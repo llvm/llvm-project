@@ -354,8 +354,19 @@ static bool isDimOpValidSymbol(ShapedDimOpInterface dimOp, Region *region) {
   if (!index.has_value())
     return false;
 
+  // Skip over all memref.cast ops (if any).
+  Operation *op = dimOp.getShapedValue().getDefiningOp();
+  while (auto castOp = dyn_cast<memref::CastOp>(op)) {
+    // Bail on unranked memrefs.
+    if (isa<UnrankedMemRefType>(castOp.getSource().getType()))
+      return false;
+    op = castOp.getSource().getDefiningOp();
+    if (!op)
+      return false;
+  }
+
   int64_t i = index.value();
-  return TypeSwitch<Operation *, bool>(dimOp.getShapedValue().getDefiningOp())
+  return TypeSwitch<Operation *, bool>(op)
       .Case<memref::ViewOp, memref::SubViewOp, memref::AllocOp>(
           [&](auto op) { return isMemRefSizeValidSymbol(op, i, region); })
       .Default([](Operation *) { return false; });
@@ -4473,6 +4484,17 @@ LogicalResult AffineVectorStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 // DelinearizeIndexOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult AffineDelinearizeIndexOp::inferReturnTypes(
+    MLIRContext *context, std::optional<::mlir::Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
+  AffineDelinearizeIndexOpAdaptor adaptor(operands, attributes, properties,
+                                          regions);
+  inferredReturnTypes.assign(adaptor.getBasis().size(),
+                             IndexType::get(context));
+  return success();
+}
 
 void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
                                      Value linearIndex,

@@ -3792,7 +3792,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         << Kind << Error << (int)SemaRef.getTemplateNameKindForDiagnostics(TN)
         << QualType(Deduced, 0) << AutoRange;
       if (auto *TD = TN.getAsTemplateDecl())
-        SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
+        SemaRef.NoteTemplateLocation(*TD);
 
       T = SemaRef.Context.IntTy;
       D.setInvalidType(true);
@@ -5371,7 +5371,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
                 LangOpts.getOpenCLCompatibleVersion() >= 120) ||
-               D.getIdentifier()->getName().startswith("__")))) {
+               D.getIdentifier()->getName().starts_with("__")))) {
           S.Diag(D.getIdentifierLoc(), diag::err_opencl_variadic_function);
           D.setInvalidType(true);
         }
@@ -8360,12 +8360,25 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   // not to need a separate attribute)
   if (!(S.Context.getTargetInfo().hasFeature("neon") ||
         S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM)) {
+        S.Context.getTargetInfo().hasFeature("sve") ||
+        S.Context.getTargetInfo().hasFeature("sme") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::Neon) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'neon', 'mve', 'sve' or 'sme'";
+    Attr.setInvalid();
+    return;
+  }
+  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
+        S.Context.getTargetInfo().hasFeature("mve") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::NeonPoly) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
         << Attr << "'neon' or 'mve'";
     Attr.setInvalid();
     return;
   }
+
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)

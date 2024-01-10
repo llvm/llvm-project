@@ -39,7 +39,7 @@ namespace bolt {
 bool YAMLProfileReader::isYAML(const StringRef Filename) {
   if (auto MB = MemoryBuffer::getFileOrSTDIN(Filename)) {
     StringRef Buffer = (*MB)->getBuffer();
-    return Buffer.startswith("---\n");
+    return Buffer.starts_with("---\n");
   } else {
     report_error(Filename, MB.getError());
   }
@@ -83,6 +83,7 @@ bool YAMLProfileReader::parseFunctionProfile(
   BinaryContext &BC = BF.getBinaryContext();
 
   const bool IsDFSOrder = YamlBP.Header.IsDFSOrder;
+  const HashFunction HashFunction = YamlBP.Header.HashFunction;
   bool ProfileMatched = true;
   uint64_t MismatchedBlocks = 0;
   uint64_t MismatchedCalls = 0;
@@ -98,7 +99,8 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(IsDFSOrder)) {
+  if (!opts::IgnoreHash &&
+      YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: function hash mismatch\n";
     ProfileMatched = false;
@@ -326,6 +328,17 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
 }
 
 Error YAMLProfileReader::readProfile(BinaryContext &BC) {
+  if (opts::Verbosity >= 1) {
+    outs() << "BOLT-INFO: YAML profile with hash: ";
+    switch (YamlBP.Header.HashFunction) {
+    case HashFunction::StdHash:
+      outs() << "std::hash\n";
+      break;
+    case HashFunction::XXH3:
+      outs() << "xxh3\n";
+      break;
+    }
+  }
   YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
 
   auto profileMatches = [](const yaml::bolt::BinaryFunctionProfile &Profile,
@@ -348,7 +361,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
     // Recompute hash once per function.
     if (!opts::IgnoreHash)
-      Function.computeHash(YamlBP.Header.IsDFSOrder);
+      Function.computeHash(YamlBP.Header.IsDFSOrder,
+                           YamlBP.Header.HashFunction);
 
     if (profileMatches(YamlBF, Function))
       matchProfileToFunction(YamlBF, Function);

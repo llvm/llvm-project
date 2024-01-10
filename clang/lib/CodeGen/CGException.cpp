@@ -156,7 +156,9 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::WatchOS:
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
-    if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
+    if (T.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
   case ObjCRuntime::GCC:
@@ -210,7 +212,8 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, L);
 
   case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
+    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
+                                            : EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
@@ -277,7 +280,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
       if (llvm::GlobalVariable *GV = dyn_cast<llvm::GlobalVariable>(Val))
         // ObjC EH selector entries are always global variables with
         // names starting like this.
-        if (GV->getName().startswith("OBJC_EHTYPE"))
+        if (GV->getName().starts_with("OBJC_EHTYPE"))
           return false;
     } else {
       // Check if any of the filter values have the ObjC prefix.
@@ -288,7 +291,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
             cast<llvm::GlobalVariable>((*II)->stripPointerCasts()))
           // ObjC EH selector entries are always global variables with
           // names starting like this.
-          if (GV->getName().startswith("OBJC_EHTYPE"))
+          if (GV->getName().starts_with("OBJC_EHTYPE"))
             return false;
       }
     }
@@ -1917,7 +1920,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         const VarDecl *D = cast<VarDecl>(I.first);
         if (isa<ImplicitParamDecl>(D) &&
             D->getType() == getContext().VoidPtrTy) {
-          assert(D->getName().startswith("frame_pointer"));
+          assert(D->getName().starts_with("frame_pointer"));
           FramePtrAddrAlloca = cast<llvm::AllocaInst>(I.second.getPointer());
           break;
         }

@@ -45,7 +45,8 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG drop_while_view
+    : public view_interface<drop_while_view<_View, _Pred>> {
 public:
   _LIBCPP_HIDE_FROM_ABI drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
@@ -65,7 +66,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(),
         "drop_while_view needs to have a non-empty predicate before calling begin() -- did a previous "
         "assignment to this drop_while_view fail?");

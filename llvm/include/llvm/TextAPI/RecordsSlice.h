@@ -14,11 +14,11 @@
 #ifndef LLVM_TEXTAPI_RECORDSLICE_H
 #define LLVM_TEXTAPI_RECORDSLICE_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Record.h"
+#include "llvm/TextAPI/RecordVisitor.h"
 
 namespace llvm {
 namespace MachO {
@@ -128,10 +128,13 @@ public:
   bool hasBinaryAttrs() const { return BA.get(); }
 
   // Determine if record slice is unassigned.
-  bool isEmpty() const {
+  bool empty() const {
     return !hasBinaryAttrs() && Globals.empty() && Classes.empty() &&
            Categories.empty();
   }
+
+  // Visit all records known to RecordsSlice.
+  void visit(RecordVisitor &V) const;
 
   struct BinaryAttrs {
     std::vector<StringRef> AllowableClients;
@@ -141,7 +144,7 @@ public:
     StringRef InstallName;
     StringRef UUID;
     StringRef Path;
-    FileType fileType = FileType::Invalid;
+    FileType File = FileType::Invalid;
     llvm::MachO::PackedVersion CurrentVersion;
     llvm::MachO::PackedVersion CompatVersion;
     uint8_t SwiftABI = 0;
@@ -153,6 +156,10 @@ public:
   /// Return reference to BinaryAttrs.
   BinaryAttrs &getBinaryAttrs();
 
+  /// Store any strings owned by RecordSlice into allocator and return back
+  /// reference to that.
+  StringRef copyString(StringRef String);
+
 private:
   const llvm::Triple TargetTriple;
   // Hold tapi converted triple to avoid unecessary casts.
@@ -160,7 +167,6 @@ private:
 
   /// BumpPtrAllocator to store generated/copied strings.
   llvm::BumpPtrAllocator StringAllocator;
-  StringRef copyString(StringRef String);
 
   /// Promote linkage of requested record. It is no-op if linkage type is lower
   /// than the current assignment.
@@ -171,12 +177,21 @@ private:
     R->Linkage = std::max(R->Linkage, L);
   }
 
+  /// Update set flags of requested record.
+  ///
+  /// \param R The global record to update.
+  /// \param F Flags to update to.
+  void updateFlags(GlobalRecord *R, SymbolFlags F) { R->Flags = F; }
+
   RecordMap<GlobalRecord> Globals;
   RecordMap<ObjCInterfaceRecord> Classes;
   RecordMap<ObjCCategoryRecord, std::pair<StringRef, StringRef>> Categories;
 
   std::unique_ptr<BinaryAttrs> BA{nullptr};
 };
+
+using Records = llvm::SmallVector<std::shared_ptr<RecordsSlice>, 4>;
+std::unique_ptr<InterfaceFile> convertToInterfaceFile(const Records &Slices);
 
 } // namespace MachO
 } // namespace llvm

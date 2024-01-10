@@ -44,21 +44,21 @@ z = ieee_value(z, ieee_quiet_nan)
 
 ! CHECK:     %[[V_40:[0-9]+]] = fir.load %[[V_2]] : !fir.ref<f128>
 ! CHECK:     %[[V_41:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f128>
-! CHECK:     %[[V_44:[0-9]+]] = arith.cmpf uno, %[[V_40]], %[[V_41]] : f128
+! CHECK:     %[[V_44:[0-9]+]] = arith.cmpf uno, %[[V_40]], %[[V_41]] {{.*}} : f128
 ! CHECK:     %[[V_45:[0-9]+]] = fir.convert %[[V_44]] : (i1) -> !fir.logical<4>
 ! CHECK:     %[[V_46:[0-9]+]] = fir.convert %[[V_45]] : (!fir.logical<4>) -> i1
 ! CHECK:     %[[V_47:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_46]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
 
 ! CHECK:     %[[V_48:[0-9]+]] = fir.load %[[V_2]] : !fir.ref<f128>
 ! CHECK:     %[[V_49:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f128>
-! CHECK:     %[[V_52:[0-9]+]] = arith.cmpf uno, %[[V_48]], %[[V_49]] : f128
+! CHECK:     %[[V_52:[0-9]+]] = arith.cmpf uno, %[[V_48]], %[[V_49]] {{.*}} : f128
 ! CHECK:     %[[V_53:[0-9]+]] = fir.convert %[[V_52]] : (i1) -> !fir.logical<4>
 ! CHECK:     %[[V_54:[0-9]+]] = fir.convert %[[V_53]] : (!fir.logical<4>) -> i1
 ! CHECK:     %[[V_55:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_54]]) {{.*}} : (!fir.ref<i8>, i1) -> i1
 
 ! CHECK:     %[[V_56:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<f128>
 ! CHECK:     %[[V_57:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<f128>
-! CHECK:     %[[V_60:[0-9]+]] = arith.cmpf uno, %[[V_56]], %[[V_57]] : f128
+! CHECK:     %[[V_60:[0-9]+]] = arith.cmpf uno, %[[V_56]], %[[V_57]] {{.*}} : f128
 ! CHECK:     %[[V_61:[0-9]+]] = fir.convert %[[V_60]] : (i1) -> !fir.logical<4>
 ! CHECK:     %[[V_62:[0-9]+]] = fir.convert %[[V_61]] : (!fir.logical<4>) -> i1
 ! CHECK:     %[[V_63:[0-9]+]] = fir.call @_FortranAioOutputLogical(%{{.*}}, %[[V_62]]) {{.*}} : (!fir.ref<i8>, i1) -> i1

@@ -6,6 +6,9 @@ s_add_i32 s0, s1, s2
 s_add_u32 s0, s1, s2
 // GFX12: encoding: [0x01,0x02,0x00,0x80]
 
+s_add_u64 s[0:1], s[2:3], s[4:5]
+// GFX12: encoding: [0x02,0x04,0x80,0xa9]
+
 s_addc_u32 s0, s1, s2
 // GFX12: encoding: [0x01,0x02,0x00,0x82]
 
@@ -14,6 +17,9 @@ s_sub_i32 s0, s1, s2
 
 s_sub_u32 s0, s1, s2
 // GFX12: encoding: [0x01,0x02,0x80,0x80]
+
+s_sub_u64 s[0:1], s[2:3], s[4:5]
+// GFX12: encoding: [0x02,0x04,0x00,0xaa]
 
 s_subb_u32 s0, s1, s2
 // GFX12: encoding: [0x01,0x02,0x80,0x82]

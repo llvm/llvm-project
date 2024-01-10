@@ -865,9 +865,9 @@ define double @f19() #0 {
 ; X87-NEXT:    .cfi_def_cfa_offset 32
 ; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fld1
+; X87-NEXT:    fstpl (%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    movl $1072693248, {{[0-9]+}}(%esp) # imm = 0x3FF00000
-; X87-NEXT:    movl $0, (%esp)
 ; X87-NEXT:    calll fmod
 ; X87-NEXT:    addl $28, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4

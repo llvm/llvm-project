@@ -1909,7 +1909,7 @@ def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, gprc:$RA, u5imm:$RB),
                           "stwat $RST, $RA, $RB", IIC_LdStStore>,
             Requires<[IsISA3_0]>;
 
-let isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+let isTrap = 1, hasCtrlDep = 1 in
 def TRAP  : XForm_24<31, 4, (outs), (ins), "trap", IIC_LdStLoad, [(trap)]>;
 
 def TWI : DForm_base<3, (outs), (ins u5imm:$RST, gprc:$RA, s16imm:$D, variable_ops),
@@ -3437,6 +3437,23 @@ def crnot : OutPatFrag<(ops node:$in),
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
 
+// Pseudo-instructions for alternate assembly syntax (never used by codegen).
+// These are aliases that require C++ handling to convert to the target
+// instruction, while InstAliases can be handled directly by tblgen.
+class PPCAsmPseudo<string asm, dag iops>
+  : Instruction {
+  let Namespace = "PPC";
+  bit PPC64 = 0;  // Default value, override with isPPC64
+
+  let OutOperandList = (outs);
+  let InOperandList = iops;
+  let Pattern = [];
+  let AsmString = asm;
+  let isAsmParserOnly = 1;
+  let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"
@@ -4458,23 +4475,6 @@ def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $a
 // PowerPC Assembler Instruction Aliases
 //
 
-// Pseudo-instructions for alternate assembly syntax (never used by codegen).
-// These are aliases that require C++ handling to convert to the target
-// instruction, while InstAliases can be handled directly by tblgen.
-class PPCAsmPseudo<string asm, dag iops>
-  : Instruction {
-  let Namespace = "PPC";
-  bit PPC64 = 0;  // Default value, override with isPPC64
-
-  let OutOperandList = (outs);
-  let InOperandList = iops;
-  let Pattern = [];
-  let AsmString = asm;
-  let isAsmParserOnly = 1;
-  let isPseudo = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
 def : InstAlias<"sc", (SC 0)>;
 
 def : InstAlias<"sync", (SYNC 0)>, Requires<[HasSYNC]>;
@@ -5259,6 +5259,9 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  (ins gprc:$RB, (memrihash $D, $RA):$addr),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
+
+let Defs = [CR7], Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

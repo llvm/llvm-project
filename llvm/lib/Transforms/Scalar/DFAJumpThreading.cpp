@@ -521,7 +521,7 @@ struct AllSwitchPaths {
 
       const BasicBlock *PrevBB = Path.back();
       for (const BasicBlock *BB : Path) {
-        if (StateDef.count(BB) != 0) {
+        if (StateDef.contains(BB)) {
           const PHINode *Phi = dyn_cast<PHINode>(StateDef[BB]);
           assert(Phi && "Expected a state-defining instr to be a phi node.");
 

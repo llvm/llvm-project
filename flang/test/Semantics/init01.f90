@@ -90,7 +90,7 @@ subroutine components(n)
   real, pointer :: p10 => o3%x
   associate (a1 => o3, a2 => o3%x)
     block
-      real, pointer :: p11 => a1
+      type(t3), pointer :: p11 => a1
       real, pointer :: p12 => a2
     end block
   end associate

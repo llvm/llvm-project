@@ -153,9 +153,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
-
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
@@ -326,6 +323,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
@@ -377,6 +377,9 @@ if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
+
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
 
     # dirent.h entrypoints
     libc.src.dirent.closedir
@@ -557,6 +560,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
   )
 endif()
 

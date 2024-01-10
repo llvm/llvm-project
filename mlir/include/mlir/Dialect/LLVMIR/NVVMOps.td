@@ -157,6 +157,11 @@ def NVVM_ClusterId : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.ctarank">;
 def NVVM_ClusterDim : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.nctarank">;
 
 //===----------------------------------------------------------------------===//
+// Clock registers
+def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
+def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
+
+//===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
@@ -458,17 +463,33 @@ def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max reg
 }
 def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
 
-def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister"> {
+def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
   let assemblyFormat = "$action $regCount attr-dict";
+  let hasVerifier = 1;
+  string llvmBuilder = [{
+    auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
+      llvm::Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32 :
+      llvm::Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32;
+
+    createIntrinsicCall(builder, intId, builder.getInt32($regCount));
+  }];
+}
+
+def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
+  let arguments = (ins );
+    let description = [{
+    Fence operation that applies on the prior nvvm.mbarrier.init
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+  
+  let assemblyFormat = "attr-dict";
   let extraClassDefinition = [{        
     std::string $cppClass::getPtx() {
-      if(getAction() == NVVM::SetMaxRegisterAction::increase)
-        return std::string("setmaxnreg.inc.sync.aligned.u32 %0;");
-      return std::string("setmaxnreg.dec.sync.aligned.u32 %0;");
+      return std::string("fence.mbarrier_init.release.cluster;");
     }
   }];
-  let hasVerifier = 1;
 }
 
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
@@ -1324,8 +1345,8 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
       ptx += ".x" + std::to_string(d);
       if (getLayout() == NVVM::MMALayout::col)
         ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1}";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2}";
+      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
+      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
       if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
       return ptx;
     }

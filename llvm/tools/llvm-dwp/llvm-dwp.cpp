@@ -144,13 +144,21 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
-  if (Args.hasArg(OPT_continueOnCuIndexOverflow)) {
-    ContinueOption =
-        Args.getLastArgValue(OPT_continueOnCuIndexOverflow, "continue");
-    if (ContinueOption == "soft-stop") {
-      OverflowOptValue = OnCuIndexOverflow::SoftStop;
-    } else {
+  if (Arg *Arg = Args.getLastArg(OPT_continueOnCuIndexOverflow,
+                                 OPT_continueOnCuIndexOverflow_EQ)) {
+    if (Arg->getOption().matches(OPT_continueOnCuIndexOverflow)) {
       OverflowOptValue = OnCuIndexOverflow::Continue;
+    } else {
+      ContinueOption = Arg->getValue();
+      if (ContinueOption == "soft-stop") {
+        OverflowOptValue = OnCuIndexOverflow::SoftStop;
+      } else if (ContinueOption == "continue") {
+        OverflowOptValue = OnCuIndexOverflow::Continue;
+      } else {
+        llvm::errs() << "invalid value for --continue-on-cu-index-overflow"
+                     << ContinueOption << '\n';
+        exit(1);
+      }
     }
   }
 

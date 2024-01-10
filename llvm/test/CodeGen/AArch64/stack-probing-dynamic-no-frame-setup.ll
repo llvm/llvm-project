@@ -1,4 +1,4 @@
-; RUN: llc --stop-after=finalize-isel -o - | FileCheck %s
+; RUN: llc < %s --stop-after=finalize-isel -o - | FileCheck %s
 target triple = "aarch64-linux"
 
 ; Check dynamic stack allocation and probing instructions do not have

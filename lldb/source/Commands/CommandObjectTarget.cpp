@@ -8,6 +8,7 @@
 
 #include "CommandObjectTarget.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
@@ -1532,7 +1533,7 @@ static void DumpOsoFilesTable(Stream &strm,
 
 static void DumpAddress(ExecutionContextScope *exe_scope,
                         const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm) {
+                        Stream &strm, llvm::StringRef pattern = "") {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1542,13 +1543,14 @@ static void DumpAddress(ExecutionContextScope *exe_scope,
   strm.Indent("    Summary: ");
   const uint32_t save_indent = strm.GetIndentLevel();
   strm.SetIndentLevel(save_indent + 13);
-  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription);
+  so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription,
+               Address::DumpStyleInvalid, UINT32_MAX, false, pattern);
   strm.SetIndentLevel(save_indent);
   // Print out detailed address information when verbose is enabled
   if (verbose) {
     strm.EOL();
     so_addr.Dump(&strm, exe_scope, Address::DumpStyleDetailedSymbolContext,
-                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges);
+                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, pattern);
   }
   strm.IndentLess();
 }
@@ -1593,6 +1595,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     return 0;
 
   SymbolContext sc;
+  const bool use_color = interpreter.GetDebugger().GetUseColor();
   std::vector<uint32_t> match_indexes;
   ConstString symbol_name(name);
   uint32_t num_matches = 0;
@@ -1618,12 +1621,19 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         if (symbol->ValueIsAddress()) {
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
-              symbol->GetAddressRef(), verbose, all_ranges, strm);
+              symbol->GetAddressRef(), verbose, all_ranges, strm,
+              use_color && name_is_regex ? name : nullptr);
           strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
-          strm.PutCString(symbol->GetDisplayName().GetStringRef());
+          llvm::StringRef ansi_prefix =
+              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
+          llvm::StringRef ansi_suffix =
+              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
+          strm.PutCStringColorHighlighted(
+              symbol->GetDisplayName().GetStringRef(),
+              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
@@ -1696,16 +1706,18 @@ static size_t LookupTypeInModule(Target *target,
                                  CommandInterpreter &interpreter, Stream &strm,
                                  Module *module, const char *name_cstr,
                                  bool name_is_regex) {
-  TypeList type_list;
   if (module && name_cstr && name_cstr[0]) {
-    const uint32_t max_num_matches = UINT32_MAX;
-    bool name_is_fully_qualified = false;
+    TypeQuery query(name_cstr);
+    TypeResults results;
+    module->FindTypes(query, results);
 
-    ConstString name(name_cstr);
-    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    module->FindTypes(name, name_is_fully_qualified, max_num_matches,
-                      searched_symbol_files, type_list);
-
+    TypeList type_list;
+    SymbolContext sc;
+    if (module)
+      sc.module_sp = module->shared_from_this();
+    // Sort the type results and put the results that matched in \a module
+    // first if \a module was specified.
+    sc.SortTypeList(results.GetTypeMap(), type_list);
     if (type_list.Empty())
       return 0;
 
@@ -1738,22 +1750,21 @@ static size_t LookupTypeInModule(Target *target,
       }
       strm.EOL();
     }
+    return type_list.GetSize();
   }
-  return type_list.GetSize();
+  return 0;
 }
 
 static size_t LookupTypeHere(Target *target, CommandInterpreter &interpreter,
                              Stream &strm, Module &module,
                              const char *name_cstr, bool name_is_regex) {
+  TypeQuery query(name_cstr);
+  TypeResults results;
+  module.FindTypes(query, results);
   TypeList type_list;
-  const uint32_t max_num_matches = UINT32_MAX;
-  bool name_is_fully_qualified = false;
-
-  ConstString name(name_cstr);
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  module.FindTypes(name, name_is_fully_qualified, max_num_matches,
-                   searched_symbol_files, type_list);
-
+  SymbolContext sc;
+  sc.module_sp = module.shared_from_this();
+  sc.SortTypeList(results.GetTypeMap(), type_list);
   if (type_list.Empty())
     return 0;
 
@@ -2072,7 +2083,7 @@ protected:
             result.GetOutputStream().EOL();
             result.GetOutputStream().EOL();
           }
-          if (INTERRUPT_REQUESTED(GetDebugger(), 
+          if (INTERRUPT_REQUESTED(GetDebugger(),
                                   "Interrupted in dump all symtabs with {0} "
                                   "of {1} dumped.", num_dumped, num_modules))
             break;
@@ -2102,8 +2113,8 @@ protected:
                 result.GetOutputStream().EOL();
                 result.GetOutputStream().EOL();
               }
-              if (INTERRUPT_REQUESTED(GetDebugger(), 
-                    "Interrupted in dump symtab list with {0} of {1} dumped.", 
+              if (INTERRUPT_REQUESTED(GetDebugger(),
+                    "Interrupted in dump symtab list with {0} of {1} dumped.",
                     num_dumped, num_matches))
                 break;
 
@@ -2165,7 +2176,7 @@ protected:
       result.GetOutputStream().Format("Dumping sections for {0} modules.\n",
                                       num_modules);
       for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-        if (INTERRUPT_REQUESTED(GetDebugger(), 
+        if (INTERRUPT_REQUESTED(GetDebugger(),
               "Interrupted in dump all sections with {0} of {1} dumped",
               image_idx, num_modules))
           break;
@@ -2186,7 +2197,7 @@ protected:
             FindModulesByName(target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(GetDebugger(), 
+            if (INTERRUPT_REQUESTED(GetDebugger(),
                   "Interrupted in dump section list with {0} of {1} dumped.",
                   i, num_matches))
               break;
@@ -2328,7 +2339,7 @@ protected:
       }
 
       for (size_t i = 0; i < num_matches; ++i) {
-        if (INTERRUPT_REQUESTED(GetDebugger(), 
+        if (INTERRUPT_REQUESTED(GetDebugger(),
               "Interrupted in dump clang ast list with {0} of {1} dumped.",
               i, num_matches))
           break;
@@ -2467,9 +2478,9 @@ protected:
         if (num_modules > 0) {
           uint32_t num_dumped = 0;
           for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-            if (INTERRUPT_REQUESTED(GetDebugger(), 
+            if (INTERRUPT_REQUESTED(GetDebugger(),
                                     "Interrupted in dump all line tables with "
-                                    "{0} of {1} dumped", num_dumped, 
+                                    "{0} of {1} dumped", num_dumped,
                                     num_modules))
               break;
 

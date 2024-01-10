@@ -115,7 +115,7 @@ define void @sve_17_vector(ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
 ; CHECK-NEXT:    addvl sp, sp, #17
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
@@ -351,7 +351,7 @@ define void @sve_16v_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    b .LBB9_1
 ; CHECK-NEXT:  .LBB9_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
@@ -467,7 +467,7 @@ define void @sve_1_vector_4096_arr(ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB11_1
 ; CHECK-NEXT:  .LBB11_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
 ; CHECK-NEXT:    addvl sp, sp, #31
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0f, 0x8f, 0x00, 0x11, 0x90, 0xe0, 0x00, 0x22, 0x11, 0x88, 0x02, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 12304 + 264 * VG
@@ -516,7 +516,7 @@ define void @sve_1_vector_16_arr_align_8192(ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB12_1
 ; CHECK-NEXT:  .LBB12_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -616,7 +616,7 @@ define void @sve_1028_64k_guard(ptr %out) #0 "stack-probe-size"="65536" {
 ; CHECK-NEXT:    b .LBB14_1
 ; CHECK-NEXT:  .LBB14_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
 ; CHECK-NEXT:    addvl sp, sp, #31
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x0e, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 1808 * VG

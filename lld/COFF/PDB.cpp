@@ -268,7 +268,7 @@ void PDBLinker::pdbMakeAbsolute(SmallVectorImpl<char> &fileName) {
   // decide that it's a unix path if we're fairly certain.  Specifically, if
   // it starts with a forward slash.
   SmallString<128> absoluteFileName = ctx.config.pdbSourcePath;
-  sys::path::Style guessedStyle = absoluteFileName.startswith("/")
+  sys::path::Style guessedStyle = absoluteFileName.starts_with("/")
                                       ? sys::path::Style::posix
                                       : sys::path::Style::windows;
   sys::path::append(absoluteFileName, guessedStyle, fileName);

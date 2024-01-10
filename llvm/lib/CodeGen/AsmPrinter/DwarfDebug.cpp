@@ -3478,6 +3478,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   Ins.first->second = Signature;
 
   if (useSplitDwarf()) {
+    // Although multiple type units can have the same signature, they are not
+    // guranteed to be bit identical. When LLDB uses .debug_names it needs to
+    // know from which CU a type unit came from. These two attrbutes help it to
+    // figure that out.
+    if (getDwarfVersion() >= 5) {
+      if (!CompilationDir.empty())
+        NewTU.addString(UnitDie, dwarf::DW_AT_comp_dir, CompilationDir);
+      NewTU.addString(UnitDie, dwarf::DW_AT_dwo_name,
+                      Asm->TM.Options.MCOptions.SplitDwarfFile);
+    }
     MCSection *Section =
         getDwarfVersion() <= 4
             ? Asm->getObjFileLowering().getDwarfTypesDWOSection()

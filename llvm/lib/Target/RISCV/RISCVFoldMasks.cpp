@@ -36,9 +36,7 @@ public:
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RISCVFoldMasks() : MachineFunctionPass(ID) {
-    initializeRISCVFoldMasksPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVFoldMasks() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {

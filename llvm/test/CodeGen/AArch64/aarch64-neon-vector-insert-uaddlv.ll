@@ -69,11 +69,10 @@ define void @insert_vec_v23i32_uaddlv_from_v8i16(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    movi.2d v2, #0000000000000000
-; CHECK-NEXT:    add x8, x0, #88
+; CHECK-NEXT:    str wzr, [x0, #88]
 ; CHECK-NEXT:    uaddlv.8h s1, v0
 ; CHECK-NEXT:    stp q0, q0, [x0, #16]
 ; CHECK-NEXT:    stp q0, q0, [x0, #48]
-; CHECK-NEXT:    st1.s { v0 }[2], [x8]
 ; CHECK-NEXT:    str d0, [x0, #80]
 ; CHECK-NEXT:    mov.s v2[0], v1[0]
 ; CHECK-NEXT:    ucvtf.4s v1, v2

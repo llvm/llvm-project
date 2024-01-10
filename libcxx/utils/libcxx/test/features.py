@@ -13,9 +13,13 @@ import shutil
 import subprocess
 import sys
 
-_isClang = lambda cfg: "__clang__" in compilerMacros(cfg) and "__apple_build_version__" not in compilerMacros(cfg)
+_isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
-_isGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg) and "__clang__" not in compilerMacros(cfg)
+_isAnyGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg)
+_isClang = lambda cfg: _isAnyClang(cfg) and not _isAppleClang(cfg)
+_isGCC = lambda cfg: _isAnyGCC(cfg) and not _isAnyClang(cfg)
+_isAnyClangOrGCC = lambda cfg: _isAnyClang(cfg) or _isAnyGCC(cfg)
+_isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
@@ -61,6 +65,9 @@ def _getAndroidDeviceApi(cfg):
 # Lit features are evaluated in order. Some checks may require the compiler detection to have
 # run first in order to work properly.
 DEFAULT_FEATURES = [
+    # gcc-style-warnings detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
+    Feature(name="gcc-style-warnings", when=_isAnyClangOrGCC),
+    Feature(name="cl-style-warnings", when=_isClExe),
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
         name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
@@ -195,6 +202,18 @@ DEFAULT_FEATURES = [
             #include <atomic>
             std::atomic_uint64_t x;
             int main(int, char**) { (void)x.load(); return 0; }
+          """,
+        ),
+    ),
+    # Tests that require 64-bit architecture
+    Feature(
+        name="32-bit-pointer",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) {
+              static_assert(sizeof(void *) == 4);
+            }
           """,
         ),
     ),
@@ -567,16 +586,13 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
-    # Tests that require 64-bit architecture
+    # Tests that require support for <print> and std::print in <ostream> in the built library.
     Feature(
-        name="32-bit-pointer",
-        when=lambda cfg: sourceBuilds(
-            cfg,
-            """
-            int main(int, char**) {
-              static_assert(sizeof(void *) == 4);
-            }
-          """,
+        name="availability-print-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # TODO(ldionne) Please provide the correct value.
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            cfg.available_features,
         ),
     ),
 ]

@@ -56,7 +56,7 @@ public:
   private:
     RunnableConfiguration() = default;
 
-    Benchmark InstrBenchmark;
+    Benchmark BenchmarkResult;
     object::OwningBinary<object::ObjectFile> ObjectFile;
   };
 
@@ -65,7 +65,7 @@ public:
                            unsigned NumRepetitions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
-  Expected<Benchmark>
+  std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
                    const std::optional<StringRef> &DumpFile) const;
 

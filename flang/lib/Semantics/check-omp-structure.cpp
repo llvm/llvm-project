@@ -2996,11 +2996,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
             source.ToString());
       } else if (!(IsDummy(*symbol))) {
         context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
             source.ToString());
       } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
         context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
+            "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
             source.ToString());
       }
     }

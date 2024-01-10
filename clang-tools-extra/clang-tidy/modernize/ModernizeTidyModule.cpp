@@ -40,6 +40,7 @@
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
 #include "UseStartsEndsWithCheck.h"
+#include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
@@ -69,6 +70,8 @@ public:
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStdNumbersCheck>(
+        "modernize-use-std-numbers");
     CheckFactories.registerCheck<UseStdPrintCheck>("modernize-use-std-print");
     CheckFactories.registerCheck<RawStringLiteralCheck>(
         "modernize-raw-string-literal");
