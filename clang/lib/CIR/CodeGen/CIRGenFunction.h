@@ -834,11 +834,13 @@ public:
                        bool IsFnTryBlock = false);
   void exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
-  mlir::LogicalResult buildCompoundStmt(const clang::CompoundStmt &S);
+  Address buildCompoundStmt(const clang::CompoundStmt &S, bool getLast = false,
+                            AggValueSlot slot = AggValueSlot::ignored());
 
-  mlir::LogicalResult
-  buildCompoundStmtWithoutScope(const clang::CompoundStmt &S);
-
+  Address
+  buildCompoundStmtWithoutScope(const clang::CompoundStmt &S,
+                                bool getLast = false,
+                                AggValueSlot slot = AggValueSlot::ignored());
   GlobalDecl CurSEHParent;
   bool currentFunctionUsesSEHTry() const { return !!CurSEHParent; }
 
