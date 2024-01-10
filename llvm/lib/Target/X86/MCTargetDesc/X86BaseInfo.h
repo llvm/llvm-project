@@ -148,21 +148,25 @@ classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
   case X86::AND16ri8:
   case X86::AND16rm:
   case X86::AND16rr:
+  case X86::AND16rr_REV:
   case X86::AND32i32:
   case X86::AND32ri:
   case X86::AND32ri8:
   case X86::AND32rm:
   case X86::AND32rr:
+  case X86::AND32rr_REV:
   case X86::AND64i32:
   case X86::AND64ri32:
   case X86::AND64ri8:
   case X86::AND64rm:
   case X86::AND64rr:
+  case X86::AND64rr_REV:
   case X86::AND8i8:
   case X86::AND8ri:
   case X86::AND8ri8:
   case X86::AND8rm:
   case X86::AND8rr:
+  case X86::AND8rr_REV:
     return FirstMacroFusionInstKind::And;
   // CMP
   case X86::CMP16i16:
@@ -171,24 +175,28 @@ classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
   case X86::CMP16ri8:
   case X86::CMP16rm:
   case X86::CMP16rr:
+  case X86::CMP16rr_REV:
   case X86::CMP32i32:
   case X86::CMP32mr:
   case X86::CMP32ri:
   case X86::CMP32ri8:
   case X86::CMP32rm:
   case X86::CMP32rr:
+  case X86::CMP32rr_REV:
   case X86::CMP64i32:
   case X86::CMP64mr:
   case X86::CMP64ri32:
   case X86::CMP64ri8:
   case X86::CMP64rm:
   case X86::CMP64rr:
+  case X86::CMP64rr_REV:
   case X86::CMP8i8:
   case X86::CMP8mr:
   case X86::CMP8ri:
   case X86::CMP8ri8:
   case X86::CMP8rm:
   case X86::CMP8rr:
+  case X86::CMP8rr_REV:
     return FirstMacroFusionInstKind::Cmp;
   // ADD
   case X86::ADD16i16:
@@ -196,42 +204,50 @@ classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
   case X86::ADD16ri8:
   case X86::ADD16rm:
   case X86::ADD16rr:
+  case X86::ADD16rr_REV:
   case X86::ADD32i32:
   case X86::ADD32ri:
   case X86::ADD32ri8:
   case X86::ADD32rm:
   case X86::ADD32rr:
+  case X86::ADD32rr_REV:
   case X86::ADD64i32:
   case X86::ADD64ri32:
   case X86::ADD64ri8:
   case X86::ADD64rm:
   case X86::ADD64rr:
+  case X86::ADD64rr_REV:
   case X86::ADD8i8:
   case X86::ADD8ri:
   case X86::ADD8ri8:
   case X86::ADD8rm:
   case X86::ADD8rr:
+  case X86::ADD8rr_REV:
   // SUB
   case X86::SUB16i16:
   case X86::SUB16ri:
   case X86::SUB16ri8:
   case X86::SUB16rm:
   case X86::SUB16rr:
+  case X86::SUB16rr_REV:
   case X86::SUB32i32:
   case X86::SUB32ri:
   case X86::SUB32ri8:
   case X86::SUB32rm:
   case X86::SUB32rr:
+  case X86::SUB32rr_REV:
   case X86::SUB64i32:
   case X86::SUB64ri32:
   case X86::SUB64ri8:
   case X86::SUB64rm:
   case X86::SUB64rr:
+  case X86::SUB64rr_REV:
   case X86::SUB8i8:
   case X86::SUB8ri:
   case X86::SUB8ri8:
   case X86::SUB8rm:
   case X86::SUB8rr:
+  case X86::SUB8rr_REV:
     return FirstMacroFusionInstKind::AddSub;
   // INC
   case X86::INC16r:
