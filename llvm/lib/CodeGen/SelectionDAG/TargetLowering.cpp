@@ -6507,7 +6507,8 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
   unsigned EltBits = VT.getScalarSizeInBits();
 
   // Check to see if we can do this.
-  if (!isTypeLegal(VT))
+  if (!isTypeLegal(VT) ||
+      !isOperationLegalOrCustom(ISD::VP_MULHS, VT, IsAfterLegalization))
     return SDValue();
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
@@ -6577,9 +6578,7 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
 
   // Multiply the numerator (operand 0) by the magic value.
   auto GetMULHS = [&](SDValue X, SDValue Y) {
-    if (isOperationLegalOrCustom(ISD::VP_MULHS, VT, IsAfterLegalization))
-      return DAG.getNode(ISD::VP_MULHS, DL, VT, X, Y, Mask, VL);
-    return SDValue();
+    return DAG.getNode(ISD::VP_MULHS, DL, VT, X, Y, Mask, VL);
   };
 
   SDValue Q = GetMULHS(N0, MagicFactor);
@@ -6822,7 +6821,8 @@ SDValue TargetLowering::BuildVPUDIV(SDNode *N, SelectionDAG &DAG,
   unsigned EltBits = VT.getScalarSizeInBits();
 
   // Check to see if we can do this.
-  if (!isTypeLegal(VT))
+  if (!isTypeLegal(VT) ||
+      !isOperationLegalOrCustom(ISD::VP_MULHU, VT, IsAfterLegalization))
     return SDValue();
 
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
@@ -6908,9 +6908,7 @@ SDValue TargetLowering::BuildVPUDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   auto GetMULHU = [&](SDValue X, SDValue Y) {
-    if (isOperationLegalOrCustom(ISD::VP_MULHU, VT, IsAfterLegalization))
-      return DAG.getNode(ISD::VP_MULHU, DL, VT, X, Y, Mask, VL);
-    return SDValue();
+    return DAG.getNode(ISD::VP_MULHU, DL, VT, X, Y, Mask, VL);
   };
 
   // Multiply the numerator (operand 0) by the magic value.
