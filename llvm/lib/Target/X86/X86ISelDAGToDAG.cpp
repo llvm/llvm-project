@@ -5042,7 +5042,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       case Intrinsic::x86_encodekey256:
         Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
         break;
-#undef GET_EGPR_IF_ENABLED
       }
 
       SDValue Chain = Node->getOperand(0);
@@ -6399,7 +6398,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     switch (Node->getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode!");
-#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
     case X86ISD::AESENCWIDE128KL:
       Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
       break;
