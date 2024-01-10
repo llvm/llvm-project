@@ -388,8 +388,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
-  FPM.addPass(MergeICmpsPass());
-  FPM.addPass(ExpandMemCmpPass(TM));
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -536,8 +534,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (AreStatisticsEnabled())
     FPM.addPass(CountVisitsPass());
 
-  FPM.addPass(MergeICmpsPass());
-  FPM.addPass(ExpandMemCmpPass(TM));
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -1435,6 +1431,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
   // result too early.
   OptimizePM.addPass(LoopSinkPass());
+
+  // Detect anc convert memcpm like idioms to the call, and expand when profitable
+  OptimizePM.addPass(MergeICmpsPass());
+  OptimizePM.addPass(ExpandMemCmpPass(TM));
 
   // And finally clean up LCSSA form before generating code.
   OptimizePM.addPass(InstSimplifyPass());
