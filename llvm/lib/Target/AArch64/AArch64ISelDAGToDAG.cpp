@@ -4303,23 +4303,17 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     if (XOR.getOpcode() != ISD::XOR || XOR != N1.getOperand(1))
       return false;
 
-    SDValue LConst = N0.getOperand(2);
-    SDValue RConst = N1.getOperand(2);
-    if (RConst.getOpcode() != ISD::SPLAT_VECTOR ||
-        LConst.getOpcode() != ISD::SPLAT_VECTOR)
+    APInt ShlAmt, ShrAmt;
+    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
+        !ISD::isConstantSplatVector(N1.getOperand(2).getNode(), ShrAmt))
       return false;
-    if (!isa<ConstantSDNode>(RConst.getOperand(0).getNode()) ||
-        !isa<ConstantSDNode>(LConst.getOperand(0).getNode()))
-      return false;
-
-    uint64_t ShlAmt = LConst->getConstantOperandVal(0);
-    uint64_t ShrAmt = RConst->getConstantOperandVal(0);
 
     if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())
       return false;
 
     SDLoc DL(N);
-    SDValue Imm = CurDAG->getTargetConstant(ShrAmt, DL, MVT::i32);
+    SDValue Imm =
+        CurDAG->getTargetConstant(ShrAmt.getZExtValue(), DL, MVT::i32);
 
     SDValue Ops[] = {XOR.getOperand(0), XOR.getOperand(1), Imm};
     if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
