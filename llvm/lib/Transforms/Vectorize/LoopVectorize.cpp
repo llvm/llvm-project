@@ -8031,6 +8031,7 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
     VPValue *EdgeMask = createEdgeMask(Predecessor, BB, Plan);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is too.
       BlockMaskCache[BB] = EdgeMask;
+      return;
     }
 
     if (!BlockMask) { // BlockMask has its initialized nullptr value.
