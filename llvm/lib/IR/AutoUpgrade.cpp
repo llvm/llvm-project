@@ -486,10 +486,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
 static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
                                         Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
-  if (!Name.starts_with("x86."))
+  if (!Name.consume_front("x86."))
     return false;
-  // Remove "x86." prefix.
-  Name = Name.substr(4);
 
   if (ShouldUpgradeX86Intrinsic(F, Name)) {
     NewFn = nullptr;
@@ -507,113 +505,112 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return true;
   }
 
+  Intrinsic::ID ID;
+
   // SSE4.1 ptest functions may have an old signature.
-  if (Name.starts_with("sse41.ptest")) { // Added in 3.2
-    if (Name.substr(11) == "c")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestc, NewFn);
-    if (Name.substr(11) == "z")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestz, NewFn);
-    if (Name.substr(11) == "nzc")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestnzc, NewFn);
+  if (Name.consume_front("sse41.ptest")) { // Added in 3.2
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("c", Intrinsic::x86_sse41_ptestc)
+             .Case("z", Intrinsic::x86_sse41_ptestz)
+             .Case("nzc", Intrinsic::x86_sse41_ptestnzc)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradePTESTIntrinsic(F, ID, NewFn);
+
+    return false;
   }
+
   // Several blend and other instructions with masks used the wrong number of
   // bits.
-  if (Name == "sse41.insertps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_insertps,
-                                            NewFn);
-  if (Name == "sse41.dppd") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dppd,
-                                            NewFn);
-  if (Name == "sse41.dpps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dpps,
-                                            NewFn);
-  if (Name == "sse41.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_mpsadbw,
-                                            NewFn);
-  if (Name == "avx.dp.ps.256") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx_dp_ps_256,
-                                            NewFn);
-  if (Name == "avx2.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx2_mpsadbw,
-                                            NewFn);
-  if (Name == "avx512.mask.cmp.pd.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_512,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
-                                     NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512, NewFn);
-  if (Name == "avx512bf16.mask.cvtneps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_512, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.128") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_128, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.256") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_256, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.512") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_512, NewFn);
 
-  // frcz.ss/sd may need to have an argument dropped. Added in 3.2
-  if (Name.starts_with("xop.vfrcz.ss") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_ss);
-    return true;
+  // Added in 3.6
+  ID = StringSwitch<Intrinsic::ID>(Name)
+           .Case("sse41.insertps", Intrinsic::x86_sse41_insertps)
+           .Case("sse41.dppd", Intrinsic::x86_sse41_dppd)
+           .Case("sse41.dpps", Intrinsic::x86_sse41_dpps)
+           .Case("sse41.mpsadbw", Intrinsic::x86_sse41_mpsadbw)
+           .Case("avx.dp.ps.256", Intrinsic::x86_avx_dp_ps_256)
+           .Case("avx2.mpsadbw", Intrinsic::x86_avx2_mpsadbw)
+           .Default(Intrinsic::not_intrinsic);
+  if (ID != Intrinsic::not_intrinsic)
+    return UpgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
+
+  if (Name.consume_front("avx512.mask.cmp.")) {
+    // Added in 7.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("pd.128", Intrinsic::x86_avx512_mask_cmp_pd_128)
+             .Case("pd.256", Intrinsic::x86_avx512_mask_cmp_pd_256)
+             .Case("pd.512", Intrinsic::x86_avx512_mask_cmp_pd_512)
+             .Case("ps.128", Intrinsic::x86_avx512_mask_cmp_ps_128)
+             .Case("ps.256", Intrinsic::x86_avx512_mask_cmp_ps_256)
+             .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86MaskedFPCompare(F, ID, NewFn);
+    return false; // No other 'x86.avx523.mask.cmp.*'.
   }
-  if (Name.starts_with("xop.vfrcz.sd") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_sd);
-    return true;
+
+  if (Name.consume_front("avx512bf16.")) {
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("cvtne2ps2bf16.128",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128)
+             .Case("cvtne2ps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256)
+             .Case("cvtne2ps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512)
+             .Case("mask.cvtneps2bf16.128",
+                   Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128)
+             .Case("cvtneps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_256)
+             .Case("cvtneps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16Intrinsic(F, ID, NewFn);
+
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("dpbf16ps.128", Intrinsic::x86_avx512bf16_dpbf16ps_128)
+             .Case("dpbf16ps.256", Intrinsic::x86_avx512bf16_dpbf16ps_256)
+             .Case("dpbf16ps.512", Intrinsic::x86_avx512bf16_dpbf16ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16DPIntrinsic(F, ID, NewFn);
+    return false; // No other 'x86.avx512bf16.*'.
   }
-  // Upgrade any XOP PERMIL2 index operand still using a float/double vector.
-  if (Name.starts_with("xop.vpermil2")) { // Added in 3.9
-    auto Idx = F->getFunctionType()->getParamType(2);
-    if (Idx->isFPOrFPVectorTy()) {
+
+  if (Name.consume_front("xop.")) {
+    Intrinsic::ID ID = Intrinsic::not_intrinsic;
+    if (Name.starts_with("vpermil2")) { // Added in 3.9
+      // Upgrade any XOP PERMIL2 index operand still using a float/double
+      // vector.
+      auto Idx = F->getFunctionType()->getParamType(2);
+      if (Idx->isFPOrFPVectorTy()) {
+        unsigned IdxSize = Idx->getPrimitiveSizeInBits();
+        unsigned EltSize = Idx->getScalarSizeInBits();
+        if (EltSize == 64 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2pd;
+        else if (EltSize == 32 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2ps;
+        else if (EltSize == 64 && IdxSize == 256)
+          ID = Intrinsic::x86_xop_vpermil2pd_256;
+        else
+          ID = Intrinsic::x86_xop_vpermil2ps_256;
+      }
+    } else if (F->arg_size() == 2)
+      // frcz.ss/sd may need to have an argument dropped. Added in 3.2
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("vfrcz.ss", Intrinsic::x86_xop_vfrcz_ss)
+               .Case("vfrcz.sd", Intrinsic::x86_xop_vfrcz_sd)
+               .Default(Intrinsic::not_intrinsic);
+
+    if (ID != Intrinsic::not_intrinsic) {
       rename(F);
-      unsigned IdxSize = Idx->getPrimitiveSizeInBits();
-      unsigned EltSize = Idx->getScalarSizeInBits();
-      Intrinsic::ID Permil2ID;
-      if (EltSize == 64 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd;
-      else if (EltSize == 32 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps;
-      else if (EltSize == 64 && IdxSize == 256)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd_256;
-      else
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps_256;
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Permil2ID);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
       return true;
     }
+    return false; // No other 'x86.xop.*'
   }
 
   if (Name == "seh.recoverfp") {
@@ -622,6 +619,284 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   }
 
   return false;
+}
+
+// Upgrade ARM (IsArm) or Aarch64 (!IsArm) intrinsic fns. Return true iff so.
+// IsArm: 'arm.*', !IsArm: 'aarch64.*'.
+static bool UpgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
+                                                 StringRef Name,
+                                                 Function *&NewFn) {
+  if (Name.starts_with("rbit")) {
+    // '(arm|aarch64).rbit'.
+    NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
+                                      F->arg_begin()->getType());
+    return true;
+  }
+
+  if (Name == "thread.pointer") {
+    // '(arm|aarch64).thread.pointer'.
+    NewFn =
+        Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
+    return true;
+  }
+
+  bool Neon = Name.consume_front("neon.");
+  if (Neon) {
+    // '(arm|aarch64).neon.*'.
+    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and
+    // v16i8 respectively.
+    if (Name.consume_front("bfdot.")) {
+      // (arm|aarch64).neon.bfdot.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .Cases("v2f32.v8i8", "v4f32.v16i8",
+                                    IsArm ? Intrinsic::arm_neon_bfdot
+                                          : Intrinsic::aarch64_neon_bfdot)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
+        assert((OperandWidth == 64 || OperandWidth == 128) &&
+               "Unexpected operand width");
+        LLVMContext &Ctx = F->getParent()->getContext();
+        std::array<Type *, 2> Tys{
+            {F->getReturnType(),
+             FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)}};
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+        return true;
+      }
+      return false; // No other '(arm|aarch64).neon.bfdot.*'.
+    }
+
+    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic
+    // anymore and accept v8bf16 instead of v16i8.
+    if (Name.consume_front("bfm")) {
+      // (arm|aarch64).neon.bfm*'.
+      if (Name.consume_back(".v4f32.v16i8")) {
+        // (arm|aarch64).neon.bfm*.v4f32.v16i8'.
+        Intrinsic::ID ID =
+            StringSwitch<Intrinsic::ID>(Name)
+                .Case("mla", IsArm ? Intrinsic::arm_neon_bfmmla
+                                   : Intrinsic::aarch64_neon_bfmmla)
+                .Case("lalb", IsArm ? Intrinsic::arm_neon_bfmlalb
+                                    : Intrinsic::aarch64_neon_bfmlalb)
+                .Case("lalt", IsArm ? Intrinsic::arm_neon_bfmlalt
+                                    : Intrinsic::aarch64_neon_bfmlalt)
+                .Default(Intrinsic::not_intrinsic);
+        if (ID != Intrinsic::not_intrinsic) {
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        return false; // No other '(arm|aarch64).neon.bfm*.v16i8'.
+      }
+      return false; // No other '(arm|aarch64).neon.bfm*.
+    }
+    // Continue on to Aarch64 Neon or Arm Neon.
+  }
+  // Continue on to Arm or Aarch64.
+
+  if (IsArm) {
+    // 'arm.*'.
+    if (Neon) {
+      // 'arm.neon.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("vclz.", Intrinsic::ctlz)
+                             .StartsWith("vcnt.", Intrinsic::ctpop)
+                             .StartsWith("vqadds.", Intrinsic::sadd_sat)
+                             .StartsWith("vqaddu.", Intrinsic::uadd_sat)
+                             .StartsWith("vqsubs.", Intrinsic::ssub_sat)
+                             .StartsWith("vqsubu.", Intrinsic::usub_sat)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
+
+      if (Name.consume_front("vst")) {
+        // 'arm.neon.vst*'.
+        static const Regex vstRegex("^([1234]|[234]lane)\\.v[a-z0-9]*$");
+        SmallVector<StringRef, 2> Groups;
+        if (vstRegex.match(Name, &Groups)) {
+          static const Intrinsic::ID StoreInts[] = {
+              Intrinsic::arm_neon_vst1, Intrinsic::arm_neon_vst2,
+              Intrinsic::arm_neon_vst3, Intrinsic::arm_neon_vst4};
+
+          static const Intrinsic::ID StoreLaneInts[] = {
+              Intrinsic::arm_neon_vst2lane, Intrinsic::arm_neon_vst3lane,
+              Intrinsic::arm_neon_vst4lane};
+
+          auto fArgs = F->getFunctionType()->params();
+          Type *Tys[] = {fArgs[0], fArgs[1]};
+          if (Groups[1].size() == 1)
+            NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                              StoreInts[fArgs.size() - 3], Tys);
+          else
+            NewFn = Intrinsic::getDeclaration(
+                F->getParent(), StoreLaneInts[fArgs.size() - 5], Tys);
+          return true;
+        }
+        return false; // No other 'arm.neon.vst*'.
+      }
+
+      return false; // No other 'arm.neon.*'.
+    }
+
+    if (Name.consume_front("mve.")) {
+      // 'arm.mve.*'.
+      if (Name == "vctp64") {
+        if (cast<FixedVectorType>(F->getReturnType())->getNumElements() == 4) {
+          // A vctp64 returning a v4i1 is converted to return a v2i1. Rename
+          // the function and deal with it below in UpgradeIntrinsicCall.
+          rename(F);
+          return true;
+        }
+        return false; // Not 'arm.mve.vctp64'.
+      }
+
+      // These too are changed to accept a v2i1 instead of the old v4i1.
+      if (Name.consume_back(".v4i1")) {
+        // 'arm.mve.*.v4i1'.
+        if (Name.consume_back(".predicated.v2i64.v4i32"))
+          // 'arm.mve.*.predicated.v2i64.v4i32.v4i1'
+          return Name == "mull.int" || Name == "vqdmull";
+
+        if (Name.consume_back(".v2i64")) {
+          // 'arm.mve.*.v2i64.v4i1'
+          bool IsGather = Name.consume_front("vldr.gather.");
+          if (IsGather || Name.consume_front("vstr.scatter.")) {
+            if (Name.consume_front("base.")) {
+              // Optional 'wb.' prefix.
+              Name.consume_front("wb.");
+              // 'arm.mve.(vldr.gather|vstr.scatter).base.(wb.)?
+              // predicated.v2i64.v2i64.v4i1'.
+              return Name == "predicated.v2i64";
+            }
+
+            if (Name.consume_front("offset.predicated."))
+              return Name == (IsGather ? "v2i64.p0i64" : "p0i64.v2i64") ||
+                     Name == (IsGather ? "v2i64.p0" : "p0.v2i64");
+
+            // No other 'arm.mve.(vldr.gather|vstr.scatter).*.v2i64.v4i1'.
+            return false;
+          }
+
+          return false; // No other 'arm.mve.*.v2i64.v4i1'.
+        }
+        return false; // No other 'arm.mve.*.v4i1'.
+      }
+      return false; // No other 'arm.mve.*'.
+    }
+
+    if (Name.consume_front("cde.vcx")) {
+      // 'arm.cde.vcx*'.
+      if (Name.consume_back(".predicated.v2i64.v4i1"))
+        // 'arm.cde.vcx*.predicated.v2i64.v4i1'.
+        return Name == "1q" || Name == "1qa" || Name == "2q" || Name == "2qa" ||
+               Name == "3q" || Name == "3qa";
+
+      return false; // No other 'arm.cde.vcx*'.
+    }
+  } else {
+    // 'aarch64.*'.
+    if (Neon) {
+      // 'aarch64.neon.*'.
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("frintn", Intrinsic::roundeven)
+                             .StartsWith("rbit", Intrinsic::bitreverse)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
+
+      if (Name.starts_with("addp")) {
+        // 'aarch64.neon.addp*'.
+        if (F->arg_size() != 2)
+          return false; // Invalid IR.
+        VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
+        if (Ty && Ty->getElementType()->isFloatingPointTy()) {
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::aarch64_neon_faddp, Ty);
+          return true;
+        }
+      }
+      return false; // No other 'aarch64.neon.*'.
+    }
+    if (Name.consume_front("sve.")) {
+      // 'aarch64.sve.*'.
+      if (Name.consume_front("bf")) {
+        if (Name.consume_back(".lane")) {
+          // 'aarch64.sve.bf*.lane'.
+          Intrinsic::ID ID =
+              StringSwitch<Intrinsic::ID>(Name)
+                  .Case("dot", Intrinsic::aarch64_sve_bfdot_lane_v2)
+                  .Case("mlalb", Intrinsic::aarch64_sve_bfmlalb_lane_v2)
+                  .Case("mlalt", Intrinsic::aarch64_sve_bfmlalt_lane_v2)
+                  .Default(Intrinsic::not_intrinsic);
+          if (ID != Intrinsic::not_intrinsic) {
+            NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+            return true;
+          }
+          return false; // No other 'aarch64.sve.bf*.lane'.
+        }
+        return false; // No other 'aarch64.sve.bf*'.
+      }
+
+      if (Name.consume_front("ld")) {
+        // 'aarch64.sve.ld*'.
+        static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
+        if (LdRegex.match(Name)) {
+          Type *ScalarTy =
+              dyn_cast<VectorType>(F->getReturnType())->getElementType();
+          ElementCount EC = dyn_cast<VectorType>(F->arg_begin()->getType())
+                                ->getElementCount();
+          Type *Ty = VectorType::get(ScalarTy, EC);
+          static const Intrinsic::ID LoadIDs[] = {
+              Intrinsic::aarch64_sve_ld2_sret,
+              Intrinsic::aarch64_sve_ld3_sret,
+              Intrinsic::aarch64_sve_ld4_sret,
+          };
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            LoadIDs[Name[0] - '2'], Ty);
+          return true;
+        }
+        return false; // No other 'aarch64.sve.ld*'.
+      }
+
+      if (Name.consume_front("tuple.")) {
+        // 'aarch64.sve.tuple.*'.
+        if (Name.starts_with("get")) {
+          // 'aarch64.sve.tuple.get*'.
+          Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_extract, Tys);
+          return true;
+        }
+
+        if (Name.starts_with("set")) {
+          // 'aarch64.sve.tuple.set*'.
+          auto Args = F->getFunctionType()->params();
+          Type *Tys[] = {Args[0], Args[2], Args[1]};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_insert, Tys);
+          return true;
+        }
+
+        static const Regex CreateTupleRegex("^create[234](.nxv[a-z0-9]+|$)");
+        if (CreateTupleRegex.match(Name)) {
+          // 'aarch64.sve.tuple.create*'.
+          auto Args = F->getFunctionType()->params();
+          Type *Tys[] = {F->getReturnType(), Args[1]};
+          NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                            Intrinsic::vector_insert, Tys);
+          return true;
+        }
+        return false; // No other 'aarch64.sve.tuple.*'.
+      }
+      return false; // No other 'aarch64.sve.*'.
+    }
+  }
+  return false; // No other 'arm.*', 'aarch64.*'.
 }
 
 static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
@@ -635,12 +910,12 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
         .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
+        .Case("ftz.bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
         .Case("ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
         .Case("ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
-        .Case("ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
-        .Case("ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
+        .Case("ftz.sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
+        .Case("ftz.sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
         .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
         .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
         .Case("sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
@@ -677,8 +952,8 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Case("bf16x2", Intrinsic::nvvm_fmin_bf16x2)
         .Case("ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
-        .Case("ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
-        .Case("ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
+        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
+        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
         .Case("ftz.nan.xorsign.abs.bf16",
               Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
         .Case("ftz.nan.xorsign.abs.bf16x2",
@@ -707,242 +982,21 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
-  // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
-  if (Name.size() <= 7 || !Name.starts_with("llvm."))
+
+  // Quickly eliminate it, if it's not a candidate.
+  if (!Name.consume_front("llvm.") || Name.empty())
     return false;
-  Name = Name.substr(5); // Strip off "llvm."
 
   switch (Name[0]) {
   default: break;
   case 'a': {
-    if (Name.starts_with("arm.rbit") || Name.starts_with("aarch64.rbit")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.frintn")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::roundeven,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.rbit")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name == "aarch64.sve.bfdot.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfdot_lane_v2);
-      return true;
-    }
-    if (Name == "aarch64.sve.bfmlalb.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfmlalb_lane_v2);
-      return true;
-    }
-    if (Name == "aarch64.sve.bfmlalt.lane") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::aarch64_sve_bfmlalt_lane_v2);
-      return true;
-    }
-    static const Regex LdRegex("^aarch64\\.sve\\.ld[234](.nxv[a-z0-9]+|$)");
-    if (LdRegex.match(Name)) {
-      Type *ScalarTy =
-          dyn_cast<VectorType>(F->getReturnType())->getElementType();
-      ElementCount EC =
-          dyn_cast<VectorType>(F->arg_begin()->getType())->getElementCount();
-      Type *Ty = VectorType::get(ScalarTy, EC);
-      Intrinsic::ID ID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .StartsWith("aarch64.sve.ld2", Intrinsic::aarch64_sve_ld2_sret)
-              .StartsWith("aarch64.sve.ld3", Intrinsic::aarch64_sve_ld3_sret)
-              .StartsWith("aarch64.sve.ld4", Intrinsic::aarch64_sve_ld4_sret)
-              .Default(Intrinsic::not_intrinsic);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Ty);
-      return true;
-    }
-    if (Name.starts_with("aarch64.sve.tuple.get")) {
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_extract, Tys);
-      return true;
-    }
-    if (Name.starts_with("aarch64.sve.tuple.set")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[2], Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-    static const Regex CreateTupleRegex(
-        "^aarch64\\.sve\\.tuple\\.create[234](.nxv[a-z0-9]+|$)");
-    if (CreateTupleRegex.match(Name)) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {F->getReturnType(), Args[1]};
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::vector_insert, Tys);
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vclz")) {
-      Type* args[2] = {
-        F->arg_begin()->getType(),
-        Type::getInt1Ty(F->getContext())
-      };
-      // Can't use Intrinsic::getDeclaration here as it adds a ".i1" to
-      // the end of the name. Change name from llvm.arm.neon.vclz.* to
-      //  llvm.ctlz.*
-      FunctionType* fType = FunctionType::get(F->getReturnType(), args, false);
-      NewFn = Function::Create(fType, F->getLinkage(), F->getAddressSpace(),
-                               "llvm.ctlz." + Name.substr(14), F->getParent());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vcnt")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctpop,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    static const Regex vstRegex("^arm\\.neon\\.vst([1234]|[234]lane)\\.v[a-z0-9]*$");
-    if (vstRegex.match(Name)) {
-      static const Intrinsic::ID StoreInts[] = {Intrinsic::arm_neon_vst1,
-                                                Intrinsic::arm_neon_vst2,
-                                                Intrinsic::arm_neon_vst3,
-                                                Intrinsic::arm_neon_vst4};
-
-      static const Intrinsic::ID StoreLaneInts[] = {
-        Intrinsic::arm_neon_vst2lane, Intrinsic::arm_neon_vst3lane,
-        Intrinsic::arm_neon_vst4lane
-      };
-
-      auto fArgs = F->getFunctionType()->params();
-      Type *Tys[] = {fArgs[0], fArgs[1]};
-      if (!Name.contains("lane"))
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          StoreInts[fArgs.size() - 3], Tys);
-      else
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          StoreLaneInts[fArgs.size() - 5], Tys);
-      return true;
-    }
-    if (Name == "aarch64.thread.pointer" || Name == "arm.thread.pointer") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqadds.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::sadd_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqaddu.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::uadd_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqsubs.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ssub_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("arm.neon.vqsubu.")) {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::usub_sat,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.starts_with("aarch64.neon.addp")) {
-      if (F->arg_size() != 2)
-        break; // Invalid IR.
-      VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
-      if (Ty && Ty->getElementType()->isFloatingPointTy()) {
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::aarch64_neon_faddp, Ty);
+    bool IsArm = Name.consume_front("arm.");
+    if (IsArm || Name.consume_front("aarch64.")) {
+      if (UpgradeArmOrAarch64IntrinsicFunction(IsArm, F, Name, NewFn))
         return true;
-      }
+      break;
     }
-
-    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and v16i8
-    // respectively
-    if ((Name.starts_with("arm.neon.bfdot.") ||
-         Name.starts_with("aarch64.neon.bfdot.")) &&
-        Name.ends_with("i8")) {
-      Intrinsic::ID IID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .Cases("arm.neon.bfdot.v2f32.v8i8",
-                     "arm.neon.bfdot.v4f32.v16i8",
-                     Intrinsic::arm_neon_bfdot)
-              .Cases("aarch64.neon.bfdot.v2f32.v8i8",
-                     "aarch64.neon.bfdot.v4f32.v16i8",
-                     Intrinsic::aarch64_neon_bfdot)
-              .Default(Intrinsic::not_intrinsic);
-      if (IID == Intrinsic::not_intrinsic)
-        break;
-
-      size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
-      assert((OperandWidth == 64 || OperandWidth == 128) &&
-             "Unexpected operand width");
-      LLVMContext &Ctx = F->getParent()->getContext();
-      std::array<Type *, 2> Tys {{
-        F->getReturnType(),
-        FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)
-      }};
-      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
-      return true;
-    }
-
-    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic anymore
-    // and accept v8bf16 instead of v16i8
-    if ((Name.starts_with("arm.neon.bfm") ||
-         Name.starts_with("aarch64.neon.bfm")) &&
-        Name.ends_with(".v4f32.v16i8")) {
-      Intrinsic::ID IID =
-          StringSwitch<Intrinsic::ID>(Name)
-              .Case("arm.neon.bfmmla.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmmla)
-              .Case("arm.neon.bfmlalb.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmlalb)
-              .Case("arm.neon.bfmlalt.v4f32.v16i8",
-                    Intrinsic::arm_neon_bfmlalt)
-              .Case("aarch64.neon.bfmmla.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmmla)
-              .Case("aarch64.neon.bfmlalb.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmlalb)
-              .Case("aarch64.neon.bfmlalt.v4f32.v16i8",
-                    Intrinsic::aarch64_neon_bfmlalt)
-              .Default(Intrinsic::not_intrinsic);
-      if (IID == Intrinsic::not_intrinsic)
-        break;
-
-      std::array<Type *, 0> Tys;
-      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
-      return true;
-    }
-
-    if (Name == "arm.mve.vctp64" &&
-        cast<FixedVectorType>(F->getReturnType())->getNumElements() == 4) {
-      // A vctp64 returning a v4i1 is converted to return a v2i1. Rename the
-      // function and deal with it below in UpgradeIntrinsicCall.
-      rename(F);
-      return true;
-    }
-    // These too are changed to accept a v2i1 insteead of the old v4i1.
-    if (Name == "arm.mve.mull.int.predicated.v2i64.v4i32.v4i1" ||
-        Name == "arm.mve.vqdmull.predicated.v2i64.v4i32.v4i1" ||
-        Name == "arm.mve.vldr.gather.base.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vldr.gather.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name ==
-            "arm.mve.vldr.gather.offset.predicated.v2i64.p0i64.v2i64.v4i1" ||
-        Name == "arm.mve.vldr.gather.offset.predicated.v2i64.p0.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.base.predicated.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.base.wb.predicated.v2i64.v2i64.v4i1" ||
-        Name ==
-            "arm.mve.vstr.scatter.offset.predicated.p0i64.v2i64.v2i64.v4i1" ||
-        Name == "arm.mve.vstr.scatter.offset.predicated.p0.v2i64.v2i64.v4i1" ||
-        Name == "arm.cde.vcx1q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx1qa.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx2q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx2qa.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx3q.predicated.v2i64.v4i1" ||
-        Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
-      return true;
 
     if (Name.consume_front("amdgcn.")) {
       if (Name == "alignbit") {
@@ -952,11 +1006,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
 
-      if (Name.starts_with("atomic.inc") || Name.starts_with("atomic.dec")) {
-        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-        // new declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("atomic.")) {
+        if (Name.starts_with("inc") || Name.starts_with("dec")) {
+          // These were replaced with atomicrmw uinc_wrap and udec_wrap, so
+          // there's no new declaration.
+          NewFn = nullptr;
+          return true;
+        }
+        break; // No other 'amdgcn.atomic.*'
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -966,24 +1023,26 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
           {F->getReturnType(), F->getArg(1)->getType()});
         return true;
       }
+      break; // No other 'amdgcn.*'
     }
 
     break;
   }
   case 'c': {
-    if (Name.starts_with("ctlz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
+    if (F->arg_size() == 1) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("ctlz.", Intrinsic::ctlz)
+                             .StartsWith("cttz.", Intrinsic::cttz)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
     }
-    if (Name.starts_with("cttz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.equals("coro.end") && F->arg_size() == 2) {
+
+    if (F->arg_size() == 2 && Name.equals("coro.end")) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
@@ -1299,7 +1358,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
 
   auto *ST = dyn_cast<StructType>(F->getReturnType());
-  if (ST && (!ST->isLiteral() || ST->isPacked())) {
+  if (ST && (!ST->isLiteral() || ST->isPacked()) &&
+      F->getIntrinsicID() != Intrinsic::not_intrinsic) {
     // Replace return type with literal non-packed struct. Only do this for
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
@@ -5212,10 +5272,12 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // This goes before adding new address spaces to prevent incoherent string
     // values.
     if (!DL.contains("-ni") && !DL.starts_with("ni"))
-      Res.append("-ni:7:8");
-    // Update ni:7 to ni:7:8.
+      Res.append("-ni:7:8:9");
+    // Update ni:7 to ni:7:8:9.
     if (DL.ends_with("ni:7"))
-      Res.append(":8");
+      Res.append(":8:9");
+    if (DL.ends_with("ni:7:8"))
+      Res.append(":9");
 
     // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
     // resources) An empty data layout has already been upgraded to G1 by now.
@@ -5223,6 +5285,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
       Res.append("-p7:160:256:256:32");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
       Res.append("-p8:128:128");
+    if (!DL.contains("-p9") && !DL.starts_with("p9"))
+      Res.append("-p9:192:256:256:32");
 
     return Res;
   }

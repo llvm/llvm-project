@@ -70,7 +70,7 @@ public:
 
 // Helper wrapper to inspect the internal state of the basic_syncbuf
 //
-// This is used the valiate some standard requirements and libc++
+// This is used to validate some standard requirements and libc++
 // implementation details.
 template <class CharT, class Traits, class Allocator>
 class syncbuf_inspector : public std::basic_syncbuf<CharT, Traits, Allocator> {

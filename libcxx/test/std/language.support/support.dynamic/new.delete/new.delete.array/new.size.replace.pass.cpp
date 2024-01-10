@@ -27,7 +27,9 @@ int delete_called = 0;
 void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc) {
     ++new_called;
     void* ret = std::malloc(s);
-    if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
+    if (!ret) {
+      std::abort(); // placate MSVC's unchecked malloc warning (assert() won't silence it)
+    }
     return  ret;
 }
 
@@ -38,7 +40,7 @@ void operator delete[](void* p) TEST_NOEXCEPT {
 
 int main(int, char**) {
     new_called = delete_called = 0;
-    int* x = new int[3];
+    int* x = DoNotOptimize(new int[3]);
     assert(x != nullptr);
     ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 

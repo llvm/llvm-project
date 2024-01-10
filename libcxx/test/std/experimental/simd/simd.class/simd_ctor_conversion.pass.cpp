@@ -7,6 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
+
+// TODO: This test makes incorrect assumptions about floating point conversions.
+//       See https://github.com/llvm/llvm-project/issues/74327.
+// XFAIL: optimization=speed
 
 // <experimental/simd>
 //

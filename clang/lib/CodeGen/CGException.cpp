@@ -277,7 +277,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
       if (llvm::GlobalVariable *GV = dyn_cast<llvm::GlobalVariable>(Val))
         // ObjC EH selector entries are always global variables with
         // names starting like this.
-        if (GV->getName().startswith("OBJC_EHTYPE"))
+        if (GV->getName().starts_with("OBJC_EHTYPE"))
           return false;
     } else {
       // Check if any of the filter values have the ObjC prefix.
@@ -288,7 +288,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
             cast<llvm::GlobalVariable>((*II)->stripPointerCasts()))
           // ObjC EH selector entries are always global variables with
           // names starting like this.
-          if (GV->getName().startswith("OBJC_EHTYPE"))
+          if (GV->getName().starts_with("OBJC_EHTYPE"))
             return false;
       }
     }
@@ -1917,7 +1917,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         const VarDecl *D = cast<VarDecl>(I.first);
         if (isa<ImplicitParamDecl>(D) &&
             D->getType() == getContext().VoidPtrTy) {
-          assert(D->getName().startswith("frame_pointer"));
+          assert(D->getName().starts_with("frame_pointer"));
           FramePtrAddrAlloca = cast<llvm::AllocaInst>(I.second.getPointer());
           break;
         }

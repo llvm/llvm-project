@@ -20,12 +20,14 @@
 #include <unistd.h>
 #include <unordered_map>
 
-#include "Debug.h"
-#include "Environment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+#include "Shared/Utils.h"
+#include "Utils/ELF.h"
+
 #include "GlobalHandler.h"
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
-#include "Utilities.h"
 #include "UtilitiesRTL.h"
 #include "omptarget.h"
 
@@ -40,6 +42,18 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#error "Missing preprocessor definitions for endianness detection."
+#endif
+
+// The HSA headers require these definitions.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define LITTLEENDIAN_CPU
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BIGENDIAN_CPU
+#endif
 
 #if defined(__has_include)
 #if __has_include("hsa/hsa.h")
@@ -161,8 +175,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
       /*force_copy_on_sdma=*/true);
-  // Increment to use one of three SDMA engines: 0x1, 0x2, 0x4
-  LocalSdmaEngine = (LocalSdmaEngine << 1) % 7;
+  // Increment to use one of two SDMA engines: 0x1, 0x2
+  LocalSdmaEngine = (LocalSdmaEngine << 1) % 3;
   SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
 
   return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine: %s");
@@ -1244,7 +1258,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -1310,7 +1324,7 @@ public:
     AMDGPUSignalTy *OutputSignals[2] = {};
     if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
       return Err;
-    for (auto Signal : OutputSignals) {
+    for (auto *Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -2110,6 +2124,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
     case TARGET_ALLOC_DEVICE:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
     case TARGET_ALLOC_HOST:
@@ -2691,11 +2706,8 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'amdgpu-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    GlobalTy Global(Name, sizeof(void *));
-    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
-      consumeError(std::move(Err));
+    if (!Handler.isSymbolInImage(*this, Image, Name))
       return Plugin::success();
-    }
 
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy AMDGPUKernel(Name);
@@ -3017,7 +3029,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    // Get the associated architecture and flags from the ELF.
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+    std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+
     for (hsa_agent_t Agent : KernelAgents) {
       std::string Target;
       auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
@@ -3040,7 +3060,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (Err)
         return std::move(Err);
 
-      if (!utils::isImageCompatibleWithEnv(Info, Target))
+      if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
+                                           ElfOrErr->getPlatformFlags(),
+                                           Target))
         return false;
     }
     return true;
@@ -3193,6 +3215,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;
     ImplArgs->GridDims = 1;
+    ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
 
   // Push the kernel launch into the stream.
@@ -3306,6 +3329,7 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
   case TARGET_ALLOC_HOST:

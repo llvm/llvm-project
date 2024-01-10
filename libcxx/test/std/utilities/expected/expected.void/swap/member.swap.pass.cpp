@@ -37,13 +37,13 @@ void swap(NotSwappable&, NotSwappable&) = delete;
 // !is_swappable_v<E>
 static_assert(!HasMemberSwap<NotSwappable>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<E>
-static_assert(!HasMemberSwap<NotMoveContructible>);
+static_assert(!HasMemberSwap<NotMoveConstructible>);
 
 // Test noexcept
 struct MoveMayThrow {

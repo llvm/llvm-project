@@ -215,7 +215,7 @@ define void @local_var_m2_with_varsize_object(i64 %n) {
 ; RV64IV-NEXT:    slli s1, s1, 1
 ; RV64IV-NEXT:    sub s1, s0, s1
 ; RV64IV-NEXT:    addi s1, s1, -32
-; RV64IV-NEXT:    call notdead@plt
+; RV64IV-NEXT:    call notdead
 ; RV64IV-NEXT:    vl2r.v v8, (s1)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 2
@@ -270,7 +270,7 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    slli s2, s2, 1
 ; RV64IV-NEXT:    add s2, s1, s2
 ; RV64IV-NEXT:    addi s2, s2, 224
-; RV64IV-NEXT:    call notdead2@plt
+; RV64IV-NEXT:    call notdead2
 ; RV64IV-NEXT:    lw zero, 124(s1)
 ; RV64IV-NEXT:    vl2r.v v8, (s2)
 ; RV64IV-NEXT:    addi a0, s1, 224

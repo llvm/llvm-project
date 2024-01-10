@@ -218,8 +218,8 @@ jr a0
 # CHECK-NEXT: [1]   - SiFive7IDiv
 # CHECK-NEXT: [2]   - SiFive7PipeA
 # CHECK-NEXT: [3]   - SiFive7PipeB
-# CHECK-NEXT: [4]   - SiFive7PipeV
-# CHECK-NEXT: [5]   - SiFive7VA
+# CHECK-NEXT: [4]   - SiFive7VA
+# CHECK-NEXT: [5]   - SiFive7VCQ
 # CHECK-NEXT: [6]   - SiFive7VL
 # CHECK-NEXT: [7]   - SiFive7VS
 

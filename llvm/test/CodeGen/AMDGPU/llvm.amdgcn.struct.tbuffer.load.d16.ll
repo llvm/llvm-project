@@ -4,6 +4,7 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX10-PACKED %s
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED %s
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX12-PACKED %s
 
 define amdgpu_ps half @tbuffer_load_d16_x(<4 x i32> inreg %rsrc) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_load_d16_x:
@@ -33,6 +34,13 @@ define amdgpu_ps half @tbuffer_load_d16_x(<4 x i32> inreg %rsrc) {
 ; GFX11-PACKED-NEXT:    tbuffer_load_d16_format_x v0, v0, s[0:3], 0 format:[BUF_FMT_32_FLOAT] idxen
 ; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX12-PACKED-LABEL: tbuffer_load_d16_x:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-PACKED-NEXT:    tbuffer_load_d16_format_x v0, v0, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen
+; GFX12-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call half @llvm.amdgcn.struct.tbuffer.load.f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)
   ret half %data
@@ -70,6 +78,14 @@ define amdgpu_ps half @tbuffer_load_d16_xy(<4 x i32> inreg %rsrc) {
 ; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX12-PACKED-LABEL: tbuffer_load_d16_xy:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-PACKED-NEXT:    tbuffer_load_d16_format_xy v0, v0, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen
+; GFX12-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX12-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <2 x half> @llvm.amdgcn.struct.tbuffer.load.v2f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <2 x half> %data, i32 1
@@ -108,6 +124,14 @@ define amdgpu_ps half @tbuffer_load_d16_xyz(<4 x i32> inreg %rsrc) {
 ; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX12-PACKED-LABEL: tbuffer_load_d16_xyz:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-PACKED-NEXT:    tbuffer_load_d16_format_xyz v[0:1], v0, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen
+; GFX12-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <3 x half> @llvm.amdgcn.struct.tbuffer.load.v3f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <3 x half> %data, i32 2
@@ -146,6 +170,14 @@ define amdgpu_ps half @tbuffer_load_d16_xyzw(<4 x i32> inreg %rsrc) {
 ; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
 ; GFX11-PACKED-NEXT:    ; return to shader part epilog
+;
+; GFX12-PACKED-LABEL: tbuffer_load_d16_xyzw:
+; GFX12-PACKED:       ; %bb.0: ; %main_body
+; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-PACKED-NEXT:    tbuffer_load_d16_format_xyzw v[0:1], v0, s[0:3], null format:[BUF_FMT_32_FLOAT] idxen
+; GFX12-PACKED-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PACKED-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX12-PACKED-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x half> @llvm.amdgcn.struct.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <4 x half> %data, i32 3

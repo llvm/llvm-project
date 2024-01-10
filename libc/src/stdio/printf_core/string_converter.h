@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"

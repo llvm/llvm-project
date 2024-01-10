@@ -22,6 +22,8 @@ set(files
   __algorithm/find_first_of.h
   __algorithm/find_if.h
   __algorithm/find_if_not.h
+  __algorithm/find_segment_if.h
+  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -87,6 +89,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
+  __algorithm/pstl_equal.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
@@ -106,6 +109,7 @@ set(files
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
+  __algorithm/ranges_contains.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -836,6 +840,7 @@ set(files
   __type_traits/void_t.h
   __undef_macros
   __utility/as_const.h
+  __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/convert_to_integral.h
@@ -849,6 +854,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/move.h
+  __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
@@ -908,10 +914,8 @@ set(files
   expected
   experimental/__config
   experimental/__memory
-  experimental/__simd/abi_tag.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
-  experimental/__simd/internal_declaration.h
   experimental/__simd/reference.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h
@@ -919,23 +923,12 @@ set(files
   experimental/__simd/traits.h
   experimental/__simd/utility.h
   experimental/__simd/vec_ext.h
-  experimental/deque
-  experimental/forward_list
   experimental/iterator
-  experimental/list
-  experimental/map
   experimental/memory
-  experimental/memory_resource
   experimental/propagate_const
-  experimental/regex
-  experimental/set
   experimental/simd
-  experimental/string
   experimental/type_traits
-  experimental/unordered_map
-  experimental/unordered_set
   experimental/utility
-  experimental/vector
   ext/__hash
   ext/hash_map
   ext/hash_set

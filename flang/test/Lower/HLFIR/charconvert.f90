@@ -63,7 +63,7 @@ end subroutine
 ! CHECK:   %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]]#0 typeparams %[[VAL_2]]#1 {uniq_name = "_QFcharconvert3Ec4"} : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
 ! CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_0]]#1, %[[VAL_0]]#1 : index
 ! CHECK:   %[[VAL_5:.*]] = hlfir.concat %[[VAL_1]]#0, %[[VAL_1]]#0 len %[[VAL_4]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+! CHECK:   %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] typeparams %[[VAL_4]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:   %[[VAL_6:.*]] = fir.alloca !fir.char<4,?>(%[[VAL_4]] : index)
 ! CHECK:   fir.char_convert %[[VAL_7]]#1 for %[[VAL_4:.*]] to %[[VAL_6]] : !fir.ref<!fir.char<1,?>>, index, !fir.ref<!fir.char<4,?>>
 ! CHECK:   hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.char<1,?>>, i1

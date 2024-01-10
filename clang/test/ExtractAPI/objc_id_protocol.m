@@ -150,6 +150,10 @@
         {
           "kind": "identifier",
           "spelling": "obj1"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -218,6 +222,10 @@
         {
           "kind": "identifier",
           "spelling": "obj2"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

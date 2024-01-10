@@ -1287,8 +1287,7 @@ static const char *matchFlagWithArg(StringRef Expected,
                                     ArrayRef<const char *> Args) {
   StringRef Arg = *ArgIt;
 
-  if (Arg.startswith("--"))
-    Arg = Arg.substr(2);
+  Arg.consume_front("--");
 
   size_t len = Expected.size();
   if (Arg == Expected) {
@@ -1297,7 +1296,7 @@ static const char *matchFlagWithArg(StringRef Expected,
 
     return *ArgIt;
   }
-  if (Arg.startswith(Expected) && Arg.size() > len && Arg[len] == '=')
+  if (Arg.starts_with(Expected) && Arg.size() > len && Arg[len] == '=')
     return Arg.data() + len + 1;
 
   return nullptr;

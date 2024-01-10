@@ -2649,6 +2649,8 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
 
   if (BaseElementType->isIncompleteType()) {
     return false;
+  } else if (!BaseElementType->isObjectType()) {
+    return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
   } else {
@@ -3410,6 +3412,13 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   }
 
   llvm_unreachable("Invalid calling convention.");
+}
+
+void FunctionProtoType::ExceptionSpecInfo::instantiate() {
+  assert(Type == EST_Uninstantiated);
+  NoexceptExpr =
+      cast<FunctionProtoType>(SourceTemplate->getType())->getNoexceptExpr();
+  Type = EST_DependentNoexcept;
 }
 
 FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,

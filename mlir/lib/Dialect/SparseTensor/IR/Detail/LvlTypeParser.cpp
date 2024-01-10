@@ -1,4 +1,4 @@
-//===- LvlTypeParser.h - `DimLevelType` parser ----------------------------===//
+//===- LvlTypeParser.h - `LevelType` parser ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +58,7 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     return failure();
   }
 
-  ERROR_IF(!isValidLT(static_cast<DimLevelType>(properties)),
+  ERROR_IF(!isValidLT(static_cast<LevelType>(properties)),
            "invalid level type: level format doesn't support the properties");
   return properties;
 }

@@ -40,7 +40,8 @@ class Module;
 
 /// Finds dbg.declare intrinsics declaring local variables as living in the
 /// memory that 'V' points to.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+void findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers, Value *V,
+                     SmallVectorImpl<DPValue *> *DPValues = nullptr);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
@@ -102,10 +103,12 @@ public:
   /// Process a single instruction and collect debug info anchors.
   void processInstruction(const Module &M, const Instruction &I);
 
-  /// Process DbgVariableIntrinsic.
-  void processVariable(const Module &M, const DbgVariableIntrinsic &DVI);
+  /// Process a DILocalVariable.
+  void processVariable(const Module &M, const DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
+  // Process a DPValue, much like a DbgVariableIntrinsic.
+  void processDPValue(const Module &M, const DPValue &DPV);
 
   /// Process subprogram.
   void processSubprogram(DISubprogram *SP);

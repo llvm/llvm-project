@@ -21,7 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
@@ -178,6 +178,9 @@ translateInputToOutputLocationList(const BinaryFunction &BF,
   return MergedLL;
 }
 
+using namespace dwarf_linker;
+using namespace dwarf_linker::classic;
+
 namespace llvm {
 namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
@@ -278,10 +281,10 @@ private:
 
 public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
-              DWARFLinker::OutputFileType OutFileType,
+              DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               std::function<StringRef(StringRef Input)> Translator,
-              DWARFLinker::messageHandler Warning)
+              DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
         DIEBldr(DIEBldr), Rewriter(Rewriter){};
 
@@ -457,7 +460,7 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   DWARFRewriter &Rewriter) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, llvm::DWARFLinker::OutputFileType::Object, OutFile,
+      &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
       [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
@@ -481,7 +484,7 @@ emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
 
 static void emitDWOBuilder(const std::string &DWOName,
                            DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
-                           const DWARFUnit &SplitCU, DWARFUnit &CU,
+                           DWARFUnit &SplitCU, DWARFUnit &CU,
                            DWARFRewriter::DWPState &State,
                            DebugLocWriter &LocWriter) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
@@ -498,17 +501,15 @@ static void emitDWOBuilder(const std::string &DWOName,
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    // TODO: Handle DWP as input. Right now it will iterate over all of CUs and
-    // TUs
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_info_section_units()) {
+      if (!CU->isTypeUnit())
+        continue;
       DWARFRewriter::UnitMeta MI =
           emitUnit(DWODIEBuilder, *Streamer, *CU.get());
-      if (CU->isTypeUnit())
-        TUMetaVector.emplace_back(MI);
-      else
-        CUMI = MI;
+      TUMetaVector.emplace_back(MI);
     }
+    CUMI = emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
@@ -556,7 +557,7 @@ void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
                                     const DWARFUnit &Unit,
                                     DIEValue &DIEAttrInfo, StringRef Str) {
   uint32_t NewOffset = StrWriter->addString(Str);
-  if (Unit.getVersion() == 5) {
+  if (Unit.getVersion() >= 5) {
     StrOffstsWriter->updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
                                       NewOffset);
     return;
@@ -681,6 +682,8 @@ void DWARFRewriter::updateDebugInfo() {
     assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
 
     if (!opts::DwarfOutputPath.empty()) {
+      if (!sys::fs::exists(opts::DwarfOutputPath))
+        sys::fs::create_directory(opts::DwarfOutputPath);
       addStringHelper(DIEBldr, UnitDIE, Unit, CompDirAttrInfo,
                       opts::DwarfOutputPath.c_str());
     }
@@ -696,8 +699,6 @@ void DWARFRewriter::updateDebugInfo() {
     std::optional<DWARFUnit *> SplitCU;
     std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
-    StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
-                                Unit->getStringOffsetsTableContribution());
     if (DWOId)
       SplitCU = BC.getDWOCU(*DWOId);
     DebugLocWriter *DebugLocWriter = createRangeLocList(*Unit);
@@ -707,7 +708,7 @@ void DWARFRewriter::updateDebugInfo() {
     // Skipping CUs that failed to load.
     if (SplitCU) {
       DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
-      DWODIEBuilder.buildBoth();
+      DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
 
@@ -752,7 +753,7 @@ void DWARFRewriter::updateDebugInfo() {
   };
 
   DIEBuilder DIEBlder(BC.DwCtx.get());
-  DIEBlder.buildTypeUnits();
+  DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
       std::make_unique<raw_svector_ostream>(OutBuffer);
@@ -963,8 +964,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               std::move(OutputRanges), CachedRanges);
           OutputRanges.clear();
         } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({RangesOrError.get().front().LowPC,
-                                  RangesOrError.get().front().HighPC});
+          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());

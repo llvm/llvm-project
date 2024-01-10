@@ -1145,15 +1145,14 @@ def DataBoundsOp : OpenMP_Op<"bounds",
 }
 
 def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
-  let arguments = (ins Optional<AnyType>:$val,
-                       Optional<OpenMP_PointerLikeType>:$var_ptr,
-                       OptionalAttr<TypeAttr>:$var_type,
+  let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
+                       TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name);
-  let results = (outs AnyType:$omp_ptr);
+  let results = (outs OpenMP_PointerLikeType:$omp_ptr);
 
   let description = [{
     The MapInfoOp captures information relating to individual OpenMP map clauses
@@ -1184,9 +1183,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
 
     Description of arguments:
-    - `val`: The value to copy.
     - `var_ptr`: The address of variable to copy.
-    - `var_type`: The type of the variable/value to copy.
+    - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
@@ -1202,10 +1200,9 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
+    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
     oilist(
-        `val` `(` $val `:` type($val) `)`
-      | `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
-      | `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
       | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `bounds` `(` $bounds `)`
@@ -1367,6 +1364,56 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
     | `device` `(` $device `:` type($device) `)`
     | `nowait` $nowait
     | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    ) attr-dict
+   }];
+
+  let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// 2.14.6 target update data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
+                                                 [AttrSizedOperandSegments]>{
+  let  summary = "target update data construct";
+  let description = [{
+    The target update directive makes the corresponding list items in the device
+    data environment consistent with their original list items, according to the
+    specified motion clauses. The target update construct is a stand-alone
+    directive.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed
+    on the host device.
+
+    The optional $device parameter specifies the device number for the
+    target region.
+
+    The optional $nowait eliminates the implicit barrier so the parent
+    task can make progress even if the target task is not yet completed.
+
+    We use `MapInfoOp` to model the motion clauses and their modifiers. Even
+    though the spec differentiates between map-types & map-type-modifiers vs.
+    motion-clauses & motion-modifiers, the motion clauses and their modifiers are
+    a subset of map types and their modifiers. The subset relation is handled in
+    during verification to make sure the restrictions for target update are
+    respected.
+
+    TODO: depend clause
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$motion_operands);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `nowait` $nowait
+    | `motion_entries` `(` $motion_operands `:` type($motion_operands) `)`
     ) attr-dict
    }];
 

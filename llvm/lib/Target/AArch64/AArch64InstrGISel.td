@@ -209,7 +209,7 @@ def G_FCMLTZ : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PREFETCH : AArch64GenericInstruction {
+def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
   let hasSideEffects = 1;
@@ -287,7 +287,7 @@ def : GINodeEquiv<G_SDOT, AArch64sdot>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
-def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
 
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),

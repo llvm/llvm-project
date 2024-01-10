@@ -30,7 +30,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -431,7 +430,7 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
 
 /// Helper method to check if the underlying ABI is AAPCS
 static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().startswith("aapcs");
+  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 LValue CodeGenFunction::
@@ -926,26 +925,15 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
         !CE->getSubExpr()->isFlexibleArrayMemberLike(CGF.getContext(),
                                                      StrictFlexArraysLevel)) {
-      CodeGenFunction::SanitizerScope SanScope(&CGF);
-
       IndexedType = CE->getSubExpr()->getType();
       const ArrayType *AT = IndexedType->castAsArrayTypeUnsafe();
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
         return CGF.Builder.getInt(CAT->getSize());
-
-      if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
+      else if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
         return CGF.getVLASize(VAT).NumElts;
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
-
-    if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
-      IndexedType = Base->getType();
-      const Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
-      return CGF.EmitAnyExprToTemp(E).getScalarVal();
-    }
   }
-
-  CodeGenFunction::SanitizerScope SanScope(&CGF);
 
   QualType EltTy{Base->getType()->getPointeeOrArrayElementType(), 0};
   if (llvm::Value *POS = CGF.LoadPassedObjectSize(Base, EltTy)) {
@@ -956,122 +944,13 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-const Expr *
-CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
-                                         const ValueDecl *CountedByVD) {
-  // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Expr *CountedByExpr = const_cast<Expr *>(Base)->IgnoreParenImpCasts();
-
-  // Work our way up the expression until we reach the DeclRefExpr.
-  while (!isa<DeclRefExpr>(CountedByExpr))
-    if (const auto *ME = dyn_cast<MemberExpr>(CountedByExpr))
-      CountedByExpr = ME->getBase()->IgnoreParenImpCasts();
-
-  // Add back an implicit cast to create the required pr-value.
-  CountedByExpr = ImplicitCastExpr::Create(
-      getContext(), CountedByExpr->getType(), CK_LValueToRValue, CountedByExpr,
-      nullptr, VK_PRValue, FPOptionsOverride());
-
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
-    // The counted_by field is inside an anonymous struct / union. The
-    // IndirectFieldDecl has the correct order of FieldDecls to build this
-    // easily. (Yay!)
-    for (NamedDecl *ND : IFD->chain()) {
-      auto *VD = cast<ValueDecl>(ND);
-      CountedByExpr =
-          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
-                                     CountedByExpr->getType()->isPointerType(),
-                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
-    }
-  } else {
-    CountedByExpr = MemberExpr::CreateImplicit(
-        getContext(), const_cast<Expr *>(CountedByExpr),
-        CountedByExpr->getType()->isPointerType(),
-        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
-        OK_Ordinary);
-  }
-
-  return CountedByExpr;
-}
-
-const ValueDecl *
-CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                              const RecordDecl *RD) {
-  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-      getLangOpts().getStrictFlexArraysLevel();
-
-  for (const Decl *D : RD->decls()) {
-    if (const auto *VD = dyn_cast<ValueDecl>(D);
-        VD && Decl::isFlexibleArrayMemberLike(
-                  Ctx, VD, VD->getType(), StrictFlexArraysLevel,
-                  /*IgnoreTemplateOrMacroSubstitution=*/true))
-      return VD;
-
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record))
-        return VD;
-  }
-
-  return nullptr;
-}
-
-const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
-  ASTContext &Ctx = getContext();
-  const RecordDecl *OuterRD = nullptr;
-  const FieldDecl *FD = nullptr;
-
-  Base = Base->IgnoreParenImpCasts();
-
-  // Get the outer-most lexical RecordDecl.
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
-    QualType Ty = DRE->getDecl()->getType();
-    if (Ty->isPointerType())
-      Ty = Ty->getPointeeType();
-
-    if (const auto *RD = Ty->getAsRecordDecl())
-      OuterRD = RD->getOuterLexicalRecordContext();
-  } else if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-    if (const ValueDecl *MD = ME->getMemberDecl()) {
-      OuterRD = MD->getDeclContext()->getOuterLexicalRecordContext();
-
-      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-          getLangOpts().getStrictFlexArraysLevel();
-      if (Decl::isFlexibleArrayMemberLike(
-              Ctx, MD, MD->getType(), StrictFlexArraysLevel,
-              /*IgnoreTemplateOrMacroSubstitution=*/true))
-        // Base is referencing the FAM itself.
-        FD = dyn_cast<FieldDecl>(MD);
-    }
-  }
-
-  if (!OuterRD)
-    return nullptr;
-
-  if (!FD) {
-    const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, OuterRD);
-    FD = dyn_cast_if_present<FieldDecl>(VD);
-    if (!FD)
-      return nullptr;
-  }
-
-  const auto *CBA = FD->getAttr<CountedByAttr>();
-  if (!CBA)
-    return nullptr;
-
-  DeclarationName DName(CBA->getCountedByField());
-  DeclContext::lookup_result Lookup = OuterRD->lookup(DName);
-
-  if (Lookup.empty())
-    return nullptr;
-
-  return dyn_cast<ValueDecl>(Lookup.front());
-}
-
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
                                       llvm::Value *Index, QualType IndexType,
                                       bool Accessed) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
+  SanitizerScope SanScope(this);
+
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
     getLangOpts().getStrictFlexArraysLevel();
 
@@ -1080,8 +959,6 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
       getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
   if (!Bound)
     return;
-
-  SanitizerScope SanScope(this);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -2158,6 +2035,14 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   llvm::Value *Vec = Builder.CreateLoad(LV.getExtVectorAddress(),
                                         LV.isVolatileQualified());
 
+  // HLSL allows treating scalars as one-element vectors. Converting the scalar
+  // IR value to a vector here allows the rest of codegen to behave as normal.
+  if (getLangOpts().HLSL && !Vec->getType()->isVectorTy()) {
+    llvm::Type *DstTy = llvm::FixedVectorType::get(Vec->getType(), 1);
+    llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
+    Vec = Builder.CreateInsertElement(DstTy, Vec, Zero, "cast.splat");
+  }
+
   const llvm::Constant *Elts = LV.getExtVectorElts();
 
   // If the result of the expression is a non-vector type, we must be extracting
@@ -2427,10 +2312,20 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
 void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
+  // HLSL allows storing to scalar values through ExtVector component LValues.
+  // To support this we need to handle the case where the destination address is
+  // a scalar.
+  Address DstAddr = Dst.getExtVectorAddress();
+  if (!DstAddr.getElementType()->isVectorTy()) {
+    assert(!Dst.getType()->isVectorType() &&
+           "this should only occur for non-vector l-values");
+    Builder.CreateStore(Src.getScalarVal(), DstAddr, Dst.isVolatileQualified());
+    return;
+  }
+
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
-  llvm::Value *Vec = Builder.CreateLoad(Dst.getExtVectorAddress(),
-                                        Dst.isVolatileQualified());
+  llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
   const llvm::Constant *Elts = Dst.getExtVectorElts();
 
   llvm::Value *SrcVal = Src.getScalarVal();
@@ -2478,7 +2373,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       llvm_unreachable("unexpected shorten vector length");
     }
   } else {
-    // If the Src is a scalar (not a vector) it must be updating one element.
+    // If the Src is a scalar (not a vector), and the target is a vector it must
+    // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
@@ -3038,9 +2934,20 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     return MakeAddrLValue(CGM.GetAddrOfMSGuidDecl(GD), T,
                           AlignmentSource::Decl);
 
-  if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND))
-    return MakeAddrLValue(CGM.GetAddrOfTemplateParamObject(TPO), T,
-                          AlignmentSource::Decl);
+  if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+    auto ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
+    auto AS = getLangASFromTargetAS(ATPO.getAddressSpace());
+
+    if (AS != T.getAddressSpace()) {
+      auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
+      auto PtrTy = ATPO.getElementType()->getPointerTo(TargetAS);
+      auto ASC = getTargetHooks().performAddrSpaceCast(
+          CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
+      ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
+    }
+
+    return MakeAddrLValue(ATPO, T, AlignmentSource::Decl);
+  }
 
   llvm_unreachable("Unhandled DeclRefExpr");
 }
@@ -3126,7 +3033,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   auto SL = E->getFunctionName();
   assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
   StringRef FnName = CurFn->getName();
-  if (FnName.startswith("\01"))
+  if (FnName.starts_with("\01"))
     FnName = FnName.substr(1);
   StringRef NameItems[] = {
       PredefinedExpr::getIdentKindName(E->getIdentKind()), FnName};
@@ -3803,6 +3710,33 @@ static QualType getFixedSizeElementType(const ASTContext &ctx,
   return eltType;
 }
 
+static bool hasBPFPreserveStaticOffset(const RecordDecl *D) {
+  return D && D->hasAttr<BPFPreserveStaticOffsetAttr>();
+}
+
+static bool hasBPFPreserveStaticOffset(const Expr *E) {
+  if (!E)
+    return false;
+  QualType PointeeType = E->getType()->getPointeeType();
+  if (PointeeType.isNull())
+    return false;
+  if (const auto *BaseDecl = PointeeType->getAsRecordDecl())
+    return hasBPFPreserveStaticOffset(BaseDecl);
+  return false;
+}
+
+// Wraps Addr with a call to llvm.preserve.static.offset intrinsic.
+static Address wrapWithBPFPreserveStaticOffset(CodeGenFunction &CGF,
+                                               Address &Addr) {
+  if (!CGF.getTarget().getTriple().isBPF())
+    return Addr;
+
+  llvm::Function *Fn =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::preserve_static_offset);
+  llvm::CallInst *Call = CGF.Builder.CreateCall(Fn, {Addr.getPointer()});
+  return Address(Call, Addr.getElementType(), Addr.getAlignment());
+}
+
 /// Given an array base, check whether its member access belongs to a record
 /// with preserve_access_index attribute or not.
 static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
@@ -3863,6 +3797,9 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   CharUnits eltSize = CGF.getContext().getTypeSizeInChars(eltType);
   CharUnits eltAlign =
     getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
+
+  if (hasBPFPreserveStaticOffset(Base))
+    addr = wrapWithBPFPreserveStaticOffset(CGF, addr);
 
   llvm::Value *eltPtr;
   auto LastIndex = dyn_cast<llvm::ConstantInt>(indices.back());
@@ -4492,6 +4429,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     Address Addr = base.getAddress(*this);
     unsigned Idx = RL.getLLVMFieldNo(field);
     const RecordDecl *rec = field->getParent();
+    if (hasBPFPreserveStaticOffset(rec))
+      Addr = wrapWithBPFPreserveStaticOffset(*this, Addr);
     if (!UseVolatile) {
       if (!IsInPreservedAIRegion &&
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
@@ -4564,6 +4503,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   }
 
   Address addr = base.getAddress(*this);
+  if (hasBPFPreserveStaticOffset(rec))
+    addr = wrapWithBPFPreserveStaticOffset(*this, addr);
   if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
     if (CGM.getCodeGenOpts().StrictVTablePointers &&
         ClassDef->isDynamicClass()) {
@@ -4868,7 +4809,6 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToPointer:
   case CK_PointerToIntegral:
   case CK_PointerToBoolean:
-  case CK_VectorSplat:
   case CK_IntegralCast:
   case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
@@ -5033,6 +4973,13 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   }
   case CK_ZeroToOCLOpaqueType:
     llvm_unreachable("NULL to OpenCL opaque type lvalue cast is not valid");
+
+  case CK_VectorSplat: {
+    // LValue results of vector splats are only supported in HLSL.
+    if (!getLangOpts().HLSL)
+      return EmitUnsupportedLValue(E, "unexpected cast lvalue");
+    return EmitLValue(E->getSubExpr());
+  }
   }
 
   llvm_unreachable("Unhandled lvalue cast kind?");

@@ -20,9 +20,22 @@ void check_fgetc(void) {
   fclose(fp);
 }
 
+void check_fgets(void) {
+  FILE *fp = tmpfile();
+  char buf[256];
+  fgets(buf, sizeof(buf), fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_fputc(void) {
   FILE *fp = tmpfile();
   fputc('A', fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_fputs(void) {
+  FILE *fp = tmpfile();
+  fputs("ABC", fp); // expected-warning {{Stream pointer might be NULL}}
   fclose(fp);
 }
 
@@ -87,6 +100,13 @@ void f_open(void) {
   char buf[1024];
   fread(buf, 1, 1, p); // expected-warning {{Stream pointer might be NULL}}
   fclose(p);
+}
+
+void f_dopen(int fd) {
+  FILE *F = fdopen(fd, "r");
+  char buf[1024];
+  fread(buf, 1, 1, F); // expected-warning {{Stream pointer might be NULL}}
+  fclose(F);
 }
 
 void f_seek(void) {

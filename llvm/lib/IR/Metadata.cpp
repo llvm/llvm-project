@@ -249,8 +249,13 @@ SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
       continue;
     DPVUsersWithID.push_back(&UseMap[Pair.first]);
   }
+  // Order DPValue users in reverse-creation order. Normal dbg.value users
+  // of MetadataAsValues are ordered by their UseList, i.e. reverse order of
+  // when they were added: we need to replicate that here. The structure of
+  // debug-info output depends on the ordering of intrinsics, thus we need
+  // to keep them consistent for comparisons sake.
   llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
+    return UserA->second > UserB->second;
   });
   SmallVector<DPValue *> DPVUsers;
   for (auto UserWithID : DPVUsersWithID)
@@ -1561,7 +1566,7 @@ void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
            "Expect existing attachment to be mapped");
 
     auto &InstVec = InstrsIt->second;
-    auto *InstIt = std::find(InstVec.begin(), InstVec.end(), this);
+    auto *InstIt = llvm::find(InstVec, this);
     assert(InstIt != InstVec.end() &&
            "Expect instruction to be mapped to attachment");
     // The vector contains a ptr to this. If this is the only element in the

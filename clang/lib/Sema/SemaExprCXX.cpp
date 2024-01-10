@@ -843,21 +843,21 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
     //       operation from the operand to the exception object (15.1) can be
     //       omitted by constructing the automatic object directly into the
     //       exception object
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Ex->IgnoreParens()))
-      if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (Var->hasLocalStorage() && !Var->getType().isVolatileQualified()) {
-          for( ; S; S = S->getParent()) {
-            if (S->isDeclScope(Var)) {
-              IsThrownVarInScope = true;
-              break;
-            }
-
-            // FIXME: Many of the scope checks here seem incorrect.
-            if (S->getFlags() &
-                (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
-                 Scope::ObjCMethodScope | Scope::TryScope))
-              break;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Ex->IgnoreParens()))
+      if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl());
+          Var && Var->hasLocalStorage() &&
+          !Var->getType().isVolatileQualified()) {
+        for (; S; S = S->getParent()) {
+          if (S->isDeclScope(Var)) {
+            IsThrownVarInScope = true;
+            break;
           }
+
+          // FIXME: Many of the scope checks here seem incorrect.
+          if (S->getFlags() &
+              (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+               Scope::ObjCMethodScope | Scope::TryScope))
+            break;
         }
       }
   }

@@ -382,14 +382,15 @@ define <4 x i1> @compare_geps_same_indices_scalar_vector_base_mismatch(ptr %ptr,
 define ptr @indexed_compare(ptr %A, i64 %offset) {
 ; CHECK-LABEL: @indexed_compare(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i64 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RHS_ADD]] = add nsw i64 [[RHS_IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 100
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i64 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i64 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 400
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
 ; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
@@ -410,16 +411,16 @@ bb2:
 define ptr @indexed_compare_different_types(ptr %A, i64 %offset) {
 ; CHECK-LABEL: @indexed_compare_different_types(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = shl nsw i64 [[OFFSET:%.*]], 2
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 100
-; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i64 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i64 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i64 [[RHS_IDX]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 800
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    ret ptr [[RHS]]
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
 ;
 entry:
   %tmp = getelementptr inbounds i32, ptr %A, i64 %offset

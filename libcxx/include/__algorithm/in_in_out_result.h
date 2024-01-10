@@ -31,18 +31,16 @@ struct in_in_out_result {
   _LIBCPP_NO_UNIQUE_ADDRESS _OutIter1 out;
 
   template <class _InIter3, class _InIter4, class _OutIter2>
-    requires convertible_to<const _InIter1&, _InIter3>
-          && convertible_to<const _InIter2&, _InIter4> && convertible_to<const _OutIter1&, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  operator in_in_out_result<_InIter3, _InIter4, _OutIter2>() const& {
+    requires convertible_to<const _InIter1&, _InIter3> && convertible_to<const _InIter2&, _InIter4> &&
+             convertible_to<const _OutIter1&, _OutIter2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_in_out_result<_InIter3, _InIter4, _OutIter2>() const& {
     return {in1, in2, out};
   }
 
   template <class _InIter3, class _InIter4, class _OutIter2>
-    requires convertible_to<_InIter1, _InIter3>
-          && convertible_to<_InIter2, _InIter4> && convertible_to<_OutIter1, _OutIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr
-  operator in_in_out_result<_InIter3, _InIter4, _OutIter2>() && {
+    requires convertible_to<_InIter1, _InIter3> && convertible_to<_InIter2, _InIter4> &&
+             convertible_to<_OutIter1, _OutIter2>
+  _LIBCPP_HIDE_FROM_ABI constexpr operator in_in_out_result<_InIter3, _InIter4, _OutIter2>() && {
     return {std::move(in1), std::move(in2), std::move(out)};
   }
 };

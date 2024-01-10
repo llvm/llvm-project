@@ -770,6 +770,10 @@ private:
   void HandlePragmaFEnvRound();
 
   /// Handle the annotation token produced for
+  /// #pragma STDC CX_LIMITED_RANGE...
+  void HandlePragmaCXLimitedRange();
+
+  /// Handle the annotation token produced for
   /// #pragma float_control
   void HandlePragmaFloatControl();
 
@@ -3532,8 +3536,19 @@ public:
   /// Placeholder for now, should just ignore the directives after emitting a
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
+public:
   DeclGroupPtrTy ParseOpenACCDirectiveDecl();
   StmtResult ParseOpenACCDirectiveStmt();
+
+private:
+  void ParseOpenACCDirective();
+  /// Helper that parses an ID Expression based on the language options.
+  ExprResult ParseOpenACCIDExpression();
+  /// Parses the variable list for the `cache` construct.
+  void ParseOpenACCCacheVarList();
+  /// Parses a single variable in a variable list for the 'cache' construct.
+  bool ParseOpenACCCacheVar();
+  bool ParseOpenACCWaitArgument();
 
 private:
   //===--------------------------------------------------------------------===//

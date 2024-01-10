@@ -28,7 +28,7 @@
 !       executable and may find the GNU linker from MinGW or Cygwin.
 ! UNIX-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! UNIX-SAME: "[[object_file]]"
-! UNIX-SAME: "-lFortran_main" "-lFortranRuntime" "-lFortranDecimal" "-lm"
+! UNIX-SAME: "--whole-archive" "-lFortran_main" "--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal" "-lm"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
@@ -38,7 +38,7 @@
 
 ! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! HAIKU-SAME: "[[object_file]]"
-! HAIKU-SAME: "-lFortran_main" "-lFortranRuntime" "-lFortranDecimal"
+! HAIKU-SAME: "--whole-archive" "-lFortran_main" "--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"

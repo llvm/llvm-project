@@ -83,7 +83,7 @@ static Triple GetTriple(StringRef ProgName, opt::InputArgList &Args) {
   StringRef DefaultBitness = "32";
   SmallString<255> Program = ProgName;
   sys::path::replace_extension(Program, "");
-  if (Program.endswith("ml64"))
+  if (Program.ends_with("ml64"))
     DefaultBitness = "64";
 
   StringRef TripleName =

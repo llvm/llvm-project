@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Support
   TargetParser
+  FrontendOpenMP
   )
 
 find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)

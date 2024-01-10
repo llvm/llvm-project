@@ -10,7 +10,7 @@
 ! from being usable on INTRINSIC statements, and force the program
 ! to USE the standard intrinsic modules in order to access the
 ! standard names of the procedures.
-module __Fortran_builtins
+module __fortran_builtins
 
   intrinsic :: __builtin_c_loc
   intrinsic :: __builtin_c_f_pointer
@@ -32,6 +32,10 @@ module __Fortran_builtins
     integer(kind=int64), private :: __count
   end type
 
+  type :: __builtin_notify_type
+    integer(kind=int64), private :: __count
+  end type
+
   type :: __builtin_lock_type
     integer(kind=int64), private :: __count
   end type
@@ -41,7 +45,8 @@ module __Fortran_builtins
   end type
 
   integer, parameter :: __builtin_atomic_int_kind = selected_int_kind(18)
-  integer, parameter :: __builtin_atomic_logical_kind = __builtin_atomic_int_kind
+  integer, parameter :: &
+    __builtin_atomic_logical_kind = __builtin_atomic_int_kind
 
   procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 
@@ -49,7 +54,8 @@ module __Fortran_builtins
     integer :: x=1, y=1, z=1
   end type
   type(__builtin_dim3) :: &
-    __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, __builtin_gridDim
+    __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
+    __builtin_gridDim
   integer, parameter :: __builtin_warpsize = 32
 
   intrinsic :: __builtin_fma
@@ -90,7 +96,8 @@ module __Fortran_builtins
   private :: c_associated_c_ptr, c_associated_c_funptr
 
   type(__builtin_c_ptr), parameter :: __builtin_c_null_ptr = __builtin_c_ptr(0)
-  type(__builtin_c_funptr), parameter :: __builtin_c_null_funptr = __builtin_c_funptr(0)
+  type(__builtin_c_funptr), parameter :: &
+    __builtin_c_null_funptr = __builtin_c_funptr(0)
 
 contains
 

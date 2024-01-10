@@ -51,6 +51,7 @@ protected:
   Comdat *ObjComdat = nullptr;
   enum {
     LastAlignmentBit = 5,
+    LastCodeModelBit = 8,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,

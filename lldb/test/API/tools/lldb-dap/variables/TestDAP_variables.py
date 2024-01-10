@@ -4,8 +4,8 @@ Test lldb-dap setBreakpoints request
 
 import os
 
-import lldbdap_testcase
 import dap_server
+import lldbdap_testcase
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -152,14 +152,30 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         globals = self.dap_server.get_global_variables()
         buffer_children = make_buffer_verify_dict(0, 32)
         verify_locals = {
-            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argc": {
+                "equals": {
+                    "type": "int",
+                    "value": "1",
+                },
+                "$__lldb_extensions": {
+                    "equals": {
+                        "value": "1",
+                    },
+                    "declaration": {
+                        "equals": {"line": 12, "column": 14},
+                        "contains": {"path": ["lldb-dap", "variables", "main.cpp"]},
+                    },
+                },
+            },
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},
                 "hasVariablesReference": True,
             },
             "pt": {
-                "equals": {"type": "PointType"},
+                "equals": {
+                    "type": "PointType",
+                },
                 "hasVariablesReference": True,
                 "children": {
                     "x": {"equals": {"type": "int", "value": "11"}},
@@ -169,6 +185,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             },
             "x": {"equals": {"type": "int"}},
         }
+        if enableAutoVariableSummaries:
+            verify_locals["pt"]["$__lldb_extensions"] = {
+                "equals": {"autoSummary": "{x:11, y:22}"}
+            }
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
             "::g_global": {"equals": {"type": "int", "value": "123"}},

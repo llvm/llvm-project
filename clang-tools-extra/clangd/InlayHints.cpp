@@ -286,7 +286,7 @@ std::string summarizeExpr(const Expr *E) {
     // Step through implicit nodes that clang doesn't classify as such.
     std::string VisitCXXMemberCallExpr(const CXXMemberCallExpr *E) {
       // Call to operator bool() inside if (X): dispatch to X.
-      if (E->getNumArgs() == 0 &&
+      if (E->getNumArgs() == 0 && E->getMethodDecl() &&
           E->getMethodDecl()->getDeclName().getNameKind() ==
               DeclarationName::CXXConversionFunctionName &&
           E->getSourceRange() ==
@@ -587,6 +587,31 @@ public:
       return true;
     processCall(Callee, {E->getArgs(), E->getNumArgs()});
     return true;
+  }
+
+  // Carefully recurse into PseudoObjectExprs, which typically incorporate
+  // a syntactic expression and several semantic expressions.
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+    Expr *SyntacticExpr = E->getSyntacticForm();
+    if (isa<CallExpr>(SyntacticExpr))
+      // Since the counterpart semantics usually get the identical source
+      // locations as the syntactic one, visiting those would end up presenting
+      // confusing hints e.g., __builtin_dump_struct.
+      // Thus, only traverse the syntactic forms if this is written as a
+      // CallExpr. This leaves the door open in case the arguments in the
+      // syntactic form could possibly get parameter names.
+      return RecursiveASTVisitor<InlayHintVisitor>::TraverseStmt(SyntacticExpr);
+    // We don't want the hints for some of the MS property extensions.
+    // e.g.
+    // struct S {
+    //   __declspec(property(get=GetX, put=PutX)) int x[];
+    //   void PutX(int y);
+    //   void Work(int y) { x = y; } // Bad: `x = y: y`.
+    // };
+    if (isa<BinaryOperator>(SyntacticExpr))
+      return true;
+    // FIXME: Handle other forms of a pseudo object expression.
+    return RecursiveASTVisitor<InlayHintVisitor>::TraversePseudoObjectExpr(E);
   }
 
   bool VisitCallExpr(CallExpr *E) {
@@ -1015,7 +1040,7 @@ private:
     if (!SourcePrefix.consume_back(ParamName))
       return false;
     SourcePrefix = SourcePrefix.rtrim(IgnoreChars);
-    return SourcePrefix.endswith("/*");
+    return SourcePrefix.ends_with("/*");
   }
 
   // If "E" spells a single unqualified identifier, return that name.

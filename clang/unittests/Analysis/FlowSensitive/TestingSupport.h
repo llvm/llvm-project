@@ -420,7 +420,9 @@ llvm::Error checkDataflowWithNoopAnalysis(
              ASTContext &)>
         VerifyResults = [](const auto &, auto &) {},
     DataflowAnalysisOptions Options = {BuiltinOptions()},
-    LangStandard::Kind Std = LangStandard::lang_cxx17);
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
 ///

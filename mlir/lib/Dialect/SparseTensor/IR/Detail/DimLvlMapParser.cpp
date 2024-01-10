@@ -298,7 +298,7 @@ ParseResult DimLvlMapParser::parseLvlSpec(bool requireLvlVarBinding) {
   const auto type = lvlTypeParser.parseLvlType(parser);
   FAILURE_IF_FAILED(type)
 
-  lvlSpecs.emplace_back(var, expr, static_cast<DimLevelType>(*type));
+  lvlSpecs.emplace_back(var, expr, static_cast<LevelType>(*type));
   return success();
 }
 

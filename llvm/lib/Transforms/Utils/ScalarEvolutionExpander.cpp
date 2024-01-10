@@ -1532,8 +1532,26 @@ Value *SCEVExpander::expand(const SCEV *S) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
   } else {
-    for (Instruction *I : DropPoisonGeneratingInsts)
+    for (Instruction *I : DropPoisonGeneratingInsts) {
       I->dropPoisonGeneratingFlagsAndMetadata();
+      // See if we can re-infer from first principles any of the flags we just
+      // dropped.
+      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+        if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+          auto *BO = cast<BinaryOperator>(I);
+          BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+          BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+        }
+      if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
+        auto *Src = NNI->getOperand(0);
+        if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
+                                    Constant::getNullValue(Src->getType()), I,
+                                    DL).value_or(false))
+          NNI->setNonNeg(true);
+      }
+    }
   }
   // Remember the expanded value for this SCEV at this location.
   //

@@ -59,7 +59,7 @@ public:
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
-    return hlfir::isBoxProcAddressType(getType());
+    return fir::isBoxProcAddressType(getType());
   }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
@@ -239,11 +239,11 @@ fir::FortranVariableOpInterface genDeclare(mlir::Location loc,
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
 /// properly typed when placed in memory.
-hlfir::AssociateOp genAssociateExpr(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    hlfir::Entity value,
-                                    mlir::Type variableType,
-                                    llvm::StringRef name);
+hlfir::AssociateOp
+genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value, mlir::Type variableType,
+                 llvm::StringRef name,
+                 std::optional<mlir::NamedAttribute> attr = std::nullopt);
 
 /// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
 /// value). The returned value should be used with care, it does not contain any
@@ -404,15 +404,15 @@ mlir::Value inlineElementalOp(
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
-               const hlfir::Entity &entity);
+               hlfir::Entity entity);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                 const hlfir::Entity &entity, mlir::Type targetType);
+                 hlfir::Entity entity, mlir::Type targetType);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             const hlfir::Entity &entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,

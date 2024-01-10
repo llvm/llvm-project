@@ -392,6 +392,16 @@ define <2 x bfloat> @test_fabs(<2 x bfloat> %a) #0 {
   ret <2 x bfloat> %r
 }
 
+; CHECK-LABEL: test_fabs_add(
+; CHECK:      abs.bf16x2
+; CHECK:      ret;
+define <2 x bfloat> @test_fabs_add(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
+  %s = fadd <2 x bfloat> %a, %a
+  %r = call <2 x bfloat> @llvm.fabs.f16(<2 x bfloat> %s)
+  %d = fadd <2 x bfloat> %r, %b
+  ret <2 x bfloat> %d
+}
+
 
 ; CHECK-LABEL: test_minnum(
 ; CHECK-DAG:  ld.param.b32    [[AF0:%r[0-9]+]], [test_minnum_param_0];

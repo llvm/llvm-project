@@ -10,7 +10,7 @@ least the (N), (E) and (D) fields.
 
 N: Linaro Toolchain Working Group
 E: linaro-toolchain@lists.linaro.org
-D: Armv7, Armv8, AArch64
+D: Arm platforms
 
 N: LLVM on Power
 E: powerllvm@ca.ibm.com

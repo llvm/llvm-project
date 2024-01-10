@@ -918,9 +918,9 @@ protected:
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.
-        size = m_option_watchpoint.watch_size == 0
+        size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
                    ? valobj_sp->GetByteSize().value_or(0)
-                   : m_option_watchpoint.watch_size;
+                   : m_option_watchpoint.watch_size.GetCurrentValue();
       }
       compiler_type = valobj_sp->GetCompilerType();
     } else {
@@ -1113,8 +1113,8 @@ protected:
       return;
     }
 
-    if (m_option_watchpoint.watch_size != 0)
-      size = m_option_watchpoint.watch_size;
+    if (m_option_watchpoint.watch_size.GetCurrentValue() != 0)
+      size = m_option_watchpoint.watch_size.GetCurrentValue();
     else
       size = target->GetArchitecture().GetAddressByteSize();
 

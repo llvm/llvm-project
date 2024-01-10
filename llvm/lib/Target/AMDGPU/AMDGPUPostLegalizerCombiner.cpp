@@ -104,6 +104,14 @@ public:
   void applyCombineSignExtendInReg(MachineInstr &MI,
                                    MachineInstr *&MatchInfo) const;
 
+  // Find the s_mul_u64 instructions where the higher bits are either
+  // zero-extended or sign-extended.
+  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
+  // Replace the s_mul_u64 instructions with S_MUL_I64_I32_PSEUDO if the higher
+  // 33 bits are sign extended and with S_MUL_U64_U32_PSEUDO if the higher 32
+  // bits are zero extended.
+  void applyCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #define AMDGPUSubtarget GCNSubtarget
@@ -417,6 +425,32 @@ void AMDGPUPostLegalizerCombinerImpl::applyCombineSignExtendInReg(
   SubwordBufferLoad->getOperand(0).setReg(SignExtendInsnDst);
   // Remove the sign extension.
   MI.eraseFromParent();
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
+    MachineInstr &MI, unsigned &NewOpcode) const {
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  if (MRI.getType(Src0) != LLT::scalar(64))
+    return false;
+
+  if (KB->getKnownBits(Src1).countMinLeadingZeros() >= 32 &&
+      KB->getKnownBits(Src0).countMinLeadingZeros() >= 32) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32;
+    return true;
+  }
+
+  if (KB->computeNumSignBits(Src1) >= 33 &&
+      KB->computeNumSignBits(Src0) >= 33) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32;
+    return true;
+  }
+  return false;
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
+    MachineInstr &MI, unsigned &NewOpcode) const {
+  Helper.replaceOpcodeWith(MI, NewOpcode);
 }
 
 // Pass boilerplate
