@@ -3816,14 +3816,23 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
 PackIndexingType::PackIndexingType(const ASTContext &Context,
                                    QualType Canonical, QualType Pattern,
                                    Expr *IndexExpr,
-                                   ArrayRef<QualType> Expansions, int Index)
+                                   ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), Index(Index) {
+      Size(Expansions.size()) {
 
   std::uninitialized_copy(Expansions.begin(), Expansions.end(),
                           getTrailingObjects<QualType>());
+}
+
+std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
+  if(isDependentType())
+    return std::nullopt;
+  ConstantExpr* CE = cast<ConstantExpr>(getIndexExpr());
+  auto Index = CE->getResultAsAPSInt();
+  assert(Index.isNonNegative() && "Invalid index");
+  return static_cast<unsigned>(Index.getExtValue());
 }
 
 TypeDependence

@@ -2181,9 +2181,6 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
   E->SubExprs[1] = Record.readStmt();
-  bool HasIndexValue = Record.readBool();
-  if (HasIndexValue)
-    E->Index = Record.readInt();
   auto **Exprs = E->getTrailingObjects<Expr *>();
   for (unsigned I = 0; I < E->TransformedExpressions; ++I)
     Exprs[I] = Record.readExpr();

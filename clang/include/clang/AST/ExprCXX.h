@@ -4346,36 +4346,23 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  // The evaluated index
-  std::optional<int64_t> Index;
-
   size_t TransformedExpressions;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   std::optional<int64_t> Index = std::nullopt,
                    ArrayRef<Expr *> SubstitutedExprs = {})
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
-        SubExprs{PackIdExpr, IndexExpr}, Index(Index),
+        SubExprs{PackIdExpr, IndexExpr},
         TransformedExpressions(SubstitutedExprs.size()) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
                             Exprs);
 
-    ExprDependence D = IndexExpr->getDependence();
-    if (SubstitutedExprs.empty())
-      D |= (PackIdExpr->getDependence() |
-            ExprDependence::TypeValueInstantiation) &
-           ~ExprDependence::UnexpandedPack;
-    else if (!IndexExpr->isValueDependent()) {
-      assert(Index && *Index < int64_t(SubstitutedExprs.size()) &&
-             "pack index out of bound");
-      D |= SubstitutedExprs[*Index]->getDependence();
-      setValueKind(SubstitutedExprs[*Index]->getValueKind());
-    }
-    setDependence(D);
+    setDependence(computeDependence(this));
+    if(!isInstantiationDependent())
+      setValueKind(getSelectedExpr()->getValueKind());
   }
 
   /// Create an empty expression.
@@ -4389,8 +4376,7 @@ public:
   static PackIndexingExpr *Create(ASTContext &Context,
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
-                                  Expr *IndexExpr,
-                                  std::optional<int64_t> Index = std::nullopt,
+                                  Expr *IndexExpr, std::optional<int64_t> Index,
                                   ArrayRef<Expr *> SubstitutedExprs = {});
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
@@ -4413,13 +4399,23 @@ public:
 
   Expr *getIndexExpr() const { return cast<Expr>(SubExprs[1]); }
 
+
+  std::optional<unsigned> getSelectedIndex() const {
+    if (isInstantiationDependent())
+      return std::nullopt;
+    ConstantExpr* CE = cast<ConstantExpr>(getIndexExpr());
+    auto Index = CE->getResultAsAPSInt();
+    assert(Index.isNonNegative() && "Invalid index");
+    return static_cast<unsigned>(Index.getExtValue());
+  }
+
   Expr *getSelectedExpr() const {
-    assert(Index && !isInstantiationDependent() &&
-           "extracting the indexed expression of a dependant pack");
+    std::optional<unsigned> Index = getSelectedIndex();
+    assert(Index && "extracting the indexed expression of a dependant pack");
     return getTrailingObjects<Expr *>()[*Index];
   }
 
-  llvm::ArrayRef<Expr *> getExpressions() const {
+  ArrayRef<Expr *> getExpressions() const {
     if (TransformedExpressions == 0)
       return {};
     return {getTrailingObjects<Expr *>(), TransformedExpressions};

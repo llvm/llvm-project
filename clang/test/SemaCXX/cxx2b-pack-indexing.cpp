@@ -17,23 +17,30 @@ int non_constant_index(); // expected-note 2{{declared here}}
 
 template <int idx>
 int params(auto... p) {
-    return p...[idx]; //expected-error 3{{invalid index 0 for pack p of size 0}}
+    return p...[idx]; // #error-param-size
 }
 
 template <auto N, typename...T>
 int test_types() {
-    T...[N] a; // expected-error 4{{invalid index -1 for pack 'T' of size 0}}
+    T...[N] a; // #error-type-size
 }
 
 void test() {
-    params<0>();   // expected-note{{here}}
-    params<1>(0);  // expected-note{{here}}
-    params<-1>(0); // expected-note{{here}}
+    params<0>();   // expected-note{{here}} \
+                   // expected-error@#error-param-size {{invalid index 0 for pack p of size 0}}
+    params<1>(0);  // expected-note{{here}} \
+                   // expected-error@#error-param-size {{invalid index 1 for pack p of size 1}}
+    params<-1>(0); // expected-note{{here}} \
+                   // expected-error@#error-param-size {{invalid index -1 for pack p of size 1}}
 
-    test_types<-1>(); //expected-note {{in instantiation}}
-    test_types<-1, int>(); //expected-note {{in instantiation}}
-    test_types<0>(); //expected-note {{in instantiation}}
-    test_types<1, int>(); //expected-note {{in instantiation}}
+    test_types<-1>(); //expected-note {{in instantiation}} \
+                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 0}}
+    test_types<-1, int>(); //expected-note {{in instantiation}} \
+                      // expected-error@#error-type-size {{invalid index -1 for pack 'T' of size 1}}
+    test_types<0>(); //expected-note {{in instantiation}} \
+                    // expected-error@#error-type-size {{invalid index 0 for pack 'T' of size 0}}
+    test_types<1, int>(); //expected-note {{in instantiation}}  \
+                         // expected-error@#error-type-size {{invalid index 1 for pack 'T' of size 1}}
 }
 
 void invalid_indexes(auto... p) {

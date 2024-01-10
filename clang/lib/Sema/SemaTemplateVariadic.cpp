@@ -1108,6 +1108,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
     if (!Res.isUsable())
       return ExprError();
     Index = Value.getExtValue();
+    IndexExpr = Res.get();
   }
 
   if (Index && (!ExpandedExprs.empty() || EmptyPack)) {

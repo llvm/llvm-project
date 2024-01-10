@@ -1681,7 +1681,7 @@ PackIndexingExpr *PackIndexingExpr::Create(ASTContext &Context,
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
   return new (Storage)
       PackIndexingExpr(Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr,
-                       Index, SubstitutedExprs);
+                       SubstitutedExprs);
 }
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {

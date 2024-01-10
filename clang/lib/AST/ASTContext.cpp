@@ -5703,11 +5703,11 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
 }
 
 QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                         bool FullyExpanded,
+                                         bool FullySubstituted,
                                          ArrayRef<QualType> Expansions,
                                          int Index) const {
   QualType Canonical;
-  if (FullyExpanded && Index != -1) {
+  if (FullySubstituted && Index != -1) {
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
@@ -5720,7 +5720,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
       Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         Expansions, Index);
+                                         Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -5730,7 +5730,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
   auto *T = new (Mem)
-      PackIndexingType(*this, Canonical, Pattern, IndexExpr, Expansions, Index);
+      PackIndexingType(*this, Canonical, Pattern, IndexExpr, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
 }

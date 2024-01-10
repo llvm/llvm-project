@@ -2607,7 +2607,7 @@ public:
                                  SourceLocation EllipsisLoc);
   QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                  SourceLocation Loc, SourceLocation EllipsisLoc,
-                                 bool FullyExpanded = false,
+                                 bool FullySubstituted = false,
                                  ArrayRef<QualType> Expansions = {});
 
   using UTTKind = UnaryTransformType::UTTKind;

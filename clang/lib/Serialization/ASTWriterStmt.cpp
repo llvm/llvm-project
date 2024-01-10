@@ -2160,9 +2160,6 @@ void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());
   Record.AddStmt(E->getIndexExpr());
-  Record.push_back(E->Index.has_value());
-  if (E->Index.has_value())
-    Record.push_back(*E->Index);
   Record.push_back(E->TransformedExpressions);
   for (Expr *Sub : E->getExpressions())
     Record.AddStmt(Sub);

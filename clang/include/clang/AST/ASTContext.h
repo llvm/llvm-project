@@ -1717,7 +1717,7 @@ public:
   QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
 
   QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                               bool FullyExpanded = false,
+                               bool FullySubstituted = false,
                                ArrayRef<QualType> Expansions = {},
                                int Index = -1) const;
 

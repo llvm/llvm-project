@@ -9831,11 +9831,11 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      SourceLocation Loc,
                                      SourceLocation EllipsisLoc,
-                                     bool FullyExpanded,
+                                     bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
   std::optional<int64_t> Index;
-  if (FullyExpanded && !IndexExpr->isValueDependent() &&
+  if (FullySubstituted && !IndexExpr->isValueDependent() &&
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
     // TODO: do we need a new enumerator instead of CCEK_ArrayBound?
@@ -9844,9 +9844,10 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
     if (!Res.isUsable())
       return QualType();
     Index = Value.getExtValue();
+    IndexExpr = Res.get();
   }
 
-  if (FullyExpanded && Index) {
+  if (FullySubstituted && Index) {
     if (*Index < 0 || *Index >= int64_t(Expansions.size())) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << Pattern << Expansions.size();
@@ -9854,7 +9855,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
     }
   }
 
-  return Context.getPackIndexingType(Pattern, IndexExpr, FullyExpanded,
+  return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
                                      Expansions, Index.value_or(-1));
 }
 
