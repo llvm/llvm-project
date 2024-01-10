@@ -110,6 +110,13 @@ public:
     PointerAndKnownNonNull.setInt(true);
     return *this;
   }
+
+  /// Get the operation which defines this address.
+  mlir::Operation *getDefiningOp() const {
+    if (!isValid())
+      return nullptr;
+    return getPointer().getDefiningOp();
+  }
 };
 
 } // namespace cir

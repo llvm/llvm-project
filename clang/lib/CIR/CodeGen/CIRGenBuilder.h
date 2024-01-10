@@ -796,6 +796,18 @@ public:
                                                mlir::Value v) {
     return create<mlir::cir::StackRestoreOp>(loc, v);
   }
+
+  // TODO(cir): Change this to hoist alloca to the parent *scope* instead.
+  /// Move alloca operation to the parent region.
+  void hoistAllocaToParentRegion(mlir::cir::AllocaOp alloca) {
+    auto &block = alloca->getParentOp()->getParentRegion()->front();
+    const auto allocas = block.getOps<mlir::cir::AllocaOp>();
+    if (allocas.empty()) {
+      alloca->moveBefore(&block, block.begin());
+    } else {
+      alloca->moveAfter(*std::prev(allocas.end()));
+    }
+  }
 };
 
 } // namespace cir
