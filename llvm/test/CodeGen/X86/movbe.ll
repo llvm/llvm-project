@@ -182,8 +182,7 @@ define i64 @test7(i64 %x) nounwind {
 ;
 ; EGPR-LABEL: test7:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; EGPR-NEXT:    bswapq %rax # encoding: [0x48,0x0f,0xc8]
+; EGPR-NEXT:    movbeq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x08,0x61,0xf8]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %bswap = call i64 @llvm.bswap.i64(i64 %x)
   ret i64 %bswap

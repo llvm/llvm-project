@@ -229,7 +229,7 @@ def PUSHA16  : I<0x60, RawFrm, (outs), (ins), "pushaw", []>,
                OpSize16, Requires<[Not64BitMode]>;
 }
 
-let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32] in {
+let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32], Predicates = [NoEGPR] in {
 // This instruction is a consequence of BSWAP32r observing operand size. The
 // encoding is valid, but the behavior is undefined.
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
