@@ -81,12 +81,11 @@ public:
 
   // Interfaces to query PSTATE.ZA
   bool hasNewZABody() const { return Bitmask & ZA_New; }
-  bool hasSharedZAInterface() const { return Bitmask & ZA_Shared; }
+  bool sharesZA() const { return Bitmask & ZA_Shared; }
+  bool hasSharedZAInterface() const { return sharesZA() || sharesZT0(); }
   bool hasPrivateZAInterface() const { return !hasSharedZAInterface(); }
   bool preservesZA() const { return Bitmask & ZA_Preserved; }
-  bool hasZAState() const {
-    return hasNewZABody() || hasSharedZAInterface();
-  }
+  bool hasZAState() const { return hasNewZABody() || sharesZA(); }
   bool requiresLazySave(const SMEAttrs &Callee) const {
     return hasZAState() && Callee.hasPrivateZAInterface() &&
            !(Callee.Bitmask & ZA_NoLazySave);

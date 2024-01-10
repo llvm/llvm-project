@@ -40,6 +40,10 @@ TEST(SMEAttributes, Constructors) {
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
                       ->getFunction("foo"))
+                  .sharesZA());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
+                      ->getFunction("foo"))
                   .hasSharedZAInterface());
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_new\"")
@@ -73,6 +77,19 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .sharesZT0());
 
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_in\"")
+                      ->getFunction("foo"))
+                  .hasSharedZAInterface());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_out\"")
+                      ->getFunction("foo"))
+                  .hasSharedZAInterface());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_inout\"")
+                      ->getFunction("foo"))
+                  .hasSharedZAInterface());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_preserved\"")
+                      ->getFunction("foo"))
+                  .hasSharedZAInterface());
+
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_preserved\"")
                       ->getFunction("foo"))
                   .preservesZT0());
@@ -80,6 +97,9 @@ TEST(SMEAttributes, Constructors) {
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_new\"")
                       ->getFunction("foo"))
                   .hasNewZT0Body());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_new\"")
+                      ->getFunction("foo"))
+                  .hasPrivateZAInterface());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
@@ -90,27 +110,37 @@ TEST(SMEAttributes, Constructors) {
                      "ZA_New and ZA_Preserved are mutually exclusive");
 
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_In),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_Out),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_InOut),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_New | SA::ZT0_Preserved),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
 
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_In | SA::ZT0_Out),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_In | SA::ZT0_InOut),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_Out | SA::ZT0_InOut),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
 
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_In),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_Out),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
   EXPECT_DEBUG_DEATH(SA(SA::ZT0_Preserved | SA::ZT0_InOut),
-                     "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+                     "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved "
+                     "are all mutually exclusive");
 
   // Test that the set() methods equally check validity.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled).set(SA::SM_Compatible),
@@ -135,7 +165,7 @@ TEST(SMEAttributes, Basics) {
 
   // Test PSTATE.ZA interfaces.
   ASSERT_FALSE(SA(SA::ZA_Shared).hasPrivateZAInterface());
-  ASSERT_TRUE(SA(SA::ZA_Shared).hasSharedZAInterface());
+  ASSERT_TRUE(SA(SA::ZA_Shared).sharesZA());
   ASSERT_TRUE(SA(SA::ZA_Shared).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_Shared).preservesZA());
   ASSERT_TRUE(SA(SA::ZA_Shared | SA::ZA_Preserved).preservesZA());

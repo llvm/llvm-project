@@ -23,19 +23,20 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "SM_Enabled and SM_Compatible are mutually exclusive");
 
   // ZA Attrs
-  assert(!(hasNewZABody() && hasSharedZAInterface()) &&
+  assert(!(hasNewZABody() && sharesZA()) &&
          "ZA_New and ZA_Shared are mutually exclusive");
   assert(!(hasNewZABody() && preservesZA()) &&
          "ZA_New and ZA_Preserved are mutually exclusive");
   assert(!(hasNewZABody() && (Bitmask & ZA_NoLazySave)) &&
          "ZA_New and ZA_NoLazySave are mutually exclusive");
-  assert(!(hasSharedZAInterface() && (Bitmask & ZA_NoLazySave)) &&
+  assert(!(sharesZA() && (Bitmask & ZA_NoLazySave)) &&
          "ZA_Shared and ZA_NoLazySave are mutually exclusive");
 
   // ZT0 Attrs
   assert((!sharesZT0() || (hasNewZT0Body() ^ isZT0In() ^ isZT0InOut() ^
                            isZT0Out() ^ preservesZT0())) &&
-         "ZT0_New,In,Out,InOut,Preserved are mutually exclusive");
+         "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved are all "
+         "mutually exclusive");
 }
 
 SMEAttrs::SMEAttrs(const CallBase &CB) {
