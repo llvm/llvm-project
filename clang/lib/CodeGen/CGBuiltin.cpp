@@ -962,7 +962,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     //     }
     //
     // Instead of calculating a wrong number, we give up.
-    if (CountCountedByAttrs(OuterRD) > 1)
+    if (OuterRD && CountCountedByAttrs(OuterRD) > 1)
       return nullptr;
   }
 
