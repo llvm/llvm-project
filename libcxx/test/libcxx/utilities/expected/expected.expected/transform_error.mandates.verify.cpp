@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Clang-18 fixed some suspurious clang diagnostics. Once clang-18 is the
+// Clang-18 fixed some spurious clang diagnostics. Once clang-18 is the
 // minumum required version these obsolete tests can be removed.
-// TODO(LLVM-20) remove suspurious clang diagnostic tests.
+// TODO(LLVM-20) remove spurious clang diagnostic tests.
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 

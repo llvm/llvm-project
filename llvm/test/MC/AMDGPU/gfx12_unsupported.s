@@ -4,6 +4,18 @@
 // Unsupported instructions.
 //===----------------------------------------------------------------------===//
 
+s_waitcnt_expcnt exec_hi, 0x1234
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_waitcnt_lgkmcnt exec_hi, 0x1234
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_waitcnt_vmcnt exec_hi, 0x1234
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_waitcnt_vscnt exec_hi, 0x1234
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_subvector_loop_begin s0, 0x1234
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 

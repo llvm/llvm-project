@@ -96,6 +96,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("if_present", OpenACCClauseKind::IfPresent)
       .Case("independent", OpenACCClauseKind::Independent)
       .Case("nohost", OpenACCClauseKind::NoHost)
+      .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("worker", OpenACCClauseKind::Worker)
@@ -328,8 +329,20 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
+  return Kind == OpenACCClauseKind::Self;
+}
+
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
   return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If;
+}
+
+ExprResult ParseOpenACCConditionalExpr(Parser &P) {
+  // FIXME: It isn't clear if the spec saying 'condition' means the same as
+  // it does in an if/while/etc (See ParseCXXCondition), however as it was
+  // written with Fortran/C in mind, we're going to assume it just means an
+  // 'expression evaluating to boolean'.
+  return P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
 }
 
 bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
@@ -362,12 +375,7 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
       break;
     }
     case OpenACCClauseKind::If: {
-      // FIXME: It isn't clear if the spec saying 'condition' means the same as
-      // it does in an if/while/etc (See ParseCXXCondition), however as it was
-      // written with Fortran/C in mind, we're going to assume it just means an
-      // 'expression evaluating to boolean'.
-      ExprResult CondExpr =
-          P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
+      ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
       // An invalid expression can be just about anything, so just give up on
       // this clause list.
       if (CondExpr.isInvalid())
@@ -379,8 +387,23 @@ bool ParseOpenACCClauseParams(Parser &P, OpenACCClauseKind Kind) {
     }
 
     return Parens.consumeClose();
+  } else if (ClauseHasOptionalParens(Kind)) {
+    if (!Parens.consumeOpen()) {
+      switch (Kind) {
+      case OpenACCClauseKind::Self: {
+        ExprResult CondExpr = ParseOpenACCConditionalExpr(P);
+        // An invalid expression can be just about anything, so just give up on
+        // this clause list.
+        if (CondExpr.isInvalid())
+          return true;
+        break;
+      }
+      default:
+        llvm_unreachable("Not an optional parens type?");
+      }
+      Parens.consumeClose();
+    }
   }
-  // FIXME: Handle optional parens
   return false;
 }
 
@@ -531,49 +554,17 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   return getActions().CorrectDelayedTyposInExpr(Res);
 }
 
-/// OpenACC 3.3, section 2.10:
-/// A 'var' in a cache directive must be a single array element or a simple
-/// subarray.  In C and C++, a simple subarray is an array name followed by an
-/// extended array range specification in brackets, with a start and length such
-/// as:
-///
-/// arr[lower:length]
-///
-bool Parser::ParseOpenACCCacheVar() {
-  ExprResult ArrayName = ParseOpenACCIDExpression();
-  if (ArrayName.isInvalid())
-    return true;
-
-  // If the expression is invalid, just continue parsing the brackets, there
-  // is likely other useful diagnostics we can emit inside of those.
-
-  BalancedDelimiterTracker SquareBrackets(*this, tok::l_square,
-                                          tok::annot_pragma_openacc_end);
-
-  // Square brackets are required, so error here, and try to recover by moving
-  // until the next comma, or the close paren/end of pragma.
-  if (SquareBrackets.expectAndConsume()) {
-    SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
-              Parser::StopBeforeMatch);
-    return true;
-  }
-
-  ExprResult Lower = getActions().CorrectDelayedTyposInExpr(ParseExpression());
-  if (Lower.isInvalid())
-    return true;
-
-  // The 'length' expression is optional, as this could be a single array
-  // element. If there is no colon, we can treat it as that.
-  if (getCurToken().is(tok::colon)) {
-    ConsumeToken();
-    ExprResult Length =
-        getActions().CorrectDelayedTyposInExpr(ParseExpression());
-    if (Length.isInvalid())
-      return true;
-  }
-
-  // Diagnose the square bracket being in the wrong place and continue.
-  return SquareBrackets.consumeClose();
+/// OpenACC 3.3, section 1.6:
+/// In this spec, a 'var' (in italics) is one of the following:
+/// - a variable name (a scalar, array, or compisite variable name)
+/// - a subarray specification with subscript ranges
+/// - an array element
+/// - a member of a composite variable
+/// - a common block name between slashes (fortran only)
+bool Parser::ParseOpenACCVar() {
+  OpenACCArraySectionRAII ArraySections(*this);
+  ExprResult Res = ParseAssignmentExpression();
+  return Res.isInvalid();
 }
 
 /// OpenACC 3.3, section 2.10:
@@ -604,7 +595,16 @@ void Parser::ParseOpenACCCacheVarList() {
     if (!FirstArray)
       ExpectAndConsume(tok::comma);
     FirstArray = false;
-    if (ParseOpenACCCacheVar())
+
+    // OpenACC 3.3, section 2.10:
+    // A 'var' in a cache directive must be a single array element or a simple
+    // subarray.  In C and C++, a simple subarray is an array name followed by
+    // an extended array range specification in brackets, with a start and
+    // length such as:
+    //
+    // arr[lower:length]
+    //
+    if (ParseOpenACCVar())
       SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end, tok::comma,
                 StopBeforeMatch);
   }
