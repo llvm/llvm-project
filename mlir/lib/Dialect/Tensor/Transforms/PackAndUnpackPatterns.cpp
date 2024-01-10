@@ -39,8 +39,12 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
     if (packOp.getPaddingValue())
       return rewriter.notifyMatchFailure(packOp, "expects no padding value");
 
-    if (!packOp.getOuterDimsPerm().empty())
-      return rewriter.notifyMatchFailure(packOp, "expects no outer_dims_perm");
+    auto outerDimsPerm = packOp.getOuterDimsPerm();
+    if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
+      return rewriter.notifyMatchFailure(
+          packOp,
+          "expects outer_dims_perm is empty or an identity permutation");
+    }
 
     RankedTensorType sourceType = packOp.getSourceType();
     RankedTensorType destType = packOp.getDestType();
@@ -75,9 +79,11 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unpackOp,
                                 PatternRewriter &rewriter) const override {
-    if (!unpackOp.getOuterDimsPerm().empty()) {
-      return rewriter.notifyMatchFailure(unpackOp,
-                                         "expects no outer_dims_perm");
+    auto outerDimsPerm = unpackOp.getOuterDimsPerm();
+    if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
+      return rewriter.notifyMatchFailure(
+          unpackOp,
+          "expects outer_dims_perm is empty or an identity permutation");
     }
 
     RankedTensorType sourceType = unpackOp.getSourceType();

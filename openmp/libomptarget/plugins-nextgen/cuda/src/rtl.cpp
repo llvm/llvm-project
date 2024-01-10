@@ -1216,10 +1216,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
   CUresult Res =
-      cuLaunchKernel(Func, NumBlocks, /* gridDimY */ 1,
-                     /* gridDimZ */ 1, NumThreads,
-                     /* blockDimY */ 1, /* blockDimZ */ 1, MaxDynCGroupMem,
-                     Stream, (void **)Args, nullptr);
+      cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
+                     /*gridDimZ=*/1, NumThreads,
+                     /*blockDimY=*/1, /*blockDimZ=*/1, MaxDynCGroupMem, Stream,
+                     (void **)Args, nullptr);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
