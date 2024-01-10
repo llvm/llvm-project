@@ -15,8 +15,6 @@
 #include "int_lib.h"
 #include "int_math.h"
 
-#if defined(CRT_HAS_TF_MODE)
-
 // Returns: the product of a + ib and c + id
 
 COMPILER_RT_ABI Qcomplex __multc3(fp_t a, fp_t b, fp_t c, fp_t d) {
@@ -66,5 +64,3 @@ COMPILER_RT_ABI Qcomplex __multc3(fp_t a, fp_t b, fp_t c, fp_t d) {
   }
   return z;
 }
-
-#endif

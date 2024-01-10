@@ -13,7 +13,6 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_TF_MODE)
 
 // Returns: the quotient of (a + ib) / (c + id)
 
@@ -52,5 +51,3 @@ COMPILER_RT_ABI Qcomplex __divtc3(fp_t __a, fp_t __b, fp_t __c, fp_t __d) {
   }
   return z;
 }
-
-#endif
