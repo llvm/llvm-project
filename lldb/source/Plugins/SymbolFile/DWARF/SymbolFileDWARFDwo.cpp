@@ -85,6 +85,17 @@ lldb::offset_t SymbolFileDWARFDwo::GetVendorDWARFOpcodeSize(
   return GetBaseSymbolFile().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
+uint64_t SymbolFileDWARFDwo::GetDebugInfoSize() {
+  // Directly get debug info from current dwo object file's section list
+  // instead of asking SymbolFileCommon::GetDebugInfo() which parses from
+  // owning module which is wrong.
+  SectionList *section_list =
+      m_objfile_sp->GetSectionList(/*update_module_section_list=*/false);
+  if (section_list)
+    return section_list->GetDebugInfoSize();
+  return 0;
+}
+
 bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
     uint8_t op, const lldb_private::DataExtractor &opcodes,
     lldb::offset_t &offset, std::vector<lldb_private::Value> &stack) const {
