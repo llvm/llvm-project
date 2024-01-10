@@ -224,6 +224,14 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
+- New :doc:`readability-DoNotReturnZeroCheck
+  <clang-tidy/checks/readability/DoNotReturnZeroCheck>` check.
+
+  The readability-DoNotReturnZeroCheck clang-tidy check identifies 
+  and suggests removal of redundant return 0; statements at the end of the main
+  function in C++ programs, enhancing code readability by eliminating unnecessary
+  code that is implicitly handled by modern C++ standards.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
