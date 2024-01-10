@@ -628,7 +628,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
   }
 
-  if (Subtarget.hasStdExtA()) {
+  if (Subtarget.hasStdExtA() || Subtarget.hasStdExtZaamo() ||
+      Subtarget.hasStdExtZalrsc()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
     setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
@@ -1334,7 +1335,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasStdExtA()) {
+  if (Subtarget.hasStdExtA() || Subtarget.hasStdExtZaamo()) {
     setOperationAction(ISD::ATOMIC_LOAD_SUB, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Expand);
@@ -16213,7 +16214,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
       // 32 for both 64 and 32.
       assert(Subtarget.getXLen() == 64);
       assert(getMinCmpXchgSizeInBits() == 32);
-      assert(Subtarget.hasStdExtA());
+      assert(Subtarget.hasStdExtA() || Subtarget.hasStdExtZalrsc());
       return 33;
     }
     break;

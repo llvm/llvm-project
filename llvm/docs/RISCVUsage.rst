@@ -96,6 +96,8 @@ on support follow.
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
      ``V``            Supported
+     ``Zaamo``        Supported
+     ``Zalrsc``       Supported
      ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported

@@ -114,7 +114,9 @@
 
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
+// CHECK-NOT: __riscv_zaamo {{.*$}}
 // CHECK-NOT: __riscv_zacas {{.*$}}
+// CHECK-NOT: __riscv_zalrsc {{.*$}}
 // CHECK-NOT: __riscv_zfa {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zicfilp {{.*$}}
@@ -1026,12 +1028,29 @@
 // CHECK-SSAIA-EXT: __riscv_ssaia  1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32i_zaamo0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZAAMO-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64i_zaamo0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZAAMO-EXT %s
+// CHECK-ZAAMO-EXT: __riscv_atomic 1
+// CHECK-ZAAMO-EXT: __riscv_zaamo 1000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zacas1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
 // RUN: -march=rv64i_zacas1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
 // CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32i_zalrsc0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZALRSC-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64i_zalrsc0p1 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZALRSC-EXT %s
+// CHECK-ZALRSC-EXT: __riscv_zalrsc 1000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izfa -x c -E -dM %s \
