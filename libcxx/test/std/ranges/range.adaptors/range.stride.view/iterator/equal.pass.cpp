@@ -8,19 +8,20 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::views::stride_view
-// TODO
+// friend constexpr bool operator==(__iterator const& __x, default_sentinel_t)
+// friend constexpr bool operator==(__iterator const& __x, __iterator const& __y)
 
 #include <cassert>
 #include <ranges>
 
 #include "test_iterators.h"
+#include "../types.h"
 
 template <class Iter>
 constexpr void testOne() {
-  using Range      = std::ranges::subrange<Iter>;
+  using Range = BasicTestView<Iter, Iter>;
+  static_assert(std::ranges::common_range<Range>);
   using StrideView = std::ranges::stride_view<Range>;
-  static_assert(std::ranges::common_range<StrideView>);
 
   {
     // simple test
@@ -36,9 +37,12 @@ constexpr void testOne() {
       assert(b == b);
       assert(!(b != b));
 
-      assert(e == e);
-      assert(!(e != e));
-
+      // When Range is a bidirectional_range, the type of e is
+      // default_sentinel_t and those do not compare to one another.
+      if constexpr (!std::ranges::bidirectional_range<Range>) {
+        assert(e == e);
+        assert(!(e != e));
+      }
       assert(!(b == e));
       assert(b != e);
 
@@ -51,8 +55,11 @@ constexpr void testOne() {
       assert(b == b);
       assert(!(b != b));
 
-      assert(e == e);
-      assert(!(e != e));
+      // See above.
+      if constexpr (!std::ranges::bidirectional_range<Range>) {
+        assert(e == e);
+        assert(!(e != e));
+      }
 
       assert(b == e);
       assert(!(b != e));
@@ -74,10 +81,10 @@ constexpr void testOne() {
 
 constexpr bool test() {
   testOne<forward_iterator<int*>>();
-  //testOne<bidirectional_iterator<int*>>();
-  //testOne<random_access_iterator<int*>>();
-  //testOne<contiguous_iterator<int*>>();
-  //testOne<int*>();
+  testOne<bidirectional_iterator<int*>>();
+  testOne<random_access_iterator<int*>>();
+  testOne<contiguous_iterator<int*>>();
+  testOne<int*>();
 
   return true;
 }
