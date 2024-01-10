@@ -443,7 +443,8 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   bool IsPostRA) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
 
   // All checking functions assume that the 1st instr is a wildcard if it is

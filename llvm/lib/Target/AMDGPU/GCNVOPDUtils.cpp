@@ -123,7 +123,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const TargetSubtargetInfo &TSI,
                                        const MachineInstr *FirstMI,
-                                       const MachineInstr &SecondMI) {
+                                       const MachineInstr &SecondMI,
+                                       bool IsPostRA) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
   unsigned Opc2 = SecondMI.getOpcode();
   auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
@@ -165,7 +166,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     std::vector<SUnit>::iterator ISUI, JSUI;
     for (ISUI = DAG->SUnits.begin(); ISUI != DAG->SUnits.end(); ++ISUI) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
+      if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI, /*IsPostRA=*/true))
         continue;
       if (!hasLessThanNumFused(*ISUI, 2))
         continue;
@@ -175,7 +176,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
-            !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
+            !shouldScheduleAdjacent(TII, ST, IMI, *JMI, /*IsPostRA=*/true))
           continue;
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI))
           break;

@@ -43,7 +43,7 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
-// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
+// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, bool);
 // CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  #endif
@@ -56,7 +56,8 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI,
+// CHECK-PREDICATOR-NEXT:      bool IsPostRA) {
 // CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
@@ -73,19 +74,10 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst0 ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
-// CHECK-PREDICATOR-NEXT:    {
-// CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
-// CHECK-PREDICATOR-NEXT:      if (!(
-// CHECK-PREDICATOR-NEXT:          MI->getOperand(0).getReg().isVirtual()
-// CHECK-PREDICATOR-NEXT:          || MI->getOperand(0).getReg() == MI->getOperand(1).getReg()
-// CHECK-PREDICATOR-NEXT:        ))
-// CHECK-PREDICATOR-NEXT:        return false;
-// CHECK-PREDICATOR-NEXT:    }
-// CHECK-PREDICATOR-NEXT:    {
-// CHECK-PREDICATOR-NEXT:      Register FirstDest = FirstMI->getOperand(0).getReg();
-// CHECK-PREDICATOR-NEXT:      if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))
-// CHECK-PREDICATOR-NEXT:        return false;
-// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    if (IsPostRA && SecondMI.getOperand(0).getReg() != SecondMI.getOperand(1).getReg())
+// CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    if (!IsPostRA && !MRI.hasOneNonDBGUse(FirstMI->getOperand(0).getReg()))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    if (!(FirstMI->getOperand(0).isReg() &&
 // CHECK-PREDICATOR-NEXT:          SecondMI.getOperand(1).isReg() &&
 // CHECK-PREDICATOR-NEXT:          FirstMI->getOperand(0).getReg() == SecondMI.getOperand(1).getReg()))

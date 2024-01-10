@@ -25,7 +25,8 @@
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+//             const MachineInstr &SecondMI,
+//             bool IsPostRA) {
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   /* Predicates */
 //   return true;
@@ -87,7 +88,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, "
        << "const MachineInstr *, "
-       << "const MachineInstr &);\n";
+       << "const MachineInstr &, bool);\n";
   }
 
   OS << "} // end namespace llvm\n";
@@ -108,7 +109,8 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
-    OS.indent(4) << "const MachineInstr &SecondMI) {\n";
+    OS.indent(4) << "const MachineInstr &SecondMI,\n";
+    OS.indent(4) << "bool IsPostRA) {\n";
     OS.indent(2) << "auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
     emitPredicates(Predicates, PE, OS);
@@ -146,12 +148,9 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(Record *Predicate,
                  << (Predicate->getValueAsBit("ReturnValue") ? "true" : "false")
                  << ";\n";
   } else if (Predicate->isSubClassOf("OneUsePred")) {
-    OS.indent(2) << "{\n";
-    OS.indent(4) << "Register FirstDest = FirstMI->getOperand(0).getReg();\n";
-    OS.indent(4)
-        << "if (FirstDest.isVirtual() && !MRI.hasOneNonDBGUse(FirstDest))\n";
-    OS.indent(4) << "  return false;\n";
-    OS.indent(2) << "}\n";
+    OS.indent(2) << "if (!IsPostRA && "
+                    "!MRI.hasOneNonDBGUse(FirstMI->getOperand(0).getReg()))\n";
+    OS.indent(2) << "  return false;\n";
   } else if (Predicate->isSubClassOf(
                  "FirstFusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
@@ -183,6 +182,10 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(Record *Predicate,
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
     OS.indent(2) << "}\n";
+  } else if (Predicate->isSubClassOf("SameRegisterPred")) {
+    OS.indent(3) << "if (IsPostRA && SecondMI.getOperand(0).getReg() != "
+                    "SecondMI.getOperand(1).getReg())\n";
+    OS.indent(2) << "  return false;\n";
   } else {
     PrintFatalError(Predicate->getLoc(),
                     "Unsupported predicate for first instruction: " +

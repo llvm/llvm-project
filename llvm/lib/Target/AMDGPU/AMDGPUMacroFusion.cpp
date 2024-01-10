@@ -26,7 +26,8 @@ namespace {
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII_,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   bool IsPostRA) {
   const SIInstrInfo &TII = static_cast<const SIInstrInfo&>(TII_);
 
   switch (SecondMI.getOpcode()) {

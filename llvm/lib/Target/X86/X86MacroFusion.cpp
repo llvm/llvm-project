@@ -35,7 +35,8 @@ static X86::SecondMacroFusionInstKind classifySecond(const MachineInstr &MI) {
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   bool IsPostRA) {
   const X86Subtarget &ST = static_cast<const X86Subtarget &>(TSI);
 
   // Check if this processor supports any kind of fusion.

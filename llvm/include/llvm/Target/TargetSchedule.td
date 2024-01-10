@@ -597,6 +597,7 @@ def both_fusion_target : FusionTarget;
 // * const MachineRegisterInfo &MRI
 // * const MachineInstr *FirstMI
 // * const MachineInstr &SecondMI
+// * bool IsPostRA
 class FusionPredicate<FusionTarget target> {
   FusionTarget Target = target;
 }
@@ -642,9 +643,15 @@ def WildcardFalse : WildcardPred<0>;
 def WildcardTrue : WildcardPred<1>;
 
 // Indicates that the destination register of `FirstMI` should have one use if
-// it is a virtual register.
+// it is a virtual register (fusion is done in pre-ra scheduler).
 class OneUsePred : FirstFusionPredicate;
 def OneUse : OneUsePred;
+
+// Indicates that the first register of `SecondMI` should be the same as the
+// second register if it is a physical register (fusion is done in post-ra
+// scheduler).
+class SameRegisterPred : SecondFusionPredicate;
+def SameRegister : SameRegisterPred;
 
 // Handled by MacroFusionPredicatorEmitter backend.
 // The generated predicator will be like:
@@ -688,11 +695,7 @@ class SimpleFusion<MCInstPredicate firstPred, MCInstPredicate secondPred,
                     SecondFusionPredicateWithMCInstPredicate<secondPred>,
                     WildcardTrue,
                     FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                    SecondFusionPredicateWithMCInstPredicate<
-                      CheckAny<[
-                        CheckIsVRegOperand<0>,
-                        CheckSameRegOperand<0, 1>
-                      ]>>,
+                    SameRegister,
                     OneUse,
                     TieReg<0, 1>,
                   ],

@@ -151,7 +151,7 @@ public:
   bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                               const TargetSubtargetInfo &STI,
                               const MachineInstr *FirstMI,
-                              const MachineInstr &SecondMI);
+                              const MachineInstr &SecondMI, bool IsPostRA);
 };
 
 } // end anonymous namespace
@@ -159,9 +159,10 @@ public:
 bool MacroFusion::shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                          const TargetSubtargetInfo &STI,
                                          const MachineInstr *FirstMI,
-                                         const MachineInstr &SecondMI) {
+                                         const MachineInstr &SecondMI,
+                                         bool IsPostRA) {
   return llvm::any_of(Predicates, [&](MacroFusionPredTy Predicate) {
-    return Predicate(TII, STI, FirstMI, SecondMI);
+    return Predicate(TII, STI, FirstMI, SecondMI, IsPostRA);
   });
 }
 
@@ -183,9 +184,11 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
   const MachineInstr &AnchorMI = *AnchorSU.getInstr();
   const TargetInstrInfo &TII = *DAG.TII;
   const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();
+  bool IsPostRA = DAG.MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoVRegs);
 
   // Check if the anchor instr may be fused.
-  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI))
+  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI, IsPostRA))
     return false;
 
   // Explorer for fusion candidates among the dependencies of the anchor instr.
@@ -201,7 +204,7 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
     // Only chain two instructions together at most.
     const MachineInstr *DepMI = DepSU.getInstr();
     if (!hasLessThanNumFused(DepSU, 2) ||
-        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI))
+        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI, IsPostRA))
       continue;
 
     if (fuseInstructionPair(DAG, DepSU, AnchorSU))

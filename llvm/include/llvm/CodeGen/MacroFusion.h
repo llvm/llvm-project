@@ -32,7 +32,7 @@ class SUnit;
 using MacroFusionPredTy = bool (*)(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &STI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI);
+                                   const MachineInstr &SecondMI, bool IsPostRA);
 
 /// Checks if the number of cluster edges between SU and its predecessors is
 /// less than FuseLimit

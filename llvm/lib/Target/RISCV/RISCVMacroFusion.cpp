@@ -18,7 +18,8 @@
 
 using namespace llvm;
 
-static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI) {
+static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI,
+                           bool IsPostRA) {
   if (!SecondMI.getOperand(1).isReg())
     return false;
 
@@ -26,7 +27,7 @@ static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI) {
     return false;
 
   // If the input is virtual make sure this is the only user.
-  if (FirstDest.isVirtual()) {
+  if (!IsPostRA) {
     auto &MRI = SecondMI.getMF()->getRegInfo();
     return MRI.hasOneNonDBGUse(FirstDest);
   }
@@ -37,7 +38,8 @@ static bool checkRegisters(Register FirstDest, const MachineInstr &SecondMI) {
 // Fuse load with add:
 // add rd, rs1, rs2
 // ld rd, 0(rd)
-static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
+                    bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::LD)
     return false;
 
@@ -55,13 +57,14 @@ static bool isLDADD(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
   if (FirstMI->getOpcode() != RISCV::ADD)
     return true;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 // Fuse zero extension of halfword:
 // slli rd, rs1, 48
 // srli rd, rd, 48
-static bool isZExtH(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+static bool isZExtH(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
+                    bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::SRLI)
     return false;
 
@@ -82,13 +85,14 @@ static bool isZExtH(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
   if (FirstMI->getOperand(2).getImm() != 48)
     return false;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 // Fuse zero extension of word:
 // slli rd, rs1, 32
 // srli rd, rd, 32
-static bool isZExtW(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+static bool isZExtW(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
+                    bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::SRLI)
     return false;
 
@@ -109,7 +113,7 @@ static bool isZExtW(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
   if (FirstMI->getOperand(2).getImm() != 32)
     return false;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 // Fuse shifted zero extension of word:
@@ -117,7 +121,7 @@ static bool isZExtW(const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
 // srli rd, rd, x
 // where 0 <= x < 32
 static bool isShiftedZExtW(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
+                           const MachineInstr &SecondMI, bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::SRLI)
     return false;
 
@@ -139,14 +143,14 @@ static bool isShiftedZExtW(const MachineInstr *FirstMI,
   if (FirstMI->getOperand(2).getImm() != 32)
     return false;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 // Fuse AUIPC followed by ADDI
 // auipc rd, imm20
 // addi rd, rd, imm12
 static bool isAUIPCADDI(const MachineInstr *FirstMI,
-                        const MachineInstr &SecondMI) {
+                        const MachineInstr &SecondMI, bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::ADDI)
     return false;
   // Assume the 1st instr to be a wildcard if it is unspecified.
@@ -156,15 +160,15 @@ static bool isAUIPCADDI(const MachineInstr *FirstMI,
   if (FirstMI->getOpcode() != RISCV::AUIPC)
     return false;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 // Fuse LUI followed by ADDI or ADDIW.
 // rd = imm[31:0] which decomposes to
 // lui rd, imm[31:12]
 // addi(w) rd, rd, imm[11:0]
-static bool isLUIADDI(const MachineInstr *FirstMI,
-                      const MachineInstr &SecondMI) {
+static bool isLUIADDI(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
+                      bool IsPostRA) {
   if (SecondMI.getOpcode() != RISCV::ADDI &&
       SecondMI.getOpcode() != RISCV::ADDIW)
     return false;
@@ -175,31 +179,32 @@ static bool isLUIADDI(const MachineInstr *FirstMI,
   if (FirstMI->getOpcode() != RISCV::LUI)
     return false;
 
-  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI);
+  return checkRegisters(FirstMI->getOperand(0).getReg(), SecondMI, IsPostRA);
 }
 
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   bool IsPostRA) {
   const RISCVSubtarget &ST = static_cast<const RISCVSubtarget &>(TSI);
 
-  if (ST.hasLUIADDIFusion() && isLUIADDI(FirstMI, SecondMI))
+  if (ST.hasLUIADDIFusion() && isLUIADDI(FirstMI, SecondMI, IsPostRA))
     return true;
 
-  if (ST.hasAUIPCADDIFusion() && isAUIPCADDI(FirstMI, SecondMI))
+  if (ST.hasAUIPCADDIFusion() && isAUIPCADDI(FirstMI, SecondMI, IsPostRA))
     return true;
 
-  if (ST.hasZExtHFusion() && isZExtH(FirstMI, SecondMI))
+  if (ST.hasZExtHFusion() && isZExtH(FirstMI, SecondMI, IsPostRA))
     return true;
 
-  if (ST.hasZExtWFusion() && isZExtW(FirstMI, SecondMI))
+  if (ST.hasZExtWFusion() && isZExtW(FirstMI, SecondMI, IsPostRA))
     return true;
 
-  if (ST.hasShiftedZExtWFusion() && isShiftedZExtW(FirstMI, SecondMI))
+  if (ST.hasShiftedZExtWFusion() && isShiftedZExtW(FirstMI, SecondMI, IsPostRA))
     return true;
 
-  if (ST.hasLDADDFusion() && isLDADD(FirstMI, SecondMI))
+  if (ST.hasLDADDFusion() && isLDADD(FirstMI, SecondMI, IsPostRA))
     return true;
 
   return false;
