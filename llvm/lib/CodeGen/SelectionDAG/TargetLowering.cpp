@@ -8398,7 +8398,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   // Propagate any NaN of both operands
   if (!N->getFlags().hasNoNaNs() &&
-      (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))) {
+      (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
     ConstantFP *FPNaN = ConstantFP::get(
         *DAG.getContext(), APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT)));
     MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
@@ -8406,8 +8406,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   }
 
   // fminimum/fmaximum requires -0.0 less than +0.0
-  if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
-      !DAG.isKnownNeverZeroFloat(RHS)) {
+  if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(RHS) &&
+      !DAG.isKnownNeverZeroFloat(LHS)) {
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
     SDValue TestZero =
