@@ -17,31 +17,33 @@ define i32 @scanfile(i32 %call148) {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    cbz w8, LBB0_7
+; CHECK-NEXT:    b.ge LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.eq LBB0_7
-; CHECK-NEXT:  ; %bb.2: ; %entry
+; CHECK-NEXT:    cbnz w8, LBB0_7
+; CHECK-NEXT:  LBB0_2: ; %common.ret1
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB0_3: ; %entry
+; CHECK-NEXT:    b.eq LBB0_2
+; CHECK-NEXT:  ; %bb.4: ; %entry
 ; CHECK-NEXT:    cmp w8, #2
-; CHECK-NEXT:    b.eq LBB0_4
-; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    b.eq LBB0_6
+; CHECK-NEXT:  ; %bb.5: ; %entry
 ; CHECK-NEXT:    cmp w8, #3
-; CHECK-NEXT:    b.ne LBB0_5
-; CHECK-NEXT:  LBB0_4: ; %sw.bb300
+; CHECK-NEXT:    b.ne LBB0_2
+; CHECK-NEXT:  LBB0_6: ; %sw.bb300
 ; CHECK-NEXT:    bl _logg
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_5: ; %entry
+; CHECK-NEXT:  LBB0_7: ; %entry
 ; CHECK-NEXT:    cmn w8, #2
-; CHECK-NEXT:    b.eq LBB0_8
-; CHECK-NEXT:  ; %bb.6: ; %entry
+; CHECK-NEXT:    b.eq LBB0_9
+; CHECK-NEXT:  ; %bb.8: ; %entry
 ; CHECK-NEXT:    cmn w8, #1
-; CHECK-NEXT:    b.eq LBB0_8
-; CHECK-NEXT:  LBB0_7: ; %common.ret1
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_8: ; %sw.bb150
+; CHECK-NEXT:    b.ne LBB0_2
+; CHECK-NEXT:  LBB0_9: ; %sw.bb150
 ; CHECK-NEXT:    bl _logg
 ; CHECK-NEXT:    brk #0x1
 entry:

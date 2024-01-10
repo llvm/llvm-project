@@ -95,17 +95,33 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #if !SANITIZER_GO
   if (!common_flags()->print_summary)
     return;
-  if (stack->size == 0) {
-    ReportErrorSummary(error_type);
-    return;
+
+  // Find first non-internal stack frame.
+  for (uptr i = 0; i < stack->size; ++i) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[i]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      if (const SymbolizedStack *summary_frame = SkipInternalFrames(frame)) {
+        ReportErrorSummary(error_type, summary_frame->info, alt_tool_name);
+        return;
+      }
+    }
   }
-  // Currently, we include the first stack frame into the report summary.
-  // Maybe sometimes we need to choose another frame (e.g. skip memcpy/etc).
-  uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
-  SymbolizedStackHolder symbolized_stack(
-      Symbolizer::GetOrInit()->SymbolizePC(pc));
-  const SymbolizedStack *frame = symbolized_stack.get();
-  ReportErrorSummary(error_type, frame->info, alt_tool_name);
+
+  // Fallback to the top one.
+  if (stack->size) {
+    uptr pc = StackTrace::GetPreviousInstructionPc(stack->trace[0]);
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    if (const SymbolizedStack *frame = symbolized_stack.get()) {
+      ReportErrorSummary(error_type, frame->info, alt_tool_name);
+      return;
+    }
+  }
+
+  // Fallback to a summary without location.
+  ReportErrorSummary(error_type);
 #endif
 }
 

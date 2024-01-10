@@ -24,6 +24,7 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_BARVINOK_H
 #define MLIR_ANALYSIS_PRESBURGER_BARVINOK_H
 
+#include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include <optional>
@@ -76,6 +77,11 @@ ConeV getDual(ConeH cone);
 /// H-representation.
 /// The returned cone is pointed at the origin.
 ConeH getDual(ConeV cone);
+
+/// Compute the generating function for a unimodular cone.
+/// The input cone must be unimodular; it assert-fails otherwise.
+GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
+                                                    ConeH cone);
 
 } // namespace detail
 } // namespace presburger

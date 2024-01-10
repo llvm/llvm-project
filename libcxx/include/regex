@@ -1889,6 +1889,9 @@ void __r_anchor_multiline<_CharT>::__exec(__state& __s) const {
   if (__s.__current_ == __s.__last_ && !(__s.__flags_ & regex_constants::match_not_eol)) {
     __s.__do_   = __state::__accept_but_not_consume;
     __s.__node_ = this->first();
+  } else if (__s.__current_ == __s.__first_ && !(__s.__flags_ & regex_constants::match_not_eol)) {
+    __s.__do_   = __state::__accept_but_not_consume;
+    __s.__node_ = this->first();
   } else if (__multiline_ && std::__is_eol(*__s.__current_)) {
     __s.__do_   = __state::__accept_but_not_consume;
     __s.__node_ = this->first();
