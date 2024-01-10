@@ -5509,8 +5509,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*IsThunk=*/false);
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
+    // All calls within a strictfp function are marked strictfp
     if (FD->hasAttr<StrictFPAttr>())
-      // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 
     // If -ffast-math is enabled and the function is guarded by an
@@ -5520,9 +5520,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CGM.AdjustMemoryAttribute(CalleePtr->getName(), Callee.getAbstractInfo(),
                                 Attrs);
   }
-  // We may not have a FunctionDecl*, but we still need to support strictfp.
+
+  // All calls within a strictfp function are marked strictfp
   if (Builder.getIsFPConstrained()) {
-    // All calls within a strictfp function are marked strictfp
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
   }
 
