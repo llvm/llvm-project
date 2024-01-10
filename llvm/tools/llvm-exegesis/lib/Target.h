@@ -67,7 +67,7 @@ struct PfmCountersInfo {
   unsigned NumIssueCounters;
 
   const std::pair<ValidationEvent, const char *> *ValidationEvents;
-  unsigned NumValidationCounters;
+  unsigned NumValidationEvents;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
