@@ -255,6 +255,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               PenaltyBreakTemplateDeclaration, 1234u);
   CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
               1234u);
+  CHECK_PARSE("PenaltyBreakScopeResolution: 1234", PenaltyBreakScopeResolution,
+              1234u);
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
   CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
               PenaltyReturnTypeOnItsOwnLine, 1234u);

@@ -4432,6 +4432,11 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyBreakOpenParenthesis** (``Unsigned``) :versionbadge:`clang-format 14` :ref:`¶ <PenaltyBreakOpenParenthesis>`
   The penalty for breaking after ``(``.
 
+.. _PenaltyBreakScopeResolution:
+
+**PenaltyBreakScopeResolution** (``Unsigned``) :versionbadge:`clang-format 18` :ref:`¶ <PenaltyBreakScopeResolution>`
+  The penalty for breaking after ``::``.
+
 .. _PenaltyBreakString:
 
 **PenaltyBreakString** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakString>`

@@ -21567,6 +21567,19 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
                Style);
 }
 
+TEST_F(FormatTest, BreakPenaltyScopeResolution) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 20;
+  Style.PenaltyExcessCharacter = 100;
+  verifyFormat("unsigned long\n"
+               "foo::bar();",
+               Style);
+  Style.PenaltyBreakScopeResolution = 10;
+  verifyFormat("unsigned long foo::\n"
+               "    bar();",
+               Style);
+}
+
 TEST_F(FormatTest, WorksFor8bitEncodings) {
   // FIXME: unstable test case
   EXPECT_EQ("\"\xce\xe4\xed\xe0\xe6\xe4\xfb \xe2 \"\n"
