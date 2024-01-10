@@ -726,6 +726,8 @@ struct __sanitizer_cpuset {
 
 typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
 extern unsigned struct_cpuset_sz;
+
+typedef unsigned long long __sanitizer_eventfd_t;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \

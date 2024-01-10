@@ -32,8 +32,6 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <unordered_map>
-
 namespace llvm {
 namespace exegesis {
 
@@ -61,7 +59,8 @@ struct PfmCountersInfo {
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
 
-  std::unordered_map<ValidationEvent, const char *> ValidationCounters;
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationCounters;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;

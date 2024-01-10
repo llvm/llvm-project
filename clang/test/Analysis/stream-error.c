@@ -21,6 +21,15 @@ void error_fopen(void) {
   fclose(F);
 }
 
+void error_fdopen(int fd) {
+  FILE *F = fdopen(fd, "r");
+  if (!F)
+    return;
+  clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+  clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  fclose(F);
+}
+
 void error_freopen(void) {
   FILE *F = fopen("file", "r");
   if (!F)
@@ -146,8 +155,8 @@ void error_fgets(void) {
   fgets(Buf, sizeof(Buf), F);         // expected-warning {{Stream might be already closed}}
 }
 
-void error_fputc(void) {
-  FILE *F = tmpfile();
+void error_fputc(int fd) {
+  FILE *F = fdopen(fd, "w");
   if (!F)
     return;
   int Ret = fputc('X', F);
@@ -180,6 +189,22 @@ void error_fputs(void) {
   }
   fclose(F);
   fputs("ABC", F); // expected-warning {{Stream might be already closed}}
+}
+
+void error_ungetc() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = ungetc('X', F);
+  clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  if (Ret == EOF) {
+    clang_analyzer_warnIfReached();          // expected-warning {{REACHABLE}}
+  } else {
+    clang_analyzer_eval(Ret == 'X');         // expected-warning {{TRUE}}
+  }
+  fputc('Y', F);                             // no-warning
+  fclose(F);
+  ungetc('A', F); // expected-warning {{Stream might be already closed}}
 }
 
 void write_after_eof_is_allowed(void) {

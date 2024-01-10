@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-#include <iostream>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "exegesis-emitter"
@@ -107,6 +105,17 @@ ExegesisEmitter::ExegesisEmitter(RecordKeeper &RK)
   Target = std::string(Targets[0]->getName());
 }
 
+struct ValidationCounterInfo {
+  int64_t EventNumber;
+  StringRef EventName;
+  unsigned PfmCounterID;
+};
+
+bool EventNumberLess(const ValidationCounterInfo &LHS,
+                     const ValidationCounterInfo &RHS) {
+  return LHS.EventNumber < RHS.EventNumber;
+}
+
 void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
                                           unsigned &IssueCountersTableOffset,
                                           raw_ostream &OS) const {
@@ -118,6 +127,29 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
       Def.getValueAsListOfDefs("IssueCounters").size();
   const size_t NumValidationCounters =
       Def.getValueAsListOfDefs("ValidationCounters").size();
+
+  // Emit Validation Counters Array
+  if (NumValidationCounters != 0) {
+    std::vector<ValidationCounterInfo> ValidationCounters;
+    ValidationCounters.reserve(NumValidationCounters);
+    for (const Record *ValidationCounter :
+         Def.getValueAsListOfDefs("ValidationCounters")) {
+      ValidationCounters.push_back(
+          {ValidationCounter->getValueAsDef("EventType")
+               ->getValueAsInt("EventNumber"),
+           ValidationCounter->getValueAsDef("EventType")->getName(),
+           getPfmCounterId(ValidationCounter->getValueAsString("Counter"))});
+    }
+    std::sort(ValidationCounters.begin(), ValidationCounters.end(),
+              EventNumberLess);
+    OS << "\nstatic const std::pair<ValidationEvent, const char*> " << Target
+       << Def.getName() << "ValidationCounters[] = {\n";
+    for (const ValidationCounterInfo &VCI : ValidationCounters) {
+      OS << "  { " << VCI.EventName << ", " << Target << "PfmCounterNames["
+         << VCI.PfmCounterID << "]},\n";
+    }
+    OS << "};\n";
+  }
 
   OS << "\nstatic const PfmCountersInfo " << Target << Def.getName()
      << " = {\n";
@@ -145,18 +177,10 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
 
   // Validation Counters
   if (NumValidationCounters == 0)
-    OS << "  {} // No validation counters.\n";
-  else {
-    OS << "  {\n";
-    for (const Record *ValidationCounter :
-         Def.getValueAsListOfDefs("ValidationCounters")) {
-      OS << "    { " << ValidationCounter->getValueAsDef("EventType")->getName()
-         << ", " << Target << "PfmCounterNames["
-         << getPfmCounterId(ValidationCounter->getValueAsString("Counter"))
-         << "]},\n";
-    }
-    OS << "  } // Validation counters.\n";
-  }
+    OS << "  nullptr, 0 // No validation counters.\n";
+  else
+    OS << "  " << Target << Def.getName() << "ValidationCounters, "
+       << NumValidationCounters << " // Validation counters.\n";
 
   OS << "};\n";
   IssueCountersTableOffset += NumIssueCounters;

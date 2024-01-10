@@ -1052,55 +1052,6 @@ public:
   }
 };
 
-class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
-public:
-  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::TransposeOp op,
-                                PatternRewriter &rewriter) const final {
-    DenseIntElementsAttr perms;
-    if (!matchPattern(op.getPerms(), m_Constant(&perms))) {
-      return rewriter.notifyMatchFailure(op, "unmatched permutation tensor");
-    }
-
-    auto loc = op.getLoc();
-    auto input = op->getOperand(0);
-    auto resultTy = cast<ShapedType>(op.getType());
-
-    SmallVector<Value> dynDims;
-    dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
-
-    SmallVector<AffineExpr, 2> inputExprs;
-    inputExprs.resize(resultTy.getRank());
-    for (const auto &permutation : llvm::enumerate(perms.getValues<APInt>())) {
-      auto index = permutation.index();
-      auto value = permutation.value().getZExtValue();
-      if (!resultTy.hasRank() || resultTy.isDynamicDim(index)) {
-        dynDims[index] = rewriter.create<tensor::DimOp>(loc, input, value);
-      }
-      inputExprs[value] = rewriter.getAffineDimExpr(index);
-    }
-
-    SmallVector<Value> filteredDims = condenseValues(dynDims);
-
-    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultTy.getElementType(), filteredDims);
-
-    SmallVector<AffineMap, 2> affineMaps = {
-        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
-                       rewriter.getContext()),
-        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
-
-    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-        op, resultTy, op.getInput1(), ValueRange{emptyTensor}, affineMaps,
-        getNParallelLoopsAttrs(resultTy.getRank()),
-        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-          nestedBuilder.create<linalg::YieldOp>(loc, *args.begin());
-        });
-    return success();
-  }
-};
-
 class RescaleConverter : public OpRewritePattern<tosa::RescaleOp> {
 public:
   using OpRewritePattern<tosa::RescaleOp>::OpRewritePattern;
@@ -2284,8 +2235,11 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
 
   static Value castIndexToFloat(OpBuilder &builder, Location loc,
                                 FloatType type, Value value) {
-    auto integerVal =
-        builder.create<arith::IndexCastUIOp>(loc, builder.getI64Type(), value);
+    auto integerVal = builder.create<arith::IndexCastUIOp>(
+        loc,
+        type.getIntOrFloatBitWidth() > 32 ? builder.getI64Type()
+                                          : builder.getI32Type(),
+        value);
 
     return builder.create<arith::UIToFPOp>(loc, type, integerVal);
   }
@@ -2454,7 +2408,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReverseConverter,
       RFFT2dConverter,
       TableConverter,
-      TileConverter,
-      TransposeConverter>(patterns->getContext());
+      TileConverter>(patterns->getContext());
   // clang-format on
 }

@@ -503,7 +503,6 @@ class MUBUF_Load_Pseudo <string opName,
   let has_vdata = !not(!or(isLds, isLdsOpc));
   let mayLoad = 1;
   let mayStore = isLds;
-  let maybeAtomic = 1;
   let Uses = !if(!or(isLds, isLdsOpc) , [EXEC, M0], [EXEC]);
   let tfe = isTFE;
   let lds = isLds;
@@ -610,7 +609,6 @@ class MUBUF_Store_Pseudo <string opName,
                     getAddrName<addrKindCopy>.ret;
   let mayLoad = 0;
   let mayStore = 1;
-  let maybeAtomic = 1;
   let elements = getMUBUFElements<store_vt>.ret;
   let tfe = isTFE;
 }
@@ -671,7 +669,6 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let LGKM_CNT = 1;
   let mayLoad = 1;
   let mayStore = 1;
-  let maybeAtomic = 1;
 
   let has_vdata = 0;
   let has_vaddr = 0;
@@ -735,7 +732,6 @@ class MUBUF_Atomic_Pseudo<string opName,
   let has_glc = 0;
   let has_dlc = 0;
   let has_sccb = 1;
-  let maybeAtomic = 1;
   let AsmMatchConverter = "cvtMubufAtomic";
 }
 
@@ -1222,8 +1218,10 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
-                                       int_amdgcn_buffer_wbinvl1>;
+let SubtargetPredicate = isNotGFX12Plus in
+def BUFFER_WBINVL1 : MUBUF_Invalidate <
+  "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
+>;
 
 let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN<

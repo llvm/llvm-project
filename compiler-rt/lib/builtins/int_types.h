@@ -139,7 +139,6 @@ typedef union {
   udwords u;
   double f;
 } double_bits;
-#endif
 
 typedef struct {
 #if _YUGA_LITTLE_ENDIAN
@@ -220,7 +219,6 @@ typedef union {
 #define CRT_HAS_TF_MODE
 #endif
 
-#if CRT_HAS_FLOATING_POINT
 #if __STDC_VERSION__ >= 199901L
 typedef float _Complex Fcomplex;
 typedef double _Complex Dcomplex;
@@ -270,5 +268,5 @@ typedef struct {
 #define COMPLEXTF_IMAGINARY(x) (x).imaginary
 #endif
 
-#endif
+#endif // CRT_HAS_FLOATING_POINT
 #endif // INT_TYPES_H

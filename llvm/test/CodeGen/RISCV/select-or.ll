@@ -44,10 +44,10 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    bnez a1, .LBB1_3
 ; RV32I-NEXT:  # %bb.2: # %if.else
-; RV32I-NEXT:    call neither@plt
+; RV32I-NEXT:    call neither
 ; RV32I-NEXT:    j .LBB1_4
 ; RV32I-NEXT:  .LBB1_3: # %if.then
-; RV32I-NEXT:    call either@plt
+; RV32I-NEXT:    call either
 ; RV32I-NEXT:  .LBB1_4: # %if.end
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -61,10 +61,10 @@ define signext i32 @if_of_or(i1 zeroext %a, i1 zeroext %b) nounwind {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    bnez a1, .LBB1_3
 ; RV64I-NEXT:  # %bb.2: # %if.else
-; RV64I-NEXT:    call neither@plt
+; RV64I-NEXT:    call neither
 ; RV64I-NEXT:    j .LBB1_4
 ; RV64I-NEXT:  .LBB1_3: # %if.then
-; RV64I-NEXT:    call either@plt
+; RV64I-NEXT:    call either
 ; RV64I-NEXT:  .LBB1_4: # %if.end
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
