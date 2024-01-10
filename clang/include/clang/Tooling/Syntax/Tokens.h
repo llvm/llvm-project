@@ -148,7 +148,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 /// A list of tokens as lexed from the input file, without expanding
 /// preprocessor macros.
 class UnexpandedTokenBuffer {
-  std::string Code;
   std::vector<syntax::Token> Tokens;
   std::unique_ptr<SourceManagerForFile> SrcMgr;
 

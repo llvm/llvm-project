@@ -285,11 +285,12 @@ static bool isMatchingSelectorName(const syntax::Token &Tok,
          Next.kind() == tok::colon && Tok.text(SrcMgr) == NamePiece;
 }
 
-llvm::Expected<SmallVector<SourceLocation>>
-findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
-                             const SourceManager &SM, SourceLocation RenameLoc,
-                             const SymbolName &OldName,
-                             ObjCSymbolSelectorKind Kind) {
+Error findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
+                                   const SourceManager &SM,
+                                   SourceLocation RenameLoc,
+                                   const SymbolName &OldName,
+                                   ObjCSymbolSelectorKind Kind,
+                                   SmallVectorImpl<SourceLocation> &Result) {
   ArrayRef<syntax::Token> Tokens =
       AllTokens.drop_while([RenameLoc](syntax::Token Tok) -> bool {
         return Tok.location() != RenameLoc;
@@ -298,7 +299,6 @@ findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
   assert(OldName.getNamePieces()[0].empty() ||
          Tokens[0].text(SM) == OldName.getNamePieces()[0]);
   assert(OldName.getNamePieces().size() > 1);
-  SmallVector<SourceLocation> Result;
 
   Result.push_back(Tokens[0].location());
 
@@ -328,7 +328,7 @@ findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
       Result.push_back(Tok.location());
       // All the selector pieces have been found.
       if (Result.size() == OldName.getNamePieces().size())
-        return Result;
+        return Error::success();
     } else if (Tok.kind() == tok::r_square) {
       // Stop scanning at the end of the message send.
       // Also account for spurious ']' in blocks or lambdas.
@@ -337,11 +337,11 @@ findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
         break;
       if (SquareCount)
         --SquareCount;
-    } else if (Tok.kind() == tok::l_square)
+    } else if (Tok.kind() == tok::l_square) {
       ++SquareCount;
-    else if (Tok.kind() == tok::l_paren)
+    } else if (Tok.kind() == tok::l_paren) {
       ++ParenCount;
-    else if (Tok.kind() == tok::r_paren) {
+    } else if (Tok.kind() == tok::r_paren) {
       if (!ParenCount)
         break;
       --ParenCount;

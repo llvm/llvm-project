@@ -75,7 +75,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs);
 /// Generates rename edits that replaces all given occurrences with the
 /// `NewName`.
 ///
-/// `OldName` is and `Tokens` are used to to find the argument labels of
+/// `OldName` and `Tokens` are used to to find the argument labels of
 /// Objective-C selectors.
 ///
 /// Exposed for testing only.
