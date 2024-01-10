@@ -311,8 +311,7 @@ class Parser : public CodeCompletionHandler {
   SmallVector<TemplateIdAnnotation *, 16> TemplateIds;
 
   void MaybeDestroyTemplateIds() {
-    if (!TemplateIds.empty() &&
-        (Tok.is(tok::eof) || !PP.mightHavePendingAnnotationTokens()))
+    if (!TemplateIds.empty() && !PP.mightHavePendingAnnotationTokens())
       DestroyTemplateIds();
   }
   void DestroyTemplateIds();
