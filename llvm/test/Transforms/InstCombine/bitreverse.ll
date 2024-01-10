@@ -108,22 +108,7 @@ entry:
 
 define i32 @rev32_bswap(i32 %v) {
 ; CHECK-LABEL: @rev32_bswap(
-; CHECK-NEXT:    [[AND_I:%.*]] = lshr i32 [[V:%.*]], 1
-; CHECK-NEXT:    [[SHR_I:%.*]] = and i32 [[AND_I]], 1431655765
-; CHECK-NEXT:    [[AND1_I:%.*]] = shl i32 [[V]], 1
-; CHECK-NEXT:    [[SHL_I:%.*]] = and i32 [[AND1_I]], -1431655766
-; CHECK-NEXT:    [[OR_I:%.*]] = or disjoint i32 [[SHR_I]], [[SHL_I]]
-; CHECK-NEXT:    [[AND2_I:%.*]] = lshr i32 [[OR_I]], 2
-; CHECK-NEXT:    [[SHR3_I:%.*]] = and i32 [[AND2_I]], 858993459
-; CHECK-NEXT:    [[AND4_I:%.*]] = shl i32 [[OR_I]], 2
-; CHECK-NEXT:    [[SHL5_I:%.*]] = and i32 [[AND4_I]], -858993460
-; CHECK-NEXT:    [[OR6_I:%.*]] = or disjoint i32 [[SHR3_I]], [[SHL5_I]]
-; CHECK-NEXT:    [[AND7_I:%.*]] = lshr i32 [[OR6_I]], 4
-; CHECK-NEXT:    [[SHR8_I:%.*]] = and i32 [[AND7_I]], 252645135
-; CHECK-NEXT:    [[AND9_I:%.*]] = shl i32 [[OR6_I]], 4
-; CHECK-NEXT:    [[SHL10_I:%.*]] = and i32 [[AND9_I]], -252645136
-; CHECK-NEXT:    [[OR11_I:%.*]] = or disjoint i32 [[SHR8_I]], [[SHL10_I]]
-; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bswap.i32(i32 [[OR11_I]])
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[V:%.*]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and.i = lshr i32 %v, 1
