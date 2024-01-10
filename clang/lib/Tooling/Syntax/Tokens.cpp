@@ -227,11 +227,7 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
 
 UnexpandedTokenBuffer::UnexpandedTokenBuffer(StringRef Code,
                                              const LangOptions &LangOpts) {
-  // InMemoryFileAdapter crashes unless the buffer is null terminated, so ensure
-  // the string is null-terminated.
-  this->Code = Code.str();
-  SrcMgr =
-      std::make_unique<SourceManagerForFile>("mock_file_name.cpp", this->Code);
+  SrcMgr = std::make_unique<SourceManagerForFile>("mock_file_name.cpp", Code);
   Tokens = syntax::tokenize(sourceManager().getMainFileID(), sourceManager(),
                             LangOpts);
 }

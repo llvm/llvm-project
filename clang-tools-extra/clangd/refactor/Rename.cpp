@@ -526,23 +526,25 @@ std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
   auto &ASTCtx = RenameDecl.getASTContext();
+  auto Identifier = NewName.getSinglePiece();
+  if (!Identifier) {
+    return std::nullopt;
+  }
   std::optional<InvalidName> Result;
-  if (auto Identifier = NewName.getSinglePiece()) {
-    if (isKeyword(*Identifier, ASTCtx.getLangOpts()))
-      Result = InvalidName{InvalidName::Keywords, *Identifier};
-    else if (!mayBeValidIdentifier(*Identifier))
-      Result = InvalidName{InvalidName::BadIdentifier, *Identifier};
-    else {
-      // Name conflict detection.
-      // Function conflicts are subtle (overloading), so ignore them.
-      if (RenameDecl.getKind() != Decl::Function &&
-          RenameDecl.getKind() != Decl::CXXMethod) {
-        if (auto *Conflict =
-                lookupSiblingWithName(ASTCtx, RenameDecl, *Identifier))
-          Result = InvalidName{
-              InvalidName::Conflict,
-              Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
-      }
+  if (isKeyword(*Identifier, ASTCtx.getLangOpts())) {
+    Result = InvalidName{InvalidName::Keywords, *Identifier};
+  } else if (!mayBeValidIdentifier(*Identifier)) {
+    Result = InvalidName{InvalidName::BadIdentifier, *Identifier};
+  } else {
+    // Name conflict detection.
+    // Function conflicts are subtle (overloading), so ignore them.
+    if (RenameDecl.getKind() != Decl::Function &&
+        RenameDecl.getKind() != Decl::CXXMethod) {
+      if (auto *Conflict =
+              lookupSiblingWithName(ASTCtx, RenameDecl, *Identifier))
+        Result = InvalidName{
+            InvalidName::Conflict,
+            Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
     }
   }
   if (Result)
@@ -579,24 +581,26 @@ renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
     if (std::optional<std::string> Identifier = NewName.getSinglePiece()) {
       tooling::Replacement NewReplacement(
           SM, CharSourceRange::getTokenRange(RenameLoc), *Identifier);
+      if (auto Err = FilteredChanges.add(NewReplacement)) {
+        return std::move(Err);
+      }
+      continue;
+    }
+    SmallVector<SourceLocation> PieceLocations;
+    llvm::Error Error = findObjCSymbolSelectorPieces(
+        AST.getTokens().expandedTokens(), SM, RenameLoc, OldName,
+        tooling::ObjCSymbolSelectorKind::Unknown, PieceLocations);
+    if (Error) {
+      // Ignore the error. We simply skip over all selectors that didn't match.
+      consumeError(std::move(Error));
+      continue;
+    }
+    for (auto [Location, NewPiece] :
+         llvm::zip_equal(PieceLocations, NewName.getNamePieces())) {
+      tooling::Replacement NewReplacement(
+          SM, CharSourceRange::getTokenRange(Location), NewPiece);
       if (auto Err = FilteredChanges.add(NewReplacement))
         return std::move(Err);
-    } else {
-      llvm::Expected<SmallVector<SourceLocation>> PieceLocations =
-          findObjCSymbolSelectorPieces(
-              AST.getTokens().expandedTokens(), SM, RenameLoc, OldName,
-              tooling::ObjCSymbolSelectorKind::Unknown);
-      if (!PieceLocations) {
-        return PieceLocations.takeError();
-      }
-      assert(PieceLocations->size() == NewName.getNamePieces().size());
-      for (auto [Location, NewPiece] :
-           llvm::zip_equal(*PieceLocations, NewName.getNamePieces())) {
-        tooling::Replacement NewReplacement(
-            SM, CharSourceRange::getTokenRange(Location), NewPiece);
-        if (auto Err = FilteredChanges.add(NewReplacement))
-          return std::move(Err);
-      }
     }
   }
   return FilteredChanges;
@@ -811,18 +815,16 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (!Name)
     return makeError(ReasonToReject::UnsupportedSymbol);
   SymbolName OldSymbolName(Name);
-  SymbolName NewSymbolName(ArrayRef<StringRef>{});
-  if (std::optional<StringRef> NewName = RInputs.NewName) {
-    NewSymbolName = SymbolName(*NewName, AST.getLangOpts());
+  SymbolName NewSymbolName;
+  if (RInputs.NewName) {
+    NewSymbolName = SymbolName(*RInputs.NewName, AST.getLangOpts());
   } else {
     // If no new name is given, we are perfoming a pseudo rename for the
     // prepareRename request to check if the rename is possible. Construct a
     // new symbol name that has as many name pieces as the old name and is thus
     // a valid new name.
-    std::vector<std::string> NewNamePieces;
-    for (StringRef Piece : OldSymbolName.getNamePieces()) {
-      NewNamePieces.push_back(Piece.str() + "__clangd_rename_placeholder");
-    }
+    std::vector<std::string> NewNamePieces = OldSymbolName.getNamePieces();
+    NewNamePieces[0] += "__clangd_rename_placeholder";
     NewSymbolName = SymbolName(NewNamePieces);
   }
   if (OldSymbolName == NewSymbolName)
@@ -961,18 +963,20 @@ buildRenameEdit(llvm::StringRef AbsFilePath, llvm::StringRef InitialCode,
               AbsFilePath, R.first, ByteLength, *Identifier)))
         return std::move(Err);
     } else {
-      llvm::Expected<SmallVector<SourceLocation>> PieceLocations =
-          findObjCSymbolSelectorPieces(
-              Tokens.tokens(), SM,
-              SM.getLocForStartOfFile(SM.getMainFileID())
-                  .getLocWithOffset(R.first),
-              OldName, tooling::ObjCSymbolSelectorKind::Unknown);
-      if (!PieceLocations) {
-        return PieceLocations.takeError();
+      SmallVector<SourceLocation> PieceLocations;
+      llvm::Error Error = findObjCSymbolSelectorPieces(
+          Tokens.tokens(), SM,
+          SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(R.first),
+          OldName, tooling::ObjCSymbolSelectorKind::Unknown, PieceLocations);
+      if (Error) {
+        // Ignore the error. We simply skip over all selectors that didn't
+        // match.
+        consumeError(std::move(Error));
+        continue;
       }
-      assert(PieceLocations->size() == NewName.getNamePieces().size());
+      assert(PieceLocations.size() == NewName.getNamePieces().size());
       for (auto [Location, NewPiece] :
-           llvm::zip_equal(*PieceLocations, NewName.getNamePieces())) {
+           llvm::zip_equal(PieceLocations, NewName.getNamePieces())) {
         tooling::Replacement NewReplacement(
             SM, CharSourceRange::getTokenRange(Location), NewPiece);
         if (auto Err = RenameEdit.add(NewReplacement))

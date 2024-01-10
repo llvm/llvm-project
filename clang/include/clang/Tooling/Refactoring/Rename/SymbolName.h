@@ -34,6 +34,8 @@ class SymbolName {
   llvm::SmallVector<std::string, 1> NamePieces;
 
 public:
+  SymbolName();
+
   /// Create a new \c SymbolName with the specified pieces.
   explicit SymbolName(ArrayRef<StringRef> NamePieces);
   explicit SymbolName(ArrayRef<std::string> NamePieces);

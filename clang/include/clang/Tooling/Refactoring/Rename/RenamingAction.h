@@ -132,10 +132,10 @@ enum class ObjCSymbolSelectorKind {
   Unknown
 };
 
-llvm::Expected<SmallVector<SourceLocation>> findObjCSymbolSelectorPieces(
+llvm::Error findObjCSymbolSelectorPieces(
     ArrayRef<syntax::Token> Tokens, const SourceManager &SrcMgr,
     SourceLocation RenameLoc, const SymbolName &OldName,
-    ObjCSymbolSelectorKind Kind);
+    ObjCSymbolSelectorKind Kind, SmallVectorImpl<SourceLocation> &Result);
 
 } // end namespace tooling
 } // end namespace clang
