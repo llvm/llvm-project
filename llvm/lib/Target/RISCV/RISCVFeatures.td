@@ -581,8 +581,8 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                               "'Ztso' (Memory Model - Total Store Order)">;
 def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
 
-def FeatureStdExtZa164rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
-                                            "'Za64rs' (Reservation Set Size of at Most 64 Bytes)">;
+def FeatureStdExtZa64rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
+                                           "'Za64rs' (Reservation Set Size of at Most 64 Bytes)">;
 
 def FeatureStdExtZa128rs : SubtargetFeature<"za128rs", "HasStdExtZa128rs", "true",
                                             "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
