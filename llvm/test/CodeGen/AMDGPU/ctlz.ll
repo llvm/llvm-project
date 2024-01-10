@@ -514,8 +514,7 @@ define amdgpu_kernel void @v_ctlz_i8(ptr addrspace(1) noalias %out, ptr addrspac
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_ffbh_u32_e32 v0, v0
 ; VI-NEXT:    v_min_u32_e32 v0, 32, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, -16, v0
-; VI-NEXT:    v_add_u16_e32 v0, -8, v0
+; VI-NEXT:    v_subrev_u32_e32 v0, vcc, 24, v0
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -558,8 +557,7 @@ define amdgpu_kernel void @v_ctlz_i8(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GFX10-NEXT:    v_min_u32_e32 v1, 32, v1
-; GFX10-NEXT:    v_add_nc_u32_e32 v1, -16, v1
-; GFX10-NEXT:    v_add_nc_u16 v1, v1, -8
+; GFX10-NEXT:    v_subrev_nc_u32_e32 v1, 24, v1
 ; GFX10-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -586,9 +584,7 @@ define amdgpu_kernel void @v_ctlz_i8(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_u32_e32 v1, 32, v1
-; GFX11-NEXT:    v_add_nc_u32_e32 v1, -16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v1, v1, -8
+; GFX11-NEXT:    v_subrev_nc_u32_e32 v1, 24, v1
 ; GFX11-NEXT:    global_store_b8 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

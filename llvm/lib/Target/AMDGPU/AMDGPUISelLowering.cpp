@@ -446,6 +446,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
       {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
       MVT::i64, Custom);
 
+  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i8, Custom);
+
   static const MVT::SimpleValueType VectorIntTypes[] = {
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
       MVT::v9i32, MVT::v10i32, MVT::v11i32, MVT::v12i32};
@@ -1397,6 +1399,10 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FEXP10:
     if (SDValue Lowered = lowerFEXP(SDValue(N, 0), DAG))
       Results.push_back(Lowered);
+    return;
+  case ISD::CTLZ:
+  case ISD::CTLZ_ZERO_UNDEF:
+    replaceCTLZResults(SDValue(N, 0u), DAG, Results);
     return;
   default:
     return;
@@ -3061,6 +3067,25 @@ static bool isCtlzOpc(unsigned Opc) {
 
 static bool isCttzOpc(unsigned Opc) {
   return Opc == ISD::CTTZ || Opc == ISD::CTTZ_ZERO_UNDEF;
+}
+
+void AMDGPUTargetLowering::replaceCTLZResults(
+    SDValue Op, SelectionDAG &DAG, SmallVectorImpl<SDValue> &Results) const {
+  auto SL = SDLoc(Op);
+  auto Arg = Op.getOperand(0u);
+  auto ResultVT = Op.getValueType();
+
+  if (ResultVT != MVT::i8)
+    return;
+
+  assert(isCtlzOpc(Op.getOpcode()));
+  assert(ResultVT == Arg.getValueType());
+
+  auto SubVal = DAG.getConstant(24u, SL, MVT::i32);
+  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+  NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
+  NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, SubVal);
+  Results.push_back(DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp));
 }
 
 SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const {
