@@ -2211,10 +2211,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_amd_pointer_info_t Info;
     Info.size = sizeof(hsa_amd_pointer_info_t);
 
-    hsa_status_t Status =
-        hsa_amd_pointer_info(HstPtr, &Info, /* Allocator */ nullptr,
-                             /* Number of accessible agents (out) */ nullptr,
-                             /* Accessible agents */ nullptr);
+    hsa_status_t Status = hsa_amd_pointer_info(
+        HstPtr, &Info, /*Allocator=*/nullptr, /*num_agents_accessible=*/nullptr,
+        /*accessible=*/nullptr);
     if (auto Err = Plugin::check(Status, "Error in hsa_amd_pointer_info: %s"))
       return std::move(Err);
 
@@ -2789,7 +2788,7 @@ private:
   AMDHostDeviceTy &HostDevice;
 
   /// The current size of the global device memory pool (managed by us).
-  uint64_t DeviceMemoryPoolSize = 1L << 29L /* 512MB */;
+  uint64_t DeviceMemoryPoolSize = 1L << 29L /*512MB=*/;
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
@@ -3031,9 +3030,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Check whether the image is compatible with an AMDGPU device.
   Expected<bool> isELFCompatible(StringRef Image) const override {
     // Get the associated architecture and flags from the ELF.
-    auto ElfOrErr =
-        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
-                                  /*InitContent=*/false);
+    auto ElfOrErr = ELF64LEObjectFile::create(
+        MemoryBufferRef(Image, /*Identifier=*/""), /*InitContent=*/false);
     if (!ElfOrErr)
       return ElfOrErr.takeError();
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
