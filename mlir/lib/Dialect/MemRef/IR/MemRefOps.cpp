@@ -3160,11 +3160,10 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
   auto sizes = applyPermutationMap<int64_t>(permutationMap, originalSizes);
   auto strides = applyPermutationMap<int64_t>(permutationMap, originalStrides);
 
-  auto stridedTy = MemRefType::Builder(memRefType)
-                       .setShape(sizes)
-                       .setLayout(StridedLayoutAttr::get(
-                           memRefType.getContext(), offset, strides));
-  return canonicalizeStridedLayout(stridedTy);
+  return MemRefType::Builder(memRefType)
+      .setShape(sizes)
+      .setLayout(
+          StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
@@ -3212,15 +3211,15 @@ LogicalResult TransposeOp::verify() {
     return emitOpError("expected a permutation map of same rank as the input");
 
   auto srcType = llvm::cast<MemRefType>(getIn().getType());
-  auto canonicalDstType =
-      canonicalizeStridedLayout(llvm::cast<MemRefType>(getType()));
-  auto inferedDstType = inferTransposeResultType(srcType, getPermutation());
+  auto resultType = llvm::cast<MemRefType>(getType());
+  auto canonicalResultType = canonicalizeStridedLayout(
+      inferTransposeResultType(srcType, getPermutation()));
 
-  if (canonicalDstType != inferedDstType)
-    return emitOpError("canonicalized output type ")
-           << canonicalDstType
-           << " does not match canonical transposed input type " << srcType
-           << ", " << inferedDstType;
+  if (canonicalizeStridedLayout(resultType) != canonicalResultType)
+    return emitOpError("result type ")
+           << resultType
+           << " is not equivalent to the canonical transposed input type "
+           << canonicalResultType;
   return success();
 }
 
