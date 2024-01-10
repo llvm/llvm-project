@@ -191,6 +191,22 @@ void error_fputs(void) {
   fputs("ABC", F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_ungetc() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = ungetc('X', F);
+  clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  if (Ret == EOF) {
+    clang_analyzer_warnIfReached();          // expected-warning {{REACHABLE}}
+  } else {
+    clang_analyzer_eval(Ret == 'X');         // expected-warning {{TRUE}}
+  }
+  fputc('Y', F);                             // no-warning
+  fclose(F);
+  ungetc('A', F); // expected-warning {{Stream might be already closed}}
+}
+
 void write_after_eof_is_allowed(void) {
   FILE *F = tmpfile();
   if (!F)
