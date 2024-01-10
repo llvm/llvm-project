@@ -2067,6 +2067,14 @@ bool SampleProfileLoader::doInitialization(Module &M,
                                                DS_Warning));
       return false;
     }
+
+    if (!FunctionSamples::ProfileIsMixedProbeOrder) {
+      const char *Msg =
+          "Pseudo-probe-based profile is on an old version ID order which "
+          "could cause profile mismatch(performance regression)";
+      Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg,
+                                               DS_Warning));
+    }
   }
 
   if (ReportProfileStaleness || PersistProfileStaleness ||

@@ -41,6 +41,7 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 namespace llvm {
 namespace sampleprof {
 bool FunctionSamples::ProfileIsProbeBased = false;
+bool FunctionSamples::ProfileIsMixedProbeOrder = false;
 bool FunctionSamples::ProfileIsCS = false;
 bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;

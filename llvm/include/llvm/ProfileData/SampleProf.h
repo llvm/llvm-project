@@ -201,6 +201,10 @@ enum class SecProfSummaryFlags : uint32_t {
   /// SecFlagIsPreInlined means this profile contains ShouldBeInlined
   /// contexts thus this is CS preinliner computed.
   SecFlagIsPreInlined = (1 << 4),
+  /// SecFlagIsMixedProbeOrder means in a pseude-probe based profile, the
+  /// callsite and BB probe IDs are mixed and sorted in lexcial order instead of
+  /// the order that callsite probe IDs are always after the BB probe IDs.
+  SecFlagIsMixedProbeOrder = (1 << 5),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
@@ -466,7 +470,7 @@ struct SampleContextFrame {
   LineLocation Location;
 
   SampleContextFrame() : Location(0, 0) {}
-  
+
   SampleContextFrame(FunctionId Func, LineLocation Location)
       : Func(Func), Location(Location) {}
 
@@ -527,7 +531,7 @@ public:
       : Func(Name), State(UnknownContext), Attributes(ContextNone) {
         assert(!Name.empty() && "Name is empty");
       }
-  
+
   SampleContext(FunctionId Func)
       : Func(Func), State(UnknownContext), Attributes(ContextNone) {}
 
@@ -1177,6 +1181,8 @@ public:
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
 
   static bool ProfileIsProbeBased;
+
+  static bool ProfileIsMixedProbeOrder;
 
   static bool ProfileIsCS;
 
