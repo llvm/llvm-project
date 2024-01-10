@@ -39,6 +39,13 @@ extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
+enum ValidationEvent {
+  L1DCacheLoadMiss,
+  InstructionRetired,
+  DataTLBLoadMiss,
+  DataTLBStoreMiss
+};
+
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
   // cycles.
@@ -60,7 +67,7 @@ struct PfmCountersInfo {
   unsigned NumIssueCounters;
 
   const std::pair<ValidationEvent, const char *> *ValidationEvents;
-  unsigned NumValidationCounters;
+  unsigned NumValidationEvents;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
