@@ -69,7 +69,8 @@ public:
   ///
   /// @param [in] debugger An optional debugger pointer to specify that this
   /// progress is to be reported only to specific debuggers.
-    Progress(std::string title, std::string details = {}, uint64_t total = UINT64_MAX,
+  Progress(std::string title, std::string details = {},
+           uint64_t total = UINT64_MAX,
            lldb_private::Debugger *debugger = nullptr);
 
   /// Destroy the progress object.

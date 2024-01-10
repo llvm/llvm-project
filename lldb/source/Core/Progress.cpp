@@ -18,7 +18,8 @@ std::atomic<uint64_t> Progress::g_id(0);
 
 Progress::Progress(std::string title, std::string details, uint64_t total,
                    lldb_private::Debugger *debugger)
-    : m_title(title), m_details(details), m_id(++g_id), m_completed(0), m_total(total) {
+    : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
+      m_total(total) {
   assert(total > 0);
   if (debugger)
     m_debugger_id = debugger->GetID();
@@ -54,7 +55,7 @@ void Progress::ReportProgress(std::string update) {
     // Make sure we only send one notification that indicates the progress is
     // complete.
     m_complete = m_completed == m_total;
-    Debugger::ReportProgress(m_id, m_title, m_details, m_completed,
-                             m_total, m_debugger_id);
+    Debugger::ReportProgress(m_id, m_title, m_details, m_completed, m_total,
+                             m_debugger_id);
   }
 }
