@@ -214,23 +214,33 @@ void AliasSetTracker::clear() {
 
 /// mergeAliasSetsForPointer - Given a pointer, merge all alias sets that may
 /// alias the pointer. Return the unified set, or nullptr if no set that aliases
-/// the pointer was found. MustAliasAll is updated to true/false if the pointer
-/// is found to MustAlias all the sets it merged.
+/// the pointer was found. A known existing alias set for the pointer value of
+/// the memory location can be passed in (or nullptr if not available).
+/// MustAliasAll is updated to true/false if the pointer is found to MustAlias
+/// all the sets it merged.
 AliasSet *
 AliasSetTracker::mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
-                                          bool &MustAliasAll) {
+                                          AliasSet *PtrAS, bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
   MustAliasAll = true;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
     if (AS.Forward)
       continue;
 
-    AliasResult AR = AS.aliasesPointer(MemLoc, AA);
-    if (AR == AliasResult::NoAlias)
-      continue;
+    // An alias set that already contains a memory location with the same
+    // pointer value is directly assumed to MustAlias; we bypass the AA query in
+    // this case.
+    // Note: it is not guaranteed that AA would always provide the same result;
+    // a known exception are undef pointer values, where alias(undef, undef) is
+    // NoAlias, while we treat it as MustAlias.
+    if (&AS != PtrAS) {
+      AliasResult AR = AS.aliasesPointer(MemLoc, AA);
+      if (AR == AliasResult::NoAlias)
+        continue;
 
-    if (AR != AliasResult::MustAlias)
-      MustAliasAll = false;
+      if (AR != AliasResult::MustAlias)
+        MustAliasAll = false;
+    }
 
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
@@ -286,18 +296,12 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     // consistent.
     // This, of course, means that we will never need a merge here.
     AS = AliasAnyAS;
-  } else if (AliasSet *AliasAS =
-                 mergeAliasSetsForPointer(MemLoc, MustAliasAll)) {
+  } else if (AliasSet *AliasAS = mergeAliasSetsForPointer(
+                 MemLoc,
+                 MapEntry ? MapEntry->getForwardedTarget(*this) : nullptr,
+                 MustAliasAll)) {
     // Add it to the alias set it aliases.
     AS = AliasAS;
-  } else if (MapEntry) {
-    // Although we have an independent memory location, forgo creating a new
-    // alias set to retain the implementation invariant that all memory
-    // locations with the same pointer value are in the same alias set.
-    // (This is only known to occur for undef pointer values, which AA treats as
-    // noalias.)
-    AS = MapEntry->getForwardedTarget(*this);
-    AS->Alias = AliasSet::SetMayAlias;
   } else {
     // Otherwise create a new alias set to hold the loaded pointer.
     AliasSets.push_back(AS = new AliasSet());

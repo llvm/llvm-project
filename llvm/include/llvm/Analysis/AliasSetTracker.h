@@ -253,7 +253,7 @@ private:
 
   AliasSet &addPointer(MemoryLocation Loc, AliasSet::AccessLattice E);
   AliasSet *mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
-                                     bool &MustAliasAll);
+                                     AliasSet *PtrAS, bool &MustAliasAll);
 
   /// Merge all alias sets into a single set that is considered to alias any
   /// pointer.
