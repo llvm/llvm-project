@@ -16,12 +16,28 @@
 #include <ranges>
 
 #include "check_assertion.h"
+#include "test_iterators.h"
+
+#include "../../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
 int main(int, char**) {
-  int range[]   = {1, 2, 3};
-  auto striv    = std::ranges::views::stride(range, 3);
-  auto striv_it = striv.begin();
-  ++striv_it;
-  TEST_LIBCPP_ASSERT_FAILURE(striv_it++, "Cannot increment an iterator already at the end.");
+  {
+    int range[]   = {1, 2, 3};
+    using Base    = BasicTestView<cpp17_input_iterator<int*>>;
+    auto striv    = std::ranges::views::stride(Base(cpp17_input_iterator(range), cpp17_input_iterator(range + 3)), 3);
+    auto striv_it = striv.begin();
+    ++striv_it;
+    TEST_LIBCPP_ASSERT_FAILURE(striv_it++, "Cannot increment an iterator already at the end.");
+    TEST_LIBCPP_ASSERT_FAILURE(++striv_it, "Cannot increment an iterator already at the end.");
+  }
+  {
+    int range[]   = {1, 2, 3};
+    using Base    = BasicTestView<forward_iterator<int*>, forward_iterator<int*>>;
+    auto striv    = std::ranges::views::stride(Base(forward_iterator(range), forward_iterator(range + 3)), 3);
+    auto striv_it = striv.begin();
+    ++striv_it;
+    TEST_LIBCPP_ASSERT_FAILURE(striv_it++, "Cannot increment an iterator already at the end.");
+    TEST_LIBCPP_ASSERT_FAILURE(++striv_it, "Cannot increment an iterator already at the end.");
+  }
   return 0;
 }
