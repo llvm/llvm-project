@@ -17,7 +17,7 @@ define i32 @group() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_pe
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
 ; SEP_BFD-NEXT:      .section .gcc_except_table.group,"aG",@progbits,group,comdat{{$}}
-; SEP-NEXT:          .section .gcc_except_table.group,"aGo",@progbits,group,comdat,group{{$}}
+; SEP-NEXT:          .section .gcc_except_table.group,"aoG",@progbits,group,group,comdat{{$}}
 ; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"aG",@progbits,group,comdat{{$}}
 ; NOUNIQUE-NEXT:     .section .gcc_except_table,"aG",@progbits,group,comdat{{$}}
 entry:
@@ -61,7 +61,7 @@ define i32 @zero() uwtable comdat personality i8* bitcast (i32 (...)* @__gxx_per
 ; CHECK:             .cfi_endproc
 ; NORMAL-NEXT:       .section .gcc_except_table.zero,"aG",@progbits,zero{{$}}
 ; SEP_BFD-NEXT:      .section .gcc_except_table.zero,"aG",@progbits,zero{{$}}
-; SEP-NEXT:          .section .gcc_except_table.zero,"aGo",@progbits,zero,zero{{$}}
+; SEP-NEXT:          .section .gcc_except_table.zero,"aoG",@progbits,zero,zero{{$}}
 ; SEP_NOUNIQUE-NEXT: .section .gcc_except_table,"aG",@progbits,zero{{$}}
 ; NOUNIQUE-NEXT:     .section .gcc_except_table,"aG",@progbits,zero{{$}}
 entry:
