@@ -17,6 +17,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 __attribute__((noinline)) void call_something() { asm volatile(""); }
 
 struct Base {
