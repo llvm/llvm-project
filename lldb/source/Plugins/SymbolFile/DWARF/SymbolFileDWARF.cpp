@@ -519,7 +519,6 @@ void SymbolFileDWARF::InitializeObject() {
 
     if (apple_names.GetByteSize() > 0 || apple_namespaces.GetByteSize() > 0 ||
         apple_types.GetByteSize() > 0 || apple_objc.GetByteSize() > 0) {
-      Progress progress("Loading Apple DWARF index", module_desc.GetData());
       m_index = AppleDWARFIndex::Create(
           *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
           apple_types, apple_objc, m_context.getOrLoadStrData());

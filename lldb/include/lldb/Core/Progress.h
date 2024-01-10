@@ -64,13 +64,13 @@ public:
   /// @param [in] title The title of this progress activity.
   ///
   /// @param [in] total The total units of work to be done if specified, if
-  /// set to UINT64_MAX then an indeterminate progress indicator should be
+  /// set to std::nullopt then an indeterminate progress indicator should be
   /// displayed.
   ///
   /// @param [in] debugger An optional debugger pointer to specify that this
   /// progress is to be reported only to specific debuggers.
   Progress(std::string title, std::string details = {},
-           uint64_t total = UINT64_MAX,
+           std::optional<uint64_t> total = std::nullopt,
            lldb_private::Debugger *debugger = nullptr);
 
   /// Destroy the progress object.
@@ -103,8 +103,8 @@ private:
   const uint64_t m_id;
   /// How much work ([0...m_total]) that has been completed.
   uint64_t m_completed;
-  /// Total amount of work, UINT64_MAX for non deterministic progress.
-  const uint64_t m_total;
+  /// Total amount of work, use a std::nullopt for non deterministic progress.
+  const std::optional<uint64_t> m_total;
   /// The optional debugger ID to report progress to. If this has no value then
   /// all debuggers will receive this event.
   std::optional<lldb::user_id_t> m_debugger_id;
