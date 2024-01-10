@@ -40,10 +40,7 @@ extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
 enum ValidationEvent {
-  L1DCacheLoadMiss,
-  InstructionRetired,
-  DataTLBLoadMiss,
-  DataTLBStoreMiss
+  InstructionRetired
 };
 
 struct PfmCountersInfo {
