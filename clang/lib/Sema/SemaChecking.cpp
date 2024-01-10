@@ -15609,8 +15609,8 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         return;
       return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_vector_scalar);
     } else if (S.getLangOpts().HLSL &&
-               Target->getAs<VectorType>()->getNumElements() <
-                   Source->getAs<VectorType>()->getNumElements()) {
+               Target->castAs<VectorType>()->getNumElements() <
+                   Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(S, E, T, CC, diag::warn_hlsl_impcast_vector_truncation);

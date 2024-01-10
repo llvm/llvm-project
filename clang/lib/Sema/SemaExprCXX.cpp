@@ -4764,11 +4764,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
   case ICK_HLSL_Vector_Truncation: {
-    // Note: HLSL vectors are ExtVectors. Since this truncates a vector to a
-    // smaller vector, this can only operate on arguments where the source and
-    // destination types are ExtVectors.
-    auto *FromVec = From->getType()->castAs<ExtVectorType>();
-    auto *ToVec = ToType->castAs<ExtVectorType>();
+    // Note: HLSL built-in vectors are ExtVectors. Since this truncates a vector
+    // to a smaller vector, this can only operate on arguments where the source
+    // and destination types are ExtVectors.
+    assert(From->getType()->isExtVectorType() && ToType->isExtVectorType() &&
+           "HLSL vector truncation should only apply to ExtVectors");
+    auto *FromVec = From->getType()->castAs<VectorType>();
+    auto *ToVec = ToType->castAs<VectorType>();
     QualType ElType = FromVec->getElementType();
     QualType TruncTy =
         Context.getExtVectorType(ElType, ToVec->getNumElements());

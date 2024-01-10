@@ -2508,7 +2508,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(DestTy->isVectorType() && "Expected dest type to be vector type");
     Value *Vec = Visit(const_cast<Expr *>(E));
     SmallVector<int, 16> Mask;
-    Mask.insert(Mask.begin(), DestTy->getAs<VectorType>()->getNumElements(), 0);
+    Mask.insert(Mask.begin(), DestTy->castAs<VectorType>()->getNumElements(),
+                0);
     return Builder.CreateShuffleVector(Vec, Mask, "trunc");
   }
 
