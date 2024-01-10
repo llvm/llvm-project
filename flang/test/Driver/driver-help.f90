@@ -108,7 +108,7 @@
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
 ! HELP-NEXT: -mrvv-vector-bits=<value>
-! HELP-NEXT:                          Specify the size in bits of an RVV vector register. Defaults to the vector length agnostic value of "scalable". Accepts power of 2 values between 64 and 65536. Also accepts "zvl" to use the value implied by -march/-mcpu. On Clang, value will be reflected in __riscv_v_fixed_vlen preprocessor define (RISC-V only)
+! HELP-NEXT:                         Specify the size in bits of an RVV vector register
 ! HELP-NEXT: -msve-vector-bits=<value>
 ! HELP-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! HELP-NEXT: --no-offload-arch=<value>
