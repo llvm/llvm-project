@@ -255,6 +255,20 @@ public:
   static uint32_t hash(StringRef Buffer) { return djbHash(Buffer); }
 };
 
+/// Helper class to identify an entry in DWARF5AccelTable based on their DIE
+/// offset and UnitID.
+struct OffsetAndUnitID : std::pair<uint64_t, uint32_t> {
+  using Base = std::pair<uint64_t, uint32_t>;
+  OffsetAndUnitID(Base B) : Base(B) {}
+
+  OffsetAndUnitID(uint64_t Offset, uint32_t UnitID) : Base(Offset, UnitID) {}
+  uint64_t offset() const { return first; };
+  uint32_t unitID() const { return second; };
+};
+
+template <>
+struct DenseMapInfo<OffsetAndUnitID> : DenseMapInfo<OffsetAndUnitID::Base> {};
+
 /// The Data class implementation for DWARF v5 accelerator table. Unlike the
 /// Apple Data classes, this class is just a DIE wrapper, and does not know to
 /// serialize itself. The complete serialization logic is in the
@@ -285,6 +299,11 @@ public:
     assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
+
+  OffsetAndUnitID getDieOffsetAndUnitID() const {
+    return {getDieOffset(), UnitID};
+  }
+
   unsigned getDieTag() const { return DieTag; }
   unsigned getUnitID() const { return UnitID; }
   bool isTU() const { return IsTU; }
@@ -299,8 +318,17 @@ public:
   }
 
   std::optional<uint64_t> getParentDieOffset() const {
+    auto OffsetAndId = getParentDieOffsetAndUnitID();
+    if (!OffsetAndId)
+      return {};
+    return OffsetAndId->offset();
+  }
+
+  std::optional<OffsetAndUnitID> getParentDieOffsetAndUnitID() const {
     assert(isNormalized() && "Accessing DIE Offset before normalizing.");
-    return ParentOffset;
+    if (!ParentOffset)
+      return std::nullopt;
+    return OffsetAndUnitID(*ParentOffset, getUnitID());
   }
 
   /// If `Die` has a non-null parent and the parent is not a declaration,

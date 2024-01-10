@@ -222,7 +222,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   // Indicates if this module is built with Split Dwarf enabled.
   bool IsSplitDwarf = false;
   /// Stores the DIE offsets which are indexed by this table.
-  DenseSet<uint64_t> IndexedOffsets;
+  DenseSet<OffsetAndUnitID> IndexedOffsets;
 
   void populateAbbrevsMap();
 
@@ -231,10 +231,10 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitBuckets() const;
   void emitStringOffsets() const;
   void emitAbbrevs() const;
-  void
-  emitEntry(const DWARF5AccelTableData &Entry,
-            const DenseMap<uint64_t, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-            DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const;
+  void emitEntry(
+      const DWARF5AccelTableData &Entry,
+      const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
+      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const;
   void emitData();
 
 public:
@@ -457,8 +457,8 @@ static uint32_t constructAbbreviationTag(
 }
 
 static std::optional<dwarf::Form>
-getFormForIdxParent(const DenseSet<uint64_t> &IndexedOffsets,
-                    std::optional<uint64_t> ParentOffset) {
+getFormForIdxParent(const DenseSet<OffsetAndUnitID> &IndexedOffsets,
+                    std::optional<OffsetAndUnitID> ParentOffset) {
   // No parent information
   if (!ParentOffset)
     return std::nullopt;
@@ -476,8 +476,8 @@ void Dwarf5AccelTableWriter::populateAbbrevsMap() {
         std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
             getIndexForEntry(*Value);
         unsigned Tag = Value->getDieTag();
-        std::optional<dwarf::Form> MaybeParentForm =
-            getFormForIdxParent(IndexedOffsets, Value->getParentDieOffset());
+        std::optional<dwarf::Form> MaybeParentForm = getFormForIdxParent(
+            IndexedOffsets, Value->getParentDieOffsetAndUnitID());
         uint32_t AbbrvTag =
             constructAbbreviationTag(Tag, EntryRet, MaybeParentForm);
         if (Abbreviations.count(AbbrvTag) == 0) {
@@ -559,11 +559,12 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
 
 void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry,
-    const DenseMap<uint64_t, MCSymbol *> &DIEOffsetToAccelEntryLabel,
+    const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
     DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const {
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
       getIndexForEntry(Entry);
-  std::optional<uint64_t> MaybeParentOffset = Entry.getParentDieOffset();
+  std::optional<OffsetAndUnitID> MaybeParentOffset =
+      Entry.getParentDieOffsetAndUnitID();
   std::optional<dwarf::Form> MaybeParentForm =
       getFormForIdxParent(IndexedOffsets, MaybeParentOffset);
   uint32_t AbbrvTag =
@@ -574,7 +575,8 @@ void Dwarf5AccelTableWriter::emitEntry(
   assert(getTagFromAbbreviationTag(AbbrevIt->first) == Entry.getDieTag() &&
          "Invalid Tag");
 
-  auto EntrySymbolIt = DIEOffsetToAccelEntryLabel.find(Entry.getDieOffset());
+  auto EntrySymbolIt =
+      DIEOffsetToAccelEntryLabel.find(Entry.getDieOffsetAndUnitID());
   assert(EntrySymbolIt != DIEOffsetToAccelEntryLabel.end());
   MCSymbol *EntrySymbol = EntrySymbolIt->getSecond();
 
@@ -614,9 +616,9 @@ void Dwarf5AccelTableWriter::emitEntry(
 }
 
 void Dwarf5AccelTableWriter::emitData() {
-  DenseMap<uint64_t, MCSymbol *> DIEOffsetToAccelEntryLabel;
+  DenseMap<OffsetAndUnitID, MCSymbol *> DIEOffsetToAccelEntryLabel;
 
-  for (auto Offset : IndexedOffsets)
+  for (OffsetAndUnitID Offset : IndexedOffsets)
     DIEOffsetToAccelEntryLabel.insert({Offset, Asm->createTempSymbol("")});
 
   Asm->OutStreamer->emitLabel(EntryPool);
@@ -652,7 +654,7 @@ Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
   for (auto &Bucket : Contents.getBuckets())
     for (auto *Hash : Bucket)
       for (auto *Value : Hash->getValues<DWARF5AccelTableData *>())
-        IndexedOffsets.insert(Value->getDieOffset());
+        IndexedOffsets.insert(Value->getDieOffsetAndUnitID());
 
   populateAbbrevsMap();
 }
