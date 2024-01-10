@@ -731,13 +731,13 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypePointer: {
-    if (!ST.isOpenCLEnv())
-      break;
     auto SC = MI.getOperand(1).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
                                ST);
     // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
     // capability.
+    if (!ST.isOpenCLEnv())
+      break;
     assert(MI.getOperand(2).isReg());
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(2).getReg());
