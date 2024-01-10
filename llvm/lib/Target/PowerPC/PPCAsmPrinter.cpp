@@ -1638,13 +1638,13 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
   // Find the GlobalVariable that corresponds to the particular TLS variable
-  // in the TLS variable to address mapping. All TLS variables should exist
+  // in the TLS variable-to-address mapping. All TLS variables should exist
   // within this map, with the exception of TLS variables marked as extern.
   const auto TLSVarsMapEntryIter = TLSVarsToAddressMapping.find(GValue);
   if (TLSVarsMapEntryIter == TLSVarsToAddressMapping.end())
     assert(IsGlobalADeclaration &&
            "Only expecting to find extern TLS variables not present in the TLS "
-           "variables to address map!");
+           "variable-to-address map!");
 
   unsigned TLSVarAddress =
       IsGlobalADeclaration ? 0 : TLSVarsMapEntryIter->second;
