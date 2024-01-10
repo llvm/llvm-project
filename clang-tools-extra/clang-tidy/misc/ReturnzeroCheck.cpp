@@ -24,7 +24,7 @@ void ReturnzeroCheck::registerMatchers(MatchFinder *Finder) {
 
 void ReturnzeroCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("main");
-  
+
   if (isCPlusPlusOrC99(Result.Context->getLangOpts())) {
     SourceLocation ReturnLoc;
     const Expr *RetValue;
@@ -32,7 +32,7 @@ void ReturnzeroCheck::check(const MatchFinder::MatchResult &Result) {
       const CompoundStmt *Body = dyn_cast<CompoundStmt>(MatchedDecl->getBody());
       if (Body && !Body->body_empty()) {
         const Stmt *LastStmt = Body->body_back();
-        
+
         if (const auto *Return = dyn_cast<ReturnStmt>(LastStmt)) {
           ReturnLoc = Return->getReturnLoc();
           RetValue = Return->getRetValue();
@@ -41,17 +41,15 @@ void ReturnzeroCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (ReturnLoc.isValid()) {
-      if(RetValue->EvaluateKnownConstInt(*Result.Context).getSExtValue() == 0){
+      if (RetValue->EvaluateKnownConstInt(*Result.Context).getSExtValue() ==
+          0) {
         // Suggest removal of the redundant return statement.
-      diag(ReturnLoc, "redundant 'return 0;' at the end of main")
-          << FixItHint::CreateRemoval(
-                 CharSourceRange::getTokenRange(ReturnLoc));
-
+        diag(ReturnLoc, "redundant 'return 0;' at the end of main")
+            << FixItHint::CreateRemoval(
+                   CharSourceRange::getTokenRange(ReturnLoc));
       }
-      
     }
   }
-  
 }
 
 } // namespace clang::tidy::misc

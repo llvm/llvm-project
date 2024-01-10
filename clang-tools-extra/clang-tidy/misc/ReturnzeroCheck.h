@@ -13,7 +13,8 @@
 
 namespace clang::tidy::misc {
 
-/// FIXME: check detects and recommends removing redundant return 0; statements at the end of C++ main functions.
+/// FIXME: check detects and recommends removing redundant return 0; statements
+/// at the end of C++ main functions.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/ReturnZero.html

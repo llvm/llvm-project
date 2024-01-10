@@ -39,8 +39,7 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<ReturnzeroCheck>(
-        "misc-ReturnZero");
+    CheckFactories.registerCheck<ReturnzeroCheck>("misc-ReturnZero");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
