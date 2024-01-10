@@ -45,15 +45,16 @@ public:
     virtual SmallVector<OperatorT> replace(OpIterRange) const = 0;
   };
 
-  /// Register a rewrite pattern with the simplifier.
-  /// Rewriter patterns are attempted in the order of registration.
+  /// Register a rewrite pattern with the rewriter.
+  /// Rewrite patterns are attempted in the order of registration.
   void addPattern(std::unique_ptr<ExprRewritePattern> pattern);
 
   /// Simplify a DIExpression according to all the patterns registered.
-  /// A non-negative `maxNumRewrites` will limit the number of rewrites this
-  /// simplifier applies.
-  LLVM::DIExpressionAttr simplify(LLVM::DIExpressionAttr expr,
-                                  int64_t maxNumRewrites = -1) const;
+  /// An optional `maxNumRewrites` can be passed to limit the number of rewrites
+  /// that gets applied.
+  LLVM::DIExpressionAttr
+  simplify(LLVM::DIExpressionAttr expr,
+           std::optional<uint64_t> maxNumRewrites = {}) const;
 
 private:
   /// The registered patterns.

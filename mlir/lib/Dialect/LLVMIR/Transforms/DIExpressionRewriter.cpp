@@ -24,8 +24,9 @@ void DIExpressionRewriter::addPattern(
   patterns.emplace_back(std::move(pattern));
 }
 
-DIExpressionAttr DIExpressionRewriter::simplify(DIExpressionAttr expr,
-                                                int64_t maxNumRewrites) const {
+DIExpressionAttr
+DIExpressionRewriter::simplify(DIExpressionAttr expr,
+                               std::optional<uint64_t> maxNumRewrites) const {
   ArrayRef<OperatorT> operators = expr.getOperations();
 
   // `inputs` contains the unprocessed postfix of operators.
@@ -37,9 +38,9 @@ DIExpressionAttr DIExpressionRewriter::simplify(DIExpressionAttr expr,
   std::deque<OperatorT> inputs(operators.begin(), operators.end());
   SmallVector<OperatorT> result;
 
-  int64_t numRewrites = 0;
-  while (!inputs.empty() &&
-         (maxNumRewrites < 0 || numRewrites < maxNumRewrites)) {
+  uint64_t numRewrites = 0;
+  while (!inputs.empty() && (!maxNumRewrites.has_value() ||
+                             numRewrites < maxNumRewrites.value())) {
     bool foundMatch = false;
     for (const std::unique_ptr<ExprRewritePattern> &pattern : patterns) {
       ExprRewritePattern::OpIterT matchEnd = pattern->match(inputs);
@@ -62,7 +63,7 @@ DIExpressionAttr DIExpressionRewriter::simplify(DIExpressionAttr expr,
     }
   }
 
-  if (maxNumRewrites >= 0 && numRewrites >= maxNumRewrites) {
+  if (maxNumRewrites.has_value() && numRewrites >= maxNumRewrites.value()) {
     LLVM_DEBUG(llvm::dbgs()
                << "LLVMDIExpressionSimplifier exceeded max num rewrites ("
                << maxNumRewrites << ")\n");
