@@ -1112,7 +1112,8 @@ def config_user_dir_EQ : Joined<["--"], "config-user-dir=">,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"User directory for configuration files">;
 def coverage : Flag<["-", "--"], "coverage">, Group<Link_Group>,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Compile with gcov code coverage">;
 def cpp_precomp : Flag<["-"], "cpp-precomp">, Group<clang_ignored_f_Group>;
 def current__version : JoinedOrSeparate<["-"], "current_version">;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
