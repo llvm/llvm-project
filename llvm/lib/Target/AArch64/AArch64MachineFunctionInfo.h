@@ -307,6 +307,8 @@ public:
         int FrameIdx = Info.getFrameIdx();
         if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
           continue;
+        if (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector)
+          continue;
         int64_t Offset = MFI.getObjectOffset(FrameIdx);
         int64_t ObjSize = MFI.getObjectSize(FrameIdx);
         MinOffset = std::min<int64_t>(Offset, MinOffset);
