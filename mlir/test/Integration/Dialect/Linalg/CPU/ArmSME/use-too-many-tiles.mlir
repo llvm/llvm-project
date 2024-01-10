@@ -50,15 +50,9 @@ func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: mem
   return
 }
 
-func.func @get_svl() -> index  attributes { enable_arm_streaming_ignore, arm_locally_streaming }{
-  %vscale = vector.vscale
-  return %vscale : index
-}
-
 func.func @main() {
   %c16 = arith.constant 16 : index
-  %svl = call @get_svl() : () -> index
-  %svl_h = arith.muli %c16, %svl : index
+  %svl_h = arm_sme.streaming_vl <half>
 
   %c2 = arith.constant 2 : i16
   %c3 = arith.constant 3 : i16
