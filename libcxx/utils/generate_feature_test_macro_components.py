@@ -1366,7 +1366,6 @@ feature_test_macros = [
             "name": "__cpp_lib_to_string",
             "values": {"c++26": 202306},  # P2587R3 to_string or not to_string
             "headers": ["string"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_to_underlying",
