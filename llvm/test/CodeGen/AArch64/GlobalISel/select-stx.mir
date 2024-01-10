@@ -25,8 +25,8 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
-    ; CHECK: early-clobber %5:gpr32 = STXRB [[COPY2]], [[COPY1]] :: (volatile store (s8) into %ir.addr)
-    ; CHECK: $w0 = COPY %5
+    ; CHECK: early-clobber [[STATUS:%[0-9]+]]:gpr32 = STXRB [[COPY2]], [[COPY1]] :: (volatile store (s8) into %ir.addr)
+    ; CHECK: $w0 = COPY [[STATUS]]
     ; CHECK: RET_ReallyLR implicit $w0
     %3:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
@@ -56,8 +56,8 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
-    ; CHECK: early-clobber %5:gpr32 = STXRH [[COPY2]], [[COPY1]] :: (volatile store (s16) into %ir.addr)
-    ; CHECK: $w0 = COPY %5
+    ; CHECK: early-clobber [[STATUS:%[0-9]+]]:gpr32 = STXRH [[COPY2]], [[COPY1]] :: (volatile store (s16) into %ir.addr)
+    ; CHECK: $w0 = COPY [[STATUS]]
     ; CHECK: RET_ReallyLR implicit $w0
     %3:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
@@ -84,8 +84,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: early-clobber %3:gpr32 = STXRW [[COPY]], [[COPY1]] :: (volatile store (s32) into %ir.addr)
-    ; CHECK: $w0 = COPY %3
+    ; CHECK: early-clobber [[STATUS:%[0-9]+]]:gpr32 = STXRW [[COPY]], [[COPY1]] :: (volatile store (s32) into %ir.addr)
+    ; CHECK: $w0 = COPY [[STATUS]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
@@ -110,8 +110,8 @@ body:             |
     ; CHECK: liveins: $w0, $x1, $x2
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: early-clobber %2:gpr32 = STXRX [[COPY]], [[COPY1]] :: (volatile store (s64) into %ir.addr)
-    ; CHECK: $w0 = COPY %2
+    ; CHECK: early-clobber [[STATUS:%[0-9]+]]:gpr32 = STXRX [[COPY]], [[COPY1]] :: (volatile store (s64) into %ir.addr)
+    ; CHECK: $w0 = COPY [[STATUS]]
     ; CHECK: RET_ReallyLR implicit $w0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = COPY $x2

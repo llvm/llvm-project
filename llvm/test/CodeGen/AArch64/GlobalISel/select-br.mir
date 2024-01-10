@@ -37,7 +37,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    TBNZW %1, 0, %bb.1
+# CHECK:    TBNZW %{{[0-9]+}}, 0, %bb.1
 # CHECK:    B %bb.0
 body:             |
   bb.0:
@@ -60,7 +60,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    %0:gpr64 = COPY $x0
+# CHECK:    %{{[0-9]+}}:gpr64 = COPY $x0
 # CHECK:    BR %0
 body:             |
   bb.0:

@@ -76,8 +76,8 @@ body:             |
 
     ; ALL-LABEL: name: test_insert_128_idx0_undef
     ; ALL: [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
-    ; ALL: undef %2.sub_xmm:vr512 = COPY [[COPY]]
-    ; ALL: $zmm0 = COPY %2
+    ; ALL: undef [[COPY1:%[0-9]+]].sub_xmm:vr512 = COPY [[COPY]]
+    ; ALL: $zmm0 = COPY [[COPY1]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>) = COPY $xmm1
@@ -177,8 +177,8 @@ body:             |
 
     ; ALL-LABEL: name: test_insert_256_idx0_undef
     ; ALL: [[COPY:%[0-9]+]]:vr256x = COPY $ymm1
-    ; ALL: undef %2.sub_ymm:vr512 = COPY [[COPY]]
-    ; ALL: $zmm0 = COPY %2
+    ; ALL: undef [[COPY1:%[0-9]+]].sub_ymm:vr512 = COPY [[COPY]]
+    ; ALL: $zmm0 = COPY [[COPY1]]
     ; ALL: RET 0, implicit $ymm0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>) = COPY $ymm1

@@ -56,7 +56,7 @@ legalized:       true
 regBankSelected: true
 
 # CHECK:  body:
-# CHECK: %2:gpr64sp = ANDXri %0, 8060
+# CHECK: %1:gpr64sp = ANDXri %0, 8060
 body:             |
   bb.0:
       liveins: $x0
@@ -220,9 +220,8 @@ tracksRegLiveness: true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 2, class: fpr32, preferred-register: '' }
-# CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
 registers:
   - { id: 0, class: fpr }
   - { id: 1, class: gpr }
@@ -257,7 +256,7 @@ regBankSelected: true
 tracksRegLiveness: true
 
 # CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 1, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 2, class: gpr32, preferred-register: '' }
 # CHECK-NEXT:  - { id: 3, class: gpr32, preferred-register: '' }
