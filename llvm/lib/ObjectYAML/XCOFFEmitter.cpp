@@ -115,8 +115,7 @@ bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
           return false;
         }
         CurrentOffset = InitSection.FileOffsetToRelocations;
-      }
-      else
+      } else
         InitSection.FileOffsetToRelocations = CurrentOffset;
       CurrentOffset += UsedSize;
       if (CurrentOffset > MaxRawDataSize) {
@@ -150,21 +149,21 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
 
     // We cannot compute section addresses in general. We only enforce
     // the rule .data and .bss are consecutive, as are .tdata and .tbss.
-    switch(InitSections[I].Flags) {
-      case XCOFF::STYP_DATA:
-        CurrentDataAddr = InitSections[I].Address + InitSections[I].Size;
-        break;
-      case XCOFF::STYP_BSS:
-        if (!InitSections[I].Address)
-          InitSections[I].Address = CurrentDataAddr;
-        break;
-      case XCOFF::STYP_TDATA:
-        CurrentTDataAddr = InitSections[I].Address + InitSections[I].Size;
-        break;
-      case XCOFF::STYP_TBSS:
-        if (!InitSections[I].Address)
-          InitSections[I].Address = CurrentTDataAddr;
-        break;
+    switch (InitSections[I].Flags) {
+    case XCOFF::STYP_DATA:
+      CurrentDataAddr = InitSections[I].Address + InitSections[I].Size;
+      break;
+    case XCOFF::STYP_BSS:
+      if (!InitSections[I].Address)
+        InitSections[I].Address = CurrentDataAddr;
+      break;
+    case XCOFF::STYP_TDATA:
+      CurrentTDataAddr = InitSections[I].Address + InitSections[I].Size;
+      break;
+    case XCOFF::STYP_TBSS:
+      if (!InitSections[I].Address)
+        InitSections[I].Address = CurrentTDataAddr;
+      break;
     }
 
     if (InitSections[I].SectionData.binary_size()) {
@@ -176,8 +175,8 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
         }
         CurrentOffset = InitSections[I].FileOffsetToData;
       } else {
-         CurrentOffset = alignTo(CurrentOffset, DefaultSectionAlign);
-         InitSections[I].FileOffsetToData = CurrentOffset;
+        CurrentOffset = alignTo(CurrentOffset, DefaultSectionAlign);
+        InitSections[I].FileOffsetToData = CurrentOffset;
       }
       CurrentOffset += InitSections[I].SectionData.binary_size();
       if (CurrentOffset > MaxRawDataSize) {
@@ -368,9 +367,10 @@ bool XCOFFWriter::assignAddressesAndIndices() {
   // If AuxHeaderSize is specified in the YAML file, we construct
   // an auxiliary header.
   const uint64_t AuxFileHdrSize =
-      Obj.Header.AuxHeaderSize ? *Obj.Header.AuxHeaderSize :
-      !Obj.AuxHeader ? 0 :
-      (Is64Bit ? XCOFF::AuxFileHeaderSize64 : XCOFF::AuxFileHeaderSize32);
+      Obj.Header.AuxHeaderSize ? *Obj.Header.AuxHeaderSize
+      : !Obj.AuxHeader
+          ? 0
+          : (Is64Bit ? XCOFF::AuxFileHeaderSize64 : XCOFF::AuxFileHeaderSize32);
   const uint64_t SecHdrSize =
       Is64Bit ? XCOFF::SectionHeaderSize64 : XCOFF::SectionHeaderSize32;
   uint64_t CurrentOffset =
