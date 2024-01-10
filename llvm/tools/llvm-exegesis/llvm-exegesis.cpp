@@ -437,7 +437,7 @@ static void runBenchmarkConfigurations(
            ArrayRef<Benchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only iff all measurements succeeded.
+        // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
         assert(OtherResult.Measurements.size() == Result.Measurements.size() &&

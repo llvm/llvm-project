@@ -1524,7 +1524,8 @@ StringRef sys::getHostCPUName() {
   // Use processor id to detect cpu name.
   uint32_t processor_id;
   __asm__("cpucfg %[prid], $zero\n\t" : [prid] "=r"(processor_id));
-  switch (processor_id & 0xff00) {
+  // Refer PRID_SERIES_MASK in linux kernel: arch/loongarch/include/asm/cpu.h.
+  switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
   // TODO: Others.

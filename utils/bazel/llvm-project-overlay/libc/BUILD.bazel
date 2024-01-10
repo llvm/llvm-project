@@ -540,6 +540,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_cpp_string_view",
         ":__support_ctype_utils",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
@@ -1873,6 +1874,30 @@ libc_math_function(name = "llround")
 libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
+
+libc_math_function(
+    name = "nan",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanf",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanl",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
 
 libc_math_function(name = "nearbyint")
 

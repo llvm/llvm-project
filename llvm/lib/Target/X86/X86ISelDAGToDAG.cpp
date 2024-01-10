@@ -487,7 +487,7 @@ namespace {
     // from PatFrags in tablegen.
     bool isUnneededShiftMask(SDNode *N, unsigned Width) const {
       assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
-      const APInt &Val = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+      const APInt &Val = N->getConstantOperandAPInt(1);
 
       if (Val.countr_one() >= Width)
         return true;
@@ -2852,7 +2852,7 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
                                        SDValue &Index, SDValue &Disp,
                                        SDValue &Segment) {
   X86ISelAddressMode AM;
-  AM.Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+  AM.Scale = ScaleOp->getAsZExtVal();
 
   // Attempt to match index patterns, as long as we're not relying on implicit
   // sign-extension, which is performed BEFORE scale.
@@ -5233,7 +5233,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case X86ISD::VPTERNLOG: {
-    uint8_t Imm = cast<ConstantSDNode>(Node->getOperand(3))->getZExtValue();
+    uint8_t Imm = Node->getConstantOperandVal(3);
     if (matchVPTERNLOG(Node, Node, Node, Node, Node->getOperand(0),
                        Node->getOperand(1), Node->getOperand(2), Imm))
       return;

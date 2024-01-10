@@ -359,7 +359,7 @@ private:
         auto CounterValueOrErr = Counter->readOrError();
         if (!CounterValueOrErr)
           return CounterValueOrErr.takeError();
-        CounterValues.swap(*CounterValueOrErr);
+        CounterValues = std::move(*CounterValueOrErr);
 
         return Error::success();
       }
@@ -488,7 +488,6 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
           OS, BC.Key, GenerateMemoryInstructions)) {

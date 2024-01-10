@@ -9681,8 +9681,8 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   bool IsQuadStore = false;
 
   switch (IntrinsicID) {
-  case Intrinsic::aarch64_sve_st1uwq:
-  case Intrinsic::aarch64_sve_st1udq:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_st1dq:
     AddrMemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
     PredTy =
         llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
@@ -10428,6 +10428,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (HintID != static_cast<unsigned>(-1)) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hint);
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
+  }
+
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
+    // Create call to __arm_sme_state and store the results to the two pointers.
+    CallInst *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(StructType::get(CGM.Int64Ty, CGM.Int64Ty), {},
+                                false),
+        "__arm_sme_state"));
+    auto Attrs =
+        AttributeList()
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_sm_compatible")
+            .addFnAttribute(getLLVMContext(), "aarch64_pstate_za_preserved");
+    CI->setAttributes(Attrs);
+    CI->setCallingConv(
+        llvm::CallingConv::
+            AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2);
+    Builder.CreateStore(Builder.CreateExtractValue(CI, 0),
+                        EmitPointerWithAlignment(E->getArg(0)));
+    return Builder.CreateStore(Builder.CreateExtractValue(CI, 1),
+                               EmitPointerWithAlignment(E->getArg(1)));
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rbit) {
