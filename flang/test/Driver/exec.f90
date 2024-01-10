@@ -1,5 +1,4 @@
-! REQUIRES: system-darwin
-! Verify that flang can correctly build executables on Darwin.
+! Verify that flang can correctly build executables.
 
 ! RUN: %flang %s -o %t
 ! RUN: %t | FileCheck %s
