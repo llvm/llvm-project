@@ -729,7 +729,37 @@ public:
 
     mlir::Value init;
     GenBodyFn genBodyFn;
-    if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
+    if constexpr (std::is_same_v<Op, hlfir::AnyOp>) {
+      init = builder.createIntegerConstant(loc, builder.getI1Type(), 0);
+      genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
+                              mlir::Value reduction,
+                              const llvm::SmallVectorImpl<mlir::Value> &indices)
+          -> mlir::Value {
+        // Inline the elemental and get the condition from it.
+        auto yield = inlineElementalOp(loc, builder, elemental, indices);
+        mlir::Value cond = builder.create<fir::ConvertOp>(
+            loc, builder.getI1Type(), yield.getElementValue());
+        yield->erase();
+
+        // Conditionally set the reduction variable.
+        return builder.create<mlir::arith::OrIOp>(loc, reduction, cond);
+      };
+    } else if constexpr (std::is_same_v<Op, hlfir::AllOp>) {
+      init = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
+      genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
+                              mlir::Value reduction,
+                              const llvm::SmallVectorImpl<mlir::Value> &indices)
+          -> mlir::Value {
+        // Inline the elemental and get the condition from it.
+        auto yield = inlineElementalOp(loc, builder, elemental, indices);
+        mlir::Value cond = builder.create<fir::ConvertOp>(
+            loc, builder.getI1Type(), yield.getElementValue());
+        yield->erase();
+
+        // Conditionally set the reduction variable.
+        return builder.create<mlir::arith::AndIOp>(loc, reduction, cond);
+      };
+    } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
       init = builder.createIntegerConstant(loc, op.getType(), 0);
       genBodyFn = [elemental](fir::FirOpBuilder builder, mlir::Location loc,
                               mlir::Value reduction,
@@ -800,6 +830,8 @@ public:
     patterns.insert<BroadcastAssignBufferization>(context);
     patterns.insert<VariableAssignBufferization>(context);
     patterns.insert<ReductionElementalConversion<hlfir::CountOp>>(context);
+    patterns.insert<ReductionElementalConversion<hlfir::AnyOp>>(context);
+    patterns.insert<ReductionElementalConversion<hlfir::AllOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             func, std::move(patterns), config))) {

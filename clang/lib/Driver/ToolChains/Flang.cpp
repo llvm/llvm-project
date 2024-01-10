@@ -428,6 +428,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+    if (Args.hasArg(options::OPT_nogpulib))
+      CmdArgs.push_back("-nogpulib");
   }
 }
 
