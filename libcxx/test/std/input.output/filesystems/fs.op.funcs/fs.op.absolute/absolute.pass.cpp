@@ -39,12 +39,8 @@ static void basic_test()
     const struct {
       std::string input;
       fs::path expect;
-    } TestCases [] = {
-        {"", cwd / ""},
-        {"foo", cwd / "foo"},
-        {"foo/", cwd / "foo/"},
-        {"/already_absolute", cwd.root_name() / "/already_absolute"}
-    };
+    } TestCases[] = {
+        {"foo", cwd / "foo"}, {"foo/", cwd / "foo/"}, {"/already_absolute", cwd.root_name() / "/already_absolute"}};
     for (auto& TC : TestCases) {
         std::error_code ec = GetTestEC();
         const path ret = absolute(TC.input, ec);
@@ -55,8 +51,20 @@ static void basic_test()
     }
 }
 
+static void test_empty_path() {
+  std::error_code ec = GetTestEC();
+  {
+    const path ret = absolute(path{}, ec);
+    assert(ec != GetTestEC());
+    assert(ec);
+    assert(ret == path{});
+  }
+  { TEST_THROWS_TYPE(filesystem_error, absolute(path{})); }
+}
+
 int main(int, char**) {
     absolute_signature_test();
+    test_empty_path();
     basic_test();
 
     return 0;

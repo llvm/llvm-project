@@ -101,15 +101,6 @@ static void test_empty_path() {
     assert(ret == path{});
   }
   { TEST_THROWS_TYPE(filesystem_error, canonical(path{})); }
-
-  ec = GetTestEC();
-  {
-    const path ret = canonical("", ec);
-    assert(ec != GetTestEC());
-    assert(ec);
-    assert(ret == path{});
-  }
-  { TEST_THROWS_TYPE(filesystem_error, canonical("")); }
 }
 
 static void test_exception_contains_paths()

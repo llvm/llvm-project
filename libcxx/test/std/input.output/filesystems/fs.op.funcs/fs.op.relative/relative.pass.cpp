@@ -30,7 +30,7 @@ namespace fs = std::filesystem;
 static void test_signature_0() {
   fs::path p("");
   const fs::path output = fs::weakly_canonical(p);
-  assert(output == fs::path::string_type(fs::current_path()));
+  assert(output == fs::path::string_type(""));
 }
 
 static void test_signature_1() {
