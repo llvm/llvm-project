@@ -42,10 +42,9 @@ define i4 @reverse_cmp_v4i1(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512-LABEL: reverse_cmp_v4i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
-; AVX512-NEXT:    vpmovm2d %k0, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,2,1,0]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
-; AVX512-NEXT:    vpmovd2m %xmm0, %k0
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
