@@ -338,8 +338,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     if (!isa<ConstantSDNode>(Off0) || !isa<ConstantSDNode>(Off1))
       return false;
 
-    Offset0 = cast<ConstantSDNode>(Off0)->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Off1)->getZExtValue();
+    Offset0 = Off0->getAsZExtVal();
+    Offset1 = Off1->getAsZExtVal();
     return true;
   }
 
@@ -6961,20 +6961,20 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     break;
   }
 
-  // Split s_mul_u64 in 32-bit vector multiplications.
   case AMDGPU::S_MUL_U64:
     if (ST.hasVectorMulU64()) {
       NewOpcode = AMDGPU::V_MUL_U64_e64;
       break;
     }
+    // Split s_mul_u64 in 32-bit vector multiplications.
     splitScalarSMulU64(Worklist, Inst, MDT);
     Inst.eraseFromParent();
     return;
 
-  // This is a special case of s_mul_u64 where all the operands are either zero
-  // extended or sign extended.
   case AMDGPU::S_MUL_U64_U32_PSEUDO:
   case AMDGPU::S_MUL_I64_I32_PSEUDO:
+    // This is a special case of s_mul_u64 where all the operands are either
+    // zero extended or sign extended.
     splitScalarSMulPseudo(Worklist, Inst, MDT);
     Inst.eraseFromParent();
     return;

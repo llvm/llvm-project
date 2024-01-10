@@ -520,6 +520,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
+- Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
+  converted constant expression and not as a reference to subobject.
 
 
 Improvements to Clang's time-trace
@@ -610,7 +612,8 @@ Bug Fixes in This Version
   of template classes. Fixes
   (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
   `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_,
-  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_)
+  `#77071 <https://github.com/llvm/llvm-project/issues/77071>`_,
+  `#77411 <https://github.com/llvm/llvm-project/issues/77411>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
@@ -696,6 +699,12 @@ Bug Fixes in This Version
 - Clang now accepts recursive non-dependent calls to functions with deduced
   return type.
   Fixes (`#71015 <https://github.com/llvm/llvm-project/issues/71015>`_)
+- Fix assertion failure when initializing union containing struct with
+  flexible array member using empty initializer list.
+  Fixes (`#77085 <https://github.com/llvm/llvm-project/issues/77085>`_)
+- Fix assertion crash due to failed scope restoring caused by too-early VarDecl
+  invalidation by invalid initializer Expr.
+  Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
 
 
 Bug Fixes to Compiler Builtins
@@ -933,6 +942,14 @@ X86 Support
 - Support ISA of ``AVX10.1``.
 - ``-march=pantherlake`` and ``-march=clearwaterforest`` are now supported.
 - Added ABI handling for ``__float128`` to match with GCC.
+- Emit warnings for options to enable knl/knm specific ISAs: AVX512PF, AVX512ER
+  and PREFETCHWT1. From next version (LLVM 19), these ISAs' intrinsic supports
+  will be deprecated:
+  * intrinsic series of *_exp2a23_*
+  * intrinsic series of *_rsqrt28_*
+  * intrinsic series of *_rcp28_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]gather_*
+  * intrinsic series of *_prefetch_i[3|6][2|4]scatter_*
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1150,9 +1167,10 @@ Improvements
 ^^^^^^^^^^^^
 
 - Improved the ``unix.StdCLibraryFunctions`` checker by modeling more
-  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp`` and
-  ``errno`` behavior.
+  functions like ``send``, ``recv``, ``readlink``, ``fflush``, ``mkdtemp``,
+  ``getcwd`` and ``errno`` behavior.
   (`52ac71f92d38 <https://github.com/llvm/llvm-project/commit/52ac71f92d38f75df5cb88e9c090ac5fd5a71548>`_,
+  `#77040 <https://github.com/llvm/llvm-project/pull/77040>`_,
   `#76671 <https://github.com/llvm/llvm-project/pull/76671>`_,
   `#71373 <https://github.com/llvm/llvm-project/pull/71373>`_,
   `#76557 <https://github.com/llvm/llvm-project/pull/76557>`_,

@@ -665,6 +665,11 @@ def VOPProfileSMFMAC_I32_32X32X32_I8  : VOPProfileSMFMAC<VOP_V16I32_V2I32_V4I32_
 def VOPProfileSMFMAC_F32_16X16X64_F8  : VOPProfileSMFMAC<VOP_V4F32_V2I32_V4I32_I32,  AVDst_128, AVSrc_64, AVSrc_128>;
 def VOPProfileSMFMAC_F32_32X32X32_F8  : VOPProfileSMFMAC<VOP_V16F32_V2I32_V4I32_I32, AVDst_512, AVSrc_64, AVSrc_128>;
 
+def VOPProfileMAI_F32_V8F16_X32     : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       AISrc_128_f32,  ADst_128, AVSrc_128>;
+def VOPProfileMAI_F32_V8F16_X32_VCD : VOPProfileMAI<VOP_V4F32_V8F16_V8F16_V4F32,       VISrc_128_f32,  VDst_128, AVSrc_128>;
+def VOPProfileMAI_F32_V8F16_X16     : VOPProfileMAI<VOP_V16F32_V8F16_V8F16_V16F32,     AISrc_512_f32,  ADst_512, AVSrc_128>;
+def VOPProfileMAI_F32_V8F16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8F16_V8F16_V16F32,     VISrc_512_f32,  VDst_512, AVSrc_128>;
+
 class MFMATable <bit is_mac, string Name> {
   bit IsMac = is_mac;
   string FMAOp = Name;
@@ -706,12 +711,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(NoDstOverlap, null_frag, AgprMAIFrag<node>)>,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node>)>,
                  MFMATable<0, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(NoDstOverlap, null_frag, VgprMAIFrag<node>)>,
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node>)>,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
@@ -719,12 +724,13 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P), AgprMAIFrag<node>>,
+        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node>)>,
                          MFMATable<1, NAME # "_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      VgprMAIFrag<node>>,
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node>)>,
                               MFMATable<1, NAME # "_vgprcd_e64">;
       }
     }
@@ -759,6 +765,11 @@ defm V_MFMA_F32_32X32X4BF16 : MAIInst<"v_mfma_f32_32x32x4bf16", "F32_V2I16_X16",
 }
 
 } // End SubtargetPredicate = HasMAIInsts
+
+let SubtargetPredicate = HasGFX950Insts, is_gfx940_xdl = 1 in {
+defm V_MFMA_F32_16X16X32_F16   : MAIInst<"v_mfma_f32_16x16x32f16",    "F32_V8F16_X32", int_amdgcn_mfma_f32_16x16x32_f16>;
+defm V_MFMA_F32_32X32X16_F16   : MAIInst<"v_mfma_f32_32x32x16f16",    "F32_V8F16_X16", int_amdgcn_mfma_f32_32x32x16_f16>;
+}
 
 let Predicates = [isGFX90APlus] in {
   let is_gfx940_xdl = 1 in {
@@ -1919,6 +1930,16 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
   }
 }
 
+multiclass VOP3P_Real_MFMA_gfx950<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+                                  VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
+                                  VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
+    let SubtargetPredicate = HasGFX950Insts,
+        AssemblerPredicate = HasGFX950Insts in {
+    defm "" : VOP3P_Real_MFMA_gfx940<op, Name, PS_ACD, PS_VCD>;
+  }
+}
+
+
 multiclass VOP3P_Real_MFMA_vi<bits<7> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
             VOP3Pe_MAI <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl, ?> {
@@ -2031,6 +2052,8 @@ defm V_MFMA_F32_16X16X16BF16_1K : VOP3P_Real_MFMA_gfx90a <0x67>;
 defm V_MFMA_F64_16X16X4F64      : VOP3P_Real_MFMA_gfx90a <0x6e>;
 defm V_MFMA_F64_4X4X4F64        : VOP3P_Real_MFMA_gfx90a <0x6f>;
 
+defm V_MFMA_F32_16X16X32_F16     : VOP3P_Real_MFMA_gfx950 <0x54, "v_mfma_f32_16x16x32_f16">;
+defm V_MFMA_F32_32X32X16_F16     : VOP3P_Real_MFMA_gfx950 <0x55, "v_mfma_f32_32x32x16_f16">;
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
 defm V_MFMA_F32_16X16X8XF32      : VOP3P_Real_MFMA_gfx940 <0x3e, "v_mfma_f32_16x16x8_xf32">;

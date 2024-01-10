@@ -29,6 +29,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let mayStore = 0;
   let mayLoad = 1;
   let hasSideEffects = 0;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
 
@@ -1059,10 +1060,6 @@ def : GCNPat <
   let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
-
-def SIMM24bitPtr : ImmLeaf <iPTR,
-  [{return isInt<24>(Imm);}]
->;
 
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;

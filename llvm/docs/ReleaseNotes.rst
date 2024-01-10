@@ -111,6 +111,8 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
+* Initial support for gfx950
+
 Changes to the ARM Backend
 --------------------------
 

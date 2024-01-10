@@ -2574,11 +2574,12 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
 
       Module::LookupInfo no_tp_lookup_info(lookup_info);
       no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
-      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
-        if (resolved_dies.insert(die.GetDIE()).second)
-          ResolveFunction(die, include_inlines, sc_list);
-        return true;
-      });
+      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
+                            [&](DWARFDIE die) {
+                              if (resolved_dies.insert(die.GetDIE()).second)
+                                ResolveFunction(die, include_inlines, sc_list);
+                              return true;
+                            });
     }
   }
 
@@ -3138,7 +3139,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
     }
 
     const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
-    m_index->GetTypes(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
+    m_index->GetFullyQualifiedType(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
       // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
@@ -3165,9 +3166,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         return true;
       }
 
-      DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
-
       if (log) {
+        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
@@ -3176,10 +3176,6 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
             DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
             type_dwarf_decl_ctx.GetQualifiedName());
       }
-
-      // Make sure the decl contexts match all the way up
-      if (die_dwarf_decl_ctx != type_dwarf_decl_ctx)
-        return true;
 
       Type *resolved_type = ResolveType(type_die, false);
       if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)

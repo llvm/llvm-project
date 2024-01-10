@@ -886,11 +886,11 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   field dag InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp,
                   HasOpSel /* Modifiers */, HasOpSel /* HasSrc2Mods */, HasOMod,
-                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, 0 /* HasOpSel */, IsVOP3P>.ret;
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, 0 /* HasOpSel */>.ret;
 
   let InsVOP3OpSel = !con(getInsVOP3Base<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs, 0, 1, 1, 0,
                                          getOpSelMod<Src0VT>.ret, getOpSelMod<Src1VT>.ret,
-                                         getOpSelMod<Src2VT>.ret, 0, 0>.ret,
+                                         getOpSelMod<Src2VT>.ret, 0>.ret,
                           (ins bitop3_0:$bitop3, op_sel0:$op_sel));
 
   let InsVOP3DPP16 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
