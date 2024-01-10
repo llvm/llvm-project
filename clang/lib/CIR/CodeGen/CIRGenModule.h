@@ -196,7 +196,7 @@ public:
 
   mlir::cir::GlobalOp
   getOrCreateStaticVarDecl(const VarDecl &D,
-                              mlir::cir::GlobalLinkageKind Linkage);
+                           mlir::cir::GlobalLinkageKind Linkage);
 
   mlir::cir::GlobalOp buildGlobal(const VarDecl *D, mlir::Type Ty,
                                   ForDefinition_t IsForDefinition);
@@ -239,7 +239,7 @@ public:
                          ForDefinition_t IsForDefinition = NotForDefinition);
 
   /// Get a reference to the target of VD.
-  mlir::Operation* getWeakRefReference(const ValueDecl *VD);
+  mlir::Operation *getWeakRefReference(const ValueDecl *VD);
 
   CharUnits
   computeNonVirtualBaseClassOffset(const CXXRecordDecl *DerivedClass,
@@ -509,7 +509,7 @@ public:
 
   /// Emit the function that initializes the specified global
   void buildGlobalVarDeclInit(const VarDecl *D, mlir::cir::GlobalOp Addr,
-                                  bool PerformInit);
+                              bool PerformInit);
 
   void addDeferredVTable(const CXXRecordDecl *RD) {
     DeferredVTables.push_back(RD);

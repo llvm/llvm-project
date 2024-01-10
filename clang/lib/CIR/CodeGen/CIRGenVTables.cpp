@@ -434,8 +434,7 @@ getAddrOfVTTVTable(CIRGenVTables &CGVT, CIRGenModule &CGM,
   llvm_unreachable("generateConstructionVTable NYI");
 }
 
-mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD)
-{
+mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD) {
   assert(RD->getNumVBases() && "Only classes with virtual bases need a VTT");
 
   SmallString<256> OutName;

@@ -221,9 +221,9 @@ Attribute ConstPtrAttr::parse(AsmParser &parser, Type odsType) {
 void ConstPtrAttr::print(AsmPrinter &printer) const {
   printer << '<';
   if (isNullValue())
-      printer << "null";
+    printer << "null";
   else
-      printer << getValue();
+    printer << getValue();
   printer << '>';
 }
 

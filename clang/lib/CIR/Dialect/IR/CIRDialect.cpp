@@ -189,8 +189,8 @@ bool omitRegionTerm(mlir::Region &r) {
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
-static mlir::ParseResult
-parseOmittedTerminatorRegion(mlir::OpAsmParser &parser, mlir::Region &region) {
+static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
+                                                      mlir::Region &region) {
   auto regionLoc = parser.getCurrentLocation();
   if (parser.parseRegion(region))
     return failure();
@@ -200,8 +200,8 @@ parseOmittedTerminatorRegion(mlir::OpAsmParser &parser, mlir::Region &region) {
 }
 
 static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
-                                          mlir::cir::ScopeOp &op,
-                                          mlir::Region &region) {
+                                         mlir::cir::ScopeOp &op,
+                                         mlir::Region &region) {
   printer.printRegion(region,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));

@@ -109,9 +109,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 GlobalOp LoweringPreparePass::buildRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::Type type, mlir::cir::GlobalLinkageKind linkage) {
-  GlobalOp g =
-      dyn_cast_or_null<GlobalOp>(SymbolTable::lookupNearestSymbolFrom(
-          theModule, StringAttr::get(theModule->getContext(), name)));
+  GlobalOp g = dyn_cast_or_null<GlobalOp>(SymbolTable::lookupNearestSymbolFrom(
+      theModule, StringAttr::get(theModule->getContext(), name)));
   if (!g) {
     g = builder.create<mlir::cir::GlobalOp>(loc, name, type);
     g.setLinkageAttr(
@@ -125,9 +124,8 @@ GlobalOp LoweringPreparePass::buildRuntimeVariable(
 FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::cir::FuncType type, mlir::cir::GlobalLinkageKind linkage) {
-  FuncOp f =
-      dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
-          theModule, StringAttr::get(theModule->getContext(), name)));
+  FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
+      theModule, StringAttr::get(theModule->getContext(), name)));
   if (!f) {
     f = builder.create<mlir::cir::FuncOp>(loc, name, type);
     f.setLinkageAttr(
@@ -342,8 +340,8 @@ void LoweringPreparePass::lowerGetBitfieldOp(GetBitfieldOp op) {
   }
   val = builder.createIntCast(val, resultTy);
 
-  op.replaceAllUsesWith(val);  
-  op.erase();  
+  op.replaceAllUsesWith(val);
+  op.erase();
 }
 
 void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
@@ -369,8 +367,7 @@ void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
   if (storageSize != size) {
     assert(storageSize > size && "Invalid bitfield size.");
 
-    mlir::Value val =
-        builder.create<mlir::cir::LoadOp>(loc, storageType, addr);
+    mlir::Value val = builder.create<mlir::cir::LoadOp>(loc, storageType, addr);
 
     srcVal =
         builder.createAnd(srcVal, llvm::APInt::getLowBitsSet(srcWidth, size));
@@ -380,8 +377,8 @@ void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
       srcVal = builder.createShiftLeft(srcVal, offset);
 
     // Mask out the original value.
-    val = builder.createAnd(val,
-                    ~llvm::APInt::getBitsSet(srcWidth, offset, offset + size));
+    val = builder.createAnd(
+        val, ~llvm::APInt::getBitsSet(srcWidth, offset, offset + size));
 
     // Or together the unchanged values and the source value.
     srcVal = builder.createOr(val, srcVal);

@@ -194,10 +194,9 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
 
   mlir::cir::FuncOp fnOp;
   if (!builtin) {
-    fnOp = CGM.createCIRFunction(
-        loc, CGM.builtinCoroAlloc,
-        mlir::cir::FuncType::get({int32Ty}, boolTy),
-        /*FD=*/nullptr);
+    fnOp = CGM.createCIRFunction(loc, CGM.builtinCoroAlloc,
+                                 mlir::cir::FuncType::get({int32Ty}, boolTy),
+                                 /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));
   } else
@@ -217,8 +216,7 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = CGM.createCIRFunction(
         loc, CGM.builtinCoroBegin,
-        mlir::cir::FuncType::get({int32Ty, VoidPtrTy},
-                                 VoidPtrTy),
+        mlir::cir::FuncType::get({int32Ty, VoidPtrTy}, VoidPtrTy),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
     fnOp.setBuiltinAttr(mlir::UnitAttr::get(builder.getContext()));

@@ -41,8 +41,8 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
 
   AsmDialect AsmDialect = inferDialect(CGM, S);
 
-  builder.create<mlir::cir::InlineAsmOp>(
-      getLoc(S.getAsmLoc()), ResultType, AsmString, AsmDialect);
+  builder.create<mlir::cir::InlineAsmOp>(getLoc(S.getAsmLoc()), ResultType,
+                                         AsmString, AsmDialect);
 
   return mlir::success();
 }
