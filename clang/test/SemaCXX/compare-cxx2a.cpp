@@ -248,7 +248,7 @@ void test_enum_integral_compare() {
 
   (void)(A <=> (unsigned)0);
   (void)((unsigned)0 <=> A);
-  (void)(ANeg <=> (unsigned)0); // expected-error {{argument to 'operator<=>' evaluates to -1, which cannot be narrowed to type 'unsigned int'}}
+  (void)(ANeg <=> (unsigned)0); // expected-error {{argument to 'operator<=>' evaluates to (EnumA)-1, which cannot be narrowed to type 'unsigned int'}}
   (void)((unsigned)0 <=> ANeg); // expected-error {{cannot be narrowed}}
 
   (void)(B <=> 42);
@@ -258,7 +258,7 @@ void test_enum_integral_compare() {
   (void)(BMax <=> (unsigned long)-1);
 
   (void)(C0 <=> (unsigned)42);
-  (void)(C <=> (unsigned)42); // expected-error {{argument to 'operator<=>' evaluates to -1, which cannot be narrowed to type 'unsigned int'}}
+  (void)(C <=> (unsigned)42); // expected-error {{argument to 'operator<=>' evaluates to (EnumC)-1, which cannot be narrowed to type 'unsigned int'}}
 }
 
 namespace EnumCompareTests {

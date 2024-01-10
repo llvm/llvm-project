@@ -7,7 +7,7 @@ struct A {
 
 constexpr auto a0 = A{0, 0, 3, 4, 5};
 
-// expected-note@+1 {{evaluates to 'A{0, {0, 3, 4}, 5} == A{1, {2, 3, 4}, 5}'}}
+// expected-note@+1 {{evaluates to '(const A){0, {0, 3, 4}, 5} == A{1, {2, 3, 4}, 5}'}}
 static_assert(a0 == A{1, {2, 3, 4}, 5}); // expected-error {{failed}}
 
 struct _arr {
@@ -20,8 +20,14 @@ struct _arr {
   }
 };
 
-// expected-note@+1 {{{evaluates to '_arr{{2, 3, 4}} == (int[3]){0, 3, 4}'}}}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-extensions"
+static_assert(_arr{{2, 3, 4}} == (const int[3]){2, 3, 4});
+#pragma clang diagnostic pop
+
+// expected-note@+1 {{{evaluates to '_arr{{2, 3, 4}} == (const int[3]){0, 3, 4}'}}}
 static_assert(_arr{2, 3, 4} == a0.b); // expected-error {{failed}}
+
 
 struct B {
   int a, c; // named the same just to keep things fresh
@@ -40,8 +46,55 @@ struct C: A, B {
 
 constexpr auto cc = C{A{1, {2, 3, 4}, 5}, B{7, 6}, C::E1};
 
-// expected-note@+1 {{{evaluates to 'C{{1, {2, 3, 4}, 5}, {7, 6}, 0} == C{{0, {0, 3, 4}, 5}, {5, 0}, 1}'}}}
+// expected-note@+1 {{{evaluates to '(const C){{1, {2, 3, 4}, 5}, {7, 6}, C::E1} == C{{0, {0, 3, 4}, 5}, {5, 0}, C::E2}'}}}
 static_assert(cc == C{a0, {5}, C::E2}); // expected-error {{failed}}
+
+enum E { numerator };
+constexpr E e = E::numerator;
+static_assert(numerator == ((E)0));
+static_assert(((E)0) == ((E)7)); // expected-error {{failed}}
+// expected-note@-1 {{{evaluates to 'numerator == (E)7'}}}
+
+typedef enum { something } MyEnum;
+static_assert(MyEnum::something == ((MyEnum)7)); // expected-error {{failed}}
+// expected-note@-1 {{{evaluates to 'something == (MyEnum)7'}}}
+
+// unnamed enums
+static_assert(C::E1 == (decltype(C::e))0);
+// expected-note@+1 {{{evaluates to 'C::E1 == C::E2'}}}
+static_assert(C::E1 == (decltype(C::e))1); // expected-error {{failed}}
+static_assert(C::E1 == (decltype(C::e))7); // expected-error {{failed}}
+// expected-note@-1 {{{evaluates to 'C::E1 == (decltype(C::e))7'}}}
+
+constexpr enum { declLocal } ee = declLocal;
+static_assert(((decltype(ee))0) == ee);
+static_assert(((decltype(ee))0) == ((decltype(ee))7)); // expected-error {{failed}}
+// expected-note@-1 {{{evaluates to 'declLocal == (decltype(ee))7'}}}
+
+struct TU {
+  enum { S, U } Tag;
+  union {
+    signed int s;
+    unsigned int u;
+  };
+  constexpr bool operator==(const TU& rhs) const {
+    if (Tag != rhs.Tag) return false;
+    switch (Tag) {
+      case S:
+        return s == rhs.s;
+      case U:
+        return u == rhs.u;
+    }
+  };
+};
+static_assert(TU{TU::S, {7}} == TU{TU::S, {.s=7}});
+static_assert(TU{TU::U, {.u=9}} == TU{TU::U, {.u=9}});
+
+// expected-note@+1 {{{evaluates to 'TU{TU::S, {.s = 7}} == TU{TU::S, {.s = 6}}'}}}
+static_assert(TU{TU::S, {.s=7}} == TU{TU::S, {.s=6}}); // expected-error {{failed}}
+static_assert(TU{TU::U, {.u=7}} == TU{TU::U, {.u=9}}); // expected-error {{failed}}
+// expected-note@-1 {{{evaluates to 'TU{TU::U, {.u = 7}} == TU{TU::U, {.u = 9}}'}}}
+
 
 // define `std::bit_cast` as a helper for doing constexpr vector comparisons
 namespace std {
@@ -106,7 +159,6 @@ struct BV {
 constexpr bool operator==(const BV& lhs, const bool8& rhs) {
   return lhs == BV{rhs};
 }
-
 
 // expected-note@+1 {{{evaluates to 'BV{{false, true, false, false, false, false, false, false}} == BV{{true, false, false, false, false, false, false, false}}'}}}
 static_assert(BV{{0, 1}} == BV{{1, 0}}); // expected-error {{failed}}

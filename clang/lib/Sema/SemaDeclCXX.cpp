@@ -22,6 +22,7 @@
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
@@ -17143,6 +17144,8 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
   if (!V.hasValue())
     return false;
 
+  PrintingPolicy Policy(Context.getPrintingPolicy());
+  Policy.UseEnumerators = true;
   switch (V.getKind()) {
   case APValue::ValueKind::Int:
     if (T->isBooleanType()) {
@@ -17184,6 +17187,12 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
           break;
         }
       }
+      // print enums as either their named value or a cast
+      if (T->isEnumeralType()) {
+        llvm::raw_svector_ostream OS(Str);
+        V.printPretty(OS, Policy, T, &Context);
+        break;
+      }
       V.getInt().toString(Str);
     }
 
@@ -17222,16 +17231,17 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
   case APValue::ValueKind::Array:
   case APValue::ValueKind::Vector: {
     llvm::raw_svector_ostream OS(Str);
-    OS << '(';
-    OS << T.getUnqualifiedType();
-    OS << ')';
-    V.printPretty(OS, Context, T);
+    OS << '(' << T << ')';
+    V.printPretty(OS, Policy, T, &Context);
   } break;
 
   case APValue::ValueKind::Struct: {
     llvm::raw_svector_ostream OS(Str);
-    OS << T.getUnqualifiedType();
-    V.printPretty(OS, Context, T);
+    if (T.hasQualifiers())
+      OS << '(' << T << ")";
+    else
+      OS << T;
+    V.printPretty(OS, Policy, T, &Context);
   } break;
 
   default:
