@@ -3915,7 +3915,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // Note that parsing away template declarations here leads to incorrectly
   // accepting function declarations as record declarations.
   // In general, we cannot solve this problem. Consider:
-  // class A<int> B() {}
+  // template<typename T>
+  // class A<T> B() {}
   // which can be a function definition or a class definition when B() is a
   // macro. If we find enough real-world cases where this is a problem, we
   // can parse for the 'template' keyword in the beginning of the statement,
@@ -3931,7 +3932,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         --AngleNestingLevel;
 
       if (AngleNestingLevel == 0 && !IsTemplate() &&
-          FormatTok->is(tok::r_paren)) {
+          FormatTok->is(tok::l_paren)) {
         break;
       }
       if (FormatTok->is(tok::l_brace)) {
