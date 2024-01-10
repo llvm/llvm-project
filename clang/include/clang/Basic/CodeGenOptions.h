@@ -494,12 +494,6 @@ public:
     return getProfileInstr() == ProfileCSIRInstr;
   }
 
-  /// Check if any form of instrumentation is on.
-  bool hasProfileInstr() const {
-    return hasProfileClangInstr() || hasProfileIRInstr() ||
-           hasProfileCSIRInstr();
-  }
-
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
     return getProfileUse() == ProfileClangInstr;
