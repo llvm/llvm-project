@@ -7825,5 +7825,33 @@ requirement:
     --p->count;
     p->array[index] = val;
   }
+
+Flexible array members, with the ``counted_by`` attribute, in unions are
+supported with one limitation. If multiple flexible array members have the
+``counted_by`` attribute, ``__builtin_dynamic_object_size`` won't be able to
+calculate the object's size. For instance, in this example:
+
+.. code-block:: c
+
+     struct union_of_fams {
+         int flags;
+         union {
+             unsigned long normal_field;
+             struct {
+                 int count1;
+                 int arr1[] __counted_by(count1);
+             };
+             struct {
+                 signed char count2;
+                 int arr2[] __counted_by(count2);
+             };
+         };
+    };
+
+    size_t get_size(struct union_of_fams *p) {
+        return __builtin_dynamic_object_size(p, 1);
+    }
+
+a call to ``get_size`` will return ``-1``.
   }];
 }
