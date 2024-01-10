@@ -32,6 +32,16 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 /// the input IR) does not match the replacement function (derived from the
 /// VecDesc mapping).
 class ReplaceWithVecLibTest : public ::testing::Test {
+
+  std::string getLastLine(std::string Out) {
+    // remove ending '\n' if it exists
+    if (!Out.empty() && *(Out.cend() - 1) == '\n')
+      Out.pop_back();
+
+    size_t LastNL = Out.find_last_of('\n');
+    return (LastNL == std::string::npos) ? Out : Out.substr(LastNL + 1);
+  }
+
 protected:
   LLVMContext Ctx;
 
@@ -39,7 +49,10 @@ protected:
   /// pass. The pass should not crash even when the replacement function
   /// (derived from the \p VD mapping) does not match the function to be
   /// replaced (from the input \p IR).
-  bool run(const VecDesc &VD, const char *IR) {
+  ///
+  /// \returns the last line of the standard error to be compared for
+  /// correctness.
+  std::string run(const VecDesc &VD, const char *IR) {
     // Create TLII and register it with FAM so it's preserved when
     // ReplaceWithVeclib pass runs.
     TargetLibraryInfoImpl TLII = TargetLibraryInfoImpl(Triple());
@@ -53,9 +66,12 @@ protected:
     std::unique_ptr<Module> M = parseIR(Ctx, IR);
     PassBuilder PB;
     PB.registerFunctionAnalyses(FAM);
-    FPM.run(*M->getFunction("foo"), FAM);
 
-    return true;
+    // Enable debugging and capture std error
+    llvm::DebugFlag = true;
+    testing::internal::CaptureStderr();
+    FPM.run(*M->getFunction("foo"), FAM);
+    return getLastLine(testing::internal::GetCapturedStderr());
   }
 };
 
@@ -76,7 +92,8 @@ TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
   VecDesc CorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvu_powi",
                        ElementCount::getScalable(4), /*Masked*/ true,
                        "_ZGVsMxvu"};
-  EXPECT_TRUE(run(CorrectVD, IR));
+  EXPECT_EQ(run(CorrectVD, IR),
+            "Instructions replaced with vector libraries: 1");
 }
 
 // The VFABI prefix in TLI describes signature which is not matching the powi
@@ -85,5 +102,7 @@ TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
   VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
                          ElementCount::getScalable(4), /*Masked*/ true,
                          "_ZGVsMxvv"};
-  EXPECT_TRUE(run(IncorrectVD, IR));
+  EXPECT_EQ(
+      run(IncorrectVD, IR),
+      "replace-with-veclib: Will not replace. Wrong type at index 1: i32");
 }

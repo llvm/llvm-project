@@ -185,7 +185,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
       Type *OrigTy = CI->getArgOperand(VFParam.ParamPos)->getType();
       if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
         LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                          << ": Will not replace: wrong type at index: "
+                          << ": Will not replace. Wrong type at index "
                           << VFParam.ParamPos << ": " << *OrigTy << "\n");
         return false;
       }
@@ -245,6 +245,9 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto Changed = runImpl(TLI, F);
   if (Changed) {
+    LLVM_DEBUG(dbgs() << "Instructions replaced with vector libraries: "
+                      << NumCallsReplaced << "\n");
+
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetLibraryAnalysis>();
