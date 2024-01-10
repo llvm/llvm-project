@@ -2344,8 +2344,8 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
   }
 };
 
-struct FFT2dConverter final : public OpRewritePattern<FFT2dOp> {
-  using OpRewritePattern<FFT2dOp>::OpRewritePattern;
+struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(FFT2dOp fft2d,
                                 PatternRewriter &rewriter) const override {
@@ -2356,42 +2356,39 @@ struct FFT2dConverter final : public OpRewritePattern<FFT2dOp> {
       return rewriter.notifyMatchFailure(fft2d, "only supports ranked tensors");
     }
 
-    auto loc = fft2d.getLoc();
-    auto input_real = fft2d.getInputReal();
-    auto input_imag = fft2d.getInputImag();
-    auto inverse = fft2d.getInverseAttr();
+    Location loc = fft2d.getLoc();
+    Value input_real = fft2d.getInputReal();
+    Value input_imag = fft2d.getInputImag();
+    BoolAttr inverse = fft2d.getInverseAttr();
 
-    auto real_el_ty = input_real.getType()
-                          .cast<ShapedType>()
-                          .getElementType()
-                          .cast<FloatType>();
-    auto imag_el_ty = input_imag.getType()
-                          .cast<ShapedType>()
-                          .getElementType()
-                          .cast<FloatType>();
+    auto real_el_ty = cast<FloatType>(
+        cast<ShapedType>(input_real.getType()).getElementType());
+    auto imag_el_ty = cast<FloatType>(
+        cast<ShapedType>(input_imag.getType()).getElementType());
 
     assert(real_el_ty == imag_el_ty);
 
     // Compute the output type and set of dynamic sizes
-    llvm::SmallVector<Value> dynamicSizes;
+    SmallVector<Value> dynamicSizes;
 
     // Get [N, H, W]
-    auto dims = tensor::getMixedSizes(rewriter, loc, input_real);
+    ArrayRef<OpFoldResult> dims =
+        tensor::getMixedSizes(rewriter, loc, input_real);
 
-    llvm::SmallVector<int64_t, 3> staticSizes;
+    SmallVector<int64_t, 3> staticSizes;
     dispatchIndexOpFoldResults(dims, dynamicSizes, staticSizes);
 
     auto outputType = RankedTensorType::get(staticSizes, real_el_ty);
 
     // Iterator types for the linalg.generic implementation
-    llvm::SmallVector<utils::IteratorType, 5> iteratorTypes = {
+    SmallVector<utils::IteratorType, 5> iteratorTypes = {
         utils::IteratorType::parallel, utils::IteratorType::parallel,
         utils::IteratorType::parallel, utils::IteratorType::reduction,
         utils::IteratorType::reduction};
 
     // Inputs/outputs to the linalg.generic implementation
-    llvm::SmallVector<Value> genericOpInputs = {input_real, input_imag};
-    llvm::SmallVector<Value> genericOpOutputs = {
+    SmallVector<Value> genericOpInputs = {input_real, input_imag};
+    SmallVector<Value> genericOpOutputs = {
         RFFT2dConverter::createZeroTensor(rewriter, loc, outputType,
                                           dynamicSizes),
         RFFT2dConverter::createZeroTensor(rewriter, loc, outputType,
@@ -2399,10 +2396,10 @@ struct FFT2dConverter final : public OpRewritePattern<FFT2dOp> {
 
     // Indexing maps for input and output tensors
     auto indexingMaps = AffineMap::inferFromExprList(
-        llvm::ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
-                       RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
-                       RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
-                       RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
+        ArrayRef{RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 3, 4),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2),
+                 RFFT2dConverter::affineDimsExpr(rewriter, 0, 1, 2)});
 
     // Width and height dimensions of the original input.
     auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input_real, 1);
@@ -2411,9 +2408,9 @@ struct FFT2dConverter final : public OpRewritePattern<FFT2dOp> {
     // Constants and dimension sizes
     auto twoPiAttr = rewriter.getFloatAttr(real_el_ty, 6.283185307179586);
     auto twoPi = rewriter.create<arith::ConstantOp>(loc, twoPiAttr);
-    auto constH =
+    Value constH =
         RFFT2dConverter::castIndexToFloat(rewriter, loc, real_el_ty, dimH);
-    auto constW =
+    Value constW =
         RFFT2dConverter::castIndexToFloat(rewriter, loc, real_el_ty, dimW);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange args) {
@@ -2423,10 +2420,14 @@ struct FFT2dConverter final : public OpRewritePattern<FFT2dOp> {
       Value sumImag = args[3];
 
       // Indices for angle computation
-      auto oy = RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 1);
-      auto ox = RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 2);
-      auto iy = RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 3);
-      auto ix = RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 4);
+      Value oy =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 1);
+      Value ox =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 2);
+      Value iy =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 3);
+      Value ix =
+          RFFT2dConverter::createLinalgIndex(builder, loc, real_el_ty, 4);
 
       // float_t angle = sign_val * 2 * pi() * ((iy * oy) / H + (ix * ox) / W);
       auto iyXoy = builder.create<arith::MulFOp>(loc, iy, oy);
