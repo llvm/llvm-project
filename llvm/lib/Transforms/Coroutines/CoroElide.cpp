@@ -165,7 +165,7 @@ void Lowerer::elideHeapAllocations(Function *F, uint64_t FrameSize,
   auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
   Frame->setAlignment(FrameAlign);
   auto *FrameVoidPtr =
-      new BitCastInst(Frame, Type::getInt8PtrTy(C), "vFrame", InsertPt);
+      new BitCastInst(Frame, PointerType::getUnqual(C), "vFrame", InsertPt);
 
   for (auto *CB : CoroBegins) {
     CB->replaceAllUsesWith(FrameVoidPtr);

@@ -49,19 +49,32 @@ endif()
 # avoid an unwanted dependency on libstdc++.so.
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 
-# Build FortranDecimal when the build target is Flang or LLVM.
-if (CMAKE_SOURCE_DIR STREQUAL FLANG_SOURCE_DIR OR CMAKE_SOURCE_DIR STREQUAL LLVM_MAIN_SRC_DIR)
-  add_flang_library(FortranDecimal
+add_flang_library(FortranDecimal INSTALL_WITH_TOOLCHAIN
+  binary-to-decimal.cpp
+  decimal-to-binary.cpp
+)
+
+if (DEFINED MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  add_flang_library(FortranDecimal.static INSTALL_WITH_TOOLCHAIN
+          binary-to-decimal.cpp
+          decimal-to-binary.cpp
+  )
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  add_flang_library(FortranDecimal.dynamic INSTALL_WITH_TOOLCHAIN
     binary-to-decimal.cpp
     decimal-to-binary.cpp
   )
-# Build FortranDecimalRT for FlangRT when the build target is Runtimes.
-# Standalone builds of FlangRT is not supported.
-elseif (CMAKE_SOURCE_DIR STREQUAL Runtimes_SOURCE_DIR)
-  add_flang_library(FortranDecimalRT STATIC INSTALL_WITH_TOOLCHAIN PIC
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+  add_flang_library(FortranDecimal.static_dbg INSTALL_WITH_TOOLCHAIN
+          binary-to-decimal.cpp
+          decimal-to-binary.cpp
+  )
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
+  add_flang_library(FortranDecimal.dynamic_dbg INSTALL_WITH_TOOLCHAIN
     binary-to-decimal.cpp
     decimal-to-binary.cpp
   )
-else()
-  message(FATAL_ERROR "CMAKE_SOURCE_DIR of target points to neither Flang or Flang-rt, no library added for FortranDecimal.")
+  add_dependencies(FortranDecimal FortranDecimal.static FortranDecimal.dynamic
+    FortranDecimal.static_dbg FortranDecimal.dynamic_dbg)
 endif()

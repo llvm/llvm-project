@@ -383,27 +383,27 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1_i1(<2 x i64> %a, <2 x i64> %b, i64
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    orr.w r2, r0, r1
+; CHECK-NEXT:    orr.w r3, r0, r1
 ; CHECK-NEXT:    vmov r0, r1, d2
 ; CHECK-NEXT:    orrs r0, r1
-; CHECK-NEXT:    vmov r1, r3, d3
+; CHECK-NEXT:    vmov r1, r2, d3
 ; CHECK-NEXT:    csetm r12, eq
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    orrs r1, r3
-; CHECK-NEXT:    vmov r1, r3, d0
+; CHECK-NEXT:    orrs r1, r2
+; CHECK-NEXT:    vmov r1, r2, d0
+; CHECK-NEXT:    csetm r4, eq
+; CHECK-NEXT:    orrs r1, r2
+; CHECK-NEXT:    vmov r1, r2, d1
 ; CHECK-NEXT:    csetm lr, eq
-; CHECK-NEXT:    orrs r1, r3
-; CHECK-NEXT:    vmov r1, r4, d1
-; CHECK-NEXT:    csetm r3, eq
-; CHECK-NEXT:    orrs r1, r4
+; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    cbz r2, .LBB15_2
+; CHECK-NEXT:    cbz r3, .LBB15_2
 ; CHECK-NEXT:  @ %bb.1: @ %select.false
 ; CHECK-NEXT:    bfi r0, r12, #0, #8
-; CHECK-NEXT:    bfi r0, lr, #8, #8
+; CHECK-NEXT:    bfi r0, r4, #8, #8
 ; CHECK-NEXT:    b .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
-; CHECK-NEXT:    bfi r0, r3, #0, #8
+; CHECK-NEXT:    bfi r0, lr, #0, #8
 ; CHECK-NEXT:    bfi r0, r1, #8, #8
 ; CHECK-NEXT:  .LBB15_3: @ %select.end
 ; CHECK-NEXT:    vmsr p0, r0

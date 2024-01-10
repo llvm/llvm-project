@@ -102,6 +102,10 @@ def FeatureUAL
     : SubtargetFeature<"ual", "HasUAL", "true",
                        "Allow memory accesses to be unaligned">;
 
+def FeatureRelax
+    : SubtargetFeature<"relax", "HasLinkerRelax", "true",
+                       "Enable Linker relaxation">;
+
 //===----------------------------------------------------------------------===//
 // Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//

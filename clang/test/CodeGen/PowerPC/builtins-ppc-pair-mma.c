@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -O3 -triple powerpc64-unknown-unknown -target-cpu pwr10 \
 // RUN: -emit-llvm %s -o - | FileCheck %s
 
-// CHECK-LABEL: define {{[^@]+}}@test1(
+// CHECK-LABEL: @test1(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], <16 x i8> [[VC]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2:![0-9]+]]
@@ -18,7 +18,7 @@ void test1(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = res;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test2(
+// CHECK-LABEL: @test2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.ppc.mma.disassemble.acc(<512 x i1> [[TMP0]])
@@ -39,7 +39,7 @@ void test2(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   __builtin_mma_disassemble_acc(resp, (__vector_quad*)vqp);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test3(
+// CHECK-LABEL: @test3(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP:%.*]], align 32, !tbaa [[TBAA6:![0-9]+]]
@@ -53,7 +53,7 @@ void test3(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_pair *)resp) = res;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test4(
+// CHECK-LABEL: @test4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> [[TMP0]])
@@ -68,7 +68,7 @@ void test4(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   __builtin_vsx_disassemble_pair(resp, (__vector_pair*)vpp);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test5(
+// CHECK-LABEL: @test5(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xxmtacc(<512 x i1> [[TMP0]])
@@ -82,7 +82,7 @@ void test5(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test6(
+// CHECK-LABEL: @test6(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xxmfacc(<512 x i1> [[TMP0]])
@@ -96,7 +96,7 @@ void test6(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test7(
+// CHECK-LABEL: @test7(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -109,7 +109,7 @@ void test7(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test8(
+// CHECK-LABEL: @test8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -122,7 +122,7 @@ void test8(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test9(
+// CHECK-LABEL: @test9(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -135,7 +135,7 @@ void test9(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, unsi
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test10(
+// CHECK-LABEL: @test10(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -148,7 +148,7 @@ void test10(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test11(
+// CHECK-LABEL: @test11(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2s(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -161,7 +161,7 @@ void test11(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test12(
+// CHECK-LABEL: @test12(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -174,7 +174,7 @@ void test12(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test13(
+// CHECK-LABEL: @test13(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf32ger(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -187,7 +187,7 @@ void test13(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test14(
+// CHECK-LABEL: @test14(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1> [[TMP0]], <16 x i8> [[VC:%.*]])
@@ -201,7 +201,7 @@ void test14(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test15(
+// CHECK-LABEL: @test15(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi4ger8(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -214,7 +214,7 @@ void test15(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test16(
+// CHECK-LABEL: @test16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -227,7 +227,7 @@ void test16(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test17(
+// CHECK-LABEL: @test17(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -240,7 +240,7 @@ void test17(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test18(
+// CHECK-LABEL: @test18(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2s(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -253,7 +253,7 @@ void test18(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test19(
+// CHECK-LABEL: @test19(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -266,7 +266,7 @@ void test19(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test20(
+// CHECK-LABEL: @test20(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf32ger(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -279,7 +279,7 @@ void test20(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test21(
+// CHECK-LABEL: @test21(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf64ger(<256 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], i32 0, i32 0)
@@ -293,7 +293,7 @@ void test21(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test22(
+// CHECK-LABEL: @test22(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -307,7 +307,7 @@ void test22(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test23(
+// CHECK-LABEL: @test23(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -321,7 +321,7 @@ void test23(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test24(
+// CHECK-LABEL: @test24(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi8ger4spp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -335,7 +335,7 @@ void test24(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test25(
+// CHECK-LABEL: @test25(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -349,7 +349,7 @@ void test25(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test26(
+// CHECK-LABEL: @test26(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvi16ger2spp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -363,7 +363,7 @@ void test26(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test27(
+// CHECK-LABEL: @test27(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi4ger8pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -377,7 +377,7 @@ void test27(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test28(
+// CHECK-LABEL: @test28(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -391,7 +391,7 @@ void test28(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test29(
+// CHECK-LABEL: @test29(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi8ger4spp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -405,7 +405,7 @@ void test29(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test30(
+// CHECK-LABEL: @test30(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -419,7 +419,7 @@ void test30(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test31(
+// CHECK-LABEL: @test31(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvi16ger2spp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -433,7 +433,7 @@ void test31(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test32(
+// CHECK-LABEL: @test32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -447,7 +447,7 @@ void test32(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test33(
+// CHECK-LABEL: @test33(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -461,7 +461,7 @@ void test33(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test34(
+// CHECK-LABEL: @test34(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2np(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -475,7 +475,7 @@ void test34(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test35(
+// CHECK-LABEL: @test35(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf16ger2nn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -489,7 +489,7 @@ void test35(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test36(
+// CHECK-LABEL: @test36(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -503,7 +503,7 @@ void test36(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test37(
+// CHECK-LABEL: @test37(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2pn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -517,7 +517,7 @@ void test37(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test38(
+// CHECK-LABEL: @test38(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2np(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -531,7 +531,7 @@ void test38(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test39(
+// CHECK-LABEL: @test39(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf16ger2nn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -545,7 +545,7 @@ void test39(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test40(
+// CHECK-LABEL: @test40(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -559,7 +559,7 @@ void test40(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test41(
+// CHECK-LABEL: @test41(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -573,7 +573,7 @@ void test41(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test42(
+// CHECK-LABEL: @test42(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -587,7 +587,7 @@ void test42(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test43(
+// CHECK-LABEL: @test43(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvf32gernn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -601,7 +601,7 @@ void test43(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test44(
+// CHECK-LABEL: @test44(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0)
@@ -615,7 +615,7 @@ void test44(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test45(
+// CHECK-LABEL: @test45(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0)
@@ -629,7 +629,7 @@ void test45(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test46(
+// CHECK-LABEL: @test46(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0)
@@ -643,7 +643,7 @@ void test46(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test47(
+// CHECK-LABEL: @test47(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0)
@@ -657,7 +657,7 @@ void test47(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test48(
+// CHECK-LABEL: @test48(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -672,7 +672,7 @@ void test48(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test49(
+// CHECK-LABEL: @test49(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -687,7 +687,7 @@ void test49(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test50(
+// CHECK-LABEL: @test50(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -702,7 +702,7 @@ void test50(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test51(
+// CHECK-LABEL: @test51(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -717,7 +717,7 @@ void test51(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test52(
+// CHECK-LABEL: @test52(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -732,7 +732,7 @@ void test52(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test53(
+// CHECK-LABEL: @test53(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -747,7 +747,7 @@ void test53(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test54(
+// CHECK-LABEL: @test54(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -762,7 +762,7 @@ void test54(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test55(
+// CHECK-LABEL: @test55(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -777,7 +777,7 @@ void test55(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test56(
+// CHECK-LABEL: @test56(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvbf16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -790,7 +790,7 @@ void test56(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test57(
+// CHECK-LABEL: @test57(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvbf16ger2(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    store <512 x i1> [[TMP0]], ptr [[RESP:%.*]], align 64, !tbaa [[TBAA2]]
@@ -803,7 +803,7 @@ void test57(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test58(
+// CHECK-LABEL: @test58(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvbf16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -817,7 +817,7 @@ void test58(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test59(
+// CHECK-LABEL: @test59(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvbf16ger2pn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -831,7 +831,7 @@ void test59(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test60(
+// CHECK-LABEL: @test60(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvbf16ger2np(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -845,7 +845,7 @@ void test60(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test61(
+// CHECK-LABEL: @test61(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.xvbf16ger2nn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
@@ -859,7 +859,7 @@ void test61(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test62(
+// CHECK-LABEL: @test62(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvbf16ger2pp(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -873,7 +873,7 @@ void test62(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test63(
+// CHECK-LABEL: @test63(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvbf16ger2pn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -887,7 +887,7 @@ void test63(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test64(
+// CHECK-LABEL: @test64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvbf16ger2np(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -901,7 +901,7 @@ void test64(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test65(
+// CHECK-LABEL: @test65(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <512 x i1> @llvm.ppc.mma.pmxvbf16ger2nn(<512 x i1> [[TMP0]], <16 x i8> [[VC:%.*]], <16 x i8> [[VC]], i32 0, i32 0, i32 0)
@@ -915,7 +915,7 @@ void test65(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test66(
+// CHECK-LABEL: @test66(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[VPP:%.*]])
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP0]], ptr [[VP2:%.*]])
@@ -926,7 +926,7 @@ void test66(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 0L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test67(
+// CHECK-LABEL: @test67(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 [[OFFSET:%.*]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -939,7 +939,7 @@ void test67(const __vector_pair *vpp, signed long offset, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, offset, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test68(
+// CHECK-LABEL: @test68(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 18
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -952,7 +952,7 @@ void test68(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 18L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test69(
+// CHECK-LABEL: @test69(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -965,7 +965,7 @@ void test69(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 1L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test70(
+// CHECK-LABEL: @test70(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 42
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -978,7 +978,7 @@ void test70(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 42L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test71(
+// CHECK-LABEL: @test71(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 32768
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -991,7 +991,7 @@ void test71(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 32768L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test72(
+// CHECK-LABEL: @test72(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 32799
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1004,7 +1004,7 @@ void test72(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_vsx_stxvp(vp, 32799L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test73(
+// CHECK-LABEL: @test73(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 8
@@ -1020,7 +1020,7 @@ void test73(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test74(
+// CHECK-LABEL: @test74(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[VPP:%.*]])
@@ -1035,7 +1035,7 @@ void test74(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test75(
+// CHECK-LABEL: @test75(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 [[OFFS:%.*]]
@@ -1051,7 +1051,7 @@ void test75(unsigned char *vqp, signed long offs, const __vector_pair *vpp, vect
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test76(
+// CHECK-LABEL: @test76(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.assemble.pair(<16 x i8> [[VC:%.*]], <16 x i8> [[VC]])
 // CHECK-NEXT:    store <256 x i1> [[TMP0]], ptr [[RESP:%.*]], align 32, !tbaa [[TBAA6]]
@@ -1065,7 +1065,7 @@ void test76(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   *((__vector_pair *)resp) = res;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test77(
+// CHECK-LABEL: @test77(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <256 x i1>, ptr [[VPP:%.*]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call { <16 x i8>, <16 x i8> } @llvm.ppc.vsx.disassemble.pair(<256 x i1> [[TMP0]])
@@ -1080,7 +1080,7 @@ void test77(unsigned char *vqp, unsigned char *vpp, vector unsigned char vc, uns
   __builtin_mma_disassemble_pair(resp, (__vector_pair*)vpp);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test78(
+// CHECK-LABEL: @test78(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[VPP:%.*]])
 // CHECK-NEXT:    tail call void @llvm.ppc.vsx.stxvp(<256 x i1> [[TMP0]], ptr [[VP2:%.*]])
@@ -1091,7 +1091,7 @@ void test78(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 0L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test79(
+// CHECK-LABEL: @test79(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 [[OFFSET:%.*]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1104,7 +1104,7 @@ void test79(const __vector_pair *vpp, signed long offset, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, offset, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test80(
+// CHECK-LABEL: @test80(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 18
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1117,7 +1117,7 @@ void test80(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 18L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test81(
+// CHECK-LABEL: @test81(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1130,7 +1130,7 @@ void test81(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 1L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test82(
+// CHECK-LABEL: @test82(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 42
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1143,7 +1143,7 @@ void test82(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 42L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test83(
+// CHECK-LABEL: @test83(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 32768
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1156,7 +1156,7 @@ void test83(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 32768L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test84(
+// CHECK-LABEL: @test84(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 32799
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[TMP0]])
@@ -1169,7 +1169,7 @@ void test84(const __vector_pair *vpp, __vector_pair *vp2) {
   __builtin_mma_stxvp(vp, 32799L, vp2);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test85(
+// CHECK-LABEL: @test85(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 8
@@ -1185,7 +1185,7 @@ void test85(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test86(
+// CHECK-LABEL: @test86(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <256 x i1> @llvm.ppc.vsx.lxvp(ptr [[VPP:%.*]])
@@ -1200,7 +1200,7 @@ void test86(unsigned char *vqp, const __vector_pair *vpp, vector unsigned char v
   *((__vector_quad *)resp) = vq;
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test87(
+// CHECK-LABEL: @test87(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load <512 x i1>, ptr [[VQP:%.*]], align 64, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[VPP:%.*]], i64 [[OFFS:%.*]]

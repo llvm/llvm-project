@@ -305,44 +305,26 @@ define <1 x i64> @movid() {
 }
 
 define <2 x float> @fmov2s() {
-; CHECK-SD-LABEL: fmov2s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov v0.2s, #-12.00000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fmov2s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, #-12.00000000
-; CHECK-GI-NEXT:    dup v0.2s, v0.s[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fmov2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v0.2s, #-12.00000000
+; CHECK-NEXT:    ret
 	ret <2 x float> < float -1.2e1, float -1.2e1>
 }
 
 define <4 x float> @fmov4s() {
-; CHECK-SD-LABEL: fmov4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov v0.4s, #-12.00000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fmov4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov s0, #-12.00000000
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fmov4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v0.4s, #-12.00000000
+; CHECK-NEXT:    ret
 	ret <4 x float> < float -1.2e1, float -1.2e1, float -1.2e1, float -1.2e1>
 }
 
 define <2 x double> @fmov2d() {
-; CHECK-SD-LABEL: fmov2d:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov v0.2d, #-12.00000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fmov2d:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov d0, #-12.00000000
-; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fmov2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v0.2d, #-12.00000000
+; CHECK-NEXT:    ret
 	ret <2 x double> < double -1.2e1, double -1.2e1>
 }
 

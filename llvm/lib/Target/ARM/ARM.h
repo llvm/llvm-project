@@ -17,7 +17,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CodeGen.h"
 #include <functional>
-#include <vector>
 
 namespace llvm {
 

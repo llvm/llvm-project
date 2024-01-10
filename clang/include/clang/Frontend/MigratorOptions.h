@@ -14,11 +14,15 @@
 #ifndef LLVM_CLANG_FRONTEND_MIGRATOROPTIONS_H
 #define LLVM_CLANG_FRONTEND_MIGRATOROPTIONS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace clang {
 
 class MigratorOptions {
 public:
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoNSAllocReallocError : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned NoFinalizeRemoval : 1;
   MigratorOptions() {
     NoNSAllocReallocError = 0;

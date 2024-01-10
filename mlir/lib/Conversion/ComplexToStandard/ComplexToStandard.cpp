@@ -499,13 +499,16 @@ struct LogOpConversion : public OpConversionPattern<complex::LogOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex());
-    Value resultReal = b.create<math::LogOp>(elementType, abs);
+    Value abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex(),
+                                         fmf.getValue());
+    Value resultReal = b.create<math::LogOp>(elementType, abs, fmf.getValue());
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
-    Value resultImag = b.create<math::Atan2Op>(elementType, imag, real);
+    Value resultImag =
+        b.create<math::Atan2Op>(elementType, imag, real, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();
@@ -520,6 +523,7 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
@@ -535,15 +539,21 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
     // log1p(a+bi) = .5*log((a+1)^2+b^2) + i*atan2(b, a + 1)
     // log((a+1)+bi) = .5*log(a*a + 2*a + 1 + b*b) + i*atan2(b, a+1)
     // log((a+1)+bi) = .5*log1p(a*a + 2*a + b*b) + i*atan2(b, a+1)
-    Value sumSq = b.create<arith::MulFOp>(real, real);
-    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(real, two));
-    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(imag, imag));
-    Value logSumSq = b.create<math::Log1pOp>(elementType, sumSq);
-    Value resultReal = b.create<arith::MulFOp>(logSumSq, half);
+    Value sumSq = b.create<arith::MulFOp>(real, real, fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(real, two, fmf.getValue()),
+        fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(imag, imag, fmf.getValue()),
+        fmf.getValue());
+    Value logSumSq =
+        b.create<math::Log1pOp>(elementType, sumSq, fmf.getValue());
+    Value resultReal = b.create<arith::MulFOp>(logSumSq, half, fmf.getValue());
 
-    Value realPlusOne = b.create<arith::AddFOp>(real, one);
+    Value realPlusOne = b.create<arith::AddFOp>(real, one, fmf.getValue());
 
-    Value resultImag = b.create<math::Atan2Op>(elementType, imag, realPlusOne);
+    Value resultImag =
+        b.create<math::Atan2Op>(elementType, imag, realPlusOne, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();
@@ -559,29 +569,39 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto type = cast<ComplexType>(adaptor.getLhs().getType());
     auto elementType = cast<FloatType>(type.getElementType());
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+    auto fmfValue = fmf.getValue();
 
     Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
-    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal);
+    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal, fmfValue);
     Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
-    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag);
+    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag, fmfValue);
     Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal);
+    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal, fmfValue);
     Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag);
+    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag, fmfValue);
 
-    Value lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    Value lhsRealTimesRhsRealAbs = b.create<math::AbsFOp>(lhsRealTimesRhsReal);
-    Value lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value lhsImagTimesRhsImagAbs = b.create<math::AbsFOp>(lhsImagTimesRhsImag);
-    Value real =
-        b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
+    Value lhsRealTimesRhsReal =
+        b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
+    Value lhsRealTimesRhsRealAbs =
+        b.create<math::AbsFOp>(lhsRealTimesRhsReal, fmfValue);
+    Value lhsImagTimesRhsImag =
+        b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
+    Value lhsImagTimesRhsImagAbs =
+        b.create<math::AbsFOp>(lhsImagTimesRhsImag, fmfValue);
+    Value real = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
+                                         lhsImagTimesRhsImag, fmfValue);
 
-    Value lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    Value lhsImagTimesRhsRealAbs = b.create<math::AbsFOp>(lhsImagTimesRhsReal);
-    Value lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value lhsRealTimesRhsImagAbs = b.create<math::AbsFOp>(lhsRealTimesRhsImag);
-    Value imag =
-        b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
+    Value lhsImagTimesRhsReal =
+        b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
+    Value lhsImagTimesRhsRealAbs =
+        b.create<math::AbsFOp>(lhsImagTimesRhsReal, fmfValue);
+    Value lhsRealTimesRhsImag =
+        b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
+    Value lhsRealTimesRhsImagAbs =
+        b.create<math::AbsFOp>(lhsRealTimesRhsImag, fmfValue);
+    Value imag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
+                                         lhsRealTimesRhsImag, fmfValue);
 
     // Handle cases where the "naive" calculation results in NaN values.
     Value realIsNan =
@@ -707,20 +727,20 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     recalc = b.create<arith::AndIOp>(isNan, recalc);
 
     // Recalculate real part.
-    lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value newReal =
-        b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
+    lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal, fmfValue);
+    lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag, fmfValue);
+    Value newReal = b.create<arith::SubFOp>(lhsRealTimesRhsReal,
+                                            lhsImagTimesRhsImag, fmfValue);
     real = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newReal), real);
+        recalc, b.create<arith::MulFOp>(inf, newReal, fmfValue), real);
 
     // Recalculate imag part.
-    lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value newImag =
-        b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
+    lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal, fmfValue);
+    lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag, fmfValue);
+    Value newImag = b.create<arith::AddFOp>(lhsImagTimesRhsReal,
+                                            lhsRealTimesRhsImag, fmfValue);
     imag = b.create<arith::SelectOp>(
-        recalc, b.create<arith::MulFOp>(inf, newImag), imag);
+        recalc, b.create<arith::MulFOp>(inf, newImag, fmfValue), imag);
 
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, real, imag);
     return success();

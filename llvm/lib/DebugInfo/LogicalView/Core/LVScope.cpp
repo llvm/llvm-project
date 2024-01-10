@@ -299,20 +299,12 @@ void LVScope::addMissingElements(LVScope *Reference) {
   LVSymbols References;
   References.append(ReferenceSymbols->begin(), ReferenceSymbols->end());
 
-  auto RemoveSymbol = [&](LVSymbols &Symbols, LVSymbol *Symbol) {
-    LVSymbols::iterator Iter = std::remove_if(
-        Symbols.begin(), Symbols.end(),
-        [Symbol](LVSymbol *Item) -> bool { return Item == Symbol; });
-    if (Iter != Symbols.end())
-      Symbols.erase(Iter, Symbols.end());
-  };
-
   // Erase abstract symbols already in this scope from the collection of
   // symbols in the referenced scope.
   if (getSymbols())
     for (const LVSymbol *Symbol : *getSymbols())
       if (Symbol->getHasReferenceAbstract())
-        RemoveSymbol(References, Symbol->getReference());
+        llvm::erase(References, Symbol->getReference());
 
   // If we have elements left in 'References', those are the elements that
   // need to be inserted in the current scope.

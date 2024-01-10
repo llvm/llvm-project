@@ -34,6 +34,19 @@
 #include <tuple>
 #include <utility>
 
+// The implicit arguments of COV5 AMDGPU kernels.
+struct implicit_args_t {
+  uint32_t grid_size_x;
+  uint32_t grid_size_y;
+  uint32_t grid_size_z;
+  uint16_t workgroup_size_x;
+  uint16_t workgroup_size_y;
+  uint16_t workgroup_size_z;
+  uint8_t Unused0[46];
+  uint16_t grid_dims;
+  uint8_t Unused1[190];
+};
+
 /// Print the error code and exit if \p code indicates an error.
 static void handle_error(hsa_status_t code) {
   if (code == HSA_STATUS_SUCCESS || code == HSA_STATUS_INFO_BREAK)
@@ -185,11 +198,13 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   uint32_t args_size;
   uint32_t group_size;
   uint32_t private_size;
+  bool dynamic_stack;
 
   std::pair<hsa_executable_symbol_info_t, void *> symbol_infos[] = {
       {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernel},
       {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, &args_size},
       {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &group_size},
+      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK, &dynamic_stack},
       {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &private_size}};
 
   for (auto &[info, value] : symbol_infos)
@@ -209,6 +224,19 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   std::memset(args, 0, args_size);
   std::memcpy(args, &kernel_args, sizeof(args_t));
 
+  // Initialize the necessary implicit arguments to the proper values.
+  bool dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
+              (params.num_blocks_z * params.num_threads_z != 1);
+  implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
+      reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
+  implicit_args->grid_dims = dims;
+  implicit_args->grid_size_x = params.num_threads_x;
+  implicit_args->grid_size_y = params.num_threads_y;
+  implicit_args->grid_size_z = params.num_threads_z;
+  implicit_args->workgroup_size_x = params.num_blocks_x;
+  implicit_args->workgroup_size_y = params.num_blocks_y;
+  implicit_args->workgroup_size_z = params.num_blocks_z;
+
   // Obtain a packet from the queue.
   uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
   while (packet_id - hsa_queue_load_read_index_scacquire(queue) >= queue->size)
@@ -222,21 +250,20 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Set up the packet for exeuction on the device. We currently only launch
   // with one thread on the device, forcing the rest of the wavefront to be
   // masked off.
-  std::memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
-  packet->setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
-                   (params.num_blocks_z * params.num_threads_z != 1))
-                  << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+  uint16_t setup = (dims) << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
   packet->workgroup_size_x = params.num_threads_x;
   packet->workgroup_size_y = params.num_threads_y;
   packet->workgroup_size_z = params.num_threads_z;
+  packet->reserved0 = 0;
   packet->grid_size_x = params.num_blocks_x * params.num_threads_x;
   packet->grid_size_y = params.num_blocks_y * params.num_threads_y;
   packet->grid_size_z = params.num_blocks_z * params.num_threads_z;
-  packet->private_segment_size = private_size;
+  packet->private_segment_size =
+      dynamic_stack ? 16 * 1024 /* 16 KB */ : private_size;
   packet->group_segment_size = group_size;
   packet->kernel_object = kernel;
   packet->kernarg_address = args;
-
+  packet->reserved2 = 0;
   // Create a signal to indicate when this packet has been completed.
   if (hsa_status_t err =
           hsa_signal_create(1, 0, nullptr, &packet->completion_signal))
@@ -244,12 +271,12 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
 
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
-  uint16_t setup = packet->setup;
   uint16_t header =
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
-  __atomic_store_n(&packet->header, header | (setup << 16), __ATOMIC_RELEASE);
+  uint32_t header_word = header | (setup << 16u);
+  __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
   // Wait until the kernel has completed execution on the device. Periodically
@@ -439,9 +466,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   void *rpc_client_host;
   if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(void *),
+          hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(void *),
                                        /*flags=*/0, &rpc_client_host))
     handle_error(err);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, rpc_client_host);
 
   void *rpc_client_dev;
   if (hsa_status_t err = hsa_executable_symbol_get_info(
@@ -455,12 +483,11 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   void *rpc_client_buffer;
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          coarsegrained_pool, rpc_get_client_size(),
-          /*flags=*/0, &rpc_client_buffer))
+  if (hsa_status_t err = hsa_amd_memory_lock(
+          const_cast<void *>(rpc_get_client_buffer(device_id)),
+          rpc_get_client_size(),
+          /*agents=*/nullptr, 0, &rpc_client_buffer))
     handle_error(err);
-  std::memcpy(rpc_client_buffer, rpc_get_client_buffer(device_id),
-              rpc_get_client_size());
 
   // Copy the RPC client buffer to the address pointed to by the symbol.
   if (hsa_status_t err =
@@ -468,7 +495,8 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                      rpc_client_buffer, host_agent, rpc_get_client_size()))
     handle_error(err);
 
-  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_buffer))
+  if (hsa_status_t err = hsa_amd_memory_unlock(
+          const_cast<void *>(rpc_get_client_buffer(device_id))))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_host))
     handle_error(err);
@@ -477,7 +505,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   // If the clock_freq symbol is missing, no work to do.
   hsa_executable_symbol_t freq_sym;
   if (HSA_STATUS_SUCCESS ==
-      hsa_executable_get_symbol_by_name(executable, "LIBC_NAMESPACE_clock_freq",
+      hsa_executable_get_symbol_by_name(executable, "__llvm_libc_clock_freq",
                                         &dev_agent, &freq_sym)) {
 
     void *host_clock_freq;
@@ -487,21 +515,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
       handle_error(err);
     hsa_amd_agents_allow_access(1, &dev_agent, nullptr, host_clock_freq);
 
-    if (hsa_status_t err =
-            hsa_agent_get_info(dev_agent,
-                               static_cast<hsa_agent_info_t>(
-                                   HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
-                               host_clock_freq))
-      handle_error(err);
+    if (HSA_STATUS_SUCCESS ==
+        hsa_agent_get_info(dev_agent,
+                           static_cast<hsa_agent_info_t>(
+                               HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
+                           host_clock_freq)) {
 
-    void *freq_addr;
-    if (hsa_status_t err = hsa_executable_symbol_get_info(
-            freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS, &freq_addr))
-      handle_error(err);
+      void *freq_addr;
+      if (hsa_status_t err = hsa_executable_symbol_get_info(
+              freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+              &freq_addr))
+        handle_error(err);
 
-    if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
-                                      host_agent, sizeof(uint64_t)))
-      handle_error(err);
+      if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
+                                        host_agent, sizeof(uint64_t)))
+        handle_error(err);
+    }
   }
 
   // Obtain a queue with the minimum (power of two) size, used to send commands

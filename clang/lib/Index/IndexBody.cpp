@@ -77,21 +77,21 @@ public:
     const Stmt *Parent = *It;
 
     if (auto BO = dyn_cast<BinaryOperator>(Parent)) {
-      if (BO->getOpcode() == BO_Assign && BO->getLHS()->IgnoreParenCasts() == E)
-        Roles |= (unsigned)SymbolRole::Write;
-
+      if (BO->getOpcode() == BO_Assign) {
+        if (BO->getLHS()->IgnoreParenCasts() == E)
+          Roles |= (unsigned)SymbolRole::Write;
+      } else if (auto CA = dyn_cast<CompoundAssignOperator>(Parent)) {
+        if (CA->getLHS()->IgnoreParenCasts() == E) {
+          Roles |= (unsigned)SymbolRole::Read;
+          Roles |= (unsigned)SymbolRole::Write;
+        }
+      }
     } else if (auto UO = dyn_cast<UnaryOperator>(Parent)) {
       if (UO->isIncrementDecrementOp()) {
         Roles |= (unsigned)SymbolRole::Read;
         Roles |= (unsigned)SymbolRole::Write;
       } else if (UO->getOpcode() == UO_AddrOf) {
         Roles |= (unsigned)SymbolRole::AddressOf;
-      }
-
-    } else if (auto CA = dyn_cast<CompoundAssignOperator>(Parent)) {
-      if (CA->getLHS()->IgnoreParenCasts() == E) {
-        Roles |= (unsigned)SymbolRole::Read;
-        Roles |= (unsigned)SymbolRole::Write;
       }
 
     } else if (auto CE = dyn_cast<CallExpr>(Parent)) {

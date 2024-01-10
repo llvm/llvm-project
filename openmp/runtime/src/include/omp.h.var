@@ -15,6 +15,7 @@
 #ifndef __OMP_H
 #   define __OMP_H
 
+#   include <stddef.h>
 #   include <stdlib.h>
 #   include <stdint.h>
 
@@ -236,6 +237,11 @@
     extern int    __KAI_KMPC_CONVENTION  omp_target_memcpy_rect_async(void *, const void *, size_t, int, const size_t *,
                                              const size_t *, const size_t *, const size_t *, const size_t *, int, int,
                                              int, omp_depend_t *);
+
+    /* OpenMP 6.0 device memory routines */
+    extern void * __KAI_KMPC_CONVENTION omp_target_memset(void *, int, size_t, int);
+    extern void * __KAI_KMPC_CONVENTION omp_target_memset_async(void *, int, size_t, int, int, omp_depend_t *);
+
     /*!
      * The `omp_get_mapped_ptr` routine returns the device pointer that is associated with a host pointer for a given device.
      */
@@ -497,7 +503,7 @@
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
 
     /* LLVM Extensions */
-    extern void *llvm_omp_target_dynamic_shared_alloc();
+    extern void *llvm_omp_target_dynamic_shared_alloc(void);
 
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP

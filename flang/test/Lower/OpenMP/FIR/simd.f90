@@ -1,6 +1,6 @@
 ! Tests for 2.9.3.1 Simd
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPsimdloop()
 subroutine simdloop

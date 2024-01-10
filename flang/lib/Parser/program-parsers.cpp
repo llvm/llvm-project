@@ -46,6 +46,10 @@ static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
 
+static constexpr auto globalOpenACCCompilerDirective{
+    construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{}))};
+
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
 // F'2018 6.3.1 defines a program unit as a sequence of one or more lines,
@@ -58,7 +62,8 @@ TYPE_PARSER(
                            "nonstandard usage: empty source file"_port_en_US,
                            skipStuffBeforeStatement >> !nextCh >>
                                pure<std::list<ProgramUnit>>()) ||
-        some(globalCompilerDirective || normalProgramUnit) /
+        some(globalCompilerDirective || globalOpenACCCompilerDirective ||
+            normalProgramUnit) /
             skipStuffBeforeStatement))
 
 // R504 specification-part ->

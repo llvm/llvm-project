@@ -44,7 +44,7 @@ define void @load(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %37 = load <vscale x 8 x i32>, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %38 = load <vscale x 16 x i32>, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %39 = load <vscale x 32 x i32>, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load i64, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load i64, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %41 = load <1 x i64>, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %42 = load <2 x i64>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %43 = load <4 x i64>, ptr %p, align 32
@@ -187,7 +187,7 @@ define void @store(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <vscale x 8 x i32> undef, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <vscale x 16 x i32> undef, ptr %p, align 64
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <vscale x 32 x i32> undef, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 undef, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i64 undef, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i64> undef, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i64> undef, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> undef, ptr %p, align 32

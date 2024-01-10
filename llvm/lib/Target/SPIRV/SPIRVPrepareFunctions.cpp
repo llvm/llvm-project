@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
@@ -38,12 +39,13 @@ void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
 namespace {
 
 class SPIRVPrepareFunctions : public ModulePass {
+  const SPIRVTargetMachine &TM;
   bool substituteIntrinsicCalls(Function *F);
   Function *removeAggregateTypesFromSignature(Function *F);
 
 public:
   static char ID;
-  SPIRVPrepareFunctions() : ModulePass(ID) {
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
     initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -300,7 +302,9 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
       } else if (II->getIntrinsicID() == Intrinsic::assume ||
                  II->getIntrinsicID() == Intrinsic::expect) {
-        lowerExpectAssume(II);
+        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+        if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
+          lowerExpectAssume(II);
         Changed = true;
       }
     }
@@ -394,6 +398,7 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   return Changed;
 }
 
-ModulePass *llvm::createSPIRVPrepareFunctionsPass() {
-  return new SPIRVPrepareFunctions();
+ModulePass *
+llvm::createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) {
+  return new SPIRVPrepareFunctions(TM);
 }

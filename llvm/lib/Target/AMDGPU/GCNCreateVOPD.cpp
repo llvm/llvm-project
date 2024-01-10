@@ -25,7 +25,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -72,8 +71,11 @@ public:
     auto *SecondMI = CI.SecondMI;
     unsigned Opc1 = FirstMI->getOpcode();
     unsigned Opc2 = SecondMI->getOpcode();
-    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
-                                        AMDGPU::getVOPDOpcode(Opc2));
+    unsigned EncodingFamily =
+        AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
+    int NewOpcode =
+        AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
+                            AMDGPU::getVOPDOpcode(Opc2), EncodingFamily);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 

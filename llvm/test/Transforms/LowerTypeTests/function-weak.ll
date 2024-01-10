@@ -48,6 +48,19 @@ entry:
   ret void
 }
 
+define void @struct() {
+; CHECK-LABEL: define void @struct() {
+; CHECK: %0 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK-NEXT: %1 = icmp ne ptr %0, null
+; CHECK-NEXT: %2 = insertvalue { i1, i8 } poison, i1 %1, 0
+; CHECK-NEXT: %3 = insertvalue { i1, i8 } %2, i8 0, 1
+; CHECK-NEXT: %x = extractvalue { i1, i8 } %3, 0
+
+entry:
+  %x = extractvalue { i1, i8 } { i1 icmp ne (ptr @f, ptr null), i8 0 }, 0
+  ret void
+}
+
 define void @phi(i1 %c) {
 ; CHECK-LABEL: define void @phi(i1 %c) {
 ; CHECK: entry:

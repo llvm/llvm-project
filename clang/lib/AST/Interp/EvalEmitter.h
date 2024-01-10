@@ -40,7 +40,7 @@ protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
               APValue &Result);
 
-  virtual ~EvalEmitter() {}
+  virtual ~EvalEmitter();
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -73,7 +73,8 @@ protected:
   llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  unsigned LambdaThisCapture;
+  /// Offset of the This parameter in a lambda record.
+  unsigned LambdaThisCapture = 0;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 

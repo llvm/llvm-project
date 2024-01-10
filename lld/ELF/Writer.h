@@ -56,6 +56,9 @@ uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
 bool isMipsN32Abi(const InputFile *f);
 bool isMicroMips();
 bool isMipsR6();
+
+bool hasMemtag();
+bool canHaveMemtagGlobals();
 } // namespace lld::elf
 
 #endif

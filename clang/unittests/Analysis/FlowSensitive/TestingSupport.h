@@ -398,8 +398,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 
 using BuiltinOptions = DataflowAnalysisContext::Options;
 
-/// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
-/// verify the results.
+/// Runs dataflow on function named `TargetFun` in `Code` with a `NoopAnalysis`
+/// and calls `VerifyResults` to verify the results.
 llvm::Error checkDataflowWithNoopAnalysis(
     llvm::StringRef Code,
     std::function<
@@ -409,6 +409,20 @@ llvm::Error checkDataflowWithNoopAnalysis(
     DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
+
+/// Runs dataflow on function matched by `TargetFuncMatcher` in `Code` with a
+/// `NoopAnalysis` and calls `VerifyResults` to verify the results.
+llvm::Error checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
@@ -482,6 +496,11 @@ public:
     return &Formula::create(A, Formula::AtomRef, {}, NextAtom++);
   }
 
+  // Returns a reference to a literal boolean value.
+  const Formula *literal(bool B) {
+    return &Formula::create(A, Formula::Literal, {}, B);
+  }
+
   // Creates a boolean conjunction.
   const Formula *conj(const Formula *LHS, const Formula *RHS) {
     return make(Formula::And, {LHS, RHS});
@@ -507,6 +526,10 @@ public:
     return make(Formula::Equal, {LHS, RHS});
   }
 };
+
+/// Parses a list of formulas, separated by newlines, and returns them.
+/// On parse errors, calls `ADD_FAILURE()` to fail the current test.
+std::vector<const Formula *> parseFormulas(Arena &A, StringRef Lines);
 
 } // namespace test
 } // namespace dataflow

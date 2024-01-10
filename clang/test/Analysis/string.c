@@ -97,6 +97,29 @@ void strlen_constant2(char x) {
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
 }
 
+const char *const global_str_ptr = "abcd";
+const char global_str_arr[] = "efgh";
+const char *global_non_const_ptr1 = "ijk";
+char *global_non_const_ptr2 = "lmn";
+char global_non_const_arr[] = "op";
+
+void strlen_global_constant_ptr(void) {
+  clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_constant_arr(void) {
+  clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_non_const_ptr(void) {
+  clang_analyzer_eval(strlen(global_non_const_ptr1) == 3); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(global_non_const_ptr2) == 3); // expected-warning{{UNKNOWN}}
+}
+
+void strlen_global_non_const_arr(void) {
+  clang_analyzer_eval(strlen(global_non_const_arr) == 2); // expected-warning{{UNKNOWN}}
+}
+
 size_t strlen_null(void) {
   return strlen(0); // expected-warning{{Null pointer passed as 1st argument to string length function}}
 }

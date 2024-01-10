@@ -120,6 +120,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "TOCDelta16LO";
   case TOCDelta16LODS:
     return "TOCDelta16LODS";
+  case RequestGOTAndTransformToDelta34:
+    return "RequestGOTAndTransformToDelta34";
   case CallBranchDelta:
     return "CallBranchDelta";
   case CallBranchDeltaRestoreTOC:
@@ -132,6 +134,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestTLSDescInGOTAndTransformToTOCDelta16HA";
   case RequestTLSDescInGOTAndTransformToTOCDelta16LO:
     return "RequestTLSDescInGOTAndTransformToTOCDelta16LO";
+  case RequestTLSDescInGOTAndTransformToDelta34:
+    return "RequestTLSDescInGOTAndTransformToDelta34";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
   }

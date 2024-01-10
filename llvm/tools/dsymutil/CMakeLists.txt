@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   AsmPrinter
   CodeGen
   CodeGenTypes
+  DWARFLinkerBase
   DWARFLinker
   DWARFLinkerParallel
   DebugInfoDWARF
@@ -30,6 +31,7 @@ add_llvm_tool(dsymutil
   MachODebugMapParser.cpp
   MachOUtils.cpp
   Reproducer.cpp
+  RelocationMap.cpp
   SymbolMap.cpp
 
   DEPENDS

@@ -9,7 +9,9 @@ entry:
 	%1 = trunc i32 %0 to i8		; <i8> [#uses=1]
 	%2 = sub i8 1, %1		; <i8> [#uses=1]
 	%3 = sext i8 %2 to i32		; <i32> [#uses=1]
-	%s = select i1 icmp ne (i8 zext (i1 icmp ugt (i32 ptrtoint (ptr @func_4 to i32), i32 3) to i8), i8 0), i32 0, i32 ptrtoint (ptr @func_4 to i32)
+	%ext = zext i1 icmp ugt (i32 ptrtoint (ptr @func_4 to i32), i32 3) to i8
+	%c = icmp ne i8 %ext, 0
+	%s = select i1 %c, i32 0, i32 ptrtoint (ptr @func_4 to i32)
 	%ashr = ashr i32 %3, %s
 	%urem = urem i32 %0, %ashr
 	%cmp = icmp eq i32 %urem, 0

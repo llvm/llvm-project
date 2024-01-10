@@ -48,8 +48,8 @@ module attributes {
 //       CHECK:   %{{.+}} = spirv.Load "Workgroup" %[[PTR]] : i32
 //       CHECK:   %[[LOC:.+]] = spirv.SDiv
 //       CHECK:   %[[PTR:.+]] = spirv.AccessChain %[[VAR]][%{{.+}}, %[[LOC]]]
-//       CHECK:   %{{.+}} = spirv.AtomicAnd "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
-//       CHECK:   %{{.+}} = spirv.AtomicOr "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
+//       CHECK:   %{{.+}} = spirv.AtomicAnd <Workgroup> <AcquireRelease> %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
+//       CHECK:   %{{.+}} = spirv.AtomicOr <Workgroup> <AcquireRelease> %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
 
 // -----
 
@@ -187,6 +187,8 @@ module attributes {
 {
   func.func @zero_size() {
     %0 = memref.alloc() : memref<0xf32, #spirv.storage_class<Workgroup>>
+    %1 = memref.alloc() : memref<0xi1, #spirv.storage_class<Workgroup>>
+    %2 = memref.alloc() : memref<0xi4, #spirv.storage_class<Workgroup>>
     return
   }
 }

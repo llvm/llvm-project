@@ -81,9 +81,14 @@ def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
 def GetoptArgvT : NamedType<"__getoptargv_t">;
 
+def SAFamilyType : NamedType<"sa_family_t">;
+def SocklenType : NamedType<"socklen_t">;
+
 def StructSockAddr : NamedType<"struct sockaddr">;
 def StructSockAddrPtr : PtrType<StructSockAddr>;
-def SAFamilyType : NamedType<"sa_family_t">;
+def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
+
+def StructSockAddrUn : NamedType<"struct sockaddr_un">;
 
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
@@ -1269,6 +1274,38 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec Search = HeaderSpec<
+    "search.h",
+    [], // Macros
+    [
+        ActionType,
+        EntryType
+    ], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "hcreate",
+            RetValSpec<IntType>,
+            [
+                ArgSpec<SizeTType>
+            ]
+        >,
+        FunctionSpec<
+            "hdestroy",
+            RetValSpec<VoidType>,
+            [] // Args
+        >,
+        FunctionSpec<
+            "hsearch",
+            RetValSpec<EntryTypePtr>,
+            [
+                ArgSpec<EntryType>, 
+                ArgSpec<ActionType>
+            ]
+        >,
+    ]
+  >; 
+
   HeaderSpec Termios = HeaderSpec<
     "termios.h",
     [
@@ -1368,7 +1405,10 @@ def POSIX : StandardSpec<"POSIX"> {
         Macro<"SOCK_PACKET">,
       ], // Macros
       [
-        StructSockAddr, SAFamilyType,
+        SAFamilyType,
+        StructSockAddr,
+        StructSockAddrUn,
+        SocklenType,
       ], // Types
       [], // Enumerations
       [
@@ -1376,6 +1416,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "socket",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "bind",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstStructSockAddrPtr>, ArgSpec<SocklenType>]
         >,
       ]  // Functions
   >;
@@ -1414,6 +1459,7 @@ def POSIX : StandardSpec<"POSIX"> {
     Time,
     Termios,
     UniStd,
-    String
+    String,
+    Search,
   ];
 }

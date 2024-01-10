@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
 #include <cstdint>
 #include <memory>
 
@@ -44,8 +43,6 @@ class MDNode;
 enum class UnitKind { Skeleton, Full };
 
 class DwarfCompileUnit final : public DwarfUnit {
-  /// A numeric ID unique among all CUs in the module
-  unsigned UniqueID;
   bool HasRangeLists = false;
 
   /// The start of the unit line section, this is also
@@ -54,9 +51,6 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   /// Skeleton unit associated with this unit.
   DwarfCompileUnit *Skeleton = nullptr;
-
-  /// The start of the unit within its section.
-  MCSymbol *LabelBegin = nullptr;
 
   /// The start of the unit macro info within macro section.
   MCSymbol *MacroLabelBegin;
@@ -151,7 +145,6 @@ public:
                    UnitKind Kind = UnitKind::Full);
 
   bool hasRangeLists() const { return HasRangeLists; }
-  unsigned getUniqueID() const { return UniqueID; }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
@@ -329,11 +322,6 @@ public:
 
   /// Add the DW_AT_addr_base attribute to the unit DIE.
   void addAddrTableBase();
-
-  MCSymbol *getLabelBegin() const {
-    assert(LabelBegin && "LabelBegin is not initialized");
-    return LabelBegin;
-  }
 
   MCSymbol *getMacroLabelBegin() const {
     return MacroLabelBegin;

@@ -535,7 +535,7 @@ class Diagnostic(object):
 class FixIt(object):
     """
     A FixIt represents a transformation to be applied to the source to
-    "fix-it". The fix-it shouldbe applied by replacing the given source range
+    "fix-it". The fix-it should be applied by replacing the given source range
     with the given value.
     """
 
@@ -1403,6 +1403,8 @@ CursorKind.TYPE_ALIAS_TEMPLATE_DECL = CursorKind(601)
 CursorKind.STATIC_ASSERT = CursorKind(602)
 # A friend declaration
 CursorKind.FRIEND_DECL = CursorKind(603)
+# A concept declaration
+CursorKind.CONCEPT_DECL = CursorKind(604)
 
 # A code completion overload candidate.
 CursorKind.OVERLOAD_CANDIDATE = CursorKind(700)

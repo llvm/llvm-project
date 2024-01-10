@@ -9,7 +9,6 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
-#include <cassert>
 #include <cstdlib>
 
 #if defined(__NetBSD__)

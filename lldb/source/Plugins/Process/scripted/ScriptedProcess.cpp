@@ -108,9 +108,17 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
+  auto obj_or_err = GetInterface().CreatePluginObject(
       m_scripted_metadata.GetClassName(), exe_ctx,
       m_scripted_metadata.GetArgsSP());
+
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    error.SetErrorString("Failed to create script object.");
+    return;
+  }
+
+  StructuredData::GenericSP object_sp = *obj_or_err;
 
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
@@ -122,11 +130,17 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
 
 ScriptedProcess::~ScriptedProcess() {
   Clear();
+  // If the interface is not valid, we can't call Finalize(). When that happens
+  // it means that the Scripted Process instanciation failed and the
+  // CreateProcess function returns a nullptr, so no one besides this class
+  // should have access to that bogus process object.
+  if (!m_interface_up)
+    return;
   // We need to call finalize on the process before destroying ourselves to
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 void ScriptedProcess::Initialize() {

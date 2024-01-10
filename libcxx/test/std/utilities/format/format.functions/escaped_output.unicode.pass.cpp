@@ -155,7 +155,7 @@ void test_char() {
   // *** P2286 examples ***
   test_format(SV("['\\'', '\"']"), SV("[{:?}, {:?}]"), CharT('\''), CharT('"'));
 
-  // *** Specical cases ***
+  // *** Special cases ***
   test_format(SV("'\\t'"), SV("{:?}"), CharT('\t'));
   test_format(SV("'\\n'"), SV("{:?}"), CharT('\n'));
   test_format(SV("'\\r'"), SV("{:?}"), CharT('\r'));
@@ -324,7 +324,7 @@ void test_string() {
 
   test_format(SV(R"(["🤷🏻\u{200d}♂\u{fe0f}"])"), SV("[{:?}]"), SV("🤷🏻‍♂️"));
 
-  // *** Specical cases ***
+  // *** Special cases ***
   test_format(SV(R"("\t\n\r\\'\" ")"), SV("{:?}"), SV("\t\n\r\\'\" "));
 
   // *** Printable ***
@@ -515,7 +515,7 @@ static void test_ill_formed_utf8() {
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-#  ifdef _LIBCPP_SHORT_WCHAR
+#  ifdef TEST_SHORT_WCHAR
 static void test_ill_formed_utf16() {
   using namespace std::literals;
 
@@ -543,7 +543,7 @@ static void test_ill_formed_utf16() {
               L"\xdbff"
               "a");
 }
-#  else // _LIBCPP_SHORT_WCHAR
+#  else // TEST_SHORT_WCHAR
 static void test_ill_formed_utf32() {
   using namespace std::literals;
 
@@ -552,7 +552,7 @@ static void test_ill_formed_utf32() {
   test_format(LR"("\x{ffffffff}")"sv, L"{:?}", L"\xffffffff"); // largest encoded code point
 }
 
-#  endif // _LIBCPP_SHORT_WCHAR
+#  endif // TEST_SHORT_WCHAR
 #endif   // TEST_HAS_NO_WIDE_CHARACTERS
 
 int main(int, char**) {
@@ -563,11 +563,11 @@ int main(int, char**) {
 
   test_ill_formed_utf8();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-#  ifdef _LIBCPP_SHORT_WCHAR
+#  ifdef TEST_SHORT_WCHAR
   test_ill_formed_utf16();
-#  else  // _LIBCPP_SHORT_WCHAR
+#  else  // TEST_SHORT_WCHAR
   test_ill_formed_utf32();
-#  endif // _LIBCPP_SHORT_WCHAR
+#  endif // TEST_SHORT_WCHAR
 #endif   // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;

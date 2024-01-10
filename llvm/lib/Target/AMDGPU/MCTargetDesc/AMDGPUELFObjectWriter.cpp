@@ -63,6 +63,10 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_AMDGPU_REL32_HI;
   case MCSymbolRefExpr::VK_AMDGPU_REL64:
     return ELF::R_AMDGPU_REL64;
+  case MCSymbolRefExpr::VK_AMDGPU_ABS32_LO:
+    return ELF::R_AMDGPU_ABS32_LO;
+  case MCSymbolRefExpr::VK_AMDGPU_ABS32_HI:
+    return ELF::R_AMDGPU_ABS32_HI;
   }
 
   MCFixupKind Kind = Fixup.getKind();

@@ -75,8 +75,7 @@ static Expected<uint64_t> parseVersion(StringRef &Buf) {
                              "Expecting version number.");
 
   uint64_t Version =
-      support::endian::read<uint64_t, support::little, support::unaligned>(
-          Buf.data());
+      support::endian::read<uint64_t, llvm::endianness::little>(Buf.data());
   if (Version != remarks::CurrentRemarkVersion)
     return createStringError(std::errc::illegal_byte_sequence,
                              "Mismatching remark version. Got %" PRId64
@@ -91,8 +90,7 @@ static Expected<uint64_t> parseStrTabSize(StringRef &Buf) {
     return createStringError(std::errc::illegal_byte_sequence,
                              "Expecting string table size.");
   uint64_t StrTabSize =
-      support::endian::read<uint64_t, support::little, support::unaligned>(
-          Buf.data());
+      support::endian::read<uint64_t, llvm::endianness::little>(Buf.data());
   Buf = Buf.drop_front(sizeof(uint64_t));
   return StrTabSize;
 }
@@ -138,7 +136,7 @@ Expected<std::unique_ptr<YAMLRemarkParser>> remarks::createYAMLParserFromMeta(
       StrTab = std::move(*MaybeStrTab);
     }
     // If it starts with "---", there is no external file.
-    if (!Buf.startswith("---")) {
+    if (!Buf.starts_with("---")) {
       // At this point, we expect Buf to contain the external file path.
       StringRef ExternalFilePath = Buf;
       SmallString<80> FullPath;

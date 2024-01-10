@@ -188,7 +188,7 @@ if (FLANG_STANDALONE_BUILD)
   if (FLANG_GTEST_AVAIL)
     add_custom_target(check-all DEPENDS check-flang FlangUnitTests)
   else()
-    add_custom_target(check-all DEPENDS check-flang)
+    add_custom_target(check-all DEPENDS check-flang )
   endif()
   if (LLVM_BUILD_DOCS)
     add_custom_target(doxygen ALL)
@@ -276,6 +276,9 @@ endif()
 
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
+if (NOT PACKAGE_VERSION)
+  set(PACKAGE_VERSION ${LLVM_VERSION_MAJOR})
+endif()
 
 
 if (NOT DEFINED FLANG_VERSION_MAJOR)
@@ -421,11 +424,6 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
-# Add Flang subdirectories.
-# NOTE: The runtime subdirectory is no longer added here.
-# Sources for the runtime are added in Flang-rt.
-# TODO: Move the runtime sources to the flang-rt top level directory.
-
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
@@ -435,6 +433,7 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+add_subdirectory(runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)
@@ -494,3 +493,17 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.inc"
     )
 endif()
+
+# Put ISO_Fortran_binding.h into the include files of the build area now
+# so that we can run tests before installing
+include(GetClangResourceDir)
+get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
+configure_file(
+  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
+  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
+
+# And also install it into the install area
+get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
+install(
+  FILES include/flang/ISO_Fortran_binding.h
+  DESTINATION ${HEADER_INSTALL_DIR} )

@@ -12,8 +12,8 @@ define dso_local void @_Z3fooPiii(ptr %A, i32 %N, i32 %M) #0 {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP3]], i1 [[CMP21]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.split.us:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[M]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[M]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul nuw nsw i64 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
 ; CHECK:       for.cond1.preheader.us:

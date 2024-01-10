@@ -393,22 +393,22 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; GENERIC-LABEL: test7:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax
-; GENERIC-NEXT:    testl %edi, %edi
-; GENERIC-NEXT:    setns %al
-; GENERIC-NEXT:    shlq $4, %rax
-; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
-; GENERIC-NEXT:    fldt (%rax,%rcx)
+; GENERIC-NEXT:    ## kill: def $edi killed $edi def $rdi
+; GENERIC-NEXT:    notl %edi
+; GENERIC-NEXT:    shrl $27, %edi
+; GENERIC-NEXT:    andl $-16, %edi
+; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
+; GENERIC-NEXT:    fldt (%rdi,%rax)
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test7:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
-; ATOM-NEXT:    testl %edi, %edi
-; ATOM-NEXT:    setns %al
-; ATOM-NEXT:    shlq $4, %rax
-; ATOM-NEXT:    fldt (%rax,%rcx)
+; ATOM-NEXT:    ## kill: def $edi killed $edi def $rdi
+; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
+; ATOM-NEXT:    notl %edi
+; ATOM-NEXT:    shrl $27, %edi
+; ATOM-NEXT:    andl $-16, %edi
+; ATOM-NEXT:    fldt (%rdi,%rax)
 ; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test7:

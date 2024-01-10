@@ -16,11 +16,11 @@
 
 #include <stdint.h>
 
+using LlvmLibcLog2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcLog2fTest, SpecialNumbers) {
+TEST_F(LlvmLibcLog2fTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log2f(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log2f(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2f(neg_inf), FE_INVALID);
@@ -32,7 +32,7 @@ TEST(LlvmLibcLog2fTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::log2f(1.0f));
 }
 
-TEST(LlvmLibcLog2fTest, TrickyInputs) {
+TEST_F(LlvmLibcLog2fTest, TrickyInputs) {
   constexpr int N = 10;
   constexpr uint32_t INPUTS[N] = {
       0x3f7d57f5U, 0x3f7e3274U, 0x3f7ed848U, 0x3f7fd6ccU, 0x3f7fffffU,
@@ -45,7 +45,7 @@ TEST(LlvmLibcLog2fTest, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcLog2fTest, InFloatRange) {
+TEST_F(LlvmLibcLog2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

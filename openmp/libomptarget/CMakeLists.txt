@@ -24,6 +24,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
+if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
+else()
+  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+endif()
+
 # Message utilities.
 include(LibomptargetUtils)
 
@@ -69,6 +75,25 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
 endif()
 
+# No exceptions and no RTTI, except if requested.
+set(offload_compile_flags -fno-exceptions)
+if(NOT LLVM_ENABLE_RTTI)
+  set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+endif()
+
+# If LTO is not explicitly disabled we check if we can enable it and do so.
+set(LIBOMPTARGET_USE_LTO TRUE CACHE BOOL "Use LTO for the offload runtimes if available")
+if (LIBOMPTARGET_USE_LTO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT use_lto OUTPUT output)
+  if(use_lto)
+    set(offload_compile_flags ${offload_compile_flags} -flto)
+    set(offload_link_flags ${offload_link_flags} -flto)
+  else()
+    message(WARNING "LTO is not supported: ${output}")
+  endif()
+endif()
+
 # OMPT support for libomptarget
 # Follow host OMPT support and check if host support has been requested.
 # LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
@@ -95,6 +120,7 @@ if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND (LIBC_GPU_BUILD OR
                                             LIBC_GPU_ARCHITECTURES))
   set(LIBC_GPU_SUPPORT TRUE)
 endif()
+
 set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LIBC_GPU_SUPPORT} CACHE BOOL
     "Libomptarget support for the GPU libc")
 pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
@@ -103,10 +129,6 @@ set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
-# Build target agnostic offloading library.
-set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_subdirectory(${LIBOMPTARGET_SRC_DIR})
-
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
 set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
   "Path to folder containing omp.h")
@@ -114,11 +136,25 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+  "Path to folder where intermediate libraries will be output")
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 
+# Build target agnostic offloading library.
+set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${LIBOMPTARGET_SRC_DIR})
+
 # Add tests.
 add_subdirectory(test)
+
+# Add unit tests if GMock/GTest is present
+if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
+  if (NOT TARGET llvm_gtest)
+    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+  endif()
+  add_subdirectory(unittests)
+endif()

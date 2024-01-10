@@ -3,13 +3,13 @@
 ; RUN: opt -passes=attributor-light -S < %s | FileCheck --check-prefixes=COMMON,ATTRIBUTOR %s
 
 define void @bar(ptr readonly %0) {
-; FNATTRS-LABEL: define void @bar
-; FNATTRS-SAME: (ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-LABEL: define void @bar(
+; FNATTRS-SAME: ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @foo(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR-LABEL: define void @bar
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; ATTRIBUTOR-LABEL: define void @bar(
+; ATTRIBUTOR-SAME: ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void @foo(ptr nocapture nofree readnone [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -18,13 +18,13 @@ define void @bar(ptr readonly %0) {
 }
 
 define void @foo(ptr readonly %0) {
-; FNATTRS-LABEL: define void @foo
-; FNATTRS-SAME: (ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0]] {
+; FNATTRS-LABEL: define void @foo(
+; FNATTRS-SAME: ptr nocapture readnone [[TMP0:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    call void @bar(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR-LABEL: define void @foo
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-LABEL: define void @foo(
+; ATTRIBUTOR-SAME: ptr nocapture nofree readnone [[TMP0:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    call void @bar(ptr nocapture nofree readnone [[TMP0]]) #[[ATTR0]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;

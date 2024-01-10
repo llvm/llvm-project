@@ -155,7 +155,7 @@ define i33 @squared_demanded_2_low_bits(i33 %x) {
 define <2 x i8> @squared_demanded_2_low_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_demanded_2_low_bits_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[TMP1]], <i8 -4, i8 -4>
+; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], <i8 -4, i8 -4>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x

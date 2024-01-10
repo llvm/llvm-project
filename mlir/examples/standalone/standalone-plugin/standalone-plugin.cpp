@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/InitAllPasses.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 
 #include "Standalone/StandaloneDialect.h"
 #include "Standalone/StandalonePasses.h"
+#include "mlir/Tools/Plugins/PassPlugin.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace mlir;
 

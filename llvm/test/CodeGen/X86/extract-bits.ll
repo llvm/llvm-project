@@ -8091,9 +8091,9 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; X64-NOBMI-LABEL: pr38938:
 ; X64-NOBMI:       # %bb.0:
 ; X64-NOBMI-NEXT:    movl (%rsi), %eax
-; X64-NOBMI-NEXT:    shrl $21, %eax
-; X64-NOBMI-NEXT:    andl $1023, %eax # imm = 0x3FF
-; X64-NOBMI-NEXT:    incl (%rdi,%rax,4)
+; X64-NOBMI-NEXT:    shrl $19, %eax
+; X64-NOBMI-NEXT:    andl $4092, %eax # imm = 0xFFC
+; X64-NOBMI-NEXT:    incl (%rdi,%rax)
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X64-BMINOTBM-LABEL: pr38938:

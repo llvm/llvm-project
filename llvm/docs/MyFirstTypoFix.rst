@@ -66,8 +66,6 @@ We're going to need some tools:
 
 -  python: to run the LLVM tests,
 
--  arcanist: for uploading changes for review,
-
 As an example, on Ubuntu:
 
 .. code:: console
@@ -93,8 +91,8 @@ It may take a while to download!
    $ git clone https://github.com/llvm/llvm-project.git
 
 This will create a directory "llvm-project" with all of the source
-code.(Checking out anonymously is OK - pushing commits uses a different
-mechanism, as we'll see later)
+code. (Checking out anonymously is OK - pushing commits uses a different
+mechanism, as we'll see later.)
 
 Configure your workspace
 ------------------------
@@ -144,21 +142,21 @@ Let's break down that last command a little:
 -  The two **-D** flags set CMake variables, which override
    CMake/project defaults:
 
--  **CMAKE\ BUILD\ TYPE=Release**: build in optimized mode, which is
-   (surprisingly) the fastest option.
+    -  **CMAKE_BUILD_TYPE=Release**: build in optimized mode, which is
+       (surprisingly) the fastest option.
 
-   If you want to run under a debugger, you should use the default Debug
-   (which is totally unoptimized, and will lead to >10x slower test
-   runs) or RelWithDebInfo which is a halfway point.
-   **CMAKE\ BUILD\ TYPE** affects code generation only, assertions are
-   on by default regardless! **LLVM\ ENABLE\ ASSERTIONS=Off** disables
-   them.
+       If you want to run under a debugger, you should use the default Debug
+       (which is totally unoptimized, and will lead to >10x slower test
+       runs) or RelWithDebInfo which is a halfway point.
+       **CMAKE_BUILD_TYPE** affects code generation only, assertions are
+       on by default regardless! **LLVM_ENABLE_ASSERTIONS=Off** disables
+       them.
 
--  **LLVM\ ENABLE\ PROJECTS=clang** : this lists the LLVM subprojects
-   you are interested in building, in addition to LLVM itself. Multiple
-   projects can be listed, separated by semicolons, such as "clang;
-   lldb".In this example, we'll be making a change to Clang, so we
-   should build it.
+    -  **LLVM_ENABLE_PROJECTS=clang**: this lists the LLVM subprojects
+       you are interested in building, in addition to LLVM itself. Multiple
+       projects can be listed, separated by semicolons, such as "clang;
+       lldb".In this example, we'll be making a change to Clang, so we
+       should build it.
 
 Finally, create a symlink (or a copy) of
 llvm-project/build/compile-commands.json into llvm-project/:
@@ -227,7 +225,7 @@ the message in your favorite editor:
    $ vi ../clang/include/clang/Basic/DiagnosticSemaKinds.td
 
 Find the message (it should be under
-warn\ *infinite*\ recursive_function)Change the message to "in order to
+``warn_infinite_recursive_function``). Change the message to "in order to
 understand recursion, you must first understand recursion".
 
 
@@ -345,41 +343,20 @@ all the \*-commits mailing lists).
 Uploading a change for review
 -----------------------------
 
-.. warning::
-
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023. For new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
-  This section contains old information that needs to be updated.
-
-LLVM code reviews happen at https://reviews.llvm.org. The web interface
-is called Phabricator, and the code review part is Differential. You
-should create a user account there for reviews (click "Log In" and then
-"Register new account").
-
-Now you can upload your change for review:
-
-.. code:: console
-
-   $ arc diff HEAD^
-
-This creates a review for your change, comparing your current commit
-with the previous commit. You will be prompted to fill in the review
-details. Your commit message is already there, so just add cfe-commits
-under the "subscribers" section. It should print a code review URL:
-https://reviews.llvm.org/D58291 You can always find your active reviews
-on Phabricator under "My activity".
-
+LLVM code reviews happen through pull-request on GitHub, see
+:ref:`GitHub <github-reviews>` documentation for how to open
+a pull-request on GitHub.
 
 Review process
 --------------
 
-When you upload a change for review, an email is sent to you, the
-cfe-commits list, and anyone else subscribed to these kinds of changes.
+When you open a pull-request, some automation will add a comment and
+notify different member of the projects depending on the component you
+changed.
 Within a few days, someone should start the review. They may add
 themselves as a reviewer, or simply start leaving comments. You'll get
 another email any time the review is updated. The details are in the
 `https://llvm.org/docs/CodeReview/ <https://llvm.org/docs/CodeReview.html>`__.
-
 
 Comments
 ~~~~~~~~
@@ -395,15 +372,9 @@ page.
 Updating your change
 ~~~~~~~~~~~~~~~~~~~~
 
-If you make changes in response to a reviewer's comments, simply run
-
-.. code:: console
-
-   $ arc diff
-
-again to update the change and notify the reviewer. Typically this is a
-good time to send any draft comments as well.
-
+If you make changes in response to a reviewer's comments, simply update
+your branch with more commits and push to your fork. It may be a good
+idea to answer the comments from the reviewer explicitly.
 
 Accepting a revision
 ~~~~~~~~~~~~~~~~~~~~
@@ -411,21 +382,20 @@ Accepting a revision
 When the reviewer is happy with the change, they will **Accept** the
 revision. They may leave some more minor comments that you should
 address, but at this point the review is complete. It's time to get it
-committed!
+merged!
 
 
 Commit by proxy
 ---------------
 
-As this is your first change, you won't have access to commit it
+As this is your first change, you won't have access to merge it
 yourself yet. The reviewer **doesn't know this**, so you need to tell
 them! Leave a message on the review like:
 
    Thanks @somellvmdev. I don't have commit access, can you land this
-   patch for me? Please use "My Name my@email" to commit the change.
+   patch for me?
 
-The review will be updated when the change is committed.
-
+The pull-request will be closed and you will be notified by GitHub.
 
 Review expectations
 -------------------
@@ -484,46 +454,6 @@ changes (e.g. llvm-commits@lists.llvm.org), as discussion often happens
 there if a new patch causes problems.
 
 
-Commit
-------
-
-Let's say you have a change on a local git branch, reviewed and ready to
-commit. Things to do first:
-
--  if you used multiple fine-grained commits locally, squash them into a
-   single commit. LLVM prefers commits to match the code that was
-   reviewed. (If you created one commit and then used "arc diff", you're
-   fine)
-
--  rebase your patch against the latest LLVM code. LLVM uses a linear
-   history, so everything should be based on an up-to-date origin/main.
-
-.. code:: console
-
-   $ git pull --rebase https://github.com/llvm/llvm-project.git main
-
--  ensure the patch looks correct.
-
-.. code:: console
-
-   $ git show
-
--  run the tests one last time, for good luck
-
-At this point git show should show a single commit on top of
-origin/main.
-
-Now you can push your commit with
-
-.. code:: console
-
-   $ git push https://github.com/llvm/llvm-project.git HEAD:main
-
-You should see your change `on
-GitHub <https://github.com/llvm/llvm-project/commits/main>`__ within
-minutes.
-
-
 Post-commit errors
 ------------------
 
@@ -559,7 +489,8 @@ buildbots, overview of bots, getting error logs.
 Reverts
 -------
 
-if in doubt, revert and re-land.
+If in doubt, revert immediately, and re-land later after investigation
+and fix.
 
 
 Conclusion

@@ -11,6 +11,7 @@
 #include "DWARFDebugInfo.h"
 
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 DWARFAttributes::DWARFAttributes() : m_infos() {}
 

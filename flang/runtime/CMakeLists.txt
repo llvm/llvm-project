@@ -6,14 +6,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-# TODO: Maybe this file should still be added by flang/CMakeLists.txt and
-# when FLANG_STANDALONE_BUILD=On and a new variable FLANG_BUILD_RUNTIME=On
-# we should invoke an ExternalProject_Add(flang-rt ...) from here?
-
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
-  project(FortranRuntime C CXX)
+  project(FlangRuntime C CXX)
 
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -86,26 +82,30 @@ append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
+add_subdirectory(FortranMain)
+
 set(sources
   ISO_Fortran_binding.cpp
   allocatable.cpp
   array-constructor.cpp
   assign.cpp
   buffer.cpp
+  character.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
-  copy.cpp
-  character.cpp
   connection.cpp
-  derived.cpp
+  copy.cpp
   derived-api.cpp
-  descriptor.cpp
+  derived.cpp
   descriptor-io.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
+  execute.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -113,10 +113,10 @@ set(sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  iostat.cpp
   io-api.cpp
   io-error.cpp
   io-stmt.cpp
+  iostat.cpp
   main.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -125,11 +125,11 @@ set(sources
   namelist.cpp
   non-tbp-dio.cpp
   numeric.cpp
+  pointer.cpp
+  product.cpp
   ragged.cpp
   random.cpp
   reduction.cpp
-  pointer.cpp
-  product.cpp
   stat.cpp
   stop.cpp
   sum.cpp
@@ -141,8 +141,8 @@ set(sources
   transformational.cpp
   type-code.cpp
   type-info.cpp
-  unit.cpp
   unit-map.cpp
+  unit.cpp
   utf.cpp
 )
 
@@ -152,10 +152,35 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 
 # List of files that are buildable for all devices.
 set(supported_files
+  ISO_Fortran_binding.cpp
+  allocatable.cpp
+  array-constructor.cpp
+  assign.cpp
+  character.cpp
+  copy.cpp
+  derived-api.cpp
+  derived.cpp
   descriptor.cpp
+  dot-product.cpp
+  extrema.cpp
+  findloc.cpp
+  inquiry.cpp
+  matmul-transpose.cpp
+  matmul.cpp
+  memory.cpp
+  misc-intrinsic.cpp
+  numeric.cpp
+  pointer.cpp
+  product.cpp
+  ragged.cpp
+  stat.cpp
+  sum.cpp
+  support.cpp
   terminator.cpp
+  tools.cpp
   transformational.cpp
   type-code.cpp
+  type-info.cpp
   )
 
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
@@ -183,6 +208,10 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
     set(CUDA_COMPILE_OPTIONS
       --expt-relaxed-constexpr
+      # Disable these warnings:
+      #   'long double' is treated as 'double' in device code
+      -Xcudafe --diag_suppress=20208
+      -Xcudafe --display_error_number
       )
   endif()
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS
@@ -270,13 +299,40 @@ if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
   endif()
 endif()
 
-add_compile_options(-fPIC)
+if (NOT DEFINED MSVC)
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
 
-add_flang_library(FortranRuntime STATIC
-  ${sources}
-  LINK_LIBS
-  FortranDecimalRT
-
-  INSTALL_WITH_TOOLCHAIN
-  PIC
-)
+    INSTALL_WITH_TOOLCHAIN
+  )
+else()
+  add_flang_library(FortranRuntime
+    ${sources}
+    LINK_LIBS
+    FortranDecimal
+  )
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  add_flang_library(FortranRuntime.static ${sources}
+    LINK_LIBS
+    FortranDecimal.static
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  add_flang_library(FortranRuntime.dynamic ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
+  add_flang_library(FortranRuntime.static_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.static_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
+  add_flang_library(FortranRuntime.dynamic_dbg ${sources}
+    LINK_LIBS
+    FortranDecimal.dynamic_dbg
+    INSTALL_WITH_TOOLCHAIN)
+  add_dependencies(FortranRuntime FortranRuntime.static FortranRuntime.dynamic
+    FortranRuntime.static_dbg FortranRuntime.dynamic_dbg)
+endif()

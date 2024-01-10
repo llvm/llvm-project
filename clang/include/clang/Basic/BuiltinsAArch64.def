@@ -68,6 +68,9 @@ TARGET_BUILTIN(__builtin_arm_ldg, "v*v*", "t", "mte")
 TARGET_BUILTIN(__builtin_arm_stg, "vv*", "t", "mte")
 TARGET_BUILTIN(__builtin_arm_subp, "Uiv*v*", "t", "mte")
 
+// SME state function
+BUILTIN(__builtin_arm_get_sme_state, "vULi*ULi*", "n")
+
 // Memory Operations
 TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
 
@@ -282,6 +285,8 @@ TARGET_HEADER_BUILTIN(_CountLeadingZeros, "UiUNi", "nh", INTRIN_H, ALL_MS_LANGUA
 TARGET_HEADER_BUILTIN(_CountLeadingZeros64, "UiULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CountOneBits, "UiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CountOneBits64, "UiULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__prefetch, "vv*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef LANGBUILTIN

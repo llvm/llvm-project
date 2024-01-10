@@ -11,6 +11,9 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
+// fmemopen is available starting in Android M (API 23)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
+
 // REQUIRES: has-unix-headers
 
 // <print>

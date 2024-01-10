@@ -25,4 +25,25 @@ entry:
   ret ptr %1
 }
 
+; Check the caller's frame address.
+define ptr @fpcaller() nounwind "backchain" {
+entry:
+; CHECK-LABEL: fpcaller:
+; CHECK: lg   %r2, 0(%r15)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.frameaddress(i32 1)
+  ret ptr %0
+}
+
+; Check the caller's frame address.
+define ptr @fpcallercaller() nounwind "backchain" {
+entry:
+; CHECK-LABEL: fpcallercaller:
+; CHECK: lg   %r1, 0(%r15)
+; CHECK: lg   %r2, 0(%r1)
+; CHECK: br   %r14
+  %0 = tail call ptr @llvm.frameaddress(i32 2)
+  ret ptr %0
+}
+
 declare ptr @llvm.frameaddress(i32) nounwind readnone

@@ -17,6 +17,7 @@
 ; ASM: .section .debug_types,"G",@,4721183873463917179,comdat
 ; Here we are not trying to verify all of the debug info; just enough  to ensure
 ; that the section contains a type unit for a type with matching signature
+; ASM-NEXT: .Ltu_begin0:
 ; ASM-NEXT:	.int32	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
 ; ASM-NEXT: .Ldebug_info_start0:
 ; ASM-NEXT:	.int16	4                               # DWARF version number

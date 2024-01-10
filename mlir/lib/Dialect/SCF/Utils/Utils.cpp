@@ -391,7 +391,6 @@ LogicalResult mlir::loopUnrollByFactor(
 
     int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
-    assert(upperBoundUnrolledCst <= ubCst);
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
     // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.
@@ -503,9 +502,12 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
 
   Value newLowerBound =
       isZeroBased ? lowerBound
-                  : boundsBuilder.create<arith::ConstantIndexOp>(loc, 0);
+                  : boundsBuilder.create<arith::ConstantOp>(
+                        loc, boundsBuilder.getZeroAttr(lowerBound.getType()));
   Value newStep =
-      isStepOne ? step : boundsBuilder.create<arith::ConstantIndexOp>(loc, 1);
+      isStepOne ? step
+                : boundsBuilder.create<arith::ConstantOp>(
+                      loc, boundsBuilder.getIntegerAttr(step.getType(), 1));
 
   // Insert code computing the value of the original loop induction variable
   // from the "normalized" one.

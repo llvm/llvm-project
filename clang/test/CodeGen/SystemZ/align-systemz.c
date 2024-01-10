@@ -25,6 +25,19 @@ void func (void)
   s = es;
 }
 
+// Test that a global variable with an incomplete type gets the minimum
+// alignment of 2 per the ABI if no alignment was specified by user.
+//
+// CHECK-DAG: @VarNoAl {{.*}} align 2
+// CHECK-DAG: @VarExplAl1  {{.*}} align 1
+// CHECK-DAG: @VarExplAl4  {{.*}} align 4
+struct incomplete_ty;
+extern struct incomplete_ty VarNoAl;
+extern struct incomplete_ty __attribute__((aligned(1))) VarExplAl1;
+extern struct incomplete_ty __attribute__((aligned(4))) VarExplAl4;
+struct incomplete_ty *fun0 (void) { return &VarNoAl; }
+struct incomplete_ty *fun1 (void) { return &VarExplAl1; }
+struct incomplete_ty *fun2 (void) { return &VarExplAl4; }
 
 // The SystemZ ABI aligns __int128_t to only eight bytes.
 

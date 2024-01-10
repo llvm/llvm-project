@@ -90,6 +90,10 @@ static lldb_private::RegisterInfo g_register_infos_sme[] = {
     {"za", nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
      KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
 
+static lldb_private::RegisterInfo g_register_infos_sme2[] = {
+    {"zt0", nullptr, 64, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
+     KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
+
 // Number of register sets provided by this context.
 enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
@@ -98,6 +102,8 @@ enum {
   k_num_mte_register = 1,
   // Number of TLS registers is dynamic so it is not listed here.
   k_num_pauth_register = 2,
+  // SME2's ZT0 will also be added to this set if present. So this number is
+  // only for SME1 registers.
   k_num_sme_register = 3,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
@@ -253,7 +259,7 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
       AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
 
       if (m_opt_regsets.AnySet(eRegsetMaskSSVE))
-        AddRegSetSME();
+        AddRegSetSME(m_opt_regsets.AnySet(eRegsetMaskZT));
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -358,22 +364,47 @@ void RegisterInfoPOSIX_arm64::AddRegSetTLS(bool has_tpidr2) {
   m_dynamic_reg_sets.back().registers = m_tls_regnum_collection.data();
 }
 
-void RegisterInfoPOSIX_arm64::AddRegSetSME() {
-  uint32_t sme_regnum = m_dynamic_reg_infos.size();
-  for (uint32_t i = 0; i < k_num_sme_register; i++) {
-    m_sme_regnum_collection.push_back(sme_regnum + i);
+void RegisterInfoPOSIX_arm64::AddRegSetSME(bool has_zt) {
+  const uint32_t first_sme_regnum = m_dynamic_reg_infos.size();
+  uint32_t sme_regnum = first_sme_regnum;
+
+  for (uint32_t i = 0; i < k_num_sme_register; ++i, ++sme_regnum) {
+    m_sme_regnum_collection.push_back(sme_regnum);
     m_dynamic_reg_infos.push_back(g_register_infos_sme[i]);
-    m_dynamic_reg_infos[sme_regnum + i].byte_offset =
-        m_dynamic_reg_infos[sme_regnum + i - 1].byte_offset +
-        m_dynamic_reg_infos[sme_regnum + i - 1].byte_size;
-    m_dynamic_reg_infos[sme_regnum + i].kinds[lldb::eRegisterKindLLDB] =
-        sme_regnum + i;
+    m_dynamic_reg_infos[sme_regnum].byte_offset =
+        m_dynamic_reg_infos[sme_regnum - 1].byte_offset +
+        m_dynamic_reg_infos[sme_regnum - 1].byte_size;
+    m_dynamic_reg_infos[sme_regnum].kinds[lldb::eRegisterKindLLDB] = sme_regnum;
+  }
+
+  lldb_private::RegisterSet sme_regset = g_reg_set_sme_arm64;
+
+  if (has_zt) {
+    m_sme_regnum_collection.push_back(sme_regnum);
+    m_dynamic_reg_infos.push_back(g_register_infos_sme2[0]);
+    m_dynamic_reg_infos[sme_regnum].byte_offset =
+        m_dynamic_reg_infos[sme_regnum - 1].byte_offset +
+        m_dynamic_reg_infos[sme_regnum - 1].byte_size;
+    m_dynamic_reg_infos[sme_regnum].kinds[lldb::eRegisterKindLLDB] = sme_regnum;
+
+    sme_regset.num_registers += 1;
   }
 
   m_per_regset_regnum_range[m_register_set_count] =
-      std::make_pair(sme_regnum, m_dynamic_reg_infos.size());
-  m_dynamic_reg_sets.push_back(g_reg_set_sme_arm64);
+      std::make_pair(first_sme_regnum, m_dynamic_reg_infos.size());
+  m_dynamic_reg_sets.push_back(sme_regset);
   m_dynamic_reg_sets.back().registers = m_sme_regnum_collection.data();
+
+  // When vg is written during streaming mode, svg will also change, as vg and
+  // svg in this state are both showing the streaming vector length.
+  // We model this as vg invalidating svg. In non-streaming mode this doesn't
+  // happen but to keep things simple we will invalidate svg anyway.
+  //
+  // This must be added now, rather than when vg is defined because SME is a
+  // dynamic set that may or may not be present.
+  static uint32_t vg_invalidates[] = {sme_regnum + 1 /*svg*/,
+                                      LLDB_INVALID_REGNUM};
+  m_dynamic_reg_infos[GetRegNumSVEVG()].invalidate_regs = vg_invalidates;
 }
 
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLengthSVE(uint32_t sve_vq) {
@@ -475,6 +506,12 @@ bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
 
 bool RegisterInfoPOSIX_arm64::IsSMERegZA(unsigned reg) const {
   return reg == m_sme_regnum_collection[2];
+}
+
+bool RegisterInfoPOSIX_arm64::IsSMERegZT(unsigned reg) const {
+  // ZT0 is part of the SME register set only if SME2 is present.
+  return m_sme_regnum_collection.size() >= 4 &&
+         reg == m_sme_regnum_collection[3];
 }
 
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {

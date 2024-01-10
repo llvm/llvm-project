@@ -110,27 +110,26 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     return result_sp;
   }
 
-  BreakpointResolver *resolver = nullptr;
   switch (resolver_type) {
   case FileLineResolver:
-    resolver = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case AddressResolver:
-    resolver = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverAddress::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case NameResolver:
-    resolver = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverName::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case FileRegexResolver:
-    resolver = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case PythonResolver:
-    resolver = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverScripted::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
@@ -139,12 +138,12 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     llvm_unreachable("Should never get an unresolvable resolver type.");
   }
 
-  if (!resolver || error.Fail())
-    return result_sp;
+  if (error.Fail() || !result_sp)
+    return {};
 
   // Add on the global offset option:
-  resolver->SetOffset(offset);
-  return BreakpointResolverSP(resolver);
+  result_sp->SetOffset(offset);
+  return result_sp;
 }
 
 StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(

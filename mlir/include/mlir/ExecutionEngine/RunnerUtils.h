@@ -38,6 +38,7 @@
 #include <iostream>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 
 template <typename T, typename StreamType>
 void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &v) {
@@ -216,14 +217,14 @@ void printMemRefShape(UnrankedMemRefType<T> &m) {
 template <typename T>
 void printMemRef(const DynamicMemRefType<T> &m) {
   printMemRefMetaData(std::cout, m);
-  std::cout << " data = " << std::endl;
+  std::cout << " data = \n";
   if (m.rank == 0)
     std::cout << "[";
   MemRefDataPrinter<T>::print(std::cout, m.data, m.rank, m.rank, m.offset,
                               m.sizes, m.strides);
   if (m.rank == 0)
     std::cout << "]";
-  std::cout << std::endl;
+  std::cout << '\n' << std::flush;
 }
 
 template <typename T, int N>
@@ -369,9 +370,15 @@ _mlir_ciface_printMemrefShapeC64(UnrankedMemRefType<impl::complex64> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefI16(UnrankedMemRefType<int16_t> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefI64(UnrankedMemRefType<int64_t> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefF16(UnrankedMemRefType<f16> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefBF16(UnrankedMemRefType<bf16> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemrefF32(UnrankedMemRefType<float> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
@@ -392,7 +399,6 @@ extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF64(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefInd(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC32(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC64(int64_t rank, void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void printCString(char *str);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *m);

@@ -69,7 +69,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    vl2r.v v16, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vle16.v v16, (a0)
 ; CHECK-NEXT:    lui a0, 1048572
-; CHECK-NEXT:    addiw a0, a0, 928
+; CHECK-NEXT:    addi a0, a0, 928
 ; CHECK-NEXT:    vmsbc.vx v0, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; CHECK-NEXT:    csrr a0, vlenb

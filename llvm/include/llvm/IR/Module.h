@@ -213,6 +213,27 @@ private:
 /// @name Constructors
 /// @{
 public:
+  /// Is this Module using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
+  /// \see BasicBlock::convertToNewDbgValues.
+  void convertToNewDbgValues() {
+    for (auto &F : *this) {
+      F.convertToNewDbgValues();
+    }
+    IsNewDbgInfoFormat = true;
+  }
+
+  /// \see BasicBlock::convertFromNewDbgValues.
+  void convertFromNewDbgValues() {
+    for (auto &F : *this) {
+      F.convertFromNewDbgValues();
+    }
+    IsNewDbgInfoFormat = false;
+  }
+
   /// The Module constructor. Note that there is no default constructor. You
   /// must provide a name for the module upon construction.
   explicit Module(StringRef ModuleID, LLVMContext& C);

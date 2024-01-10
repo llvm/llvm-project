@@ -52,6 +52,28 @@ static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
     Opts.UserEntries.push_back(Entries[Idx]);
 }
 
+static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
+                                   bool IsSystemModule) {
+  // If this is not a system module or -Wsystem-headers was passed, don't
+  // optimize.
+  if (!IsSystemModule)
+    return;
+  bool Wsystem_headers = false;
+  for (StringRef Opt : Opts.Warnings) {
+    bool isPositive = !Opt.consume_front("no-");
+    if (Opt == "system-headers")
+      Wsystem_headers = isPositive;
+  }
+  if (Wsystem_headers)
+    return;
+
+  // Remove all warning flags. System modules suppress most, but not all,
+  // warnings.
+  Opts.Warnings.clear();
+  Opts.UndefPrefixes.clear();
+  Opts.Remarks.clear();
+}
+
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
   StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -97,6 +119,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  // LLVM options are not going to affect the AST
+  CI.getFrontendOpts().LLVMArgs.clear();
 
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
@@ -294,9 +318,9 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules) {
-  llvm::HashBuilder<llvm::TruncatedBLAKE3<16>,
-                    llvm::support::endianness::native>
+                                        bool EagerLoadModules,
+                                        llvm::vfs::FileSystem &VFS) {
+  llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
   SmallString<32> Scratch;
 
@@ -304,6 +328,9 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+  llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  if (CWD)
+    HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -335,7 +362,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(Deps, CI, EagerLoadModules);
+  Deps.ID.ContextHash = getModuleContextHash(
+      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -495,7 +523,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          M->getASTFile());
+          *M->getASTFile());
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -504,7 +532,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
@@ -522,7 +550,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
-                .endswith("__inferred_module.map"))
+                .ends_with("__inferred_module.map"))
           return;
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });
@@ -530,9 +558,13 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (MDC.OptimizeArgs)
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF);
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
+              optimizeDiagnosticOpts(
+                  BuildInvocation.getMutDiagnosticOpts(),
+                  BuildInvocation.getFrontendOpts().IsSystemModule);
           });
 
   MDC.associateWithContextHash(CI, MD);
@@ -629,7 +661,8 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    bool OptimizeArgs, bool EagerLoadModules, bool IsStdModuleP1689Format)
+    ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
+    bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
       Opts(std::move(Opts)),
       CommonInvocation(
@@ -667,12 +700,24 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
+  if (IsStdModuleP1689Format) {
+    // Within P1689 format, we don't want all the paths to be absolute path
+    // since it may violate the tranditional make style dependencies info.
+    FileDeps.push_back(std::string(Path));
+    return;
+  }
+
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   FileDeps.push_back(std::string(Path));
 }
 
 void ModuleDepCollector::addFileDep(ModuleDeps &MD, StringRef Path) {
+  if (IsStdModuleP1689Format) {
+    MD.FileDeps.insert(Path);
+    return;
+  }
+
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   MD.FileDeps.insert(Path);

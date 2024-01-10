@@ -14,6 +14,7 @@
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
@@ -44,7 +45,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);
@@ -60,12 +61,17 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
       MD->getParent()->getCaptureFields(LC, LTC);
 
       for (auto Cap : LC) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        if (MD->isStatic())
+          return nullptr;
+
         unsigned Offset = R->getField(Cap.second)->Offset;
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      // FIXME: LambdaThisCapture
-      (void)LTC;
+      if (LTC)
+        this->LambdaThisCapture = R->getField(LTC)->Offset;
     }
   }
 
@@ -84,10 +90,16 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
-  if (!Func)
-    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                            std::move(ParamDescriptors),
-                            std::move(ParamOffsets), HasThisPointer, HasRVO);
+  if (!Func) {
+    bool IsUnevaluatedBuiltin = false;
+    if (unsigned BI = FuncDecl->getBuiltinID())
+      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+
+    Func =
+        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                         std::move(ParamDescriptors), std::move(ParamOffsets),
+                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+  }
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
@@ -149,7 +161,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
-      endian::write<int32_t, endianness::native, 1>(Location, Offset);
+      endian::write<int32_t, llvm::endianness::native>(Location, Offset);
     }
     LabelRelocs.erase(It);
   }

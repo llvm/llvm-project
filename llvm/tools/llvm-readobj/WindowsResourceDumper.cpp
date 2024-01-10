@@ -26,7 +26,7 @@ std::string stripUTF16(const ArrayRef<UTF16> &UTF16Str) {
   for (UTF16 Ch : UTF16Str) {
     // UTF16Str will have swapped byte order in case of big-endian machines.
     // Swap it back in such a case.
-    uint16_t ChValue = support::endian::byte_swap(Ch, support::little);
+    uint16_t ChValue = support::endian::byte_swap(Ch, llvm::endianness::little);
     if (ChValue <= 0xFF)
       Result += ChValue;
     else

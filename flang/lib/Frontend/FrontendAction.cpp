@@ -171,7 +171,7 @@ bool FrontendAction::runSemanticChecks() {
 
   // Prepare semantics
   ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
-      ci.getInvocation().getSemanticsContext(), *parseTree,
+      ci.getSemanticsContext(), *parseTree,
       ci.getInvocation().getDebugModuleDir()));
   auto &semantics = ci.getSemantics();
 
@@ -191,8 +191,7 @@ bool FrontendAction::runSemanticChecks() {
 bool FrontendAction::generateRtTypeTables() {
   getInstance().setRtTyTables(
       std::make_unique<Fortran::semantics::RuntimeDerivedTypeTables>(
-          BuildRuntimeDerivedTypeTables(
-              getInstance().getInvocation().getSemanticsContext())));
+          BuildRuntimeDerivedTypeTables(getInstance().getSemanticsContext())));
 
   // The runtime derived type information table builder may find additional
   // semantic errors. Report them.

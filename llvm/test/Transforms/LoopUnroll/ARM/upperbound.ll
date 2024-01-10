@@ -17,9 +17,9 @@ define void @test(ptr %x, i32 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[REM]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY_1:%.*]], label [[WHILE_END]]
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[REM]], 1
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY_1:%.*]]
 ; CHECK:       while.body.1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[TMP1]], 10
@@ -28,7 +28,7 @@ define void @test(ptr %x, i32 %n) {
 ; CHECK-NEXT:    store i32 0, ptr [[INCDEC_PTR]], align 4
 ; CHECK-NEXT:    br label [[IF_END_1]]
 ; CHECK:       if.end.1:
-; CHECK-NEXT:    [[INCDEC_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR_1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 2
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i32 [[REM]], 2
 ; CHECK-NEXT:    br i1 [[CMP_1]], label [[WHILE_BODY_2:%.*]], label [[WHILE_END]]
 ; CHECK:       while.body.2:
@@ -75,8 +75,8 @@ define i32 @test2(i32 %l86) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L86_OFF:%.*]] = add i32 [[L86:%.*]], -1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[L86_OFF]], 24
-; CHECK-NEXT:    [[DOTNOT30:%.*]] = icmp ne i32 [[L86]], 25
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[DOTNOT30]] to i32
+; CHECK-NEXT:    [[OR_COND23_NOT:%.*]] = icmp ne i32 [[L86]], 25
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = zext i1 [[OR_COND23_NOT]] to i32
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[SWITCH]], i32 0, i32 [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;

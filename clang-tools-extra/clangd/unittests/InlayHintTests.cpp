@@ -58,8 +58,8 @@ struct ExpectedHint {
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   if (arg.label != ExpectedView.trim(" ") ||
-      arg.paddingLeft != ExpectedView.startswith(" ") ||
-      arg.paddingRight != ExpectedView.endswith(" ")) {
+      arg.paddingLeft != ExpectedView.starts_with(" ") ||
+      arg.paddingRight != ExpectedView.ends_with(" ")) {
     *result_listener << "label is '" << arg.label << "'";
     return false;
   }
@@ -841,6 +841,34 @@ TEST(ParameterHints, FunctionCallOperator) {
                        ExpectedHint{"x: ", "7"}, ExpectedHint{"x: ", "8"},
                        ExpectedHint{"x: ", "9"}, ExpectedHint{"x: ", "10"},
                        ExpectedHint{"a: ", "11"}, ExpectedHint{"b: ", "12"});
+}
+
+TEST(ParameterHints, DeducingThis) {
+  assertParameterHints(R"cpp(
+    struct S {
+      template <typename This>
+      auto operator()(this This &&Self, int Param) {
+        return 42;
+      }
+
+      auto function(this auto &Self, int Param) {
+        return Param;
+      }
+    };
+    void work() {
+      S s;
+      s($1[[42]]);
+      s.function($2[[42]]);
+      S()($3[[42]]);
+      auto lambda = [](this auto &Self, char C) -> void {
+        return Self(C);
+      };
+      lambda($4[['A']]);
+    }
+  )cpp",
+                       ExpectedHint{"Param: ", "1"},
+                       ExpectedHint{"Param: ", "2"},
+                       ExpectedHint{"Param: ", "3"}, ExpectedHint{"C: ", "4"});
 }
 
 TEST(ParameterHints, Macros) {
@@ -1681,7 +1709,8 @@ TEST(DesignatorHints, NoCrash) {
     void test() {
       Foo f{A(), $b[[1]]};
     }
-  )cpp", ExpectedHint{".b=", "b"});
+  )cpp",
+                        ExpectedHint{".b=", "b"});
 }
 
 TEST(InlayHints, RestrictRange) {
@@ -1694,6 +1723,38 @@ TEST(InlayHints, RestrictRange) {
   auto AST = TestTU::withCode(Code.code()).build();
   EXPECT_THAT(inlayHints(AST, Code.range()),
               ElementsAre(labelIs(": int"), labelIs(": char")));
+}
+
+TEST(ParameterHints, PseudoObjectExpr) {
+  Annotations Code(R"cpp(
+    struct S {
+      __declspec(property(get=GetX, put=PutX)) int x[];
+      int GetX(int y, int z) { return 42 + y; }
+      void PutX(int) { }
+
+      // This is a PseudoObjectExpression whose syntactic form is a binary
+      // operator.
+      void Work(int y) { x = y; } // Not `x = y: y`.
+    };
+
+    int printf(const char *Format, ...);
+
+    int main() {
+      S s;
+      __builtin_dump_struct(&s, printf); // Not `Format: __builtin_dump_struct()`
+      printf($Param[["Hello, %d"]], 42); // Normal calls are not affected.
+      // This builds a PseudoObjectExpr, but here it's useful for showing the
+      // arguments from the semantic form.
+      return s.x[ $one[[1]] ][ $two[[2]] ]; // `x[y: 1][z: 2]`
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-fms-extensions");
+  auto AST = TU.build();
+  EXPECT_THAT(inlayHints(AST, std::nullopt),
+              ElementsAre(HintMatcher(ExpectedHint{"Format: ", "Param"}, Code),
+                          HintMatcher(ExpectedHint{"y: ", "one"}, Code),
+                          HintMatcher(ExpectedHint{"z: ", "two"}, Code)));
 }
 
 TEST(ParameterHints, ArgPacksAndConstructors) {
@@ -2142,6 +2203,19 @@ TEST(BlockEndHints, Macro) {
     RBRACE;
   )cpp",
                       ExpectedHint{" // struct S1", "S1"});
+}
+
+TEST(BlockEndHints, PointerToMemberFunction) {
+  // Do not crash trying to summarize `a->*p`.
+  assertBlockEndHints(R"cpp(
+    class A {};
+    using Predicate = bool(A::*)();
+    void foo(A* a, Predicate p) {
+      if ((a->*p)()) {
+      $ptrmem[[}]]
+    } // suppress
+  )cpp",
+                      ExpectedHint{" // if", "ptrmem"});
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:

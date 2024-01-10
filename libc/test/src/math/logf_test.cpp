@@ -15,11 +15,11 @@
 
 #include <stdint.h>
 
+using LlvmLibcLogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcLogfTest, SpecialNumbers) {
+TEST_F(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::logf(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::logf(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(neg_inf), FE_INVALID);
@@ -31,7 +31,7 @@ TEST(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::logf(1.0f));
 }
 
-TEST(LlvmLibcLogfTest, TrickyInputs) {
+TEST_F(LlvmLibcLogfTest, TrickyInputs) {
   constexpr int N = 35;
   constexpr uint32_t INPUTS[N] = {
       0x1b7679ffU, /*0x1.ecf3fep-73f*/
@@ -77,7 +77,7 @@ TEST(LlvmLibcLogfTest, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcLogfTest, InFloatRange) {
+TEST_F(LlvmLibcLogfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

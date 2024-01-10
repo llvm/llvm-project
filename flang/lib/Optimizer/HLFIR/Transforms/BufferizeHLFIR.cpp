@@ -452,7 +452,7 @@ struct AssociateOpConversion
       //   %0 = hlfir.as_expr %x move %true :
       //       (!fir.box<!fir.heap<!fir.type<_T{y:i32}>>>, i1) ->
       //       !hlfir.expr<!fir.type<_T{y:i32}>>
-      //   %1:3 = hlfir.associate %0 {uniq_name = "adapt.valuebyref"} :
+      //   %1:3 = hlfir.associate %0 {adapt.valuebyref} :
       //       (!hlfir.expr<!fir.type<_T{y:i32}>>) ->
       //       (!fir.ref<!fir.type<_T{y:i32}>>,
       //        !fir.ref<!fir.type<_T{y:i32}>>,
@@ -525,8 +525,15 @@ struct AssociateOpConversion
       return mlir::success();
     }
     if (isTrivialValue) {
-      auto temp = builder.createTemporary(loc, bufferizedExpr.getType(),
-                                          associate.getUniqName());
+      llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
+      if (associate->hasAttr(fir::getAdaptToByRefAttrName())) {
+        attrs.push_back(fir::getAdaptToByRefAttr(builder));
+      }
+      llvm::StringRef name = "";
+      if (associate.getUniqName())
+        name = *associate.getUniqName();
+      auto temp =
+          builder.createTemporary(loc, bufferizedExpr.getType(), name, attrs);
       builder.create<fir::StoreOp>(loc, bufferizedExpr, temp);
       mlir::Value mustFree = builder.createBool(loc, false);
       replaceWith(temp, temp, mustFree);
@@ -791,26 +798,35 @@ struct ElementalOpConversion
     // Assign the element value to the temp element for this iteration.
     auto tempElement =
         hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
-    // FIXME: if the elemental result is a function result temporary
-    // of a derived type, we have to make sure that we are either
-    // deallocate any allocatable/automatic components after the assignment
-    // or that we do not do the deep copy with the AssignOp. The latter
-    // seems to be preferrable, because the deep copy is more expensive.
-    // The shallow copy may be done with a load/store of the RecordType scalar.
-    builder.create<hlfir::AssignOp>(loc, elementValue, tempElement,
-                                    /*realloc=*/false,
-                                    /*keep_lhs_length_if_realloc=*/false,
-                                    /*temporary_lhs=*/true);
-    // hlfir.yield_element implicitly marks the end-of-life its operand if
-    // it is an expression created in the hlfir.elemental (since it is its
-    // last use and an hlfir.destroy could not be created afterwards)
-    // Now that this node has been removed and the expression has been used in
-    // the assign, insert an hlfir.destroy to mark the expression end-of-life.
-    // If the expression creation allocated a buffer on the heap inside the
-    // loop, this will ensure the buffer properly deallocated.
-    if (elementValue.getType().isa<hlfir::ExprType>() &&
-        wasCreatedInCurrentBlock(elementValue, builder))
-      builder.create<hlfir::DestroyOp>(loc, elementValue);
+    // If the elemental result is a temporary of a derived type,
+    // we can avoid the deep copy implied by the AssignOp and just
+    // do the shallow copy with load/store. This helps avoiding the overhead
+    // of deallocating allocatable components of the temporary (if any)
+    // on each iteration of the elemental operation.
+    auto asExpr = elementValue.getDefiningOp<hlfir::AsExprOp>();
+    auto elemType = hlfir::getFortranElementType(elementValue.getType());
+    if (asExpr && asExpr.isMove() && mlir::isa<fir::RecordType>(elemType) &&
+        hlfir::mayHaveAllocatableComponent(elemType) &&
+        wasCreatedInCurrentBlock(elementValue, builder)) {
+      auto load = builder.create<fir::LoadOp>(loc, asExpr.getVar());
+      builder.create<fir::StoreOp>(loc, load, tempElement);
+    } else {
+      builder.create<hlfir::AssignOp>(loc, elementValue, tempElement,
+                                      /*realloc=*/false,
+                                      /*keep_lhs_length_if_realloc=*/false,
+                                      /*temporary_lhs=*/true);
+
+      // hlfir.yield_element implicitly marks the end-of-life its operand if
+      // it is an expression created in the hlfir.elemental (since it is its
+      // last use and an hlfir.destroy could not be created afterwards)
+      // Now that this node has been removed and the expression has been used in
+      // the assign, insert an hlfir.destroy to mark the expression end-of-life.
+      // If the expression creation allocated a buffer on the heap inside the
+      // loop, this will ensure the buffer properly deallocated.
+      if (elementValue.getType().isa<hlfir::ExprType>() &&
+          wasCreatedInCurrentBlock(elementValue, builder))
+        builder.create<hlfir::DestroyOp>(loc, elementValue);
+    }
     builder.restoreInsertionPoint(insPt);
 
     mlir::Value bufferizedExpr =

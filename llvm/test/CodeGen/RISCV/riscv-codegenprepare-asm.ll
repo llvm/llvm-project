@@ -12,7 +12,7 @@ define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    addiw a2, a2, 4
+; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    sw a2, 0(a0)
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 4
@@ -24,7 +24,7 @@ entry:
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
+  %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -62,9 +62,9 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a5, -4(a4)
 ; CHECK-NEXT:    lw a6, 0(a4)
-; CHECK-NEXT:    addiw a5, a5, 4
+; CHECK-NEXT:    addi a5, a5, 4
 ; CHECK-NEXT:    sw a5, -4(a4)
-; CHECK-NEXT:    addiw a6, a6, 4
+; CHECK-NEXT:    addi a6, a6, 4
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    addi a3, a3, 2
 ; CHECK-NEXT:    addi a4, a4, 8
@@ -75,7 +75,7 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    slli a3, a3, 2
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    lw a1, 0(a0)
-; CHECK-NEXT:    addiw a1, a1, 4
+; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:  .LBB1_7: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -84,7 +84,7 @@ entry:
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
+  %wide.trip.count = zext nneg i32 %n to i64
   %xtraiter = and i64 %wide.trip.count, 1
   %0 = icmp eq i32 %n, 1
   br i1 %0, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
@@ -115,7 +115,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %2, 4
   store i32 %add, ptr %arrayidx, align 4
-  %indvars.iv.next = or i64 %indvars.iv, 1
+  %indvars.iv.next = or disjoint i64 %indvars.iv, 1
   %arrayidx.1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv.next
   %3 = load i32, ptr %arrayidx.1, align 4
   %add.1 = add nsw i32 %3, 4

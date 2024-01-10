@@ -35,6 +35,7 @@ class LegalizationArtifactCombiner {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
+  GISelKnownBits *KB;
 
   static bool isArtifactCast(unsigned Opc) {
     switch (Opc) {
@@ -50,8 +51,9 @@ class LegalizationArtifactCombiner {
 
 public:
   LegalizationArtifactCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                    const LegalizerInfo &LI)
-      : Builder(B), MRI(MRI), LI(LI) {}
+                               const LegalizerInfo &LI,
+                               GISelKnownBits *KB = nullptr)
+      : Builder(B), MRI(MRI), LI(LI), KB(KB) {}
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
@@ -131,13 +133,25 @@ public:
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
       APInt MaskVal = APInt::getAllOnes(SrcTy.getScalarSizeInBits());
-      auto Mask = Builder.buildConstant(
-        DstTy, MaskVal.zext(DstTy.getScalarSizeInBits()));
       if (SextSrc && (DstTy != MRI.getType(SextSrc)))
         SextSrc = Builder.buildSExtOrTrunc(DstTy, SextSrc).getReg(0);
       if (TruncSrc && (DstTy != MRI.getType(TruncSrc)))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
-      Builder.buildAnd(DstReg, SextSrc ? SextSrc : TruncSrc, Mask);
+      APInt ExtMaskVal = MaskVal.zext(DstTy.getScalarSizeInBits());
+      Register AndSrc = SextSrc ? SextSrc : TruncSrc;
+      // Elide G_AND and mask constant if possible.
+      // The G_AND would also be removed by the post-legalize redundant_and
+      // combine, but in this very common case, eliding early and regardless of
+      // OptLevel results in significant compile-time and O0 code-size
+      // improvements. Inserting unnecessary instructions between boolean defs
+      // and uses hinders a lot of folding during ISel.
+      if (KB && (KB->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
+        replaceRegOrBuildCopy(DstReg, AndSrc, MRI, Builder, UpdatedDefs,
+                              Observer);
+      } else {
+        auto Mask = Builder.buildConstant(DstTy, ExtMaskVal);
+        Builder.buildAnd(DstReg, AndSrc, Mask);
+      }
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -1352,6 +1366,9 @@ public:
           // Adding Use to ArtifactList.
           WrapperObserver.changedInstr(Use);
           break;
+        case TargetOpcode::G_ASSERT_SEXT:
+        case TargetOpcode::G_ASSERT_ZEXT:
+        case TargetOpcode::G_ASSERT_ALIGN:
         case TargetOpcode::COPY: {
           Register Copy = Use.getOperand(0).getReg();
           if (Copy.isVirtual())
@@ -1378,6 +1395,9 @@ private:
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_EXTRACT:
+    case TargetOpcode::G_ASSERT_SEXT:
+    case TargetOpcode::G_ASSERT_ZEXT:
+    case TargetOpcode::G_ASSERT_ALIGN:
       return MI.getOperand(1).getReg();
     case TargetOpcode::G_UNMERGE_VALUES:
       return MI.getOperand(MI.getNumOperands() - 1).getReg();
@@ -1411,7 +1431,8 @@ private:
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
           assert((TmpDef->getOpcode() == TargetOpcode::COPY ||
-                  isArtifactCast(TmpDef->getOpcode())) &&
+                  isArtifactCast(TmpDef->getOpcode()) ||
+                  isPreISelGenericOptimizationHint(TmpDef->getOpcode())) &&
                  "Expecting copy or artifact cast here");
 
           DeadInsts.push_back(TmpDef);
@@ -1495,16 +1516,8 @@ private:
   /// Looks through copy instructions and returns the actual
   /// source register.
   Register lookThroughCopyInstrs(Register Reg) {
-    using namespace llvm::MIPatternMatch;
-
-    Register TmpReg;
-    while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
-      if (MRI.getType(TmpReg).isValid())
-        Reg = TmpReg;
-      else
-        break;
-    }
-    return Reg;
+    Register TmpReg = getSrcRegIgnoringCopies(Reg, MRI);
+    return TmpReg.isValid() ? TmpReg : Reg;
   }
 };
 

@@ -520,6 +520,11 @@
 // CHECK-COVERAGE-COMPILATION-DIR: "-fcoverage-compilation-dir=."
 // CHECK-COVERAGE-COMPILATION-DIR-NOT: "-ffile-compilation-dir=."
 
+// RUN: %clang -### -S -fverify-intermediate-code %s 2>&1 | FileCheck -check-prefix=CHECK-VERIFY-INTERMEDIATE-CODE %s
+// RUN: %clang -### -S -fno-verify-intermediate-code %s 2>&1 | FileCheck -check-prefix=CHECK-NO-VERIFY-INTERMEDIATE-CODE %s
+// CHECK-VERIFY-INTERMEDIATE-CODE-NOT: "-disable-llvm-verifier"
+// CHECK-NO-VERIFY-INTERMEDIATE-CODE: "-disable-llvm-verifier"
+
 // RUN: %clang -### -S -fdiscard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-DISCARD-NAMES %s
 // RUN: %clang -### -S -fno-discard-value-names %s 2>&1 | FileCheck -check-prefix=CHECK-NO-DISCARD-NAMES %s
 // CHECK-DISCARD-NAMES: "-discard-value-names"
@@ -606,3 +611,9 @@
 // CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
 // RUN: not %clang -### -fno-integrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
 // CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target
+
+// RUN: %clang -### --target=aarch64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=aarch64-windows-msvc -fms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// CHECK-MS-VOLATILE: -fms-volatile
+// CHECK-NO-MS-VOLATILE-NOT: -fms-volatile

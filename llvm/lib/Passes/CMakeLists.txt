@@ -16,9 +16,11 @@ add_llvm_component_library(LLVMPasses
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  CFGuard
   CodeGen
   Core
   Coroutines
+  HipStdPar
   IPO
   InstCombine
   IRPrinter

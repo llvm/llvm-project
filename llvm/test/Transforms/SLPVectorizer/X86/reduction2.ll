@@ -35,7 +35,7 @@ define double @foo(ptr nocapture %D) {
   %4 = load double, ptr %3, align 4
   %A4 = fmul double %4, %4
   %A42 = fmul double %A4, %A4
-  %5 = or i32 %2, 1
+  %5 = or disjoint i32 %2, 1
   %6 = getelementptr inbounds double, ptr %D, i32 %5
   %7 = load double, ptr %6, align 4
   %A7 = fmul double %7, %7

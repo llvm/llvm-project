@@ -20,7 +20,7 @@ class ARMAsmBackendELF : public ARMAsmBackend {
 public:
   uint8_t OSABI;
   ARMAsmBackendELF(const Target &T, bool isThumb, uint8_t OSABI,
-                   support::endianness Endian)
+                   llvm::endianness Endian)
       : ARMAsmBackend(T, isThumb, Endian), OSABI(OSABI) {}
 
   std::unique_ptr<MCObjectTargetWriter>

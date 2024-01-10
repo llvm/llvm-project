@@ -12,8 +12,8 @@
 
 // __debug_less checks that a comparator actually provides a strict-weak ordering.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-hardening-mode=debug
+// UNSUPPORTED: c++03
 
 #include <algorithm>
 #include <cassert>

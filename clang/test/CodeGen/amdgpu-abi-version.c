@@ -2,14 +2,14 @@
 // RUN: %clang_cc1 -cc1 -triple amdgcn-amd-amdhsa -emit-llvm -mcode-object-version=none %s -o - | FileCheck %s
 
 //.
-// CHECK: @llvm.amdgcn.abi.version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 0
+// CHECK: @__oclc_ABI_version = external addrspace(4) global i32
 //.
 // CHECK-LABEL: define dso_local i32 @foo(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) @llvm.amdgcn.abi.version, align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) @__oclc_ABI_version, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i32 [[TMP0]], 500
 // CHECK-NEXT:    [[TMP2:%.*]] = call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP2]], i32 12

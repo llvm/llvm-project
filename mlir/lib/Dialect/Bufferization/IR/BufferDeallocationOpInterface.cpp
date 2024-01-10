@@ -120,8 +120,7 @@ void DeallocationState::addMemrefToDeallocate(Value memref, Block *block) {
 }
 
 void DeallocationState::dropMemrefToDeallocate(Value memref, Block *block) {
-  llvm::erase_if(memrefsToDeallocatePerBlock[block],
-                 [&](const auto &mr) { return mr == memref; });
+  llvm::erase(memrefsToDeallocatePerBlock[block], memref);
 }
 
 void DeallocationState::getLiveMemrefsIn(Block *block,

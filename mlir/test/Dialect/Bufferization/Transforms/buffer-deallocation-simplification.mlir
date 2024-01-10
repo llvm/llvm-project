@@ -133,3 +133,30 @@ func.func @dealloc_remove_dealloc_memref_contained_in_retained_with_const_true_c
 //       CHECK:   [[BASE:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[ARG2]]
 //       CHECK:   bufferization.dealloc ([[BASE]] :{{.*}}) if (%true{{[0-9_]*}})
 //  CHECK-NEXT:   return [[ARG0]], [[ARG1]], %true{{[0-9_]*}}, %true{{[0-9_]*}} :
+
+// -----
+
+func.func @alloc_and_bbarg(%arg0: memref<5xf32>, %arg1: index, %arg2: index, %arg3: index) -> f32 {
+  %true = arith.constant true
+  %false = arith.constant false
+  %0:2 = scf.for %arg4 = %arg1 to %arg2 step %arg3 iter_args(%arg5 = %arg0, %arg6 = %false) -> (memref<5xf32>, i1) {
+    %alloc = memref.alloc() : memref<5xf32>
+    memref.copy %arg5, %alloc : memref<5xf32> to memref<5xf32>
+    %base_buffer_0, %offset_1, %sizes_2, %strides_3 = memref.extract_strided_metadata %arg5 : memref<5xf32> -> memref<f32>, index, index, index
+    %2 = bufferization.dealloc (%base_buffer_0, %alloc : memref<f32>, memref<5xf32>) if (%arg6, %true) retain (%alloc : memref<5xf32>)
+    scf.yield %alloc, %2 : memref<5xf32>, i1
+  }
+  %1 = memref.load %0#0[%arg1] : memref<5xf32>
+  %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %0#0 : memref<5xf32> -> memref<f32>, index, index, index
+  bufferization.dealloc (%base_buffer : memref<f32>) if (%0#1)
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @alloc_and_bbarg
+//       CHECK:   %[[true:.*]] = arith.constant true
+//       CHECK:   scf.for {{.*}} iter_args(%[[iter:.*]] = %{{.*}}, %{{.*}} = %{{.*}})
+//       CHECK:     %[[alloc:.*]] = memref.alloc
+//       CHECK:     %[[view:.*]], %{{.*}}, %{{.*}}, %{{.*}} =  memref.extract_strided_metadata %[[iter]]
+//       CHECK:     bufferization.dealloc (%[[view]] : memref<f32>)
+//   CHECK-NOT:     retain
+//       CHECK:     scf.yield %[[alloc]], %[[true]]

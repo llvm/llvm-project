@@ -16,7 +16,8 @@
 #include "mlir/ExecutionEngine/Msan.h"
 
 #ifndef _WIN32
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || \
+    defined(__DragonFly__)
 #include <cstdlib>
 #else
 #include <alloca.h>
@@ -30,6 +31,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
+#include <numeric>
 #include <random>
 #include <string.h>
 
@@ -51,6 +53,7 @@ extern "C" void printI64(int64_t i) { fprintf(stdout, "%" PRId64, i); }
 extern "C" void printU64(uint64_t u) { fprintf(stdout, "%" PRIu64, u); }
 extern "C" void printF32(float f) { fprintf(stdout, "%g", f); }
 extern "C" void printF64(double d) { fprintf(stdout, "%lg", d); }
+extern "C" void printString(char const *s) { fputs(s, stdout); }
 extern "C" void printOpen() { fputs("( ", stdout); }
 extern "C" void printClose() { fputs(" )", stdout); }
 extern "C" void printComma() { fputs(", ", stdout); }
@@ -172,6 +175,17 @@ extern "C" uint64_t rtrand(void *g, uint64_t m) {
 extern "C" void rtdrand(void *g) {
   std::mt19937 *generator = static_cast<std::mt19937 *>(g);
   delete generator;
+}
+
+extern "C" void _mlir_ciface_shuffle(StridedMemRefType<uint64_t, 1> *mref,
+                                     void *g) {
+  assert(mref);
+  assert(mref->strides[0] == 1); // consecutive
+  std::mt19937 *generator = static_cast<std::mt19937 *>(g);
+  uint64_t s = mref->sizes[0];
+  uint64_t *data = mref->data + mref->offset;
+  std::iota(data, data + s, 0);
+  std::shuffle(data, data + s, *generator);
 }
 
 #define IMPL_STDSORT(VNAME, V)                                                 \

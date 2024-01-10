@@ -53,6 +53,7 @@ First, create the root directory and `cd` into it.
 ```bash
 mkdir root
 cd root
+```
 
 Now clone the source:
 ```bash
@@ -86,6 +87,10 @@ cmake \
 
 ninja
 ```
+
+On Darwin, to make flang able to link binaries with the default sysroot without
+having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
+`-DDEFAULT_SYSROOT="$(xcrun --show-sdk-path)"`.
 
 By default flang tests that do not specify an explicit `--target` flag use
 LLVM's default target triple. For these tests, if there is a need to test on a
@@ -141,8 +146,14 @@ code is in good shape.
 
 ### Building flang standalone
 To do the standalone build, start by building flang in tree as described above.
-This build is base build for subsequent standalone builds.  Start each
-standalone build the same way by cloning the source for llvm-project:
+This build can be used as the  base build for several subsequent standalone
+builds.  Set the environment variable **ROOT_DIR** to the directory that
+contains the subdirectory `build` that was created previously, for example:
+```bash
+export ROOTDIR=/home/user/root
+```
+Start each standalone build the same way by cloning the source for
+llvm-project:
 ```bash
 mkdir standalone
 cd standalone
@@ -175,7 +186,7 @@ cmake \
 ninja
 ```
 
-To run the flang tests on this build, execute the command in the "flang/build"
+To run the flang tests on this build, execute the command in the `flang/build`
 directory:
 ```bash
 ninja check-flang
@@ -227,6 +238,7 @@ cmake \
   -DCMAKE_CUDA_COMPILER=nvcc \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtime/
+
 make -j FortranRuntime
 ```
 
@@ -239,7 +251,7 @@ code.  Note that the packaging of the libraries is different
 between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
 compatible compiler drivers.
 
-### Bulding in-tree
+#### Building in-tree
 One may build Flang runtime library along with building Flang itself
 by providing these additional CMake variables on top of the Flang in-tree
 build config:
@@ -269,7 +281,7 @@ Normal `make -j check-flang` will work with such CMake configuration.
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.
 
-```
+```bash
 cd llvm-project/flang
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
@@ -281,6 +293,7 @@ cmake \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
   ../runtime/
+
 make -j FortranRuntime
 ```
 
@@ -332,6 +345,7 @@ and the GCC library and tools that were used to build clang++.
 
 CXX should include the full path to clang++
 or clang++ should be found on your PATH.
+
 ```bash
 export CXX=clang++
 ```

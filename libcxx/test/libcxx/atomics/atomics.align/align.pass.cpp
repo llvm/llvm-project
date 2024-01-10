@@ -100,6 +100,7 @@ int main(int, char**) {
   CHECK_ALIGNMENT(struct Empty {});
   CHECK_ALIGNMENT(struct OneInt { int i; });
   CHECK_ALIGNMENT(struct IntArr2 { int i[2]; });
+  CHECK_ALIGNMENT(struct FloatArr3 { float i[3]; });
   CHECK_ALIGNMENT(struct LLIArr2 { long long int i[2]; });
   CHECK_ALIGNMENT(struct LLIArr4 { long long int i[4]; });
   CHECK_ALIGNMENT(struct LLIArr8 { long long int i[8]; });

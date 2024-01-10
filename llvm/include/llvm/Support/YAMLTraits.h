@@ -584,11 +584,11 @@ inline bool isNumeric(StringRef S) {
   // Section 10.3.2 Tag Resolution
   // YAML 1.2 Specification prohibits Base 8 and Base 16 numbers prefixed with
   // [-+], so S should be used instead of Tail.
-  if (S.startswith("0o"))
+  if (S.starts_with("0o"))
     return S.size() > 2 &&
            S.drop_front(2).find_first_not_of("01234567") == StringRef::npos;
 
-  if (S.startswith("0x"))
+  if (S.starts_with("0x"))
     return S.size() > 2 && S.drop_front(2).find_first_not_of(
                                "0123456789abcdefABCDEF") == StringRef::npos;
 
@@ -598,12 +598,12 @@ inline bool isNumeric(StringRef S) {
   // Handle cases when the number starts with '.' and hence needs at least one
   // digit after dot (as opposed by number which has digits before the dot), but
   // doesn't have one.
-  if (S.startswith(".") &&
+  if (S.starts_with(".") &&
       (S.equals(".") ||
        (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
     return false;
 
-  if (S.startswith("E") || S.startswith("e"))
+  if (S.starts_with("E") || S.starts_with("e"))
     return false;
 
   enum ParseState {
@@ -1058,6 +1058,19 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   }
 }
 
+namespace detail {
+
+template <typename T, typename Context>
+std::string doValidate(IO &io, T &Val, Context &Ctx) {
+  return MappingContextTraits<T, Context>::validate(io, Val, Ctx);
+}
+
+template <typename T> std::string doValidate(IO &io, T &Val, EmptyContext &) {
+  return MappingTraits<T>::validate(io, Val);
+}
+
+} // namespace detail
+
 template <typename T, typename Context>
 std::enable_if_t<validatedMappingTraits<T, Context>::value, void>
 yamlize(IO &io, T &Val, bool, Context &Ctx) {
@@ -1066,7 +1079,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   else
     io.beginMapping();
   if (io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty()) {
       errs() << Err << "\n";
       assert(Err.empty() && "invalid struct trying to be written as yaml");
@@ -1074,7 +1087,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   }
   detail::doMapping(io, Val, Ctx);
   if (!io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty())
       io.setError(Err);
   }
@@ -1277,7 +1290,7 @@ struct ScalarTraits<double> {
 // For endian types, we use existing scalar Traits class for the underlying
 // type.  This way endian aware types are supported whenever the traits are
 // defined for the underlying type.
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarTraits<support::detail::packed_endian_specific_integral<
                         value_type, endian, alignment>,
                     std::enable_if_t<has_ScalarTraits<value_type>::value>> {
@@ -1301,7 +1314,7 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarEnumerationTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,
@@ -1317,7 +1330,7 @@ struct ScalarEnumerationTraits<
   }
 };
 
-template <typename value_type, support::endianness endian, size_t alignment>
+template <typename value_type, llvm::endianness endian, size_t alignment>
 struct ScalarBitSetTraits<
     support::detail::packed_endian_specific_integral<value_type, endian,
                                                      alignment>,

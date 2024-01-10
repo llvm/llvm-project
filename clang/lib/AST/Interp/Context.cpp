@@ -92,6 +92,9 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
+  if (T->isAnyComplexType())
+    return std::nullopt;
+
   if (T->isSignedIntegerOrEnumerationType()) {
     switch (Ctx.getIntWidth(T)) {
     case 64:
@@ -158,10 +161,19 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
-  InterpState State(Parent, *P, Stk, *this);
-  State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
-  if (Interpret(State, Result))
-    return true;
+
+  {
+    InterpState State(Parent, *P, Stk, *this);
+    State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
+    if (Interpret(State, Result)) {
+      assert(Stk.empty());
+      return true;
+    }
+
+    // State gets destroyed here, so the Stk.clear() below doesn't accidentally
+    // remove values the State's destructor might access.
+  }
+
   Stk.clear();
   return false;
 }

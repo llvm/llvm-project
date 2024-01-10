@@ -58,3 +58,12 @@ define double @f6(<2 x double> %val1, <2 x double> %val2) {
   %ret = fadd double %scalar1, %scalar2
   ret double %ret
 }
+
+; Test a v1i128 addition.
+define <1 x i128> @f7(<1 x i128> %dummy, <1 x i128> %val1, <1 x i128> %val2) {
+; CHECK-LABEL: f7:
+; CHECK: vaq %v24, %v26, %v28
+; CHECK: br %r14
+  %ret = add <1 x i128> %val1, %val2
+  ret <1 x i128> %ret
+}

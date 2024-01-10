@@ -86,7 +86,7 @@ private:
   using StringTable = std::vector<StringTableEntry>;
 
   static bool swapStruct() {
-    return MachOTraits::Endianness != support::endian::system_endianness();
+    return MachOTraits::Endianness != llvm::endianness::native;
   }
 
 public:
@@ -507,7 +507,7 @@ struct MachO64LE {
   using NList = MachO::nlist_64;
   using Relocation = MachO::relocation_info;
 
-  static constexpr support::endianness Endianness = support::little;
+  static constexpr llvm::endianness Endianness = llvm::endianness::little;
   static constexpr uint32_t Magic = MachO::MH_MAGIC_64;
   static constexpr MachO::LoadCommandType SegmentCmd = MachO::LC_SEGMENT_64;
   static constexpr MachO::LoadCommandType SymTabCmd = MachO::LC_SYMTAB;

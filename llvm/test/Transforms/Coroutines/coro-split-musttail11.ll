@@ -1,6 +1,7 @@
 ; Tests that we would convert coro.resume to a musttail call if the target is
 ; Wasm32 with tail-call support.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

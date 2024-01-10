@@ -388,17 +388,17 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
   if (Str.empty())
     return 10;
 
-  if (Str.startswith("0x") || Str.startswith("0X")) {
+  if (Str.starts_with("0x") || Str.starts_with("0X")) {
     Str = Str.substr(2);
     return 16;
   }
 
-  if (Str.startswith("0b") || Str.startswith("0B")) {
+  if (Str.starts_with("0b") || Str.starts_with("0B")) {
     Str = Str.substr(2);
     return 2;
   }
 
-  if (Str.startswith("0o")) {
+  if (Str.starts_with("0o")) {
     Str = Str.substr(2);
     return 8;
   }

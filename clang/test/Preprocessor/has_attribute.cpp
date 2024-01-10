@@ -3,14 +3,14 @@
 
 #define CXX11(x) x: __has_cpp_attribute(x)
 
-// CHECK: clang::fallthrough: 201603L
+// CHECK: clang::fallthrough: 1
 CXX11(clang::fallthrough)
 
 // CHECK: selectany: 0
 CXX11(selectany)
 
 // The attribute name can be bracketed with double underscores.
-// CHECK: clang::__fallthrough__: 201603L
+// CHECK: clang::__fallthrough__: 1
 CXX11(clang::__fallthrough__)
 
 // The scope cannot be bracketed with double underscores unless it is
@@ -18,11 +18,20 @@ CXX11(clang::__fallthrough__)
 // CHECK: __gsl__::suppress: 0
 CXX11(__gsl__::suppress)
 
-// CHECK: _Clang::fallthrough: 201603L
+// CHECK: _Clang::fallthrough: 1
 CXX11(_Clang::fallthrough)
 
 // CHECK: __nodiscard__: 201907L
 CXX11(__nodiscard__)
+
+// CHECK: warn_unused_result: 0
+CXX11(warn_unused_result)
+
+// CHECK: gnu::warn_unused_result: 1
+CXX11(gnu::warn_unused_result)
+
+// CHECK: clang::warn_unused_result: 1
+CXX11(clang::warn_unused_result)
 
 // CHECK: __gnu__::__const__: 1
 CXX11(__gnu__::__const__)

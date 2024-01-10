@@ -256,8 +256,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_mac_f32_e32 v1, 0x40400000, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v1
+; SI-NEXT:    v_madmk_f32 v0, v0, 0x40400000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -280,8 +280,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    s_mov_b32 s0, s4
 ; VI-FLUSH-NEXT:    s_mov_b32 s1, s5
-; VI-FLUSH-NEXT:    v_mac_f16_e32 v1, 0x4200, v0
-; VI-FLUSH-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; VI-FLUSH-NEXT:    v_madmk_f16 v0, v0, 0x4200, v1
+; VI-FLUSH-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-FLUSH-NEXT:    s_endpgm
 ;
 ; VI-DENORM-LABEL: fmuladd_f16_imm_a:
@@ -353,8 +353,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-NEXT:    s_mov_b32 s0, s4
 ; GFX10-DENORM-NEXT:    s_mov_b32 s1, s5
-; GFX10-DENORM-NEXT:    v_fmac_f16_e32 v1, 0x4200, v0
-; GFX10-DENORM-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; GFX10-DENORM-NEXT:    v_fmamk_f16 v0, v0, 0x4200, v1
+; GFX10-DENORM-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX10-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: fmuladd_f16_imm_a:
@@ -442,8 +442,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_mac_f32_e32 v1, 0x40400000, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v1
+; SI-NEXT:    v_madmk_f32 v0, v0, 0x40400000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -466,8 +466,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    s_mov_b32 s0, s4
 ; VI-FLUSH-NEXT:    s_mov_b32 s1, s5
-; VI-FLUSH-NEXT:    v_mac_f16_e32 v1, 0x4200, v0
-; VI-FLUSH-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; VI-FLUSH-NEXT:    v_madmk_f16 v0, v0, 0x4200, v1
+; VI-FLUSH-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-FLUSH-NEXT:    s_endpgm
 ;
 ; VI-DENORM-LABEL: fmuladd_f16_imm_b:
@@ -539,8 +539,8 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DENORM-NEXT:    s_mov_b32 s0, s4
 ; GFX10-DENORM-NEXT:    s_mov_b32 s1, s5
-; GFX10-DENORM-NEXT:    v_fmac_f16_e32 v1, 0x4200, v0
-; GFX10-DENORM-NEXT:    buffer_store_short v1, off, s[0:3], 0
+; GFX10-DENORM-NEXT:    v_fmamk_f16 v0, v0, 0x4200, v1
+; GFX10-DENORM-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX10-DENORM-NEXT:    s_endpgm
 ;
 ; GFX11-FLUSH-LABEL: fmuladd_f16_imm_b:

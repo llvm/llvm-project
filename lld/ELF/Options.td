@@ -129,9 +129,9 @@ defm call_graph_ordering_file:
   Eq<"call-graph-ordering-file", "Layout sections to optimize the given callgraph">;
 
 def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
-  HelpText<"Reorder input sections with call graph profile using the specified algorithm (default: hfsort)">,
-  MetaVarName<"[none,hfsort]">,
-  Values<"none,hfsort">;
+  HelpText<"Reorder input sections with call graph profile using the specified algorithm (default: cdsort)">,
+  MetaVarName<"[none,hfsort,cdsort]">,
+  Values<"none,hfsort,cdsort">;
 def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
   Flags<[HelpHidden]>;
 

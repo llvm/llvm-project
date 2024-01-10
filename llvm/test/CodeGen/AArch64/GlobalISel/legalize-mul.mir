@@ -131,8 +131,8 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND %lhs_wide, [[C]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND %rhs_wide, [[C]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT %lhs_wide(s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16777215
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C1]]
     ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT %rhs_wide(s32)
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[ANYEXT1]], [[C1]]
@@ -223,8 +223,8 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LOAD]], [[LOAD1]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s64), [[C]]
     ; CHECK-NEXT: G_STORE [[C]](s64), [[FRAME_INDEX2]](p0) :: (store (s64), align 1)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C1]]
     ; CHECK-NEXT: $x0 = COPY [[MUL]](s64)
     ; CHECK-NEXT: $x1 = COPY [[AND]](s64)

@@ -127,6 +127,8 @@ target(tsan_target_type, "rtl") {
     sources += [ "tsan_rtl_mips64.S" ]
   } else if (target_cpu == "powerpc64") {
     sources += [ "tsan_rtl_ppc64.S" ]
+  } else if (target_cpu == "riscv64") {
+    sources += [ "tsan_rtl_riscv64.S" ]
   } else if (target_cpu == "s390x") {
     sources += [ "tsan_rtl_s390x.S" ]
   }

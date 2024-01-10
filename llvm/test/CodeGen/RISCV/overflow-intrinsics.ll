@@ -451,7 +451,7 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV32-NEXT:  .LBB10_4:
 ; RV32-NEXT:    neg s1, a2
 ; RV32-NEXT:    and s1, s1, a3
-; RV32-NEXT:    call use@plt
+; RV32-NEXT:    call use
 ; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    mv a1, s1
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -474,7 +474,7 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li s0, 42
 ; RV64-NEXT:  .LBB10_2:
-; RV64-NEXT:    call use@plt
+; RV64-NEXT:    call use
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -551,7 +551,7 @@ define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, ptr %p) {
 ;
 ; RV64-LABEL: uaddo_i8_increment_noncanonical_1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a2, a0, 1
+; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:    andi a0, a2, 255
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    sb a2, 0(a1)
@@ -594,7 +594,7 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, ptr %p) {
 ;
 ; RV64-LABEL: uaddo_i16_increment_noncanonical_3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addiw a2, a0, 1
+; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:    slli a0, a2, 48
 ; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    seqz a0, a0
@@ -672,7 +672,7 @@ define i1 @uaddo_i32_decrement_alt(i32 signext %x, ptr %p) {
 ; RV64-LABEL: uaddo_i32_decrement_alt:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    snez a2, a0
-; RV64-NEXT:    addiw a0, a0, -1
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    sw a0, 0(a1)
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
@@ -915,7 +915,7 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a0, 48
 ; RV64-NEXT:    srli a2, a2, 48
-; RV64-NEXT:    addiw a3, a0, -44
+; RV64-NEXT:    addi a3, a0, -44
 ; RV64-NEXT:    sltiu a0, a2, 44
 ; RV64-NEXT:    sh a3, 0(a1)
 ; RV64-NEXT:    ret
@@ -939,7 +939,7 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a0, 255
 ; RV64-NEXT:    sltiu a2, a2, 45
-; RV64-NEXT:    addiw a0, a0, -45
+; RV64-NEXT:    addi a0, a0, -45
 ; RV64-NEXT:    sb a0, 0(a1)
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    ret
@@ -962,7 +962,7 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, ptr %p) {
 ; RV64-LABEL: usubo_eq_constant1_op1_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a2, a0
-; RV64-NEXT:    addiw a3, a0, -1
+; RV64-NEXT:    addi a3, a0, -1
 ; RV64-NEXT:    seqz a0, a2
 ; RV64-NEXT:    sw a3, 0(a1)
 ; RV64-NEXT:    ret
@@ -1091,7 +1091,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    sltu s6, s4, s1
 ; RV32-NEXT:  .LBB32_4: # %t
 ; RV32-NEXT:    mv a0, s6
-; RV32-NEXT:    call call@plt
+; RV32-NEXT:    call call
 ; RV32-NEXT:    beqz s6, .LBB32_8
 ; RV32-NEXT:  # %bb.5: # %end
 ; RV32-NEXT:    sltu a1, s4, s1
@@ -1145,7 +1145,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV64-NEXT:    mv s3, a0
 ; RV64-NEXT:    sltu s4, a0, a1
 ; RV64-NEXT:    mv a0, s4
-; RV64-NEXT:    call call@plt
+; RV64-NEXT:    call call
 ; RV64-NEXT:    bgeu s3, s2, .LBB32_3
 ; RV64-NEXT:  # %bb.2: # %end
 ; RV64-NEXT:    sub a0, s3, s2

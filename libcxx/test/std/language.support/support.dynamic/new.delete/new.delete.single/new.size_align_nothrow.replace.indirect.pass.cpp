@@ -15,9 +15,6 @@
 
 // XFAIL: LIBCXX-AIX-FIXME
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
@@ -53,7 +50,7 @@ int main(int, char**) {
     // Test with an overaligned type
     {
         new_called = delete_called = 0;
-        OverAligned* x = new (std::nothrow) OverAligned;
+        OverAligned* x = DoNotOptimize(new (std::nothrow) OverAligned);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(static_cast<void*>(x) == DummyData);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 
@@ -64,7 +61,7 @@ int main(int, char**) {
     // Test with a type that is right on the verge of being overaligned
     {
         new_called = delete_called = 0;
-        MaxAligned* x = new (std::nothrow) MaxAligned;
+        MaxAligned* x = DoNotOptimize(new (std::nothrow) MaxAligned);
         assert(x != nullptr);
         assert(new_called == 0);
 
@@ -75,7 +72,7 @@ int main(int, char**) {
     // Test with a type that is clearly not overaligned
     {
         new_called = delete_called = 0;
-        int* x = new (std::nothrow) int;
+        int* x = DoNotOptimize(new (std::nothrow) int);
         assert(x != nullptr);
         assert(new_called == 0);
 

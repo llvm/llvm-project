@@ -117,7 +117,7 @@ int nested(int a){
 // CHECK-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK:       omp_offload.failed:
-// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42(i64 [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42(i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK:       omp_offload.cont:
 // CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[F]], i32 0, i32 0
@@ -141,7 +141,7 @@ int nested(int a){
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -219,7 +219,7 @@ int nested(int a){
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -284,7 +284,7 @@ int nested(int a){
 //
 //
 // CHECK-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-NEXT:    ret void
@@ -342,7 +342,7 @@ int nested(int a){
 // CHECK-X86-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
 // CHECK-X86-NEXT:    br i1 [[TMP21]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK-X86:       omp_offload.failed:
-// CHECK-X86-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42(i32 [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-X86-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42(i32 [[TMP1]]) #[[ATTR2:[0-9]+]]
 // CHECK-X86-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK-X86:       omp_offload.cont:
 // CHECK-X86-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[F]], i32 0, i32 0
@@ -366,7 +366,7 @@ int nested(int a){
 //
 //
 // CHECK-X86-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined
-// CHECK-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-X86-NEXT:  entry:
 // CHECK-X86-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-X86-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -444,7 +444,7 @@ int nested(int a){
 //
 //
 // CHECK-X86-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined
-// CHECK-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR2]] {
+// CHECK-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-X86-NEXT:  entry:
 // CHECK-X86-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-X86-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -509,7 +509,7 @@ int nested(int a){
 //
 //
 // CHECK-X86-LABEL: define internal void @.omp_offloading.requires_reg
-// CHECK-X86-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-X86-SAME: () #[[ATTR3:[0-9]+]] {
 // CHECK-X86-NEXT:  entry:
 // CHECK-X86-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-X86-NEXT:    ret void
@@ -578,10 +578,12 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-LABEL: define weak_odr protected void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42
-// TCHECK-TARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// TCHECK-TARGET-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // TCHECK-TARGET-NEXT:  entry:
+// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // TCHECK-TARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // TCHECK-TARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
+// TCHECK-TARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
@@ -591,7 +593,7 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined
-// TCHECK-TARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// TCHECK-TARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-NEXT:  entry:
 // TCHECK-TARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // TCHECK-TARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -656,10 +658,12 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-LABEL: define weak_odr protected void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49
-// TCHECK-TARGET-SAME: (i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// TCHECK-TARGET-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-NEXT:  entry:
+// TCHECK-TARGET-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // TCHECK-TARGET-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // TCHECK-TARGET-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
+// TCHECK-TARGET-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // TCHECK-TARGET-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
@@ -669,7 +673,7 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined
-// TCHECK-TARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// TCHECK-TARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-NEXT:  entry:
 // TCHECK-TARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // TCHECK-TARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -734,10 +738,12 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-X86-LABEL: define weak_odr protected void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42
-// TCHECK-TARGET-X86-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // TCHECK-TARGET-X86-NEXT:  entry:
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // TCHECK-TARGET-X86-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // TCHECK-TARGET-X86-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
+// TCHECK-TARGET-X86-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
@@ -747,7 +753,7 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-X86-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l42.omp_outlined
-// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1:[0-9]+]] {
+// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-X86-NEXT:  entry:
 // TCHECK-TARGET-X86-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // TCHECK-TARGET-X86-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -812,10 +818,12 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-X86-LABEL: define weak_odr protected void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49
-// TCHECK-TARGET-X86-SAME: (i32 noundef [[A:%.*]]) #[[ATTR0]] {
+// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-X86-NEXT:  entry:
+// TCHECK-TARGET-X86-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // TCHECK-TARGET-X86-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // TCHECK-TARGET-X86-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
+// TCHECK-TARGET-X86-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // TCHECK-TARGET-X86-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
@@ -825,7 +833,7 @@ int nested(int a){
 //
 //
 // TCHECK-TARGET-X86-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z6nestedi_l49.omp_outlined
-// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
+// TCHECK-TARGET-X86-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR0]] {
 // TCHECK-TARGET-X86-NEXT:  entry:
 // TCHECK-TARGET-X86-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // TCHECK-TARGET-X86-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4

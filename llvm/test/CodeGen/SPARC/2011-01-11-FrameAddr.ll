@@ -19,10 +19,8 @@ entry:
 
 ;SPARC64-LABEL: frameaddr
 ;SPARC64:       save %sp, -128, %sp
-;SPARC64:       add  %fp, 2047, %i0
 ;SPARC64:       ret
-;SPARC64-NOT:   restore %g0, %g0, %g0
-;SPARC64:       restore
+;SPARC64:       restore %fp, 2047, %o0
 
   %0 = tail call i8* @llvm.frameaddress(i32 0)
   ret i8* %0
@@ -47,7 +45,8 @@ entry:
 ;SPARC64: ldx [%fp+2159],     %[[R0:[goli][0-7]]]
 ;SPARC64: ldx [%[[R0]]+2159], %[[R1:[goli][0-7]]]
 ;SPARC64: ldx [%[[R1]]+2159], %[[R2:[goli][0-7]]]
-;SPARC64: add %[[R2]], 2047, {{.+}}
+;SPARC64: ret
+;SPARC64: restore %[[R2]], 2047, %o0
 
   %0 = tail call i8* @llvm.frameaddress(i32 3)
   ret i8* %0

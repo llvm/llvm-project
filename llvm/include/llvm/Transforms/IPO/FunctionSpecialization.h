@@ -84,8 +84,6 @@
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
-using namespace llvm;
-
 namespace llvm {
 // Map of potential specializations for each function. The FunctionSpecializer
 // keeps the discovered specialisation opportunities for the module in a single
@@ -218,6 +216,22 @@ private:
   Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
+
+  // Transitively Incoming Values (TIV) is a set of Values that can "feed" a
+  // value to the initial PHI-node. It is defined like this:
+  //
+  // * the initial PHI-node belongs to TIV.
+  //
+  // * for every PHI-node in TIV, its operands belong to TIV
+  //
+  // If TIV for the initial PHI-node (P) contains more than one constant or a
+  // value that is not a PHI-node, then P cannot be folded to a constant.
+  //
+  // As soon as we detect these cases, we bail, without constructing the
+  // full TIV.
+  // Otherwise P can be folded to the one constant in TIV.
+  bool discoverTransitivelyIncomingValues(Constant *Const, PHINode *Root,
+                                          DenseSet<PHINode *> &TransitivePHIs);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
   Constant *visitPHINode(PHINode &I);

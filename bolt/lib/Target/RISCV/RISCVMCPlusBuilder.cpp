@@ -15,6 +15,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -31,6 +32,33 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+              CompFuncTy Comp) const override {
+    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
+    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+      return false;
+
+    return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
+                                 *RISCVExprB.getSubExpr(), Comp);
+  }
+
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X2);
+    Regs |= getAliases(RISCV::X8);
+    Regs |= getAliases(RISCV::X9);
+    Regs |= getAliases(RISCV::X18);
+    Regs |= getAliases(RISCV::X19);
+    Regs |= getAliases(RISCV::X20);
+    Regs |= getAliases(RISCV::X21);
+    Regs |= getAliases(RISCV::X22);
+    Regs |= getAliases(RISCV::X23);
+    Regs |= getAliases(RISCV::X24);
+    Regs |= getAliases(RISCV::X25);
+    Regs |= getAliases(RISCV::X26);
+    Regs |= getAliases(RISCV::X27);
+  }
+
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
@@ -46,6 +74,7 @@ public:
     case ELF::R_RISCV_HI20:
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       return true;
     default:
       llvm_unreachable("Unexpected RISCV relocation type in code");
@@ -86,6 +115,7 @@ public:
       return false;
     case RISCV::JALR:
     case RISCV::C_JALR:
+    case RISCV::C_JR:
       return true;
     }
   }
@@ -157,6 +187,17 @@ public:
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+
+    // Check for the following long tail call sequence:
+    // 1: auipc xi, %pcrel_hi(sym)
+    // jalr zero, %pcrel_lo(1b)(xi)
+    if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
+      MCInst &PrevInst = *std::prev(End);
+      if (isRISCVCall(PrevInst, Instruction) &&
+          Instruction.getOperand(0).getReg() == RISCV::X0)
+        return IndirectBranchType::POSSIBLE_TAIL_CALL;
+    }
+
     return IndirectBranchType::UNKNOWN;
   }
 
@@ -396,6 +437,7 @@ public:
     default:
       return Expr;
     case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TLS_GOT_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
@@ -448,6 +490,13 @@ public:
     assert(Second.getOpcode() == RISCV::JALR);
     return true;
   }
+
+  uint16_t getMinFunctionAlignment() const override {
+    if (STI->hasFeature(RISCV::FeatureStdExtC) ||
+        STI->hasFeature(RISCV::FeatureStdExtZca))
+      return 2;
+    return 4;
+  }
 };
 
 } // end anonymous namespace
@@ -457,8 +506,9 @@ namespace bolt {
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *Analysis,
                                         const MCInstrInfo *Info,
-                                        const MCRegisterInfo *RegInfo) {
-  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo);
+                                        const MCRegisterInfo *RegInfo,
+                                        const MCSubtargetInfo *STI) {
+  return new RISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

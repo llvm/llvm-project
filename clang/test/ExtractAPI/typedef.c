@@ -82,8 +82,8 @@ typedef int MyInt;
       },
       "location": {
         "position": {
-          "character": 13,
-          "line": 1
+          "character": 12,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },

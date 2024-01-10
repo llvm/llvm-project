@@ -33,8 +33,8 @@ define hidden void @widget() {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    flat_load_dword v0, v[0:1]
-; GCN-NEXT:    s_mov_b64 s[16:17], 0
 ; GCN-NEXT:    s_mov_b64 s[20:21], -1
+; GCN-NEXT:    s_mov_b64 s[16:17], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 21, v0
 ; GCN-NEXT:    s_mov_b64 s[46:47], 0
@@ -66,9 +66,9 @@ define hidden void @widget() {
 ; GCN-NEXT:    s_mov_b32 s14, s44
 ; GCN-NEXT:    s_mov_b32 s15, s45
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[34:35]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
 ; GCN-NEXT:    s_mov_b64 s[10:11], s[40:41]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_mov_b64 s[16:17], 0
 ; GCN-NEXT:    s_andn2_b64 s[18:19], s[46:47], exec
@@ -294,21 +294,21 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_writelane_b32 v40, s57, 25
 ; GCN-NEXT:    v_writelane_b32 v40, s58, 26
 ; GCN-NEXT:    v_writelane_b32 v40, s59, 27
+; GCN-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v41, v31
 ; GCN-NEXT:    s_mov_b32 s46, s15
 ; GCN-NEXT:    s_mov_b32 s47, s14
 ; GCN-NEXT:    s_mov_b32 s48, s13
 ; GCN-NEXT:    s_mov_b32 s49, s12
-; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GCN-NEXT:    s_mov_b64 s[50:51], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_and_b32_e32 v2, 0x3ff, v41
-; GCN-NEXT:    flat_load_dword v44, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v43, 0
+; GCN-NEXT:    flat_load_dword v44, v[0:1]
+; GCN-NEXT:    s_mov_b64 s[50:51], 0
 ; GCN-NEXT:    s_getpc_b64 s[52:53]
 ; GCN-NEXT:    s_add_u32 s52, s52, spam@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s53, s53, spam@rel32@hi+12
@@ -329,10 +329,10 @@ define hidden void @blam() {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    flat_load_dword v0, v[42:43]
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], 0
-; GCN-NEXT:    s_mov_b64 s[4:5], -1
+; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 2, v0
-; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    s_mov_b64 s[4:5], -1
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GCN-NEXT:    s_xor_b64 s[56:57], exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_12
@@ -344,9 +344,9 @@ define hidden void @blam() {
 ; GCN-NEXT:  ; %bb.4: ; %bb11
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; GCN-NEXT:    s_mov_b32 s12, s49
 ; GCN-NEXT:    s_mov_b32 s13, s48
 ; GCN-NEXT:    s_mov_b32 s14, s47
@@ -525,3 +525,6 @@ bb18:                                             ; preds = %bb17, %bb10
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare hidden float @spam()
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

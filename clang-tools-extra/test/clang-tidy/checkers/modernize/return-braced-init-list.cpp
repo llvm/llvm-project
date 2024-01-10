@@ -30,12 +30,16 @@ public:
 };
 
 template <typename T>
+struct allocator {};
+
+template <typename T, typename Allocator = ::std::allocator<T>>
 class vector {
 public:
-  vector(T) {}
-  vector(std::initializer_list<T>) {}
+  vector(T);
+  vector(size_t, T, const Allocator &alloc = Allocator());
+  vector(std::initializer_list<T>);
 };
-}
+} // namespace std
 
 class Bar {};
 
@@ -98,11 +102,25 @@ Foo f6() {
   return Foo(b6, 1);
 }
 
-std::vector<int> f7() {
+std::vector<int> vectorWithOneParameter() {
   int i7 = 1;
   return std::vector<int>(i7);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
 }
+
+std::vector<int> vectorIntWithTwoParameter() {
+  return std::vector<int>(1, 2);
+}
+
+std::vector<double> vectorDoubleWithTwoParameter() {
+  return std::vector<double>(1, 2.1);
+}
+struct A {};
+std::vector<A> vectorRecordWithTwoParameter() {
+  A a{};
+  return std::vector<A>(1, a);
+}
+
 
 Bar f8() {
   return {};

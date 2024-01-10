@@ -1935,7 +1935,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumProcs)
     OS << Target << "SubTypeKV, ";
   else
-    OS << "None, ";
+    OS << "std::nullopt, ";
   OS << '\n'; OS.indent(22);
   OS << Target << "WriteProcResTable, "
      << Target << "WriteLatencyTable, "
@@ -2028,7 +2028,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumProcs)
     OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
   else
-    OS << "None, ";
+    OS << "std::nullopt, ";
   OS << '\n'; OS.indent(24);
   OS << Target << "WriteProcResTable, "
      << Target << "WriteLatencyTable, "

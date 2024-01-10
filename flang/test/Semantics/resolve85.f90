@@ -1,6 +1,6 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
-! C730 The same type-attr-spec shall not appear more than once in a given 
+! C730 The same type-attr-spec shall not appear more than once in a given
 ! derived-type-stmt.
 !
 ! R727 derived-type-stmt ->

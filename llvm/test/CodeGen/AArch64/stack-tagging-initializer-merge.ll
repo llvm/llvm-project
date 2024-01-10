@@ -215,7 +215,8 @@ entry:
 
 ; CHECK-LABEL: define void @InitVectorSplit(
 ; CHECK:  [[TX:%.*]] = call ptr @llvm.aarch64.tagp
-; CHECK:  call void @llvm.aarch64.stgp(ptr [[TX]], i64 shl (i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), i64 32), i64 lshr (i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), i64 32))
+; CHECK:  [[LSHR:%.*]] = lshr i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), 32
+; CHECK:  call void @llvm.aarch64.stgp(ptr [[TX]], i64 shl (i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), i64 32), i64 [[LSHR]])
 ; CHECK:  ret void
 
 define void @MemSetZero() sanitize_memtag {

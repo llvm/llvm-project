@@ -16,8 +16,8 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Classic/DWARFLinker.h"
+#include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include <string>
 
 namespace llvm {
@@ -72,7 +72,8 @@ struct LinkOptions {
   unsigned Threads = 1;
 
   // Output file type.
-  DWARFLinker::OutputFileType FileType = DWARFLinker::OutputFileType::Object;
+  dwarf_linker::DWARFLinkerBase::OutputFileType FileType =
+      dwarf_linker::DWARFLinkerBase::OutputFileType::Object;
 
   /// The accelerator table kind
   DsymutilAccelTableKind TheAccelTableKind;
@@ -92,6 +93,12 @@ struct LinkOptions {
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       vfs::getRealFileSystem();
+
+  /// -build-variant-suffix.
+  std::string BuildVariantSuffix;
+
+  /// Paths where to search for the .dSYM files of merged libraries.
+  std::vector<std::string> DSYMSearchPaths;
 
   /// Fields used for linking and placing remarks into the .dSYM bundle.
   /// @{

@@ -22,7 +22,6 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <stack>
@@ -60,6 +59,9 @@ struct UnwrappedLine {
   bool InMacroBody = false;
 
   bool MustBeDeclaration = false;
+
+  /// Whether the parser has seen \c decltype(auto) in this line.
+  bool SeenDecltypeAuto = false;
 
   /// \c True if this line should be indented by ContinuationIndent in
   /// addition to the normal indention level.
@@ -148,8 +150,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -240,6 +241,7 @@ private:
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);
   void calculateBraceTypes(bool ExpectClassBody = false);
+  void setPreviousRBraceType(TokenType Type);
 
   // Marks a conditional compilation edge (for example, an '#if', '#ifdef',
   // '#else' or merge conflict marker). If 'Unreachable' is true, assumes
@@ -334,6 +336,14 @@ private:
   // Keeps a stack of the states of nested control statements (true if the
   // statement contains more than some predefined number of nested statements).
   SmallVector<bool, 8> NestedTooDeep;
+
+  // Keeps a stack of the states of nested lambdas (true if the return type of
+  // the lambda is `decltype(auto)`).
+  SmallVector<bool, 4> NestedLambdas;
+
+  // Whether the parser is parsing the body of a function whose return type is
+  // `decltype(auto)`.
+  bool IsDecltypeAutoFunction = false;
 
   // Represents preprocessor branch type, so we can find matching
   // #if/#else/#endif directives.

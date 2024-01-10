@@ -70,6 +70,7 @@ enum class Operation : int {
   BeginBinaryOperationsSingleOutput,
   Fmod,
   Hypot,
+  Pow,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -356,21 +357,25 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
   {                                                                            \
     namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
-    if (__r1.success)                                                          \
+    if (__r1.success) {                                                        \
       EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Nearest);                          \
+    }                                                                          \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
-    if (__r2.success)                                                          \
+    if (__r2.success) {                                                        \
       EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Upward);                           \
+    }                                                                          \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
-    if (__r3.success)                                                          \
+    if (__r3.success) {                                                        \
       EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Downward);                         \
+    }                                                                          \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
-    if (__r4.success)                                                          \
+    if (__r4.success) {                                                        \
       EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::TowardZero);                       \
+    }                                                                          \
   }
 
 #define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
@@ -400,21 +405,25 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
   {                                                                            \
     namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
     mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
-    if (__r1.success)                                                          \
+    if (__r1.success) {                                                        \
       ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Nearest);                          \
+    }                                                                          \
     mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
-    if (__r2.success)                                                          \
+    if (__r2.success) {                                                        \
       ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Upward);                           \
+    }                                                                          \
     mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
-    if (__r3.success)                                                          \
+    if (__r3.success) {                                                        \
       ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::Downward);                         \
+    }                                                                          \
     mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
-    if (__r4.success)                                                          \
+    if (__r4.success) {                                                        \
       ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
                         mpfr::RoundingMode::TowardZero);                       \
+    }                                                                          \
   }
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H

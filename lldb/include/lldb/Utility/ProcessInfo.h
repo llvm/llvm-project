@@ -187,6 +187,26 @@ protected:
 
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
+class ProcessInfoList {
+public:
+  ProcessInfoList(const ProcessInstanceInfoList &list) : m_list(list) {}
+
+  uint32_t GetSize() const { return m_list.size(); }
+
+  bool GetProcessInfoAtIndex(uint32_t idx, ProcessInstanceInfo &info) {
+    if (idx < m_list.size()) {
+      info = m_list[idx];
+      return true;
+    }
+    return false;
+  }
+
+  void Clear() { return m_list.clear(); }
+
+private:
+  ProcessInstanceInfoList m_list;
+};
+
 // ProcessInstanceInfoMatch
 //
 // A class to help matching one ProcessInstanceInfo to another.

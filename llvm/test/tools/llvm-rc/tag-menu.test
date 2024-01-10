@@ -1,7 +1,7 @@
 ; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-menu.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=MENU
 
-; Test running llvm-rc -no-preprocess without an explicit output file.
+; Test running llvm-rc without an explicit output file.
 ; RUN: cp %p/Inputs/tag-menu.rc %t.implicit.rc
 ; RUN: llvm-rc -no-preprocess -- %t.implicit.rc
 ; RUN: llvm-readobj %t.implicit.res | FileCheck --check-prefix=MENU %s

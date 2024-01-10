@@ -321,3 +321,24 @@ typedef bool (*ISSUE_65055_2)(int);
 // CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: {{^}}using ISSUE_65055_1 = void (*)(int);{{$}}
 // CHECK-FIXES: {{^}}using ISSUE_65055_2 = bool (*)(int);{{$}}
+
+typedef class ISSUE_67529_1 *ISSUE_67529;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using ISSUE_67529 = class ISSUE_67529_1 *;
+
+// Some Header
+extern "C" {
+
+typedef int InExternC;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using InExternC = int;
+
+}
+
+extern "C++" {
+
+typedef int InExternCPP;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using InExternCPP = int;
+
+}

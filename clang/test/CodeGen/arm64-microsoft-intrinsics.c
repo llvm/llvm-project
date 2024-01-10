@@ -402,6 +402,16 @@ unsigned int check_CountOneBits64(unsigned __int64 arg1) {
 // CHECK-MSCOMPAT: ret i32 %[[VAR2]]
 // CHECK-LINUX: error: call to undeclared function '_CountOneBits64'
 
+void check__prefetch(void *arg1) {
+  return __prefetch(arg1);
+}
+
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca ptr, align 8
+// CHECK-MSCOMPAT: store ptr %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load ptr, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: call void @llvm.prefetch.p0(ptr %[[VAR0]], i32 0, i32 3, i32 1)
+// CHECK-MSCOMPAT: ret void
+
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}

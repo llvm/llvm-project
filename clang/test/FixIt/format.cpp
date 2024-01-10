@@ -12,20 +12,32 @@ struct S {
   N::E Type;
 };
 
+using uint32_t = unsigned;
+enum class FixedE : uint32_t { Two };
+
 void a(N::E NEVal, S *SPtr, S &SRef) {
   printf("%d", N::E::One); // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:25-[[@LINE-2]]:25}:")"
 
   printf("%hd", N::E::One); // expected-warning{{format specifies type 'short' but the argument has type 'N::E'}}
-  // CHECK: "static_cast<short>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%d"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"static_cast<int>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:")"
 
   printf("%hu", N::E::One); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'N::E'}}
-  // CHECK: "static_cast<unsigned short>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%d"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:"static_cast<int>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:26-[[@LINE-3]]:26}:")"
 
   LOG("%d", N::E::One); // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:13}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:22-[[@LINE-2]]:22}:")"
+
+  LOG("%s", N::E::One); // expected-warning{{format specifies type 'char *' but the argument has type 'N::E'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:8-[[@LINE-1]]:10}:"%d"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"static_cast<int>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:22-[[@LINE-3]]:22}:")"
 
   printf("%d", NEVal); // expected-warning{{format specifies type 'int' but the argument has type 'N::E'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"static_cast<int>("
@@ -58,4 +70,8 @@ void a(N::E NEVal, S *SPtr, S &SRef) {
       SRef.Type);
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"static_cast<int>("
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:16}:")"
+
+  printf("%u", FixedE::Two); //expected-warning{{format specifies type 'unsigned int' but the argument has type 'FixedE'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"static_cast<uint32_t>("
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:27-[[@LINE-2]]:27}:")"
 }

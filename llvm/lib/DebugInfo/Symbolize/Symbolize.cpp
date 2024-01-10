@@ -231,6 +231,54 @@ LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
   return symbolizeFrameCommon(BuildID, ModuleOffset);
 }
 
+template <typename T>
+Expected<std::vector<DILineInfo>>
+LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
+                                 uint64_t Offset) {
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
+
+  SymbolizableModule *Info = *InfoOrErr;
+  std::vector<DILineInfo> Result;
+
+  // A null module means an error has already been reported. Return an empty
+  // result.
+  if (!Info)
+    return Result;
+
+  for (object::SectionedAddress A : Info->findSymbol(Symbol, Offset)) {
+    DILineInfo LineInfo = Info->symbolizeCode(
+        A, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
+        Opts.UseSymbolTable);
+    if (LineInfo.FileName != DILineInfo::BadString) {
+      if (Opts.Demangle)
+        LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
+      Result.push_back(LineInfo);
+    }
+  }
+
+  return Result;
+}
+
+Expected<std::vector<DILineInfo>>
+LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(Obj, Symbol, Offset);
+}
+
+Expected<std::vector<DILineInfo>>
+LLVMSymbolizer::findSymbol(const std::string &ModuleName, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(ModuleName, Symbol, Offset);
+}
+
+Expected<std::vector<DILineInfo>>
+LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(BuildID, Symbol, Offset);
+}
+
 void LLVMSymbolizer::flush() {
   ObjectForUBPathAndArch.clear();
   LRUBinaries.clear();
@@ -673,7 +721,7 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 
   // Remove any ending '@' for vectorcall.
   bool IsVectorCall = false;
-  if (HasAtNumSuffix && SymbolName.endswith("@")) {
+  if (HasAtNumSuffix && SymbolName.ends_with("@")) {
     SymbolName = SymbolName.drop_back();
     IsVectorCall = true;
   }

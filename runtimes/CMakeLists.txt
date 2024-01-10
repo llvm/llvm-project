@@ -19,7 +19,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
-set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;flang-rt")
+set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
 set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -224,12 +224,14 @@ foreach(entry ${runtimes})
   add_subdirectory(${entry} ${projName})
 endforeach()
 
+# Define runtimes-test-depends so the parent build can use it unconditionally.
+add_custom_target(runtimes-test-depends)
+
 if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
   get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
-  add_custom_target(runtimes-test-depends)
   if(LLVM_RUNTIMES_LIT_DEPENDS)
     # add_dependencies complains if called with no dependencies
     add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})

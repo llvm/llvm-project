@@ -116,6 +116,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
       DoSymbol(*symbol);
     }
   }
+  // Ensure that the size is a multiple of the alignment
+  offset_ = Align(offset_, alignment_);
   scope.set_size(offset_);
   scope.SetAlignment(alignment_);
   // Assign offsets in COMMON blocks, unless this scope is a BLOCK construct,
@@ -158,9 +160,11 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
-      context_.Say(errorSite,
-          "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
-          commonBlock.name(), padding, symbol.name());
+      if (context_.ShouldWarn(common::UsageWarning::CommonBlockPadding)) {
+        context_.Say(errorSite,
+            "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
+            commonBlock.name(), padding, symbol.name());
+      }
     }
     previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};

@@ -1,7 +1,7 @@
 # Chapter H: Reproducing Halide Schedule
 
 This chapter demonstrates how a schedule from the [Halide
-DSL](http://halide-lang.org) can be implemented using transform dialect for
+DSL](http://halide-lang.org) can be implemented using Transform dialect for
 structured ops.
 
 Note that the IR below is pseudo-code with types removed for brevity. It may
@@ -408,7 +408,7 @@ identical_ to the code with the full schedule. Therefore, we will only unroll
 the corresponding loops corresponding to `xi` and `ci` dimensions that actually
 get unrolled by Halide.
 
-As tiling in the transform dialect produces handles to the loops materialized by
+As tiling in the Transform dialect produces handles to the loops materialized by
 tiling, unrolling those loops is just a matter of chaining the corresponding
 transformation. Note that the inner loop must be unrolled first as unrolling the
 outer loop will invalidate the handles to the inner loop.
@@ -495,6 +495,20 @@ bufferization is directly available as a transform operation.
 %arg1 = transform.bufferization.one_shot_bufferize %arg0 {
   bufferize_function_boundaries = true,
   function_boundary_type_conversion = 1 : i32 }
+```
+
+One-shot bufferization itself does not produce buffer deallocations, which may
+lead to leaks. So we have to run the buffer deallocation pass pipeline to avoid
+them. Note that the Transform dialect seamlessly runs named passes and pass
+pipelines: if desired, one could replace complex `--pass-pipeline expressions`
+with operations. Note that we apply the pipeline to functions rather than entire
+module to avoid running it on the transform IR that is contained in the module.
+
+```mlir
+%f = transform.structured.match ops{["func.func"]} in %arg1
+  : (!transform.any_op) -> !transform.any_op
+transform.apply_registered_pass "buffer-deallocation-pipeline" to %f
+  : (!transform.any_op) -> !transform.any_op
 ```
 
 In this particular case, the transformed IR could be directly bufferized. This

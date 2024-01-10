@@ -4,6 +4,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dirent
     libc.include.errno
     libc.include.fcntl
+    libc.include.features
     libc.include.fenv
     libc.include.inttypes
     libc.include.math
@@ -16,6 +17,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdlib
     libc.include.string
     libc.include.strings
+    libc.include.search
     libc.include.termios
     libc.include.threads
     libc.include.time

@@ -57,7 +57,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       if (!GV)
         continue;
 
-      if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
+      if (GV->getName().starts_with("llvm.bpf.btf.type.id")) {
         if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
           report_fatal_error(
               "Missing metadata for llvm.bpf.btf.type.id intrinsic");
@@ -86,15 +86,16 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       Reloc = BTF::BTF_TYPE_ID_LOCAL;
     } else {
       Reloc = BTF::BTF_TYPE_ID_REMOTE;
-      DIType *Ty = cast<DIType>(MD);
-      while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-        unsigned Tag = DTy->getTag();
-        if (Tag != dwarf::DW_TAG_const_type &&
-            Tag != dwarf::DW_TAG_volatile_type)
-          break;
-        Ty = DTy->getBaseType();
-      }
+    }
+    DIType *Ty = cast<DIType>(MD);
+    while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+      unsigned Tag = DTy->getTag();
+      if (Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type)
+        break;
+      Ty = DTy->getBaseType();
+    }
 
+    if (Reloc == BTF::BTF_TYPE_ID_REMOTE) {
       if (Ty->getName().empty()) {
         if (isa<DISubroutineType>(Ty))
           report_fatal_error(
@@ -102,8 +103,8 @@ static bool BPFPreserveDITypeImpl(Function &F) {
         else
           report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
       }
-      MD = Ty;
     }
+    MD = Ty;
 
     BasicBlock *BB = Call->getParent();
     IntegerType *VarType = Type::getInt64Ty(BB->getContext());
