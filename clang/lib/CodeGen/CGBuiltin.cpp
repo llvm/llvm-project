@@ -830,8 +830,8 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     if (const auto *Field = dyn_cast<FieldDecl>(D);
         Field && (Name.empty() || Field->getNameAsString() == Name) &&
         Decl::isFlexibleArrayMemberLike(
-                     Ctx, Field, Field->getType(), StrictFlexArraysLevel,
-                     /*IgnoreTemplateOrMacroSubstitution=*/true)) {
+            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
       Offset += Layout.getFieldOffset(FieldNo);
       return Field;
@@ -970,7 +970,8 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     return nullptr;
 
   uint64_t Offset = 0;
-  const FieldDecl *FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
+  const FieldDecl *FAMDecl =
+      FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
   Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
   if (!FAMDecl || !FAMDecl->hasAttr<CountedByAttr>())
