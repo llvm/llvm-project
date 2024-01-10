@@ -5035,7 +5035,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       unsigned Opcode;
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
-#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
       case Intrinsic::x86_encodekey128:
         Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
         break;
@@ -6399,7 +6399,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     switch (Node->getOpcode()) {
     default:
       llvm_unreachable("Unexpected opcode!");
-#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
     case X86ISD::AESENCWIDE128KL:
       Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
       break;
