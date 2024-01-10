@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -59,17 +60,15 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
 }
 
 unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
-  MachineInstr *MI = Op.getParent();
-  if (!MI->isPHI())
+  auto *MI = dyn_cast<GPhi>(&*Op.getParent());
+  if (!MI)
     return 0;
 
   Register SrcReg = Op.getReg();
   unsigned NumUses = 0;
-  for (unsigned Idx = 1; Idx < MI->getNumOperands(); Idx += 2) {
-    auto &MO = MI->getOperand(Idx);
-    if (&MO != &Op && MO.isReg() && MO.getReg() == SrcReg)
+  for (unsigned I = 0, NumVals = MI->getNumIncomingValues(); I < NumVals; ++I)
+    if (MI->getIncomingValue(I) == SrcReg)
       ++NumUses;
-  }
   return NumUses;
 }
 
@@ -171,17 +170,16 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
     // may still benefit from sinking, especially since the value might be live
     // across a call.
     if (Users.empty()) {
-      // Make sure we don't sink in between
-      // two terminator sequences by scanning forward, not backward.
+      // Make sure we don't sink in between two terminator sequences by scanning
+      // forward, not backward.
       II = MBB.getFirstTerminatorForward();
-      LLVM_DEBUG(dbgs() << "Only phi users: moving " << *MI << " to the end\n");
+      LLVM_DEBUG(dbgs() << "Only phi users: moving inst to end: " << *MI);
     } else {
       ++II;
       while (II != MBB.end() && !Users.count(&*II))
         ++II;
       assert(II != MBB.end() && "Didn't find the user in the MBB");
-      LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II
-                        << '\n');
+      LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II);
     }
 
     MI->removeFromParent();
