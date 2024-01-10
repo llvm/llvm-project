@@ -84,15 +84,16 @@ struct MergeTrivialConditionalBranches : public OpRewritePattern<BrCondOp> {
   void rewrite(BrCondOp op, PatternRewriter &rewriter) const final {
     auto constOp = llvm::cast<ConstantOp>(op.getCond().getDefiningOp());
     bool cond = constOp.getValue().cast<cir::BoolAttr>().getValue();
+    auto *destTrue = op.getDestTrue(), *destFalse = op.getDestFalse();
     Block *block = op.getOperation()->getBlock();
 
     rewriter.eraseOp(op);
     if (cond) {
-      rewriter.mergeBlocks(op.getDestTrue(), block);
-      rewriter.eraseBlock(op.getDestFalse());
+      rewriter.mergeBlocks(destTrue, block);
+      rewriter.eraseBlock(destFalse);
     } else {
-      rewriter.mergeBlocks(op.getDestFalse(), block);
-      rewriter.eraseBlock(op.getDestTrue());
+      rewriter.mergeBlocks(destFalse, block);
+      rewriter.eraseBlock(destTrue);
     }
   }
 };

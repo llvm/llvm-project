@@ -36,8 +36,8 @@ struct IdiomRecognizerPass : public IdiomRecognizerBase<IdiomRecognizerPass> {
   IdiomRecognizerPass() = default;
   void runOnOperation() override;
   void recognizeCall(CallOp call);
-  void raiseStdFind(CallOp call);
-  void raiseIteratorBeginEnd(CallOp call);
+  bool raiseStdFind(CallOp call);
+  bool raiseIteratorBeginEnd(CallOp call);
 
   // Handle pass options
   struct Options {
@@ -88,14 +88,14 @@ struct IdiomRecognizerPass : public IdiomRecognizerBase<IdiomRecognizerPass> {
 };
 } // namespace
 
-void IdiomRecognizerPass::raiseStdFind(CallOp call) {
+bool IdiomRecognizerPass::raiseStdFind(CallOp call) {
   // FIXME: tablegen all of this function.
   if (call.getNumOperands() != 3)
-    return;
+    return false;
 
   auto callExprAttr = call.getAstAttr();
   if (!callExprAttr || !callExprAttr.isStdFunctionCall("find")) {
-    return;
+    return false;
   }
 
   if (opts.emitRemarkFoundCalls())
@@ -109,6 +109,7 @@ void IdiomRecognizerPass::raiseStdFind(CallOp call) {
 
   call.replaceAllUsesWith(findOp);
   call.erase();
+  return true;
 }
 
 static bool isIteratorLikeType(mlir::Type t) {
@@ -128,24 +129,24 @@ static bool isIteratorInStdContainter(mlir::Type t) {
   return isStdArrayType(t);
 }
 
-void IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
+bool IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
   // FIXME: tablegen all of this function.
   CIRBaseBuilderTy builder(getContext());
 
   if (call.getNumOperands() != 1 || call.getNumResults() != 1)
-    return;
+    return false;
 
   auto callExprAttr = call.getAstAttr();
   if (!callExprAttr)
-    return;
+    return false;
 
   if (!isIteratorLikeType(call.getResult(0).getType()))
-    return;
+    return false;
 
   // First argument is the container "this" pointer.
   auto thisPtr = call.getOperand(0).getType().dyn_cast<PointerType>();
   if (!thisPtr || !isIteratorInStdContainter(thisPtr.getPointee()))
-    return;
+    return false;
 
   builder.setInsertionPointAfter(call.getOperation());
   mlir::Operation *iterOp;
@@ -162,16 +163,20 @@ void IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
         call.getLoc(), call.getResult(0).getType(), call.getCalleeAttr(),
         call.getOperand(0));
   } else {
-    return;
+    return false;
   }
 
   call.replaceAllUsesWith(iterOp);
   call.erase();
+  return true;
 }
 
 void IdiomRecognizerPass::recognizeCall(CallOp call) {
-  raiseIteratorBeginEnd(call);
-  raiseStdFind(call);
+  if (raiseIteratorBeginEnd(call))
+    return;
+
+  if (raiseStdFind(call))
+    return;
 }
 
 void IdiomRecognizerPass::runOnOperation() {
