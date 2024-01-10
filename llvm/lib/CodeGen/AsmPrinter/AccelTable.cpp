@@ -401,6 +401,16 @@ void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   Asm->OutStreamer->emitBytes({AugmentationString, AugmentationStringSize});
 }
 
+std::optional<uint64_t>
+DWARF5AccelTableData::getDefiningParentDieOffset(const DIE &Die) {
+  auto *Parent = Die.getParent();
+  if (!Parent)
+    return {};
+  if (Parent->findAttribute(dwarf::Attribute::DW_AT_declaration))
+    return {};
+  return Parent->getOffset();
+}
+
 enum IdxParentEncoding : uint8_t {
   NoIndexedParent = 0, /// Parent information present but parent isn't indexed.
   Ref4 = 1,            /// Parent information present and parent is indexed.

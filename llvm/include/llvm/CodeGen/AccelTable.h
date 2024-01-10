@@ -271,11 +271,11 @@ public:
   DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
                        const bool IsTU = false);
   DWARF5AccelTableData(const uint64_t DieOffset,
-                       const std::optional<uint64_t> ParentOffset,
+                       const std::optional<uint64_t> DefiningParentOffset,
                        const unsigned DieTag, const unsigned UnitID,
                        const bool IsTU = false)
-      : OffsetVal(DieOffset), ParentOffset(ParentOffset), DieTag(DieTag),
-        UnitID(UnitID), IsTU(IsTU) {}
+      : OffsetVal(DieOffset), ParentOffset(DefiningParentOffset),
+        DieTag(DieTag), UnitID(UnitID), IsTU(IsTU) {}
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -291,8 +291,7 @@ public:
   void normalizeDIEToOffset() {
     assert(!isNormalized() && "Accessing offset after normalizing.");
     const DIE *Entry = std::get<const DIE *>(OffsetVal);
-    ParentOffset = Entry->getParent() ? Entry->getParent()->getOffset()
-                                      : std::optional<uint64_t>();
+    ParentOffset = getDefiningParentDieOffset(*Entry);
     OffsetVal = Entry->getOffset();
   }
   bool isNormalized() const {
@@ -303,6 +302,10 @@ public:
     assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return ParentOffset;
   }
+
+  /// If `Die` has a non-null parent and the parent is not a declaration,
+  /// return its offset.
+  static std::optional<uint64_t> getDefiningParentDieOffset(const DIE &Die);
 
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
