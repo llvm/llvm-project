@@ -31,18 +31,18 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; AVX-32:       # %bb.0: # %L.entry
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm0
-; AVX-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
+; AVX-32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-32-NEXT:    vbroadcastss 304(%ecx), %xmm1
+; AVX-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7]
 ; AVX-32-NEXT:    vmovups %ymm0, 608(%eax)
 ; AVX-32-NEXT:    vzeroupper
 ; AVX-32-NEXT:    retl
 ;
 ; AVX-64-LABEL: PR15298:
 ; AVX-64:       # %bb.0: # %L.entry
-; AVX-64-NEXT:    vbroadcastss 304(%rdi), %xmm0
-; AVX-64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3,4,5,6,7]
+; AVX-64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-64-NEXT:    vbroadcastss 304(%rdi), %xmm1
+; AVX-64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3,4,5,6,7]
 ; AVX-64-NEXT:    vmovups %ymm0, 608(%rsi)
 ; AVX-64-NEXT:    vzeroupper
 ; AVX-64-NEXT:    retq

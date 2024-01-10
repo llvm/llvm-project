@@ -7,7 +7,7 @@
 define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; AVX2-LABEL: foo:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $40, %rsp
+; AVX2-NEXT:    subq $56, %rsp
 ; AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __extendhfsf2@PLT
@@ -20,9 +20,17 @@ define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; AVX2-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; AVX2-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX2-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
 ; AVX2-NEXT:    callq __truncsfhf2@PLT
-; AVX2-NEXT:    addq $40, %rsp
+; AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX2-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; AVX2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vaddss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX2-NEXT:    callq __truncsfhf2@PLT
+; AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
+; AVX2-NEXT:    addq $56, %rsp
 ; AVX2-NEXT:    retq
 ;
 ; F16C-LABEL: foo:
@@ -44,7 +52,10 @@ define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; FP16-LABEL: foo:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    vpsrld $16, %xmm0, %xmm1
-; FP16-NEXT:    vfmaddsub231ph {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; FP16-NEXT:    vmulph {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; FP16-NEXT:    vaddph %xmm0, %xmm1, %xmm2
+; FP16-NEXT:    vsubsh %xmm0, %xmm1, %xmm0
+; FP16-NEXT:    vmovsh %xmm0, %xmm2, %xmm0
 ; FP16-NEXT:    retq
   %2 = shufflevector <2 x half> %0, <2 x half> undef, <2 x i32> <i32 1, i32 2>
   %3 = fmul fast <2 x half> %2, <half 0xH3D3A, half 0xH3854>

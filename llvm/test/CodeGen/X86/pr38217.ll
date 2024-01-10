@@ -17,11 +17,11 @@ define dso_local void @_Z12d2s_bufferedmPc(i64 %arg, ptr nocapture %arg1) {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %r8
 ; CHECK-NEXT:    shrq $11, %rdx
-; CHECK-NEXT:    imulq $10000, %rdx, %rax # imm = 0x2710
-; CHECK-NEXT:    movq %rdi, %r9
-; CHECK-NEXT:    subq %rax, %r9
-; CHECK-NEXT:    imulq $42949673, %r9, %rax # imm = 0x28F5C29
-; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    imull $10000, %edx, %eax # imm = 0x2710
+; CHECK-NEXT:    movl %edi, %r9d
+; CHECK-NEXT:    subl %eax, %r9d
+; CHECK-NEXT:    imulq $1374389535, %r9, %rax # imm = 0x51EB851F
+; CHECK-NEXT:    shrq $37, %rax
 ; CHECK-NEXT:    imull $100, %eax, %r10d
 ; CHECK-NEXT:    subl %r10d, %r9d
 ; CHECK-NEXT:    movl %ecx, %r10d

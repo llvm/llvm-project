@@ -368,7 +368,7 @@ define void @complex_lea_alt4(i1 %b, ptr readnone %ptr, i64 %idx) {
 ; CHECK-NEXT:    addq $66, %rsi
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cmovneq %rax, %rsi
-; CHECK-NEXT:    decw (%rdx,%rsi)
+; CHECK-NEXT:    decw (%rsi,%rdx)
 ; CHECK-NEXT:    retq
   %i = ptrtoint ptr %ptr to i64
   %i66 = add i64 %i, 66
@@ -414,7 +414,7 @@ define void @complex_lea_alt6(i1 %b, ptr readnone %ptr, i64 %idx) {
 ; CHECK-NEXT:    addq $66, %rdx
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cmovneq %rax, %rdx
-; CHECK-NEXT:    decw (%rsi,%rdx)
+; CHECK-NEXT:    decw (%rdx,%rsi)
 ; CHECK-NEXT:    retq
   %i = ptrtoint ptr %ptr to i64
   %i66 = add i64 %idx, 66

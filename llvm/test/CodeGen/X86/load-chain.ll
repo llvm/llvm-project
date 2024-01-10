@@ -11,9 +11,9 @@ define void @translate(ptr %ptr) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movl $-32707, %ebp # imm = 0x803D
-; CHECK-NEXT:    andl (%rdi), %ebp
+; CHECK-NEXT:    movzwl (%rdi), %ebp
 ; CHECK-NEXT:    callq maybe_mutate@PLT
+; CHECK-NEXT:    andl $32829, %ebp # imm = 0x803D
 ; CHECK-NEXT:    orl $514, %ebp # imm = 0x202
 ; CHECK-NEXT:    movw %bp, (%rbx)
 ; CHECK-NEXT:    addq $8, %rsp

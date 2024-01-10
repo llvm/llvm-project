@@ -1133,10 +1133,10 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X87-NEXT:    movl %edi, 8(%esi)
-; X87-NEXT:    movl %edx, 12(%esi)
-; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %edi, 12(%esi)
+; X87-NEXT:    movl %edx, 8(%esi)
 ; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %eax, (%esi)
 ; X87-NEXT:    movl %esi, %eax
 ; X87-NEXT:    addl $36, %esp
 ; X87-NEXT:    popl %esi
@@ -1470,10 +1470,10 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X87-NEXT:    movl %edi, 8(%esi)
-; X87-NEXT:    movl %edx, 12(%esi)
-; X87-NEXT:    movl %eax, (%esi)
+; X87-NEXT:    movl %edi, 12(%esi)
+; X87-NEXT:    movl %edx, 8(%esi)
 ; X87-NEXT:    movl %ecx, 4(%esi)
+; X87-NEXT:    movl %eax, (%esi)
 ; X87-NEXT:    movl %esi, %eax
 ; X87-NEXT:    addl $36, %esp
 ; X87-NEXT:    popl %esi

@@ -198,7 +198,7 @@ define i1 @abs_ne_nonpow2(i16 %0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movswl %ax, %ecx
-; X86-NEXT:    sarl $15, %ecx
+; X86-NEXT:    shrl $15, %ecx
 ; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    movzwl %ax, %eax

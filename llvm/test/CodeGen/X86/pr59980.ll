@@ -8,8 +8,8 @@ define void @foo(ptr %0, ptr %1, ptr %2) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl (%rdx), %eax
-; CHECK-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    andl $15, %eax
+; CHECK-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    vpextrw $0, %xmm0, (%rsi,%rax,2)
 ; CHECK-NEXT:    retq
   %4 = bitcast ptr %2 to ptr

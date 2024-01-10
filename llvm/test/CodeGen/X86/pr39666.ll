@@ -4,7 +4,8 @@
 define <2 x i64> @test5(ptr %base, <2 x i64> %src0) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpinsrq $1, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    vmovddup (%rdi), %xmm1 # xmm1 = mem[0,0]
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
  %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr %base, <2 x i1> <i1 false, i1 true>, <2 x i64> %src0)
  ret <2 x i64>%res

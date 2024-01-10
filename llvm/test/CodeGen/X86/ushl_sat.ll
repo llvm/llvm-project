@@ -111,7 +111,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $7, %ecx
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl %eax, %edx

@@ -18,7 +18,7 @@ define i16 @isnonneg_i16(i16 %x) {
 ; CHECK-LABEL: isnonneg_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswl %di, %eax
-; CHECK-NEXT:    sarl $15, %eax
+; CHECK-NEXT:    shrl $15, %eax
 ; CHECK-NEXT:    orl $542, %eax # imm = 0x21E
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq

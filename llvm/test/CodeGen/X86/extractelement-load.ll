@@ -406,10 +406,10 @@ define i32 @main() nounwind {
 ; X32-SSE2-NEXT:    andl $-32, %esp
 ; X32-SSE2-NEXT:    subl $64, %esp
 ; X32-SSE2-NEXT:    movdqa zero, %xmm0
-; X32-SSE2-NEXT:    movaps n1+16, %xmm1
-; X32-SSE2-NEXT:    movaps n1, %xmm2
-; X32-SSE2-NEXT:    movaps %xmm2, zero
-; X32-SSE2-NEXT:    movaps %xmm1, zero+16
+; X32-SSE2-NEXT:    movaps n1, %xmm1
+; X32-SSE2-NEXT:    movaps n1+16, %xmm2
+; X32-SSE2-NEXT:    movaps %xmm2, zero+16
+; X32-SSE2-NEXT:    movaps %xmm1, zero
 ; X32-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
 ; X32-SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE2-NEXT:    movaps %xmm1, (%esp)
@@ -444,8 +444,8 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    movq n1@GOTPCREL(%rip), %rax
 ; X64-SSSE3-NEXT:    movaps (%rax), %xmm1
 ; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm2
-; X64-SSSE3-NEXT:    movaps %xmm1, zero(%rip)
 ; X64-SSSE3-NEXT:    movaps %xmm2, zero+16(%rip)
+; X64-SSSE3-NEXT:    movaps %xmm1, zero(%rip)
 ; X64-SSSE3-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
 ; X64-SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; X64-SSSE3-NEXT:    movaps %xmm1, (%rsp)

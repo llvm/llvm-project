@@ -16,7 +16,7 @@ define dso_local i32 @main() nounwind {
 ; CHECK-NEXT:    movq b@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq $1, (%rax)
 ; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl (%rax), %ecx
+; CHECK-NEXT:    movslq (%rax), %rcx
 ; CHECK-NEXT:    movl $-2, %eax
 ; CHECK-NEXT:    sarl %cl, %eax
 ; CHECK-NEXT:    movq c@GOTPCREL(%rip), %rdx

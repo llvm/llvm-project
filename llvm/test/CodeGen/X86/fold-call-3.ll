@@ -60,8 +60,8 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(ptr %Val, ptr %Acti
 ; pre-RA-NEXT:    movq %rax, %rsi
 ; pre-RA-NEXT:    callq *560(%rcx)
 ; pre-RA-NEXT:    incl %ebp
-; pre-RA-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; pre-RA-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; pre-RA-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; pre-RA-NEXT:    cmpl _NumTrials(%rip), %ebp
 ; pre-RA-NEXT:    jb LBB0_2
 ; pre-RA-NEXT:  ## %bb.3:

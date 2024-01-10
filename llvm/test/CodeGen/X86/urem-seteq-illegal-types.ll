@@ -62,22 +62,33 @@ define i1 @test_urem_even(i27 %X) nounwind {
 define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; X86-LABEL: test_urem_odd_setne:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %ecx
-; X86-NEXT:    leal (%eax,%ecx,4), %eax
-; X86-NEXT:    andb $15, %al
-; X86-NEXT:    cmpb $4, %al
-; X86-NEXT:    setae %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %edx
+; X86-NEXT:    leal (%ecx,%edx,4), %ecx
+; X86-NEXT:    shrb $6, %cl
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
+; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    testb $15, %al
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_odd_setne:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi,2), %eax
-; X64-NEXT:    leal (%rdi,%rax,4), %eax
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andb $15, %al
-; X64-NEXT:    cmpb $4, %al
-; X64-NEXT:    setae %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    leal (%rax,%rax,2), %ecx
+; X64-NEXT:    leal (%rax,%rcx,4), %eax
+; X64-NEXT:    shrb $6, %al
+; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    leal (%rax,%rax,4), %eax
+; X64-NEXT:    subb %al, %dil
+; X64-NEXT:    testb $15, %dil
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %urem = urem i4 %X, 5
   %cmp = icmp ne i4 %urem, 0

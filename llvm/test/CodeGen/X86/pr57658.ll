@@ -6,9 +6,8 @@ define <2 x double> @f(<2 x double> %I) {
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    mulpd %xmm1, %xmm0
 ; CHECK-NEXT:    mulpd %xmm0, %xmm1
-; CHECK-NEXT:    mulpd %xmm0, %xmm1
-; CHECK-NEXT:    mulpd %xmm0, %xmm0
 ; CHECK-NEXT:    mulpd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 BB:

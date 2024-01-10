@@ -35,21 +35,21 @@ define i8 @bitselect_i8(i8 %a, i8 %b, i8 %m) nounwind {
 define i16 @bitselect_i16(i16 %a, i16 %b, i16 %m) nounwind {
 ; X86-LABEL: bitselect_i16:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorw %ax, %cx
+; X86-NEXT:    andw %cx, %ax
+; X86-NEXT:    notl %ecx
 ; X86-NEXT:    andw {{[0-9]+}}(%esp), %cx
-; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bitselect_i16:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    movl %edx, %eax
-; X64-NOBMI-NEXT:    andl %edx, %esi
-; X64-NOBMI-NEXT:    notl %eax
-; X64-NOBMI-NEXT:    andl %edi, %eax
-; X64-NOBMI-NEXT:    orl %esi, %eax
+; X64-NOBMI-NEXT:    movl %esi, %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
+; X64-NOBMI-NEXT:    andl %edx, %eax
+; X64-NOBMI-NEXT:    xorl %edi, %eax
 ; X64-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NOBMI-NEXT:    retq
 ;

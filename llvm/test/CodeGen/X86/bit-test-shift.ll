@@ -5,10 +5,12 @@
 define i32 @x(i32 %t) nounwind readnone ssp {
 ; CHECK-LABEL: x:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    shll $23, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    andl $-26, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    movl $-26, %eax
+; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    retl
 entry:
   %and = and i32 %t, 256

@@ -10,11 +10,13 @@ define i16 @f(i64 %x, double %y) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm1, atomic
-; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    movsd %xmm1, atomic2
-; CHECK-NEXT:    movsd %xmm0, anything
+; CHECK-NEXT:    movsd %xmm0, atomic
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movsd %xmm0, atomic2
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %ecx, anything+4
+; CHECK-NEXT:    movl %eax, anything
 ; CHECK-NEXT:    movl ioport, %ecx
 ; CHECK-NEXT:    movl ioport, %eax
 ; CHECK-NEXT:    shrl $16, %eax

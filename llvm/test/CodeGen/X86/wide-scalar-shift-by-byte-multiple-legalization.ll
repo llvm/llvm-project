@@ -671,12 +671,12 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    andl $15, %ecx
 ; X86-SSE2-NEXT:    movl (%esp,%ecx), %edx
 ; X86-SSE2-NEXT:    movl 4(%esp,%ecx), %esi
-; X86-SSE2-NEXT:    movl 12(%esp,%ecx), %edi
-; X86-SSE2-NEXT:    movl 8(%esp,%ecx), %ecx
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
-; X86-SSE2-NEXT:    movl %edi, 12(%eax)
-; X86-SSE2-NEXT:    movl %edx, (%eax)
+; X86-SSE2-NEXT:    movl 8(%esp,%ecx), %edi
+; X86-SSE2-NEXT:    movl 12(%esp,%ecx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
+; X86-SSE2-NEXT:    movl %edi, 8(%eax)
 ; X86-SSE2-NEXT:    movl %esi, 4(%eax)
+; X86-SSE2-NEXT:    movl %edx, (%eax)
 ; X86-SSE2-NEXT:    addl $32, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -827,12 +827,12 @@ define void @shl_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movsbl %cl, %ecx
 ; X86-SSE2-NEXT:    movl 16(%esp,%ecx), %edx
 ; X86-SSE2-NEXT:    movl 20(%esp,%ecx), %esi
-; X86-SSE2-NEXT:    movl 28(%esp,%ecx), %edi
-; X86-SSE2-NEXT:    movl 24(%esp,%ecx), %ecx
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
-; X86-SSE2-NEXT:    movl %edi, 12(%eax)
-; X86-SSE2-NEXT:    movl %edx, (%eax)
+; X86-SSE2-NEXT:    movl 24(%esp,%ecx), %edi
+; X86-SSE2-NEXT:    movl 28(%esp,%ecx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
+; X86-SSE2-NEXT:    movl %edi, 8(%eax)
 ; X86-SSE2-NEXT:    movl %esi, 4(%eax)
+; X86-SSE2-NEXT:    movl %edx, (%eax)
 ; X86-SSE2-NEXT:    addl $32, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -986,12 +986,12 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    andl $15, %ecx
 ; X86-SSE2-NEXT:    movl (%esp,%ecx), %edx
 ; X86-SSE2-NEXT:    movl 4(%esp,%ecx), %esi
-; X86-SSE2-NEXT:    movl 12(%esp,%ecx), %edi
-; X86-SSE2-NEXT:    movl 8(%esp,%ecx), %ecx
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
-; X86-SSE2-NEXT:    movl %edi, 12(%eax)
-; X86-SSE2-NEXT:    movl %edx, (%eax)
+; X86-SSE2-NEXT:    movl 8(%esp,%ecx), %edi
+; X86-SSE2-NEXT:    movl 12(%esp,%ecx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
+; X86-SSE2-NEXT:    movl %edi, 8(%eax)
 ; X86-SSE2-NEXT:    movl %esi, 4(%eax)
+; X86-SSE2-NEXT:    movl %edx, (%eax)
 ; X86-SSE2-NEXT:    addl $32, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -1088,12 +1088,12 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    andl $31, %esi
 ; X64-SSE2-NEXT:    movq -64(%rsp,%rsi), %rax
 ; X64-SSE2-NEXT:    movq -56(%rsp,%rsi), %rcx
-; X64-SSE2-NEXT:    movq -40(%rsp,%rsi), %rdi
-; X64-SSE2-NEXT:    movq -48(%rsp,%rsi), %rsi
-; X64-SSE2-NEXT:    movq %rsi, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rax, (%rdx)
+; X64-SSE2-NEXT:    movq -48(%rsp,%rsi), %rdi
+; X64-SSE2-NEXT:    movq -40(%rsp,%rsi), %rsi
+; X64-SSE2-NEXT:    movq %rsi, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rcx, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rax, (%rdx)
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: lshr_32bytes:
@@ -1121,10 +1121,8 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    andl $31, %eax
-; X64-AVX-NEXT:    vmovups -64(%rsp,%rax), %xmm0
-; X64-AVX-NEXT:    vmovups -48(%rsp,%rax), %xmm1
-; X64-AVX-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX-NEXT:    vmovups -64(%rsp,%rax), %ymm0
+; X64-AVX-NEXT:    vmovups %ymm0, (%rdx)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 ;
@@ -1171,23 +1169,23 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 12(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 20(%esp,%eax), %esi
-; X86-SSE2-NEXT:    movl 16(%esp,%eax), %edi
-; X86-SSE2-NEXT:    movl 28(%esp,%eax), %ebx
-; X86-SSE2-NEXT:    movl 24(%esp,%eax), %ebp
-; X86-SSE2-NEXT:    movl 36(%esp,%eax), %edx
-; X86-SSE2-NEXT:    movl 32(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 16(%esp,%eax), %esi
+; X86-SSE2-NEXT:    movl 20(%esp,%eax), %edi
+; X86-SSE2-NEXT:    movl 24(%esp,%eax), %ebx
+; X86-SSE2-NEXT:    movl 28(%esp,%eax), %ebp
+; X86-SSE2-NEXT:    movl 32(%esp,%eax), %edx
+; X86-SSE2-NEXT:    movl 36(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
-; X86-SSE2-NEXT:    movl %edx, 28(%eax)
-; X86-SSE2-NEXT:    movl %ebp, 16(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 20(%eax)
-; X86-SSE2-NEXT:    movl %edi, 8(%eax)
-; X86-SSE2-NEXT:    movl %esi, 12(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
+; X86-SSE2-NEXT:    movl %edx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ebp, 20(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 16(%eax)
+; X86-SSE2-NEXT:    movl %edi, 12(%eax)
+; X86-SSE2-NEXT:    movl %esi, 8(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $72, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -1229,10 +1227,8 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    vmovups %ymm0, (%esp)
 ; X86-AVX-NEXT:    andl $31, %ecx
-; X86-AVX-NEXT:    vmovups (%esp,%ecx), %xmm0
-; X86-AVX-NEXT:    vmovups 16(%esp,%ecx), %xmm1
-; X86-AVX-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovups (%esp,%ecx), %ymm0
+; X86-AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86-AVX-NEXT:    addl $64, %esp
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
@@ -1264,12 +1260,12 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    movsbq %sil, %rax
 ; X64-SSE2-NEXT:    movq -32(%rsp,%rax), %rcx
 ; X64-SSE2-NEXT:    movq -24(%rsp,%rax), %rsi
-; X64-SSE2-NEXT:    movq -8(%rsp,%rax), %rdi
-; X64-SSE2-NEXT:    movq -16(%rsp,%rax), %rax
-; X64-SSE2-NEXT:    movq %rax, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rcx, (%rdx)
+; X64-SSE2-NEXT:    movq -16(%rsp,%rax), %rdi
+; X64-SSE2-NEXT:    movq -8(%rsp,%rax), %rax
+; X64-SSE2-NEXT:    movq %rax, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rsi, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rcx, (%rdx)
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: shl_32bytes:
@@ -1301,10 +1297,8 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX-NEXT:    andb $31, %al
 ; X64-AVX-NEXT:    negb %al
 ; X64-AVX-NEXT:    movsbq %al, %rax
-; X64-AVX-NEXT:    vmovups -32(%rsp,%rax), %xmm0
-; X64-AVX-NEXT:    vmovups -16(%rsp,%rax), %xmm1
-; X64-AVX-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX-NEXT:    vmovups -32(%rsp,%rax), %ymm0
+; X64-AVX-NEXT:    vmovups %ymm0, (%rdx)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 ;
@@ -1348,28 +1342,28 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    andb $31, %al
 ; X86-SSE2-NEXT:    negb %al
-; X86-SSE2-NEXT:    movsbl %al, %edx
-; X86-SSE2-NEXT:    movl 40(%esp,%edx), %eax
+; X86-SSE2-NEXT:    movsbl %al, %ecx
+; X86-SSE2-NEXT:    movl 40(%esp,%ecx), %eax
 ; X86-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 44(%esp,%edx), %eax
+; X86-SSE2-NEXT:    movl 44(%esp,%ecx), %eax
 ; X86-SSE2-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 52(%esp,%edx), %esi
-; X86-SSE2-NEXT:    movl 48(%esp,%edx), %edi
-; X86-SSE2-NEXT:    movl 60(%esp,%edx), %ebx
-; X86-SSE2-NEXT:    movl 56(%esp,%edx), %ebp
-; X86-SSE2-NEXT:    movl 68(%esp,%edx), %ecx
-; X86-SSE2-NEXT:    movl 64(%esp,%edx), %edx
+; X86-SSE2-NEXT:    movl 48(%esp,%ecx), %esi
+; X86-SSE2-NEXT:    movl 52(%esp,%ecx), %edi
+; X86-SSE2-NEXT:    movl 56(%esp,%ecx), %ebx
+; X86-SSE2-NEXT:    movl 60(%esp,%ecx), %ebp
+; X86-SSE2-NEXT:    movl 64(%esp,%ecx), %edx
+; X86-SSE2-NEXT:    movl 68(%esp,%ecx), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %edx, 24(%eax)
 ; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
-; X86-SSE2-NEXT:    movl %ebp, 16(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 20(%eax)
-; X86-SSE2-NEXT:    movl %edi, 8(%eax)
-; X86-SSE2-NEXT:    movl %esi, 12(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %edx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ebp, 20(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 16(%eax)
+; X86-SSE2-NEXT:    movl %edi, 12(%eax)
+; X86-SSE2-NEXT:    movl %esi, 8(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $72, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -1415,10 +1409,8 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX-NEXT:    andb $31, %cl
 ; X86-AVX-NEXT:    negb %cl
 ; X86-AVX-NEXT:    movsbl %cl, %ecx
-; X86-AVX-NEXT:    vmovups 32(%esp,%ecx), %xmm0
-; X86-AVX-NEXT:    vmovups 48(%esp,%ecx), %xmm1
-; X86-AVX-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovups 32(%esp,%ecx), %ymm0
+; X86-AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86-AVX-NEXT:    addl $64, %esp
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
@@ -1449,12 +1441,12 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    andl $31, %esi
 ; X64-SSE2-NEXT:    movq -64(%rsp,%rsi), %rax
 ; X64-SSE2-NEXT:    movq -56(%rsp,%rsi), %rcx
-; X64-SSE2-NEXT:    movq -40(%rsp,%rsi), %rdi
-; X64-SSE2-NEXT:    movq -48(%rsp,%rsi), %rsi
-; X64-SSE2-NEXT:    movq %rsi, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rax, (%rdx)
+; X64-SSE2-NEXT:    movq -48(%rsp,%rsi), %rdi
+; X64-SSE2-NEXT:    movq -40(%rsp,%rsi), %rsi
+; X64-SSE2-NEXT:    movq %rsi, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rcx, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rax, (%rdx)
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: ashr_32bytes:
@@ -1493,10 +1485,9 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    andl $31, %esi
-; X64-AVX-NEXT:    vmovups -64(%rsp,%rsi), %xmm0
-; X64-AVX-NEXT:    vmovups -48(%rsp,%rsi), %xmm1
-; X64-AVX-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX-NEXT:    vmovups -64(%rsp,%rsi), %ymm0
+; X64-AVX-NEXT:    vmovups %ymm0, (%rdx)
+; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: ashr_32bytes:
@@ -1543,23 +1534,23 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 12(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 20(%esp,%eax), %esi
-; X86-SSE2-NEXT:    movl 16(%esp,%eax), %edi
-; X86-SSE2-NEXT:    movl 28(%esp,%eax), %ebx
-; X86-SSE2-NEXT:    movl 24(%esp,%eax), %ebp
-; X86-SSE2-NEXT:    movl 36(%esp,%eax), %edx
-; X86-SSE2-NEXT:    movl 32(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 16(%esp,%eax), %esi
+; X86-SSE2-NEXT:    movl 20(%esp,%eax), %edi
+; X86-SSE2-NEXT:    movl 24(%esp,%eax), %ebx
+; X86-SSE2-NEXT:    movl 28(%esp,%eax), %ebp
+; X86-SSE2-NEXT:    movl 32(%esp,%eax), %edx
+; X86-SSE2-NEXT:    movl 36(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
-; X86-SSE2-NEXT:    movl %edx, 28(%eax)
-; X86-SSE2-NEXT:    movl %ebp, 16(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 20(%eax)
-; X86-SSE2-NEXT:    movl %edi, 8(%eax)
-; X86-SSE2-NEXT:    movl %esi, 12(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
+; X86-SSE2-NEXT:    movl %edx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ebp, 20(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 16(%eax)
+; X86-SSE2-NEXT:    movl %edi, 12(%eax)
+; X86-SSE2-NEXT:    movl %esi, 8(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $72, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -1637,14 +1628,13 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-AVX-NEXT:    andl $31, %ecx
-; X86-AVX-NEXT:    vmovups (%esp,%ecx), %xmm0
-; X86-AVX-NEXT:    vmovups 16(%esp,%ecx), %xmm1
-; X86-AVX-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovups (%esp,%ecx), %ymm0
+; X86-AVX-NEXT:    vmovups %ymm0, (%eax)
 ; X86-AVX-NEXT:    addl $64, %esp
 ; X86-AVX-NEXT:    popl %esi
 ; X86-AVX-NEXT:    popl %edi
 ; X86-AVX-NEXT:    popl %ebx
+; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
   %src = load i256, ptr %src.ptr, align 1
   %byteOff = load i256, ptr %byteOff.ptr, align 1
@@ -1686,20 +1676,20 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    andl $63, %esi
 ; X64-SSE2-NEXT:    movq -128(%rsp,%rsi), %rax
 ; X64-SSE2-NEXT:    movq -120(%rsp,%rsi), %rcx
-; X64-SSE2-NEXT:    movq -104(%rsp,%rsi), %rdi
-; X64-SSE2-NEXT:    movq -112(%rsp,%rsi), %r8
-; X64-SSE2-NEXT:    movq -88(%rsp,%rsi), %r9
-; X64-SSE2-NEXT:    movq -96(%rsp,%rsi), %r10
-; X64-SSE2-NEXT:    movq -72(%rsp,%rsi), %r11
-; X64-SSE2-NEXT:    movq -80(%rsp,%rsi), %rsi
-; X64-SSE2-NEXT:    movq %rsi, 48(%rdx)
-; X64-SSE2-NEXT:    movq %r11, 56(%rdx)
-; X64-SSE2-NEXT:    movq %r10, 32(%rdx)
-; X64-SSE2-NEXT:    movq %r9, 40(%rdx)
-; X64-SSE2-NEXT:    movq %r8, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rax, (%rdx)
+; X64-SSE2-NEXT:    movq -112(%rsp,%rsi), %rdi
+; X64-SSE2-NEXT:    movq -104(%rsp,%rsi), %r8
+; X64-SSE2-NEXT:    movq -96(%rsp,%rsi), %r9
+; X64-SSE2-NEXT:    movq -88(%rsp,%rsi), %r10
+; X64-SSE2-NEXT:    movq -80(%rsp,%rsi), %r11
+; X64-SSE2-NEXT:    movq -72(%rsp,%rsi), %rsi
+; X64-SSE2-NEXT:    movq %rsi, 56(%rdx)
+; X64-SSE2-NEXT:    movq %r11, 48(%rdx)
+; X64-SSE2-NEXT:    movq %r10, 40(%rdx)
+; X64-SSE2-NEXT:    movq %r9, 32(%rdx)
+; X64-SSE2-NEXT:    movq %r8, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rcx, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rax, (%rdx)
 ; X64-SSE2-NEXT:    popq %rbx
 ; X64-SSE2-NEXT:    retq
 ;
@@ -1725,8 +1715,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE42-NEXT:    movups -96(%rsp,%rax), %xmm2
 ; X64-SSE42-NEXT:    movups -80(%rsp,%rax), %xmm3
 ; X64-SSE42-NEXT:    movups %xmm3, 48(%rdx)
-; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm2, 32(%rdx)
+; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm0, (%rdx)
 ; X64-SSE42-NEXT:    retq
 ;
@@ -1741,14 +1731,10 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX1-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
 ; X64-AVX1-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX1-NEXT:    andl $63, %eax
-; X64-AVX1-NEXT:    vmovups -128(%rsp,%rax), %xmm0
-; X64-AVX1-NEXT:    vmovups -112(%rsp,%rax), %xmm1
-; X64-AVX1-NEXT:    vmovups -96(%rsp,%rax), %xmm2
-; X64-AVX1-NEXT:    vmovups -80(%rsp,%rax), %xmm3
-; X64-AVX1-NEXT:    vmovups %xmm3, 48(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm2, 32(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX1-NEXT:    vmovups -128(%rsp,%rax), %ymm0
+; X64-AVX1-NEXT:    vmovups -96(%rsp,%rax), %ymm1
+; X64-AVX1-NEXT:    vmovups %ymm1, 32(%rdx)
+; X64-AVX1-NEXT:    vmovups %ymm0, (%rdx)
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1760,14 +1746,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX512-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
 ; X64-AVX512-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; X64-AVX512-NEXT:    andl $63, %eax
-; X64-AVX512-NEXT:    vmovups -128(%rsp,%rax), %xmm0
-; X64-AVX512-NEXT:    vmovups -112(%rsp,%rax), %xmm1
-; X64-AVX512-NEXT:    vmovups -96(%rsp,%rax), %xmm2
-; X64-AVX512-NEXT:    vmovups -80(%rsp,%rax), %xmm3
-; X64-AVX512-NEXT:    vmovups %xmm3, 48(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm2, 32(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX512-NEXT:    vmovups -128(%rsp,%rax), %zmm0
+; X64-AVX512-NEXT:    vmovups %zmm0, (%rdx)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 ;
@@ -1854,55 +1834,55 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 44(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 52(%esp,%eax), %ecx
-; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 48(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 60(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 52(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 56(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 68(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 60(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 64(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 76(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 68(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 72(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 76(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 84(%esp,%eax), %ebp
-; X86-SSE2-NEXT:    movl 80(%esp,%eax), %ebx
-; X86-SSE2-NEXT:    movl 92(%esp,%eax), %edi
-; X86-SSE2-NEXT:    movl 88(%esp,%eax), %esi
-; X86-SSE2-NEXT:    movl 100(%esp,%eax), %edx
-; X86-SSE2-NEXT:    movl 96(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 80(%esp,%eax), %ebp
+; X86-SSE2-NEXT:    movl 84(%esp,%eax), %ebx
+; X86-SSE2-NEXT:    movl 88(%esp,%eax), %edi
+; X86-SSE2-NEXT:    movl 92(%esp,%eax), %esi
+; X86-SSE2-NEXT:    movl 96(%esp,%eax), %edx
+; X86-SSE2-NEXT:    movl 100(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %ecx, 56(%eax)
-; X86-SSE2-NEXT:    movl %edx, 60(%eax)
-; X86-SSE2-NEXT:    movl %esi, 48(%eax)
-; X86-SSE2-NEXT:    movl %edi, 52(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 40(%eax)
-; X86-SSE2-NEXT:    movl %ebp, 44(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 60(%eax)
+; X86-SSE2-NEXT:    movl %edx, 56(%eax)
+; X86-SSE2-NEXT:    movl %esi, 52(%eax)
+; X86-SSE2-NEXT:    movl %edi, 48(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 44(%eax)
+; X86-SSE2-NEXT:    movl %ebp, 40(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 36(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 20(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $168, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -1957,14 +1937,10 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX1-NEXT:    vmovups %ymm1, {{[0-9]+}}(%esp)
 ; X86-AVX1-NEXT:    vmovups %ymm0, (%esp)
 ; X86-AVX1-NEXT:    andl $63, %ecx
-; X86-AVX1-NEXT:    vmovups (%esp,%ecx), %xmm0
-; X86-AVX1-NEXT:    vmovups 16(%esp,%ecx), %xmm1
-; X86-AVX1-NEXT:    vmovups 32(%esp,%ecx), %xmm2
-; X86-AVX1-NEXT:    vmovups 48(%esp,%ecx), %xmm3
-; X86-AVX1-NEXT:    vmovups %xmm3, 48(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm2, 32(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX1-NEXT:    vmovups (%esp,%ecx), %ymm0
+; X86-AVX1-NEXT:    vmovups 32(%esp,%ecx), %ymm1
+; X86-AVX1-NEXT:    vmovups %ymm1, 32(%eax)
+; X86-AVX1-NEXT:    vmovups %ymm0, (%eax)
 ; X86-AVX1-NEXT:    addl $128, %esp
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
@@ -1981,14 +1957,8 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX512-NEXT:    vmovups %zmm1, {{[0-9]+}}(%esp)
 ; X86-AVX512-NEXT:    vmovups %zmm0, (%esp)
 ; X86-AVX512-NEXT:    andl $63, %ecx
-; X86-AVX512-NEXT:    vmovups (%esp,%ecx), %xmm0
-; X86-AVX512-NEXT:    vmovups 16(%esp,%ecx), %xmm1
-; X86-AVX512-NEXT:    vmovups 32(%esp,%ecx), %xmm2
-; X86-AVX512-NEXT:    vmovups 48(%esp,%ecx), %xmm3
-; X86-AVX512-NEXT:    vmovups %xmm3, 48(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm2, 32(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX512-NEXT:    vmovups (%esp,%ecx), %zmm0
+; X86-AVX512-NEXT:    vmovups %zmm0, (%eax)
 ; X86-AVX512-NEXT:    addl $128, %esp
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -2033,20 +2003,20 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    movslq %esi, %rax
 ; X64-SSE2-NEXT:    movq -64(%rsp,%rax), %rcx
 ; X64-SSE2-NEXT:    movq -56(%rsp,%rax), %rsi
-; X64-SSE2-NEXT:    movq -40(%rsp,%rax), %rdi
-; X64-SSE2-NEXT:    movq -48(%rsp,%rax), %r8
-; X64-SSE2-NEXT:    movq -24(%rsp,%rax), %r9
-; X64-SSE2-NEXT:    movq -32(%rsp,%rax), %r10
-; X64-SSE2-NEXT:    movq -8(%rsp,%rax), %r11
-; X64-SSE2-NEXT:    movq -16(%rsp,%rax), %rax
-; X64-SSE2-NEXT:    movq %rax, 48(%rdx)
-; X64-SSE2-NEXT:    movq %r11, 56(%rdx)
-; X64-SSE2-NEXT:    movq %r10, 32(%rdx)
-; X64-SSE2-NEXT:    movq %r9, 40(%rdx)
-; X64-SSE2-NEXT:    movq %r8, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rcx, (%rdx)
+; X64-SSE2-NEXT:    movq -48(%rsp,%rax), %rdi
+; X64-SSE2-NEXT:    movq -40(%rsp,%rax), %r8
+; X64-SSE2-NEXT:    movq -32(%rsp,%rax), %r9
+; X64-SSE2-NEXT:    movq -24(%rsp,%rax), %r10
+; X64-SSE2-NEXT:    movq -16(%rsp,%rax), %r11
+; X64-SSE2-NEXT:    movq -8(%rsp,%rax), %rax
+; X64-SSE2-NEXT:    movq %rax, 56(%rdx)
+; X64-SSE2-NEXT:    movq %r11, 48(%rdx)
+; X64-SSE2-NEXT:    movq %r10, 40(%rdx)
+; X64-SSE2-NEXT:    movq %r9, 32(%rdx)
+; X64-SSE2-NEXT:    movq %r8, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
 ; X64-SSE2-NEXT:    movq %rsi, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rcx, (%rdx)
 ; X64-SSE2-NEXT:    popq %rbx
 ; X64-SSE2-NEXT:    retq
 ;
@@ -2074,8 +2044,8 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE42-NEXT:    movups -32(%rsp,%rax), %xmm2
 ; X64-SSE42-NEXT:    movups -16(%rsp,%rax), %xmm3
 ; X64-SSE42-NEXT:    movups %xmm3, 48(%rdx)
-; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm2, 32(%rdx)
+; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm0, (%rdx)
 ; X64-SSE42-NEXT:    retq
 ;
@@ -2092,14 +2062,10 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX1-NEXT:    andl $63, %eax
 ; X64-AVX1-NEXT:    negl %eax
 ; X64-AVX1-NEXT:    cltq
-; X64-AVX1-NEXT:    vmovups -64(%rsp,%rax), %xmm0
-; X64-AVX1-NEXT:    vmovups -48(%rsp,%rax), %xmm1
-; X64-AVX1-NEXT:    vmovups -32(%rsp,%rax), %xmm2
-; X64-AVX1-NEXT:    vmovups -16(%rsp,%rax), %xmm3
-; X64-AVX1-NEXT:    vmovups %xmm3, 48(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm2, 32(%rdx)
-; X64-AVX1-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX1-NEXT:    vmovups -64(%rsp,%rax), %ymm0
+; X64-AVX1-NEXT:    vmovups -32(%rsp,%rax), %ymm1
+; X64-AVX1-NEXT:    vmovups %ymm1, 32(%rdx)
+; X64-AVX1-NEXT:    vmovups %ymm0, (%rdx)
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -2113,14 +2079,8 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-AVX512-NEXT:    andl $63, %eax
 ; X64-AVX512-NEXT:    negl %eax
 ; X64-AVX512-NEXT:    cltq
-; X64-AVX512-NEXT:    vmovups -64(%rsp,%rax), %xmm0
-; X64-AVX512-NEXT:    vmovups -48(%rsp,%rax), %xmm1
-; X64-AVX512-NEXT:    vmovups -32(%rsp,%rax), %xmm2
-; X64-AVX512-NEXT:    vmovups -16(%rsp,%rax), %xmm3
-; X64-AVX512-NEXT:    vmovups %xmm3, 48(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm2, 32(%rdx)
-; X64-AVX512-NEXT:    vmovups %xmm0, (%rdx)
+; X64-AVX512-NEXT:    vmovups -64(%rsp,%rax), %zmm0
+; X64-AVX512-NEXT:    vmovups %zmm0, (%rdx)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 ;
@@ -2187,8 +2147,8 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    andl $63, %eax
-; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    subl %eax, %ecx
+; X86-SSE2-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    subl %eax, %edx
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2205,60 +2165,60 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-SSE2-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movl (%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 4(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 12(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 8(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 20(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 16(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 28(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 24(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 36(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 32(%ecx), %edx
-; X86-SSE2-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 44(%ecx), %ebp
-; X86-SSE2-NEXT:    movl 40(%ecx), %ebx
-; X86-SSE2-NEXT:    movl 52(%ecx), %edi
-; X86-SSE2-NEXT:    movl 60(%ecx), %esi
-; X86-SSE2-NEXT:    movl 56(%ecx), %edx
+; X86-SSE2-NEXT:    movl (%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 8(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 12(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 16(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 20(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 24(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 28(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 32(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 36(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 40(%edx), %ecx
+; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 44(%edx), %ebp
+; X86-SSE2-NEXT:    movl 48(%edx), %ebx
+; X86-SSE2-NEXT:    movl 52(%edx), %edi
+; X86-SSE2-NEXT:    movl 56(%edx), %esi
+; X86-SSE2-NEXT:    movl 60(%edx), %ecx
 ; X86-SSE2-NEXT:    negl %eax
-; X86-SSE2-NEXT:    movl 152(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 108(%esp,%eax), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %edx, 56(%eax)
-; X86-SSE2-NEXT:    movl %esi, 60(%eax)
-; X86-SSE2-NEXT:    movl %ecx, 48(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 60(%eax)
+; X86-SSE2-NEXT:    movl %esi, 56(%eax)
 ; X86-SSE2-NEXT:    movl %edi, 52(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 40(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 48(%eax)
 ; X86-SSE2-NEXT:    movl %ebp, 44(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 40(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 36(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 20(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
+; X86-SSE2-NEXT:    movl %edx, 4(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $168, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -2290,13 +2250,13 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE42-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; X86-SSE42-NEXT:    subl %ecx, %edx
 ; X86-SSE42-NEXT:    movups (%edx), %xmm0
-; X86-SSE42-NEXT:    movups 16(%edx), %xmm1
-; X86-SSE42-NEXT:    movups 32(%edx), %xmm2
+; X86-SSE42-NEXT:    movups 32(%edx), %xmm1
+; X86-SSE42-NEXT:    movups 48(%edx), %xmm2
 ; X86-SSE42-NEXT:    negl %ecx
-; X86-SSE42-NEXT:    movups 112(%esp,%ecx), %xmm3
-; X86-SSE42-NEXT:    movups %xmm3, 48(%eax)
-; X86-SSE42-NEXT:    movups %xmm2, 32(%eax)
-; X86-SSE42-NEXT:    movups %xmm1, 16(%eax)
+; X86-SSE42-NEXT:    movups 80(%esp,%ecx), %xmm3
+; X86-SSE42-NEXT:    movups %xmm2, 48(%eax)
+; X86-SSE42-NEXT:    movups %xmm1, 32(%eax)
+; X86-SSE42-NEXT:    movups %xmm3, 16(%eax)
 ; X86-SSE42-NEXT:    movups %xmm0, (%eax)
 ; X86-SSE42-NEXT:    addl $128, %esp
 ; X86-SSE42-NEXT:    retl
@@ -2318,15 +2278,11 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX1-NEXT:    andl $63, %ecx
 ; X86-AVX1-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; X86-AVX1-NEXT:    subl %ecx, %edx
-; X86-AVX1-NEXT:    vmovups (%edx), %xmm0
-; X86-AVX1-NEXT:    vmovups 16(%edx), %xmm1
-; X86-AVX1-NEXT:    vmovups 32(%edx), %xmm2
+; X86-AVX1-NEXT:    vmovups (%edx), %ymm0
 ; X86-AVX1-NEXT:    negl %ecx
-; X86-AVX1-NEXT:    vmovups 112(%esp,%ecx), %xmm3
-; X86-AVX1-NEXT:    vmovups %xmm3, 48(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm2, 32(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX1-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX1-NEXT:    vmovups 96(%esp,%ecx), %ymm1
+; X86-AVX1-NEXT:    vmovups %ymm1, 32(%eax)
+; X86-AVX1-NEXT:    vmovups %ymm0, (%eax)
 ; X86-AVX1-NEXT:    addl $128, %esp
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
@@ -2343,17 +2299,9 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-AVX512-NEXT:    vmovups %zmm1, (%esp)
 ; X86-AVX512-NEXT:    vmovups %zmm0, {{[0-9]+}}(%esp)
 ; X86-AVX512-NEXT:    andl $63, %ecx
-; X86-AVX512-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; X86-AVX512-NEXT:    subl %ecx, %edx
-; X86-AVX512-NEXT:    vmovups (%edx), %xmm0
-; X86-AVX512-NEXT:    vmovups 16(%edx), %xmm1
-; X86-AVX512-NEXT:    vmovups 32(%edx), %xmm2
 ; X86-AVX512-NEXT:    negl %ecx
-; X86-AVX512-NEXT:    vmovups 112(%esp,%ecx), %xmm3
-; X86-AVX512-NEXT:    vmovups %xmm3, 48(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm2, 32(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX512-NEXT:    vmovups %xmm0, (%eax)
+; X86-AVX512-NEXT:    vmovups 64(%esp,%ecx), %zmm0
+; X86-AVX512-NEXT:    vmovups %zmm0, (%eax)
 ; X86-AVX512-NEXT:    addl $128, %esp
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -2367,24 +2315,25 @@ define void @shl_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-LABEL: ashr_64bytes:
 ; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    pushq %r14
 ; X64-SSE2-NEXT:    pushq %rbx
-; X64-SSE2-NEXT:    movq (%rdi), %rax
-; X64-SSE2-NEXT:    movq 8(%rdi), %rcx
-; X64-SSE2-NEXT:    movq 16(%rdi), %r8
-; X64-SSE2-NEXT:    movq 24(%rdi), %r9
-; X64-SSE2-NEXT:    movq 32(%rdi), %r10
-; X64-SSE2-NEXT:    movq 40(%rdi), %r11
-; X64-SSE2-NEXT:    movq 48(%rdi), %rbx
+; X64-SSE2-NEXT:    movq (%rdi), %rcx
+; X64-SSE2-NEXT:    movq 8(%rdi), %r8
+; X64-SSE2-NEXT:    movq 16(%rdi), %r9
+; X64-SSE2-NEXT:    movq 24(%rdi), %r10
+; X64-SSE2-NEXT:    movq 32(%rdi), %r11
+; X64-SSE2-NEXT:    movq 40(%rdi), %rbx
+; X64-SSE2-NEXT:    movq 48(%rdi), %r14
 ; X64-SSE2-NEXT:    movq 56(%rdi), %rdi
-; X64-SSE2-NEXT:    movl (%rsi), %esi
+; X64-SSE2-NEXT:    movl (%rsi), %eax
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; X64-SSE2-NEXT:    movq %r14, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rbx, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r11, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    sarq $63, %rdi
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
@@ -2394,24 +2343,25 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    andl $63, %esi
-; X64-SSE2-NEXT:    movq -128(%rsp,%rsi), %rax
-; X64-SSE2-NEXT:    movq -120(%rsp,%rsi), %rcx
-; X64-SSE2-NEXT:    movq -104(%rsp,%rsi), %rdi
-; X64-SSE2-NEXT:    movq -112(%rsp,%rsi), %r8
-; X64-SSE2-NEXT:    movq -88(%rsp,%rsi), %r9
-; X64-SSE2-NEXT:    movq -96(%rsp,%rsi), %r10
-; X64-SSE2-NEXT:    movq -72(%rsp,%rsi), %r11
-; X64-SSE2-NEXT:    movq -80(%rsp,%rsi), %rsi
-; X64-SSE2-NEXT:    movq %rsi, 48(%rdx)
-; X64-SSE2-NEXT:    movq %r11, 56(%rdx)
-; X64-SSE2-NEXT:    movq %r10, 32(%rdx)
-; X64-SSE2-NEXT:    movq %r9, 40(%rdx)
-; X64-SSE2-NEXT:    movq %r8, 16(%rdx)
-; X64-SSE2-NEXT:    movq %rdi, 24(%rdx)
-; X64-SSE2-NEXT:    movq %rax, (%rdx)
-; X64-SSE2-NEXT:    movq %rcx, 8(%rdx)
+; X64-SSE2-NEXT:    andl $63, %eax
+; X64-SSE2-NEXT:    movq -128(%rsp,%rax), %rcx
+; X64-SSE2-NEXT:    movq -120(%rsp,%rax), %rsi
+; X64-SSE2-NEXT:    movq -112(%rsp,%rax), %rdi
+; X64-SSE2-NEXT:    movq -104(%rsp,%rax), %r8
+; X64-SSE2-NEXT:    movq -96(%rsp,%rax), %r9
+; X64-SSE2-NEXT:    movq -88(%rsp,%rax), %r10
+; X64-SSE2-NEXT:    movq -80(%rsp,%rax), %r11
+; X64-SSE2-NEXT:    movq -72(%rsp,%rax), %rax
+; X64-SSE2-NEXT:    movq %rax, 56(%rdx)
+; X64-SSE2-NEXT:    movq %r11, 48(%rdx)
+; X64-SSE2-NEXT:    movq %r10, 40(%rdx)
+; X64-SSE2-NEXT:    movq %r9, 32(%rdx)
+; X64-SSE2-NEXT:    movq %r8, 24(%rdx)
+; X64-SSE2-NEXT:    movq %rdi, 16(%rdx)
+; X64-SSE2-NEXT:    movq %rsi, 8(%rdx)
+; X64-SSE2-NEXT:    movq %rcx, (%rdx)
 ; X64-SSE2-NEXT:    popq %rbx
+; X64-SSE2-NEXT:    popq %r14
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE42-LABEL: ashr_64bytes:
@@ -2442,42 +2392,64 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X64-SSE42-NEXT:    movups -96(%rsp,%rsi), %xmm2
 ; X64-SSE42-NEXT:    movups -80(%rsp,%rsi), %xmm3
 ; X64-SSE42-NEXT:    movups %xmm3, 48(%rdx)
-; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm2, 32(%rdx)
+; X64-SSE42-NEXT:    movups %xmm1, 16(%rdx)
 ; X64-SSE42-NEXT:    movups %xmm0, (%rdx)
 ; X64-SSE42-NEXT:    retq
 ;
-; X64-AVX-LABEL: ashr_64bytes:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX-NEXT:    vmovups 32(%rdi), %xmm1
-; X64-AVX-NEXT:    movq 48(%rdi), %rax
-; X64-AVX-NEXT:    movq 56(%rdi), %rcx
-; X64-AVX-NEXT:    movl (%rsi), %esi
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    sarq $63, %rcx
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    andl $63, %esi
-; X64-AVX-NEXT:    vmovups -128(%rsp,%rsi), %xmm0
-; X64-AVX-NEXT:    vmovups -112(%rsp,%rsi), %xmm1
-; X64-AVX-NEXT:    vmovups -96(%rsp,%rsi), %xmm2
-; X64-AVX-NEXT:    vmovups -80(%rsp,%rsi), %xmm3
-; X64-AVX-NEXT:    vmovups %xmm3, 48(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm1, 16(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm2, 32(%rdx)
-; X64-AVX-NEXT:    vmovups %xmm0, (%rdx)
-; X64-AVX-NEXT:    vzeroupper
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: ashr_64bytes:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
+; X64-AVX1-NEXT:    movq 48(%rdi), %rax
+; X64-AVX1-NEXT:    movq 56(%rdi), %rcx
+; X64-AVX1-NEXT:    movl (%rsi), %esi
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    sarq $63, %rcx
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX1-NEXT:    andl $63, %esi
+; X64-AVX1-NEXT:    vmovups -128(%rsp,%rsi), %ymm0
+; X64-AVX1-NEXT:    vmovups -96(%rsp,%rsi), %ymm1
+; X64-AVX1-NEXT:    vmovups %ymm1, 32(%rdx)
+; X64-AVX1-NEXT:    vmovups %ymm0, (%rdx)
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: ashr_64bytes:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX512-NEXT:    vmovups 32(%rdi), %xmm1
+; X64-AVX512-NEXT:    movq 48(%rdi), %rax
+; X64-AVX512-NEXT:    movq 56(%rdi), %rcx
+; X64-AVX512-NEXT:    movl (%rsi), %esi
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    vmovups %xmm1, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    sarq $63, %rcx
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; X64-AVX512-NEXT:    andl $63, %esi
+; X64-AVX512-NEXT:    vmovups -128(%rsp,%rsi), %zmm0
+; X64-AVX512-NEXT:    vmovups %zmm0, (%rdx)
+; X64-AVX512-NEXT:    vzeroupper
+; X64-AVX512-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: ashr_64bytes:
 ; X86-SSE2:       # %bb.0:
@@ -2563,55 +2535,55 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 44(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 52(%esp,%eax), %ecx
-; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 48(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 60(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 52(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 56(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 68(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 60(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 64(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 76(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 68(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE2-NEXT:    movl 72(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    movl 76(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-SSE2-NEXT:    movl 84(%esp,%eax), %ebp
-; X86-SSE2-NEXT:    movl 80(%esp,%eax), %ebx
-; X86-SSE2-NEXT:    movl 92(%esp,%eax), %edi
-; X86-SSE2-NEXT:    movl 88(%esp,%eax), %esi
-; X86-SSE2-NEXT:    movl 100(%esp,%eax), %edx
-; X86-SSE2-NEXT:    movl 96(%esp,%eax), %ecx
+; X86-SSE2-NEXT:    movl 80(%esp,%eax), %ebp
+; X86-SSE2-NEXT:    movl 84(%esp,%eax), %ebx
+; X86-SSE2-NEXT:    movl 88(%esp,%eax), %edi
+; X86-SSE2-NEXT:    movl 92(%esp,%eax), %esi
+; X86-SSE2-NEXT:    movl 96(%esp,%eax), %edx
+; X86-SSE2-NEXT:    movl 100(%esp,%eax), %ecx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %ecx, 56(%eax)
-; X86-SSE2-NEXT:    movl %edx, 60(%eax)
-; X86-SSE2-NEXT:    movl %esi, 48(%eax)
-; X86-SSE2-NEXT:    movl %edi, 52(%eax)
-; X86-SSE2-NEXT:    movl %ebx, 40(%eax)
-; X86-SSE2-NEXT:    movl %ebp, 44(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 60(%eax)
+; X86-SSE2-NEXT:    movl %edx, 56(%eax)
+; X86-SSE2-NEXT:    movl %esi, 52(%eax)
+; X86-SSE2-NEXT:    movl %edi, 48(%eax)
+; X86-SSE2-NEXT:    movl %ebx, 44(%eax)
+; X86-SSE2-NEXT:    movl %ebp, 40(%eax)
 ; X86-SSE2-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
-; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 36(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 32(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 28(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 24(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 20(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
+; X86-SSE2-NEXT:    movl %ecx, 16(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 12(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-SSE2-NEXT:    movl %ecx, (%eax)
+; X86-SSE2-NEXT:    movl %ecx, 8(%eax)
 ; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-SSE2-NEXT:    movl %ecx, 4(%eax)
+; X86-SSE2-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-SSE2-NEXT:    movl %ecx, (%eax)
 ; X86-SSE2-NEXT:    addl $168, %esp
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
@@ -2675,60 +2647,105 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; X86-SSE42-NEXT:    popl %ebx
 ; X86-SSE42-NEXT:    retl
 ;
-; X86-AVX-LABEL: ashr_64bytes:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    pushl %ebx
-; X86-AVX-NEXT:    pushl %edi
-; X86-AVX-NEXT:    pushl %esi
-; X86-AVX-NEXT:    subl $128, %esp
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX-NEXT:    vmovups (%edx), %ymm0
-; X86-AVX-NEXT:    vmovups 32(%edx), %xmm1
-; X86-AVX-NEXT:    movl 48(%edx), %esi
-; X86-AVX-NEXT:    movl 52(%edx), %edi
-; X86-AVX-NEXT:    movl 56(%edx), %ebx
-; X86-AVX-NEXT:    movl 60(%edx), %edx
-; X86-AVX-NEXT:    movl (%ecx), %ecx
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    vmovups %xmm1, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    vmovups %ymm0, (%esp)
-; X86-AVX-NEXT:    sarl $31, %edx
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-AVX-NEXT:    andl $63, %ecx
-; X86-AVX-NEXT:    vmovups (%esp,%ecx), %xmm0
-; X86-AVX-NEXT:    vmovups 16(%esp,%ecx), %xmm1
-; X86-AVX-NEXT:    vmovups 32(%esp,%ecx), %xmm2
-; X86-AVX-NEXT:    vmovups 48(%esp,%ecx), %xmm3
-; X86-AVX-NEXT:    vmovups %xmm3, 48(%eax)
-; X86-AVX-NEXT:    vmovups %xmm2, 32(%eax)
-; X86-AVX-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX-NEXT:    vmovups %xmm0, (%eax)
-; X86-AVX-NEXT:    addl $128, %esp
-; X86-AVX-NEXT:    popl %esi
-; X86-AVX-NEXT:    popl %edi
-; X86-AVX-NEXT:    popl %ebx
-; X86-AVX-NEXT:    vzeroupper
-; X86-AVX-NEXT:    retl
+; X86-AVX1-LABEL: ashr_64bytes:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    pushl %ebx
+; X86-AVX1-NEXT:    pushl %edi
+; X86-AVX1-NEXT:    pushl %esi
+; X86-AVX1-NEXT:    subl $128, %esp
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX1-NEXT:    vmovups (%edx), %ymm0
+; X86-AVX1-NEXT:    vmovups 32(%edx), %xmm1
+; X86-AVX1-NEXT:    movl 48(%edx), %esi
+; X86-AVX1-NEXT:    movl 52(%edx), %edi
+; X86-AVX1-NEXT:    movl 56(%edx), %ebx
+; X86-AVX1-NEXT:    movl 60(%edx), %edx
+; X86-AVX1-NEXT:    movl (%ecx), %ecx
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    vmovups %xmm1, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    vmovups %ymm0, (%esp)
+; X86-AVX1-NEXT:    sarl $31, %edx
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX1-NEXT:    andl $63, %ecx
+; X86-AVX1-NEXT:    vmovups (%esp,%ecx), %ymm0
+; X86-AVX1-NEXT:    vmovups 32(%esp,%ecx), %ymm1
+; X86-AVX1-NEXT:    vmovups %ymm1, 32(%eax)
+; X86-AVX1-NEXT:    vmovups %ymm0, (%eax)
+; X86-AVX1-NEXT:    addl $128, %esp
+; X86-AVX1-NEXT:    popl %esi
+; X86-AVX1-NEXT:    popl %edi
+; X86-AVX1-NEXT:    popl %ebx
+; X86-AVX1-NEXT:    vzeroupper
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX512-LABEL: ashr_64bytes:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    pushl %ebx
+; X86-AVX512-NEXT:    pushl %edi
+; X86-AVX512-NEXT:    pushl %esi
+; X86-AVX512-NEXT:    subl $128, %esp
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-AVX512-NEXT:    vmovups (%edx), %ymm0
+; X86-AVX512-NEXT:    vmovups 32(%edx), %xmm1
+; X86-AVX512-NEXT:    movl 48(%edx), %esi
+; X86-AVX512-NEXT:    movl 52(%edx), %edi
+; X86-AVX512-NEXT:    movl 56(%edx), %ebx
+; X86-AVX512-NEXT:    movl 60(%edx), %edx
+; X86-AVX512-NEXT:    movl (%ecx), %ecx
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    vmovups %xmm1, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    vmovups %ymm0, (%esp)
+; X86-AVX512-NEXT:    sarl $31, %edx
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-AVX512-NEXT:    andl $63, %ecx
+; X86-AVX512-NEXT:    vmovups (%esp,%ecx), %zmm0
+; X86-AVX512-NEXT:    vmovups %zmm0, (%eax)
+; X86-AVX512-NEXT:    addl $128, %esp
+; X86-AVX512-NEXT:    popl %esi
+; X86-AVX512-NEXT:    popl %edi
+; X86-AVX512-NEXT:    popl %ebx
+; X86-AVX512-NEXT:    vzeroupper
+; X86-AVX512-NEXT:    retl
   %src = load i512, ptr %src.ptr, align 1
   %byteOff = load i512, ptr %byteOff.ptr, align 1
   %bitOff = shl i512 %byteOff, 3

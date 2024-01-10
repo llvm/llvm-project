@@ -711,13 +711,10 @@ define <4 x i32> @combine_vec_shl_or1(<4 x i32> %x) {
 define <4 x i32> @combine_vec_shl_mul0(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_shl_mul0:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [20,20,20,20]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pslld $2, %xmm1
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    pslld $2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_shl_mul0:

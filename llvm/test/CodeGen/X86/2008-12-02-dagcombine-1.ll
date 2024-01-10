@@ -8,8 +8,11 @@ define ptr @test(ptr %a, ptr %L, ptr %P) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $-2, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    addl %ecx, %edx
+; CHECK-NEXT:    subl %edx, %eax
+; CHECK-NEXT:    leal -2(%eax,%ecx), %eax
 ; CHECK-NEXT:    retl
 entry:
         %0 = ptrtoint ptr %a to i32

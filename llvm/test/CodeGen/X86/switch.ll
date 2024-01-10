@@ -1416,10 +1416,10 @@ sw:
 define void @int_max_table_cluster(i8 %x) {
 ; CHECK-LABEL: int_max_table_cluster:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpb $-9, %dil
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    cmpl $247, %eax
 ; CHECK-NEXT:    ja .LBB15_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    jmpq *.LJTI15_0(,%rax,8)
 ; CHECK-NEXT:  .LBB15_2: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
@@ -2443,12 +2443,10 @@ return: ret void
 define void @pr23738(i4 %x) {
 ; CHECK-LABEL: pr23738:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $15, %al
-; CHECK-NEXT:    cmpb $11, %al
+; CHECK-NEXT:    andl $15, %edi
+; CHECK-NEXT:    cmpl $11, %edi
 ; CHECK-NEXT:    ja .LBB23_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    andl $15, %edi
 ; CHECK-NEXT:    movl $2051, %eax # imm = 0x803
 ; CHECK-NEXT:    btl %edi, %eax
 ; CHECK-NEXT:    jae .LBB23_2

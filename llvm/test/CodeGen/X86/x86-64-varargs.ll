@@ -29,18 +29,18 @@ define void @func(...) nounwind {
 ; CHECK-X64-NEXT:    movaps %xmm6, 192(%rsp)
 ; CHECK-X64-NEXT:    movaps %xmm7, 208(%rsp)
 ; CHECK-X64-NEXT:  LBB0_47: ## %entry
-; CHECK-X64-NEXT:    movq %rdi, 48(%rsp)
-; CHECK-X64-NEXT:    movq %rsi, 56(%rsp)
-; CHECK-X64-NEXT:    movq %rdx, 64(%rsp)
-; CHECK-X64-NEXT:    movq %rcx, 72(%rsp)
-; CHECK-X64-NEXT:    movq %r8, 80(%rsp)
 ; CHECK-X64-NEXT:    movq %r9, 88(%rsp)
+; CHECK-X64-NEXT:    movq %r8, 80(%rsp)
+; CHECK-X64-NEXT:    movq %rcx, 72(%rsp)
+; CHECK-X64-NEXT:    movq %rdx, 64(%rsp)
+; CHECK-X64-NEXT:    movq %rsi, 56(%rsp)
+; CHECK-X64-NEXT:    movq %rdi, 48(%rsp)
 ; CHECK-X64-NEXT:    movabsq $206158430208, %rax ## imm = 0x3000000000
 ; CHECK-X64-NEXT:    movq %rax, (%rsp)
-; CHECK-X64-NEXT:    leaq 240(%rsp), %rax
-; CHECK-X64-NEXT:    movq %rax, 8(%rsp)
 ; CHECK-X64-NEXT:    leaq 48(%rsp), %rax
 ; CHECK-X64-NEXT:    movq %rax, 16(%rsp)
+; CHECK-X64-NEXT:    leaq 240(%rsp), %rax
+; CHECK-X64-NEXT:    movq %rax, 8(%rsp)
 ; CHECK-X64-NEXT:    movl (%rsp), %ecx
 ; CHECK-X64-NEXT:    cmpl $48, %ecx
 ; CHECK-X64-NEXT:    jae LBB0_2
@@ -288,18 +288,18 @@ define void @func(...) nounwind {
 ; CHECK-X32-NEXT:    movaps %xmm6, 176(%esp)
 ; CHECK-X32-NEXT:    movaps %xmm7, 192(%esp)
 ; CHECK-X32-NEXT:  .LBB0_47: # %entry
-; CHECK-X32-NEXT:    movq %rdi, 32(%esp)
-; CHECK-X32-NEXT:    movq %rsi, 40(%esp)
-; CHECK-X32-NEXT:    movq %rdx, 48(%esp)
-; CHECK-X32-NEXT:    movq %rcx, 56(%esp)
-; CHECK-X32-NEXT:    movq %r8, 64(%esp)
 ; CHECK-X32-NEXT:    movq %r9, 72(%esp)
+; CHECK-X32-NEXT:    movq %r8, 64(%esp)
+; CHECK-X32-NEXT:    movq %rcx, 56(%esp)
+; CHECK-X32-NEXT:    movq %rdx, 48(%esp)
+; CHECK-X32-NEXT:    movq %rsi, 40(%esp)
+; CHECK-X32-NEXT:    movq %rdi, 32(%esp)
 ; CHECK-X32-NEXT:    movabsq $206158430208, %rax # imm = 0x3000000000
 ; CHECK-X32-NEXT:    movq %rax, (%esp)
-; CHECK-X32-NEXT:    leal 224(%rsp), %eax
-; CHECK-X32-NEXT:    movl %eax, 8(%esp)
 ; CHECK-X32-NEXT:    leal 32(%rsp), %eax
 ; CHECK-X32-NEXT:    movl %eax, 12(%esp)
+; CHECK-X32-NEXT:    leal 224(%rsp), %eax
+; CHECK-X32-NEXT:    movl %eax, 8(%esp)
 ; CHECK-X32-NEXT:    movl (%esp), %ecx
 ; CHECK-X32-NEXT:    cmpl $48, %ecx
 ; CHECK-X32-NEXT:    jae .LBB0_2

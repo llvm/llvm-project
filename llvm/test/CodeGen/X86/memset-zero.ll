@@ -735,10 +735,10 @@ define void @memset_64(ptr %a) nounwind  {
 ; SANDYBRIDGE-LABEL: memset_64:
 ; SANDYBRIDGE:       # %bb.0: # %entry
 ; SANDYBRIDGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; SANDYBRIDGE-NEXT:    vmovups %xmm0, 16(%rdi)
-; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
 ; SANDYBRIDGE-NEXT:    vmovups %xmm0, 48(%rdi)
 ; SANDYBRIDGE-NEXT:    vmovups %xmm0, 32(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, 16(%rdi)
+; SANDYBRIDGE-NEXT:    vmovups %xmm0, (%rdi)
 ; SANDYBRIDGE-NEXT:    retq
 ;
 ; SKYLAKE-LABEL: memset_64:

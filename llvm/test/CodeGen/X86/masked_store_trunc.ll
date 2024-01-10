@@ -514,8 +514,9 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB1_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -901,8 +902,9 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB2_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -1290,8 +1292,9 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB4_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -1521,8 +1524,9 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB5_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -1760,8 +1764,9 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB7_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -1879,8 +1884,9 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB8_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -3560,8 +3566,9 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB11_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -3937,8 +3944,9 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB12_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -4141,8 +4149,9 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB13_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -4315,8 +4324,9 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB14_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -4385,7 +4395,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    jne .LBB15_1
 ; SSE2-NEXT:  # %bb.2: # %else
@@ -4602,7 +4612,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    shll $16, %eax
 ; SSE4-NEXT:    orl %ecx, %eax
-; SSE4-NEXT:    testb $1, %al
+; SSE4-NEXT:    testb $1, %cl
 ; SSE4-NEXT:    jne .LBB15_1
 ; SSE4-NEXT:  # %bb.2: # %else
 ; SSE4-NEXT:    testb $2, %al
@@ -4847,7 +4857,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    notl %eax
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    testb $1, %al
+; AVX1-NEXT:    testb $1, %cl
 ; AVX1-NEXT:    jne .LBB15_1
 ; AVX1-NEXT:  # %bb.2: # %else
 ; AVX1-NEXT:    testb $2, %al
@@ -6407,8 +6417,9 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne .LBB17_1
 ; AVX512F-NEXT:  # %bb.2: # %else
 ; AVX512F-NEXT:    testb $2, %al

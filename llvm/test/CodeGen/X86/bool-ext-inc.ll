@@ -6,8 +6,8 @@
 define i32 @sext_inc(i1 zeroext %x) nounwind {
 ; CHECK-LABEL: sext_inc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl $1, %eax
 ; CHECK-NEXT:    retq
   %ext = sext i1 %x to i32
   %add = add i32 %ext, 1
@@ -19,8 +19,10 @@ define i32 @sext_inc(i1 zeroext %x) nounwind {
 define <4 x i32> @sext_inc_vec(<4 x i1> %x) nounwind {
 ; CHECK-LABEL: sext_inc_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
-; CHECK-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrad $31, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %ext = sext <4 x i1> %x to <4 x i32>
   %add = add <4 x i32> %ext, <i32 1, i32 1, i32 1, i32 1>
@@ -31,8 +33,8 @@ define <4 x i32> @cmpgt_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: cmpgt_sext_inc_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i32> %x, %y
   %ext = sext <4 x i1> %cmp to <4 x i32>
@@ -44,7 +46,8 @@ define <4 x i32> @cmpne_sext_inc_vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: cmpne_sext_inc_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %cmp = icmp ne <4 x i32> %x, %y
   %ext = sext <4 x i1> %cmp to <4 x i32>
@@ -56,8 +59,8 @@ define <4 x i64> @cmpgt_sext_inc_vec256(<4 x i64> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: cmpgt_sext_inc_vec256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; CHECK-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt <4 x i64> %x, %y
   %ext = sext <4 x i1> %cmp to <4 x i64>

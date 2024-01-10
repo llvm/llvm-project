@@ -64,12 +64,14 @@ define float @fdiv_extra_use_changes_cost(float %a0, float %a1, float %a2) nounw
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm2
-; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    subss %xmm1, %xmm0
-; CHECK-NEXT:    divss %xmm2, %xmm0
-; CHECK-NEXT:    movss %xmm0, (%esp)
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps %xmm2, %xmm3
+; CHECK-NEXT:    subss %xmm1, %xmm3
+; CHECK-NEXT:    mulss %xmm0, %xmm3
+; CHECK-NEXT:    subss %xmm2, %xmm1
+; CHECK-NEXT:    addss %xmm0, %xmm1
+; CHECK-NEXT:    divss %xmm3, %xmm1
+; CHECK-NEXT:    movss %xmm1, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl

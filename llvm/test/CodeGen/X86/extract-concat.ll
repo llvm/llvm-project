@@ -9,22 +9,17 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
-; SSE2-NEXT:    movl %eax, (%rdi)
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: foo:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE42-NEXT:    movl $255, %eax
 ; SSE42-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE42-NEXT:    movd %xmm0, (%rdi)
@@ -33,7 +28,7 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    movl $255, %eax
 ; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
@@ -162,11 +157,32 @@ define <4 x i32> @cat_ext_straddle(ptr %px, ptr %py) {
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: cat_ext_straddle:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: cat_ext_straddle:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps (%rdi), %ymm0
+; AVX1-NEXT:    vinsertf128 $1, (%rsi), %ymm0, %ymm1
+; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: cat_ext_straddle:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-NEXT:    vbroadcastsd (%rsi), %ymm1
+; AVX2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: cat_ext_straddle:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512F-NEXT:    vbroadcastsd (%rsi), %ymm1
+; AVX512F-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
   %x = load <6 x i32>, ptr %px
   %y = load <6 x i32>, ptr %py
   %cat = shufflevector <6 x i32> %x, <6 x i32> %y, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>

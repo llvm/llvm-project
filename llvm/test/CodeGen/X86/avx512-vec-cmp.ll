@@ -1187,14 +1187,22 @@ define <4 x i32> @test44(<4 x i16> %x, <4 x i16> %y) #0 {
 }
 
 define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
-; AVX512-LABEL: test45:
-; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x75,0xc1]
-; AVX512-NEXT:    vpmovzxwq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x34,0xc0]
-; AVX512-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
-; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; AVX512-NEXT:    retq ## encoding: [0xc3]
+; KNL-LABEL: test45:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x75,0xc1]
+; KNL-NEXT:    vpsrlw $15, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x71,0xd0,0x0f]
+; KNL-NEXT:    vpmovzxwq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x34,0xc0]
+; KNL-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; KNL-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512BW-LABEL: test45:
+; AVX512BW:       ## %bb.0:
+; AVX512BW-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x75,0xc1]
+; AVX512BW-NEXT:    vpmovzxwq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x34,0xc0]
+; AVX512BW-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; AVX512BW-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test45:
 ; SKX:       ## %bb.0:

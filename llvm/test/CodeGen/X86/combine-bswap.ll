@@ -42,15 +42,15 @@ define i32 @test_bswap_bswap(i32 %a0) nounwind {
 define i16 @test_bswap_srli_8_bswap_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bswap_srli_8_bswap_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_srli_8_bswap_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $8, %eax
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
     %1 = call i16 @llvm.bswap.i16(i16 %a)
@@ -106,7 +106,8 @@ define i16 @test_bswap_shli_8_bswap_i16(i16 %a) nounwind {
 ; X64-LABEL: test_bswap_shli_8_bswap_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movzbl %ah, %eax
+; X64-NEXT:    andl $65280, %eax # imm = 0xFF00
+; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
     %1 = call i16 @llvm.bswap.i16(i16 %a)
@@ -136,8 +137,12 @@ define i32 @test_bswap_shli_8_bswap_i32(i32 %a) nounwind {
 define i64 @test_bswap_shli_16_bswap_i64(i64 %a) nounwind {
 ; X86-LABEL: test_bswap_shli_16_bswap_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shrl $16, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_shli_16_bswap_i64:
@@ -220,7 +225,7 @@ define i64 @test_bswap64_shift48_zext(i16 %a0) {
 define i64 @test_bswap64_shift48(i64 %a0) {
 ; X86-LABEL: test_bswap64_shift48:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    xorl %edx, %edx

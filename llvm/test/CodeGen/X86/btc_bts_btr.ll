@@ -859,8 +859,8 @@ define void @btr_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:  .LBB33_2:
 ; X86-NEXT:    notl %esi
 ; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %edx, (%eax)
 ; X86-NEXT:    andl %esi, 4(%eax)
+; X86-NEXT:    andl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -899,8 +899,8 @@ define void @bts_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB34_2:
-; X86-NEXT:    orl %edx, (%eax)
 ; X86-NEXT:    orl %esi, 4(%eax)
+; X86-NEXT:    orl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -938,8 +938,8 @@ define void @btc_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB35_2:
-; X86-NEXT:    xorl %edx, (%eax)
 ; X86-NEXT:    xorl %esi, 4(%eax)
+; X86-NEXT:    xorl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -1027,8 +1027,8 @@ define i64 @btr_64_mask_zeros(i64 %x, i64 %n) {
 ;
 ; X86-LABEL: btr_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx
@@ -1062,8 +1062,8 @@ define i64 @bts_64_mask_zeros(i64 %x, i64 %n) {
 ;
 ; X86-LABEL: bts_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx
@@ -1094,8 +1094,8 @@ define i64 @btc_64_mask_zeros(i64 %x, i64 %n) {
 ;
 ; X86-LABEL: btc_64_mask_zeros:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shlb $2, %cl
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    shldl %cl, %eax, %edx

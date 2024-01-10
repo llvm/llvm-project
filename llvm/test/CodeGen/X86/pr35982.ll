@@ -5,8 +5,14 @@
 define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA-LABEL: PR35982_emms:
 ; NO-POSTRA:       # %bb.0:
-; NO-POSTRA-NEXT:    subl $8, %esp
-; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NO-POSTRA-NEXT:    pushl %ebp
+; NO-POSTRA-NEXT:    movl %esp, %ebp
+; NO-POSTRA-NEXT:    andl $-8, %esp
+; NO-POSTRA-NEXT:    subl $16, %esp
+; NO-POSTRA-NEXT:    movl 8(%ebp), %eax
+; NO-POSTRA-NEXT:    movl 12(%ebp), %ecx
+; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; NO-POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; NO-POSTRA-NEXT:    movd %mm0, %ecx
@@ -15,14 +21,21 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA-NEXT:    fildl (%esp)
 ; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; NO-POSTRA-NEXT:    addl $8, %esp
+; NO-POSTRA-NEXT:    movl %ebp, %esp
+; NO-POSTRA-NEXT:    popl %ebp
 ; NO-POSTRA-NEXT:    retl
 ;
 ; POSTRA-LABEL: PR35982_emms:
 ; POSTRA:       # %bb.0:
-; POSTRA-NEXT:    subl $8, %esp
+; POSTRA-NEXT:    pushl %ebp
+; POSTRA-NEXT:    movl %esp, %ebp
+; POSTRA-NEXT:    andl $-8, %esp
+; POSTRA-NEXT:    subl $16, %esp
+; POSTRA-NEXT:    movl 8(%ebp), %eax
+; POSTRA-NEXT:    movl 12(%ebp), %ecx
+; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; POSTRA-NEXT:    movd %mm0, %ecx
 ; POSTRA-NEXT:    emms
@@ -30,7 +43,8 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; POSTRA-NEXT:    fildl (%esp)
 ; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; POSTRA-NEXT:    addl $8, %esp
+; POSTRA-NEXT:    movl %ebp, %esp
+; POSTRA-NEXT:    popl %ebp
 ; POSTRA-NEXT:    retl
   %2 = bitcast <1 x i64> %0 to <2 x i32>
   %3 = extractelement <2 x i32> %2, i32 0
@@ -49,8 +63,14 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 define float @PR35982_femms(<1 x i64>) nounwind {
 ; NO-POSTRA-LABEL: PR35982_femms:
 ; NO-POSTRA:       # %bb.0:
-; NO-POSTRA-NEXT:    subl $8, %esp
-; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NO-POSTRA-NEXT:    pushl %ebp
+; NO-POSTRA-NEXT:    movl %esp, %ebp
+; NO-POSTRA-NEXT:    andl $-8, %esp
+; NO-POSTRA-NEXT:    subl $16, %esp
+; NO-POSTRA-NEXT:    movl 8(%ebp), %eax
+; NO-POSTRA-NEXT:    movl 12(%ebp), %ecx
+; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; NO-POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; NO-POSTRA-NEXT:    movd %mm0, %ecx
@@ -59,14 +79,21 @@ define float @PR35982_femms(<1 x i64>) nounwind {
 ; NO-POSTRA-NEXT:    fildl (%esp)
 ; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; NO-POSTRA-NEXT:    addl $8, %esp
+; NO-POSTRA-NEXT:    movl %ebp, %esp
+; NO-POSTRA-NEXT:    popl %ebp
 ; NO-POSTRA-NEXT:    retl
 ;
 ; POSTRA-LABEL: PR35982_femms:
 ; POSTRA:       # %bb.0:
-; POSTRA-NEXT:    subl $8, %esp
+; POSTRA-NEXT:    pushl %ebp
+; POSTRA-NEXT:    movl %esp, %ebp
+; POSTRA-NEXT:    andl $-8, %esp
+; POSTRA-NEXT:    subl $16, %esp
+; POSTRA-NEXT:    movl 8(%ebp), %eax
+; POSTRA-NEXT:    movl 12(%ebp), %ecx
+; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; POSTRA-NEXT:    movd %mm0, %ecx
 ; POSTRA-NEXT:    femms
@@ -74,7 +101,8 @@ define float @PR35982_femms(<1 x i64>) nounwind {
 ; POSTRA-NEXT:    fildl (%esp)
 ; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; POSTRA-NEXT:    addl $8, %esp
+; POSTRA-NEXT:    movl %ebp, %esp
+; POSTRA-NEXT:    popl %ebp
 ; POSTRA-NEXT:    retl
   %2 = bitcast <1 x i64> %0 to <2 x i32>
   %3 = extractelement <2 x i32> %2, i32 0

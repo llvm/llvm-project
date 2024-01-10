@@ -36,8 +36,8 @@ define i1 @canonical_parity(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    andl $1, %eax
-; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
+; POPCNT-NEXT:    testb $1, %al
+; POPCNT-NEXT:    setne %al
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
   %i2 = call i16 @llvm.ctpop.i16(i16 %i1)
@@ -50,23 +50,8 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; NOPOPCNT:       # %bb.0:
 ; NOPOPCNT-NEXT:    psllw $7, %xmm0
 ; NOPOPCNT-NEXT:    pmovmskb %xmm0, %eax
-; NOPOPCNT-NEXT:    movl %eax, %ecx
-; NOPOPCNT-NEXT:    shrl %ecx
-; NOPOPCNT-NEXT:    andl $21845, %ecx # imm = 0x5555
-; NOPOPCNT-NEXT:    subl %ecx, %eax
-; NOPOPCNT-NEXT:    movl %eax, %ecx
-; NOPOPCNT-NEXT:    andl $13107, %ecx # imm = 0x3333
-; NOPOPCNT-NEXT:    shrl $2, %eax
-; NOPOPCNT-NEXT:    andl $13107, %eax # imm = 0x3333
-; NOPOPCNT-NEXT:    addl %ecx, %eax
-; NOPOPCNT-NEXT:    movl %eax, %ecx
-; NOPOPCNT-NEXT:    shrl $4, %ecx
-; NOPOPCNT-NEXT:    addl %eax, %ecx
-; NOPOPCNT-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; NOPOPCNT-NEXT:    movl %ecx, %eax
-; NOPOPCNT-NEXT:    shrl $8, %eax
-; NOPOPCNT-NEXT:    addl %ecx, %eax
-; NOPOPCNT-NEXT:    # kill: def $al killed $al killed $eax
+; NOPOPCNT-NEXT:    xorb %ah, %al
+; NOPOPCNT-NEXT:    setnp %al
 ; NOPOPCNT-NEXT:    retq
 ;
 ; POPCNT-LABEL: canonical_parity_noncanonical_pred:
@@ -74,7 +59,9 @@ define i1 @canonical_parity_noncanonical_pred(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
+; POPCNT-NEXT:    andl $1, %eax
+; POPCNT-NEXT:    cmpw $1, %ax
+; POPCNT-NEXT:    sete %al
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
   %i2 = call i16 @llvm.ctpop.i16(i16 %i1)
@@ -143,8 +130,8 @@ define i1 @canonical_nonparity_noncanonical_pred(<16 x i1> %x) {
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
 ; POPCNT-NEXT:    andl $1, %eax
-; POPCNT-NEXT:    xorb $1, %al
-; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
+; POPCNT-NEXT:    cmpw $1, %ax
+; POPCNT-NEXT:    setne %al
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
   %i2 = call i16 @llvm.ctpop.i16(i16 %i1)

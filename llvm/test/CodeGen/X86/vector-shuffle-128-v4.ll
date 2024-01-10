@@ -1517,13 +1517,13 @@ define <4 x i32> @shuffle_v4i32_2345(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @shuffle_v4i32_2456(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: shuffle_v4i32_2456:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[0,1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,2],xmm1[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4i32_2456:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[0,1]
+; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,2],xmm1[0,0]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; SSE3-NEXT:    retq
 ;
@@ -2052,19 +2052,19 @@ define <4 x i32> @extract3_insert0_v4i32_7123(<4 x i32> %a0, <4 x i32> %a1) {
 define <4 x i32> @extract3_insert3_v4i32_0127(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE2-LABEL: extract3_insert3_v4i32_0127:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1],xmm0[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: extract3_insert3_v4i32_0127:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1],xmm0[2,3]
+; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: extract3_insert3_v4i32_0127:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1],xmm0[2,3]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; SSSE3-NEXT:    retq
 ;

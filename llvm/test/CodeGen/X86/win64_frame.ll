@@ -27,9 +27,9 @@ define void @f2(i32 %p, ...) "frame-pointer"="all" {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .seh_setframe %rbp, 0
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    movq %rdx, 32(%rbp)
-; CHECK-NEXT:    movq %r8, 40(%rbp)
 ; CHECK-NEXT:    movq %r9, 48(%rbp)
+; CHECK-NEXT:    movq %r8, 40(%rbp)
+; CHECK-NEXT:    movq %rdx, 32(%rbp)
 ; CHECK-NEXT:    leaq 32(%rbp), %rax
 ; CHECK-NEXT:    movq %rax, (%rbp)
 ; CHECK-NEXT:    addq $8, %rsp

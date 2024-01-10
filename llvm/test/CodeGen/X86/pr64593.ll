@@ -6,10 +6,8 @@
 define void @pr64593(ptr %p) {
 ; CHECK-LABEL: pr64593:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovqb %zmm0, (%rdi)
-; CHECK-NEXT:    movq $0, 8(%rdi)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %v = insertelement <8 x i64> zeroinitializer, i64 0, i32 1
   %trunc = trunc <8 x i64> %v to <8 x i8>

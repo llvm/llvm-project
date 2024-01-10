@@ -792,7 +792,8 @@ entry:
 define i1 @issubnormal_or_zero_f(float %x) {
 ; CHECK-32-LABEL: issubnormal_or_zero_f:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    sete %al
 ; CHECK-32-NEXT:    retl
 ;
@@ -810,7 +811,8 @@ entry:
 define i1 @issubnormal_or_zero_f_daz(float %x) #0 {
 ; CHECK-32-LABEL: issubnormal_or_zero_f_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    sete %al
 ; CHECK-32-NEXT:    retl
 ;
@@ -828,7 +830,8 @@ entry:
 define i1 @issubnormal_or_zero_f_maybe_daz(float %x) #1 {
 ; CHECK-32-LABEL: issubnormal_or_zero_f_maybe_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    sete %al
 ; CHECK-32-NEXT:    retl
 ;
@@ -846,7 +849,8 @@ entry:
 define i1 @not_issubnormal_or_zero_f(float %x) {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;
@@ -864,7 +868,8 @@ entry:
 define i1 @not_issubnormal_or_zero_f_daz(float %x) #0 {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;
@@ -882,7 +887,8 @@ entry:
 define i1 @not_issubnormal_or_zero_f_maybe_daz(float %x) #1 {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f_maybe_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    testl $32640, %eax # imm = 0x7F80
 ; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;

@@ -318,11 +318,11 @@ define void @vmw_host_printf(ptr %fmt, ...) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $200, %rsp
 ; CHECK-NEXT:    movq %r10, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq %rsi, -184(%rbp)
-; CHECK-NEXT:    movq %rdx, -176(%rbp)
-; CHECK-NEXT:    movq %rcx, -168(%rbp)
-; CHECK-NEXT:    movq %r8, -160(%rbp)
 ; CHECK-NEXT:    movq %r9, -152(%rbp)
+; CHECK-NEXT:    movq %r8, -160(%rbp)
+; CHECK-NEXT:    movq %rcx, -168(%rbp)
+; CHECK-NEXT:    movq %rdx, -176(%rbp)
+; CHECK-NEXT:    movq %rsi, -184(%rbp)
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -361,11 +361,11 @@ define void @vmw_host_printf(ptr %fmt, ...) nounwind {
 ; X32ABI-NEXT:    andl $-16, %esp
 ; X32ABI-NEXT:    subl $208, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
-; X32ABI-NEXT:    movq %rsi, 24(%ebx)
-; X32ABI-NEXT:    movq %rdx, 32(%ebx)
-; X32ABI-NEXT:    movq %rcx, 40(%ebx)
-; X32ABI-NEXT:    movq %r8, 48(%ebx)
 ; X32ABI-NEXT:    movq %r9, 56(%ebx)
+; X32ABI-NEXT:    movq %r8, 48(%ebx)
+; X32ABI-NEXT:    movq %rcx, 40(%ebx)
+; X32ABI-NEXT:    movq %rdx, 32(%ebx)
+; X32ABI-NEXT:    movq %rsi, 24(%ebx)
 ; X32ABI-NEXT:    testb %al, %al
 ; X32ABI-NEXT:    je .LBB3_2
 ; X32ABI-NEXT:  # %bb.1: # %entry

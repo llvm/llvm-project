@@ -407,8 +407,9 @@ define <4 x i1> @shl_to_ror_eq_4xi32_s8(<4 x i32> %x) {
 ;
 ; CHECK-AVX512-LABEL: shl_to_ror_eq_4xi32_s8:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vprold $8, %xmm0, %xmm1
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpslld $8, %xmm0, %xmm1
+; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
 ; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = shl <4 x i32> %x, <i32 8, i32 8, i32 8, i32 8>

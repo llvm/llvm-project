@@ -68,14 +68,14 @@ entry:
 define float @test_fneg_fma_subx_negy_negz_f32(float %w, float %x, float %y, float %z)  {
 ; FMA3-LABEL: test_fneg_fma_subx_negy_negz_f32:
 ; FMA3:       # %bb.0: # %entry
-; FMA3-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; FMA3-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm3
+; FMA3-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; FMA3-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: test_fneg_fma_subx_negy_negz_f32:
 ; FMA4:       # %bb.0: # %entry
-; FMA4-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; FMA4-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm2) + xmm3
+; FMA4-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; FMA4-NEXT:    vfnmaddss {{.*#+}} xmm0 = -(xmm0 * xmm2) + xmm3
 ; FMA4-NEXT:    retq
 entry:
   %subx = fsub nsz float %w, %x

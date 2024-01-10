@@ -4,6 +4,11 @@
 define float @same_dynamic_index_fp_vector_type(float %val, i32 %idx) {
 ; CHECK-LABEL: same_dynamic_index_fp_vector_type:
 ; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    andl $3, %edi
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
 bb:
   %tmp0 = insertelement <4 x float> undef, float %val, i32 %idx

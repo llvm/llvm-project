@@ -629,7 +629,8 @@ define void @usat_trunc_wb_128_mem(<8 x i16> %i, ptr %res) {
 ;
 ; SKX-LABEL: usat_trunc_wb_128_mem:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovuswb %xmm0, (%rdi)
+; SKX-NEXT:    vpmovuswb %xmm0, %xmm0
+; SKX-NEXT:    vmovq %xmm0, (%rdi)
 ; SKX-NEXT:    retq
   %x3 = icmp ult <8 x i16> %i, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <8 x i1> %x3, <8 x i16> %i, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -654,7 +655,8 @@ define void @usat_trunc_db_512_mem(<16 x i32> %i, ptr %res) {
 define void @usat_trunc_qb_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL-LABEL: usat_trunc_qb_512_mem:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpmovusqb %zmm0, (%rdi)
+; ALL-NEXT:    vpmovusqb %zmm0, %xmm0
+; ALL-NEXT:    vmovq %xmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %x3 = icmp ult <8 x i64> %i, <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
@@ -864,18 +866,11 @@ define <16 x i8> @smax_usat_trunc_wb_256(<16 x i16> %i) {
   }
 
 define void @smax_usat_trunc_wb_128_mem(<8 x i16> %i, ptr %res) {
-; KNL-LABEL: smax_usat_trunc_wb_128_mem:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
-; KNL-NEXT:    vmovq %xmm0, (%rdi)
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: smax_usat_trunc_wb_128_mem:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpmovuswb %xmm0, (%rdi)
-; SKX-NEXT:    retq
+; ALL-LABEL: smax_usat_trunc_wb_128_mem:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovq %xmm0, (%rdi)
+; ALL-NEXT:    retq
   %x1 = icmp sgt <8 x i16> %i, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
   %x2 = select <8 x i1> %x1, <8 x i16> %i, <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
   %x3 = icmp slt <8 x i16> %x2, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
@@ -907,7 +902,8 @@ define void @smax_usat_trunc_qb_512_mem(<8 x i64> %i, ptr %res) {
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vpmaxsq %zmm1, %zmm0, %zmm0
-; ALL-NEXT:    vpmovusqb %zmm0, (%rdi)
+; ALL-NEXT:    vpmovusqb %zmm0, %xmm0
+; ALL-NEXT:    vmovq %xmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %x1 = icmp sgt <8 x i64> %i, <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>

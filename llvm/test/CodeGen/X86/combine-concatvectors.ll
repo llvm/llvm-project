@@ -48,7 +48,7 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX1-NEXT:    movl $1091567616, 30256(%rax) # imm = 0x41100000
 ; AVX1-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; AVX1-NEXT:    movq %rcx, 46348(%rax)
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1065353216,1065353216,1065353216,1065353216,1065353216,1065353216,1065353216,1065353216]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [?,?,?,?]
 ; AVX1-NEXT:    vmovups %ymm0, 48296(%rax)
 ; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vmovsd %xmm0, 47372(%rax)
@@ -90,25 +90,24 @@ define <4 x float> @concat_of_broadcast_v4f32_v8f32(ptr %a0, ptr %a1, ptr %a2) {
 ; AVX1-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX1-NEXT:    vmovaps (%rsi), %ymm1
 ; AVX1-NEXT:    vmovaps (%rdx), %ymm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4],ymm2[5,6],ymm0[7]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2],xmm1[3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,0,2,3]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[3,0],xmm0[0,0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[2,0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: concat_of_broadcast_v4f32_v8f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %ymm0
-; AVX2-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,0]
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = [6,7,4,3]
-; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3],ymm0[4],mem[5,6],ymm0[7]
-; AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vmovaps (%rsi), %ymm1
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm2 = <6,0,u,3>
+; AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1],mem[2,3,4,5,6,7]
+; AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
   %ld0 = load volatile <8 x float>, ptr %a0

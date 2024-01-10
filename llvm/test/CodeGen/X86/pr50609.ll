@@ -4,10 +4,11 @@
 define void @PR50609(ptr noalias nocapture %RET, ptr noalias %aFOO, <16 x i32> %__mask) nounwind {
 ; CHECK-LABEL: PR50609:
 ; CHECK:       # %bb.0: # %allocas
-; CHECK-NEXT:    leal 40(%rsi), %eax
 ; CHECK-NEXT:    vmovq %rsi, %xmm2
-; CHECK-NEXT:    vmovd %eax, %xmm3
+; CHECK-NEXT:    addq $40, %rsi
+; CHECK-NEXT:    vmovq %rsi, %xmm3
 ; CHECK-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; CHECK-NEXT:    vpsrad $31, %xmm2, %xmm3
 ; CHECK-NEXT:    vpsrld $30, %xmm3, %xmm3
 ; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2

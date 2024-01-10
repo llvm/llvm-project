@@ -2941,8 +2941,9 @@ define <8 x i16> @load_v8i16_v8i16(<8 x i16> %trigger, ptr %addr, <8 x i16> %dst
 ; AVX512F-NEXT:    vpcmpgtw %xmm0, %xmm2, %xmm0
 ; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %ecx
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $1, %cl
 ; AVX512F-NEXT:    jne LBB21_1
 ; AVX512F-NEXT:  ## %bb.2: ## %else
 ; AVX512F-NEXT:    testb $2, %al
@@ -4517,7 +4518,7 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %dst
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    jne LBB24_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
@@ -4936,7 +4937,7 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %dst
 ; SSE42-NEXT:    pmovmskb %xmm1, %eax
 ; SSE42-NEXT:    shll $16, %eax
 ; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    testb $1, %al
+; SSE42-NEXT:    testb $1, %cl
 ; SSE42-NEXT:    jne LBB24_1
 ; SSE42-NEXT:  ## %bb.2: ## %else
 ; SSE42-NEXT:    testb $2, %al
@@ -5170,7 +5171,7 @@ define <32 x i8> @load_v32i8_v32i8(<32 x i8> %trigger, ptr %addr, <32 x i8> %dst
 ; AVX1-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %ecx, %eax
-; AVX1-NEXT:    testb $1, %al
+; AVX1-NEXT:    testb $1, %cl
 ; AVX1-NEXT:    jne LBB24_1
 ; AVX1-NEXT:  ## %bb.2: ## %else
 ; AVX1-NEXT:    testb $2, %al
@@ -6559,20 +6560,13 @@ define <8 x float> @mload_constmask_v8f32(ptr %addr, <8 x float> %dst) {
 }
 
 define <8 x float> @mload_constmask_v8f32_zero(ptr %addr, <8 x float> %dst) {
-; SSE2-LABEL: mload_constmask_v8f32_zero:
-; SSE2:       ## %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: mload_constmask_v8f32_zero:
-; SSE42:       ## %bb.0:
-; SSE42-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE42-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],zero
-; SSE42-NEXT:    xorps %xmm1, %xmm1
-; SSE42-NEXT:    retq
+; SSE-LABEL: mload_constmask_v8f32_zero:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: mload_constmask_v8f32_zero:
 ; AVX1OR2:       ## %bb.0:

@@ -732,11 +732,12 @@ define void @load_v3i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 define void @load_v3i1_broadcast_2_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_2_v1i1_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    testb $4, (%rdi)
-; AVX512-NEXT:    movl $255, %ecx
-; AVX512-NEXT:    cmovel %eax, %ecx
-; AVX512-NEXT:    kmovd %ecx, %k0
+; AVX512-NEXT:    movzbl (%rdi), %eax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    btl $2, %eax
+; AVX512-NEXT:    movl $255, %eax
+; AVX512-NEXT:    cmovael %ecx, %eax
+; AVX512-NEXT:    kmovd %eax, %k0
 ; AVX512-NEXT:    kshiftrb $2, %k0, %k0
 ; AVX512-NEXT:    kshiftlb $7, %k0, %k0
 ; AVX512-NEXT:    kshiftrb $7, %k0, %k0
@@ -745,11 +746,12 @@ define void @load_v3i1_broadcast_2_v1i1_store(ptr %a0,ptr %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v3i1_broadcast_2_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    xorl %eax, %eax
-; AVX512NOTDQ-NEXT:    testb $4, (%rdi)
-; AVX512NOTDQ-NEXT:    movl $255, %ecx
-; AVX512NOTDQ-NEXT:    cmovel %eax, %ecx
-; AVX512NOTDQ-NEXT:    kmovd %ecx, %k0
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
+; AVX512NOTDQ-NEXT:    xorl %ecx, %ecx
+; AVX512NOTDQ-NEXT:    btl $2, %eax
+; AVX512NOTDQ-NEXT:    movl $255, %eax
+; AVX512NOTDQ-NEXT:    cmovael %ecx, %eax
+; AVX512NOTDQ-NEXT:    kmovd %eax, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $2, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftlw $15, %k0, %k0
 ; AVX512NOTDQ-NEXT:    kshiftrw $15, %k0, %k0

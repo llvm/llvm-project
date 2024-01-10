@@ -34,8 +34,9 @@ define i16 @mulhu(i16 %a0, i16 %a1) {
 ;
 ; AVX-LABEL: mulhu:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl %si, %eax
 ; AVX-NEXT:    vmovd %edi, %xmm0
-; AVX-NEXT:    vmovd %esi, %xmm1
+; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax

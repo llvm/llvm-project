@@ -129,8 +129,8 @@ define void @store_single_256bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwin
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
 ; SSE-NEXT:    movaps 16(%rdi), %xmm1
-; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps %xmm1, 16(%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_single_256bit_elt_vector:
@@ -175,8 +175,8 @@ define void @load_single_512bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwind
 ; SSE-NEXT:    movaps %xmm4, 64(%rdx)
 ; SSE-NEXT:    movaps %xmm3, 48(%rdx)
 ; SSE-NEXT:    movaps %xmm2, 32(%rdx)
-; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    movaps %xmm0, (%rdx)
+; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_single_512bit_elt_vector:
@@ -226,17 +226,17 @@ define void @store_single_512bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwin
 ; SSE-NEXT:    movaps 32(%rdi), %xmm2
 ; SSE-NEXT:    movaps 48(%rdi), %xmm3
 ; SSE-NEXT:    movaps %xmm3, 48(%rdx)
-; SSE-NEXT:    movaps %xmm0, (%rdx)
-; SSE-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE-NEXT:    movaps %xmm2, 32(%rdx)
+; SSE-NEXT:    movaps %xmm1, 16(%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_single_512bit_elt_vector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -244,8 +244,8 @@ define void @store_single_512bit_elt_vector(ptr %in, ptr %off, ptr %out) nounwin
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX2-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX2-NEXT:    vmovaps %ymm1, 32(%rdx)
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

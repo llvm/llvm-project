@@ -21,14 +21,14 @@ define void @get_fpenv_02(ptr %ptr1, ptr %ptr2) #0 {
 ; X64-NEXT:    movq (%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; X64-NEXT:    movq %rsi, 16(%r14)
-; X64-NEXT:    movq %rcx, (%r14)
-; X64-NEXT:    movq %rax, 24(%r14)
+; X64-NEXT:    movq %rsi, 24(%r14)
 ; X64-NEXT:    movq %rdx, 8(%r14)
-; X64-NEXT:    movq %rsi, 16(%rbx)
-; X64-NEXT:    movq %rcx, (%rbx)
-; X64-NEXT:    movq %rax, 24(%rbx)
+; X64-NEXT:    movq %rax, 16(%r14)
+; X64-NEXT:    movq %rcx, (%r14)
+; X64-NEXT:    movq %rsi, 24(%rbx)
+; X64-NEXT:    movq %rax, 16(%rbx)
 ; X64-NEXT:    movq %rdx, 8(%rbx)
+; X64-NEXT:    movq %rcx, (%rbx)
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14

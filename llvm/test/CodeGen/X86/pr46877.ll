@@ -12,7 +12,7 @@ define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, 
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm9 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm12
 ; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm1 = -(xmm3 * xmm1) + xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm12 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm2
 ; CHECK-NEXT:    vmulss %xmm1, %xmm2, %xmm1
@@ -187,7 +187,7 @@ define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, 
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm12 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm11 = -(xmm12 * xmm11) + xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm10 = -(xmm12 * xmm10) + xmm0
-; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm7 = (xmm13 * xmm7) - xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm7 = -(xmm13 * xmm7) + xmm0
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm1 = -(xmm1 * mem) + xmm0
 ; CHECK-NEXT:    vmulss %xmm3, %xmm1, %xmm0
 ; CHECK-NEXT:    vmulss %xmm0, %xmm8, %xmm0

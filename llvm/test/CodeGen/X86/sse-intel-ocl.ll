@@ -220,9 +220,9 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN64-NEXT:    subq $232, %rsp
 ; WIN64-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; WIN64-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; WIN64-NEXT:    movaps (%r9), %xmm4
-; WIN64-NEXT:    movaps (%rdx), %xmm5
-; WIN64-NEXT:    movaps (%r8), %xmm6
+; WIN64-NEXT:    movaps (%rdx), %xmm4
+; WIN64-NEXT:    movaps (%r8), %xmm5
+; WIN64-NEXT:    movaps (%r9), %xmm6
 ; WIN64-NEXT:    movaps (%rcx), %xmm7
 ; WIN64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
@@ -231,11 +231,11 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; WIN64-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movaps %xmm5, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movaps %xmm4, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax

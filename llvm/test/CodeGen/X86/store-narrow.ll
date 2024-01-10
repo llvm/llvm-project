@@ -67,22 +67,21 @@ entry:
 define void @test3(ptr nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test3:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movw %si, (%rdi)
+; X64-NEXT:    movzwl 2(%rdi), %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test3:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movw %ax, (%ecx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test3:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movw {{[0-9]+}}(%esp), %ax
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWOFF-NEXT:    movw %ax, (%ecx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test3:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl 2(%ecx), %edx
+; X86-NEXT:    shll $16, %edx
+; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    retl
 entry:
   %A = load i32, ptr %a0, align 4
   %B = and i32 %A, -65536    ; 0xFFFF0000
@@ -95,22 +94,21 @@ entry:
 define void @test4(ptr nocapture %a0, i16 zeroext %a1) nounwind ssp {
 ; X64-LABEL: test4:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movw %si, 2(%rdi)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    shll $16, %esi
+; X64-NEXT:    orl %eax, %esi
+; X64-NEXT:    movl %esi, (%rdi)
 ; X64-NEXT:    retq
 ;
-; X86-BWON-LABEL: test4:
-; X86-BWON:       ## %bb.0: ## %entry
-; X86-BWON-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWON-NEXT:    movw %ax, 2(%ecx)
-; X86-BWON-NEXT:    retl
-;
-; X86-BWOFF-LABEL: test4:
-; X86-BWOFF:       ## %bb.0: ## %entry
-; X86-BWOFF-NEXT:    movw {{[0-9]+}}(%esp), %ax
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BWOFF-NEXT:    movw %ax, 2(%ecx)
-; X86-BWOFF-NEXT:    retl
+; X86-LABEL: test4:
+; X86:       ## %bb.0: ## %entry
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %edx
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    retl
 entry:
   %A = load i32, ptr %a0, align 4
   %B = and i32 %A, 65535    ; 0x0000FFFF

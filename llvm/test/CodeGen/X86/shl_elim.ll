@@ -5,7 +5,7 @@ define i32 @test1(i64 %a) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    shrl $9, %eax
 ; CHECK-NEXT:    cwtl
 ; CHECK-NEXT:    retl
         %tmp29 = lshr i64 %a, 24                ; <i64> [#uses=1]

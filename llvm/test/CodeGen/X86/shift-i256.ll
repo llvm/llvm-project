@@ -12,7 +12,7 @@ define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $92, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
@@ -203,7 +203,7 @@ define i256 @shift2(i256 %c) nounwind
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $92, %esp
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)

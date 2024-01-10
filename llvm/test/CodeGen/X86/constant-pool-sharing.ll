@@ -81,11 +81,11 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-LINUX-NEXT:    movaps %xmm1, 32(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, 16(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, (%rdi)
-; SSE-LINUX-NEXT:    movaps %xmm0, 32(%rsi)
 ; SSE-LINUX-NEXT:    movaps %xmm0, 48(%rsi)
-; SSE-LINUX-NEXT:    movaps %xmm1, (%rsi)
+; SSE-LINUX-NEXT:    movaps %xmm0, 32(%rsi)
 ; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
 ; SSE-LINUX-NEXT:    movaps %xmm0, 16(%rsi)
+; SSE-LINUX-NEXT:    movaps %xmm1, (%rsi)
 ; SSE-LINUX-NEXT:    retq
 ;
 ; SSE-MSVC-LABEL: store_repeated_constants:
@@ -96,11 +96,11 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-MSVC-NEXT:    movaps %xmm1, 32(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, 16(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, (%rcx)
-; SSE-MSVC-NEXT:    movaps %xmm0, 32(%rdx)
 ; SSE-MSVC-NEXT:    movaps %xmm0, 48(%rdx)
-; SSE-MSVC-NEXT:    movaps %xmm1, (%rdx)
+; SSE-MSVC-NEXT:    movaps %xmm0, 32(%rdx)
 ; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
 ; SSE-MSVC-NEXT:    movaps %xmm0, 16(%rdx)
+; SSE-MSVC-NEXT:    movaps %xmm1, (%rdx)
 ; SSE-MSVC-NEXT:    retq
 ;
 ; AVX-LINUX-LABEL: store_repeated_constants:

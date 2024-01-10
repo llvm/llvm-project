@@ -252,9 +252,9 @@ define i1 @or_rotl_ne_0_use(i32 %x, i32 %y, i32 %z) nounwind {
 define <4 x i1> @or_rotl_ne_eq0(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: or_rotl_ne_eq0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %rot = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32>%x, <4 x i32> %x, <4 x i32> %y)
   %or = or <4 x i32> %y, %rot
@@ -291,10 +291,10 @@ define i1 @fshl_or_commute_eq_0(i32 %x, i32 %y) {
 define <4 x i1> @fshl_or2_eq_0(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: fshl_or2_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psrld $7, %xmm1
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %or = or <4 x i32> %x, %y
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
@@ -305,10 +305,10 @@ define <4 x i1> @fshl_or2_eq_0(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @fshl_or2_commute_eq_0(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: fshl_or2_commute_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psrld $7, %xmm1
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %or = or <4 x i32> %y, %x
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %or, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
@@ -319,8 +319,8 @@ define <4 x i1> @fshl_or2_commute_eq_0(<4 x i32> %x, <4 x i32> %y) {
 define i1 @fshr_or_eq_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orw %di, %si
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %or = or i16 %x, %y
@@ -332,8 +332,8 @@ define i1 @fshr_or_eq_0(i16 %x, i16 %y) {
 define i1 @fshr_or_commute_eq_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or_commute_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orw %di, %si
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %or = or i16 %y, %x
@@ -397,10 +397,10 @@ define i1 @fshl_or_commute_ne_0(i32 %x, i32 %y) {
 define <4 x i1> @fshl_or2_ne_0(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: fshl_or2_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psrld $27, %xmm1
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -413,10 +413,10 @@ define <4 x i1> @fshl_or2_ne_0(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @fshl_or2_commute_ne_0(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: fshl_or2_commute_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psrld $27, %xmm1
 ; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -429,8 +429,8 @@ define <4 x i1> @fshl_or2_commute_ne_0(<4 x i32> %x, <4 x i32> %y) {
 define i1 @fshr_or_ne_0(i64 %x, i64 %y) {
 ; CHECK-LABEL: fshr_or_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %or = or i64 %x, %y
@@ -442,8 +442,8 @@ define i1 @fshr_or_ne_0(i64 %x, i64 %y) {
 define i1 @fshr_or_commute_ne_0(i64 %x, i64 %y) {
 ; CHECK-LABEL: fshr_or_commute_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlq $63, %rsi
-; CHECK-NEXT:    orq %rdi, %rsi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %or = or i64 %y, %x
@@ -455,9 +455,8 @@ define i1 @fshr_or_commute_ne_0(i64 %x, i64 %y) {
 define i1 @fshr_or2_ne_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or2_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %si, %eax
-; CHECK-NEXT:    shrl $2, %eax
-; CHECK-NEXT:    orw %di, %ax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %or = or i16 %x, %y
@@ -469,9 +468,8 @@ define i1 @fshr_or2_ne_0(i16 %x, i16 %y) {
 define i1 @fshr_or2_commute_ne_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or2_commute_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %si, %eax
-; CHECK-NEXT:    shrl $2, %eax
-; CHECK-NEXT:    orw %di, %ax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %or = or i16 %y, %x

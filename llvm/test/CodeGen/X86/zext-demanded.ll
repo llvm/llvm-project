@@ -140,7 +140,8 @@ define i64 @mul_neg_one(i64 %x) {
 define i32 @PR36689(ptr) {
 ; CHECK-LABEL: PR36689:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzbl 1(%rdi), %eax
+; CHECK-NEXT:    shll $8, %eax
 ; CHECK-NEXT:    orl $255, %eax
 ; CHECK-NEXT:    retq
   %2 = load i32, ptr %0

@@ -311,10 +311,55 @@ entry:
 ; We implement the scalar broadcast intrinsics with vector initializers.
 ; Verify that the IR generated will produce the broadcast at the end.
 define <8 x double> @test_mm512_broadcastsd_pd(<2 x double> %a) {
-; ALL-LABEL: test_mm512_broadcastsd_pd:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
-; ALL-NEXT:    retq
+; AVX512F-LABEL: test_mm512_broadcastsd_pd:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vmovapd %xmm0, %xmm1
+; AVX512F-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX512F-NEXT:    vbroadcastsd %xmm1, %zmm1
+; AVX512F-NEXT:    movb $4, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    movb $8, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    movb $16, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    movb $32, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    movb $64, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    movb $-128, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: test_mm512_broadcastsd_pd:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vmovapd %xmm0, %xmm1
+; AVX512BW-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX512BW-NEXT:    vbroadcastsd %xmm1, %zmm1
+; AVX512BW-NEXT:    movb $4, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    movb $8, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    movb $16, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    movb $32, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    movb $64, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    movb $-128, %al
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512BW-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %a, i32 0
   %vecinit.i = insertelement <8 x double> undef, double %0, i32 0

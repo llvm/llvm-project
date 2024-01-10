@@ -14,12 +14,12 @@ define void @func_cf_vector_x64(ptr %0, ptr %1) #0 {
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    movups (%rdx), %xmm0
 ; X64-NEXT:    movups 16(%rdx), %xmm1
-; X64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; X64-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    callq *__guard_dispatch_icall_fptr(%rip)
 ; X64-NEXT:    nop
 ; X64-NEXT:    addq $72, %rsp

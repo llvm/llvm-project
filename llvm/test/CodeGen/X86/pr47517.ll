@@ -6,7 +6,19 @@ define float @test(float %src, ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq $0, (%rdi)
-; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps %xmm1, %xmm2
+; CHECK-NEXT:    mulss %xmm0, %xmm2
+; CHECK-NEXT:    addss %xmm1, %xmm2
+; CHECK-NEXT:    movaps %xmm2, %xmm1
+; CHECK-NEXT:    addss %xmm2, %xmm1
+; CHECK-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    mulss %xmm1, %xmm2
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    mulss %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm2, %xmm0
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %a1 = getelementptr inbounds float, ptr %p, i32 1

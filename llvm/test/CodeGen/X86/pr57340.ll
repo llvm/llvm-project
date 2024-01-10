@@ -4,12 +4,11 @@
 define void @main.41() local_unnamed_addr #1 {
 ; CHECK-LABEL: main.41:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastw (%rax), %xmm0
-; CHECK-NEXT:    vmovdqu (%rax), %ymm2
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm3
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [31,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-; CHECK-NEXT:    vpermi2w %ymm3, %ymm2, %ymm1
+; CHECK-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
 ; CHECK-NEXT:    vpextrw $0, %xmm0, %eax
+; CHECK-NEXT:    vmovdqu (%rax), %ymm2
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; CHECK-NEXT:    vpermi2w %ymm0, %ymm2, %ymm1
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0

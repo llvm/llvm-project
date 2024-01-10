@@ -10,18 +10,17 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    movbel 0, %eax
 ; CHECK-NEXT:    movbel 12(%rdi), %ecx
 ; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [128,128,128,128,0,1,2,3,128,128,128,128,128,128,128,128]
-; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm0
-; CHECK-NEXT:    vpslld $15, %xmm2, %xmm3
-; CHECK-NEXT:    vpor %xmm0, %xmm3, %xmm0
-; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm3
-; CHECK-NEXT:    vpslld $13, %xmm2, %xmm4
-; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vpslld $15, %xmm2, %xmm1
+; CHECK-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpsrld $19, %xmm2, %xmm1
+; CHECK-NEXT:    vpslld $13, %xmm2, %xmm3
+; CHECK-NEXT:    vpor %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vmovd %ecx, %xmm3
-; CHECK-NEXT:    vpshufb %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vmovd %ecx, %xmm1
+; CHECK-NEXT:    vpsllq $32, %xmm1, %xmm1
 ; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrld $17, %xmm1, %xmm0
 ; CHECK-NEXT:    vpslld $15, %xmm1, %xmm3
@@ -63,18 +62,9 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
 ; CHECK-NEXT:    vpsrld $10, %xmm2, %xmm2
 ; CHECK-NEXT:    vpxor %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpsrlq $32, %xmm1, %xmm3
-; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm1
-; CHECK-NEXT:    vpsrld $17, %xmm1, %xmm2
-; CHECK-NEXT:    vpslld $15, %xmm1, %xmm4
-; CHECK-NEXT:    vpor %xmm2, %xmm4, %xmm2
-; CHECK-NEXT:    vpsrld $19, %xmm1, %xmm4
-; CHECK-NEXT:    vpslld $13, %xmm1, %xmm5
-; CHECK-NEXT:    vpor %xmm4, %xmm5, %xmm4
-; CHECK-NEXT:    vpxor %xmm4, %xmm2, %xmm2
-; CHECK-NEXT:    vpsrld $10, %xmm1, %xmm4
-; CHECK-NEXT:    vpxor %xmm4, %xmm2, %xmm2
-; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpsrlq $32, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %xmm2, %xmm1, %xmm2
+; CHECK-NEXT:    vmovq %xmm2, 132(%rdi)
 ; CHECK-NEXT:    vpsrld $17, %xmm2, %xmm3
 ; CHECK-NEXT:    vpslld $15, %xmm2, %xmm4
 ; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
@@ -82,25 +72,33 @@ define void @SHA256_Compress_Generic(ptr noundef %ctx) #1 {
 ; CHECK-NEXT:    vpslld $13, %xmm2, %xmm5
 ; CHECK-NEXT:    vpor %xmm4, %xmm5, %xmm4
 ; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
-; CHECK-NEXT:    vpsrld $10, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpsrld $17, %xmm0, %xmm2
+; CHECK-NEXT:    vpsrld $10, %xmm2, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; CHECK-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    movq $0, 140(%rdi)
+; CHECK-NEXT:    vpsrld $17, %xmm1, %xmm3
+; CHECK-NEXT:    vpslld $15, %xmm1, %xmm4
+; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
+; CHECK-NEXT:    vpsrld $19, %xmm1, %xmm4
+; CHECK-NEXT:    vpslld $13, %xmm1, %xmm5
+; CHECK-NEXT:    vpor %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vpxor %xmm4, %xmm3, %xmm3
+; CHECK-NEXT:    vpsrld $10, %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $17, %xmm0, %xmm1
 ; CHECK-NEXT:    vpslld $15, %xmm0, %xmm3
-; CHECK-NEXT:    vpor %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpor %xmm1, %xmm3, %xmm1
 ; CHECK-NEXT:    vpsrld $19, %xmm0, %xmm3
 ; CHECK-NEXT:    vpslld $13, %xmm0, %xmm4
 ; CHECK-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; CHECK-NEXT:    vpxor %xmm3, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrld $10, %xmm0, %xmm3
-; CHECK-NEXT:    vpxor %xmm3, %xmm2, %xmm2
-; CHECK-NEXT:    vpsllq $32, %xmm1, %xmm3
-; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; CHECK-NEXT:    vmovdqu %ymm0, 132(%rdi)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vpxor %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    vpsllq $32, %xmm2, %xmm2
+; CHECK-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vmovdqu %xmm0, 148(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, ptr null, align 4

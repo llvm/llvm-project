@@ -349,12 +349,26 @@ define <4 x i32> @knownbits_mask_urem_shuffle_lshr(<4 x i32> %a0, <4 x i32> %a1)
 define <4 x i32> @knownbits_mask_srem_shuffle_lshr(<4 x i32> %a0) nounwind {
 ; X86-LABEL: knownbits_mask_srem_shuffle_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-NEXT:    vpsrad $31, %xmm0, %xmm0
+; X86-NEXT:    vpsrld $28, %xmm0, %xmm0
+; X86-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
+; X86-NEXT:    vpsrld $22, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_srem_shuffle_lshr:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-NEXT:    vpsrad $31, %xmm0, %xmm0
+; X64-NEXT:    vpsrld $28, %xmm0, %xmm0
+; X64-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,3,3]
+; X64-NEXT:    vpsrld $22, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -32768, i32 -1, i32 -1, i32 -32768>
   %2 = srem <4 x i32> %1, <i32 16, i32 16, i32 16, i32 16>

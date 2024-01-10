@@ -167,9 +167,9 @@ define i1 @length3_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    xorw (%rsi), %ax
 ; X64-NEXT:    movzbl 2(%rdi), %ecx
-; X64-NEXT:    xorb 2(%rsi), %cl
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    orw %ax, %cx
+; X64-NEXT:    movzbl 2(%rsi), %edx
+; X64-NEXT:    xorl %ecx, %edx
+; X64-NEXT:    orw %ax, %dx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
@@ -276,9 +276,9 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    xorl (%rsi), %eax
 ; X64-NEXT:    movzbl 4(%rdi), %ecx
-; X64-NEXT:    xorb 4(%rsi), %cl
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    orl %eax, %ecx
+; X64-NEXT:    movzbl 4(%rsi), %edx
+; X64-NEXT:    xorl %ecx, %edx
+; X64-NEXT:    orl %eax, %edx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
@@ -435,9 +435,9 @@ define i1 @length9_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    xorq (%rsi), %rax
 ; X64-NEXT:    movzbl 8(%rdi), %ecx
-; X64-NEXT:    xorb 8(%rsi), %cl
-; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    movzbl 8(%rsi), %edx
+; X64-NEXT:    xorq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 9) nounwind
@@ -451,9 +451,9 @@ define i1 @length10_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    xorq (%rsi), %rax
 ; X64-NEXT:    movzwl 8(%rdi), %ecx
-; X64-NEXT:    xorw 8(%rsi), %cx
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    movzwl 8(%rsi), %edx
+; X64-NEXT:    xorq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 10) nounwind
@@ -482,8 +482,9 @@ define i1 @length12_eq(ptr %X, ptr %Y) nounwind {
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    xorq (%rsi), %rax
 ; X64-NEXT:    movl 8(%rdi), %ecx
-; X64-NEXT:    xorl 8(%rsi), %ecx
-; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    movl 8(%rsi), %edx
+; X64-NEXT:    xorq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) nounwind
@@ -1628,10 +1629,96 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX1-LABEL: length48_eq:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovups 32(%rsi), %xmm2
-; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    movq 32(%rdi), %rax
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $8, %ecx
+; X64-AVX1-NEXT:    vmovd %eax, %xmm1
+; X64-AVX1-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $16, %ecx
+; X64-AVX1-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $24, %ecx
+; X64-AVX1-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $32, %rcx
+; X64-AVX1-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $40, %rcx
+; X64-AVX1-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $48, %rcx
+; X64-AVX1-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    shrq $56, %rax
+; X64-AVX1-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq 40(%rdi), %rax
+; X64-AVX1-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $8, %ecx
+; X64-AVX1-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $16, %ecx
+; X64-AVX1-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $24, %ecx
+; X64-AVX1-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $32, %rcx
+; X64-AVX1-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $40, %rcx
+; X64-AVX1-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $48, %rcx
+; X64-AVX1-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    shrq $56, %rax
+; X64-AVX1-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq 32(%rsi), %rcx
+; X64-AVX1-NEXT:    movq 40(%rsi), %rax
+; X64-AVX1-NEXT:    movl %ecx, %edx
+; X64-AVX1-NEXT:    shrl $8, %edx
+; X64-AVX1-NEXT:    vmovd %ecx, %xmm2
+; X64-AVX1-NEXT:    vpinsrb $1, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movl %ecx, %edx
+; X64-AVX1-NEXT:    shrl $16, %edx
+; X64-AVX1-NEXT:    vpinsrb $2, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movl %ecx, %edx
+; X64-AVX1-NEXT:    shrl $24, %edx
+; X64-AVX1-NEXT:    vpinsrb $3, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rcx, %rdx
+; X64-AVX1-NEXT:    shrq $32, %rdx
+; X64-AVX1-NEXT:    vpinsrb $4, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rcx, %rdx
+; X64-AVX1-NEXT:    shrq $40, %rdx
+; X64-AVX1-NEXT:    vpinsrb $5, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rcx, %rdx
+; X64-AVX1-NEXT:    shrq $48, %rdx
+; X64-AVX1-NEXT:    vpinsrb $6, %edx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    shrq $56, %rcx
+; X64-AVX1-NEXT:    vpinsrb $7, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $8, %ecx
+; X64-AVX1-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $16, %ecx
+; X64-AVX1-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $24, %ecx
+; X64-AVX1-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $32, %rcx
+; X64-AVX1-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $40, %rcx
+; X64-AVX1-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $48, %rcx
+; X64-AVX1-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX1-NEXT:    shrq $56, %rax
+; X64-AVX1-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; X64-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
@@ -1641,10 +1728,96 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX2-LABEL: length48_eq:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX2-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-AVX2-NEXT:    vmovdqu 32(%rsi), %xmm2
-; X64-AVX2-NEXT:    vpxor (%rsi), %ymm0, %ymm0
+; X64-AVX2-NEXT:    movq 32(%rdi), %rax
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $8, %ecx
+; X64-AVX2-NEXT:    vmovd %eax, %xmm1
+; X64-AVX2-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $16, %ecx
+; X64-AVX2-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $24, %ecx
+; X64-AVX2-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $32, %rcx
+; X64-AVX2-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $40, %rcx
+; X64-AVX2-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $48, %rcx
+; X64-AVX2-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    shrq $56, %rax
+; X64-AVX2-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq 40(%rdi), %rax
+; X64-AVX2-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $8, %ecx
+; X64-AVX2-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $16, %ecx
+; X64-AVX2-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $24, %ecx
+; X64-AVX2-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $32, %rcx
+; X64-AVX2-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $40, %rcx
+; X64-AVX2-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $48, %rcx
+; X64-AVX2-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    shrq $56, %rax
+; X64-AVX2-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq 32(%rsi), %rcx
+; X64-AVX2-NEXT:    movq 40(%rsi), %rax
+; X64-AVX2-NEXT:    movl %ecx, %edx
+; X64-AVX2-NEXT:    shrl $8, %edx
+; X64-AVX2-NEXT:    vmovd %ecx, %xmm2
+; X64-AVX2-NEXT:    vpinsrb $1, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movl %ecx, %edx
+; X64-AVX2-NEXT:    shrl $16, %edx
+; X64-AVX2-NEXT:    vpinsrb $2, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movl %ecx, %edx
+; X64-AVX2-NEXT:    shrl $24, %edx
+; X64-AVX2-NEXT:    vpinsrb $3, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rcx, %rdx
+; X64-AVX2-NEXT:    shrq $32, %rdx
+; X64-AVX2-NEXT:    vpinsrb $4, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rcx, %rdx
+; X64-AVX2-NEXT:    shrq $40, %rdx
+; X64-AVX2-NEXT:    vpinsrb $5, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rcx, %rdx
+; X64-AVX2-NEXT:    shrq $48, %rdx
+; X64-AVX2-NEXT:    vpinsrb $6, %edx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    shrq $56, %rcx
+; X64-AVX2-NEXT:    vpinsrb $7, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $8, %ecx
+; X64-AVX2-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $16, %ecx
+; X64-AVX2-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $24, %ecx
+; X64-AVX2-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $32, %rcx
+; X64-AVX2-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $40, %rcx
+; X64-AVX2-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $48, %rcx
+; X64-AVX2-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX2-NEXT:    shrq $56, %rax
+; X64-AVX2-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpxor (%rsi), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX2-NEXT:    sete %al
@@ -1654,10 +1827,96 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX512-LABEL: length48_eq:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX512-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-AVX512-NEXT:    vmovdqu 32(%rsi), %xmm2
-; X64-AVX512-NEXT:    vpxor (%rsi), %ymm0, %ymm0
+; X64-AVX512-NEXT:    movq 32(%rdi), %rax
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $8, %ecx
+; X64-AVX512-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $16, %ecx
+; X64-AVX512-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $24, %ecx
+; X64-AVX512-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $32, %rcx
+; X64-AVX512-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $40, %rcx
+; X64-AVX512-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $48, %rcx
+; X64-AVX512-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    shrq $56, %rax
+; X64-AVX512-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq 40(%rdi), %rax
+; X64-AVX512-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $8, %ecx
+; X64-AVX512-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $16, %ecx
+; X64-AVX512-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $24, %ecx
+; X64-AVX512-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $32, %rcx
+; X64-AVX512-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $40, %rcx
+; X64-AVX512-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $48, %rcx
+; X64-AVX512-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    shrq $56, %rax
+; X64-AVX512-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq 32(%rsi), %rcx
+; X64-AVX512-NEXT:    movq 40(%rsi), %rax
+; X64-AVX512-NEXT:    movl %ecx, %edx
+; X64-AVX512-NEXT:    shrl $8, %edx
+; X64-AVX512-NEXT:    vmovd %ecx, %xmm2
+; X64-AVX512-NEXT:    vpinsrb $1, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movl %ecx, %edx
+; X64-AVX512-NEXT:    shrl $16, %edx
+; X64-AVX512-NEXT:    vpinsrb $2, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movl %ecx, %edx
+; X64-AVX512-NEXT:    shrl $24, %edx
+; X64-AVX512-NEXT:    vpinsrb $3, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rcx, %rdx
+; X64-AVX512-NEXT:    shrq $32, %rdx
+; X64-AVX512-NEXT:    vpinsrb $4, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rcx, %rdx
+; X64-AVX512-NEXT:    shrq $40, %rdx
+; X64-AVX512-NEXT:    vpinsrb $5, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rcx, %rdx
+; X64-AVX512-NEXT:    shrq $48, %rdx
+; X64-AVX512-NEXT:    vpinsrb $6, %edx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    shrq $56, %rcx
+; X64-AVX512-NEXT:    vpinsrb $7, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $8, %ecx
+; X64-AVX512-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $16, %ecx
+; X64-AVX512-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $24, %ecx
+; X64-AVX512-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $32, %rcx
+; X64-AVX512-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $40, %rcx
+; X64-AVX512-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $48, %rcx
+; X64-AVX512-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX512-NEXT:    shrq $56, %rax
+; X64-AVX512-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
 ; X64-AVX512-NEXT:    vpxor %ymm2, %ymm1, %ymm1
+; X64-AVX512-NEXT:    vpxor (%rsi), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX512-NEXT:    sete %al
@@ -1668,8 +1927,22 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %ymm1
-; X64-MIC-AVX-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-MIC-AVX-NEXT:    vmovdqu 32(%rsi), %xmm3
+; X64-MIC-AVX-NEXT:    movq 32(%rdi), %rax
+; X64-MIC-AVX-NEXT:    vmovd %eax, %xmm2
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    movq 40(%rdi), %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    movq 32(%rsi), %rax
+; X64-MIC-AVX-NEXT:    vmovd %eax, %xmm3
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; X64-MIC-AVX-NEXT:    movq 40(%rsi), %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm2, %k0
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
 ; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
@@ -1815,9 +2088,52 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X64-AVX1-LABEL: length48_eq_const:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
-; X64-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    movq 32(%rdi), %rax
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $8, %ecx
+; X64-AVX1-NEXT:    vmovd %eax, %xmm1
+; X64-AVX1-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $16, %ecx
+; X64-AVX1-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $24, %ecx
+; X64-AVX1-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $32, %rcx
+; X64-AVX1-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $40, %rcx
+; X64-AVX1-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $48, %rcx
+; X64-AVX1-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    shrq $56, %rax
+; X64-AVX1-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq 40(%rdi), %rax
+; X64-AVX1-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $8, %ecx
+; X64-AVX1-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $16, %ecx
+; X64-AVX1-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movl %eax, %ecx
+; X64-AVX1-NEXT:    shrl $24, %ecx
+; X64-AVX1-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $32, %rcx
+; X64-AVX1-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $40, %rcx
+; X64-AVX1-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    movq %rax, %rcx
+; X64-AVX1-NEXT:    shrq $48, %rcx
+; X64-AVX1-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX1-NEXT:    shrq $56, %rax
+; X64-AVX1-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
@@ -1827,9 +2143,52 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X64-AVX2-LABEL: length48_eq_const:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX2-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    movq 32(%rdi), %rax
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $8, %ecx
+; X64-AVX2-NEXT:    vmovd %eax, %xmm1
+; X64-AVX2-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $16, %ecx
+; X64-AVX2-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $24, %ecx
+; X64-AVX2-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $32, %rcx
+; X64-AVX2-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $40, %rcx
+; X64-AVX2-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $48, %rcx
+; X64-AVX2-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    shrq $56, %rax
+; X64-AVX2-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq 40(%rdi), %rax
+; X64-AVX2-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $8, %ecx
+; X64-AVX2-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $16, %ecx
+; X64-AVX2-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movl %eax, %ecx
+; X64-AVX2-NEXT:    shrl $24, %ecx
+; X64-AVX2-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $32, %rcx
+; X64-AVX2-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $40, %rcx
+; X64-AVX2-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    movq %rax, %rcx
+; X64-AVX2-NEXT:    shrq $48, %rcx
+; X64-AVX2-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    shrq $56, %rax
+; X64-AVX2-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX2-NEXT:    setne %al
@@ -1839,9 +2198,52 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X64-AVX512-LABEL: length48_eq_const:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX512-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX512-NEXT:    movq 32(%rdi), %rax
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $8, %ecx
+; X64-AVX512-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $16, %ecx
+; X64-AVX512-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $24, %ecx
+; X64-AVX512-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $32, %rcx
+; X64-AVX512-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $40, %rcx
+; X64-AVX512-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $48, %rcx
+; X64-AVX512-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    shrq $56, %rax
+; X64-AVX512-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq 40(%rdi), %rax
+; X64-AVX512-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $8, %ecx
+; X64-AVX512-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $16, %ecx
+; X64-AVX512-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movl %eax, %ecx
+; X64-AVX512-NEXT:    shrl $24, %ecx
+; X64-AVX512-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $32, %rcx
+; X64-AVX512-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $40, %rcx
+; X64-AVX512-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    movq %rax, %rcx
+; X64-AVX512-NEXT:    shrq $48, %rcx
+; X64-AVX512-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX512-NEXT:    shrq $56, %rax
+; X64-AVX512-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; X64-AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; X64-AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX512-NEXT:    setne %al
@@ -1851,12 +2253,19 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX-LABEL: length48_eq_const:
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-MIC-AVX-NEXT:    vmovdqu 32(%rdi), %xmm1
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [892613426,959985462,858927408,926299444,0,0,0,0]
-; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
-; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
-; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    movq 32(%rdi), %rax
+; X64-MIC-AVX-NEXT:    vmovd %eax, %xmm1
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    movq 40(%rdi), %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm0 = [892613426,959985462,858927408,926299444,0,0,0,0]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm0, %zmm1, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k1, %k0
 ; X64-MIC-AVX-NEXT:    setne %al
 ; X64-MIC-AVX-NEXT:    vzeroupper
 ; X64-MIC-AVX-NEXT:    retq
@@ -2380,11 +2789,187 @@ define i1 @length96_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX512BW-LABEL: length96_eq:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-AVX512BW-NEXT:    vmovdqu 64(%rsi), %ymm2
-; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k0
-; X64-AVX512BW-NEXT:    vpcmpneqb %zmm2, %zmm1, %k1
-; X64-AVX512BW-NEXT:    kortestq %k1, %k0
+; X64-AVX512BW-NEXT:    movq 80(%rdi), %rax
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512BW-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq 88(%rdi), %rax
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq 64(%rdi), %rax
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512BW-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-AVX512BW-NEXT:    movq 80(%rsi), %rax
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512BW-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq 88(%rsi), %rax
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq 64(%rsi), %rcx
+; X64-AVX512BW-NEXT:    movq 72(%rsi), %rax
+; X64-AVX512BW-NEXT:    movl %ecx, %edx
+; X64-AVX512BW-NEXT:    shrl $8, %edx
+; X64-AVX512BW-NEXT:    vmovd %ecx, %xmm3
+; X64-AVX512BW-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movl %ecx, %edx
+; X64-AVX512BW-NEXT:    shrl $16, %edx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movl %ecx, %edx
+; X64-AVX512BW-NEXT:    shrl $24, %edx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rcx, %rdx
+; X64-AVX512BW-NEXT:    shrq $32, %rdx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rcx, %rdx
+; X64-AVX512BW-NEXT:    shrq $40, %rdx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rcx, %rdx
+; X64-AVX512BW-NEXT:    shrq $48, %rdx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %edx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    shrq $56, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $7, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm3
+; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; X64-AVX512BW-NEXT:    vpcmpneqb %zmm2, %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
 ; X64-AVX512BW-NEXT:    setne %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
@@ -2392,11 +2977,43 @@ define i1 @length96_eq(ptr %x, ptr %y) nounwind {
 ; X64-AVX512F-LABEL: length96_eq:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-AVX512F-NEXT:    vmovdqu 64(%rsi), %ymm2
-; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
-; X64-AVX512F-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
-; X64-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-AVX512F-NEXT:    movq 80(%rsi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    movq 88(%rsi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    movq 64(%rsi), %rax
+; X64-AVX512F-NEXT:    movq 72(%rsi), %rcx
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm3
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    vpinsrd $2, %ecx, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    shrq $32, %rcx
+; X64-AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; X64-AVX512F-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
 ; X64-AVX512F-NEXT:    setne %al
 ; X64-AVX512F-NEXT:    vzeroupper
 ; X64-AVX512F-NEXT:    retq
@@ -2421,11 +3038,43 @@ define i1 @length96_eq(ptr %x, ptr %y) nounwind {
 ; X64-MIC-AVX512F-LABEL: length96_eq:
 ; X64-MIC-AVX512F:       # %bb.0:
 ; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-MIC-AVX512F-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-MIC-AVX512F-NEXT:    vmovdqu 64(%rsi), %ymm2
-; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
-; X64-MIC-AVX512F-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
-; X64-MIC-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-MIC-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-MIC-AVX512F-NEXT:    movq 80(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    movq 88(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    movq 64(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    movq 72(%rsi), %rcx
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm3
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %ecx, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX512F-NEXT:    setne %al
 ; X64-MIC-AVX512F-NEXT:    vzeroupper
 ; X64-MIC-AVX512F-NEXT:    retq
@@ -2509,10 +3158,98 @@ define i1 @length96_eq_const(ptr %X) nounwind {
 ; X64-AVX512BW-LABEL: length96_eq_const:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-AVX512BW-NEXT:    vpcmpneqb .L.str(%rip), %zmm0, %k0
-; X64-AVX512BW-NEXT:    vpcmpneqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k1
-; X64-AVX512BW-NEXT:    kortestq %k1, %k0
+; X64-AVX512BW-NEXT:    movq 80(%rdi), %rax
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512BW-NEXT:    vpinsrb $1, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq 88(%rdi), %rax
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    movq 64(%rdi), %rax
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512BW-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $4, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $6, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512BW-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $8, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $16, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movl %eax, %ecx
+; X64-AVX512BW-NEXT:    shrl $24, %ecx
+; X64-AVX512BW-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $32, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $40, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    movq %rax, %rcx
+; X64-AVX512BW-NEXT:    shrq $48, %rcx
+; X64-AVX512BW-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    shrq $56, %rax
+; X64-AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
+; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-AVX512BW-NEXT:    vpcmpneqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb .L.str(%rip), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
 ; X64-AVX512BW-NEXT:    sete %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
@@ -2520,10 +3257,26 @@ define i1 @length96_eq_const(ptr %X) nounwind {
 ; X64-AVX512F-LABEL: length96_eq_const:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
-; X64-AVX512F-NEXT:    vpcmpneqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k1
-; X64-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-AVX512F-NEXT:    vpcmpneqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
 ; X64-AVX512F-NEXT:    sete %al
 ; X64-AVX512F-NEXT:    vzeroupper
 ; X64-AVX512F-NEXT:    retq
@@ -2548,10 +3301,26 @@ define i1 @length96_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX512F-LABEL: length96_eq_const:
 ; X64-MIC-AVX512F:       # %bb.0:
 ; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-MIC-AVX512F-NEXT:    vmovdqu 64(%rdi), %ymm1
-; X64-MIC-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k0
-; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k1
-; X64-MIC-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-MIC-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd .L.str(%rip), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
 ; X64-MIC-AVX512F-NEXT:    sete %al
 ; X64-MIC-AVX512F-NEXT:    vzeroupper
 ; X64-MIC-AVX512F-NEXT:    retq

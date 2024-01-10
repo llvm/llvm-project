@@ -113,6 +113,7 @@ define <4 x i32> @demandedelts_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 define <4 x i64> @demandedelts_vpsrlvq(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: demandedelts_vpsrlvq:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; CHECK-NEXT:    retq

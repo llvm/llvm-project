@@ -126,14 +126,21 @@ define dso_local i32 @test2(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $24, %ecx
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    andl $16711680, %eax # imm = 0xFF0000
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    sarl $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test2:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    shll $24, %eax
+; CHECK64-NEXT:    shll $8, %edi
+; CHECK64-NEXT:    andl $16711680, %edi # imm = 0xFF0000
+; CHECK64-NEXT:    orl %edi, %eax
 ; CHECK64-NEXT:    sarl $16, %eax
 ; CHECK64-NEXT:    retq
   %and = lshr i32 %a, 8

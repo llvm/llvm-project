@@ -16,7 +16,7 @@ define i32 @and_signbit_shl(i32 %x, ptr %dst) {
 ; X86-LABEL: and_signbit_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl 8(%esp), %ecx
-; X86-NEXT:    movzbl 6(%esp), %eax
+; X86-NEXT:    movzwl 6(%esp), %eax
 ; X86-NEXT:    shll $24, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl

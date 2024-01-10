@@ -1041,9 +1041,12 @@ b:
 define void @and32_imm_br() nounwind {
 ; CHECK-LABEL: and32_imm_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andl $-2147483648, g32(%rip) # encoding: [0x81,0x25,A,A,A,A,0x00,0x00,0x00,0x80]
-; CHECK-NEXT:    # fixup A - offset: 2, value: g32-8, kind: reloc_riprel_4byte
+; CHECK-NEXT:    movl $-2147483648, %eax # encoding: [0xb8,0x00,0x00,0x00,0x80]
 ; CHECK-NEXT:    # imm = 0x80000000
+; CHECK-NEXT:    andl g32(%rip), %eax # encoding: [0x23,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 2, value: g32-4, kind: reloc_riprel_4byte_relax
+; CHECK-NEXT:    movl %eax, g32(%rip) # encoding: [0x89,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 2, value: g32-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    jne b # TAILCALL
 ; CHECK-NEXT:    # encoding: [0x75,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: b-1, kind: FK_PCRel_1
@@ -1127,9 +1130,12 @@ b:
 define void @and16_imm_br() nounwind {
 ; CHECK-LABEL: and16_imm_br:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andw $-32768, g16(%rip) # encoding: [0x66,0x81,0x25,A,A,A,A,0x00,0x80]
-; CHECK-NEXT:    # fixup A - offset: 3, value: g16-6, kind: reloc_riprel_4byte
+; CHECK-NEXT:    movzwl g16(%rip), %eax # encoding: [0x0f,0xb7,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: g16-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    andl $32768, %eax # encoding: [0x25,0x00,0x80,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x8000
+; CHECK-NEXT:    movw %ax, g16(%rip) # encoding: [0x66,0x89,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: g16-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    jne b # TAILCALL
 ; CHECK-NEXT:    # encoding: [0x75,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: b-1, kind: FK_PCRel_1

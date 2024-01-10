@@ -92,9 +92,9 @@ define zeroext i16 @TEST_mm512_mask_test_epi32_mask(i16 %__U, <8 x i64> %__A, <8
 ;
 ; X86-LABEL: TEST_mm512_mask_test_epi32_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vptestmd %zmm0, %zmm1, %k0
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vptestmd %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -198,9 +198,9 @@ define zeroext i16 @TEST_mm512_mask_testn_epi32_mask(i16 %__U, <8 x i64> %__A, <
 ;
 ; X86-LABEL: TEST_mm512_mask_testn_epi32_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vptestnmd %zmm0, %zmm1, %k0
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vptestnmd %zmm0, %zmm1, %k0 {%k1}
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl

@@ -1123,11 +1123,9 @@ define dso_local i32 @TestBits128(fp128 %ld) nounwind {
 ; X64-SSE-NEXT:    movaps %xmm0, %xmm1
 ; X64-SSE-NEXT:    callq __multf3@PLT
 ; X64-SSE-NEXT:    movaps %xmm0, (%rsp)
-; X64-SSE-NEXT:    movq (%rsp), %rcx
-; X64-SSE-NEXT:    movq %rcx, %rdx
-; X64-SSE-NEXT:    shrq $32, %rdx
+; X64-SSE-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; X64-SSE-NEXT:    xorl %eax, %eax
-; X64-SSE-NEXT:    orl %ecx, %edx
+; X64-SSE-NEXT:    orl (%rsp), %ecx
 ; X64-SSE-NEXT:    sete %al
 ; X64-SSE-NEXT:    addq $24, %rsp
 ; X64-SSE-NEXT:    retq
@@ -1169,11 +1167,9 @@ define dso_local i32 @TestBits128(fp128 %ld) nounwind {
 ; X64-AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; X64-AVX-NEXT:    callq __multf3@PLT
 ; X64-AVX-NEXT:    vmovaps %xmm0, (%rsp)
-; X64-AVX-NEXT:    movq (%rsp), %rcx
-; X64-AVX-NEXT:    movq %rcx, %rdx
-; X64-AVX-NEXT:    shrq $32, %rdx
+; X64-AVX-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; X64-AVX-NEXT:    xorl %eax, %eax
-; X64-AVX-NEXT:    orl %ecx, %edx
+; X64-AVX-NEXT:    orl (%rsp), %ecx
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    addq $24, %rsp
 ; X64-AVX-NEXT:    retq
@@ -1221,14 +1217,14 @@ define fp128 @TestPair128(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    addl $3, %ecx
-; X86-NEXT:    adcl $0, %edx
-; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    addl $3, %esi
 ; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    movl %esi, 8(%eax)
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

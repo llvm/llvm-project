@@ -33,8 +33,8 @@ define <4 x i64> @A2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    movl 4(%ecx), %esi
 ; X86-NEXT:    vbroadcastsd (%ecx), %ymm0
-; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -601,8 +601,8 @@ define <2 x i64> @G2(ptr %ptr, ptr %ptr2) nounwind uwtable readnone ssp {
 ; X86-NEXT:    movl (%ecx), %edx
 ; X86-NEXT:    movl 4(%ecx), %esi
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

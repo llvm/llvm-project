@@ -476,8 +476,8 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:  # %bb.5: # %sw.bb
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    movzbl (%rcx), %r9d # encoding: [0x44,0x0f,0xb6,0x09]
-; WIN64-NEXT:    cmpl $43, %r9d # encoding: [0x41,0x83,0xf9,0x2b]
 ; WIN64-NEXT:    movl $1, %r8d # encoding: [0x41,0xb8,0x01,0x00,0x00,0x00]
+; WIN64-NEXT:    cmpl $43, %r9d # encoding: [0x41,0x83,0xf9,0x2b]
 ; WIN64-NEXT:    je .LBB3_10 # encoding: [0x74,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_10-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.6: # %sw.bb

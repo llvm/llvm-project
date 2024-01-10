@@ -534,11 +534,20 @@ define <8 x i32> @cmpne_knownzeros_zext_v8i16_v8i32(<8 x i16> %x) {
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: cmpne_knownzeros_zext_v8i16_v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: cmpne_knownzeros_zext_v8i16_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512F-NEXT:    retq
+;
+; AVX512DQBW-LABEL: cmpne_knownzeros_zext_v8i16_v8i32:
+; AVX512DQBW:       # %bb.0:
+; AVX512DQBW-NEXT:    vpsrlw $15, %xmm0, %xmm0
+; AVX512DQBW-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512DQBW-NEXT:    retq
   %a = lshr <8 x i16> %x, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %b = icmp ne <8 x i16> %a, zeroinitializer
   %c = zext <8 x i1> %b to <8 x i32>

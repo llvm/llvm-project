@@ -3686,37 +3686,43 @@ entry:
 define <8 x float> @broadcast_concat_crash(<4 x float> %x, <4 x float> %y, float %z) {
 ; AVX1-LABEL: broadcast_concat_crash:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,3,1,1]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: broadcast_concat_crash:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,3,1,1]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastss %xmm2, %ymm1
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: broadcast_concat_crash:
 ; AVX512VL-SLOW:       # %bb.0: # %entry
-; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
-; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512VL-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,3,1,1]
 ; AVX512VL-SLOW-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX512VL-SLOW-NEXT:    vbroadcastss %xmm2, %ymm1
+; AVX512VL-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
-; AVX512VL-FAST-LABEL: broadcast_concat_crash:
-; AVX512VL-FAST:       # %bb.0: # %entry
-; AVX512VL-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
-; AVX512VL-FAST-NEXT:    vmovaps {{.*#+}} xmm1 = [1,4,3,3]
-; AVX512VL-FAST-NEXT:    vpermi2ps %xmm2, %xmm0, %xmm1
-; AVX512VL-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-FAST-NEXT:    retq
+; AVX512VL-FAST-ALL-LABEL: broadcast_concat_crash:
+; AVX512VL-FAST-ALL:       # %bb.0: # %entry
+; AVX512VL-FAST-ALL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; AVX512VL-FAST-ALL-NEXT:    vbroadcastss %xmm2, %ymm2
+; AVX512VL-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = [3,13,1,1,3,13,1,1]
+; AVX512VL-FAST-ALL-NEXT:    # ymm0 = mem[0,1,0,1]
+; AVX512VL-FAST-ALL-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: broadcast_concat_crash:
+; AVX512VL-FAST-PERLANE:       # %bb.0: # %entry
+; AVX512VL-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[3,3,1,1]
+; AVX512VL-FAST-PERLANE-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX512VL-FAST-PERLANE-NEXT:    vbroadcastss %xmm2, %ymm1
+; AVX512VL-FAST-PERLANE-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
 entry:
   %tmp = shufflevector <4 x float> %x, <4 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %bc = bitcast <8 x float> %tmp to <4 x i64>

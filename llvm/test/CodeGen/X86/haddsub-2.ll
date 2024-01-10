@@ -195,12 +195,12 @@ define <4 x i32> @phadd_d_test2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm0, %esi
 ; SSE3-NEXT:    addl %eax, %esi
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    movd %xmm1, %edi
+; SSE3-NEXT:    addl %eax, %edi
 ; SSE3-NEXT:    movd %esi, %xmm0
-; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; SSE3-NEXT:    movd %xmm2, %eax
-; SSE3-NEXT:    movd %xmm1, %esi
-; SSE3-NEXT:    addl %eax, %esi
-; SSE3-NEXT:    movd %esi, %xmm1
+; SSE3-NEXT:    movd %edi, %xmm1
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE3-NEXT:    movd %ecx, %xmm2
 ; SSE3-NEXT:    movd %edx, %xmm0
@@ -311,12 +311,12 @@ define <4 x i32> @phsub_d_test2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE3-NEXT:    movd %xmm0, %esi
 ; SSE3-NEXT:    subl %esi, %edx
-; SSE3-NEXT:    movd %edx, %xmm0
-; SSE3-NEXT:    movd %xmm1, %edx
-; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; SSE3-NEXT:    movd %xmm1, %esi
-; SSE3-NEXT:    subl %esi, %edx
-; SSE3-NEXT:    movd %edx, %xmm1
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE3-NEXT:    movd %xmm0, %edi
+; SSE3-NEXT:    subl %edi, %esi
+; SSE3-NEXT:    movd %edx, %xmm0
+; SSE3-NEXT:    movd %esi, %xmm1
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE3-NEXT:    movd %eax, %xmm2
 ; SSE3-NEXT:    movd %ecx, %xmm0

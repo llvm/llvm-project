@@ -36,16 +36,34 @@ define <4 x i32> @rot_v4i32_non_splat(<4 x i32> %x) {
 }
 
 define <4 x i32> @rot_v4i32_splat_2masks(<4 x i32> %x) {
-; XOP-LABEL: rot_v4i32_splat_2masks:
-; XOP:       # %bb.0:
-; XOP-NEXT:    vprotd $31, %xmm0, %xmm0
-; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    retq
+; XOPAVX1-LABEL: rot_v4i32_splat_2masks:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpsrld $1, %xmm0, %xmm1
+; XOPAVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: rot_v4i32_splat_2masks:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpsrld $1, %xmm0, %xmm1
+; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; XOPAVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: rot_v4i32_splat_2masks:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vprold $31, %xmm0, %xmm0
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-NEXT:    vpsrld $1, %xmm0, %xmm1
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %2 = and <4 x i32> %1, <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
@@ -57,16 +75,34 @@ define <4 x i32> @rot_v4i32_splat_2masks(<4 x i32> %x) {
 }
 
 define <4 x i32> @rot_v4i32_non_splat_2masks(<4 x i32> %x) {
-; XOP-LABEL: rot_v4i32_non_splat_2masks:
-; XOP:       # %bb.0:
-; XOP-NEXT:    vprotd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    retq
+; XOPAVX1-LABEL: rot_v4i32_non_splat_2masks:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpshld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; XOPAVX1-NEXT:    vpshld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; XOPAVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: rot_v4i32_non_splat_2masks:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; XOPAVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; XOPAVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOPAVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: rot_v4i32_non_splat_2masks:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vprolvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; AVX512-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3],xmm2[4,5,6],xmm0[7]
+; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
   %2 = and <4 x i32> %1, <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>

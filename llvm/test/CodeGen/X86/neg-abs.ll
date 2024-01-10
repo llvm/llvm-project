@@ -36,7 +36,7 @@ define i16 @neg_abs_i16(i16 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    shrl $15, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -180,7 +180,7 @@ define i16 @sub_abs_i16(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    shrl $15, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax

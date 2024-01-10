@@ -175,7 +175,10 @@ define <4 x float> @fmul_v4f32_two_consts_no_splat_reassoc_2(<4 x float> %x) {
 define <4 x float> @fmul_v4f32_two_consts_no_splat_multiple_use(<4 x float> %x) {
 ; CHECK-LABEL: fmul_v4f32_two_consts_no_splat_multiple_use:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
+; CHECK-NEXT:    mulps %xmm0, %xmm1
 ; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = fmul fast <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
   %z = fmul fast <4 x float> %y, <float 5.0, float 6.0, float 7.0, float 8.0>
@@ -269,7 +272,14 @@ define float @getNegatedExpression_crash(ptr %p) {
 ; CHECK-LABEL: getNegatedExpression_crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $0, (%rdi)
-; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    mulss %xmm0, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    mulss %xmm0, %xmm2
+; CHECK-NEXT:    mulss %xmm2, %xmm0
+; CHECK-NEXT:    mulss %xmm2, %xmm0
+; CHECK-NEXT:    mulss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   store float 0.0, ptr %p, align 1
   %real = load float, ptr %p, align 1

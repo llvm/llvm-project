@@ -17,9 +17,7 @@ define i8 @mask8(i8 %x) {
 define void @mask8_mem(ptr %ptr) {
 ; CHECK-LABEL: mask8_mem:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    kmovb (%rdi), %k0
-; CHECK-NEXT:    knotb %k0, %k0
-; CHECK-NEXT:    kmovb %k0, (%rdi)
+; CHECK-NEXT:    notb (%rdi)
 ; CHECK-NEXT:    retq
   %x = load i8, ptr %ptr, align 4
   %m0 = bitcast i8 %x to <8 x i1>

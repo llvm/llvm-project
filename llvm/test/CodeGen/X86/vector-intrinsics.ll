@@ -161,14 +161,15 @@ define void @a(ptr %p) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movaps (%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps (%rdi), %xmm1
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps 16(%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps 32(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps 32(%rdi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps 48(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
@@ -209,13 +210,13 @@ define void @a(ptr %p) nounwind {
 ; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, (%rbx)
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, 32(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm0, (%rbx)
 ; CHECK-NEXT:    addq $96, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -232,24 +233,24 @@ define void @b(ptr %p, ptr %q) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movaps (%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps 16(%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps 32(%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps 48(%rdi), %xmm2
+; CHECK-NEXT:    movaps (%rdi), %xmm2
 ; CHECK-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps 16(%rdi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps 32(%rdi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps 48(%rdi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movaps (%rsi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps (%rsi), %xmm1
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps 16(%rsi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps 32(%rsi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movaps 48(%rsi), %xmm1
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps 48(%rsi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm2, %xmm0
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -304,13 +305,13 @@ define void @b(ptr %p, ptr %q) nounwind {
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, (%rbx)
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, 32(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm0, (%rbx)
 ; CHECK-NEXT:    addq $160, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -330,14 +331,15 @@ define void @c(ptr %p, i32 %n) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movaps (%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps (%rdi), %xmm1
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps 16(%rdi), %xmm0
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps 32(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps 32(%rdi), %xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps 48(%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    movl %esi, %edi
 ; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -387,13 +389,13 @@ define void @c(ptr %p, i32 %n) nounwind {
 ; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movsd %xmm0, 64(%rbx)
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, (%rbx)
-; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps %xmm0, 32(%rbx)
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps %xmm0, 48(%rbx)
+; CHECK-NEXT:    movaps %xmm0, 16(%rbx)
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm0, (%rbx)
 ; CHECK-NEXT:    addq $104, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp

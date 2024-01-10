@@ -47,7 +47,7 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
 ; AVX-NEXT:    vpxor %ymm0, %ymm2, %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
