@@ -206,8 +206,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 
   Value processIndexAlongAxis =
       builder
-          .create<ProcessIndexOp>(mesh.getSymName(),
-                                  SmallVector<MeshAxis>({splitMeshAxis}))
+          .create<ProcessMultiIndexOp>(mesh.getSymName(),
+                                       SmallVector<MeshAxis>({splitMeshAxis}))
           .getResult()[0];
 
   MeshShardingAttr targetSharding = targetShardingInSplitLastAxis(
