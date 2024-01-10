@@ -113,6 +113,7 @@
 ! HELP-NEXT: --no-offload-arch=<value>
 ! HELP-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! HELP-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! HELP-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! HELP-NEXT: --offload-arch=<value>  Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). If 'native' is used the compiler will detect locally installed architectures. For HIP offloading, the device architecture can be followed by target ID features delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.
 ! HELP-NEXT: --offload-device-only   Only compile for the offloading device.
 ! HELP-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
@@ -249,6 +250,7 @@
 ! HELP-FC1-NEXT: -mvscale-max=<value>    Specify the vscale maximum. Defaults to the vector length agnostic value of "0". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -mvscale-min=<value>    Specify the vscale minimum. Defaults to "1". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! HELP-FC1-NEXT: -opt-record-file <value>
 ! HELP-FC1-NEXT:                         File name to use for YAML optimization record output
 ! HELP-FC1-NEXT: -opt-record-format <value>

@@ -340,6 +340,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SHL_I128, nullptr);
   setLibcallName(RTLIB::SRA_I128, nullptr);
 
+  // Also expand 256 bit shifts if i128 is a legal type.
+  if (isTypeLegal(MVT::i128)) {
+    setOperationAction(ISD::SRL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SHL_PARTS, MVT::i128, Expand);
+    setOperationAction(ISD::SRA_PARTS, MVT::i128, Expand);
+  }
+
   // Handle bitcast from fp128 to i128.
   if (!isTypeLegal(MVT::i128))
     setOperationAction(ISD::BITCAST, MVT::i128, Custom);
