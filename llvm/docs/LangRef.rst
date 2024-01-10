@@ -15754,7 +15754,11 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``rint`` functions
-would, and handles error conditions in the same way.
+would, and handles error conditions in the same way. Since LLVM assumes the
+:ref:`default floating-point environment <floatenv>`, the rounding mode is
+assumed to be set to "nearest", so halfway cases are rounded to the even
+integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`
+to avoid that assumption.
 
 .. _int_nearbyint:
 
@@ -15792,7 +15796,11 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``nearbyint``
-functions would, and handles error conditions in the same way.
+functions would, and handles error conditions in the same way. Since LLVM
+assumes the :ref:`default floating-point environment <floatenv>`, the rounding
+mode is assumed to be set to "nearest", so halfway cases are rounded to the even
+integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` to
+avoid that assumption.
 
 .. _int_round:
 
@@ -27219,9 +27227,6 @@ obviously not constant. However, a call like
 ``llvm.is.constant.i32(i32 %param)`` *can* return true after the
 function is inlined, if the value passed to the function parameter was
 a constant.
-
-On the other hand, if constant folding is not run, it will never
-evaluate to true, even in simple cases.
 
 .. _int_ptrmask:
 

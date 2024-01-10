@@ -4820,8 +4820,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // some tweaks to the heuristics for the previous and->shift transform.
   // FIXME: Optimize cases where the LHS isn't a shift.
   if (Subtarget->isThumb1Only() && LHS->getOpcode() == ISD::SHL &&
-      isa<ConstantSDNode>(RHS) &&
-      cast<ConstantSDNode>(RHS)->getZExtValue() == 0x80000000U &&
+      isa<ConstantSDNode>(RHS) && RHS->getAsZExtVal() == 0x80000000U &&
       CC == ISD::SETUGT && isa<ConstantSDNode>(LHS.getOperand(1)) &&
       LHS.getConstantOperandVal(1) < 31) {
     unsigned ShiftAmt = LHS.getConstantOperandVal(1) + 1;
@@ -5533,7 +5532,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     SDValue CCR = DAG.getRegister(ARM::CPSR, MVT::i32);
     SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
     // Choose GE over PL, which vsel does now support
-    if (cast<ConstantSDNode>(ARMcc)->getZExtValue() == ARMCC::PL)
+    if (ARMcc->getAsZExtVal() == ARMCC::PL)
       ARMcc = DAG.getConstant(ARMCC::GE, dl, MVT::i32);
     return getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, CCR, Cmp, DAG);
   }
@@ -7749,7 +7748,7 @@ static SDValue IsSingleInstrConstant(SDValue N, SelectionDAG &DAG,
   uint64_t Val;
   if (!isa<ConstantSDNode>(N))
     return SDValue();
-  Val = cast<ConstantSDNode>(N)->getZExtValue();
+  Val = N->getAsZExtVal();
 
   if (ST->isThumb1Only()) {
     if (Val <= 255 || ~Val <= 255)
@@ -7804,7 +7803,7 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
     SDValue V = Op.getOperand(i);
     if (!isa<ConstantSDNode>(V) && !V.isUndef())
       continue;
-    bool BitSet = V.isUndef() ? false : cast<ConstantSDNode>(V)->getZExtValue();
+    bool BitSet = V.isUndef() ? false : V->getAsZExtVal();
     if (BitSet)
       Bits32 |= BoolMask << (i * BitsPerBool);
   }
@@ -9240,7 +9239,7 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
   EVT Op1VT = V1.getValueType();
   unsigned NumElts = VT.getVectorNumElements();
-  unsigned Index = cast<ConstantSDNode>(V2)->getZExtValue();
+  unsigned Index = V2->getAsZExtVal();
 
   assert(VT.getScalarSizeInBits() == 1 &&
          "Unexpected custom EXTRACT_SUBVECTOR lowering");
@@ -14618,7 +14617,7 @@ static SDValue PerformORCombineToBFI(SDNode *N,
     // Case (3): or (and (shl A, #shamt), mask), B => ARMbfi B, A, ~mask
     // where lsb(mask) == #shamt and masked bits of B are known zero.
     SDValue ShAmt = N00.getOperand(1);
-    unsigned ShAmtC = cast<ConstantSDNode>(ShAmt)->getZExtValue();
+    unsigned ShAmtC = ShAmt->getAsZExtVal();
     unsigned LSB = llvm::countr_zero(Mask);
     if (ShAmtC != LSB)
       return SDValue();
@@ -18339,8 +18338,7 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
   SDValue Chain = N->getOperand(0);
   SDValue BB = N->getOperand(1);
   SDValue ARMcc = N->getOperand(2);
-  ARMCC::CondCodes CC =
-    (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  ARMCC::CondCodes CC = (ARMCC::CondCodes)ARMcc->getAsZExtVal();
 
   // (brcond Chain BB ne CPSR (cmpz (and (cmov 0 1 CC CPSR Cmp) 1) 0))
   // -> (brcond Chain BB CC CPSR Cmp)
@@ -18373,8 +18371,7 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   SDValue FalseVal = N->getOperand(0);
   SDValue TrueVal = N->getOperand(1);
   SDValue ARMcc = N->getOperand(2);
-  ARMCC::CondCodes CC =
-    (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  ARMCC::CondCodes CC = (ARMCC::CondCodes)ARMcc->getAsZExtVal();
 
   // BFI is only available on V6T2+.
   if (!Subtarget->isThumb1Only() && Subtarget->hasV6T2Ops()) {
