@@ -206,7 +206,7 @@ define i16 @add16mi8(ptr %a) {
 ; CHECK-LABEL: add16mi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    addl $123, %eax, %eax
+; CHECK-NEXT:    addl $123, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
@@ -252,7 +252,7 @@ define i16 @add16mi(ptr %a) {
 ; CHECK-LABEL: add16mi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    addl $1234, %eax, %eax # imm = 0x4D2
+; CHECK-NEXT:    addl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
@@ -489,8 +489,8 @@ define i1 @add64ri_reloc(i16 %k) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movswq %di, %rax
-; CHECK-NEXT:    addq %rax, %rax, %rax
-; CHECK-NEXT:    addq $val, %rax, %rax
+; CHECK-NEXT:    addq %rax, %rax
+; CHECK-NEXT:    addq $val, %rax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %g = getelementptr inbounds i16, ptr @val, i16 %k

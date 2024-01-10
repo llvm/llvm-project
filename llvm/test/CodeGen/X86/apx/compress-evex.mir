@@ -6,7 +6,7 @@ name:            ndd_2_non_ndd_xor
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-    ; CHECK: xorq    %rsi, %rax, %rax                # encoding: [0x62,0xf4,0xfc,0x18,0x31,0xf0]
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
     RET64 $rax
@@ -17,7 +17,7 @@ name:            ndd_2_non_ndd_sub
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-    ; CHECK: subq    %rsi, %rax, %rax                # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xf0]
+    ; CHECK: subq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x29,0xf0]
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = SUB64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
     RET64 $rax
@@ -28,7 +28,7 @@ name:            ndd_2_non_ndd_commutable
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-    ; CHECK: xorq    %rax, %rsi, %rax                # encoding: [0x62,0xf4,0xfc,0x18,0x31,0xc6]
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = XOR64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
     RET64 $rax
