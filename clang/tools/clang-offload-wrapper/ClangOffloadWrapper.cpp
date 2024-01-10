@@ -112,7 +112,6 @@ class BinaryWrapper {
   StructType *EntryTy = nullptr;
   StructType *ImageTy = nullptr;
   StructType *DescTy = nullptr;
-  StructType *ImageInfoTy = nullptr;
 
   std::string ToolName;
   std::string ObjcopyPath;
@@ -185,27 +184,6 @@ private:
 
   PointerType *getBinDescPtrTy() {
     return PointerType::getUnqual(getBinDescTy());
-  }
-
-  // This matches the runtime struct definition of __tgt_image_info
-  // declared in openmp/libomptarget/include/omptarget.h /
-  // struct __tgt_image_info {
-  //   int32_t version;
-  //   int32_t image_number;
-  //   int32_t number_images;
-  //   char* offload_arch;
-  //   char* target_compile_opts;
-  // };
-  StructType *getImageInfoTy() {
-    if (!ImageInfoTy)
-      ImageInfoTy = StructType::create(
-          "__tgt_image_info", Type::getInt32Ty(C), Type::getInt32Ty(C),
-          Type::getInt32Ty(C), PointerType::getUnqual(C), PointerType::getUnqual(C));
-    return ImageInfoTy;
-  }
-
-  PointerType *getImageInfoPtrTy() {
-    return PointerType::getUnqual(getImageInfoTy());
   }
 
   /// Creates binary descriptor for the given device images. Binary descriptor
