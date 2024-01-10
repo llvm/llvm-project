@@ -211,10 +211,14 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
+    ++*this;
+  }
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
     auto __tmp = *this;
     ++*this;
     return __tmp;
