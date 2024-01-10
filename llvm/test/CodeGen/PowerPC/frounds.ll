@@ -5,14 +5,17 @@
 ; RUN:   -check-prefix=PPC64
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le -mattr=-direct-move \
 ; RUN:   | FileCheck %s -check-prefix=PPC64LE
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=pwr9 \
+; RUN:   | FileCheck %s -check-prefix=P9_32
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le -mcpu=pwr9 \
+; RUN:   | FileCheck %s -check-prefix=P9
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le | FileCheck %s \
 ; RUN:   -check-prefix=DM
 
-define i32 @foo() {
+define i32 @foo() #0 {
 ; PPC32-LABEL: foo:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    stwu 1, -32(1)
-; PPC32-NEXT:    .cfi_def_cfa_offset 32
 ; PPC32-NEXT:    mffs 0
 ; PPC32-NEXT:    stfd 0, 16(1)
 ; PPC32-NEXT:    lwz 3, 20(1)
@@ -51,6 +54,33 @@ define i32 @foo() {
 ; PPC64LE-NEXT:    stw 3, -4(1)
 ; PPC64LE-NEXT:    blr
 ;
+; P9_32-LABEL: foo:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    stwu 1, -32(1)
+; P9_32-NEXT:    mffs 0
+; P9_32-NEXT:    stfd 0, 16(1)
+; P9_32-NEXT:    lwz 3, 20(1)
+; P9_32-NEXT:    clrlwi 4, 3, 30
+; P9_32-NEXT:    not 3, 3
+; P9_32-NEXT:    rlwinm 3, 3, 31, 31, 31
+; P9_32-NEXT:    xor 3, 4, 3
+; P9_32-NEXT:    stw 3, 24(1)
+; P9_32-NEXT:    stw 3, 28(1)
+; P9_32-NEXT:    addi 1, 1, 32
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: foo:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    mffs 0
+; P9-NEXT:    mffprd 3, 0
+; P9-NEXT:    clrlwi 4, 3, 30
+; P9-NEXT:    not 3, 3
+; P9-NEXT:    rlwinm 3, 3, 31, 31, 31
+; P9-NEXT:    xor 3, 4, 3
+; P9-NEXT:    stw 3, -8(1)
+; P9-NEXT:    stw 3, -4(1)
+; P9-NEXT:    blr
+;
 ; DM-LABEL: foo:
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mffs 0
@@ -77,7 +107,7 @@ return:		; preds = %entry
 	ret i32 %retval3
 }
 
-define void @setrnd_tozero() {
+define void @setrnd_tozero() #0 {
 ; PPC32-LABEL: setrnd_tozero:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    mtfsb0 30
@@ -96,6 +126,16 @@ define void @setrnd_tozero() {
 ; PPC64LE-NEXT:    mtfsb1 31
 ; PPC64LE-NEXT:    blr
 ;
+; P9_32-LABEL: setrnd_tozero:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    mffscrni 0, 1
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: setrnd_tozero:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    mffscrni 0, 1
+; P9-NEXT:    blr
+;
 ; DM-LABEL: setrnd_tozero:
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mtfsb0 30
@@ -106,7 +146,7 @@ entry:
   ret void
 }
 
-define void @setrnd_tonearest_tieeven() {
+define void @setrnd_tonearest_tieeven() #0 {
 ; PPC32-LABEL: setrnd_tonearest_tieeven:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    mtfsb0 30
@@ -125,6 +165,16 @@ define void @setrnd_tonearest_tieeven() {
 ; PPC64LE-NEXT:    mtfsb0 31
 ; PPC64LE-NEXT:    blr
 ;
+; P9_32-LABEL: setrnd_tonearest_tieeven:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    mffscrni 0, 0
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: setrnd_tonearest_tieeven:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    mffscrni 0, 0
+; P9-NEXT:    blr
+;
 ; DM-LABEL: setrnd_tonearest_tieeven:
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mtfsb0 30
@@ -135,7 +185,7 @@ entry:
   ret void
 }
 
-define void @setrnd_toposinf() {
+define void @setrnd_toposinf() #0 {
 ; PPC32-LABEL: setrnd_toposinf:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    mtfsb1 30
@@ -154,6 +204,16 @@ define void @setrnd_toposinf() {
 ; PPC64LE-NEXT:    mtfsb0 31
 ; PPC64LE-NEXT:    blr
 ;
+; P9_32-LABEL: setrnd_toposinf:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    mffscrni 0, 2
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: setrnd_toposinf:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    mffscrni 0, 2
+; P9-NEXT:    blr
+;
 ; DM-LABEL: setrnd_toposinf:
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mtfsb1 30
@@ -164,7 +224,7 @@ entry:
   ret void
 }
 
-define void @setrnd_toneginf() {
+define void @setrnd_toneginf() #0 {
 ; PPC32-LABEL: setrnd_toneginf:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    mtfsb1 30
@@ -183,6 +243,16 @@ define void @setrnd_toneginf() {
 ; PPC64LE-NEXT:    mtfsb1 31
 ; PPC64LE-NEXT:    blr
 ;
+; P9_32-LABEL: setrnd_toneginf:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    mffscrni 0, 3
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: setrnd_toneginf:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    mffscrni 0, 3
+; P9-NEXT:    blr
+;
 ; DM-LABEL: setrnd_toneginf:
 ; DM:       # %bb.0: # %entry
 ; DM-NEXT:    mtfsb1 30
@@ -193,11 +263,10 @@ entry:
   ret void
 }
 
-define void @setrnd_var(i32 %x) {
+define void @setrnd_var(i32 %x) #0 {
 ; PPC32-LABEL: setrnd_var:
 ; PPC32:       # %bb.0: # %entry
 ; PPC32-NEXT:    stwu 1, -16(1)
-; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    mffs 0
 ; PPC32-NEXT:    stfd 0, 8(1)
 ; PPC32-NEXT:    clrlwi 4, 3, 30
@@ -246,6 +315,29 @@ define void @setrnd_var(i32 %x) {
 ; PPC64LE-NEXT:    lfd 0, -8(1)
 ; PPC64LE-NEXT:    mtfsf 255, 0
 ; PPC64LE-NEXT:    blr
+;
+; P9_32-LABEL: setrnd_var:
+; P9_32:       # %bb.0: # %entry
+; P9_32-NEXT:    stwu 1, -16(1)
+; P9_32-NEXT:    clrlwi 4, 3, 30
+; P9_32-NEXT:    rlwinm 3, 3, 31, 31, 31
+; P9_32-NEXT:    xor 3, 3, 4
+; P9_32-NEXT:    xori 3, 3, 1
+; P9_32-NEXT:    stw 3, 12(1)
+; P9_32-NEXT:    lfd 0, 8(1)
+; P9_32-NEXT:    mffscrn 0, 0
+; P9_32-NEXT:    addi 1, 1, 16
+; P9_32-NEXT:    blr
+;
+; P9-LABEL: setrnd_var:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    clrlwi 4, 3, 30
+; P9-NEXT:    rlwinm 3, 3, 31, 31, 31
+; P9-NEXT:    xor 3, 3, 4
+; P9-NEXT:    xori 3, 3, 1
+; P9-NEXT:    mtfprd 0, 3
+; P9-NEXT:    mffscrn 0, 0
+; P9-NEXT:    blr
 ;
 ; DM-LABEL: setrnd_var:
 ; DM:       # %bb.0: # %entry

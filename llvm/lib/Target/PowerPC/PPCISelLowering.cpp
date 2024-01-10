@@ -8906,11 +8906,17 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
   EVT PtrVT = getPointerTy(MF.getDataLayout());
   SDValue Chain = Op.getOperand(0);
 
-  // If requested mode is constant, just use simpler mtfsb.
+  // If requested mode is constant, just use simpler mtfsb/mffscrni
   if (auto *CVal = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
     uint64_t Mode = CVal->getZExtValue();
     assert(Mode < 4 && "Unsupported rounding mode!");
     unsigned InternalRnd = Mode ^ (~(Mode >> 1) & 1);
+    if (Subtarget.isISA3_0())
+      return SDValue(
+          DAG.getMachineNode(
+              PPC::MFFSCRNI, Dl, {MVT::f64, MVT::Other},
+              {DAG.getConstant(InternalRnd, Dl, MVT::i32, true), Chain}),
+          1);
     SDNode *SetHi = DAG.getMachineNode(
         (InternalRnd & 2) ? PPC::MTFSB1 : PPC::MTFSB0, Dl, MVT::Other,
         {DAG.getConstant(30, Dl, MVT::i32, true), Chain});
@@ -8931,43 +8937,59 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
                              DAG.getNode(ISD::SRL, Dl, MVT::i32, SrcFlag, One),
                              MVT::i32),
                   One));
-  SDValue MFFS = DAG.getNode(PPCISD::MFFS, Dl, {MVT::f64, MVT::Other}, Chain);
-  Chain = MFFS.getValue(1);
+  // For Power9, there's faster mffscrn, and we don't need to read FPSCR
+  SDValue MFFS;
+  if (!Subtarget.isISA3_0()) {
+    MFFS = DAG.getNode(PPCISD::MFFS, Dl, {MVT::f64, MVT::Other}, Chain);
+    Chain = MFFS.getValue(1);
+  }
   SDValue NewFPSCR;
   if (isTypeLegal(MVT::i64)) {
-    // Set the last two bits (rounding mode) of bitcasted FPSCR.
-    NewFPSCR = DAG.getNode(
-        ISD::OR, Dl, MVT::i64,
-        DAG.getNode(ISD::AND, Dl, MVT::i64,
-                    DAG.getNode(ISD::BITCAST, Dl, MVT::i64, MFFS),
-                    DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i64), MVT::i64)),
-        DAG.getNode(ISD::ZERO_EXTEND, Dl, MVT::i64, DstFlag));
+    if (Subtarget.isISA3_0())
+      NewFPSCR = DAG.getAnyExtOrTrunc(DstFlag, Dl, MVT::i64);
+    else
+      // Set the last two bits (rounding mode) of bitcasted FPSCR.
+      NewFPSCR = DAG.getNode(
+          ISD::OR, Dl, MVT::i64,
+          DAG.getNode(
+              ISD::AND, Dl, MVT::i64,
+              DAG.getNode(ISD::BITCAST, Dl, MVT::i64, MFFS),
+              DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i64), MVT::i64)),
+          DAG.getNode(ISD::ZERO_EXTEND, Dl, MVT::i64, DstFlag));
     NewFPSCR = DAG.getNode(ISD::BITCAST, Dl, MVT::f64, NewFPSCR);
   } else {
     // In 32-bit mode, store f64, load and update the lower half.
     int SSFI = MF.getFrameInfo().CreateStackObject(8, Align(8), false);
     SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
-    Chain = DAG.getStore(Chain, Dl, MFFS, StackSlot, MachinePointerInfo());
-    SDValue Addr;
-    if (Subtarget.isLittleEndian())
-      Addr = StackSlot;
-    else
-      Addr = DAG.getNode(ISD::ADD, Dl, PtrVT, StackSlot,
-                         DAG.getConstant(4, Dl, PtrVT));
-    SDValue Tmp = DAG.getLoad(MVT::i32, Dl, Chain, Addr, MachinePointerInfo());
-    Chain = Tmp.getValue(1);
+    SDValue Addr = Subtarget.isLittleEndian()
+                       ? StackSlot
+                       : DAG.getNode(ISD::ADD, Dl, PtrVT, StackSlot,
+                                     DAG.getConstant(4, Dl, PtrVT));
+    if (Subtarget.isISA3_0()) {
+      Chain = DAG.getStore(Chain, Dl, DstFlag, Addr, MachinePointerInfo());
+    } else {
+      Chain = DAG.getStore(Chain, Dl, MFFS, StackSlot, MachinePointerInfo());
+      SDValue Tmp =
+          DAG.getLoad(MVT::i32, Dl, Chain, Addr, MachinePointerInfo());
+      Chain = Tmp.getValue(1);
 
-    Tmp = DAG.getNode(
-        ISD::OR, Dl, MVT::i32,
-        DAG.getNode(ISD::AND, Dl, MVT::i32, Tmp,
-                    DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i32), MVT::i32)),
-        DstFlag);
+      Tmp = DAG.getNode(
+          ISD::OR, Dl, MVT::i32,
+          DAG.getNode(
+              ISD::AND, Dl, MVT::i32, Tmp,
+              DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i32), MVT::i32)),
+          DstFlag);
 
-    Chain = DAG.getStore(Chain, Dl, Tmp, Addr, MachinePointerInfo());
+      Chain = DAG.getStore(Chain, Dl, Tmp, Addr, MachinePointerInfo());
+    }
     NewFPSCR =
         DAG.getLoad(MVT::f64, Dl, Chain, StackSlot, MachinePointerInfo());
     Chain = NewFPSCR.getValue(1);
   }
+  if (Subtarget.isISA3_0())
+    return SDValue(DAG.getMachineNode(PPC::MFFSCRN, Dl, {MVT::f64, MVT::Other},
+                                      {NewFPSCR, Chain}),
+                   1);
   SDValue Zero = DAG.getConstant(0, Dl, MVT::i32, true);
   SDNode *MTFSF = DAG.getMachineNode(
       PPC::MTFSF, Dl, MVT::Other,
