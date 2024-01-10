@@ -56365,12 +56365,21 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                   int JTI,
                                                   SelectionDAG &DAG) const {
   const Module *M = DAG.getMachineFunction().getMMI().getModule();
-  Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
-  if (IsCFProtectionSupported) {
-    // In case control-flow branch protection is enabled, we need to add
-    // notrack prefix to the indirect branch.
-    // In order to do that we create NT_BRIND SDNode.
-    // Upon ISEL, the pattern will convert it to jmp with NoTrack prefix.
+
+  uint64_t CFProtectionBranchLevel = 0;
+  if (Metadata *CFProtectionBranchEnabled =
+          M->getModuleFlag("cf-protection-branch"))
+    CFProtectionBranchLevel =
+        cast<ConstantAsMetadata>(CFProtectionBranchEnabled)
+            ->getValue()
+            ->getUniqueInteger()
+            .getLimitedValue();
+
+  if (CFProtectionBranchLevel == 1) {
+    // In case control-flow branch protection is enabled but we are not
+    // protecting jump table branches, we need to add notrack prefix to the
+    // indirect branch. In order to do that we create NT_BRIND SDNode. Upon
+    // ISEL, the pattern will convert it to jmp with NoTrack prefix.
     SDValue JTInfo = DAG.getJumpTableDebugInfo(JTI, Value, dl);
     return DAG.getNode(X86ISD::NT_BRIND, dl, MVT::Other, JTInfo, Addr);
   }

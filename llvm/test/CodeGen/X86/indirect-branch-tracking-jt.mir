@@ -1,0 +1,35 @@
+# RUN: llc %s -o - -mtriple=x86_64-- -run-pass=x86-ibt | FileCheck %s
+# Check that if module flag cf-protection-branch >= 2, indirect jump table
+# branches do not have a NOTRACK prefix and that all jump table BBs
+# start with an ENDBRANCH instruction.
+--- |
+
+  define void @foo() { ret void }
+
+  !llvm.module.flags = !{!0}
+
+  !0 = !{i32 1, !"cf-protection-branch", i32 2}
+
+...
+---
+name:            foo
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.2' ]
+body:             |
+
+  bb.1:
+    successors: %bb.2
+
+  ; CHECK: JMP64m $noreg, 8, $rdi, %jump-table.0, $noreg
+    JMP64m $noreg, 8, $rdi, %jump-table.0, $noreg
+
+  bb.2:
+
+  ; CHECK: ENDBR64
+  ; CHECK-NEXT: RET64
+    RET64
+
+...
