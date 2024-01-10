@@ -165,7 +165,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
     Builder.defineMacro(
         Twine("__riscv_", ExtName),
-        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
+        Twine(getVersionValue(ExtInfo.Major, ExtInfo.Minor)));
   }
 
   if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
