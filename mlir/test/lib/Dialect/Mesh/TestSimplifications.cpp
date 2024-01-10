@@ -33,7 +33,7 @@ void TestMeshSimplificationsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   SymbolTableCollection symbolTableCollection;
   mesh::populateSimplificationPatterns(patterns, symbolTableCollection);
-  LogicalResult status =
+  [[maybe_unused]] LogicalResult status =
       applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   assert(succeeded(status) && "Rewrite patters application did not converge.");
 }
