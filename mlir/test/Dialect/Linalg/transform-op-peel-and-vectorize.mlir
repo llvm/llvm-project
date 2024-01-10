@@ -7,7 +7,7 @@
 
 func.func @matmul(%A: tensor<1024x512xf32>,
                   %B: tensor<512x2000xf32>,
-                  %C:tensor<1024x2000xf32>) -> tensor<1024x2000xf32> {
+                  %C: tensor<1024x2000xf32>) -> tensor<1024x2000xf32> {
 
 // CHECK:      #[[MAP:.*]] = affine_map<()[s0] -> (-(2000 mod s0) + 2000)>
 // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
