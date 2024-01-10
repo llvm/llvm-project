@@ -72,9 +72,9 @@ constexpr bool test() {
                    bidirectional_iterator<Inner*>, sentinel_wrapper<bidirectional_iterator<Inner*>>>;
     using JoinView = std::ranges::join_view<ConstInconvertibleOuter>;
     using sentinel_t     = std::ranges::sentinel_t<JoinView>;
-    using const_sentinel = std::ranges::sentinel_t<const JoinView>;
-    static_assert(!std::constructible_from<sentinel_t, const_sentinel>);
-    static_assert(!std::constructible_from<const_sentinel, sentinel_t>);
+    using const_sentinel_t = std::ranges::sentinel_t<const JoinView>;
+    static_assert(!std::constructible_from<sentinel_t, const_sentinel_t>);
+    static_assert(!std::constructible_from<const_sentinel_t, sentinel_t>);
   }
   return true;
 }
