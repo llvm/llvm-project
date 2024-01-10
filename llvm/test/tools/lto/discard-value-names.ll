@@ -5,6 +5,8 @@
 ; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macos_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _bar -lSystem -mllvm -lto-discard-value-names=false
 ; RUN: llvm-dis %t.dylib.lto.opt.bc -o - | FileCheck --check-prefix=KEEP %s
 
+; REQUIRES: macos-sdk-10.15
+
 ; FIXME: -lto-discard-value-names is ignored at the moment.
 ; DISCARD: %cmp.i = icmp
 ; DISCARD: %add = add i32
