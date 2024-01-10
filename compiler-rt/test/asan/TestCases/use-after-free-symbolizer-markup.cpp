@@ -1,5 +1,5 @@
 // COM: End to end test for the sanitizer symbolizer markup. Since it uses debug info
-// COM: to do offline symbolization we only check that the current module correctly is correctly symbolized  
+// COM: to do offline symbolization we only check that the current module is correctly symbolized  
 // REQUIRES: linux
 // RUN: %clangxx_asan %s -Wl,--build-id=0x12345678 -o %t.main
 // RUN: mkdir -p %t/.build-id/12
