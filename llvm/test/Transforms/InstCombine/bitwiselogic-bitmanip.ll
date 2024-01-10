@@ -4,9 +4,9 @@
 define i32 @test_or_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 ; CHECK-LABEL: define i32 @test_or_fshl(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i32 [[SH:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A]], i32 [[B]], i32 [[SH]])
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.fshl.i32(i32 [[C]], i32 [[D]], i32 [[SH]])
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A]], [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[D]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP2]], i32 [[SH]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %sh)
@@ -17,9 +17,9 @@ define i32 @test_or_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 define i32 @test_and_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 ; CHECK-LABEL: define i32 @test_and_fshl(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i32 [[SH:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A]], i32 [[B]], i32 [[SH]])
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.fshl.i32(i32 [[C]], i32 [[D]], i32 [[SH]])
-; CHECK-NEXT:    [[RET:%.*]] = and i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A]], [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[B]], [[D]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP2]], i32 [[SH]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %sh)
@@ -30,9 +30,9 @@ define i32 @test_and_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 define i32 @test_xor_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 ; CHECK-LABEL: define i32 @test_xor_fshl(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i32 [[SH:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A]], i32 [[B]], i32 [[SH]])
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.fshl.i32(i32 [[C]], i32 [[D]], i32 [[SH]])
-; CHECK-NEXT:    [[RET:%.*]] = xor i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[B]], [[D]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP2]], i32 [[SH]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %sh)
@@ -43,9 +43,9 @@ define i32 @test_xor_fshl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 define i32 @test_or_fshr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 ; CHECK-LABEL: define i32 @test_or_fshr(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i32 [[SH:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.fshr.i32(i32 [[A]], i32 [[B]], i32 [[SH]])
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.fshr.i32(i32 [[C]], i32 [[D]], i32 [[SH]])
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A]], [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[B]], [[D]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.fshr.i32(i32 [[TMP1]], i32 [[TMP2]], i32 [[SH]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %sh)
@@ -56,11 +56,11 @@ define i32 @test_or_fshr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %sh) {
 define i32 @test_or_fshl_cascade(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define i32 @test_or_fshl_cascade(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; CHECK-NEXT:    [[FSHL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A]], i32 [[A]], i32 24)
-; CHECK-NEXT:    [[FSHL2:%.*]] = call i32 @llvm.fshl.i32(i32 [[B]], i32 [[B]], i32 24)
-; CHECK-NEXT:    [[FSHL3:%.*]] = call i32 @llvm.fshl.i32(i32 [[C]], i32 [[C]], i32 24)
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[FSHL1]], [[FSHL2]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[OR1]], [[FSHL3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP1]], [[C]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[C]]
+; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP3]], i32 [[TMP4]], i32 24)
 ; CHECK-NEXT:    ret i32 [[OR2]]
 ;
   %fshl1 = call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 24)
@@ -73,9 +73,8 @@ define i32 @test_or_fshl_cascade(i32 %a, i32 %b, i32 %c) {
 define i32 @test_or_bitreverse(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @test_or_bitreverse(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A]])
-; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[B]])
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[VAL1]], [[VAL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.bitreverse.i32(i32 %a)
@@ -86,8 +85,8 @@ define i32 @test_or_bitreverse(i32 %a, i32 %b) {
 define i32 @test_or_bitreverse_constant(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @test_or_bitreverse_constant(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A]])
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[VAL1]], -16777216
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[A]], 255
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %val1 = call i32 @llvm.bitreverse.i32(i32 %a)
