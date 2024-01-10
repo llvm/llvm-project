@@ -629,7 +629,7 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
     const Pointer &Arg = S.Stk.peek<Pointer>();
     S.Stk.push<Pointer>(Arg);
   } else {
-    assert(false);
+    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
   }
   return true;
 }
