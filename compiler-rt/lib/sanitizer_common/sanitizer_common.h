@@ -94,7 +94,10 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
 inline void *MmapOrDieQuietly(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type, /*raw_report*/ true);
 }
-void UnmapOrDie(void *addr, uptr size);
+void UnmapOrDie(void *addr, uptr size, bool raw_report = false);
+inline void UnmapOrDieQuietly(void *addr, uptr size) {
+  UnmapOrDie(addr, size, /*raw_report*/ true);
+}
 // Behaves just like MmapOrDie, but tolerates out of memory condition, in that
 // case returns nullptr.
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type);

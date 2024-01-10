@@ -34,6 +34,7 @@ namespace __asan {
 static void (*error_report_callback)(const char*);
 static char *error_message_buffer = nullptr;
 static uptr error_message_buffer_pos = 0;
+static uptr error_message_buffer_size = kErrorMessageBufferSize;
 static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
@@ -42,17 +43,23 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
-      (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
+        (char *)MmapOrDieQuietly(error_message_buffer_size, __func__);
     error_message_buffer_pos = 0;
   }
   uptr length = internal_strlen(buffer);
-  RAW_CHECK(kErrorMessageBufferSize >= error_message_buffer_pos);
-  uptr remaining = kErrorMessageBufferSize - error_message_buffer_pos;
-  internal_strncpy(error_message_buffer + error_message_buffer_pos,
-                   buffer, remaining);
-  error_message_buffer[kErrorMessageBufferSize - 1] = '\0';
-  // FIXME: reallocate the buffer instead of truncating the message.
-  error_message_buffer_pos += Min(remaining, length);
+  if (error_message_buffer_pos + length + 1 > error_message_buffer_size) {
+    uptr new_size = RoundUpToPowerOfTwo(error_message_buffer_size + length + 1);
+    RAW_CHECK(new_size > error_message_buffer_size);
+    char *new_buffer = (char *)MmapOrDieQuietly(new_size, __func__);
+    internal_memcpy(new_buffer, error_message_buffer,
+                    error_message_buffer_size);
+    UnmapOrDieQuietly(error_message_buffer, error_message_buffer_size);
+    error_message_buffer = new_buffer;
+    error_message_buffer_size = new_size;
+  }
+  internal_strncpy(error_message_buffer + error_message_buffer_pos, buffer,
+                   length + 1);
+  error_message_buffer_pos += length;
 }
 
 // ---------------------- Helper functions ----------------------- {{{1
