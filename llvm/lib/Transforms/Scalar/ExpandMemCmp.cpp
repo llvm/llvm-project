@@ -921,8 +921,9 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
                           ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
                           DominatorTree *DT) {
   // Sanitizers prefer that calls to memcmp remain as such
-  //so that they may be itercepted, but since the sanitizer passes run late
-  // we disable the optimization here. See maybeMarkSanitizerLibraryCallNoBuiltin
+  // so that they may be itercepted, but since the sanitizer passes run late
+  // we disable the optimization here. See
+  // maybeMarkSanitizerLibraryCallNoBuiltin
   if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
       F.hasFnAttribute(Attribute::SanitizeAddress) ||
       F.hasFnAttribute(Attribute::SanitizeHWAddress) ||

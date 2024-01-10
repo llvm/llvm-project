@@ -1432,7 +1432,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // result too early.
   OptimizePM.addPass(LoopSinkPass());
 
-  // Detect anc convert memcpm like idioms to the call, and expand when profitable
+  // Detect anc convert memcpm like idioms to the call, and expand when
+  // profitable
   OptimizePM.addPass(MergeICmpsPass());
   OptimizePM.addPass(ExpandMemCmpPass(TM));
 
