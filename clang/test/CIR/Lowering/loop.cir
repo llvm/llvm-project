@@ -1,26 +1,15 @@
 // RUN: cir-opt %s -cir-to-llvm -o %t.mlir
-// RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
-
+// RUN: FileCheck --input-file=%t.mlir %s
+#true = #cir.bool<true> : !cir.bool
 !s32i = !cir.int<s, 32>
+
+
 module {
-  cir.func @testFor() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
-    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+
+  cir.func @testFor(%arg0 : !cir.bool) {
     cir.loop for(cond : {
-      %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
-      %3 = cir.const(#cir.int<10> : !s32i) : !s32i
-      %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
-      %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
-      cir.brcond %5 ^bb1, ^bb2
-    ^bb1:  // pred: ^bb0
-      cir.yield continue
-    ^bb2:  // pred: ^bb0
-      cir.yield
+      cir.condition(%arg0)
     }, step : {
-      %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
-      %3 = cir.unary(inc, %2) : !s32i, !s32i
-      cir.store %3, %0 : !s32i, cir.ptr <!s32i>
       cir.yield
     }) {
       cir.yield
@@ -28,271 +17,116 @@ module {
     cir.return
   }
 
-//      MLIR: module {
-// MLIR-NEXT:   llvm.func @testFor()
-// MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:     llvm.store %2, %1 : i32, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb1
-// ============= Condition block =============
-// MLIR-NEXT:   ^bb1:  // 2 preds: ^bb0, ^bb5
-// MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr -> i32
-// MLIR-NEXT:     %4 = llvm.mlir.constant(10 : i32) : i32
-// MLIR-NEXT:     %5 = llvm.icmp "slt" %3, %4 : i32
-// MLIR-NEXT:     %6 = llvm.zext %5 : i1 to i32
-// MLIR-NEXT:     %7 = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:     %8 = llvm.icmp "ne" %6, %7 : i32
-// MLIR-NEXT:     %9 = llvm.zext %8 : i1 to i8
-// MLIR-NEXT:     %10 = llvm.trunc %9 : i8 to i1
-// MLIR-NEXT:     llvm.cond_br %10, ^bb2, ^bb3
-// MLIR-NEXT:   ^bb2:  // pred: ^bb1
-// MLIR-NEXT:     llvm.br ^bb4
-// MLIR-NEXT:   ^bb3:  // pred: ^bb1
-// MLIR-NEXT:     llvm.br ^bb6
-// ============= Body block =============
-// MLIR-NEXT:   ^bb4:  // pred: ^bb2
-// MLIR-NEXT:     llvm.br ^bb5
-// ============= Step block =============
-// MLIR-NEXT:   ^bb5:  // pred: ^bb4
-// MLIR-NEXT:     %11 = llvm.load %1 : !llvm.ptr -> i32
-// MLIR-NEXT:     %12 = llvm.mlir.constant(1 : i32) : i32
-// MLIR-NEXT:     %13 = llvm.add %11, %12  : i32
-// MLIR-NEXT:     llvm.store %13, %1 : i32, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb1
-// ============= Exit block =============
-// MLIR-NEXT:   ^bb6:  // pred: ^bb3
-// MLIR-NEXT:     llvm.return
-// MLIR-NEXT:   }
+// CHECK: @testFor
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
 
   // Test while cir.loop operation lowering.
-  cir.func @testWhile(%arg0: !s32i) {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
-    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
-    cir.scope {
-      cir.loop while(cond : {
-        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %2 = cir.const(#cir.int<10> : !s32i) : !s32i
-        %3 = cir.cmp(lt, %1, %2) : !s32i, !s32i
-        %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
-        cir.brcond %4 ^bb1, ^bb2
-      ^bb1:  // pred: ^bb0
-        cir.yield continue
-      ^bb2:  // pred: ^bb0
-        cir.yield
-      }, step : {
-        cir.yield
-      }) {
-        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %2 = cir.unary(inc, %1) : !s32i, !s32i
-        cir.store %2, %0 : !s32i, cir.ptr <!s32i>
-        cir.yield
-      }
+  cir.func @testWhile(%arg0 : !cir.bool) {
+    cir.loop while(cond : {
+      cir.condition(%arg0)
+    }, step : { // Droped when lowering while statements.
+      cir.yield
+    }) {
+      cir.yield
     }
     cir.return
   }
 
-  //      MLIR:  llvm.func @testWhile(%arg0: i32)
-  // MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
-  // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-  // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
-  // MLIR-NEXT:    llvm.br ^bb1
-  // MLIR-NEXT:  ^bb1:
-  // MLIR-NEXT:    llvm.br ^bb2
-  // ============= Condition block =============
-  // MLIR-NEXT:  ^bb2:  // 2 preds: ^bb1, ^bb5
-  // MLIR-NEXT:    %2 = llvm.load %1 : !llvm.ptr -> i32
-  // MLIR-NEXT:    %3 = llvm.mlir.constant(10 : i32) : i32
-  // MLIR-NEXT:    %4 = llvm.icmp "slt" %2, %3 : i32
-  // MLIR-NEXT:    %5 = llvm.zext %4 : i1 to i32
-  // MLIR-NEXT:    %6 = llvm.mlir.constant(0 : i32) : i32
-  // MLIR-NEXT:    %7 = llvm.icmp "ne" %5, %6 : i32
-  // MLIR-NEXT:    %8 = llvm.zext %7 : i1 to i8
-  // MLIR-NEXT:    %9 = llvm.trunc %8 : i8 to i1
-  // MLIR-NEXT:    llvm.cond_br %9, ^bb3, ^bb4
-  // MLIR-NEXT:  ^bb3:  // pred: ^bb2
-  // MLIR-NEXT:    llvm.br ^bb5
-  // MLIR-NEXT:  ^bb4:  // pred: ^bb2
-  // MLIR-NEXT:    llvm.br ^bb6
-  // ============= Body block =============
-  // MLIR-NEXT:  ^bb5:  // pred: ^bb3
-  // MLIR-NEXT:    %10 = llvm.load %1 : !llvm.ptr -> i32
-  // MLIR-NEXT:    %11 = llvm.mlir.constant(1 : i32) : i32
-  // MLIR-NEXT:    %12 = llvm.add %10, %11  : i32
-  // MLIR-NEXT:    llvm.store %12, %1 : i32, !llvm.ptr
-  // MLIR-NEXT:    llvm.br ^bb2
-  // ============= Exit block =============
-  // MLIR-NEXT:  ^bb6:  // pred: ^bb4
-  // MLIR-NEXT:    llvm.br ^bb7
+// CHECK: @testWhile
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
 
   // Test do-while cir.loop operation lowering.
-  cir.func @testDoWhile(%arg0: !s32i) {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
-    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
-    cir.scope {
-      cir.loop dowhile(cond : {
-        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %2 = cir.const(#cir.int<10> : !s32i) : !s32i
-        %3 = cir.cmp(lt, %1, %2) : !s32i, !s32i
-        %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
-        cir.brcond %4 ^bb1, ^bb2
-      ^bb1:  // pred: ^bb0
-        cir.yield continue
-      ^bb2:  // pred: ^bb0
-        cir.yield
-      }, step : {
-        cir.yield
-      }) {
-        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %2 = cir.unary(inc, %1) : !s32i, !s32i
-        cir.store %2, %0 : !s32i, cir.ptr <!s32i>
-        cir.yield
-      }
+  cir.func @testDoWhile(%arg0 : !cir.bool) {
+    cir.loop dowhile(cond : {
+      cir.condition(%arg0)
+    }, step : { // Droped when lowering while statements.
+      cir.yield
+    }) {
+      cir.yield
     }
     cir.return
   }
 
-  //      MLIR:  llvm.func @testDoWhile(%arg0: i32)
-  // MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
-  // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-  // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
-  // MLIR-NEXT:    llvm.br ^bb1
-  // MLIR-NEXT:  ^bb1:
-  // MLIR-NEXT:    llvm.br ^bb5
-  // ============= Condition block =============
-  // MLIR-NEXT:  ^bb2:
-  // MLIR-NEXT:    %2 = llvm.load %1 : !llvm.ptr -> i32
-  // MLIR-NEXT:    %3 = llvm.mlir.constant(10 : i32) : i32
-  // MLIR-NEXT:    %4 = llvm.icmp "slt" %2, %3 : i32
-  // MLIR-NEXT:    %5 = llvm.zext %4 : i1 to i32
-  // MLIR-NEXT:    %6 = llvm.mlir.constant(0 : i32) : i32
-  // MLIR-NEXT:    %7 = llvm.icmp "ne" %5, %6 : i32
-  // MLIR-NEXT:    %8 = llvm.zext %7 : i1 to i8
-  // MLIR-NEXT:    %9 = llvm.trunc %8 : i8 to i1
-  // MLIR-NEXT:    llvm.cond_br %9, ^bb3, ^bb4
-  // MLIR-NEXT:  ^bb3:
-  // MLIR-NEXT:    llvm.br ^bb5
-  // MLIR-NEXT:  ^bb4:
-  // MLIR-NEXT:    llvm.br ^bb6
-  // ============= Body block =============
-  // MLIR-NEXT:  ^bb5:
-  // MLIR-NEXT:    %10 = llvm.load %1 : !llvm.ptr -> i32
-  // MLIR-NEXT:    %11 = llvm.mlir.constant(1 : i32) : i32
-  // MLIR-NEXT:    %12 = llvm.add %10, %11  : i32
-  // MLIR-NEXT:    llvm.store %12, %1 : i32, !llvm.ptr
-  // MLIR-NEXT:    llvm.br ^bb2
-  // ============= Exit block =============
-  // MLIR-NEXT:  ^bb6:
-  // MLIR-NEXT:    llvm.br ^bb7
+// CHECK: @testDoWhile
+// CHECK:    llvm.br ^bb[[#BODY:]]
+// CHECK:  ^bb[[#COND:]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
 
-  // Test endless cir.loop lowering.
-  cir.func @testEndless() {
-    cir.scope {
-      cir.loop for(cond : {
-        cir.yield continue
-      }, step : {
-        cir.yield
-      }) {
-        cir.yield
-      }
-    }
-    cir.return
-  }
 
-  //      MLIR: llvm.func @testEndless()
-  // MLIR-NEXT:   llvm.br ^bb1
-  // MLIR-NEXT:   ^bb1:
-  // MLIR-NEXT:     llvm.br ^bb2
-  // ============= Condition block =============
-  // MLIR-NEXT:   ^bb2:
-  // MLIR-NEXT:     llvm.br ^bb3
-  // ============= Body block =============
-  // MLIR-NEXT:   ^bb3:
-  // MLIR-NEXT:     llvm.br ^bb4
-  // ============= Step block =============
-  // MLIR-NEXT:   ^bb4:
-  // MLIR-NEXT:     llvm.br ^bb2
-  // ============= Exit block =============
-  // MLIR-NEXT:   ^bb5:
-  // MLIR-NEXT:     llvm.br ^bb6
-  // MLIR-NEXT:   ^bb6:
-  // MLIR-NEXT:     llvm.return
 
   // test corner case 
   // while (1) {
   //     break;
   // }
-  cir.func @whileCornerCase() {
-    cir.scope {
-      cir.loop while(cond : {
-        %0 = cir.const(#cir.int<1> : !s32i) : !s32i
-        %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
-        cir.brcond %1 ^bb1, ^bb2
-      ^bb1:  // pred: ^bb0
-        cir.yield continue
-      ^bb2:  // pred: ^bb0
-        cir.yield
-      }, step : {
-        cir.yield
-      }) {
-        cir.yield break
-      }
+  cir.func @testWhileWithBreakTerminatedBody(%arg0 : !cir.bool) {
+    cir.loop while(cond : {
+      cir.condition(%arg0)
+    }, step : { // Droped when lowering while statements.
+      cir.yield
+    }) {
+      cir.yield break
     }
     cir.return
   }
-  //      MLIR: llvm.func @whileCornerCase()
-  //      MLIR:   %0 = llvm.mlir.constant(1 : i32) : i32
-  // MLIR-NEXT:   %1 = llvm.mlir.constant(0 : i32) : i32
-  // MLIR-NEXT:   %2 = llvm.icmp "ne" %0, %1 : i32
-  // MLIR-NEXT:   %3 = llvm.zext %2 : i1 to i8
-  // MLIR-NEXT:   %4 = llvm.trunc %3 : i8 to i
-  // MLIR-NEXT:   llvm.cond_br %4, ^bb3, ^bb4
-  // MLIR-NEXT: ^bb3:  // pred: ^bb2
-  // MLIR-NEXT:   llvm.br ^bb5
-  // MLIR-NEXT: ^bb4:  // pred: ^bb2
-  // MLIR-NEXT:   llvm.br ^bb6
-  // MLIR-NEXT: ^bb5:  // pred: ^bb3
-  // MLIR-NEXT:   llvm.br ^bb6
-  // MLIR-NEXT: ^bb6:  // 2 preds: ^bb4, ^bb5
-  // MLIR-NEXT:   llvm.br ^bb7
-  // MLIR-NEXT: ^bb7:  // pred: ^bb6
-  // MLIR-NEXT:   llvm.return
 
-  // test corner case - no fails during the lowering
+// CHECK: @testWhileWithBreakTerminatedBody
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+
+
+
+  // test C only corner case - no fails during the lowering
   // for (;;) {
   //     break;
   // }
-  cir.func @forCornerCase() {
-    cir.scope {
+  cir.func @forWithBreakTerminatedScopeInBody(%arg0 : !cir.bool) {
       cir.loop for(cond : {
-        cir.yield continue
+        cir.condition(%arg0)
       }, step : {
         cir.yield
       }) {
-        cir.scope {
+        cir.scope { // FIXME(cir): Redundant scope emitted during C codegen.
           cir.yield break
         }
         cir.yield
       }
-    }
     cir.return
   }
-//      MLIR: llvm.func @forCornerCase()
-//      MLIR:     llvm.br ^bb1
-// MLIR-NEXT:   ^bb1:  // pred: ^bb0
-// MLIR-NEXT:     llvm.br ^bb2
-// MLIR-NEXT:   ^bb2:  // 2 preds: ^bb1, ^bb6
-// MLIR-NEXT:     llvm.br ^bb3
-// MLIR-NEXT:   ^bb3:  // pred: ^bb2
-// MLIR-NEXT:     llvm.br ^bb4
-// MLIR-NEXT:   ^bb4:  // pred: ^bb3
-// MLIR-NEXT:     llvm.br ^bb7
-// MLIR-NEXT:   ^bb5:  // no predecessors
-// MLIR-NEXT:     llvm.br ^bb6
-// MLIR-NEXT:   ^bb6:  // pred: ^bb5
-// MLIR-NEXT:     llvm.br ^bb2
-// MLIR-NEXT:   ^bb7:  // pred: ^bb4
-// MLIR-NEXT:     llvm.br ^bb8
-// MLIR-NEXT:   ^bb8:  // pred: ^bb7
-// MLIR-NEXT:     llvm.return
+
+// CHECK: @forWithBreakTerminatedScopeInBody
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND:]]:
+// CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#SCOPE_IN:]]
+// CHECK:  ^bb[[#SCOPE_IN]]:
+// CHECK:    llvm.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#SCOPE_EXIT:]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
+// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:  ^bb[[#EXIT]]:
 }

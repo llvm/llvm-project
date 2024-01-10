@@ -226,6 +226,30 @@ void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionOp
+//===-----------------------------------------------------------------------===//
+
+//===----------------------------------
+// BranchOpTerminatorInterface Methods
+
+void ConditionOp::getSuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  auto loopOp = cast<LoopOp>(getOperation()->getParentOp());
+
+  // TODO(cir): The condition value may be folded to a constant, narrowing
+  // down its list of possible successors.
+  // Condition may branch to the body or to the parent op.
+  regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
+  regions.emplace_back(loopOp->getResults());
+}
+
+MutableOperandRange
+ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  // No values are yielded to the successor region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -1303,26 +1327,11 @@ void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
 
 LogicalResult LoopOp::verify() {
-  // Cond regions should only terminate with plain 'cir.yield' or
-  // 'cir.yield continue'.
-  auto terminateError = [&]() {
-    return emitOpError() << "cond region must be terminated with "
-                            "'cir.yield' or 'cir.yield continue'";
-  };
+  if (getCond().empty())
+    return emitOpError() << "cond region must not be empty";
 
-  auto &blocks = getCond().getBlocks();
-  for (Block &block : blocks) {
-    if (block.empty())
-      continue;
-    auto &op = block.back();
-    if (isa<BrCondOp>(op))
-      continue;
-    if (!isa<YieldOp>(op))
-      terminateError();
-    auto y = cast<YieldOp>(op);
-    if (!(y.isPlain() || y.isContinue()))
-      terminateError();
-  }
+  if (!llvm::isa<ConditionOp>(getCond().back().getTerminator()))
+    return emitOpError() << "cond region terminate with 'cir.condition'";
 
   return success();
 }

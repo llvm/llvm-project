@@ -403,25 +403,14 @@ public:
   using mlir::OpConversionPattern<mlir::cir::LoopOp>::OpConversionPattern;
   using LoopKind = mlir::cir::LoopOpKind;
 
-  mlir::LogicalResult
-  fetchCondRegionYields(mlir::Region &condRegion,
-                        mlir::cir::YieldOp &yieldToBody,
-                        mlir::cir::YieldOp &yieldToCont) const {
-    for (auto &bb : condRegion) {
-      if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(bb.getTerminator())) {
-        if (!yieldOp.getKind().has_value())
-          yieldToCont = yieldOp;
-        else if (yieldOp.getKind() == mlir::cir::YieldOpKind::Continue)
-          yieldToBody = yieldOp;
-        else
-          return mlir::failure();
-      }
-    }
-
-    // Succeed only if both yields are found.
-    if (!yieldToBody)
-      return mlir::failure();
-    return mlir::success();
+  inline void
+  lowerConditionOp(mlir::cir::ConditionOp op, mlir::Block *body,
+                   mlir::Block *exit,
+                   mlir::ConversionPatternRewriter &rewriter) const {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(op);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrCondOp>(op, op.getCondition(),
+                                                     body, exit);
   }
 
   mlir::LogicalResult
@@ -435,9 +424,6 @@ public:
     // Fetch required info from the condition region.
     auto &condRegion = loopOp.getCond();
     auto &condFrontBlock = condRegion.front();
-    mlir::cir::YieldOp yieldToBody, yieldToCont;
-    if (fetchCondRegionYields(condRegion, yieldToBody, yieldToCont).failed())
-      return loopOp.emitError("failed to fetch yields in cond region");
 
     // Fetch required info from the body region.
     auto &bodyRegion = loopOp.getBody();
@@ -469,15 +455,10 @@ public:
     auto &entry = (kind != LoopKind::DoWhile ? condFrontBlock : bodyFrontBlock);
     rewriter.create<mlir::cir::BrOp>(loopOp.getLoc(), &entry);
 
-    // Set loop exit point to continue block.
-    if (yieldToCont) {
-      rewriter.setInsertionPoint(yieldToCont);
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToCont, continueBlock);
-    }
-
-    // Branch from condition to body.
-    rewriter.setInsertionPoint(yieldToBody);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToBody, &bodyFrontBlock);
+    // Branch from condition region to body or exit.
+    auto conditionOp =
+        cast<mlir::cir::ConditionOp>(condFrontBlock.getTerminator());
+    lowerConditionOp(conditionOp, &bodyFrontBlock, continueBlock, rewriter);
 
     // Branch from body to condition or to step on for-loop cases.
     rewriter.setInsertionPoint(bodyYield);

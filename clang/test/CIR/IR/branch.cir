@@ -1,60 +1,21 @@
 // RUN: cir-opt %s | FileCheck %s
 
-#false = #cir.bool<false> : !cir.bool
-#true = #cir.bool<true> : !cir.bool
-
-cir.func @b0() {
-  cir.scope {
-    cir.loop while(cond :  {
-      %0 = cir.const(#true) : !cir.bool
-      cir.brcond %0 ^bb1, ^bb2
-      ^bb1:
-        cir.yield continue
-      ^bb2:
-        cir.yield
-    }, step :  {
-      cir.yield
-    })  {
-      cir.br ^bb1
-    ^bb1:
-      cir.return
-    }
-  }
+cir.func @test_branch_parsing(%arg0: !cir.bool) {
+  // CHECK: cir.br ^bb1
+  cir.br ^bb1
+^bb1:
+  // CHECK: cir.br ^bb2(%arg0 : !cir.bool)
+  cir.br ^bb2(%arg0 : !cir.bool)
+// CHECK: ^bb2(%0: !cir.bool):
+^bb2(%x: !cir.bool):
   cir.return
 }
 
-// CHECK: cir.func @b0
-// CHECK-NEXT:  cir.scope {
-// CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
-// CHECK-NEXT:      cir.brcond %0 ^bb1, ^bb2
-// CHECK-NEXT:      ^bb1:
-// CHECK-NEXT:        cir.yield continue
-// CHECK-NEXT:      ^bb2:
-// CHECK-NEXT:        cir.yield
-// CHECK-NEXT:    }, step :  {
-// CHECK-NEXT:      cir.yield
-// CHECK-NEXT:    })  {
-// CHECK-NEXT:      cir.br ^bb1
-// CHECK-NEXT:    ^bb1:
-// CHECK-NEXT:      cir.return
-// CHECK-NEXT:    }
-// CHECK-NEXT:  }
-// CHECK-NEXT:  cir.return
-// CHECK-NEXT: }
-
-
-!s32i = !cir.int<s, 32>
-cir.func @test_br() -> !s32i {
-    %0 = cir.const(#cir.int<0>: !s32i) : !s32i
-    cir.br ^bb1(%0 : !s32i)
-  ^bb1(%x: !s32i):
-    cir.return %x : !s32i
+cir.func @test_conditional_branch_parsing(%arg0 : !cir.bool) {
+  // CHEK: cir.brcond %arg0 ^bb1, ^bb2
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.return
+^bb2:
+  cir.return
 }
-
-// CHECK:  cir.func @test_br() -> !s32i {
-// CHECK-NEXT:    %0 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CHECK-NEXT:    cir.br ^bb1(%0 : !s32i)
-// CHECK-NEXT:  ^bb1(%1: !s32i):  // pred: ^bb0
-// CHECK-NEXT:    cir.return %1 : !s32i
-// CHECK-NEXT:  }
