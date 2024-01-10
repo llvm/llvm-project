@@ -3320,7 +3320,6 @@ define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounw
 ;
 ; RV64IA-ZACAS-LABEL: cmpxchg_i32_monotonic_monotonic:
 ; RV64IA-ZACAS:       # %bb.0:
-; RV64IA-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-ZACAS-NEXT:    ret
 ;
@@ -3412,7 +3411,6 @@ define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_acquire_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aq a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3430,7 +3428,6 @@ define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_acquire_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire monotonic
@@ -3510,7 +3507,6 @@ define void @cmpxchg_i32_acquire_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_acquire_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aq a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3528,7 +3524,6 @@ define void @cmpxchg_i32_acquire_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_acquire_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire acquire
@@ -3608,7 +3603,6 @@ define void @cmpxchg_i32_release_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_release_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.rl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3626,7 +3620,6 @@ define void @cmpxchg_i32_release_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_release_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release monotonic
@@ -3706,7 +3699,6 @@ define void @cmpxchg_i32_release_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_release_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3724,7 +3716,6 @@ define void @cmpxchg_i32_release_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_release_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release acquire
@@ -3804,7 +3795,6 @@ define void @cmpxchg_i32_acq_rel_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_acq_rel_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3822,7 +3812,6 @@ define void @cmpxchg_i32_acq_rel_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_acq_rel_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel monotonic
@@ -3902,7 +3891,6 @@ define void @cmpxchg_i32_acq_rel_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_acq_rel_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -3920,7 +3908,6 @@ define void @cmpxchg_i32_acq_rel_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_acq_rel_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel acquire
@@ -4000,7 +3987,6 @@ define void @cmpxchg_i32_seq_cst_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_seq_cst_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -4018,7 +4004,6 @@ define void @cmpxchg_i32_seq_cst_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_seq_cst_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst monotonic
@@ -4098,7 +4083,6 @@ define void @cmpxchg_i32_seq_cst_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_seq_cst_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -4116,7 +4100,6 @@ define void @cmpxchg_i32_seq_cst_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_seq_cst_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst acquire
@@ -4196,7 +4179,6 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
-; RV64IA-WMO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-WMO-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-WMO-ZACAS-NEXT:    ret
 ;
@@ -4214,7 +4196,6 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ;
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
-; RV64IA-TSO-ZACAS-NEXT:    sext.w a1, a1
 ; RV64IA-TSO-ZACAS-NEXT:    amocas.w a1, a2, (a0)
 ; RV64IA-TSO-ZACAS-NEXT:    ret
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
