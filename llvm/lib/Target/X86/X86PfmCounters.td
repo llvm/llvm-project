@@ -275,6 +275,9 @@ def ZnVer2PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn2AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn2Divider", "div_op_count">
   ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
+  ];
 }
 def : PfmCountersBinding<"znver2", ZnVer2PfmCounters>;
 
@@ -287,6 +290,9 @@ def ZnVer3PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn3Load", "ls_dispatch:ld_dispatch">,
     PfmIssueCounter<"Zn3Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn3Divider", "div_op_count">
+  ];
+  let ValidationCounters = [
+    PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
   ];
 }
 def : PfmCountersBinding<"znver3", ZnVer3PfmCounters>;
