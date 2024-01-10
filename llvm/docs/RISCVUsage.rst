@@ -97,6 +97,8 @@ on support follow.
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
      ``V``            Supported
+     ``Za128rs``      Supported
+     ``Za64rs``       Supported
      ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported
@@ -118,9 +120,14 @@ on support follow.
      ``Zfinx``        Supported
      ``Zhinx``        Supported
      ``Zhinxmin``     Supported
+     ``Zic64b``       Supported
      ``Zicbom``       Assembly Support
      ``Zicbop``       Supported
      ``Zicboz``       Assembly Support
+     ``Ziccamoa``     Supported
+     ``Ziccif``       Supported
+     ``Zicclsm``      Supported
+     ``Ziccrse``      Supported
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
      ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
