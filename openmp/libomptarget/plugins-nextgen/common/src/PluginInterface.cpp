@@ -1853,8 +1853,6 @@ bool __tgt_rtl_requested_prepopulate_gpu_page_table() {
   return Plugin::get().requestedPrepopulateGPUPageTable();
 }
 
-bool __tgt_rtl_is_no_maps_check() { return Plugin::get().IsNoMapsCheck(); }
-
 bool __tgt_rtl_is_fine_grained_memory_enabled() {
   return Plugin::get().IsFineGrainedMemoryEnabled();
 }
@@ -1935,7 +1933,8 @@ void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
   assert(*AllocOrErr && "Null pointer upon successful allocation");
 
   // Method has no effect when the CUDA Plugin is used.
-  if (Kind == TARGET_ALLOC_SHARED)
+  // This method can only be called if HostPtr is not null.
+  if (HostPtr && Kind == TARGET_ALLOC_SHARED)
     __tgt_rtl_set_coarse_grain_mem_region(DeviceId, HostPtr, Size);
 
   return *AllocOrErr;

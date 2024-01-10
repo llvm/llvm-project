@@ -42,8 +42,6 @@ bool __tgt_rtl_has_USM_capable_dGPU(void);
 
 bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled(void);
 
-bool __tgt_rtl_is_no_maps_check(void);
-
 bool __tgt_rtl_is_fine_grained_memory_enabled(void);
 
 // Set up environement e.g. depending on the values of the env vars

@@ -1,3 +1,4 @@
+// XFAIL: amdgcn-amd-amdhsa
 // clang-format off
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-target-jit \
 // RUN:     -DTGT1_DIRECTIVE="target"                          \

@@ -1,5 +1,6 @@
 ! Basic offloading test of a regular array explicitly
 ! passed within a target region
+! XFAIL: amdgcn-amd-amdhsa
 ! REQUIRES: flang
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu

@@ -53,7 +53,6 @@ PLUGIN_API_HANDLE(has_apu_device, true);
 PLUGIN_API_HANDLE(has_USM_capable_dGPU, true);
 PLUGIN_API_HANDLE(are_allocations_for_maps_on_apus_disabled, true);
 PLUGIN_API_HANDLE(requested_prepopulate_gpu_page_table, true);
-PLUGIN_API_HANDLE(is_no_maps_check, true);
 PLUGIN_API_HANDLE(is_fine_grained_memory_enabled, true);
 PLUGIN_API_HANDLE(is_system_supporting_managed_memory, true);
 PLUGIN_API_HANDLE(number_of_team_procs, true);

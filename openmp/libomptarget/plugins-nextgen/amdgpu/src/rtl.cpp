@@ -848,9 +848,16 @@ private:
         ThreadLimitClause[0] += GenericDevice.getWarpSize();
     }
 
-    return std::min(MaxNumThreads, (ThreadLimitClause[0] > 0)
-                                       ? ThreadLimitClause[0]
-                                       : PreferredNumThreads);
+    // Limit number of threads taking into consideration the user
+    // environment variable OMP_TEAMS_THREAD_LIMIT if provided.
+    uint32_t CurrentMaxNumThreads = MaxNumThreads;
+    if (TeamsThreadLimitEnvVar > 0)
+      CurrentMaxNumThreads = std::min(
+          static_cast<uint32_t>(TeamsThreadLimitEnvVar), CurrentMaxNumThreads);
+
+    return std::min(CurrentMaxNumThreads,
+                    (ThreadLimitClause[0] > 0) ? ThreadLimitClause[0] :
+                    PreferredNumThreads);
   }
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
@@ -4026,8 +4033,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return PrepopulateGPUPageTable;
   }
 
-  bool IsNoMapsCheck() override final { return NoUSMMapChecks; }
-
   bool IsFineGrainedMemoryEnabled() override final {
     return EnableFineGrainedMemory;
   }
@@ -4047,7 +4052,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "parseEnvVars was called on uninitialized plugin");
 
-    NoMapChecks = BoolEnvar("OMPX_DISABLE_MAPS", true);
     DisableUsmMaps = BoolEnvar("OMPX_DISABLE_USM_MAPS", false);
     HsaXnack = BoolEnvar("HSA_XNACK", false);
     APUPrefault = BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false);
@@ -4055,11 +4059,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   void setUpEnv() override final {
-
-    if (NoMapChecks.get() == false) {
-      NoUSMMapChecks = false;
-    }
-
     if (DisableUsmMaps.get() == true) {
       EnableFineGrainedMemory = true;
     }
@@ -4359,10 +4358,6 @@ private:
   // If set, map clauses provoke prefaulting of the GPU
   // page table.
   bool PrepopulateGPUPageTable{false};
-
-  // Set by OMPX_DISABLE_MAPS environment variable.
-  // When active (default value), maps are ignored by the runtime
-  bool NoUSMMapChecks{true};
 
   // Set by OMPX_DISABLE_USM_MAPS environment variable.
   // If set, fine graned memory is used for maps instead of coarse grained.

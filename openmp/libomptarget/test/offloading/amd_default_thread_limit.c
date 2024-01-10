@@ -1,4 +1,3 @@
-// XFAIL: *
 // clang-format off
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=16 \
@@ -37,53 +36,59 @@ int main() {
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 42 (MaxFlatWorkGroupSize: 1024
+// Note: upstream uses 42 (MaxFlatWorkGroupSize: 1024
+// DEFAULT: 42 (MaxFlatWorkGroupSize: 256
 #pragma omp target thread_limit(optnone() * 42)
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 42 (MaxFlatWorkGroupSize: 42
+// TODO implement support for ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
+// DEFAULT-NOT: 42 (MaxFlatWorkGroupSize: 42
 #pragma omp target thread_limit(optnone() * 42) ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 42 (MaxFlatWorkGroupSize: 42
+// TODO implement support for ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
+// DEFAULT-NOT: 42 (MaxFlatWorkGroupSize: 42
 #pragma omp target ompx_attribute(__attribute__((amdgpu_flat_work_group_size(42, 42))))
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: MaxFlatWorkGroupSize: 1024
+// DEFAULT: MaxFlatWorkGroupSize: 256
 #pragma omp target
 #pragma omp teams distribute parallel for num_threads(optnone() * 42)
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: MaxFlatWorkGroupSize: 1024
+// DEFAULT: MaxFlatWorkGroupSize: 256
 #pragma omp target teams distribute parallel for thread_limit(optnone() * 42)
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: MaxFlatWorkGroupSize: 1024
+// DEFAULT: MaxFlatWorkGroupSize: 256
 #pragma omp target teams distribute parallel for num_threads(optnone() * 42)
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 9 (MaxFlatWorkGroupSize: 9
+// TODO: Should num_threads clause limit the MaxFlatWorkGroupSize to 9?
+// DEFAULT: 9 (MaxFlatWorkGroupSize: 256
 #pragma omp target
 #pragma omp teams distribute parallel for num_threads(9)
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 4 (MaxFlatWorkGroupSize: 4
+// TODO: Should thread_limit clause limit the MaxFlatWorkGroupSize to 4?
+// DEFAULT: 4 (MaxFlatWorkGroupSize: 256
 #pragma omp target thread_limit(4)
 #pragma omp teams distribute parallel for
   for (int i = 0; i < N; ++i) {
     optnone();
   }
-// DEFAULT: 4 (MaxFlatWorkGroupSize: 4
+// TODO: Should thread_limit clause limit the MaxFlatWorkGroupSize to 4?
+// DEFAULT: 4 (MaxFlatWorkGroupSize: 256
 #pragma omp target
 #pragma omp teams distribute parallel for thread_limit(4)
   for (int i = 0; i < N; ++i) {

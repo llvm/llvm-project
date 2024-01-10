@@ -280,19 +280,6 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
           Device.RTL->prepopulate_page_table) {
         Device.RTL->prepopulate_page_table(Device.DeviceID, HstPtrBegin, Size);
       }
-
-      if (!Device.RTL->is_no_maps_check()) {
-        // even under unified_shared_memory need to check for correctness of
-        // use of map clauses. Device pointer is same as host ptr in this case
-        LR.TPR.setEntry(HDTTMap
-                            ->emplace(new HostDataToTargetTy(
-                                (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                                (uintptr_t)HstPtrBegin + Size,
-                                (uintptr_t)HstPtrBegin, (uintptr_t)HstPtrBegin,
-                                HasHoldModifier, HstPtrName, /*IsInf=*/true,
-                                /*IsUSMAlloc=*/true))
-                            .first->HDTT);
-      }
     }
     DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
        "memory\n",
@@ -402,8 +389,7 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
   LR.TPR.Flags.IsPresent = true;
 
   if ((LR.Flags.IsContained ||
-       (!MustContain && (LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter))) &&
-      !LR.TPR.getEntry()->IsUSMAlloc) {
+       (!MustContain && (LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter)))) {
 
     LR.TPR.Flags.IsLast =
         LR.TPR.getEntry()->decShouldRemove(UseHoldRefCount, ForceDelete);

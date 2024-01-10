@@ -72,8 +72,6 @@ struct HostDataToTargetTy {
   const uintptr_t TgtAllocBegin; // allocated target memory
   const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
 
-  const bool IsUSMAlloc; // used to track maps under USM mode (optional)
-
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
   static std::string refCountToStr(uint64_t RefCount) {
@@ -127,10 +125,9 @@ public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
                      uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
-                     bool IsINF = false, bool IsUSMAlloc = false)
+                     bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
         TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
-        IsUSMAlloc(IsUSMAlloc),
         States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
                                           : IsINF         ? INFRefCount
                                                           : 1,

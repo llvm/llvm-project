@@ -1104,8 +1104,6 @@ struct GenericPluginTy {
 
   virtual bool requestedPrepopulateGPUPageTable() { return false; }
 
-  virtual bool IsNoMapsCheck() { return false; }
-
   virtual bool IsFineGrainedMemoryEnabled() { return false; }
 
   virtual bool IsSystemSupportingManagedMemory() { return false; }

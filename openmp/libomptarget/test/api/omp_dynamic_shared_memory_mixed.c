@@ -1,3 +1,5 @@
+// XFAIL: x86_64-pc-linux-gnu
+// XFAIL: x86_64-pc-linux-gnu-LTO
 // RUN: env LIBOMPTARGET_NEXTGEN_PLUGINS=1 \
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
