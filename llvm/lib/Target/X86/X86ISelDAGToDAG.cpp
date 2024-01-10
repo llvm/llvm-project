@@ -4086,7 +4086,7 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   SDValue Control;
   unsigned ROpc, MOpc;
 
-#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
   if (!PreferBEXTR) {
     assert(Subtarget->hasBMI2() && "We must have BMI2's BZHI then.");
     // If we can't make use of BEXTR then we can't fuse shift+mask stages.
@@ -5487,7 +5487,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     bool UseMULXHi = UseMULX && SDValue(Node, 0).use_empty();
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
-#define GET_EGPR_IF_ENABLED(OPC) Subtarget->hasEGPR() ? OPC##_EVEX : OPC
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
     case MVT::i32:
       Opc = UseMULXHi  ? X86::MULX32Hrr
             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rr)
