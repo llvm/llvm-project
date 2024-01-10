@@ -1214,6 +1214,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1227,6 +1230,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1240,6 +1246,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 # FIXME: These tests are currently spurious for NVPTX.

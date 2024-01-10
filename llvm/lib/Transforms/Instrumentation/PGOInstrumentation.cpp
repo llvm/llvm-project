@@ -658,10 +658,10 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
                     << " CRC = " << JC.getCRC()
                     << ", Selects = " << SIVisitor.getNumOfSelectInsts()
                     << ", Edges = " << MST.numEdges() << ", ICSites = "
-                    << ValueSites[IPVK_IndirectCallTarget].size());
-  LLVM_DEBUG(dbgs() << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
-                    << ", High32 CRC = " << JCH.getCRC());
-  LLVM_DEBUG(dbgs() << ", Hash = " << FunctionHash << "\n";);
+                    << ValueSites[IPVK_IndirectCallTarget].size()
+                    << ", Memops = " << ValueSites[IPVK_MemOPSize].size()
+                    << ", High32 CRC = " << JCH.getCRC()
+                    << ", Hash = " << FunctionHash << "\n";);
 
   if (PGOTraceFuncHash != "-" && F.getName().contains(PGOTraceFuncHash))
     dbgs() << "Funcname=" << F.getName() << ", Hash=" << FunctionHash
