@@ -2013,8 +2013,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           ColonLocFirst = ConsumeToken();
           Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
         }
-      }
-      else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
+      } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
         if (Tok.is(tok::colon)) {
           // Consume ':'
@@ -2052,8 +2051,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           // well.
           LHS = Actions.ActOnOMPArraySectionExpr(
               LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
-              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(),
-              RLoc);
+              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
         } else {
           LHS = Actions.ActOnArraySubscriptExpr(getCurScope(), LHS.get(), Loc,
                                                 ArgExprs, RLoc);

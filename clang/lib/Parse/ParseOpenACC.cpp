@@ -598,9 +598,9 @@ void Parser::ParseOpenACCCacheVarList() {
 
     // OpenACC 3.3, section 2.10:
     // A 'var' in a cache directive must be a single array element or a simple
-    // subarray.  In C and C++, a simple subarray is an array name followed by an
-    // extended array range specification in brackets, with a start and length such
-    // as:
+    // subarray.  In C and C++, a simple subarray is an array name followed by
+    // an extended array range specification in brackets, with a start and
+    // length such as:
     //
     // arr[lower:length]
     //
