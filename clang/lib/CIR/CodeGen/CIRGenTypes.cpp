@@ -634,7 +634,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       SkippedLayout = true;
       ResultType = Builder.getUInt8Ty();
     }
-    ResultType = Builder.getArrayType(ResultType, 0);  
+    ResultType = Builder.getArrayType(ResultType, 0);
     break;
   }
   case Type::ConstantArray: {

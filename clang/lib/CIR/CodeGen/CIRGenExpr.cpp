@@ -234,8 +234,8 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
 
   auto fieldPtr =
       mlir::cir::PointerType::get(getBuilder().getContext(), fieldType);
-  auto sea = getBuilder().createGetMember(
-    loc, fieldPtr, base.getPointer(), field->getName(), index);
+  auto sea = getBuilder().createGetMember(loc, fieldPtr, base.getPointer(),
+                                          field->getName(), index);
 
   return Address(sea, CharUnits::One());
 }
@@ -341,7 +341,7 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       llvm::StringRef fieldName = field->getName();
-      auto& layout = CGM.getTypes().getCIRGenRecordLayout(field->getParent());
+      auto &layout = CGM.getTypes().getCIRGenRecordLayout(field->getParent());
       unsigned fieldIndex = layout.getCIRFieldNo(field);
 
       if (CGM.LambdaFieldToName.count(field))
@@ -396,7 +396,7 @@ LValue CIRGenFunction::buildLValueForFieldInitialization(
   if (!FieldType->isReferenceType())
     return buildLValueForField(Base, Field);
 
-  auto& layout = CGM.getTypes().getCIRGenRecordLayout(Field->getParent());
+  auto &layout = CGM.getTypes().getCIRGenRecordLayout(Field->getParent());
   unsigned FieldIndex = layout.getCIRFieldNo(Field);
 
   Address V = buildAddrOfFieldStorage(*this, Base.getAddress(), Field,
