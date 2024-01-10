@@ -106,6 +106,45 @@ entry:
   ret i32 %or.4
 }
 
+define i32 @rev32_bswap(i32 %v) {
+; CHECK-LABEL: @rev32_bswap(
+; CHECK-NEXT:    [[AND_I:%.*]] = lshr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[SHR_I:%.*]] = and i32 [[AND_I]], 1431655765
+; CHECK-NEXT:    [[AND1_I:%.*]] = shl i32 [[V]], 1
+; CHECK-NEXT:    [[SHL_I:%.*]] = and i32 [[AND1_I]], -1431655766
+; CHECK-NEXT:    [[OR_I:%.*]] = or disjoint i32 [[SHR_I]], [[SHL_I]]
+; CHECK-NEXT:    [[AND2_I:%.*]] = lshr i32 [[OR_I]], 2
+; CHECK-NEXT:    [[SHR3_I:%.*]] = and i32 [[AND2_I]], 858993459
+; CHECK-NEXT:    [[AND4_I:%.*]] = shl i32 [[OR_I]], 2
+; CHECK-NEXT:    [[SHL5_I:%.*]] = and i32 [[AND4_I]], -858993460
+; CHECK-NEXT:    [[OR6_I:%.*]] = or disjoint i32 [[SHR3_I]], [[SHL5_I]]
+; CHECK-NEXT:    [[AND7_I:%.*]] = lshr i32 [[OR6_I]], 4
+; CHECK-NEXT:    [[SHR8_I:%.*]] = and i32 [[AND7_I]], 252645135
+; CHECK-NEXT:    [[AND9_I:%.*]] = shl i32 [[OR6_I]], 4
+; CHECK-NEXT:    [[SHL10_I:%.*]] = and i32 [[AND9_I]], -252645136
+; CHECK-NEXT:    [[OR11_I:%.*]] = or disjoint i32 [[SHR8_I]], [[SHL10_I]]
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bswap.i32(i32 [[OR11_I]])
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %and.i = lshr i32 %v, 1
+  %shr.i = and i32 %and.i, 1431655765
+  %and1.i = shl i32 %v, 1
+  %shl.i = and i32 %and1.i, -1431655766
+  %or.i = or disjoint i32 %shr.i, %shl.i
+  %and2.i = lshr i32 %or.i, 2
+  %shr3.i = and i32 %and2.i, 858993459
+  %and4.i = shl i32 %or.i, 2
+  %shl5.i = and i32 %and4.i, -858993460
+  %or6.i = or disjoint i32 %shr3.i, %shl5.i
+  %and7.i = lshr i32 %or6.i, 4
+  %shr8.i = and i32 %and7.i, 252645135
+  %and9.i = shl i32 %or6.i, 4
+  %shl10.i = and i32 %and9.i, -252645136
+  %or11.i = or disjoint i32 %shr8.i, %shl10.i
+  %ret = call i32 @llvm.bswap.i32(i32 %or11.i)
+  ret i32 %ret
+}
+
 define i64 @rev64(i64 %v) {
 ; CHECK-LABEL: @rev64(
 ; CHECK-NEXT:  entry:
@@ -508,3 +547,5 @@ define i64 @rev_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
   call void @use_i64(i64 %2)
   ret i64 %4
 }
+
+declare i32 @llvm.bswap.i32(i32 %or11.i)
