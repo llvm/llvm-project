@@ -9,12 +9,12 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -23,13 +23,14 @@
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <utility>
 #include <iostream>
+#include <utility>
 
 #ifdef __unix__
 #include <unistd.h>
@@ -583,6 +584,59 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
     emitter << *op.getConstantIndex();
   else
     emitter << emitter.getOrCreateName(op.getIndex());
+  emitter << ")";
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter,
+                                    memref::ReinterpretCastOp op) {
+  Value result = op.getResult();
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  emitter.memrefSpaces[result] = emitter.memrefSpaces[op.getSource()];
+  int sourceRank = sourceType.getRank();
+  if (sourceRank != 1 || (emitter.isStridedSubview(op.getSource())) ||
+      llvm::any_of(op.getStaticStrides(),
+                   [](auto stride) { return stride != 1; })) {
+    return op.emitError(
+        "ReinterpretCastOp has these restrictions (a) 1D memrefs (b) no "
+        "strided input or output (c) staically known size (d) unit stride");
+  }
+  const bool useDynamicSizes = !op.getSizes().empty();
+  const bool useDynamicOffsets = !op.getOffsets().empty();
+  auto emitSize = [&](int dim) -> LogicalResult {
+    if (useDynamicSizes) {
+      if (failed(emitter.emitValue(op.getSizes()[dim])))
+        return failure();
+    } else
+      emitter << op.getStaticSizes()[dim];
+    return success();
+  };
+  auto emitOffset = [&](int dim) -> LogicalResult {
+    if (useDynamicOffsets) {
+      if (failed(emitter.emitValue(op.getOffsets()[dim])))
+        return failure();
+    } else
+      emitter << op.getStaticOffsets()[dim];
+    return success();
+  };
+  emitter << "auto " << emitter.getOrCreateName(result)
+          << " = Kokkos::subview(";
+  if (failed(emitter.emitValue(op.getSource())))
+    return failure();
+  for (int dim = 0; dim < sourceRank; dim++) {
+    emitter << ", Kokkos::make_pair<int64_t, int64_t>(";
+    // interval for each dim is [offset, offset+size)
+    // TODO: this is only correct for unit strides, see above
+    if (failed(emitOffset(dim)))
+      return failure();
+    emitter << ", ";
+    if (failed(emitOffset(dim)))
+      return failure();
+    emitter << " + ";
+    if (failed(emitSize(dim)))
+      return failure();
+    emitter << ")";
+  }
   emitter << ")";
   return success();
 }
@@ -3205,8 +3259,11 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<math::SqrtOp, math::AbsIOp, math::AbsFOp, math::ExpOp, math::Exp2Op, math::SinOp, math::CosOp, math::AtanOp, math::TanhOp, math::ErfOp, math::LogOp, math::Log2Op>(
               [&](auto op) { return printMathOperation(*this, op); })
           // Memref ops.
-          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp, memref::AllocaOp, memref::StoreOp, memref::LoadOp,
-                memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp, memref::DeallocOp, memref::DimOp>(
+          .Case<memref::GlobalOp, memref::GetGlobalOp, memref::AllocOp,
+                memref::AllocaOp, memref::StoreOp, memref::LoadOp,
+                memref::CopyOp, memref::SubViewOp, memref::CollapseShapeOp,
+                memref::CastOp, memref::DeallocOp, memref::DimOp,
+                memref::ReinterpretCastOp>(
               [&](auto op) { return printOperation(*this, op); })
           // GPU ops.
           .Case<gpu::AllocOp, gpu::DeallocOp, gpu::MemcpyOp>(

@@ -8,6 +8,7 @@ target_link_libraries(MLIRDialectTests
 
 add_subdirectory(LLVMIR)
 add_subdirectory(MemRef)
+add_subdirectory(PartTensor)
 add_subdirectory(SparseTensor)
 add_subdirectory(SPIRV)
 add_subdirectory(Transform)

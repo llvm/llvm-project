@@ -1,0 +1,9 @@
+buildDir := "build"
+alias pt := partTensorTest
+build target:
+    ninja -C {{buildDir}} {{target}}
+buildMin:
+    nice -n 14 ionice -c3 ninja -C {{buildDir}} lib/libmlir_c_runner_utils.so mlir-opt
+run_test target: (build target)
+    {{buildDir}}/{{target}}
+partTensorTest: (run_test "tools/mlir/unittests/Dialect/PartTensor/MLIRPartTensorTests")

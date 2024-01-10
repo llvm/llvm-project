@@ -1,4 +1,4 @@
-//===- SparseTensorKokkosPipelines.cpp - Pipelines for sparse tensor code -------===//
+//===- SparseTensorKokkosPipelines.cpp - Pipelines for sparse tensor code -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/PartTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -30,6 +31,7 @@ using namespace mlir::sparse_tensor;
 
 void mlir::sparse_tensor::buildSparseKokkosCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
+  pm.addPass(createPartTensorConversionPass());
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(createSparsificationAndBufferizationPass(
       getBufferizationOptionsForSparsification(
