@@ -5,7 +5,7 @@ add_llvm_component_library(LLVMDWARFLinkerClassic
   DWARFStreamer.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker/Classic
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker
 
   DEPENDS
   intrinsics_gen

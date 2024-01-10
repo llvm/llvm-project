@@ -12,7 +12,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   SyntheticTypeNameBuilder.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinker/Parallel
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/DWARFLinkerParallel
 
   DEPENDS
   intrinsics_gen
