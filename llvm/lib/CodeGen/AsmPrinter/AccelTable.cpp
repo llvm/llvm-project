@@ -221,7 +221,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   MCSymbol *EntryPool = Asm->createTempSymbol("names_entries");
   // Indicates if this module is built with Split Dwarf enabled.
   bool IsSplitDwarf = false;
-  // Stores the DIE offsets which are indexed by this table.
+  /// Stores the DIE offsets which are indexed by this table.
   DenseSet<uint64_t> IndexedOffsets;
 
   void populateAbbrevsMap();
@@ -402,14 +402,14 @@ void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
 }
 
 enum IdxParentEncoding : uint8_t {
-  NoIndexedParent = 0, // Parent information present but parent isn't indexed.
-  Ref4 = 1,            // Parent information present and parent is indexed.
-  NoParent = 2,        // Parent information missing.
+  NoIndexedParent = 0, /// Parent information present but parent isn't indexed.
+  Ref4 = 1,            /// Parent information present and parent is indexed.
+  NoParent = 2,        /// Parent information missing.
 };
 
 static uint32_t constexpr NumBitsIdxParent = 2;
 
-uint8_t encodeIdxParent(std::optional<dwarf::Form> MaybeParentForm) {
+uint8_t encodeIdxParent(const std::optional<dwarf::Form> MaybeParentForm) {
   if (!MaybeParentForm)
     return NoParent;
   switch (*MaybeParentForm) {
@@ -418,11 +418,10 @@ uint8_t encodeIdxParent(std::optional<dwarf::Form> MaybeParentForm) {
   case dwarf::Form::DW_FORM_ref4:
     return Ref4;
   default:
-    break;
+    // This is not crashing on bad input: we should only reach this if the
+    // internal compiler logic is faulty; see getFormForIdxParent.
+    llvm_unreachable("Bad form for IDX_parent");
   }
-  // This is not crashing on bad input: we should only reach this if the
-  // internal compiler logic is faulty; see getFormForIdxParent.
-  llvm_unreachable("Bad form for IDX_parent");
 }
 
 static uint32_t constexpr ParentBitOffset = dwarf::DW_IDX_type_hash;
@@ -608,7 +607,7 @@ void Dwarf5AccelTableWriter::emitData() {
   DenseMap<uint64_t, MCSymbol *> DIEOffsetToAccelEntryLabel;
 
   for (auto Offset : IndexedOffsets)
-    DIEOffsetToAccelEntryLabel[Offset] = Asm->createTempSymbol("symbol");
+    DIEOffsetToAccelEntryLabel.insert({Offset, Asm->createTempSymbol("")});
 
   Asm->OutStreamer->emitLabel(EntryPool);
   DenseSet<MCSymbol *> EmittedAccelEntrySymbols;
