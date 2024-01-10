@@ -221,7 +221,7 @@ _mlir_ciface_printMemref1dC64(StridedMemRefType<impl::complex64, 1> *M) {
 
 extern "C" int64_t
 _mlir_ciface_verifyMemRefI8(UnrankedMemRefType<int8_t> *actual,
-                             UnrankedMemRefType<int8_t> *expected) {
+                            UnrankedMemRefType<int8_t> *expected) {
   return impl::verifyMemRef(*actual, *expected);
 }
 
@@ -251,7 +251,7 @@ _mlir_ciface_verifyMemRefF16(UnrankedMemRefType<f16> *actual,
 
 extern "C" int64_t
 _mlir_ciface_verifyMemRefBF16(UnrankedMemRefType<bf16> *actual,
-                             UnrankedMemRefType<bf16> *expected) {
+                              UnrankedMemRefType<bf16> *expected) {
   return impl::verifyMemRef(*actual, *expected);
 }
 

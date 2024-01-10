@@ -331,9 +331,9 @@ int64_t verifyMemRef(const DynamicMemRefType<T> &actual,
   }
   // Return the number of errors.
   int64_t printCounter = 0;
-  return MemRefDataVerifier<T>::verify(
-      std::cerr, actual.data, expected.data, actual.rank, actual.offset,
-      actual.sizes, actual.strides, printCounter);
+  return MemRefDataVerifier<T>::verify(std::cerr, actual.data, expected.data,
+                                       actual.rank, actual.offset, actual.sizes,
+                                       actual.strides, printCounter);
 }
 
 /// Verify the equivalence of two unranked memrefs and return the number of
