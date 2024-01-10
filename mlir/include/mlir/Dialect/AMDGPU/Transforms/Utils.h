@@ -11,10 +11,13 @@
 namespace mlir {
 namespace amdgpu {
 
-/// Get the indices that the given load/store operation is operating on.
+/// Get and set the indices that the given load/store operation is operating on.
+/// Preconditions:
+/// - The Op must have memory affects
+/// - Considers memref::LoadOp,  vector::LoadOp,  vector::TransferReadOp
+/// - Considers memref::StoreOp, vector::StoreOp, vector::TransferWriteOp
+/// - Excludes subview op
 Operation::operand_range getIndices(Operation *op);
-
-/// Set the indices that the given load/store operation is operating on.
 void setIndices(Operation *op, ArrayRef<Value> indices);
 
 } // namespace amdgpu
