@@ -159,9 +159,69 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
-  // TODO: Also check if we are seeing the result of an AND operation which
-  // could be bypassed since we only check the lower log2(xlen) bits.
-  return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
+  if (!Root.isReg())
+    return std::nullopt;
+
+  using namespace llvm::MIPatternMatch;
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  Register RootReg = Root.getReg();
+  Register ShAmtReg = RootReg;
+  const LLT ShiftLLT = MRI.getType(RootReg);
+  unsigned ShiftWidth = ShiftLLT.getSizeInBits();
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  // Peek through zext.
+  Register ZExtSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg)))) {
+    ShAmtReg = ZExtSrcReg;
+  }
+
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
+    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+    if (ShMask.isSubsetOf(AndMask)) {
+      ShAmtReg = AndSrcReg;
+    } else {
+      // TODO:
+      // SimplifyDemandedBits may have optimized the mask so try restoring any
+      // bits that are known zero.
+    }
+  }
+
+  APInt Imm;
+  Register Reg;
+  if (mi_match(ShAmtReg, MRI, m_GAdd(m_Reg(Reg), m_ICst(Imm)))) {
+    if (Imm != 0 && Imm.urem(ShiftWidth) == 0)
+      // If we are shifting by X+N where N == 0 mod Size, then just shift by X
+      // to avoid the ADD.
+      ShAmtReg = Reg;
+  } else if (mi_match(ShAmtReg, MRI, m_GSub(m_ICst(Imm), m_Reg(Reg)))) {
+    if (Imm != 0 && Imm.urem(ShiftWidth) == 0) {
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
+      // to generate a NEG instead of a SUB of a constant.
+      ShAmtReg = MRI.createGenericVirtualRegister(ShiftLLT);
+      unsigned NegOpc = Subtarget->is64Bit() ? RISCV::SUBW : RISCV::SUB;
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(NegOpc, {ShAmtReg}, {Register(RISCV::X0), Reg});
+        MIB.addReg(ShAmtReg);
+      }}};
+    }
+    if ((Imm.urem(ShiftWidth) & (ShiftWidth - 1)) == ShiftWidth - 1) {
+      // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
+      // to generate a NOT instead of a SUB of a constant.
+      ShAmtReg = MRI.createGenericVirtualRegister(ShiftLLT);
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(RISCV::XORI, {ShAmtReg}, {Reg})
+            .addImm(-1);
+        MIB.addReg(ShAmtReg);
+      }}};
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
 }
 
 InstructionSelector::ComplexRendererFns
