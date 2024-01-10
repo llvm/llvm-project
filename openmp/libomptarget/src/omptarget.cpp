@@ -18,6 +18,7 @@
 #include "PluginManager.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/Utils.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -29,6 +30,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
 #include <cstdint>
@@ -308,9 +310,31 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins())
+      if (!PM->getNumUsedPlugins()) {
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
+
+        llvm::SmallVector<llvm::StringRef> Archs;
+        for (auto &Image : PM->deviceImages()) {
+          const char *Start = reinterpret_cast<const char *>(
+              Image.getExecutableImage().ImageStart);
+          uint64_t Length = llvm::omp::target::getPtrDiff(
+              Start, Image.getExecutableImage().ImageEnd);
+          llvm::MemoryBufferRef Buffer(llvm::StringRef(Start, Length),
+                                       /*Identifier=*/"");
+
+          auto ObjectOrErr = llvm::object::ObjectFile::createObjectFile(Buffer);
+          if (auto Err = ObjectOrErr.takeError()) {
+            llvm::consumeError(std::move(Err));
+            continue;
+          }
+
+          if (auto CPU = (*ObjectOrErr)->tryGetCPUName())
+            Archs.push_back(*CPU);
+        }
+        fprintf(stderr, "Found %zu image(s): (%s)\n", Archs.size(),
+                llvm::join(Archs, ",").c_str());
+      }
 
       SourceInfo Info(Loc);
       if (Info.isAvailible())
