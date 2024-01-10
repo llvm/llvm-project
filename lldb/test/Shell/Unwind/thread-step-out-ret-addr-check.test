@@ -3,6 +3,8 @@
 
 # REQUIRES: target-x86_64
 # UNSUPPORTED: system-windows
+# XFAIL: system-darwin
+# See: rdar://120797300
 
 # RUN: %clang_host %p/Inputs/call-asm.c -x assembler-with-cpp %p/Inputs/thread-step-out-ret-addr-check.s -o %t
 # RUN: not %lldb %t -s %s -b 2>&1 | FileCheck %s

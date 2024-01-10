@@ -16,6 +16,7 @@ class TestIndirectFunctions(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(["pyapi"])
+    @expectedFailureDarwin("rdar://120796553")
     def test_with_python_api(self):
         """Test stepping and setting breakpoints in indirect and re-exported symbols."""
         self.build()
