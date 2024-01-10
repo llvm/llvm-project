@@ -580,7 +580,7 @@ bool AArch64DAGToDAGISel::SelectArithImmed(SDValue N, SDValue &Val,
   if (!isa<ConstantSDNode>(N.getNode()))
     return false;
 
-  uint64_t Immed = cast<ConstantSDNode>(N.getNode())->getZExtValue();
+  uint64_t Immed = N.getNode()->getAsZExtVal();
   unsigned ShiftAmt;
 
   if (Immed >> 12 == 0) {
@@ -611,7 +611,7 @@ bool AArch64DAGToDAGISel::SelectNegArithImmed(SDValue N, SDValue &Val,
     return false;
 
   // The immediate operand must be a 24-bit zero-extended immediate.
-  uint64_t Immed = cast<ConstantSDNode>(N.getNode())->getZExtValue();
+  uint64_t Immed = N.getNode()->getAsZExtVal();
 
   // This negation is almost always valid, but "cmp wN, #0" and "cmn wN, #0"
   // have the opposite effect on the C flag, so this pattern mustn't match under
@@ -1326,7 +1326,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   //     MOV  X0, WideImmediate
   //     LDR  X2, [BaseReg, X0]
   if (isa<ConstantSDNode>(RHS)) {
-    int64_t ImmOff = (int64_t)cast<ConstantSDNode>(RHS)->getZExtValue();
+    int64_t ImmOff = (int64_t)RHS->getAsZExtVal();
     // Skip the immediate can be selected by load/store addressing mode.
     // Also skip the immediate can be encoded by a single ADD (SUB is also
     // checked by using -ImmOff).
