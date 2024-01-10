@@ -2225,7 +2225,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   const char *file_name = file.GetFilename().AsCString("<Unknown>");
   LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress(llvm::formatv("Parsing symbol table for {0}", file_name));
+  Progress progress("Parsing symbol table", file_name);
 
   llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
