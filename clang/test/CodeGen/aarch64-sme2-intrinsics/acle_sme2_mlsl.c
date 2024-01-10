@@ -479,7 +479,7 @@ void test_svmls_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) _
 //
 void test_svmls_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_f16,,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_f16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane1_bf16(
