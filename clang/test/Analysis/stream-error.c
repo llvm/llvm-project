@@ -295,6 +295,37 @@ void error_fseek(void) {
   fclose(F);
 }
 
+void error_fseeko(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  int rc = fseeko(F, 1, SEEK_SET);
+  if (rc) {
+    int IsFEof = feof(F), IsFError = ferror(F);
+    // Get feof or ferror or no error.
+    clang_analyzer_eval(IsFEof || IsFError);
+    // expected-warning@-1 {{FALSE}}
+    // expected-warning@-2 {{TRUE}}
+    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Error flags should not change.
+    if (IsFEof)
+      clang_analyzer_eval(feof(F)); // expected-warning {{TRUE}}
+    else
+      clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
+    if (IsFError)
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    else
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    // Error flags should not change.
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  }
+  fclose(F);
+}
+
 void error_fseek_0(void) {
   FILE *F = fopen("file", "r");
   if (!F)
@@ -320,6 +351,57 @@ void error_fseek_0(void) {
     // Error flags should not change.
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  }
+  fclose(F);
+}
+
+void error_fseeko_0(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  int rc = fseeko(F, 0, SEEK_SET);
+  if (rc) {
+    int IsFEof = feof(F), IsFError = ferror(F);
+    // Get ferror or no error, but not feof.
+    clang_analyzer_eval(IsFError);
+    // expected-warning@-1 {{FALSE}}
+    // expected-warning@-2 {{TRUE}}
+    clang_analyzer_eval(IsFEof);
+    // expected-warning@-1 {{FALSE}}
+    // Error flags should not change.
+    clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
+    if (IsFError)
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    else
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    // Error flags should not change.
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+  }
+  fclose(F);
+}
+
+void error_ftell(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  long Ret = ftell(F);
+  if (!(Ret >= 0)) {
+    clang_analyzer_eval(Ret == -1L); // expected-warning {{TRUE}}
+  }
+  fclose(F);
+}
+
+void error_ftello(void) {
+  FILE *F = fopen("file", "r");
+  if (!F)
+    return;
+  off_t Ret = ftello(F);
+  if (!(Ret == -1)) {
+    clang_analyzer_eval(Ret >= 0);   // expected-warning {{TRUE}}
   }
   fclose(F);
 }
