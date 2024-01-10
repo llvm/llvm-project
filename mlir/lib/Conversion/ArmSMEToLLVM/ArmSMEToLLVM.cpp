@@ -259,7 +259,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
 
     VectorType tileVectorType = tileOp.getTileType();
     auto sliceType = VectorType::Builder(tileVectorType).dropDim(0);
-    auto emitTileSwap = [&] {
+    auto swapInMemoryTileWithSMETileZero = [&] {
       emitFullTileSwap(rewriter, loc, tileAlloca,
                        *arm_sme::getSMETileType(tileVectorType), sliceType,
                        zeroTileId);
@@ -271,10 +271,10 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     {
       rewriter.setInsertionPoint(op);
       // Swap the contents of ZA and the in-memory tile before the op.
-      emitTileSwap();
+      swapInMemoryTileWithSMETileZero();
       rewriter.setInsertionPointAfter(op);
       // Swap the tile back out to memory again after the op.
-      emitTileSwap();
+      swapInMemoryTileWithSMETileZero();
     }
 
     return success();

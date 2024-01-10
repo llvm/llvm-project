@@ -7,8 +7,8 @@
 /// Checks tile spill/reloads are inserted around in-memory tiles (i.e. tiles
 /// that were not assigned a physical SME tile).
 ///
-/// These spills are currently very naive and paranoid and will spill/reload
-/// entire tiles around ArmSME ops.
+/// These spills are currently very naive and will spill/reload entire tiles
+/// around ArmSME ops.
 ///
 /// The general pattern is:
 ///
@@ -34,19 +34,17 @@
 /// Then around the op:
 ///
 /// // Swap contents of %tileAlloca and tile 0
-/// scf.for %sliceIdx ... {
+/// scf.for %sliceIdx ...
 ///   %currentSlice = arm_sme.intr.read.horiz {tile_id = 0}
 ///   arm_sme.intr.ld1h.horiz %tileAlloca[%sliceIdx, %c0] {tile_id = 0}
 ///   vector.store %currentSlice, %tileAlloca[%sliceIdx, %c0]
-/// }
 /// // Execute the op using tile 0
 /// arm_sme.intr.zero
 /// // Swap contents of %tileAlloca and tile 0
-/// scf.for %sliceIdx ... {
+/// scf.for %sliceIdx ...
 ///   %currentSlice = arm_sme.intr.read.horiz {tile_id = 0}
 ///   arm_sme.intr.ld1h.horiz %tileAlloca[%sliceIdx, %c0] {tile_id = 0}
 ///   vector.store %currentSlice, %tileAlloca[%sliceIdx, %c0]
-/// }
 ///
 
 // -----
@@ -78,10 +76,12 @@ func.func @use_too_many_tiles() {
 // AFTER-LLVM-LOWERING-SAME:   {arm_sme.in_memory_tile_id = 16 : i32} : memref<?x?xi16>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
-//      AFTER-LLVM-LOWERING: arm_sme.intr.zero
+//                           Note: 17 is the mask for the 32-bit tile 0.
+//      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 17 : i32}>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
-//      AFTER-LLVM-LOWERING: arm_sme.intr.zero
+//                           Note: 34 is the mask for the 32-bit tile 1.
+//      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 34 : i32}>
 //
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
@@ -92,7 +92,8 @@ func.func @use_too_many_tiles() {
 // AFTER-LLVM-LOWERING-NEXT:   "arm_sme.intr.ld1h.horiz"({{.*}}, %[[SLICE_PTR]], {{.*}}) <{tile_id = 0 : i32}>
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }
-//      AFTER-LLVM-LOWERING: arm_sme.intr.zero
+//                           Note: 85 is the mask for the 16-bit tile 0.
+//      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 85 : i32}>
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
 //      AFTER-LLVM-LOWERING:   %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[TILE_ALLOCA]]
