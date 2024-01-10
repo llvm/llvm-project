@@ -1662,8 +1662,8 @@ extern "C" {
 int32_t __tgt_rtl_init_plugin() {
   auto Err = Plugin::initIfNeeded();
   if (Err) {
-    REPORT("Failure to initialize plugin " GETNAME(TARGET_NAME) ": %s\n",
-           toString(std::move(Err)).data());
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to init plugin: %s", ErrStr.c_str());
     return OFFLOAD_FAIL;
   }
 
