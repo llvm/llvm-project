@@ -229,7 +229,7 @@ set(CXXLIBS none default libstdc++ libc++)
 set_property(CACHE SANITIZER_TEST_CXX PROPERTY STRINGS ;${CXXLIBS})
 handle_default_cxx_lib(SANITIZER_TEST_CXX)
 
-option(COMPILER_RT_USE_LLVM_UNWINDER "Use the LLVM unwinder." ON)
+option(COMPILER_RT_USE_LLVM_UNWINDER "Use the LLVM unwinder." OFF)
 cmake_dependent_option(COMPILER_RT_ENABLE_STATIC_UNWINDER
   "Statically link the LLVM unwinder." OFF
   "COMPILER_RT_USE_LLVM_UNWINDER" OFF)
