@@ -8945,17 +8945,18 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
   }
   SDValue NewFPSCR;
   if (Subtarget.isPPC64()) {
-    if (Subtarget.isISA3_0())
+    if (Subtarget.isISA3_0()) {
       NewFPSCR = DAG.getAnyExtOrTrunc(DstFlag, Dl, MVT::i64);
-    else
+    } else {
       // Set the last two bits (rounding mode) of bitcasted FPSCR.
-      NewFPSCR = DAG.getNode(
-          ISD::OR, Dl, MVT::i64,
-          DAG.getNode(
-              ISD::AND, Dl, MVT::i64,
-              DAG.getNode(ISD::BITCAST, Dl, MVT::i64, MFFS),
-              DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i64), MVT::i64)),
-          DAG.getNode(ISD::ZERO_EXTEND, Dl, MVT::i64, DstFlag));
+      SDNode *InsertRN = DAG.getMachineNode(
+          PPC::RLDIMI, Dl, MVT::i64,
+          {DAG.getNode(ISD::BITCAST, Dl, MVT::i64, MFFS),
+           DAG.getNode(ISD::ZERO_EXTEND, Dl, MVT::i64, DstFlag),
+           DAG.getTargetConstant(0, Dl, MVT::i32),
+           DAG.getTargetConstant(62, Dl, MVT::i32)});
+      NewFPSCR = SDValue(InsertRN, 0);
+    }
     NewFPSCR = DAG.getNode(ISD::BITCAST, Dl, MVT::f64, NewFPSCR);
   } else {
     // In 32-bit mode, store f64, load and update the lower half.
@@ -8972,14 +8973,12 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
       SDValue Tmp =
           DAG.getLoad(MVT::i32, Dl, Chain, Addr, MachinePointerInfo());
       Chain = Tmp.getValue(1);
-
-      Tmp = DAG.getNode(
-          ISD::OR, Dl, MVT::i32,
-          DAG.getNode(
-              ISD::AND, Dl, MVT::i32, Tmp,
-              DAG.getNOT(Dl, DAG.getConstant(3, Dl, MVT::i32), MVT::i32)),
-          DstFlag);
-
+      Tmp = SDValue(DAG.getMachineNode(
+                        PPC::RLWIMI, Dl, MVT::i32,
+                        {Tmp, DstFlag, DAG.getTargetConstant(0, Dl, MVT::i32),
+                         DAG.getTargetConstant(30, Dl, MVT::i32),
+                         DAG.getTargetConstant(31, Dl, MVT::i32)}),
+                    0);
       Chain = DAG.getStore(Chain, Dl, Tmp, Addr, MachinePointerInfo());
     }
     NewFPSCR =

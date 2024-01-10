@@ -274,9 +274,8 @@ define void @setrnd_var(i32 %x) #0 {
 ; PPC32-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; PPC32-NEXT:    xor 3, 3, 4
 ; PPC32-NEXT:    xori 3, 3, 1
-; PPC32-NEXT:    rlwinm 4, 5, 0, 0, 29
-; PPC32-NEXT:    rlwimi 4, 3, 0, 30, 31
-; PPC32-NEXT:    stw 4, 12(1)
+; PPC32-NEXT:    rlwimi 5, 3, 0, 30, 31
+; PPC32-NEXT:    stw 5, 12(1)
 ; PPC32-NEXT:    lfd 0, 8(1)
 ; PPC32-NEXT:    mtfsf 255, 0
 ; PPC32-NEXT:    addi 1, 1, 16
@@ -286,15 +285,14 @@ define void @setrnd_var(i32 %x) #0 {
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    mffs 0
 ; PPC64-NEXT:    stfd 0, -16(1)
-; PPC64-NEXT:    ld 5, -16(1)
 ; PPC64-NEXT:    clrlwi 4, 3, 30
 ; PPC64-NEXT:    rlwinm 3, 3, 31, 31, 31
+; PPC64-NEXT:    ld 5, -16(1)
 ; PPC64-NEXT:    xor 3, 3, 4
 ; PPC64-NEXT:    xori 3, 3, 1
 ; PPC64-NEXT:    clrldi 3, 3, 32
-; PPC64-NEXT:    rldicr 4, 5, 0, 61
-; PPC64-NEXT:    or 3, 4, 3
-; PPC64-NEXT:    std 3, -8(1)
+; PPC64-NEXT:    rldimi 5, 3, 0, 62
+; PPC64-NEXT:    std 5, -8(1)
 ; PPC64-NEXT:    lfd 0, -8(1)
 ; PPC64-NEXT:    mtfsf 255, 0
 ; PPC64-NEXT:    blr
@@ -308,10 +306,9 @@ define void @setrnd_var(i32 %x) #0 {
 ; PPC64LE-NEXT:    xor 3, 3, 4
 ; PPC64LE-NEXT:    ld 4, -16(1)
 ; PPC64LE-NEXT:    xori 3, 3, 1
-; PPC64LE-NEXT:    rldicr 4, 4, 0, 61
 ; PPC64LE-NEXT:    clrldi 3, 3, 32
-; PPC64LE-NEXT:    or 3, 4, 3
-; PPC64LE-NEXT:    std 3, -8(1)
+; PPC64LE-NEXT:    rldimi 4, 3, 0, 62
+; PPC64LE-NEXT:    std 4, -8(1)
 ; PPC64LE-NEXT:    lfd 0, -8(1)
 ; PPC64LE-NEXT:    mtfsf 255, 0
 ; PPC64LE-NEXT:    blr
@@ -348,9 +345,8 @@ define void @setrnd_var(i32 %x) #0 {
 ; DM-NEXT:    clrldi 3, 3, 32
 ; DM-NEXT:    mffs 0
 ; DM-NEXT:    mffprd 4, 0
-; DM-NEXT:    rldicr 4, 4, 0, 61
-; DM-NEXT:    or 3, 4, 3
-; DM-NEXT:    mtfprd 0, 3
+; DM-NEXT:    rldimi 4, 3, 0, 62
+; DM-NEXT:    mtfprd 0, 4
 ; DM-NEXT:    mtfsf 255, 0
 ; DM-NEXT:    blr
 entry:
