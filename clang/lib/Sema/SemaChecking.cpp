@@ -2998,13 +2998,6 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
 
-enum ArmStreamingType {
-  ArmNonStreaming,
-  ArmStreaming,
-  ArmStreamingCompatible,
-  ArmStreamingOrSVE2p1
-};
-
 bool Sema::ParseSVEImmChecks(
     CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
   // Perform all the immediate checks for this builtin call.
@@ -3145,7 +3138,7 @@ bool Sema::ParseSVEImmChecks(
   return HasError;
 }
 
-static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
+Sema::ArmStreamingType Sema::getArmStreamingFnType(const FunctionDecl *FD) {
   if (FD->hasAttr<ArmLocallyStreamingAttr>())
     return ArmStreaming;
   if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
@@ -3159,31 +3152,31 @@ static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
 
 static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
-                                     ArmStreamingType BuiltinType) {
-  ArmStreamingType FnType = getArmStreamingFnType(FD);
-  if (BuiltinType == ArmStreamingOrSVE2p1) {
+                                     Sema::ArmStreamingType BuiltinType) {
+  Sema::ArmStreamingType FnType = Sema::getArmStreamingFnType(FD);
+  if (BuiltinType == Sema::ArmStreamingOrSVE2p1) {
     // Check intrinsics that are available in [sve2p1 or sme/sme2].
     llvm::StringMap<bool> CallerFeatureMap;
     S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     if (Builtin::evaluateRequiredTargetFeatures("sve2p1", CallerFeatureMap))
-      BuiltinType = ArmStreamingCompatible;
+      BuiltinType = Sema::ArmStreamingCompatible;
     else
-      BuiltinType = ArmStreaming;
+      BuiltinType = Sema::ArmStreaming;
   }
 
-  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
+  if (FnType == Sema::ArmStreaming && BuiltinType == Sema::ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
   }
 
-  if (FnType == ArmStreamingCompatible &&
-      BuiltinType != ArmStreamingCompatible) {
+  if (FnType == Sema::ArmStreamingCompatible &&
+      BuiltinType != Sema::ArmStreamingCompatible) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming compatible";
     return;
   }
 
-  if (FnType == ArmNonStreaming && BuiltinType == ArmStreaming) {
+  if (FnType == Sema::ArmNonStreaming && BuiltinType == Sema::ArmStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
   }

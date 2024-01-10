@@ -8,6 +8,8 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Sema/Sema.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -155,6 +157,11 @@ public:
     }
     return TargetCodeGenInfo::isScalarizableAsmOperand(CGF, Ty);
   }
+
+  void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
+                            const FunctionDecl *Caller,
+                            const FunctionDecl *Callee,
+                            const CallArgList &Args) const override;
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
@@ -812,6 +819,19 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
                           /*allowHigherAlign*/ false);
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABI(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args) const {
+    if (!Callee->hasAttr<AlwaysInlineAttr>())
+      return;
+
+    auto CalleeIsStreaming = Sema::getArmStreamingFnType(Callee) == Sema::ArmStreaming;
+    auto CallerIsStreaming = Sema::getArmStreamingFnType(Caller) == Sema::ArmStreaming;
+
+    if (CalleeIsStreaming && !CallerIsStreaming)
+        CGM.getDiags().Report(CallLoc, diag::err_function_alwaysinline_attribute_mismatch) << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 }
 
 std::unique_ptr<TargetCodeGenInfo>
