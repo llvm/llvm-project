@@ -13,6 +13,10 @@
 #include "Address.h"
 #include "CIRGenFunction.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/CharUnits.h"
+#include "clang/AST/Stmt.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace cir;
 using namespace clang;
@@ -21,11 +25,42 @@ using namespace mlir::cir;
 Address CIRGenFunction::buildCompoundStmtWithoutScope(const CompoundStmt &S,
                                                       bool getLast,
                                                       AggValueSlot slot) {
-  for (auto *CurStmt : S.body())
-    if (buildStmt(CurStmt, /*useCurrentScope=*/false).failed())
-      return Address::invalid();
+  const Stmt *ExprResult = S.getStmtExprResult();
+  assert((!getLast || (getLast && ExprResult)) &&
+         "If getLast is true then the CompoundStmt must have a StmtExprResult");
 
-  return Address::invalid();
+  Address retAlloca = Address::invalid();
+
+  for (auto *CurStmt : S.body()) {
+    if (getLast && ExprResult == CurStmt) {
+      while (!isa<Expr>(ExprResult)) {
+        if (const auto *LS = dyn_cast<LabelStmt>(ExprResult))
+          llvm_unreachable("labels are NYI");
+        else if (const auto *AS = dyn_cast<AttributedStmt>(ExprResult))
+          llvm_unreachable("statement attributes are NYI");
+        else
+          llvm_unreachable("Unknown value statement");
+      }
+
+      const Expr *E = cast<Expr>(ExprResult);
+      QualType exprTy = E->getType();
+      if (hasAggregateEvaluationKind(exprTy)) {
+        buildAggExpr(E, slot);
+      } else {
+        // We can't return an RValue here because there might be cleanups at
+        // the end of the StmtExpr.  Because of that, we have to emit the result
+        // here into a temporary alloca.
+        retAlloca = CreateMemTemp(exprTy, getLoc(E->getSourceRange()));
+        buildAnyExprToMem(E, retAlloca, Qualifiers(),
+                          /*IsInit*/ false);
+      }
+    } else {
+      if (buildStmt(CurStmt, /*useCurrentScope=*/false).failed())
+        llvm_unreachable("failed to build statement");
+    }
+  }
+
+  return retAlloca;
 }
 
 Address CIRGenFunction::buildCompoundStmt(const CompoundStmt &S, bool getLast,
@@ -37,9 +72,9 @@ Address CIRGenFunction::buildCompoundStmt(const CompoundStmt &S, bool getLast,
   auto scopeLoc = getLoc(S.getSourceRange());
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
+      [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        retAlloca = buildCompoundStmtWithoutScope(S);
+        retAlloca = buildCompoundStmtWithoutScope(S, getLast, slot);
       });
 
   return retAlloca;

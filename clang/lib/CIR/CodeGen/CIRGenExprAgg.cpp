@@ -203,7 +203,12 @@ public:
   // Operators.
   void VisitCastExpr(CastExpr *E);
   void VisitCallExpr(const CallExpr *E);
-  void VisitStmtExpr(const StmtExpr *E) { llvm_unreachable("NYI"); }
+
+  void VisitStmtExpr(const StmtExpr *E) {
+    assert(!UnimplementedFeature::stmtExprEvaluation() && "NYI");
+    CGF.buildCompoundStmt(*E->getSubStmt(), /*getLast=*/true, Dest);
+  }
+
   void VisitBinaryOperator(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *E) {
     llvm_unreachable("NYI");
