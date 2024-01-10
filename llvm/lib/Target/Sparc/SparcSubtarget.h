@@ -44,9 +44,8 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   SparcFrameLowering FrameLowering;
 
 public:
-  SparcSubtarget(const Triple &TT, const std::string &CPU,
-                 const std::string &TuneCPU, const std::string &FS,
-                 const TargetMachine &TM, bool is64bit);
+  SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
+                 const StringRef &FS, const TargetMachine &TM, bool is64bit);
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
