@@ -72,6 +72,10 @@
     ret void
   }
 
+  define void @pre_same_sewlmul_ratio() {
+    ret void
+  }
+
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
 
   declare <vscale x 1 x i64> @llvm.riscv.vle.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>* nocapture, i64) #4
@@ -444,5 +448,58 @@ body:             |
     %pt:vrm2 = IMPLICIT_DEF
     %0:vrm2 = PseudoVID_V_M2 %pt, 4, 6, 3
     %4:vr = PseudoVMV_V_I_MF4 undef %4, 0, 4, 3, 0
+    PseudoRET
+...
+---
+# make sure we don't try to perform PRE when one of the blocks is sew/lmul ratio
+# only
+name: pre_same_sewlmul_ratio
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: pre_same_sewlmul_ratio
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond:gpr = COPY $x10
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]]:vr = PseudoVMV_V_I_M1 $noreg, 1, 2, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   PseudoCALL $noreg, csr_ilp32_lp64
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   $x0 = PseudoVSETIVLI 2, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_X_S_MF2_:%[0-9]+]]:gpr = PseudoVMV_X_S_MF2 $noreg, 5 /* e32 */, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_1:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    liveins: $x10
+    %cond:gpr = COPY $x10
+    %1:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5, 0
+    BEQ %cond, $x0, %bb.2
+  bb.1:
+    %2:vr = PseudoVMV_V_I_M1 $noreg, 1, 2, 6, 0
+  bb.2: ; the exit info here should have sew/lmul ratio only
+    BEQ %cond, $x0, %bb.4
+  bb.3:
+    PseudoCALL $noreg, csr_ilp32_lp64
+  bb.4: ; this block will have PRE attempted on it
+    %4:gpr = PseudoVMV_X_S_MF2 $noreg, 5
+    %5:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5, 0
     PseudoRET
 ...

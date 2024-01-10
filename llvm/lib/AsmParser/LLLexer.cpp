@@ -906,7 +906,7 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #define DWKEYWORD(TYPE, TOKEN)                                                 \
   do {                                                                         \
-    if (Keyword.startswith("DW_" #TYPE "_")) {                                 \
+    if (Keyword.starts_with("DW_" #TYPE "_")) {                                \
       StrVal.assign(Keyword.begin(), Keyword.end());                           \
       return lltok::TOKEN;                                                     \
     }                                                                          \

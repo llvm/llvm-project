@@ -45,6 +45,7 @@
 // CHECK-NOT: __ARM_PCS_VFP 1
 // CHECK-NOT: __ARM_SIZEOF_MINIMAL_ENUM 1
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
+// CHECK-NOT: __ARM_FEATURE_COPROC
 // CHECK-NOT: __ARM_FEATURE_SVE
 // CHECK-NOT: __ARM_FEATURE_DOTPROD
 // CHECK-NOT: __ARM_FEATURE_PAC_DEFAULT
@@ -600,6 +601,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1

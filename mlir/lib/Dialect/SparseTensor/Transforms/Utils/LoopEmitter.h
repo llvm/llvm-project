@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
-#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
+#define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_
 
 #include <vector>
+
+#include "SparseTensorLevel.h"
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -22,7 +24,7 @@ namespace sparse_tensor {
 // A compressed <tensor id, level> pair.
 using TensorLevel = unsigned;
 
-//===----------------------------------------------------------------------===//
+//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to
 // generate loop structure to (co)-iterate sparse tensors.
 //
@@ -48,8 +50,7 @@ using TensorLevel = unsigned;
 // loopEmiter.exitCurrentLoop(); // exit k
 // loopEmiter.exitCurrentLoop(); // exit j
 // loopEmiter.exitCurrentLoop(); // exit i
-//===----------------------------------------------------------------------===//
-
+//
 class LoopEmitter {
 public:
   /// Optional callback function to setup dense output tensors when
@@ -62,22 +63,18 @@ public:
   using SynTensorBoundSetter =
       function_ref<Value(OpBuilder &builder, Location loc, Level lvl)>;
 
-  // Map from [tid, lvl] to a list of dependent [tidlvl, coeffecient] for
+  // Map from [tid, lvl] to a list of dependent [LoopId, coeffecient] for
   // subscript expressions on sparse tensors.
   //
-  // E.g., for affine index (2 * d0 + d1), it depends on two tidlvls that
-  // defines d0 and d1 (for affine expression reduction) and uses 2 and 1 for
-  // cofficients on d0, d1 respectively.
-  // If the list is empty, it means that there is no affine expression on the
-  // input [tid, lvl].
+  // E.g., for affine index (2 * d0 + d1), it depends on loop d0 and d1 (for
+  // affine expression reduction) and uses 2 and 1 for coefficients on d0, d1
+  // respectively. If the list is empty, it means that there is no affine
+  // expression on the input [tid, lvl].
   //
-  // NOTE: The caller is responsible to ensure that the order of the returned
-  // list to be consistent with the topological order of the iteration graph,
-  // otherwise the loop emitter might reduce a wrong dependent index variable
-  // when generating slice-driven loops.
+  // NOTE: LoopEmitter assumes that the loop id is consistent with the loop
+  // order, i.e., loop `d0` will be generated before loop `d1`.
   using DependentLvlGetter =
-      function_ref<std::vector<std::pair<TensorLevel, unsigned>>(TensorId,
-                                                                 Level)>;
+      function_ref<std::vector<std::pair<LoopId, unsigned>>(TensorId, Level)>;
 
   LoopEmitter() = default;
 
@@ -242,12 +239,6 @@ public:
   const std::vector<std::vector<Value>> &getPosits() const { return posits; };
   const std::vector<std::vector<Value>> &getCoords() const { return coords; };
   const std::vector<std::vector<Value>> &getHighs() const { return highs; };
-  const std::vector<std::vector<Value>> &getPositionBuffers() const {
-    return positionsBuffers;
-  };
-  const std::vector<std::vector<Value>> &getCoordinateBuffers() const {
-    return coordinatesBuffers;
-  };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
   constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
@@ -539,6 +530,8 @@ private:
   // Slice-driven loop related methods.
   //
 
+  void initSliceDriven(OpBuilder &builder, Location loc);
+
   /// Retrieves the most recent slice on lvl. To reduce affine expression like
   /// d0 + d1 + d2, we need two slices (one of size d1 + d2, and the other of
   /// size d2). This methods returns the latter slice (of size d2).
@@ -626,9 +619,6 @@ private:
   bool hasOutput;
   bool isSparseOut;
 
-  /// The insertion point to allocate top level local variables.
-  Operation *localInsertPos;
-
   //
   // Fields which have `numTensor` many entries.
   //
@@ -649,9 +639,8 @@ private:
   std::vector<std::vector<Value>> segHi;
   std::vector<std::vector<Value>> highs;
   std::vector<std::vector<Value>> lvlSizes;
-  std::vector<std::vector<Value>> positionsBuffers;   // to_positions
-  std::vector<std::vector<Value>> coordinatesBuffers; // to_coordinates
-  std::vector<Value> valBuffer;                       // to_value
+  std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
+  std::vector<Value> valBuffer; // to_value
 
   //
   // Slice-driven loops related fields.
@@ -665,7 +654,7 @@ private:
 
   // Map from [tid, level] to a list of dependent [tidlevel, coefficient].
   // See comments for `DependentLvlGetter`.
-  std::vector<std::vector<std::vector<std::pair<TensorLevel, unsigned>>>>
+  std::vector<std::vector<std::vector<std::pair<LoopId, unsigned>>>>
       dependentLvlMap;
 
   // The cached position buffer for the slices, they serve the same purpose as
@@ -705,4 +694,4 @@ private:
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_SPARSETENSORLOOPEMITTER_H_
+#endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_LOOPEMITTER_H_

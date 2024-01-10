@@ -418,8 +418,6 @@ gentbl_filegroup(
     td_file = "mlir/dialects/BufferizationOps.td",
     deps = [
         ":BufferizationOpsPyTdFiles",
-        "//mlir:DestinationStyleOpInterfaceTdFiles",
-        "//mlir:SubsetOpInterfaceTdFiles",
     ],
 )
 
@@ -1058,6 +1056,37 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# SPIRV dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "SPIRVOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=spirv",
+            ],
+            "mlir/dialects/_spirv_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SPIRVOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:SPIRVOpsTdFiles",
+    ],
+)
+
+filegroup(
+    name = "SPIRVOpsPyFiles",
+    srcs = [
+        "mlir/dialects/spirv.py",
+        ":SPIRVOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Tensor dialect.
 ##---------------------------------------------------------------------------##
 
@@ -1447,6 +1476,11 @@ filegroup(
 filegroup(
     name = "TransformOpsPackagePyFiles",
     srcs = glob(["mlir/dialects/transform/*.py"]),
+)
+
+filegroup(
+    name = "TransformExtrasPackagePyFiles",
+    srcs = glob(["mlir/dialects/transform/extras/*.py"]),
 )
 
 ##---------------------------------------------------------------------------##

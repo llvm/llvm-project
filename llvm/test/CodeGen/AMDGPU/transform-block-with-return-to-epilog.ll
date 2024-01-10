@@ -26,7 +26,7 @@ define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float
   ; GCN:   successors:
   ; GCN:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
-  ; GCN:   S_WAITCNT 3952
+  ; GCN:   S_WAITCNT_soft 3952
   ; GCN: bb.3:
 entry:
   %cc = icmp sgt i32 %a, 0
@@ -63,7 +63,7 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN:   successors:
   ; GCN:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
-  ; GCN:   S_WAITCNT 3952
+  ; GCN:   S_WAITCNT_soft 3952
   ; GCN: bb.5:
 entry:
   %cc = icmp sgt i32 %a, 0

@@ -60,11 +60,35 @@ FunctionPass *llvm::createAArch64PointerAuthPass() {
 
 char AArch64PointerAuth::ID = 0;
 
+// Where PAuthLR support is not known at compile time, it is supported using
+// PACM. PACM is in the hint space so has no effect when PAuthLR is not
+// supported by the hardware, but will alter the behaviour of PACI*SP, AUTI*SP
+// and RETAA/RETAB if the hardware supports PAuthLR.
+static void BuildPACM(const AArch64Subtarget &Subtarget, MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                      MachineInstr::MIFlag Flags, MCSymbol *PACSym = nullptr) {
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  auto &MFnI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
+
+  // ADR X16,<address_of_PACIASP>
+  if (PACSym) {
+    assert(Flags == MachineInstr::FrameDestroy);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADR))
+        .addReg(AArch64::X16, RegState::Define)
+        .addSym(PACSym);
+  }
+
+  // Only emit PACM if -mbranch-protection has +pc and the target does not
+  // have feature +pauth-lr.
+  if (MFnI.branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM)).setMIFlag(Flags);
+}
+
 void AArch64PointerAuth::signLR(MachineFunction &MF,
                                 MachineBasicBlock::iterator MBBI) const {
-  const AArch64FunctionInfo *MFnI = MF.getInfo<AArch64FunctionInfo>();
-  bool UseBKey = MFnI->shouldSignWithBKey();
-  bool EmitCFI = MFnI->needsDwarfUnwindInfo(MF);
+  auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+  bool UseBKey = MFnI.shouldSignWithBKey();
+  bool EmitCFI = MFnI.needsDwarfUnwindInfo(MF);
   bool NeedsWinCFI = MF.hasWinCFI();
 
   MachineBasicBlock &MBB = *MBBI->getParent();
@@ -77,11 +101,29 @@ void AArch64PointerAuth::signLR(MachineFunction &MF,
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
+  // PAuthLR authentication instructions need to know the value of PC at the
+  // point of signing (PACI*).
+  if (MFnI.branchProtectionPAuthLR()) {
+    MCSymbol *PACSym = MF.getMMI().getContext().createTempSymbol();
+    MFnI.setSigningInstrLabel(PACSym);
+  }
+
   // No SEH opcode for this one; it doesn't materialize into an
   // instruction on Windows.
-  BuildMI(MBB, MBBI, DL,
-          TII->get(UseBKey ? AArch64::PACIBSP : AArch64::PACIASP))
-      .setMIFlag(MachineInstr::FrameSetup);
+  if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    BuildMI(MBB, MBBI, DL,
+            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSPPC
+                                               : AArch64::PACIASPPC))
+        .setMIFlag(MachineInstr::FrameSetup)
+        ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+  } else {
+    BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL,
+            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
+                                               : AArch64::PACIASP))
+        .setMIFlag(MachineInstr::FrameSetup)
+        ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
+  }
 
   if (EmitCFI) {
     unsigned CFIIndex =
@@ -118,15 +160,37 @@ void AArch64PointerAuth::authenticateLR(
   // DW_CFA_AARCH64_negate_ra_state can't be emitted.
   bool TerminatorIsCombinable =
       TI != MBB.end() && TI->getOpcode() == AArch64::RET;
+  MCSymbol *PACSym = MFnI->getSigningInstrLabel();
+
   if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-    unsigned CombinedRetOpcode = UseBKey ? AArch64::RETAB : AArch64::RETAA;
-    BuildMI(MBB, TI, DL, TII->get(CombinedRetOpcode)).copyImplicitOps(*TI);
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      BuildMI(MBB, TI, DL,
+              TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
+          .addSym(PACSym)
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      BuildPACM(*Subtarget, MBB, TI, DL, MachineInstr::FrameDestroy, PACSym);
+      BuildMI(MBB, TI, DL, TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
     MBB.erase(TI);
   } else {
-    unsigned AutOpcode = UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP;
-    BuildMI(MBB, MBBI, DL, TII->get(AutOpcode))
-        .setMIFlag(MachineInstr::FrameDestroy);
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
+          .addSym(PACSym)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      BuildPACM(*Subtarget, MBB, MBBI, DL, MachineInstr::FrameDestroy, PACSym);
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
 
     if (EmitAsyncCFI) {
       unsigned CFIIndex =

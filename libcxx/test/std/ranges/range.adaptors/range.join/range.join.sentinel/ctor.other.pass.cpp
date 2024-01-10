@@ -15,6 +15,7 @@
 #include <ranges>
 
 #include "../types.h"
+#include "test_range.h"
 
 template <class T>
 struct convertible_sentinel_wrapper {
@@ -45,7 +46,7 @@ struct ConstConvertibleView : BufferView<BufferView<int*>*> {
 static_assert(!std::ranges::common_range<ConstConvertibleView>);
 static_assert(std::convertible_to<std::ranges::sentinel_t<ConstConvertibleView>,
                                   std::ranges::sentinel_t<ConstConvertibleView const>>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<ConstConvertibleView>);
+static_assert(!simple_view<ConstConvertibleView>);
 
 constexpr bool test() {
   int buffer[4][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};

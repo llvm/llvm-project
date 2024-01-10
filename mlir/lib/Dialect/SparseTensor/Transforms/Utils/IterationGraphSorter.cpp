@@ -1,4 +1,4 @@
-//===- LoopScheduler.cpp -------------------------------------------------===//
+//===- IterationGraphSorter.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,32 +20,32 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-/// A helper class that visits an affine expression and tries to find an
-/// AffineDimExpr to which the corresponding iterator from a GenericOp matches
-/// the desired iterator type.
-/// If there is no matched iterator type, returns the first DimExpr in the
-/// expression.
+/// A helper class that visits an affine expression and tries to find
+/// an AffineDimExpr to which the corresponding iterator from a GenericOp
+/// matches the desired iterator type. If there is no matched iterator
+/// type, the method returns the first DimExpr in the expression.
 class AffineDimFinder : public AffineExprVisitor<AffineDimFinder> {
 public:
   explicit AffineDimFinder(ArrayRef<utils::IteratorType> itTypes)
       : iterTypes(itTypes) {}
 
-  // Override method from AffineExprVisitor.
+  /// Overrides the visit method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) {
     if (pickedDim == nullptr || pickIterType == iterTypes[expr.getPosition()])
       pickedDim = expr;
   }
 
-  /// Set the desired iterator type that we want to pick.
+  /// Sets the desired iterator type that we want to pick.
   void setPickedIterType(utils::IteratorType iterType) {
     pickIterType = iterType;
   }
 
-  /// Get the desired AffineDimExpr.
+  /// Gets the desired AffineDimExpr.
   AffineDimExpr getDimExpr() const {
     return llvm::cast<AffineDimExpr>(pickedDim);
   }
 
+  /// Walks the graph in post order to find dim expr.
   void walkPostOrder(AffineExpr expr) {
     pickedDim = nullptr;
     AffineExprVisitor<AffineDimFinder>::walkPostOrder(expr);
@@ -56,11 +56,11 @@ private:
   AffineExpr pickedDim;
   /// The iterator type that we want.
   utils::IteratorType pickIterType;
-  /// The mapping between dim=>iterator type.
+  /// The mapping between levels and iterator types.
   ArrayRef<utils::IteratorType> iterTypes;
 };
 
-// Flattens an affine expression into a list of AffineDimExprs.
+/// Flattens an affine expression into a list of AffineDimExprs.
 struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
   // Overrides method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) { dims.push_back(expr); }
@@ -81,11 +81,9 @@ inline static bool includesDenseOutput(SortMask mask) {
   return includesAny(mask, SortMask::kIncludeDenseOutput);
 }
 
-/// A helper to compute a topological sort. O(n^2) time complexity
-/// as we use adj matrix for the graph.
-/// The sorted result will put the first Reduction iterator to the
-/// latest possible position.
 AffineMap IterationGraphSorter::topoSort() {
+  // The sorted result will put the first Reduction iterator to the
+  // latest possible position.
   std::vector<unsigned> redIt; // reduce iterator with 0 degree
   std::vector<unsigned> parIt; // parallel iterator with 0 degree
   const unsigned numLoops = getNumLoops();
@@ -100,8 +98,8 @@ AffineMap IterationGraphSorter::topoSort() {
 
   SmallVector<unsigned> loopOrder;
   while (!redIt.empty() || !parIt.empty()) {
-    // We always prefer parallel loop over reduction loop because putting
-    // reduction loop early might make the loop sequence inadmissible.
+    // We always prefer a parallel loop over a reduction loop because putting
+    // a reduction loop early might make the loop sequence inadmissible.
     auto &it = !parIt.empty() ? parIt : redIt;
     auto src = it.back();
     loopOrder.push_back(src);
@@ -117,6 +115,7 @@ AffineMap IterationGraphSorter::topoSort() {
     }
   }
 
+  // Return the topological sort on success.
   if (loopOrder.size() == numLoops)
     return AffineMap::getPermutationMap(loopOrder, out.getContext());
 
@@ -167,27 +166,29 @@ IterationGraphSorter::IterationGraphSorter(
 }
 
 AffineMap IterationGraphSorter::sort(SortMask mask, Value ignored) {
-  // Reset the interation graph.
+  // Reset the adjacency matrix that represents the iteration graph.
   for (auto &row : itGraph)
     std::fill(row.begin(), row.end(), false);
-  // Reset cached in-degree.
+
+  // Reset in-degree.
   std::fill(inDegree.begin(), inDegree.end(), 0);
 
+  // Add the constraints for the loop to level map.
   for (auto [in, map] : llvm::zip(ins, loop2InsLvl)) {
     // Get map and encoding.
     const auto enc = getSparseTensorEncoding(in.getType());
     // Skip dense inputs when not requested.
     if ((!enc && !includesDenseInput(mask)) || in == ignored)
       continue;
-
     addConstraints(in, map);
   }
 
-  // Get map and encoding.
+  // Add the constraints for the output map.
   const auto enc = getSparseTensorEncoding(out.getType());
   if ((enc || includesDenseOutput(mask)) && out != ignored)
     addConstraints(out, loop2OutLvl);
 
+  // Return the topological sort (empty for cyclic).
   return topoSort();
 }
 
@@ -199,6 +200,7 @@ void IterationGraphSorter::addConstraints(Value t, AffineMap loop2LvlMap) {
     }
   };
 
+  // Set up a reduction finder.
   AffineDimFinder finder(iterTypes);
   finder.setPickedIterType(utils::IteratorType::reduction);
 

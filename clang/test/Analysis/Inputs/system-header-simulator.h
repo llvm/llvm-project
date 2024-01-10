@@ -43,6 +43,7 @@ FILE *funopen(const void *,
               int (*)(void *));
 
 FILE *fopen(const char *restrict path, const char *restrict mode);
+FILE *fdopen(int fd, const char *mode);
 FILE *tmpfile(void);
 FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream);
 int fclose(FILE *fp);
@@ -52,6 +53,7 @@ int fgetc(FILE *stream);
 char *fgets(char *restrict str, int count, FILE *restrict stream);
 int fputc(int ch, FILE *stream);
 int fputs(const char *restrict s, FILE *restrict stream);
+int ungetc(int c, FILE *stream);
 int fseek(FILE *__stream, long int __off, int __whence);
 long int ftell(FILE *__stream);
 void rewind(FILE *__stream);
@@ -61,6 +63,7 @@ void clearerr(FILE *stream);
 int feof(FILE *stream);
 int ferror(FILE *stream);
 int fileno(FILE *stream);
+int fflush(FILE *stream);
 
 size_t strlen(const char *);
 

@@ -281,7 +281,7 @@ public:
       : ExecutedTestVectorBitmap(Bitmap), Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         Folded(NumConditions, false), IndependencePairs(NumConditions),
-        TestVectors(pow(2, NumConditions)) {}
+        TestVectors((size_t)1 << NumConditions) {}
 
 private:
   void recordTestVector(MCDCRecord::TestVector &TV,

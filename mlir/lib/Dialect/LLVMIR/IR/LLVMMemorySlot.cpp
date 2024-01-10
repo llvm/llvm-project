@@ -248,6 +248,28 @@ DeletionKind LLVM::LifetimeEndOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::InvariantStartOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantStartOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::InvariantEndOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {

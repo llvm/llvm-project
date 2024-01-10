@@ -3647,10 +3647,10 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm2
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm3
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm3, %xmm3
-; AVX-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb 16(%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
 ; AVX-NEXT:    vmovdqa %xmm2, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm3, 48(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdx)
 ; AVX-NEXT:    vzeroupper
@@ -3833,10 +3833,10 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm2
 ; AVX-NEXT:    vmovdqa 16(%rdi), %xmm3
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm3, %xmm3
-; AVX-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb 16(%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
 ; AVX-NEXT:    vmovdqa %xmm2, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm3, 48(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdx)
 ; AVX-NEXT:    vzeroupper

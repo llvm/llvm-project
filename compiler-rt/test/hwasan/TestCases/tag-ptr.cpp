@@ -17,7 +17,7 @@ int main() {
     assert(__hwasan_get_tag_from_pointer(ptr) == i);
   }
 #ifdef __x86_64__
-  assert(ptrs.size() == 8);
+  assert(ptrs.size() == 8 || ptrs.size() == 64);
 #else
   assert(ptrs.size() == 256);
 #endif

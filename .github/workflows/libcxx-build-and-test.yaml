@@ -161,6 +161,7 @@ jobs:
           'generic-no-unicode',
           'generic-no-wide-characters',
           'generic-no-rtti',
+          'generic-optimized-speed',
           'generic-static',
           'generic-with_llvm_unwinder',
           # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
@@ -185,7 +186,7 @@ jobs:
           std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: libcxx-runners-32-set
+          machine: libcxx-runners-8-set
           std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:
@@ -207,4 +208,3 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
-  
