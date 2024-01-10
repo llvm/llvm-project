@@ -979,8 +979,7 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
         break;
       }
       // Pack indexing
-      if (getLangOpts().CPlusPlus26 && Tok.is(tok::ellipsis) &&
-          NextToken().is(tok::l_square)) {
+      if (Tok.is(tok::ellipsis) && NextToken().is(tok::l_square)) {
         Toks.push_back(Tok);
         SourceLocation OpenLoc = ConsumeToken();
         Toks.push_back(Tok);

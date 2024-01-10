@@ -284,7 +284,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::FunctionNoProto:
     case Type::Paren:
     case Type::PackExpansion:
-
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
       CanPrefixQualifiers = false;

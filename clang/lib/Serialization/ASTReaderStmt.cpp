@@ -2176,17 +2176,16 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
-  unsigned NumTransformedExprs = Record.readInt();
+  E->TransformedExpressions = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
   E->SubExprs[1] = Record.readStmt();
-  E->TransformedExpressions = NumTransformedExprs;
   bool HasIndexValue = Record.readBool();
   if (HasIndexValue)
     E->Index = Record.readInt();
   auto **Exprs = E->getTrailingObjects<Expr *>();
-  for (unsigned I = 0; I < NumTransformedExprs; ++I)
+  for (unsigned I = 0; I < E->TransformedExpressions; ++I)
     Exprs[I] = Record.readExpr();
 }
 

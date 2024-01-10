@@ -1690,7 +1690,7 @@ NamedDecl *PackIndexingExpr::getPackDecl() const {
     assert(ND && "exected a named decl");
     return ND;
   }
-  assert(false && "Non variables packs not supported");
+  assert(false && "invalid declaration kind in pack indexing expression");
   return nullptr;
 }
 

@@ -8116,7 +8116,7 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     break;
   }
-  case DeclSpec::TST_indexed_typename_pack: {
+  case DeclSpec::TST_typename_pack_indexing: {
     T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
                               DS.getBeginLoc(), DS.getEllipsisLoc());
     TLB.pushTrivial(getASTContext(),

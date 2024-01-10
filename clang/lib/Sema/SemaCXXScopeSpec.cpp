@@ -874,7 +874,7 @@ bool Sema::ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
   if (SS.isInvalid() || DS.getTypeSpecType() == DeclSpec::TST_error)
     return true;
 
-  assert(DS.getTypeSpecType() == DeclSpec::TST_indexed_typename_pack);
+  assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
 
   if (Type.isNull())
     return true;

@@ -1197,7 +1197,7 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
 }
 
 SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
-  assert(Tok.isOneOf(tok::annot_indexed_pack_type, tok::identifier) &&
+  assert(Tok.isOneOf(tok::annot_pack_indexing_type, tok::identifier) &&
          "Expected an identifier");
 
   TypeResult Type;
@@ -1207,7 +1207,7 @@ SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
   unsigned DiagID;
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
 
-  if (Tok.is(tok::annot_indexed_pack_type)) {
+  if (Tok.is(tok::annot_pack_indexing_type)) {
     StartLoc = Tok.getLocation();
     SourceLocation EndLoc;
     Type = getTypeAnnotation(Tok);
@@ -1220,7 +1220,7 @@ SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
       DS.SetTypeSpecError();
       return EndLoc;
     }
-    DS.SetTypeSpecType(DeclSpec::TST_indexed_typename_pack, StartLoc, PrevSpec,
+    DS.SetTypeSpecType(DeclSpec::TST_typename_pack_indexing, StartLoc, PrevSpec,
                        DiagID, Type, Policy);
     return EndLoc;
   } else {
@@ -1278,7 +1278,7 @@ void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 
-  Tok.setKind(tok::annot_indexed_pack_type);
+  Tok.setKind(tok::annot_pack_indexing_type);
   setTypeAnnotation(Tok, T);
   Tok.setAnnotationEndLoc(EndLoc);
   Tok.setLocation(StartLoc);
@@ -1382,7 +1382,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     return Actions.ActOnTypeName(DeclaratorInfo);
   }
 
-  if (Tok.is(tok::annot_indexed_pack_type)) {
+  if (Tok.is(tok::annot_pack_indexing_type)) {
     DeclSpec DS(AttrFactory);
     ParseIndexedTypeNamePack(DS);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -3933,9 +3933,9 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     // ParseOptionalCXXScopeSpecifier at this point.
     // FIXME: Can we get here with a scope specifier?
     ParseDecltypeSpecifier(DS);
-  } else if (Tok.is(tok::annot_indexed_pack_type)) {
+  } else if (Tok.is(tok::annot_pack_indexing_type)) {
     // Uses of T...[N] will already have been converted to
-    // annot_indexed_pack_type by ParseOptionalCXXScopeSpecifier at this point.
+    // annot_pack_indexing_type by ParseOptionalCXXScopeSpecifier at this point.
     ParseIndexedTypeNamePack(DS);
   } else {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)

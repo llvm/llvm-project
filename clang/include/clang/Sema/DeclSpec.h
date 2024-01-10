@@ -309,7 +309,8 @@ public:
   static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
-  static const TST TST_indexed_typename_pack = clang::TST_indexed_typename_pack;
+  static const TST TST_typename_pack_indexing =
+      clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
 #include "clang/Basic/TransformTypeTraits.def"
@@ -430,7 +431,7 @@ private:
   static bool isTypeRep(TST T) {
     return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
            T == TST_typeof_unqualType || isTransformTypeTrait(T) ||
-           T == TST_indexed_typename_pack;
+           T == TST_typename_pack_indexing;
   }
   static bool isExprRep(TST T) {
     return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
@@ -535,7 +536,7 @@ public:
   }
 
   Expr *getPackIndexingExpr() const {
-    assert(TypeSpecType == TST_indexed_typename_pack &&
+    assert(TypeSpecType == TST_typename_pack_indexing &&
            "DeclSpec is not a pack indexing expr");
     return PackIndexingExpr;
   }

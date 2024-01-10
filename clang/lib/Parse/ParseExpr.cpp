@@ -1073,7 +1073,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         // If the token is not annotated, then it might be an expression pack
         // indexing
         if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.is(tok::annot_indexed_pack_type))
+            Tok.is(tok::annot_pack_indexing_type))
           return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                      isVectorLiteral, NotPrimaryExpression);
       }
@@ -1561,7 +1561,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     [[fallthrough]];
 
   case tok::annot_decltype:
-  case tok::annot_indexed_pack_type:
+  case tok::annot_pack_indexing_type:
   case tok::kw_char:
   case tok::kw_wchar_t:
   case tok::kw_char8_t:

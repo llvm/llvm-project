@@ -1686,7 +1686,7 @@ enum CXCursorKind {
   CXCursor_CXXParenListInitExpr = 155,
 
   /**
-   *  Represents a C++26 pack indexing expression
+   *  Represents a C++26 pack indexing expression.
    */
   CXCursor_PackIndexingExpr = 156,
 

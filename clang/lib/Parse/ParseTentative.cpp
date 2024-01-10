@@ -1793,7 +1793,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw__Accum:
   case tok::kw__Fract:
   case tok::kw__Sat:
-  case tok::annot_indexed_pack_type:
+  case tok::annot_pack_indexing_type:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
     if (NextToken().is(tok::l_paren))
@@ -1872,7 +1872,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   switch (Tok.getKind()) {
     // typename-specifier
   case tok::annot_decltype:
-  case tok::annot_indexed_pack_type:
+  case tok::annot_pack_indexing_type:
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:

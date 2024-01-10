@@ -874,7 +874,7 @@ std::optional<unsigned> Sema::getNumArgumentsInExpansion(
 bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   const DeclSpec &DS = D.getDeclSpec();
   switch (DS.getTypeSpecType()) {
-  case TST_indexed_typename_pack:
+  case TST_typename_pack_indexing:
   case TST_typename:
   case TST_typeof_unqualType:
   case TST_typeofType:
@@ -1071,7 +1071,7 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
 }
 
 static bool isParameterPack(Expr *PackExpression) {
-  if (auto D = dyn_cast<DeclRefExpr>(PackExpression); D) {
+  if (auto *D = dyn_cast<DeclRefExpr>(PackExpression); D) {
     ValueDecl *VD = D->getDecl();
     return VD->isParameterPack();
   }
@@ -1100,7 +1100,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
                             ArrayRef<Expr *> ExpandedExprs, bool EmptyPack) {
 
   std::optional<int64_t> Index;
-  if (!IndexExpr->isValueDependent() && !IndexExpr->isTypeDependent()) {
+  if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
     // TODO: do we need a new enumerator instead of CCEK_ArrayBound?
     ExprResult Res = CheckConvertedConstantExpression(

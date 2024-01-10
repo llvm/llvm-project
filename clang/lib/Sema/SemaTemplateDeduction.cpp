@@ -6433,9 +6433,12 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     break;
 
   case Type::PackIndexing:
-    if (!OnlyDeduced)
+    if (!OnlyDeduced) {
       MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getPattern(),
                                  OnlyDeduced, Depth, Used);
+      MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getIndexExpr(),
+                                 OnlyDeduced, Depth, Used);
+    }
     break;
 
   case Type::UnaryTransform:

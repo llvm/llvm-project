@@ -2426,7 +2426,7 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.SetRangeEnd(ParseDecltypeSpecifier(DS));
     return DS.Finish(Actions, Policy);
 
-  case tok::annot_indexed_pack_type:
+  case tok::annot_pack_indexing_type:
     DS.SetRangeEnd(ParseIndexedTypeNamePack(DS));
     return DS.Finish(Actions, Policy);
 

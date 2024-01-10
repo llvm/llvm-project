@@ -1667,7 +1667,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
-  case DeclSpec::TST_indexed_typename_pack: {
+  case DeclSpec::TST_typename_pack_indexing: {
     Expr *E = DS.getPackIndexingExpr();
     assert(E && "Didn't get an expression for pack indexing");
     QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
@@ -6326,7 +6326,7 @@ namespace {
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
-      assert(DS.getTypeSpecType() == DeclSpec::TST_indexed_typename_pack);
+      assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
       TL.setEllipsisLoc(DS.getEllipsisLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
