@@ -3,8 +3,12 @@
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s \
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s\
+// RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s \
 // RUN: | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
@@ -13,6 +17,13 @@
 // REQUIRES: aarch64-registered-target
 
 #include <arm_sve.h>
+
+#ifdef SVE_OVERLOADED_FORMS
+// A simple used,unused... macro, long enough to represent any SVE builtin.
+#define SVE_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED) A1##A3
+#else
+#define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
+#endif
 
 // NOTE: For these tests clang converts the struct parameter into
 // several parameters, one for each member of the original struct.
@@ -28,7 +39,7 @@
 //
 svbool_t test_svget4_b_0(svboolx4_t tuple)
 {
-  return svget4_b(tuple, 0);
+  return SVE_ACLE_FUNC(svget4,_b,,)(tuple, 0);
 }
 
 // NOTE: For these tests clang converts the struct parameter into
@@ -45,7 +56,7 @@ svbool_t test_svget4_b_0(svboolx4_t tuple)
 //
 svbool_t test_svget4_b_1(svboolx4_t tuple)
 {
-  return svget4_b(tuple, 1);
+  return SVE_ACLE_FUNC(svget4,_b,,)(tuple, 1);
 }
 
 // NOTE: For these tests clang converts the struct parameter into
@@ -62,5 +73,5 @@ svbool_t test_svget4_b_1(svboolx4_t tuple)
 //
 svbool_t test_svget4_b_3(svboolx4_t tuple)
 {
-  return svget4_b(tuple, 3);
+  return SVE_ACLE_FUNC(svget4,_b,,)(tuple, 3);
 }
