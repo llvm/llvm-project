@@ -948,8 +948,7 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
     if (to_superclass)
       return; // we're not going to override it if it's set
 
-    ObjCInterfaceDecl *from_objc_interface =
-        dyn_cast<ObjCInterfaceDecl>(from);
+    ObjCInterfaceDecl *from_objc_interface = dyn_cast<ObjCInterfaceDecl>(from);
 
     if (!from_objc_interface)
       return;
