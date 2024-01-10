@@ -46,11 +46,7 @@ void init(unsigned numImages) {
 // CHECK:     cir.store %11, %6 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
 // CHECK:     cir.loop for(cond : {
 // CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EneERKS3_(%5, %6) : (!cir.ptr<![[VEC_IT]]>, !cir.ptr<![[VEC_IT]]>) -> !cir.bool
-// CHECK:       cir.brcond %12 ^bb1, ^bb2
-// CHECK:     ^bb1:  // pred: ^bb0
-// CHECK:       cir.yield continue
-// CHECK:     ^bb2:  // pred: ^bb0
-// CHECK:       cir.yield
+// CHECK:       cir.condition(%12)
 // CHECK:     }, step : {
 // CHECK:       %12 = cir.call @_ZN17__vector_iteratorI6triplePS0_RS0_EppEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<![[VEC_IT]]>
 // CHECK:       cir.yield
