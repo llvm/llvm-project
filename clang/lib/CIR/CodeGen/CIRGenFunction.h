@@ -1703,6 +1703,9 @@ public:
       Switch   // cir.switch
     } ScopeKind = Regular;
 
+    // Track scope return value.
+    mlir::Value retVal = nullptr;
+
   public:
     unsigned Depth = 0;
     bool HasReturn = false;
@@ -1724,6 +1727,8 @@ public:
 
       assert(EntryBlock && "expected valid block");
     }
+
+    void setRetVal(mlir::Value v) { retVal = v; }
 
     void cleanup();
     void restore() { CGF.currLexScope = ParentScope; }
