@@ -3354,6 +3354,8 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   }
   if (auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I))
     Flags.setExact(ExactOp->isExact());
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    Flags.setDisjoint(DisjointOp->isDisjoint());
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
 
@@ -4112,7 +4114,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       unsigned IdxSize = DAG.getDataLayout().getIndexSizeInBits(AS);
       MVT IdxTy = MVT::getIntegerVT(IdxSize);
       TypeSize ElementSize =
-          DAG.getDataLayout().getTypeAllocSize(GTI.getIndexedType());
+          GTI.getSequentialElementStride(DAG.getDataLayout());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
       APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
@@ -5642,7 +5644,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
   // expansion/promotion) if it was possible to expand a libcall of an
   // illegal type during operation legalization. But it's not, so things
   // get a bit hacky.
-  unsigned ScaleInt = cast<ConstantSDNode>(Scale)->getZExtValue();
+  unsigned ScaleInt = Scale->getAsZExtVal();
   if ((ScaleInt > 0 || (Saturating && Signed)) &&
       (TLI.isTypeLegal(VT) ||
        (VT.isVector() && TLI.isTypeLegal(VT.getVectorElementType())))) {
@@ -7655,8 +7657,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // suitable for the target. Convert the index as required.
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
-      Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
+      Index = DAG.getVectorIdxConstant(Index->getAsZExtVal(), sdl);
 
     EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getNode(ISD::INSERT_SUBVECTOR, sdl, ResultVT, Vec, SubVec,
@@ -7672,8 +7673,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // suitable for the target. Convert the index as required.
     MVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
     if (Index.getValueType() != VectorIdxTy)
-      Index = DAG.getVectorIdxConstant(
-          cast<ConstantSDNode>(Index)->getZExtValue(), sdl);
+      Index = DAG.getVectorIdxConstant(Index->getAsZExtVal(), sdl);
 
     setValue(&I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
@@ -8136,7 +8136,7 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::VP_IS_FPCLASS: {
     const DataLayout DLayout = DAG.getDataLayout();
     EVT DestVT = TLI.getValueType(DLayout, VPIntrin.getType());
-    auto Constant = cast<ConstantSDNode>(OpValues[1])->getZExtValue();
+    auto Constant = OpValues[1]->getAsZExtVal();
     SDValue Check = DAG.getTargetConstant(Constant, DL, MVT::i32);
     SDValue V = DAG.getNode(ISD::VP_IS_FPCLASS, DL, DestVT,
                             {OpValues[0], Check, OpValues[2], OpValues[3]});
@@ -9173,8 +9173,7 @@ findMatchingInlineAsmOperand(unsigned OperandNo,
   unsigned CurOp = InlineAsm::Op_FirstOperand;
   for (; OperandNo; --OperandNo) {
     // Advance to the next operand.
-    unsigned OpFlag =
-        cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
+    unsigned OpFlag = AsmNodeOperands[CurOp]->getAsZExtVal();
     const InlineAsm::Flag F(OpFlag);
     assert(
         (F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isMemKind()) &&
@@ -9480,8 +9479,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // just use its register.
         auto CurOp = findMatchingInlineAsmOperand(OpInfo.getMatchedOperand(),
                                                   AsmNodeOperands);
-        InlineAsm::Flag Flag(
-            cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue());
+        InlineAsm::Flag Flag(AsmNodeOperands[CurOp]->getAsZExtVal());
         if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
@@ -9985,14 +9983,14 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // constant nodes.
   SDValue ID = getValue(CI.getArgOperand(0));
   assert(ID.getValueType() == MVT::i64);
-  SDValue IDConst = DAG.getTargetConstant(
-      cast<ConstantSDNode>(ID)->getZExtValue(), DL, ID.getValueType());
+  SDValue IDConst =
+      DAG.getTargetConstant(ID->getAsZExtVal(), DL, ID.getValueType());
   Ops.push_back(IDConst);
 
   SDValue Shad = getValue(CI.getArgOperand(1));
   assert(Shad.getValueType() == MVT::i32);
-  SDValue ShadConst = DAG.getTargetConstant(
-      cast<ConstantSDNode>(Shad)->getZExtValue(), DL, Shad.getValueType());
+  SDValue ShadConst =
+      DAG.getTargetConstant(Shad->getAsZExtVal(), DL, Shad.getValueType());
   Ops.push_back(ShadConst);
 
   // Add the live variables.
@@ -10041,7 +10039,7 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   // Get the real number of arguments participating in the call <numArgs>
   SDValue NArgVal = getValue(CB.getArgOperand(PatchPointOpers::NArgPos));
-  unsigned NumArgs = cast<ConstantSDNode>(NArgVal)->getZExtValue();
+  unsigned NumArgs = NArgVal->getAsZExtVal();
 
   // Skip the four meta args: <id>, <numNopBytes>, <target>, <numArgs>
   // Intrinsics include all meta-operands up to but not including CC.
@@ -10088,12 +10086,9 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   // Add the <id> and <numBytes> constants.
   SDValue IDVal = getValue(CB.getArgOperand(PatchPointOpers::IDPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(IDVal)->getZExtValue(), dl, MVT::i64));
+  Ops.push_back(DAG.getTargetConstant(IDVal->getAsZExtVal(), dl, MVT::i64));
   SDValue NBytesVal = getValue(CB.getArgOperand(PatchPointOpers::NBytesPos));
-  Ops.push_back(DAG.getTargetConstant(
-                  cast<ConstantSDNode>(NBytesVal)->getZExtValue(), dl,
-                  MVT::i32));
+  Ops.push_back(DAG.getTargetConstant(NBytesVal->getAsZExtVal(), dl, MVT::i32));
 
   // Add the callee.
   Ops.push_back(Callee);
@@ -11637,92 +11632,16 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   }
 }
 
-unsigned SelectionDAGBuilder::caseClusterRank(const CaseCluster &CC,
-                                              CaseClusterIt First,
-                                              CaseClusterIt Last) {
-  return std::count_if(First, Last + 1, [&](const CaseCluster &X) {
-    if (X.Prob != CC.Prob)
-      return X.Prob > CC.Prob;
-
-    // Ties are broken by comparing the case value.
-    return X.Low->getValue().slt(CC.Low->getValue());
-  });
-}
-
 void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
                                         const SwitchWorkListItem &W,
                                         Value *Cond,
                                         MachineBasicBlock *SwitchMBB) {
   assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
          "Clusters not sorted?");
-
   assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
 
-  // Balance the tree based on branch probabilities to create a near-optimal (in
-  // terms of search time given key frequency) binary search tree. See e.g. Kurt
-  // Mehlhorn "Nearly Optimal Binary Search Trees" (1975).
-  CaseClusterIt LastLeft = W.FirstCluster;
-  CaseClusterIt FirstRight = W.LastCluster;
-  auto LeftProb = LastLeft->Prob + W.DefaultProb / 2;
-  auto RightProb = FirstRight->Prob + W.DefaultProb / 2;
-
-  // Move LastLeft and FirstRight towards each other from opposite directions to
-  // find a partitioning of the clusters which balances the probability on both
-  // sides. If LeftProb and RightProb are equal, alternate which side is
-  // taken to ensure 0-probability nodes are distributed evenly.
-  unsigned I = 0;
-  while (LastLeft + 1 < FirstRight) {
-    if (LeftProb < RightProb || (LeftProb == RightProb && (I & 1)))
-      LeftProb += (++LastLeft)->Prob;
-    else
-      RightProb += (--FirstRight)->Prob;
-    I++;
-  }
-
-  while (true) {
-    // Our binary search tree differs from a typical BST in that ours can have up
-    // to three values in each leaf. The pivot selection above doesn't take that
-    // into account, which means the tree might require more nodes and be less
-    // efficient. We compensate for this here.
-
-    unsigned NumLeft = LastLeft - W.FirstCluster + 1;
-    unsigned NumRight = W.LastCluster - FirstRight + 1;
-
-    if (std::min(NumLeft, NumRight) < 3 && std::max(NumLeft, NumRight) > 3) {
-      // If one side has less than 3 clusters, and the other has more than 3,
-      // consider taking a cluster from the other side.
-
-      if (NumLeft < NumRight) {
-        // Consider moving the first cluster on the right to the left side.
-        CaseCluster &CC = *FirstRight;
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        if (LeftSideRank <= RightSideRank) {
-          // Moving the cluster to the left does not demote it.
-          ++LastLeft;
-          ++FirstRight;
-          continue;
-        }
-      } else {
-        assert(NumRight < NumLeft);
-        // Consider moving the last element on the left to the right side.
-        CaseCluster &CC = *LastLeft;
-        unsigned LeftSideRank = caseClusterRank(CC, W.FirstCluster, LastLeft);
-        unsigned RightSideRank = caseClusterRank(CC, FirstRight, W.LastCluster);
-        if (RightSideRank <= LeftSideRank) {
-          // Moving the cluster to the right does not demot it.
-          --LastLeft;
-          --FirstRight;
-          continue;
-        }
-      }
-    }
-    break;
-  }
-
-  assert(LastLeft + 1 == FirstRight);
-  assert(LastLeft >= W.FirstCluster);
-  assert(FirstRight <= W.LastCluster);
+  auto [LastLeft, FirstRight, LeftProb, RightProb] =
+      SL->computeSplitWorkItemInfo(W);
 
   // Use the first element on the right as pivot since we will make less-than
   // comparisons against it.

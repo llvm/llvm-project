@@ -1197,7 +1197,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM,
                  AArch64::AEK_FP16, AArch64::AEK_DOTPROD, AArch64::AEK_RCPC,
                  AArch64::AEK_SSBS, AArch64::AEK_PROFILE, AArch64::AEK_FLAGM,
-                 AArch64::AEK_PAUTH, AArch64::AEK_FP16FML})),
+                 AArch64::AEK_PAUTH})),
             "8.2-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-a710", "armv9-a", "neon-fp-armv8",
@@ -1289,7 +1289,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
-                 AArch64::AEK_PAUTH, AArch64::AEK_PROFILE})),
+                 AArch64::AEK_PAUTH, AArch64::AEK_PROFILE, AArch64::AEK_FLAGM})),
             "8.2-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-x2", "armv9-a", "neon-fp-armv8",
@@ -1300,7 +1300,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PAUTH, AArch64::AEK_I8MM, AArch64::AEK_BF16,
                  AArch64::AEK_SVE, AArch64::AEK_SVE2, AArch64::AEK_SVE2BITPERM,
                  AArch64::AEK_SSBS, AArch64::AEK_SB, AArch64::AEK_FP16,
-                 AArch64::AEK_FP16FML})),
+                 AArch64::AEK_FP16FML, AArch64::AEK_FLAGM})),
             "9-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-x3", "armv9-a", "neon-fp-armv8",

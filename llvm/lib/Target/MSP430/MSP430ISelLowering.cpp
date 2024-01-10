@@ -333,6 +333,7 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
 
   setMinFunctionAlignment(Align(2));
   setPrefFunctionAlignment(Align(2));
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
@@ -964,7 +965,7 @@ SDValue MSP430TargetLowering::LowerShifts(SDValue Op,
   if (!isa<ConstantSDNode>(N->getOperand(1)))
     return Op;
 
-  uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  uint64_t ShiftAmount = N->getConstantOperandVal(1);
 
   // Expand the stuff into sequence of shifts.
   SDValue Victim = N->getOperand(0);
@@ -1168,8 +1169,8 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool Invert = false;
   bool Shift = false;
   bool Convert = true;
-  switch (cast<ConstantSDNode>(TargetCC)->getZExtValue()) {
-   default:
+  switch (TargetCC->getAsZExtVal()) {
+  default:
     Convert = false;
     break;
    case MSP430CC::COND_HS:
@@ -1193,7 +1194,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
      // C = ~Z for AND instruction, thus we can put Res = ~(SR & 1), however,
      // Res = (SR >> 1) & 1 is 1 word shorter.
      break;
-  }
+   }
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
@@ -1269,7 +1270,7 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
 
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   EVT PtrVT = Op.getValueType();
 
@@ -1295,7 +1296,7 @@ SDValue MSP430TargetLowering::LowerFRAMEADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);  // FIXME probably not meaningful
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
                                          MSP430::R4, VT);
   while (Depth--)

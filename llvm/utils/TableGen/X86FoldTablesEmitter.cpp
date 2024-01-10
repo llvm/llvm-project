@@ -348,7 +348,9 @@ public:
     // memory form: broadcast
     if (IsBroadcast && (RegRI.HasEVEX_B || !MemRI.HasEVEX_B))
       return false;
-    if (!IsBroadcast && (RegRI.HasEVEX_B || MemRI.HasEVEX_B))
+    // EVEX_B indicates NDD for MAP4 instructions
+    if (!IsBroadcast && (RegRI.HasEVEX_B || MemRI.HasEVEX_B) &&
+        RegRI.OpMap != X86Local::T_MAP4)
       return false;
 
     if (!mayFoldFromLeftToRight(RegRI.Form, MemRI.Form))
@@ -369,18 +371,18 @@ public:
                         RegRI.OpMap, RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W,
                         RegRI.HasVEX_4V, RegRI.HasVEX_L, RegRI.IgnoresVEX_L,
                         RegRI.IgnoresW, RegRI.HasEVEX_K, RegRI.HasEVEX_KZ,
-                        RegRI.HasEVEX_L2, RegRec->getValueAsBit("hasEVEX_RC"),
+                        RegRI.HasEVEX_L2, RegRI.HasEVEX_NF,
+                        RegRec->getValueAsBit("hasEVEX_RC"),
                         RegRec->getValueAsBit("hasLockPrefix"),
-                        RegRec->getValueAsBit("hasNoTrackPrefix"),
-                        RegRec->getValueAsBit("EVEX_W1_VEX_W0")) !=
+                        RegRec->getValueAsBit("hasNoTrackPrefix")) !=
         std::make_tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix,
                         MemRI.OpMap, MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W,
                         MemRI.HasVEX_4V, MemRI.HasVEX_L, MemRI.IgnoresVEX_L,
                         MemRI.IgnoresW, MemRI.HasEVEX_K, MemRI.HasEVEX_KZ,
-                        MemRI.HasEVEX_L2, MemRec->getValueAsBit("hasEVEX_RC"),
+                        MemRI.HasEVEX_L2, MemRI.HasEVEX_NF,
+                        MemRec->getValueAsBit("hasEVEX_RC"),
                         MemRec->getValueAsBit("hasLockPrefix"),
-                        MemRec->getValueAsBit("hasNoTrackPrefix"),
-                        MemRec->getValueAsBit("EVEX_W1_VEX_W0")))
+                        MemRec->getValueAsBit("hasNoTrackPrefix")))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.
@@ -666,6 +668,14 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
       continue;
 
     if (NoFoldSet.find(Rec->getName()) != NoFoldSet.end())
+      continue;
+
+    // Promoted legacy instruction is in EVEX space, and has REX2-encoding
+    // alternative. It's added due to HW design and never emitted by compiler.
+    if (byteFromBitsInit(Rec->getValueAsBitsInit("OpMapBits")) ==
+            X86Local::T_MAP4 &&
+        byteFromBitsInit(Rec->getValueAsBitsInit("explicitOpPrefixBits")) ==
+            X86Local::ExplicitEVEX)
       continue;
 
     // - Instructions including RST register class operands are not relevant

@@ -215,6 +215,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -380,6 +381,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<int32_t> initImpl() override {
 #ifdef OMPT_SUPPORT
     ompt::connectLibrary();
+#endif
+
+#ifdef USES_DYNAMIC_FFI
+    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+      return std::move(Err);
 #endif
 
     return NUM_DEVICES;

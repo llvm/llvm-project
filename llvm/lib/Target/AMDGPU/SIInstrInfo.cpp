@@ -273,8 +273,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // subtract the index by one.
     Offset0Idx -= get(Opc0).NumDefs;
     Offset1Idx -= get(Opc1).NumDefs;
-    Offset0 = cast<ConstantSDNode>(Load0->getOperand(Offset0Idx))->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Load1->getOperand(Offset1Idx))->getZExtValue();
+    Offset0 = Load0->getConstantOperandVal(Offset0Idx);
+    Offset1 = Load1->getConstantOperandVal(Offset1Idx);
     return true;
   }
 
@@ -338,8 +338,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     if (!isa<ConstantSDNode>(Off0) || !isa<ConstantSDNode>(Off1))
       return false;
 
-    Offset0 = cast<ConstantSDNode>(Off0)->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Off1)->getZExtValue();
+    Offset0 = Off0->getAsZExtVal();
+    Offset1 = Off1->getAsZExtVal();
     return true;
   }
 
@@ -955,12 +955,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     bool IsSGPRSrc = AMDGPU::SReg_LO16RegClass.contains(SrcReg);
     bool IsAGPRDst = AMDGPU::AGPR_LO16RegClass.contains(DestReg);
     bool IsAGPRSrc = AMDGPU::AGPR_LO16RegClass.contains(SrcReg);
-    bool DstLow = AMDGPU::VGPR_LO16RegClass.contains(DestReg) ||
-                  AMDGPU::SReg_LO16RegClass.contains(DestReg) ||
-                  AMDGPU::AGPR_LO16RegClass.contains(DestReg);
-    bool SrcLow = AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-                  AMDGPU::SReg_LO16RegClass.contains(SrcReg) ||
-                  AMDGPU::AGPR_LO16RegClass.contains(SrcReg);
+    bool DstLow = !AMDGPU::isHi(DestReg, RI);
+    bool SrcLow = !AMDGPU::isHi(SrcReg, RI);
     MCRegister NewDestReg = RI.get32BitRegister(DestReg);
     MCRegister NewSrcReg = RI.get32BitRegister(SrcReg);
 
@@ -2479,6 +2475,11 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
+
+  case AMDGPU::S_MUL_U64_U32_PSEUDO:
+  case AMDGPU::S_MUL_I64_I32_PSEUDO:
+    MI.setDesc(get(AMDGPU::S_MUL_U64));
+    break;
   }
   return true;
 }
@@ -4157,15 +4158,15 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-    return (isInt<16>(Imm) || isUInt<16>(Imm)) &&
-           AMDGPU::isInlinableIntLiteral((int16_t)Imm);
+    return AMDGPU::isInlinableLiteralV2I16(Imm);
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+    return AMDGPU::isInlinableLiteralV2F16(Imm);
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
-  case AMDGPU::OPERAND_REG_IMM_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
       // A few special case instructions have 16-bit operands on subtargets
       // where 16-bit instructions are not legal.
@@ -6849,6 +6850,21 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     // Default handling
     break;
   }
+
+  case AMDGPU::S_MUL_U64:
+    // Split s_mul_u64 in 32-bit vector multiplications.
+    splitScalarSMulU64(Worklist, Inst, MDT);
+    Inst.eraseFromParent();
+    return;
+
+  case AMDGPU::S_MUL_U64_U32_PSEUDO:
+  case AMDGPU::S_MUL_I64_I32_PSEUDO:
+    // This is a special case of s_mul_u64 where all the operands are either
+    // zero extended or sign extended.
+    splitScalarSMulPseudo(Worklist, Inst, MDT);
+    Inst.eraseFromParent();
+    return;
+
   case AMDGPU::S_AND_B64:
     splitScalar64BitBinaryOp(Worklist, Inst, AMDGPU::S_AND_B32, MDT);
     Inst.eraseFromParent();
@@ -7201,6 +7217,18 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   if (NewOpcode == Opcode) {
     Register DstReg = Inst.getOperand(0).getReg();
     const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Inst);
+
+    // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
+    // hope for the best.
+    if (Inst.isCopy() && DstReg.isPhysical() &&
+        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+      // TODO: Only works for 32 bit registers.
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+              get(AMDGPU::V_READFIRSTLANE_B32), Inst.getOperand(0).getReg())
+          .add(Inst.getOperand(1));
+      Inst.eraseFromParent();
+      return;
+    }
 
     if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
         NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
@@ -7641,6 +7669,180 @@ void SIInstrInfo::splitScalar64BitUnaryOp(SIInstrWorklist &Worklist,
 
   // We don't need to legalizeOperands here because for a single operand, src0
   // will support any kind of input.
+
+  // Move all users of this moved value.
+  addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
+}
+
+// There is not a vector equivalent of s_mul_u64. For this reason, we need to
+// split the s_mul_u64 in 32-bit vector multiplications.
+void SIInstrInfo::splitScalarSMulU64(SIInstrWorklist &Worklist,
+                                     MachineInstr &Inst,
+                                     MachineDominatorTree *MDT) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  Register FullDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  const DebugLoc &DL = Inst.getDebugLoc();
+  MachineBasicBlock::iterator MII = Inst;
+
+  const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
+  const TargetRegisterClass *Src1RC = MRI.getRegClass(Src1.getReg());
+  const TargetRegisterClass *Src0SubRC =
+      RI.getSubRegisterClass(Src0RC, AMDGPU::sub0);
+  if (RI.isSGPRClass(Src0SubRC))
+    Src0SubRC = RI.getEquivalentVGPRClass(Src0SubRC);
+  const TargetRegisterClass *Src1SubRC =
+      RI.getSubRegisterClass(Src1RC, AMDGPU::sub0);
+  if (RI.isSGPRClass(Src1SubRC))
+    Src1SubRC = RI.getEquivalentVGPRClass(Src1SubRC);
+
+  // First, we extract the low 32-bit and high 32-bit values from each of the
+  // operands.
+  MachineOperand Op0L =
+      buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+  MachineOperand Op1L =
+      buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+  MachineOperand Op0H =
+      buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+  MachineOperand Op1H =
+      buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
+  // The multilication is done as follows:
+  //
+  //                            Op1H  Op1L
+  //                          * Op0H  Op0L
+  //                       --------------------
+  //                       Op1H*Op0L  Op1L*Op0L
+  //          + Op1H*Op0H  Op1L*Op0H
+  // -----------------------------------------
+  // (Op1H*Op0L + Op1L*Op0H + carry)  Op1L*Op0L
+  //
+  //  We drop Op1H*Op0H because the result of the multiplication is a 64-bit
+  //  value and that would overflow.
+  //  The low 32-bit value is Op1L*Op0L.
+  //  The high 32-bit value is Op1H*Op0L + Op1L*Op0H + carry (from Op1L*Op0L).
+
+  Register Op1L_Op0H_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineInstr *Op1L_Op0H =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_MUL_LO_U32_e64), Op1L_Op0H_Reg)
+          .add(Op1L)
+          .add(Op0H);
+
+  Register Op1H_Op0L_Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineInstr *Op1H_Op0L =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_MUL_LO_U32_e64), Op1H_Op0L_Reg)
+          .add(Op1H)
+          .add(Op0L);
+
+  Register CarryReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineInstr *Carry =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_MUL_HI_U32_e64), CarryReg)
+          .add(Op1L)
+          .add(Op0L);
+
+  MachineInstr *LoHalf =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_MUL_LO_U32_e64), DestSub0)
+          .add(Op1L)
+          .add(Op0L);
+
+  Register AddReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  MachineInstr *Add = BuildMI(MBB, MII, DL, get(AMDGPU::V_ADD_U32_e32), AddReg)
+                          .addReg(Op1L_Op0H_Reg)
+                          .addReg(Op1H_Op0L_Reg);
+
+  MachineInstr *HiHalf =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_ADD_U32_e32), DestSub1)
+          .addReg(AddReg)
+          .addReg(CarryReg);
+
+  BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+
+  MRI.replaceRegWith(Dest.getReg(), FullDestReg);
+
+  // Try to legalize the operands in case we need to swap the order to keep it
+  // valid.
+  legalizeOperands(*Op1L_Op0H, MDT);
+  legalizeOperands(*Op1H_Op0L, MDT);
+  legalizeOperands(*Carry, MDT);
+  legalizeOperands(*LoHalf, MDT);
+  legalizeOperands(*Add, MDT);
+  legalizeOperands(*HiHalf, MDT);
+
+  // Move all users of this moved value.
+  addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
+}
+
+// Lower S_MUL_U64_U32_PSEUDO/S_MUL_I64_I32_PSEUDO in two 32-bit vector
+// multiplications.
+void SIInstrInfo::splitScalarSMulPseudo(SIInstrWorklist &Worklist,
+                                        MachineInstr &Inst,
+                                        MachineDominatorTree *MDT) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  Register FullDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
+  Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  const DebugLoc &DL = Inst.getDebugLoc();
+  MachineBasicBlock::iterator MII = Inst;
+
+  const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
+  const TargetRegisterClass *Src1RC = MRI.getRegClass(Src1.getReg());
+  const TargetRegisterClass *Src0SubRC =
+      RI.getSubRegisterClass(Src0RC, AMDGPU::sub0);
+  if (RI.isSGPRClass(Src0SubRC))
+    Src0SubRC = RI.getEquivalentVGPRClass(Src0SubRC);
+  const TargetRegisterClass *Src1SubRC =
+      RI.getSubRegisterClass(Src1RC, AMDGPU::sub0);
+  if (RI.isSGPRClass(Src1SubRC))
+    Src1SubRC = RI.getEquivalentVGPRClass(Src1SubRC);
+
+  // First, we extract the low 32-bit and high 32-bit values from each of the
+  // operands.
+  MachineOperand Op0L =
+      buildExtractSubRegOrImm(MII, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+  MachineOperand Op1L =
+      buildExtractSubRegOrImm(MII, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+  unsigned Opc = Inst.getOpcode();
+  unsigned NewOpc = Opc == AMDGPU::S_MUL_U64_U32_PSEUDO
+                        ? AMDGPU::V_MUL_HI_U32_e64
+                        : AMDGPU::V_MUL_HI_I32_e64;
+  MachineInstr *HiHalf =
+      BuildMI(MBB, MII, DL, get(NewOpc), DestSub1).add(Op1L).add(Op0L);
+
+  MachineInstr *LoHalf =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_MUL_LO_U32_e64), DestSub0)
+          .add(Op1L)
+          .add(Op0L);
+
+  BuildMI(MBB, MII, DL, get(TargetOpcode::REG_SEQUENCE), FullDestReg)
+      .addReg(DestSub0)
+      .addImm(AMDGPU::sub0)
+      .addReg(DestSub1)
+      .addImm(AMDGPU::sub1);
+
+  MRI.replaceRegWith(Dest.getReg(), FullDestReg);
+
+  // Try to legalize the operands in case we need to swap the order to keep it
+  // valid.
+  legalizeOperands(*HiHalf, MDT);
+  legalizeOperands(*LoHalf, MDT);
 
   // Move all users of this moved value.
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);

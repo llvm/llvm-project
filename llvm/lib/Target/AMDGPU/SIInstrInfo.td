@@ -860,23 +860,6 @@ def ShiftAmt32Imm : ImmLeaf <i32, [{
   return Imm < 32;
 }]>;
 
-def getNegV2I16Imm : SDNodeXForm<build_vector, [{
-  return SDValue(packNegConstantV2I16(N, *CurDAG), 0);
-}]>;
-
-def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
-  assert(N->getNumOperands() == 2);
-  assert(N->getOperand(0).getValueType().getSizeInBits() == 16);
-  SDValue Src0 = N->getOperand(0);
-  SDValue Src1 = N->getOperand(1);
-  if (Src0 == Src1)
-    return isNegInlineImmediate(Src0.getNode());
-
-  return (isNullConstantOrUndef(Src0) && isNegInlineImmediate(Src1.getNode())) ||
-         (isNullConstantOrUndef(Src1) && isNegInlineImmediate(Src0.getNode()));
-}], getNegV2I16Imm>;
-
-
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
@@ -1144,6 +1127,8 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
+def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDst">;
+def wait_va_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSrc">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -1788,28 +1773,27 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
 class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
-                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel,
-                bit IsVOP3P> {
+                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel> {
   // getInst64 handles clamp and omod. implicit mutex between vop3p and omod
   dag base = getIns64 <Src0RC, Src1RC, Src2RC, NumSrcArgs,
                 HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
                 Src0Mod, Src1Mod, Src2Mod>.ret;
   dag opsel = (ins op_sel0:$op_sel);
-  dag vop3pOpsel = (ins op_sel_hi0:$op_sel_hi);
-  dag vop3pFields = !con(!if(HasOpSel, vop3pOpsel, (ins)), (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi));
-
-  dag ret = !con(base,
-                 !if(HasOpSel, opsel,(ins)),
-                 !if(IsVOP3P, vop3pFields,(ins)));
+  dag ret = !con(base, !if(HasOpSel, opsel, (ins)));
 }
 
 class getInsVOP3P <RegisterOperand Src0RC, RegisterOperand Src1RC,
                    RegisterOperand Src2RC, int NumSrcArgs, bit HasClamp, bit HasOpSel,
                    Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
-  dag ret = getInsVOP3Base<Src0RC, Src1RC, Src2RC, NumSrcArgs,
+  dag base = getInsVOP3Base<Src0RC, Src1RC, Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/,
-                    0/*HasOMod*/, Src0Mod, Src1Mod, Src2Mod,
-                    HasOpSel, 1/*IsVOP3P*/>.ret;
+                    0/*HasOMod*/, Src0Mod, Src1Mod, Src2Mod, HasOpSel>.ret;
+
+  dag vop3pOpsel = (ins op_sel_hi0:$op_sel_hi);
+  dag vop3p_neg = (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi);
+
+  dag vop3pFields = !con(!if(HasOpSel, vop3pOpsel, (ins)), vop3p_neg);
+  dag ret = !con(base, vop3pFields);
 }
 
 class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -1819,7 +1803,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
   dag ret = getInsVOP3Base<Src0RC, Src1RC,
                     Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/, HasOMod,
-                    Src0Mod, Src1Mod, Src2Mod, 1/*HasOpSel*/, 0>.ret;
+                    Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1>.ret;
 }
 
 class getInsDPPBase <RegisterOperand OldRC, RegisterClass Src0RC, RegisterClass Src1RC,
@@ -2405,9 +2389,15 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsDPP8 = getInsDPP8<DstRCDPP, Src0DPP, Src1DPP, Src2DPP,
                                  NumSrcArgs, HasModifiers,
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
-  field dag InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+  defvar InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel, IsVOP3P>.ret;
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret;
+  defvar InsVOP3PDPPBase = getInsVOP3P<Src0VOP3DPP, Src1VOP3DPP,
+                  Src2VOP3DPP, NumSrcArgs, HasClamp, HasOpSel,
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP>.ret;
+
+  field dag InsVOP3Base = !if(IsVOP3P, InsVOP3PDPPBase, InsVOP3DPPBase);
+
   field dag InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;

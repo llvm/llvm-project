@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -149,7 +150,8 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
     return moreElementsVector(MI, Step.TypeIdx, Step.NewType);
   case Custom:
     LLVM_DEBUG(dbgs() << ".. Custom legalization\n");
-    return LI.legalizeCustom(*this, MI) ? Legalized : UnableToLegalize;
+    return LI.legalizeCustom(*this, MI, LocObserver) ? Legalized
+                                                     : UnableToLegalize;
   default:
     LLVM_DEBUG(dbgs() << ".. Unable to legalize\n");
     return UnableToLegalize;
@@ -531,6 +533,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
     RTLIBCASE(POW_F);
+  case TargetOpcode::G_FPOWI:
+    RTLIBCASE(POWI_F);
   case TargetOpcode::G_FMA:
     RTLIBCASE(FMA_F);
   case TargetOpcode::G_FSIN:
@@ -567,7 +571,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
 
 /// True if an instruction is in tail position in its caller. Intended for
 /// legalizing libcalls as tail calls when possible.
-static bool isLibCallInTailPosition(MachineInstr &MI,
+static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
+                                    MachineInstr &MI,
                                     const TargetInstrInfo &TII,
                                     MachineRegisterInfo &MRI) {
   MachineBasicBlock &MBB = *MI.getParent();
@@ -596,17 +601,12 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
   //   RET_ReallyLR implicit $x0
   auto Next = next_nodbg(MI.getIterator(), MBB.instr_end());
   if (Next != MBB.instr_end() && Next->isCopy()) {
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("unsupported opcode");
-    case TargetOpcode::G_BZERO:
+    if (MI.getOpcode() == TargetOpcode::G_BZERO)
       return false;
-    case TargetOpcode::G_MEMCPY:
-    case TargetOpcode::G_MEMMOVE:
-    case TargetOpcode::G_MEMSET:
-      break;
-    }
 
+    // For MEMCPY/MOMMOVE/MEMSET these will be the first use (the dst), as the
+    // mempy/etc routines return the same parameter. For other it will be the
+    // returned value.
     Register VReg = MI.getOperand(0).getReg();
     if (!VReg.isVirtual() || VReg != Next->getOperand(1).getReg())
       return false;
@@ -622,7 +622,7 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
     if (Ret->getNumImplicitOperands() != 1)
       return false;
 
-    if (PReg != Ret->getOperand(0).getReg())
+    if (!Ret->getOperand(0).isReg() || PReg != Ret->getOperand(0).getReg())
       return false;
 
     // Skip over the COPY that we just validated.
@@ -639,34 +639,64 @@ LegalizerHelper::LegalizeResult
 llvm::createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
                     const CallLowering::ArgInfo &Result,
                     ArrayRef<CallLowering::ArgInfo> Args,
-                    const CallingConv::ID CC) {
+                    const CallingConv::ID CC, LostDebugLocObserver &LocObserver,
+                    MachineInstr *MI) {
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
 
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = CC;
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = Result;
+  if (MI)
+    Info.IsTailCall =
+        (Result.Ty->isVoidTy() ||
+         Result.Ty == MIRBuilder.getMF().getFunction().getReturnType()) &&
+        isLibCallInTailPosition(Result, *MI, MIRBuilder.getTII(),
+                                *MIRBuilder.getMRI());
+
   std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
   if (!CLI.lowerCall(MIRBuilder, Info))
     return LegalizerHelper::UnableToLegalize;
 
+  if (MI && Info.LoweredTailCall) {
+    assert(Info.IsTailCall && "Lowered tail call when it wasn't a tail call?");
+
+    // Check debug locations before removing the return.
+    LocObserver.checkpoint(true);
+
+    // We must have a return following the call (or debug insts) to get past
+    // isLibCallInTailPosition.
+    do {
+      MachineInstr *Next = MI->getNextNode();
+      assert(Next &&
+             (Next->isCopy() || Next->isReturn() || Next->isDebugInstr()) &&
+             "Expected instr following MI to be return or debug inst?");
+      // We lowered a tail call, so the call is now the return from the block.
+      // Delete the old return.
+      Next->eraseFromParent();
+    } while (MI->getNextNode());
+
+    // We expect to lose the debug location from the return.
+    LocObserver.checkpoint(false);
+  }
   return LegalizerHelper::Legalized;
 }
 
 LegalizerHelper::LegalizeResult
 llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
                     const CallLowering::ArgInfo &Result,
-                    ArrayRef<CallLowering::ArgInfo> Args) {
+                    ArrayRef<CallLowering::ArgInfo> Args,
+                    LostDebugLocObserver &LocObserver, MachineInstr *MI) {
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   const char *Name = TLI.getLibcallName(Libcall);
   const CallingConv::ID CC = TLI.getLibcallCallingConv(Libcall);
-  return createLibcall(MIRBuilder, Name, Result, Args, CC);
+  return createLibcall(MIRBuilder, Name, Result, Args, CC, LocObserver, MI);
 }
 
 // Useful for libcalls where all operands have the same type.
 static LegalizerHelper::LegalizeResult
 simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
-              Type *OpType) {
+              Type *OpType, LostDebugLocObserver &LocObserver) {
   auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
 
   // FIXME: What does the original arg index mean here?
@@ -674,7 +704,8 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
     Args.push_back({MO.getReg(), OpType, 0});
   return createLibcall(MIRBuilder, Libcall,
-                       {MI.getOperand(0).getReg(), OpType, 0}, Args);
+                       {MI.getOperand(0).getReg(), OpType, 0}, Args,
+                       LocObserver, &MI);
 }
 
 LegalizerHelper::LegalizeResult
@@ -733,8 +764,9 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
   Info.Callee = MachineOperand::CreateES(Name);
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
-  Info.IsTailCall = MI.getOperand(MI.getNumOperands() - 1).getImm() &&
-                    isLibCallInTailPosition(MI, MIRBuilder.getTII(), MRI);
+  Info.IsTailCall =
+      MI.getOperand(MI.getNumOperands() - 1).getImm() &&
+      isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI);
 
   std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
   if (!CLI.lowerCall(MIRBuilder, Info))
@@ -765,6 +797,132 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   return LegalizerHelper::Legalized;
 }
 
+static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  auto &AtomicMI = cast<GMemOperation>(MI);
+  auto &MMO = AtomicMI.getMMO();
+  auto Ordering = MMO.getMergedOrdering();
+  LLT MemType = MMO.getMemoryType();
+  uint64_t MemSize = MemType.getSizeInBytes();
+  if (MemType.isVector())
+    return RTLIB::UNKNOWN_LIBCALL;
+
+#define LCALLS(A, B)                                                           \
+  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALL5(A)                                                              \
+  LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_CAS)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_SWP)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_AND: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_OR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDSET)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDEOR)};
+    return getOutlineAtomicHelper(LC, Ordering, MemSize);
+  }
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+#undef LCALLS
+#undef LCALL5
+}
+
+static LegalizerHelper::LegalizeResult
+createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+
+  Type *RetTy;
+  SmallVector<Register> RetRegs;
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    Register Success;
+    LLT SuccessLLT;
+    auto [Ret, RetLLT, Mem, MemLLT, Cmp, CmpLLT, New, NewLLT] =
+        MI.getFirst4RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+      std::tie(Ret, RetLLT, Success, SuccessLLT, Mem, MemLLT, Cmp, CmpLLT, New,
+               NewLLT) = MI.getFirst5RegLLTs();
+      RetRegs.push_back(Success);
+      RetTy = StructType::get(
+          Ctx, {RetTy, IntegerType::get(Ctx, SuccessLLT.getSizeInBits())});
+    }
+    Args.push_back({Cmp, IntegerType::get(Ctx, CmpLLT.getSizeInBits()), 0});
+    Args.push_back({New, IntegerType::get(Ctx, NewLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    auto [Ret, RetLLT, Mem, MemLLT, Val, ValLLT] = MI.getFirst3RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMICRMW_AND)
+      Val =
+          MIRBuilder.buildXor(ValLLT, MIRBuilder.buildConstant(ValLLT, -1), Val)
+              .getReg(0);
+    else if (Opc == TargetOpcode::G_ATOMICRMW_SUB)
+      Val =
+          MIRBuilder.buildSub(ValLLT, MIRBuilder.buildConstant(ValLLT, 0), Val)
+              .getReg(0);
+    Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  default:
+    llvm_unreachable("unsupported opcode");
+  }
+
+  auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
+  const char *Name = TLI.getLibcallName(RTLibcall);
+
+  // Unsupported libcall on the target.
+  if (!Name) {
+    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
+                      << MIRBuilder.getTII().getName(Opc) << "\n");
+    return LegalizerHelper::UnableToLegalize;
+  }
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
+
+  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  if (!CLI.lowerCall(MIRBuilder, Info))
+    return LegalizerHelper::UnableToLegalize;
+
+  return LegalizerHelper::Legalized;
+}
+
 static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
                                        Type *FromType) {
   auto ToMVT = MVT::getVT(ToType);
@@ -789,11 +947,11 @@ static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
 
 static LegalizerHelper::LegalizeResult
 conversionLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, Type *ToType,
-                  Type *FromType) {
+                  Type *FromType, LostDebugLocObserver &LocObserver) {
   RTLIB::Libcall Libcall = getConvRTLibDesc(MI.getOpcode(), ToType, FromType);
-  return createLibcall(MIRBuilder, Libcall,
-                       {MI.getOperand(0).getReg(), ToType, 0},
-                       {{MI.getOperand(1).getReg(), FromType, 0}});
+  return createLibcall(
+      MIRBuilder, Libcall, {MI.getOperand(0).getReg(), ToType, 0},
+      {{MI.getOperand(1).getReg(), FromType, 0}}, LocObserver, &MI);
 }
 
 static RTLIB::Libcall
@@ -829,7 +987,8 @@ getStateLibraryFunctionFor(MachineInstr &MI, const TargetLowering &TLI) {
 //
 LegalizerHelper::LegalizeResult
 LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI) {
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
   auto &MRI = *MIRBuilder.getMRI();
@@ -850,7 +1009,8 @@ LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
   auto Res =
       createLibcall(MIRBuilder, RTLibcall,
                     CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
-                    CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}));
+                    CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}),
+                    LocObserver, nullptr);
   if (Res != LegalizerHelper::Legalized)
     return Res;
 
@@ -867,7 +1027,8 @@ LegalizerHelper::createGetStateLibcall(MachineIRBuilder &MIRBuilder,
 // content of memory region.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI) {
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
   auto &MRI = *MIRBuilder.getMRI();
@@ -892,7 +1053,8 @@ LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
   RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
   return createLibcall(MIRBuilder, RTLibcall,
                        CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
-                       CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}));
+                       CallLowering::ArgInfo({Temp.getReg(0), StatePtrTy, 0}),
+                       LocObserver, nullptr);
 }
 
 // The function is used to legalize operations that set default environment
@@ -902,7 +1064,8 @@ LegalizerHelper::createSetStateLibcall(MachineIRBuilder &MIRBuilder,
 // it is not true, the target must provide custom lowering.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::createResetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                         MachineInstr &MI) {
+                                         MachineInstr &MI,
+                                         LostDebugLocObserver &LocObserver) {
   const DataLayout &DL = MIRBuilder.getDataLayout();
   auto &MF = MIRBuilder.getMF();
   auto &Ctx = MF.getFunction().getContext();
@@ -919,7 +1082,8 @@ LegalizerHelper::createResetStateLibcall(MachineIRBuilder &MIRBuilder,
   RTLIB::Libcall RTLibcall = getStateLibraryFunctionFor(MI, TLI);
   return createLibcall(MIRBuilder, RTLibcall,
                        CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0),
-                       CallLowering::ArgInfo({ Dest.getReg(), StatePtrTy, 0}));
+                       CallLowering::ArgInfo({Dest.getReg(), StatePtrTy, 0}),
+                       LocObserver, &MI);
 }
 
 LegalizerHelper::LegalizeResult
@@ -938,7 +1102,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = LLTy.getSizeInBits();
     Type *HLTy = IntegerType::get(Ctx, Size);
-    auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
+    auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -974,7 +1138,28 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
       return UnableToLegalize;
     }
-    auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
+    auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_FPOWI: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    Type *ITy = IntegerType::get(
+        Ctx, MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+    std::initializer_list<CallLowering::ArgInfo> Args = {
+        {MI.getOperand(1).getReg(), HLTy, 0},
+        {MI.getOperand(2).getReg(), ITy, 1}};
+    LegalizeResult Status =
+        createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), HLTy, 0},
+                      Args, LocObserver, &MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -985,7 +1170,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     Type *ToTy = getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(0).getReg()));
     if (!FromTy || !ToTy)
       return UnableToLegalize;
-    LegalizeResult Status = conversionLibcall(MI, MIRBuilder, ToTy, FromTy );
+    LegalizeResult Status =
+        conversionLibcall(MI, MIRBuilder, ToTy, FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -1000,7 +1186,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     LegalizeResult Status = conversionLibcall(
         MI, MIRBuilder,
         ToSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
-        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx));
+        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
+        LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -1015,7 +1202,21 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     LegalizeResult Status = conversionLibcall(
         MI, MIRBuilder,
         ToSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
-        FromSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx));
+        FromSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
+        LocObserver);
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_SUB:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR:
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    auto Status = createAtomicLibcall(MIRBuilder, MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -1032,19 +1233,20 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     return Result;
   }
   case TargetOpcode::G_GET_FPMODE: {
-    LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI);
+    LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
   case TargetOpcode::G_SET_FPMODE: {
-    LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI);
+    LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
   case TargetOpcode::G_RESET_FPMODE: {
-    LegalizeResult Result = createResetStateLibcall(MIRBuilder, MI);
+    LegalizeResult Result =
+        createResetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
@@ -2831,6 +3033,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_VECREDUCE_FADD:
+  case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
@@ -4515,8 +4718,13 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*imm*/});
   GISEL_VECREDUCE_CASES_NONSEQ
     return fewerElementsVectorReductions(MI, TypeIdx, NarrowTy);
+  case TargetOpcode::G_VECREDUCE_SEQ_FADD:
+  case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
+    return fewerElementsVectorSeqReductions(MI, TypeIdx, NarrowTy);
   case G_SHUFFLE_VECTOR:
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
+  case G_FPOWI:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
   default:
     return UnableToLegalize;
   }
@@ -4742,6 +4950,36 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
                 .getReg(0);
     }
   }
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
+                                                  unsigned int TypeIdx,
+                                                  LLT NarrowTy) {
+  auto [DstReg, DstTy, ScalarReg, ScalarTy, SrcReg, SrcTy] =
+      MI.getFirst3RegLLTs();
+  if (!NarrowTy.isScalar() || TypeIdx != 2 || DstTy != ScalarTy ||
+      DstTy != NarrowTy)
+    return UnableToLegalize;
+
+  assert((MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FADD ||
+          MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FMUL) &&
+         "Unexpected vecreduce opcode");
+  unsigned ScalarOpc = MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FADD
+                           ? TargetOpcode::G_FADD
+                           : TargetOpcode::G_FMUL;
+
+  SmallVector<Register> SplitSrcs;
+  unsigned NumParts = SrcTy.getNumElements();
+  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs);
+  Register Acc = ScalarReg;
+  for (unsigned i = 0; i < NumParts; i++)
+    Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]})
+              .getReg(0);
+
+  MIRBuilder.buildCopy(DstReg, Acc);
   MI.eraseFromParent();
   return Legalized;
 }

@@ -21,7 +21,8 @@ namespace Fortran::runtime::io {
 static inline bool IsCharValueSeparator(const DataEdit &edit, char32_t ch) {
   char32_t comma{
       edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','}};
-  return ch == ' ' || ch == '\t' || ch == '/' || ch == comma;
+  return ch == ' ' || ch == '\t' || ch == comma || ch == '/' ||
+      (edit.IsNamelist() && (ch == '&' || ch == '$'));
 }
 
 static bool CheckCompleteListDirectedField(
@@ -243,10 +244,21 @@ bool EditIntegerInput(
   if (sign == '-') {
     value = -value;
   }
-  if (any || !io.GetConnectionState().IsAtEOF()) {
-    std::memcpy(n, &value, kind); // a blank field means zero
+  if (any || !io.GetIoErrorHandler().InError()) {
+    // The value is stored in the lower order bits on big endian platform.
+    // When memcpy, shift the value to the higher order bit.
+    auto shft{static_cast<int>(sizeof(value.low())) - kind};
+    // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
+    if (!isHostLittleEndian && shft >= 0) {
+      auto l{value.low() << (8 * shft)};
+      std::memcpy(n, &l, kind);
+    } else {
+      std::memcpy(n, &value, kind); // a blank field means zero
+    }
+    return true;
+  } else {
+    return false;
   }
-  return any;
 }
 
 // Parses a REAL input number from the input source as a normalized
@@ -615,31 +627,6 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
       fraction <<= 1;
       --expo;
     }
-    // Rounding
-    bool increase{false};
-    switch (rounding) {
-    case decimal::RoundNearest: // RN & RP
-      increase = roundingBit && (guardBit | ((int)fraction & 1));
-      break;
-    case decimal::RoundUp: // RU
-      increase = !isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundDown: // RD
-      increase = isNegative && (roundingBit | guardBit);
-      break;
-    case decimal::RoundToZero: // RZ
-      break;
-    case decimal::RoundCompatible: // RC
-      increase = roundingBit != 0;
-      break;
-    }
-    if (increase) {
-      ++fraction;
-      if (fraction >> binaryPrecision) {
-        fraction >>= 1;
-        ++expo;
-      }
-    }
   }
   // Package & return result
   constexpr RawType significandMask{(one << RealType::significandBits) - 1};
@@ -650,16 +637,9 @@ decimal::ConversionToBinaryResult<binaryPrecision> ConvertHexadecimal(
     expo = 0; // subnormal
     flags |= decimal::Underflow;
   } else if (expo >= RealType::maxExponent) {
-    if (rounding == decimal::RoundToZero ||
-        (rounding == decimal::RoundDown && !isNegative) ||
-        (rounding == decimal::RoundUp && isNegative)) {
-      expo = RealType::maxExponent - 1; // +/-HUGE()
-      fraction = significandMask;
-    } else {
-      expo = RealType::maxExponent; // +/-Inf
-      fraction = 0;
-      flags |= decimal::Overflow;
-    }
+    expo = RealType::maxExponent; // +/-Inf
+    fraction = 0;
+    flags |= decimal::Overflow;
   } else {
     fraction &= significandMask; // remove explicit normalization unless x87
   }
@@ -907,6 +887,10 @@ static bool EditListDirectedCharacterInput(
     case '\t':
     case '/':
       isSep = true;
+      break;
+    case '&':
+    case '$':
+      isSep = edit.IsNamelist();
       break;
     case ',':
       isSep = !(edit.modes.editingFlags & decimalComma);

@@ -291,10 +291,9 @@ int32_t DeviceTy::destroyEvent(void *Event) {
   return OFFLOAD_SUCCESS;
 }
 
-void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {
+void DeviceTy::addOffloadEntry(const OffloadEntryTy &Entry) {
   std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
-  DeviceOffloadEntries.getExclusiveAccessor()->insert(
-      {Entry.getName(), &Entry});
+  DeviceOffloadEntries.getExclusiveAccessor()->insert({Entry.getName(), Entry});
   if (Entry.isGlobal())
     return;
 
@@ -329,14 +328,14 @@ void DeviceTy::dumpOffloadEntries() {
   fprintf(stderr, "Device %i offload entries:\n", DeviceID);
   for (auto &It : *DeviceOffloadEntries.getExclusiveAccessor()) {
     const char *Kind = "kernel";
-    if (It.second->isCTor())
+    if (It.second.isCTor())
       Kind = "constructor";
-    else if (It.second->isDTor())
+    else if (It.second.isDTor())
       Kind = "destructor";
-    else if (It.second->isLink())
+    else if (It.second.isLink())
       Kind = "link";
-    else if (It.second->isGlobal())
+    else if (It.second.isGlobal())
       Kind = "global var.";
-    fprintf(stderr, "  %11s: %s\n", Kind, It.second->getNameAsCStr());
+    fprintf(stderr, "  %11s: %s\n", Kind, It.second.getNameAsCStr());
   }
 }

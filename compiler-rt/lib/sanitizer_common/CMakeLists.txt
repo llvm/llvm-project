@@ -151,7 +151,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_flags.h
   sanitizer_flags.inc
   sanitizer_flat_map.h
-  sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h
   sanitizer_hash.h

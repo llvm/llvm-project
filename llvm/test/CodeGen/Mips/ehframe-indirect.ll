@@ -62,7 +62,7 @@ declare void @foo()
 ; N64: .8byte _ZTISt9exception
 ; ALL: .hidden DW.ref.__gxx_personality_v0
 ; ALL: .weak DW.ref.__gxx_personality_v0
-; ALL: .section .data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+; ALL: .section .data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 ; O32: .p2align 2
 ; N32: .p2align 2
 ; N64: .p2align 3

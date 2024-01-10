@@ -24,7 +24,7 @@ using enum E;
 #endif
 }
 
-namespace dr2628 { // dr2628: no open
+namespace dr2628 { // dr2628: no
                    // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
@@ -197,7 +197,7 @@ J j = { "ghi" };
 #endif
 }
 
-namespace dr2672 { // dr2672: 18 open
+namespace dr2672 { // dr2672: 18
 #if __cplusplus >= 202002L
 template <class T>
 void f(T) requires requires { []() { T::invalid; } (); };
@@ -211,7 +211,7 @@ void f(...);
 
 template <class T>
 void bar(T) requires requires {
-   decltype([]() -> T {})::foo();
+   []() -> decltype(T::foo()) {};
 };
 void bar(...);
 
