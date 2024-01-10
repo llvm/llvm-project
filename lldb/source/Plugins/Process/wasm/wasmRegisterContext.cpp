@@ -8,9 +8,9 @@
 
 #include "wasmRegisterContext.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteRegisterContext.h"
-#include "lldb/Utility/RegisterValue.h"
 #include "ProcessWasm.h"
 #include "ThreadWasm.h"
+#include "lldb/Utility/RegisterValue.h"
 #include <memory>
 
 using namespace lldb;
@@ -27,9 +27,8 @@ WasmRegisterContext::WasmRegisterContext(
 WasmRegisterContext::~WasmRegisterContext() = default;
 
 uint32_t WasmRegisterContext::ConvertRegisterKindToRegisterNumber(
-    lldb::RegisterKind kind, uint32_t num) 
-{
-    return num;
+    lldb::RegisterKind kind, uint32_t num) {
+  return num;
 }
 
 size_t WasmRegisterContext::GetRegisterCount() { return 0; }
@@ -40,34 +39,15 @@ const RegisterInfo *WasmRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
     return m_reg_info_sp->GetRegisterInfoAtIndex(reg);
   }
 
-  reg &= 0x3fffffff;
-
-  static const uint32_t kMaxVirtualRegisters = 2048;
-  if (reg > kMaxVirtualRegisters) {
-    // Only kMaxVirtualRegisters supported.
-    return nullptr;
-    // return m_reg_info_sp->GetRegisterInfoAtIndex(reg); // ???
+  auto it = m_register_map.find(reg);
+  if (it == m_register_map.end()) {
+    WasmVirtualRegisterKinds kind =
+        static_cast<WasmVirtualRegisterKinds>(tag - 1);
+    std::tie(it, std::ignore) = m_register_map.insert(
+        {reg,
+         std::make_unique<WasmVirtualRegisterInfo>(kind, reg & 0x3fffffff)});
   }
-
-  static WasmVirtualRegisterInfo g_register_infos[kNumWasmVirtualRegisterKinds]
-                                                 [kMaxVirtualRegisters];
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, [&]() {
-    for (int i_kind = WasmVirtualRegisterKinds::eLocal;
-         i_kind < WasmVirtualRegisterKinds::kNumWasmVirtualRegisterKinds;
-         i_kind++) {
-      WasmVirtualRegisterKinds kind =
-          static_cast<WasmVirtualRegisterKinds>(i_kind);
-      for (uint32_t i_reg = 0; i_reg < kMaxVirtualRegisters; i_reg++) {
-        g_register_infos[static_cast<WasmVirtualRegisterKinds>(kind)][i_reg] = {
-            kind, i_reg};
-      }
-    }
-  });
-
-  WasmVirtualRegisterKinds kind =
-      static_cast<WasmVirtualRegisterKinds>(tag - 1);
-  return &g_register_infos[kind][reg];
+  return it->second.get();
 }
 
 size_t WasmRegisterContext::GetRegisterSetCount() { return 0; }
@@ -87,7 +67,6 @@ bool WasmRegisterContext::ReadRegister(const RegisterInfo *reg_info,
   if (!thread)
     return false;
 
-//uint32_t frame_index = thread->GetSelectedFrameIndex(SelectMostRelevantFrame);
   uint32_t frame_index = m_concrete_frame_idx;
   WasmVirtualRegisterInfo *wasm_reg_info =
       static_cast<WasmVirtualRegisterInfo *>(

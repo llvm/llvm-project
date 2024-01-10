@@ -12,6 +12,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteRegisterContext.h"
 #include "ThreadWasm.h"
 #include "lldb/lldb-private-types.h"
+#include <unordered_map>
 
 namespace lldb_private {
 namespace wasm {
@@ -31,7 +32,6 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
   WasmVirtualRegisterKinds kind;
   uint32_t index;
 
-  WasmVirtualRegisterInfo() : RegisterInfo(), kind(eLocal), index(0) {}
   WasmVirtualRegisterInfo(WasmVirtualRegisterKinds kind, uint32_t index)
       : RegisterInfo(), kind(kind), index(index) {}
 };
@@ -63,6 +63,10 @@ public:
 
   bool WriteRegister(const RegisterInfo *reg_info,
                      const RegisterValue &value) override;
+
+private:
+  std::unordered_map<size_t, std::unique_ptr<WasmVirtualRegisterInfo>>
+      m_register_map;
 };
 
 } // namespace wasm
