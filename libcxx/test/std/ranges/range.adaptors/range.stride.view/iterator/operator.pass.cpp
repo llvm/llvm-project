@@ -200,10 +200,11 @@ static_assert(!std::three_way_comparable<std::ranges::iterator_t<UnEqualableView
 static_assert(!std::ranges::random_access_range<UnEqualableView>);
 static_assert(!std::three_way_comparable<UnEqualableView>);
 
-constexpr bool test_non_forward_operator_minus() {
-  using Base = BasicTestView<SizedInputIterator, SizedInputIterator>;
+template <typename Iter>
+  requires std::sized_sentinel_for<Iter, Iter> && (!std::forward_iterator<Iter>)
+constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, Iter end) {
+  using Base = BasicTestView<Iter, Iter>;
   // Test the non-forward-range operator- between two iterators (i.e., ceil).
-  int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   // First, what operators are valid for an iterator derived from a stride view
   // over a sized input view.
   using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
@@ -223,101 +224,100 @@ constexpr bool test_non_forward_operator_minus() {
   static_assert(!std::is_invocable_v<std::greater_equal<>, StrideViewIterator, StrideViewIterator>);
   static_assert(!CanSubscript<StrideViewIterator>);
 
-  auto rav_zero    = Base(SizedInputIterator(arr), SizedInputIterator(arr + 10));
-  auto rav_one     = Base(SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
-  auto stride_zoff = std::ranges::stride_view(rav_zero, 3);
-  auto stride_ooff = std::ranges::stride_view(rav_one, 3);
+  auto base_view_offset_zero             = Base(zero_begin, end);
+  auto base_view_offset_one              = Base(one_begin, end);
+  auto stride_view_over_base_zero_offset = std::ranges::stride_view(base_view_offset_zero, 3);
+  auto stride_view_over_base_one_offset  = std::ranges::stride_view(base_view_offset_one, 3);
 
-  auto stride_zoff_begin = stride_zoff.begin();
-  auto stride_ooff_begin = stride_ooff.begin();
+  auto sv_zero_offset_begin = stride_view_over_base_zero_offset.begin();
+  auto sv_one_offset_begin  = stride_view_over_base_one_offset.begin();
 
-  auto stride_zoff_one   = stride_zoff_begin;
-  auto stride_zoff_four  = ++stride_zoff_begin;
-  auto stride_zoff_seven = ++stride_zoff_begin;
+  auto sv_zero_offset_should_be_one   = sv_zero_offset_begin;
+  auto sv_zero_offset_should_be_four  = ++sv_zero_offset_begin;
+  auto sv_zero_offset_should_be_seven = ++sv_zero_offset_begin;
 
-  auto stride_ooff_two  = stride_ooff_begin;
-  auto stride_ooff_five = ++stride_ooff_begin;
+  auto sv_one_offset_should_be_two  = sv_one_offset_begin;
+  auto sv_one_offset_should_be_five = ++sv_one_offset_begin;
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
-  static_assert(CanMinus<decltype(stride_zoff_begin)>);
+  static_assert(CanMinus<decltype(sv_zero_offset_begin)>);
 
-  assert(*stride_zoff_one == 1);
-  assert(*stride_zoff_four == 4);
-  assert(*stride_zoff_seven == 7);
+  assert(*sv_zero_offset_should_be_one == 1);
+  assert(*sv_zero_offset_should_be_four == 4);
+  assert(*sv_zero_offset_should_be_seven == 7);
 
-  assert(*stride_ooff_two == 2);
-  assert(*stride_ooff_five == 5);
+  assert(*sv_one_offset_should_be_two == 2);
+  assert(*sv_one_offset_should_be_five == 5);
 
   // Check positive __n with exact multiple of left's stride.
-  assert(stride_zoff_four - stride_zoff_one == 1);
-  assert(stride_zoff_seven - stride_zoff_one == 2);
+  assert(sv_zero_offset_should_be_four - sv_zero_offset_should_be_one == 1);
+  assert(sv_zero_offset_should_be_seven - sv_zero_offset_should_be_one == 2);
   // Check positive __n with non-exact multiple of left's stride.
-  assert(stride_ooff_two - stride_zoff_one == 1);
-  assert(stride_ooff_five - stride_zoff_one == 2);
+  assert(sv_one_offset_should_be_two - sv_zero_offset_should_be_one == 1);
+  assert(sv_one_offset_should_be_five - sv_zero_offset_should_be_one == 2);
 
   // Check negative __n with exact multiple of left's stride.
-  assert(stride_zoff_one - stride_zoff_four == -1);
-  assert(stride_zoff_one - stride_zoff_seven == -2);
+  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_four == -1);
+  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_seven == -2);
   // Check negative __n with non-exact multiple of left's stride.
-  assert(stride_zoff_one - stride_ooff_two == -1);
-  assert(stride_zoff_one - stride_ooff_five == -2);
+  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_two == -1);
+  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_five == -2);
 
   return true;
 }
 
-constexpr bool test_forward_operator_minus() {
+template <std::forward_iterator Iter>
+constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
   // Test the forward-range operator- between two iterators (i.e., no ceil).
-  using Base = BasicTestView<int*, int*>;
-  int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  using Base = BasicTestView<Iter, Iter>;
+  //int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
   // First, what operators are valid for an iterator derived from a stride view
   // over a sized forward view (even though it is actually much more than that!).
   using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
 
   static_assert(std::weakly_incrementable<StrideViewIterator>);
-
   static_assert(CanMinus<StrideViewIterator>);
 
-  auto rav_zero    = Base(arr, arr + 10);
-  auto rav_one     = Base(arr + 1, arr + 10);
-  auto stride_zoff = std::ranges::stride_view(rav_zero, 3);
-  auto stride_ooff = std::ranges::stride_view(rav_one, 3);
+  auto base_view_offset_zero             = Base(begin, end);
+  auto base_view_offset_one              = Base(begin + 1, end);
+  auto stride_view_over_base_zero_offset = std::ranges::stride_view(base_view_offset_zero, 3);
+  auto stride_view_over_base_one_offset  = std::ranges::stride_view(base_view_offset_one, 3);
 
-  auto stride_zoff_begin = stride_zoff.begin();
-  auto stride_ooff_begin = stride_ooff.begin();
+  auto sv_zero_offset_begin = stride_view_over_base_zero_offset.begin();
+  auto sv_one_offset_begin  = stride_view_over_base_one_offset.begin();
 
-  auto stride_zoff_one   = stride_zoff_begin;
-  auto stride_zoff_four  = ++stride_zoff_begin;
-  auto stride_zoff_seven = ++stride_zoff_begin;
+  auto sv_zero_offset_should_be_one   = sv_zero_offset_begin;
+  auto sv_zero_offset_should_be_four  = ++sv_zero_offset_begin;
+  auto sv_zero_offset_should_be_seven = ++sv_zero_offset_begin;
 
-  auto stride_ooff_two  = stride_ooff_begin;
-  auto stride_ooff_five = ++stride_ooff_begin;
+  auto sv_one_offset_should_be_two  = sv_one_offset_begin;
+  auto sv_one_offset_should_be_five = ++sv_one_offset_begin;
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
-  static_assert(CanMinus<decltype(stride_zoff_begin)>);
+  static_assert(CanMinus<decltype(sv_zero_offset_begin)>);
   static_assert(std::forward_iterator<std::ranges::iterator_t<Base>>);
+  assert(*sv_zero_offset_should_be_one == 1);
+  assert(*sv_zero_offset_should_be_four == 4);
+  assert(*sv_zero_offset_should_be_seven == 7);
 
-  assert(*stride_zoff_one == 1);
-  assert(*stride_zoff_four == 4);
-  assert(*stride_zoff_seven == 7);
-
-  assert(*stride_ooff_two == 2);
-  assert(*stride_ooff_five == 5);
+  assert(*sv_one_offset_should_be_two == 2);
+  assert(*sv_one_offset_should_be_five == 5);
   // Check positive __n with exact multiple of left's stride.
-  assert(stride_zoff_four - stride_zoff_one == 1);
-  assert(stride_zoff_seven - stride_zoff_one == 2);
+  assert(sv_zero_offset_should_be_four - sv_zero_offset_should_be_one == 1);
+  assert(sv_zero_offset_should_be_seven - sv_zero_offset_should_be_one == 2);
 
   // Check positive __n with non-exact multiple of left's stride.
-  assert(stride_ooff_two - stride_zoff_one == 0);
-  assert(stride_ooff_five - stride_zoff_one == 1);
+  assert(sv_one_offset_should_be_two - sv_zero_offset_should_be_one == 0);
+  assert(sv_one_offset_should_be_five - sv_zero_offset_should_be_one == 1);
 
   // Check negative __n with exact multiple of left's stride.
-  assert(stride_zoff_one - stride_zoff_four == -1);
-  assert(stride_zoff_one - stride_zoff_seven == -2);
+  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_four == -1);
+  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_seven == -2);
 
   // Check negative __n with non-exact multiple of left's stride.
-  assert(stride_zoff_one - stride_ooff_two == 0);
-  assert(stride_zoff_one - stride_ooff_five == -1);
+  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_two == 0);
+  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_five == -1);
   return true;
 }
 
@@ -357,11 +357,17 @@ constexpr bool test_properly_handling_missing() {
 }
 
 int main(int, char**) {
-  test_forward_operator_minus();
-  static_assert(test_forward_operator_minus());
+  {
+    constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    test_forward_operator_minus(arr, arr + 10);
+    test_forward_operator_minus(vec.begin(), vec.end());
+  }
 
-  test_non_forward_operator_minus();
-  static_assert(test_non_forward_operator_minus());
+  {
+    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    test_non_forward_operator_minus(SizedInputIterator(arr), SizedInputIterator(arr + 1), SizedInputIterator(arr + 10));
+  }
 
   test_properly_handling_missing();
   static_assert(test_properly_handling_missing());
