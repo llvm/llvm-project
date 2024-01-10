@@ -884,6 +884,9 @@ Bug Fixes to AST Handling
 - Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
+- Fixed a bug where range-loop-analysis checks for trivial copyability,
+  rather than trivial copy-constructibility
+  `Issue 47355 <https://github.com/llvm/llvm-project/issues/47355>`_
 - Fixed a bug where Template Instantiation failed to handle Lambda Expressions
   with certain types of Attributes.
   (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
@@ -1199,8 +1202,9 @@ Improvements
   (`c3a87ddad62a <https://github.com/llvm/llvm-project/commit/c3a87ddad62a6cc01acaccc76592bc6730c8ac3c>`_,
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
-- Improved the ``alpha.unix.Stream`` checker by modeling more functions like,
-  ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fdopen``, ``fgets``, ``tmpfile``.
+- Improved the ``alpha.unix.Stream`` checker by modeling more functions
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``
+  and no not recognize alternative ``fopen`` and ``tmpfile`` implementations.
   (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
   `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
@@ -1208,7 +1212,8 @@ Improvements
   `#71518 <https://github.com/llvm/llvm-project/pull/71518>`_,
   `#72016 <https://github.com/llvm/llvm-project/pull/72016>`_,
   `#70540 <https://github.com/llvm/llvm-project/pull/70540>`_,
-  `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_)
+  `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_,
+  `#77331 <https://github.com/llvm/llvm-project/pull/77331>`_)
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked
