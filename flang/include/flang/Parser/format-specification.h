@@ -19,7 +19,6 @@
 // TODO: support Q formatting extension?
 
 #include "flang/Common/idioms.h"
-
 #include <cinttypes>
 #include <list>
 #include <optional>
