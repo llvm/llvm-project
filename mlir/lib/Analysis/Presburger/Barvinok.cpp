@@ -76,6 +76,11 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// coefficients.
 GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     ParamPoint vertex, int sign, ConeH cone) {
+  // Consider a cone with H-representation [0  -1].
+  //                                       [-1 -2]
+  // Let the vertex be given by the matrix [ 2  2   0], with 2 params.
+  //                                       [-1 -1/2 1]
+
   // `cone` must be unimodular.
   assert(getIndex(getDual(cone)) == 1 && "input cone is not unimodular!");
 
@@ -91,6 +96,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 
   FracMatrix generators(numVar, numIneq);
   transp.determinant(/*inverse=*/&generators); // This is the U-matrix.
+  // Thus the generators are given by U = [2  -1].
+  //                                      [-1  0]
 
   // The powers in the denominator of the generating
   // function are given by the generators of the cone,
@@ -125,23 +132,15 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
     numerator.setRow(i, transp.preMultiplyWithRow(ithCol));
     numerator.negateRow(i);
   }
+  // Therefore Λ will be given by [ 1    0 ] and the negation of this will be
+  //                              [ 1/2 -1 ]
+  //                              [ -1  -2 ]
+  // stored as the numerator.
+  // Algebraically, the numerator exponent is
+  // [ -2 ⌊ - N - M/2 + 1 ⌋ + 1 ⌊ 0 + M + 2 ⌋ ] -> first  COLUMN of U is [2, -1]
+  // [  1 ⌊ - N - M/2 + 1 ⌋ + 0 ⌊ 0 + M + 2 ⌋ ] -> second COLUMN of U is [-1, 0]
 
   return GeneratingFunction(numColumns - 1, SmallVector<int>(1, sign),
                             std::vector({numerator}),
                             std::vector({denominator}));
-
-  // Suppose the vertex is given by the matrix [ 2  2   0], with 2 params
-  //                                           [-1 -1/2 1]
-  // and the cone has H-representation [0  -1],
-  //                                   [-1 -2]
-  // i.e., its generators are given by U = [2  -1].
-  //                                       [-1  0]
-  // Therefore Λ will be given by [ 1    0 ] and the negation of this will be
-  // stored as the numerator.
-  //                              [ 1/2 -1 ]
-  //                              [ -1  -2 ]
-
-  // Algebraically, the numerator exponent is
-  // [ -2 ⌊ - N - M/2 + 1 ⌋ + 1 ⌊ 0 + M + 2 ⌋ ] -> first  COLUMN of U is [2, -1]
-  // [  1 ⌊ - N - M/2 + 1 ⌋ + 0 ⌊ 0 + M + 2 ⌋ ] -> second COLUMN of U is [-1, 0]
 }
