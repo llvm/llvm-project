@@ -229,18 +229,25 @@ public:
   };
 
   SmallVector<Value> serialize() const override {
-    assert(!randomAccessible());
     SmallVector<Value> ret;
-    ret.push_back(itPos);
-    ret.push_back(loopHi);
+    if (randomAccessible())
+      ret.push_back(posLo);
+    else {
+      ret.push_back(itPos);
+      ret.push_back(loopHi);
+    }
     return ret;
   };
 
   void deserialize(ValueRange vs) override {
-    assert(!randomAccessible());
-    assert(vs.size() == 2);
-    seek(vs.front());
-    loopHi = vs.back();
+    if (randomAccessible()) {
+      assert(vs.size() == 1);
+      posLo = vs.front();
+    } else {
+      assert(vs.size() == 2);
+      seek(vs.front());
+      loopHi = vs.back();
+    }
   };
 
   ValuePair getCurPosition() const override { return {itPos, nullptr}; }
@@ -335,14 +342,12 @@ public:
   }
 
   SmallVector<Value> serialize() const override {
-    assert(!randomAccessible());
     SmallVector<Value> ret;
     ret.append(getItVals().begin(), getItVals().end());
     ret.push_back(posHi);
     return ret;
   };
   void deserialize(ValueRange vs) override {
-    assert(!randomAccessible());
     assert(vs.size() == 3);
     seek(vs.take_front(getItVals().size()));
     posHi = vs.back();
@@ -488,8 +493,8 @@ public:
                           Value subSectSz, unsigned stride)
       : SparseIterator(IterKind::kNonEmptySubSect, wrap->tid, wrap->lvl,
                        /*itVals=*/subSectMeta),
-        tupleSz(wrap->serialize().size()), subSectSz(subSectSz), stride(stride),
-        parent(parent), wrap(std::move(wrap)) {
+        subSectSz(subSectSz), stride(stride), parent(parent),
+        wrap(std::move(wrap)) {
 
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
     assert(stride == 1);
@@ -509,6 +514,7 @@ public:
     if (randomAccessible())
       return;
 
+    tupleSz = this->wrap->serialize().size();
     subSectPosBuf = allocSubSectPosBuf(b, l);
   }
 
@@ -527,6 +533,22 @@ public:
   }
 
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override;
+
+  std::pair<Value, Value> genForCond(OpBuilder &b, Location l) override {
+    // Yield a dense range [curCrd, upperBound).
+    return {deref(b, l), upperBound(b, l)};
+  }
+
+  void locate(OpBuilder &b, Location l, Value crd) override {
+    Value absOff = crd;
+    auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
+    if (p && p->lvl == lvl)
+      absOff = ADDI(crd, p->getAbsOff());
+
+    wrap->locate(b, l, absOff);
+    seek(ValueRange{absOff, absOff, C_TRUE});
+    updateCrd(crd);
+  }
 
   Value genNotEnd(OpBuilder &b, Location l) override { return getNotEnd(); };
 
@@ -548,9 +570,13 @@ public:
   Value getAbsOff() const { return subSectMeta[1]; }
   Value getNotEnd() const { return subSectMeta[2]; }
 
+  // Number of values required to serialize the wrapped iterator.
+  unsigned tupleSz;
+  // Max number of tuples, and the actual number of tuple.
   Value maxTupleCnt, tupleCnt;
+  // The memory used to cache the tuple serialized from the wrapped iterator.
   Value subSectPosBuf;
-  const unsigned tupleSz;
+
   const Value subSectSz;
   const unsigned stride;
 
@@ -594,13 +620,30 @@ public:
   };
 
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override {
-    Value tupleId;
     if (llvm::isa<NonEmptySubSectIterator>(parent)) {
-      tupleId = C_IDX(0);
+      if (randomAccessible()) {
+        // A dense range can be inferred without caching.
+        wrap->deserialize(subSect.wrap->serialize());
+        // Locate the random accessible iterator to the offset of the
+        // subsection to iterate over [offset, offset + size) later.
+        wrap->locate(b, l, subSect.getAbsOff());
+        return;
+      }
+      wrap->deserialize(subSect.loadItVals(b, l, C_IDX(0)));
     } else {
       llvm_unreachable("Not implemented");
     }
-    wrap->deserialize(subSect.loadItVals(b, l, tupleId));
+  }
+
+  std::pair<Value, Value> genForCond(OpBuilder &b, Location l) override {
+    // Yield a dense range [curCrd, upperBound).
+    return {deref(b, l), upperBound(b, l)};
+  }
+
+  void locate(OpBuilder &b, Location l, Value crd) override {
+    Value absCrd = ADDI(crd, subSect.getAbsOff());
+    wrap->locate(b, l, absCrd);
+    updateCrd(crd);
   }
 
   Value genNotEnd(OpBuilder &b, Location l) override {
