@@ -22,8 +22,11 @@ Progress::Progress(std::string title, std::string details,
                    std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger)
     : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
-      m_total(total) {
+      m_total(1) {
   assert(total == std::nullopt || total > 0);
+  if (total)
+    m_total = *total;
+
   if (debugger)
     m_debugger_id = debugger->GetID();
   std::lock_guard<std::mutex> guard(m_mutex);
@@ -34,32 +37,34 @@ Progress::~Progress() {
   // Make sure to always report progress completed when this object is
   // destructed so it indicates the progress dialog/activity should go away.
   std::lock_guard<std::mutex> guard(m_mutex);
-  if (m_total.has_value() && !m_completed)
-    m_completed = m_total.value();
+  if (!m_completed)
+    m_completed = m_total;
   ReportProgress();
 }
 
-void Progress::Increment(uint64_t amount, std::string update) {
+void Progress::Increment(uint64_t amount,
+                         std::optional<std::string> updated_detail) {
   if (amount > 0) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    m_details = update;
+    if (updated_detail)
+      m_details = *updated_detail;
     // Watch out for unsigned overflow and make sure we don't increment too
     // much and exceed m_total.
-    if (m_total.has_value() && (amount > (m_total.value() - m_completed)))
-      m_completed = m_total.value();
+    if (m_total && (amount > (m_total - m_completed)))
+      m_completed = m_total;
     else
       m_completed += amount;
-    ReportProgress(update);
+    ReportProgress();
   }
 }
 
-void Progress::ReportProgress(std::string update) {
+void Progress::ReportProgress() {
   if (!m_complete) {
     // Make sure we only send one notification that indicates the progress is
     // complete, and only modify m_complete is m_total isn't null.
-    if (m_total.has_value())
-      m_complete = m_completed == m_total.value();
-    Debugger::ReportProgress(m_id, m_title, m_details, m_completed,
-                             m_total.value_or(0), m_debugger_id);
+    if (m_total)
+      m_complete = m_completed == m_total;
+    Debugger::ReportProgress(m_id, m_title, m_details, m_completed, m_total,
+                             m_debugger_id);
   }
 }
