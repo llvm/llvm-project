@@ -62,42 +62,35 @@ namespace fir {
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
+static constexpr unsigned defaultAddressSpace = 0u;
 
 /// `fir.box` attribute values as defined for CFI_attribute_t in
 /// flang/ISO_Fortran_binding.h.
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
-static inline unsigned getAllocaAddressSpace(mlir::ModuleOp module) {
-  if (mlir::Attribute addrSpace =
-          mlir::DataLayout(module).getAllocaMemorySpace())
-    return addrSpace.cast<mlir::IntegerAttr>().getUInt();
-
-  return 0u;
-}
-
-static inline unsigned getProgramAddressSpace(mlir::ModuleOp module) {
-  if (mlir::Attribute addrSpace =
-          mlir::DataLayout(module).getProgramMemorySpace())
-    return addrSpace.cast<mlir::IntegerAttr>().getUInt();
-
-  return 0u;
-}
-
 static inline unsigned
 getAllocaAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-  return parentOp ? ::getAllocaAddressSpace(
-                        parentOp->getParentOfType<mlir::ModuleOp>())
-                  : 0u;
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getAllocaMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
 }
 
 static inline unsigned
 getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-  return parentOp ? ::getProgramAddressSpace(
-                        parentOp->getParentOfType<mlir::ModuleOp>())
-                  : 0u;
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getProgramMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
 }
 
 static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
@@ -402,11 +395,15 @@ protected:
     return getBlockForAllocaInsert(op->getParentOp());
   }
 
-  // Generate an alloca of size 1 for an object of type \p llvmObjectTy.
-  mlir::Value
-  genAllocaWithType(mlir::Location loc, mlir::Type llvmObjectTy,
-                    unsigned alignment,
-                    mlir::ConversionPatternRewriter &rewriter) const {
+  // Generate an alloca of size 1 for an object of type \p llvmObjectTy in the
+  // allocation address space provided for the architecture in the DataLayout
+  // specification. If the address space is different from the devices
+  // program address space we perform a cast. In the case of most architectures
+  // the program and allocation address space will be the default of 0 and no
+  // cast will be emitted.
+  mlir::Value genAllocaAndAddrCastWithType(
+      mlir::Location loc, mlir::Type llvmObjectTy, unsigned alignment,
+      mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
     mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
@@ -1753,8 +1750,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (isInGlobalOp(rewriter))
       return boxValue;
     mlir::Type llvmBoxTy = boxValue.getType();
-    auto alloca =
-        this->genAllocaWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+    auto alloca = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy,
+                                                     defaultAlign, rewriter);
     auto storeOp = rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, alloca);
     this->attachTBAATag(storeOp, boxTy, boxTy, nullptr);
     return alloca;
@@ -3172,7 +3169,7 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       else
         attachTBAATag(boxValue, boxTy, boxTy, nullptr);
       auto newBoxStorage =
-          genAllocaWithType(loc, llvmLoadTy, defaultAlign, rewriter);
+          genAllocaAndAddrCastWithType(loc, llvmLoadTy, defaultAlign, rewriter);
       auto storeOp =
           rewriter.create<mlir::LLVM::StoreOp>(loc, boxValue, newBoxStorage);
       attachTBAATag(storeOp, boxTy, boxTy, nullptr);
