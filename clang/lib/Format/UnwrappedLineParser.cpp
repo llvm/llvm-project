@@ -2308,15 +2308,13 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
       LeftSquare->isCppStructuredBinding(Style)) {
     return false;
   }
-  if (FormatTok->is(tok::l_square))
+  if (FormatTok->is(tok::l_square) || tok::isLiteral(FormatTok->Tok.getKind()))
     return false;
   if (FormatTok->is(tok::r_square)) {
     const FormatToken *Next = Tokens->peekNextToken(/*SkipComment=*/true);
     if (Next->is(tok::greater))
       return false;
   }
-  if (tok::isLiteral(FormatTok->Tok.getKind()))
-    return false;
   parseSquare(/*LambdaIntroducer=*/true);
   return true;
 }
