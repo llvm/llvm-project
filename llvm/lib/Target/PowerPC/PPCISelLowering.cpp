@@ -8944,7 +8944,7 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
     Chain = MFFS.getValue(1);
   }
   SDValue NewFPSCR;
-  if (isTypeLegal(MVT::i64)) {
+  if (Subtarget.isPPC64()) {
     if (Subtarget.isISA3_0())
       NewFPSCR = DAG.getAnyExtOrTrunc(DstFlag, Dl, MVT::i64);
     else
