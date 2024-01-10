@@ -705,6 +705,9 @@ Bug Fixes in This Version
 - Fix assertion crash due to failed scope restoring caused by too-early VarDecl
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
+- Clang now emits correct source location for code-coverage regions in `if constexpr`
+  and `if consteval` branches.
+  Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
 
 
 Bug Fixes to Compiler Builtins
