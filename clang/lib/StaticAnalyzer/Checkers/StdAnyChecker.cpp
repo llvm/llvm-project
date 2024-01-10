@@ -58,39 +58,31 @@ public:
     if (AnyReset.matches(Call))
       return handleResetCall(Call, C);
 
-    bool IsAnyConstructor =
-        isa<CXXConstructorCall>(Call) && AnyConstructor.matches(Call);
-    bool IsAnyAssignmentOperatorCall =
-        isa<CXXMemberOperatorCall>(Call) && AnyAsOp.matches(Call);
+    const auto *AsCtorCall = dyn_cast_or_null<CXXConstructorCall>(
+        AnyConstructor.matches(Call) ? &Call : nullptr);
+    const auto *AsAssignCall = dyn_cast_or_null<CXXMemberOperatorCall>(
+        AnyAsOp.matches(Call) ? &Call : nullptr);
 
-    if (IsAnyConstructor || IsAnyAssignmentOperatorCall) {
-      auto State = C.getState();
-      SVal ThisSVal = [&]() {
-        if (IsAnyConstructor) {
-          const auto *AsConstructorCall = dyn_cast<CXXConstructorCall>(&Call);
-          return AsConstructorCall->getCXXThisVal();
-        }
-        if (IsAnyAssignmentOperatorCall) {
-          const auto *AsMemberOpCall = dyn_cast<CXXMemberOperatorCall>(&Call);
-          return AsMemberOpCall->getCXXThisVal();
-        }
-        llvm_unreachable("We must have an assignment operator or constructor");
-      }();
+    if (!AsCtorCall && !AsAssignCall)
+      return false;
 
-      // Default constructor call.
-      // In this case the any holds a null type.
-      if (Call.getNumArgs() == 0) {
-        const auto *ThisMemRegion = ThisSVal.getAsRegion();
-        C.addTransition(setNullTypeAny(ThisMemRegion, C));
-        return true;
-      }
+    SVal ThisSVal = AsCtorCall ? AsCtorCall->getCXXThisVal()
+                               : AsAssignCall->getCXXThisVal();
 
-      if (Call.getNumArgs() != 1)
-        return false;
-
-      handleConstructorAndAssignment<AnyHeldTypeMap>(Call, C, ThisSVal);
+    // Default constructor call.
+    // In this case the any holds a null type.
+    if (Call.getNumArgs() == 0) {
+      const auto *ThisMemRegion = ThisSVal.getAsRegion();
+      C.addTransition(setNullTypeAny(ThisMemRegion, C));
       return true;
     }
+
+    if (Call.getNumArgs() != 1)
+      return false;
+
+    handleConstructorAndAssignment<AnyHeldTypeMap>(Call, C, ThisSVal);
+    return true;
+
     return false;
   }
 
