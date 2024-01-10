@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
 #include <cstddef>
@@ -49,6 +50,17 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
   if (descriptor->Allocate() != 0) {
     return nullptr;
   }
+  return descriptor;
+}
+
+template <int kind = sizeof(std::int64_t)>
+static OwningPtr<Descriptor> IntDescriptor(const int &value) {
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
+      kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  if (descriptor->Allocate() != 0) {
+    return nullptr;
+  }
+  std::memcpy(descriptor->OffsetElement<int>(), &value, sizeof(int));
   return descriptor;
 }
 
@@ -239,6 +251,102 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 }
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
+
+TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  std::string spaces(cmdMsg->ElementBytes(), ' ');
+  CheckDescriptorEqInt(exitStat.get(), 0);
+  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  CheckDescriptorEqInt(exitStat.get(), 0);
+  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+#else
+  CheckDescriptorEqInt(exitStat.get(), 127);
+#endif
+  CheckDescriptorEqInt(cmdStat.get(), 3);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No Change")};
+
+#ifdef _WIN32
+  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+      "Invalid command quit with exit status code: 1");
+#else
+  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+      "Invalid command quit with exit status code: 127");
+#endif
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqStr(cmdMsg.get(), "No Change");
+}
+
+TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{false};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{false};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
+
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
