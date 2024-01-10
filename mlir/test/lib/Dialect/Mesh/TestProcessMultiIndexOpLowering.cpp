@@ -43,6 +43,7 @@ void TestMultiIndexOpLoweringPass::runOnOperation() {
                                                     symbolTableCollection);
   LogicalResult status =
       applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)status;
   assert(succeeded(status) && "applyPatternsAndFoldGreedily failed.");
 }
 
