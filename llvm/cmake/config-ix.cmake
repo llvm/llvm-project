@@ -295,19 +295,23 @@ if(LLVM_HAS_LOGF128)
 endif()
 
 #Check for icu.
-find_package(ICU COMPONENTS uc i18n)
-if(ICU_FOUND)
-  set(HAVE_ICU 1)
-else()
-  set(HAVE_ICU 0)
+if(LLVM_ENABLE_ICU)
+  find_package(ICU COMPONENTS uc i18n)
+  if(ICU_FOUND)
+    set(HAVE_ICU 1)
+  else()
+    set(HAVE_ICU 0)
+  endif()
 endif()
 
 # Check for iconv.
-find_package(Iconv)
-if(Iconv_FOUND)
-  set(HAVE_ICONV 1)
-else()
-  set(HAVE_ICONV 0)
+if(LLVM_ENABLE_ICONV)
+  find_package(Iconv)
+  if(Iconv_FOUND)
+    set(HAVE_ICONV 1)
+  else()
+    set(HAVE_ICONV 0)
+  endif()
 endif()
 
 # function checks
