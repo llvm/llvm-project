@@ -101,11 +101,11 @@ define void @fold_strncmp_past_end(ptr %pcmp) {
 }
 
 
-; Fold strrchr(a5 + 5, '\0') to poison (it's UB).
+; Fold strrchr(a5 + 5, '\0') to null
 
-define ptr @fold_strrchr_past_end(i32 %c) {
+define ptr @fold_strrchr_past_end() {
 ; CHECK-LABEL: @fold_strrchr_past_end(
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0)
 ;
   %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
   %r = call ptr @strrchr(ptr %p5, i32 0)
