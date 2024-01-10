@@ -38,13 +38,9 @@ define void @test2(i3 %x) {
 ; CHECK-SAME: i3 [[X:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[RES:%.*]] = alloca [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i1, align 8
-; CHECK-NEXT:    [[TMP_SROA_2:%.*]] = alloca i3, align 1
-; CHECK-NEXT:    store i1 true, ptr [[TMP_SROA_0]], align 8
-; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RES]], ptr align 8 [[TMP_SROA_0]], i64 1, i1 false), !tbaa.struct [[TBAA_STRUCT0:![0-9]+]]
+; CHECK-NEXT:    store i1 true, ptr [[RES]], align 1, !tbaa.struct [[TBAA_STRUCT0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP_SROA_2_0_RES_SROA_IDX]], ptr align 1 [[TMP_SROA_2]], i64 1, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2_0_RES_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @use(ptr [[RES]])
 ; CHECK-NEXT:    ret void
 ;
@@ -66,12 +62,10 @@ define void @test3(i3 %x) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[RES:%.*]] = alloca [[B:%.*]], align 8
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i1, align 8
-; CHECK-NEXT:    [[TMP_SROA_2:%.*]] = alloca i3, align 1
 ; CHECK-NEXT:    store i1 true, ptr [[TMP_SROA_0]], align 8
-; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2]], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RES]], ptr align 8 [[TMP_SROA_0]], i64 1, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP_SROA_2_0_RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP_SROA_2_0_RES_SROA_IDX]], ptr align 1 [[TMP_SROA_2]], i64 1, i1 false), !tbaa.struct [[TBAA_STRUCT7]]
+; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2_0_RES_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT7]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @use(ptr [[RES]])
 ; CHECK-NEXT:    ret void
 ;
