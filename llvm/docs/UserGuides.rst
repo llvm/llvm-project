@@ -43,6 +43,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -58,7 +59,6 @@ intermediate LLVM representation.
    NVPTXUsage
    Phabricator
    Passes
-   InstrProfileFormat
    ReportingGuide
    ResponseGuide
    Remarks
