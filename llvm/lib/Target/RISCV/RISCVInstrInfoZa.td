@@ -67,6 +67,57 @@ defm AMOCAS_D_RV64 : AMO_cas_aq_rl<0b00101, 0b011, "amocas.d", GPR>;
 defm AMOCAS_Q : AMO_cas_aq_rl<0b00101, 0b100, "amocas.q", GPRPairRV64>;
 } // Predicates = [HasStdExtZacas, IsRV64]
 
+multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
+                     list<Predicate> ExtraPreds = []> {
+  let Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds) in {
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
+                                                     (vt GPR:$cmp),
+                                                     (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst#"_AQ") GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst#"_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst#"_AQ_RL") GPR:$cmp, GPR:$addr, GPR:$new)>;
+  } // Predicates = !listconcat([HasStdExtZacas, NotHasStdExtZtso], ExtraPreds)
+  let Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds) in {
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_monotonic") (vt GPR:$addr),
+                                                     (vt GPR:$cmp),
+                                                     (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acquire") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_release") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_acq_rel") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
+                                                   (vt GPR:$cmp),
+                                                   (vt GPR:$new)),
+              (!cast<RVInst>(BaseInst) GPR:$cmp, GPR:$addr, GPR:$new)>;
+  } // Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds)
+}
+
+defm : AMOCASPat<"atomic_cmp_swap_32", "AMOCAS_W">;
+defm : AMOCASPat<"atomic_cmp_swap_64", "AMOCAS_D_RV64", i64, [IsRV64]>;
+
 //===----------------------------------------------------------------------===//
 // Zawrs (Wait-on-Reservation-Set)
 //===----------------------------------------------------------------------===//
