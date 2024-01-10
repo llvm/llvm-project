@@ -242,6 +242,7 @@ Clang-Tidy Checks
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
+   :doc:`misc-ReturnZero <misc/ReturnZero>`, "Yes"
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,

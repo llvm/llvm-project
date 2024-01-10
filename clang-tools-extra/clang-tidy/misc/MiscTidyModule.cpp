@@ -23,6 +23,7 @@
 #include "NonCopyableObjects.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
 #include "RedundantExpressionCheck.h"
+#include "ReturnzeroCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UnconventionalAssignOperatorCheck.h"
@@ -38,6 +39,8 @@ namespace misc {
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<ReturnzeroCheck>(
+        "misc-ReturnZero");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(

@@ -32,6 +32,7 @@ add_clang_library(clangTidyMiscModule
   NonCopyableObjects.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
   RedundantExpressionCheck.cpp
+  ReturnzeroCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
   UnconventionalAssignOperatorCheck.cpp

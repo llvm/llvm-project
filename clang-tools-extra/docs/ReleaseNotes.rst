@@ -192,6 +192,13 @@ New checks
   Ensure that the result of ``std::remove``, ``std::remove_if`` and
   ``std::unique`` are not ignored according to rule 17.5.1.
 
+- New :doc:`misc-ReturnZero
+  <clang-tidy/checks/misc/ReturnZero>` check.
+
+  Identifies and suggests removal of redundant return 0; statements at the end of the main
+  function in C++ programs, enhancing code readability by eliminating unnecessary
+  code that is implicitly handled by modern C++ standards.
+
 - New :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
 
