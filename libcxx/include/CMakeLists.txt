@@ -569,6 +569,7 @@ set(files
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
+  __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
