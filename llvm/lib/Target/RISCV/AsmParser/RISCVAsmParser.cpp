@@ -466,10 +466,6 @@ public:
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-
-  bool isGPRPF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
-
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
     if (auto *RE = dyn_cast<RISCVMCExpr>(Expr)) {
@@ -1299,7 +1295,7 @@ unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
 
   for (unsigned I = 0; I < MCID.NumOperands; ++I) {
-    if (MCID.operands()[I].RegClass == RISCV::GPRPF64RegClassID) {
+    if (MCID.operands()[I].RegClass == RISCV::GPRPairRegClassID) {
       const auto &Op = Inst.getOperand(I);
       assert(Op.isReg());
 
@@ -1832,57 +1828,18 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
     if (getParser().parseIdentifier(Identifier))
       return ParseStatus::Failure;
 
-    // Check for CSR names conflicts.
-    // Custom CSR names might conflict with CSR names in privileged spec.
-    // E.g. - SiFive mnscratch(0x350) and privileged spec mnscratch(0x740).
-    auto CheckCSRNameConflict = [&]() {
-      if (!(RISCVSysReg::lookupSysRegByName(Identifier))) {
-        Error(S, "system register use requires an option to be enabled");
-        return true;
-      }
-      return false;
-    };
-
-    // First check for vendor specific CSRs.
-    auto SiFiveReg = RISCVSysReg::lookupSiFiveRegByName(Identifier);
-    if (SiFiveReg) {
-      if (SiFiveReg->haveVendorRequiredFeatures(getSTI().getFeatureBits())) {
-        Operands.push_back(
-            RISCVOperand::createSysReg(Identifier, S, SiFiveReg->Encoding));
-        return ParseStatus::Success;
-      }
-      if (CheckCSRNameConflict())
-        return ParseStatus::Failure;
-    }
-
     auto SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
+    if (!SysReg)
+      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
     if (!SysReg)
       if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
         Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
                        SysReg->Name + "'");
 
-    // Check for CSR encoding conflicts.
-    // Custom CSR encoding might conflict with CSR encoding in privileged spec.
-    // E.g. - SiFive mnscratch(0x350) and privileged spec miselect(0x350).
-    auto CheckCSREncodingConflict = [&]() {
-      auto Reg = RISCVSysReg::lookupSiFiveRegByEncoding(SysReg->Encoding);
-      if (Reg && Reg->haveVendorRequiredFeatures(getSTI().getFeatureBits())) {
-        Warning(S, "'" + Identifier + "' CSR is not available on the current " +
-                       "subtarget. Instead '" + Reg->Name +
-                       "' CSR will be used.");
-        Operands.push_back(
-            RISCVOperand::createSysReg(Reg->Name, S, Reg->Encoding));
-        return true;
-      }
-      return false;
-    };
-
-    // Accept a named SysReg if the required features are present.
+    // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
       if (!SysReg->haveRequiredFeatures(getSTI().getFeatureBits()))
         return Error(S, "system register use requires an option to be enabled");
-      if (CheckCSREncodingConflict())
-        return ParseStatus::Success;
       Operands.push_back(
           RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return ParseStatus::Success;
@@ -2078,9 +2035,8 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
-  RISCVMCExpr::VariantKind Kind = RISCVMCExpr::VK_RISCV_CALL;
-  if (Identifier.consume_back("@plt"))
-    Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
+  RISCVMCExpr::VariantKind Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
+  (void)Identifier.consume_back("@plt");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());

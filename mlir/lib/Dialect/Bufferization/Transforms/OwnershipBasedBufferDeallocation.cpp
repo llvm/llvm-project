@@ -463,7 +463,7 @@ BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
 }
 
 static bool regionOperatesOnMemrefValues(Region &region) {
-  auto checkBlock = [](Block *block) {
+  WalkResult result = region.walk([](Block *block) {
     if (llvm::any_of(block->getArguments(), isMemref))
       return WalkResult::interrupt();
     for (Operation &op : *block) {
@@ -473,18 +473,8 @@ static bool regionOperatesOnMemrefValues(Region &region) {
         return WalkResult::interrupt();
     }
     return WalkResult::advance();
-  };
-  WalkResult result = region.walk(checkBlock);
-  if (result.wasInterrupted())
-    return true;
-
-  // Note: Block::walk/Region::walk visits only blocks that are nested under
-  // nested operations, but not direct children.
-  for (Block &block : region)
-    if (checkBlock(&block).wasInterrupted())
-      return true;
-
-  return false;
+  });
+  return result.wasInterrupted();
 }
 
 LogicalResult
@@ -871,6 +861,12 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
 
   for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
     if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
+      // The bufferization.manual_deallocation attribute can be attached to ops
+      // with an allocation and/or deallocation side effect. It indicates that
+      // the op is under a "manual deallocation" scheme. Deallocation ops are
+      // usually forbidden in the input IR (not supported by the buffer
+      // deallocation pass). However, if they are under manual deallocation,
+      // they can be safely ignored by the buffer deallocation pass.
       if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
         return op->emitError(
             "memory free side-effect on MemRef value not supported!");

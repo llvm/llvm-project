@@ -65,9 +65,9 @@ void AddDebugFoundationPass::runOnOperation() {
   mlir::LLVM::DIFileAttr fileAttr = getFileAttr(inputFilePath);
   mlir::StringAttr producer = mlir::StringAttr::get(context, "Flang");
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
-      context, llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr,
-      producer, /*isOptimized=*/false,
-      mlir::LLVM::DIEmissionKind::LineTablesOnly);
+      context, mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
+      llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
+      /*isOptimized=*/false, mlir::LLVM::DIEmissionKind::LineTablesOnly);
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     mlir::Location l = funcOp->getLoc();
@@ -93,8 +93,18 @@ void AddDebugFoundationPass::runOnOperation() {
             context, llvm::dwarf::getCallingConvention("DW_CC_normal"),
             {bT, bT});
     mlir::LLVM::DIFileAttr funcFileAttr = getFileAttr(funcFilePath);
+
+    // Only definitions need a distinct identifier and a compilation unit.
+    mlir::DistinctAttr id;
+    mlir::LLVM::DICompileUnitAttr compilationUnit;
+    if (!funcOp.isExternal()) {
+      id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+      compilationUnit = cuAttr;
+    }
     mlir::LLVM::DISubprogramAttr spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, cuAttr, fileAttr, funcName, funcName, funcFileAttr, /*line=*/1,
+        context, id, compilationUnit, fileAttr, funcName, funcName,
+        funcFileAttr,
+        /*line=*/1,
         /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
         subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));

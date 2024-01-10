@@ -23,10 +23,10 @@ public:
   /// Records that a given file entry is needed for replaying callbacks.
   void addNecessaryFile(FileEntryRef File) {
     // Don't record modulemap files because it breaks same file detection.
-    if (!(File.getName().endswith("module.modulemap") ||
-          File.getName().endswith("module.private.modulemap") ||
-          File.getName().endswith("module.map") ||
-          File.getName().endswith("module_private.map")))
+    if (!(File.getName().ends_with("module.modulemap") ||
+          File.getName().ends_with("module.private.modulemap") ||
+          File.getName().ends_with("module.map") ||
+          File.getName().ends_with("module_private.map")))
       FilesToRecord.insert(File);
   }
 
@@ -100,7 +100,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
                                               /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts());
+                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
                            Compiler.getTarget().getTriple());
 }

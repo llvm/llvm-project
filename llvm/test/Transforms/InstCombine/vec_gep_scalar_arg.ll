@@ -4,7 +4,7 @@
 define <4 x ptr> @PR41270(ptr %x) {
 ; CHECK-LABEL: @PR41270(
 ; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds [4 x i16], ptr [[X:%.*]], i64 0, i64 3
-; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x ptr> undef, ptr [[T3]], i64 0
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x ptr> <ptr poison, ptr undef, ptr undef, ptr undef>, ptr [[T3]], i64 0
 ; CHECK-NEXT:    ret <4 x ptr> [[INS2]]
 ;
   %ins = insertelement <4 x ptr> undef, ptr %x, i32 0

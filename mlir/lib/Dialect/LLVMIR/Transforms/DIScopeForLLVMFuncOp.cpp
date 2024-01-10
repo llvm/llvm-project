@@ -34,64 +34,95 @@ static FileLineColLoc extractFileLoc(Location loc) {
   return FileLineColLoc();
 }
 
+/// Creates a DISubprogramAttr with the provided compile unit and attaches it
+/// to the function. Does nothing when the function already has an attached
+/// subprogram.
+static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
+                               LLVM::DICompileUnitAttr compileUnitAttr) {
+
+  Location loc = llvmFunc.getLoc();
+  if (loc->findInstanceOf<mlir::FusedLocWith<LLVM::DISubprogramAttr>>())
+    return;
+
+  MLIRContext *context = llvmFunc->getContext();
+
+  // Filename, line and colmun to associate to the function.
+  LLVM::DIFileAttr fileAttr;
+  int64_t line = 1, col = 1;
+  FileLineColLoc fileLoc = extractFileLoc(loc);
+  if (!fileLoc && compileUnitAttr) {
+    fileAttr = compileUnitAttr.getFile();
+  } else if (!fileLoc) {
+    fileAttr = LLVM::DIFileAttr::get(context, "<unknown>", "");
+  } else {
+    line = fileLoc.getLine();
+    col = fileLoc.getColumn();
+    StringRef inputFilePath = fileLoc.getFilename().getValue();
+    fileAttr =
+        LLVM::DIFileAttr::get(context, llvm::sys::path::filename(inputFilePath),
+                              llvm::sys::path::parent_path(inputFilePath));
+  }
+  auto subroutineTypeAttr =
+      LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
+
+  StringAttr funcNameAttr = llvmFunc.getNameAttr();
+  // Only definitions need a distinct identifier and a compilation unit.
+  mlir::DistinctAttr id;
+  if (!llvmFunc.isExternal())
+    id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+  else
+    compileUnitAttr = {};
+  mlir::LLVM::DISubprogramAttr subprogramAttr = LLVM::DISubprogramAttr::get(
+      context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
+      fileAttr,
+      /*line=*/line,
+      /*scopeline=*/col,
+      LLVM::DISubprogramFlags::Definition | LLVM::DISubprogramFlags::Optimized,
+      subroutineTypeAttr);
+  llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
+}
+
 namespace {
 /// Add a debug info scope to LLVMFuncOp that are missing it.
 struct DIScopeForLLVMFuncOp
     : public LLVM::impl::DIScopeForLLVMFuncOpBase<DIScopeForLLVMFuncOp> {
   void runOnOperation() override {
-    LLVM::LLVMFuncOp llvmFunc = getOperation();
-    Location loc = llvmFunc.getLoc();
-    if (loc->findInstanceOf<mlir::FusedLocWith<LLVM::DISubprogramAttr>>())
-      return;
+    ModuleOp module = getOperation();
+    Location loc = module.getLoc();
 
     MLIRContext *context = &getContext();
 
     // To find a DICompileUnitAttr attached to a parent (the module for
     // example), otherwise create a default one.
+    // Find a DICompileUnitAttr attached to the module, otherwise create a
+    // default one.
     LLVM::DICompileUnitAttr compileUnitAttr;
-    if (ModuleOp module = llvmFunc->getParentOfType<ModuleOp>()) {
-      auto fusedCompileUnitAttr =
-          module->getLoc()
-              ->findInstanceOf<mlir::FusedLocWith<LLVM::DICompileUnitAttr>>();
-      if (fusedCompileUnitAttr)
-        compileUnitAttr = fusedCompileUnitAttr.getMetadata();
-    }
-
-    // Filename, line and colmun to associate to the function.
-    LLVM::DIFileAttr fileAttr;
-    int64_t line = 1, col = 1;
-    FileLineColLoc fileLoc = extractFileLoc(loc);
-    if (!fileLoc && compileUnitAttr) {
-      fileAttr = compileUnitAttr.getFile();
-    } else if (!fileLoc) {
-      fileAttr = LLVM::DIFileAttr::get(context, "<unknown>", "");
+    auto fusedCompileUnitAttr =
+        module->getLoc()
+            ->findInstanceOf<mlir::FusedLocWith<LLVM::DICompileUnitAttr>>();
+    if (fusedCompileUnitAttr) {
+      compileUnitAttr = fusedCompileUnitAttr.getMetadata();
     } else {
-      line = fileLoc.getLine();
-      col = fileLoc.getColumn();
-      StringRef inputFilePath = fileLoc.getFilename().getValue();
-      fileAttr = LLVM::DIFileAttr::get(
-          context, llvm::sys::path::filename(inputFilePath),
-          llvm::sys::path::parent_path(inputFilePath));
-    }
-    if (!compileUnitAttr) {
-      compileUnitAttr = LLVM::DICompileUnitAttr::get(
-          context, llvm::dwarf::DW_LANG_C, fileAttr,
-          StringAttr::get(context, "MLIR"), /*isOptimized=*/true,
-          LLVM::DIEmissionKind::LineTablesOnly);
-    }
-    auto subroutineTypeAttr =
-        LLVM::DISubroutineTypeAttr::get(context, llvm::dwarf::DW_CC_normal, {});
+      LLVM::DIFileAttr fileAttr;
+      if (FileLineColLoc fileLoc = extractFileLoc(loc)) {
+        StringRef inputFilePath = fileLoc.getFilename().getValue();
+        fileAttr = LLVM::DIFileAttr::get(
+            context, llvm::sys::path::filename(inputFilePath),
+            llvm::sys::path::parent_path(inputFilePath));
+      } else {
+        fileAttr = LLVM::DIFileAttr::get(context, "<unknown>", "");
+      }
 
-    StringAttr funcNameAttr = llvmFunc.getNameAttr();
-    auto subprogramAttr =
-        LLVM::DISubprogramAttr::get(context, compileUnitAttr, fileAttr,
-                                    funcNameAttr, funcNameAttr, fileAttr,
-                                    /*line=*/line,
-                                    /*scopeline=*/col,
-                                    LLVM::DISubprogramFlags::Definition |
-                                        LLVM::DISubprogramFlags::Optimized,
-                                    subroutineTypeAttr);
-    llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
+      compileUnitAttr = LLVM::DICompileUnitAttr::get(
+          context, DistinctAttr::create(UnitAttr::get(context)),
+          llvm::dwarf::DW_LANG_C, fileAttr, StringAttr::get(context, "MLIR"),
+          /*isOptimized=*/true, LLVM::DIEmissionKind::LineTablesOnly);
+    }
+
+    // Create subprograms for each function with the same distinct compile unit.
+    module.walk([&](LLVM::LLVMFuncOp func) {
+      addScopeToFunction(func, compileUnitAttr);
+    });
   }
 };
 

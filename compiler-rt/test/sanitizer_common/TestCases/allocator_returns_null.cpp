@@ -94,21 +94,29 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-mCRASH: malloc:
-// CHECK-mCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-mCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-mCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{.*}}lloc
 // CHECK-cCRASH: calloc:
-// CHECK-cCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-cCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-cCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{.*}}lloc
 // CHECK-coCRASH: calloc-overflow:
-// CHECK-coCRASH: {{SUMMARY: .*Sanitizer: calloc-overflow}}
+// CHECK-coCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-coCRASH: {{SUMMARY: .*Sanitizer: calloc-overflow.*}} in {{.*}}lloc
 // CHECK-rCRASH: realloc:
-// CHECK-rCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-rCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-rCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{.*}}lloc
 // CHECK-mrCRASH: realloc-after-malloc:
-// CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-mrCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{.*}}lloc
 // CHECK-nCRASH: new:
-// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-nCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{operator new|.*lloc}}
 // CHECK-nCRASH-OOM: new:
-// CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory}}
+// CHECK-nCRASH-O#{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory.*}} in {{operator new|.*lloc}}
 // CHECK-nnCRASH: new-nothrow:
-// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-nnCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*}} in {{operator new|.*lloc}}
 
 // CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow}}
 // CHECK-NULL: errno: 12, x: 0

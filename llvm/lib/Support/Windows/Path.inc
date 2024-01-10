@@ -154,7 +154,10 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
     return "";
 
   llvm::sys::path::make_preferred(PathNameUTF8);
-  return std::string(PathNameUTF8.data());
+
+  SmallString<256> RealPath;
+  sys::fs::real_path(PathNameUTF8, RealPath);
+  return std::string(RealPath);
 }
 
 UniqueID file_status::getUniqueID() const {

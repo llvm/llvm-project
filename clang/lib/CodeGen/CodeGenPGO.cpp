@@ -161,13 +161,24 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   PGOHash Hash;
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  /// The next bitmap byte index to assign.
+  unsigned NextMCDCBitmapIdx;
+  /// The map of statements to MC/DC bitmap coverage objects.
+  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
+  /// Maximum number of supported MC/DC conditions in a boolean expression.
+  unsigned MCDCMaxCond;
   /// The profile version.
   uint64_t ProfileVersion;
+  /// Diagnostics Engine used to report warnings.
+  DiagnosticsEngine &Diag;
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
-                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap)
+                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+                    llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap,
+                    unsigned MCDCMaxCond, DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
-        ProfileVersion(ProfileVersion) {}
+        NextMCDCBitmapIdx(0), MCDCBitmapMap(MCDCBitmapMap),
+        MCDCMaxCond(MCDCMaxCond), ProfileVersion(ProfileVersion), Diag(Diag) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -207,15 +218,126 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return Type;
   }
 
+  /// The following stacks are used with dataTraverseStmtPre() and
+  /// dataTraverseStmtPost() to track the depth of nested logical operators in a
+  /// boolean expression in a function.  The ultimate purpose is to keep track
+  /// of the number of leaf-level conditions in the boolean expression so that a
+  /// profile bitmap can be allocated based on that number.
+  ///
+  /// The stacks are also used to find error cases and notify the user.  A
+  /// standard logical operator nest for a boolean expression could be in a form
+  /// similar to this: "x = a && b && c && (d || f)"
+  unsigned NumCond = 0;
+  bool SplitNestedLogicalOp = false;
+  SmallVector<const Stmt *, 16> NonLogOpStack;
+  SmallVector<const BinaryOperator *, 16> LogOpStack;
+
+  // Hook: dataTraverseStmtPre() is invoked prior to visiting an AST Stmt node.
+  bool dataTraverseStmtPre(Stmt *S) {
+    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
+    if (MCDCMaxCond == 0)
+      return true;
+
+    /// At the top of the logical operator nest, reset the number of conditions.
+    if (LogOpStack.empty())
+      NumCond = 0;
+
+    if (const Expr *E = dyn_cast<Expr>(S)) {
+      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
+      if (BinOp && BinOp->isLogicalOp()) {
+        /// Check for "split-nested" logical operators. This happens when a new
+        /// boolean expression logical-op nest is encountered within an existing
+        /// boolean expression, separated by a non-logical operator.  For
+        /// example, in "x = (a && b && c && foo(d && f))", the "d && f" case
+        /// starts a new boolean expression that is separated from the other
+        /// conditions by the operator foo(). Split-nested cases are not
+        /// supported by MC/DC.
+        SplitNestedLogicalOp = SplitNestedLogicalOp || !NonLogOpStack.empty();
+
+        LogOpStack.push_back(BinOp);
+        return true;
+      }
+    }
+
+    /// Keep track of non-logical operators. These are OK as long as we don't
+    /// encounter a new logical operator after seeing one.
+    if (!LogOpStack.empty())
+      NonLogOpStack.push_back(S);
+
+    return true;
+  }
+
+  // Hook: dataTraverseStmtPost() is invoked by the AST visitor after visiting
+  // an AST Stmt node.  MC/DC will use it to to signal when the top of a
+  // logical operation (boolean expression) nest is encountered.
+  bool dataTraverseStmtPost(Stmt *S) {
+    /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
+    if (MCDCMaxCond == 0)
+      return true;
+
+    if (const Expr *E = dyn_cast<Expr>(S)) {
+      const BinaryOperator *BinOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
+      if (BinOp && BinOp->isLogicalOp()) {
+        assert(LogOpStack.back() == BinOp);
+        LogOpStack.pop_back();
+
+        /// At the top of logical operator nest:
+        if (LogOpStack.empty()) {
+          /// Was the "split-nested" logical operator case encountered?
+          if (SplitNestedLogicalOp) {
+            unsigned DiagID = Diag.getCustomDiagID(
+                DiagnosticsEngine::Warning,
+                "unsupported MC/DC boolean expression; "
+                "contains an operation with a nested boolean expression. "
+                "Expression will not be covered");
+            Diag.Report(S->getBeginLoc(), DiagID);
+            return false;
+          }
+
+          /// Was the maximum number of conditions encountered?
+          if (NumCond > MCDCMaxCond) {
+            unsigned DiagID = Diag.getCustomDiagID(
+                DiagnosticsEngine::Warning,
+                "unsupported MC/DC boolean expression; "
+                "number of conditions (%0) exceeds max (%1). "
+                "Expression will not be covered");
+            Diag.Report(S->getBeginLoc(), DiagID) << NumCond << MCDCMaxCond;
+            return false;
+          }
+
+          // Otherwise, allocate the number of bytes required for the bitmap
+          // based on the number of conditions. Must be at least 1-byte long.
+          MCDCBitmapMap[BinOp] = NextMCDCBitmapIdx;
+          unsigned SizeInBits = std::max<unsigned>(1L << NumCond, CHAR_BIT);
+          NextMCDCBitmapIdx += SizeInBits / CHAR_BIT;
+        }
+        return true;
+      }
+    }
+
+    if (!LogOpStack.empty())
+      NonLogOpStack.pop_back();
+
+    return true;
+  }
+
   /// The RHS of all logical operators gets a fresh counter in order to count
   /// how many times the RHS evaluates to true or false, depending on the
   /// semantics of the operator. This is only valid for ">= v7" of the profile
-  /// version so that we facilitate backward compatibility.
+  /// version so that we facilitate backward compatibility. In addition, in
+  /// order to use MC/DC, count the number of total LHS and RHS conditions.
   bool VisitBinaryOperator(BinaryOperator *S) {
-    if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
-      if (S->isLogicalOp() &&
-          CodeGenFunction::isInstrumentedCondition(S->getRHS()))
-        CounterMap[S->getRHS()] = NextCounter++;
+    if (S->isLogicalOp()) {
+      if (CodeGenFunction::isInstrumentedCondition(S->getLHS()))
+        NumCond++;
+
+      if (CodeGenFunction::isInstrumentedCondition(S->getRHS())) {
+        if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
+          CounterMap[S->getRHS()] = NextCounter++;
+
+        NumCond++;
+      }
+    }
     return Base::VisitBinaryOperator(S);
   }
 
@@ -851,8 +973,22 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
     ProfileVersion = PGOReader->getVersion();
   }
 
+  // If MC/DC is enabled, set the MaxConditions to a preset value. Otherwise,
+  // set it to zero. This value impacts the number of conditions accepted in a
+  // given boolean expression, which impacts the size of the bitmap used to
+  // track test vector execution for that boolean expression.  Because the
+  // bitmap scales exponentially (2^n) based on the number of conditions seen,
+  // the maximum value is hard-coded at 6 conditions, which is more than enough
+  // for most embedded applications. Setting a maximum value prevents the
+  // bitmap footprint from growing too large without the user's knowledge. In
+  // the future, this value could be adjusted with a command-line option.
+  unsigned MCDCMaxConditions = (CGM.getCodeGenOpts().MCDCCoverage) ? 6 : 0;
+
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap);
+  RegionMCDCBitmapMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
+                           *RegionMCDCBitmapMap, MCDCMaxConditions,
+                           CGM.getDiags());
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
@@ -863,6 +999,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
     Walker.TraverseDecl(const_cast<CapturedDecl *>(CD));
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
+  MCDCBitmapBytes = Walker.NextMCDCBitmapIdx;
   FunctionHash = Walker.Hash.finalize();
 }
 
@@ -894,9 +1031,11 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 
   std::string CoverageMapping;
   llvm::raw_string_ostream OS(CoverageMapping);
-  CoverageMappingGen MappingGen(*CGM.getCoverageMapping(),
-                                CGM.getContext().getSourceManager(),
-                                CGM.getLangOpts(), RegionCounterMap.get());
+  RegionCondIDMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  CoverageMappingGen MappingGen(
+      *CGM.getCoverageMapping(), CGM.getContext().getSourceManager(),
+      CGM.getLangOpts(), RegionCounterMap.get(), RegionMCDCBitmapMap.get(),
+      RegionCondIDMap.get());
   MappingGen.emitCounterMapping(D, OS);
   OS.flush();
 
@@ -970,6 +1109,108 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
     Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
         ArrayRef(Args));
+}
+
+bool CodeGenPGO::canEmitMCDCCoverage(const CGBuilderTy &Builder) {
+  return (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+          CGM.getCodeGenOpts().MCDCCoverage && Builder.GetInsertBlock());
+}
+
+void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+    return;
+
+  auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+
+  // Emit intrinsic representing MCDC bitmap parameters at function entry.
+  // This is used by the instrumentation pass, but it isn't actually lowered to
+  // anything.
+  llvm::Value *Args[3] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+                          Builder.getInt64(FunctionHash),
+                          Builder.getInt32(MCDCBitmapBytes)};
+  Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
+}
+
+void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
+                                                const Expr *S,
+                                                Address MCDCCondBitmapAddr) {
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+    return;
+
+  S = S->IgnoreParens();
+
+  auto ExprMCDCBitmapMapIterator = RegionMCDCBitmapMap->find(S);
+  if (ExprMCDCBitmapMapIterator == RegionMCDCBitmapMap->end())
+    return;
+
+  // Extract the ID of the global bitmap associated with this expression.
+  unsigned MCDCTestVectorBitmapID = ExprMCDCBitmapMapIterator->second;
+  auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+
+  // Emit intrinsic responsible for updating the global bitmap corresponding to
+  // a boolean expression. The index being set is based on the value loaded
+  // from a pointer to a dedicated temporary value on the stack that is itself
+  // updated via emitMCDCCondBitmapReset() and emitMCDCCondBitmapUpdate(). The
+  // index represents an executed test vector.
+  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+                          Builder.getInt64(FunctionHash),
+                          Builder.getInt32(MCDCBitmapBytes),
+                          Builder.getInt32(MCDCTestVectorBitmapID),
+                          MCDCCondBitmapAddr.getPointer()};
+  Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
+}
+
+void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
+                                         Address MCDCCondBitmapAddr) {
+  if (!canEmitMCDCCoverage(Builder) || !RegionMCDCBitmapMap)
+    return;
+
+  S = S->IgnoreParens();
+
+  if (RegionMCDCBitmapMap->find(S) == RegionMCDCBitmapMap->end())
+    return;
+
+  // Emit intrinsic that resets a dedicated temporary value on the stack to 0.
+  Builder.CreateStore(Builder.getInt32(0), MCDCCondBitmapAddr);
+}
+
+void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
+                                          Address MCDCCondBitmapAddr,
+                                          llvm::Value *Val) {
+  if (!canEmitMCDCCoverage(Builder) || !RegionCondIDMap)
+    return;
+
+  // Even though, for simplicity, parentheses and unary logical-NOT operators
+  // are considered part of their underlying condition for both MC/DC and
+  // branch coverage, the condition IDs themselves are assigned and tracked
+  // using the underlying condition itself.  This is done solely for
+  // consistency since parentheses and logical-NOTs are ignored when checking
+  // whether the condition is actually an instrumentable condition. This can
+  // also make debugging a bit easier.
+  S = CodeGenFunction::stripCond(S);
+
+  auto ExprMCDCConditionIDMapIterator = RegionCondIDMap->find(S);
+  if (ExprMCDCConditionIDMapIterator == RegionCondIDMap->end())
+    return;
+
+  // Extract the ID of the condition we are setting in the bitmap.
+  unsigned CondID = ExprMCDCConditionIDMapIterator->second;
+  assert(CondID > 0 && "Condition has no ID!");
+
+  auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+
+  // Emit intrinsic that updates a dedicated temporary value on the stack after
+  // a condition is evaluated. After the set of conditions has been updated,
+  // the resulting value is used to update the boolean expression's bitmap.
+  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+                          Builder.getInt64(FunctionHash),
+                          Builder.getInt32(CondID - 1),
+                          MCDCCondBitmapAddr.getPointer(), Val};
+  Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),
+      Args);
 }
 
 void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {

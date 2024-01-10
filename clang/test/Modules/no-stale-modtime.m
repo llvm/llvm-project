@@ -11,9 +11,9 @@
 // RUN: echo '// top' > %t/t.h-1
 // RUN: cat %t/t.h-1 > %t/t.h
 
-// RUN: echo 'module b { header "b.h" } module l { header "l.h" }' > %t/module.map-1
-// RUN: echo 'module r { header "r.h" } module t { header "t.h" }' > %t/module.map-2
-// RUN: cat %t/module.map-1 %t/module.map-2 > %t/module.map
+// RUN: echo 'module b { header "b.h" } module l { header "l.h" }' > %t/module.modulemap-1
+// RUN: echo 'module r { header "r.h" } module t { header "t.h" }' > %t/module.modulemap-2
+// RUN: cat %t/module.modulemap-1 %t/module.modulemap-2 > %t/module.modulemap
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash \
 // RUN:     -I %t -fsyntax-only %s -Rmodule-build 2>&1 \

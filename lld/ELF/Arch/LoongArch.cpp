@@ -463,6 +463,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_B16:
   case R_LARCH_B21:
   case R_LARCH_B26:
+  case R_LARCH_CALL36:
     return R_PLT_PC;
   case R_LARCH_GOT_PC_HI20:
   case R_LARCH_GOT64_PC_LO20:
@@ -589,6 +590,25 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     checkAlignment(loc, val, 4, rel);
     write32le(loc, setD10k16(read32le(loc), val >> 2));
     return;
+
+  case R_LARCH_CALL36: {
+    // This relocation is designed for adjancent pcaddu18i+jirl pairs that
+    // are patched in one time. Because of sign extension of these insns'
+    // immediate fields, the relocation range is [-128G - 0x20000, +128G -
+    // 0x20000) (of course must be 4-byte aligned).
+    if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
+      reportRangeError(loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
+                       llvm::maxIntN(38) - 0x20000);
+    checkAlignment(loc, val, 4, rel);
+    // Since jirl performs sign extension on the offset immediate, adds (1<<17)
+    // to original val to get the correct hi20.
+    uint32_t hi20 = extractBits(val + (1 << 17), 37, 18);
+    // Despite the name, the lower part is actually 18 bits with 4-byte aligned.
+    uint32_t lo16 = extractBits(val, 17, 2);
+    write32le(loc, setJ20(read32le(loc), hi20));
+    write32le(loc + 4, setK16(read32le(loc + 4), lo16));
+    return;
+  }
 
   // Relocs intended for `addi`, `ld` or `st`.
   case R_LARCH_PCALA_LO12:

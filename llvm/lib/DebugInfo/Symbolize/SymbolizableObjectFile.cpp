@@ -352,12 +352,14 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
 }
 
 std::vector<object::SectionedAddress>
-SymbolizableObjectFile::findSymbol(StringRef Symbol) const {
+SymbolizableObjectFile::findSymbol(StringRef Symbol, uint64_t Offset) const {
   std::vector<object::SectionedAddress> Result;
   for (const SymbolDesc &Sym : Symbols) {
     if (Sym.Name.equals(Symbol)) {
-      object::SectionedAddress A{Sym.Addr,
-                                 getModuleSectionIndexForAddress(Sym.Addr)};
+      uint64_t Addr = Sym.Addr;
+      if (Offset < Sym.Size)
+        Addr += Offset;
+      object::SectionedAddress A{Addr, getModuleSectionIndexForAddress(Addr)};
       Result.push_back(A);
     }
   }
