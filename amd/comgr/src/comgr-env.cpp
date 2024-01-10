@@ -208,7 +208,7 @@ public:
     for (sys::fs::directory_iterator Dir(ParentDir, EC), DirEnd;
          Dir != DirEnd && !EC; Dir.increment(EC)) {
       const StringRef Path = llvm::sys::path::filename(Dir->path());
-      if (Path.startswith(Prefix)) {
+      if (Path.starts_with(Prefix)) {
         return StringRef(Dir->path());
       }
     }
@@ -248,8 +248,8 @@ public:
 InstallationDetector *CreatePathDetector(StringRef Path,
                                          bool isComgrPath = false) {
   StringRef DirName = llvm::sys::path::filename(Path);
-  if ((!isComgrPath && DirName.startswith("rocm-cmake-")) ||
-      (isComgrPath && DirName.startswith("comgr-"))) {
+  if ((!isComgrPath && DirName.starts_with("rocm-cmake-")) ||
+      (isComgrPath && DirName.starts_with("comgr-"))) {
     return new SpackInstallationDetector(Path, isComgrPath);
   }
 

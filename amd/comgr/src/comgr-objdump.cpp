@@ -1459,16 +1459,16 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
       for (const auto &Symb : Symbols) {
         uint64_t Address = Symb.Addr;
         StringRef Name = Symb.Name;
-        if (Name.startswith("$d")) {
+        if (Name.starts_with("$d")) {
           DataMappingSymsAddr.push_back(Address - SectionAddr);
         }
-        if (Name.startswith("$x")) {
+        if (Name.starts_with("$x")) {
           TextMappingSymsAddr.push_back(Address - SectionAddr);
         }
-        if (Name.startswith("$a")) {
+        if (Name.starts_with("$a")) {
           TextMappingSymsAddr.push_back(Address - SectionAddr);
         }
-        if (Name.startswith("$t")) {
+        if (Name.starts_with("$t")) {
           TextMappingSymsAddr.push_back(Address - SectionAddr);
         }
       }
