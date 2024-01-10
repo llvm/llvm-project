@@ -13,9 +13,7 @@ struct S {
 };
 
 void f() {
-  try {
-    S s[3];
-  } catch (...) {}
+  S s[3];
 }
 }
 
