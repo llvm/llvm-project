@@ -19364,6 +19364,11 @@ bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
+ISD::NodeType RISCVTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // Zacas will use amocas.w which does not require extension.
+  return Subtarget.hasStdExtZacas() ? ISD::ANY_EXTEND : ISD::SIGN_EXTEND;
+}
+
 Register RISCVTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   return RISCV::X10;
