@@ -69,7 +69,7 @@ static_assert(HasConstAndNonConstEnd<std::ranges::stride_view<UnsimpleConstView>
 
 constexpr bool test_non_default_sentinel() {
   {
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<BasicTestView<int*, int*>>);
+    static_assert(simple_view<BasicTestView<int*, int*>>);
     static_assert(std::ranges::common_range<BasicTestView<int*, int*>>);
     static_assert(std::ranges::sized_range<BasicTestView<int*, int*>>);
     static_assert(std::ranges::forward_range<BasicTestView<int*, int*>>);
@@ -80,7 +80,7 @@ constexpr bool test_non_default_sentinel() {
   }
 
   {
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NoConstView>);
+    static_assert(!simple_view<NoConstView>);
     static_assert(std::ranges::common_range<NoConstView>);
     static_assert(std::ranges::sized_range<NoConstView>);
     static_assert(std::ranges::forward_range<NoConstView>);
@@ -94,7 +94,7 @@ constexpr bool test_non_default_sentinel() {
 
 constexpr bool test_default_sentinel() {
   {
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<UnsimpleUnCommonView>);
+    static_assert(!simple_view<UnsimpleUnCommonView>);
     static_assert(!std::ranges::common_range<UnsimpleUnCommonView>);
     static_assert(std::ranges::sized_range<UnsimpleConstView>);
     static_assert(std::ranges::forward_range<UnsimpleConstView>);
@@ -105,7 +105,7 @@ constexpr bool test_default_sentinel() {
   }
 
   {
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleUnCommonView>);
+    static_assert(simple_view<SimpleUnCommonView>);
     static_assert(!std::ranges::common_range<SimpleUnCommonView>);
 
     auto v  = SimpleUnCommonView{};
