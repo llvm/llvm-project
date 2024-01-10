@@ -214,8 +214,7 @@ mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
 }
 
 bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
-  int n = permutation.size();
-  for (int i = 0; i < n; ++i)
+  for (auto i : llvm::seq<int64_t>(0, permutation.size()))
     if (permutation[i] != i)
       return false;
   return true;

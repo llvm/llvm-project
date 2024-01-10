@@ -37,6 +37,18 @@ func.func @single_last_inner_dim_packing(%arg0: tensor<5x256xf32>) -> tensor<5x8
 
 // -----
 
+// CHECK-LABEL: func.func @pack_1d_with_outer_dims_perm(
+// CHECK-SAME:    %[[ARG0:.+]]: tensor<64xf32>)
+// CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0, 1]] : tensor<64xf32> into tensor<2x32xf32>
+// CHECK:         return %[[EXPANDED]] : tensor<2x32xf32>
+func.func @pack_1d_with_outer_dims_perm(%arg0: tensor<64xf32>) -> tensor<2x32xf32> {
+  %empty = tensor.empty() :  tensor<2x32xf32>
+  %pack = tensor.pack %arg0 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %empty : tensor<64xf32> -> tensor<2x32xf32>
+  return %pack : tensor<2x32xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @single_last_inner_dim_packing_with_identity_outer_dims_perm(
 // CHECK-SAME:    %[[ARG0:.+]]: tensor<5x256xf32>)
 // CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0], [1, 2]] : tensor<5x256xf32> into tensor<5x8x32xf32>
