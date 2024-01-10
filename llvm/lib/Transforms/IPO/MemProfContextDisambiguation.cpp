@@ -1707,8 +1707,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
 
   // Add the new nodes after the above loop so that the iteration is not
   // invalidated.
-  for (auto &I : TailCallToContextNodeMap)
-    NonAllocationCallToContextNodeMap[I.first] = I.second;
+  for (auto &[Call, Node] : TailCallToContextNodeMap)
+    NonAllocationCallToContextNodeMap[Call] = Node;
 }
 
 uint64_t ModuleCallsiteContextGraph::getStackId(uint64_t IdOrIndex) const {
@@ -1774,9 +1774,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // Create new nodes for each found callee and connect in between the profiled
   // caller and callee.
   auto *CurCalleeNode = Edge->Callee;
-  for (auto I : FoundCalleeChain) {
-    auto &NewCall = I.first;
-    auto *Func = I.second;
+  for (auto &[NewCall, Func] : FoundCalleeChain) {
     ContextNode *NewNode = nullptr;
     // First check if we have already synthesized a node for this tail call.
     if (TailCallToContextNodeMap.count(NewCall)) {
