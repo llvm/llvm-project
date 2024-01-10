@@ -2027,15 +2027,6 @@ template<typename T> struct CrazyDerived : T { };
 
 class class_forward; // expected-note 2 {{forward declaration of 'class_forward'}}
 
-template <typename Base, typename Derived>
-void isBaseOfT() {
-  static_assert(__is_base_of(Base, Derived), "");
-};
-template <typename Base, typename Derived>
-void isBaseOfF() {
-  static_assert(!__is_base_of(Base, Derived), "");
-};
-
 template <class T> class DerivedTemp : Base {};
 template <class T> class NonderivedTemp {};
 template <class T> class UndefinedTemp; // expected-note {{declared here}}
@@ -2079,14 +2070,14 @@ void is_base_of() {
   static_assert(!__is_base_of(int, Empty), "");
   static_assert(!__is_base_of(Union, int), "");
 
-  isBaseOfT<Base, Derived>();
-  isBaseOfF<Derived, Base>();
+  static_assert(__is_base_of(Base, Derived), "");
+  static_assert(!__is_base_of(Derived, Base), "");
 
-  isBaseOfT<Base, CrazyDerived<Base> >();
-  isBaseOfF<CrazyDerived<Base>, Base>();
+  static_assert(__is_base_of(Base, CrazyDerived<Base>), "");
+  static_assert(!__is_base_of(CrazyDerived<Base>, Base), "");
 
-  isBaseOfT<BaseA<int>, DerivedB<int> >();
-  isBaseOfF<DerivedB<int>, BaseA<int> >();
+  static_assert(__is_base_of(BaseA<int>, DerivedB<int>), "");
+  static_assert(!__is_base_of(DerivedB<int>, BaseA<int>), "");
 }
 
 template<class T, class U>
