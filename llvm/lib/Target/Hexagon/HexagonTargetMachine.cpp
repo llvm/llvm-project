@@ -274,7 +274,8 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());

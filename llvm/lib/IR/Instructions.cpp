@@ -2412,9 +2412,6 @@ bool ShuffleVectorInst::isInsertSubvectorMask(ArrayRef<int> Mask,
 }
 
 bool ShuffleVectorInst::isIdentityWithPadding() const {
-  if (isa<UndefValue>(Op<2>()))
-    return false;
-
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2439,9 +2436,6 @@ bool ShuffleVectorInst::isIdentityWithPadding() const {
 }
 
 bool ShuffleVectorInst::isIdentityWithExtract() const {
-  if (isa<UndefValue>(Op<2>()))
-    return false;
-
   // FIXME: Not currently possible to express a shuffle mask for a scalable
   // vector for this case.
   if (isa<ScalableVectorType>(getType()))
@@ -2457,8 +2451,7 @@ bool ShuffleVectorInst::isIdentityWithExtract() const {
 
 bool ShuffleVectorInst::isConcat() const {
   // Vector concatenation is differentiated from identity with padding.
-  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()) ||
-      isa<UndefValue>(Op<2>()))
+  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
     return false;
 
   // FIXME: Not currently possible to express a shuffle mask for a scalable

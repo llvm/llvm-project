@@ -234,15 +234,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
-    bool IsNegative = Name.startswith("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
 #ifndef NDEBUG
-    assert(Name.startswith("avx10.") && "Invalid AVX10 feature name.");
+    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     StringRef Version, Width;
     std::tie(Version, Width) = Name.substr(6).split('-');
     assert(Version == "1" && "Invalid AVX10 feature name.");
@@ -260,7 +258,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     A->claim();
 
     // Skip over "-m".
-    assert(Name.startswith("m") && "Invalid feature name.");
+    assert(Name.starts_with("m") && "Invalid feature name.");
     Name = Name.substr(1);
 
     // Replace -mgeneral-regs-only with -x87, -mmx, -sse
@@ -269,7 +267,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       continue;
     }
 
-    bool IsNegative = Name.startswith("no-");
+    bool IsNegative = Name.starts_with("no-");
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 

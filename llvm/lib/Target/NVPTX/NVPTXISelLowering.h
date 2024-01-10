@@ -513,6 +513,8 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,

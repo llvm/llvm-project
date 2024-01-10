@@ -68,6 +68,7 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
     }
     Print("Creating  : ");
   }
+  ClearShadowForThreadStackAndTLS();
 }
 
 void Thread::InitStackRingBuffer(uptr stack_buffer_start,

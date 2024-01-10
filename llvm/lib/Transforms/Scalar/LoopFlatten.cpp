@@ -343,9 +343,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
     // If the RHS of the compare is equal to the backedge taken count we need
     // to add one to get the trip count.
     if (SCEVRHS == BackedgeTCExt || SCEVRHS == BackedgeTakenCount) {
-      ConstantInt *One = ConstantInt::get(ConstantRHS->getType(), 1);
-      Value *NewRHS = ConstantInt::get(
-          ConstantRHS->getContext(), ConstantRHS->getValue() + One->getValue());
+      Value *NewRHS = ConstantInt::get(ConstantRHS->getContext(),
+                                       ConstantRHS->getValue() + 1);
       return setLoopComponents(NewRHS, TripCount, Increment,
                                IterationInstructions);
     }

@@ -1259,6 +1259,12 @@ multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
   def : SVE_1_Op_Passthru_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME)>;
+
+  def : SVE_1_Op_Passthru_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8f16,  op, nxv8i1, nxv8f16,  !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4f32,  op, nxv4i1, nxv4f32,  !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2f64,  op, nxv2i1, nxv2f64,  !cast<Instruction>(NAME)>;
+
 }
 
 class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
@@ -3712,8 +3718,14 @@ multiclass sme2_mova_vec_to_array_vg2_multi<string mnemonic, SDPatternOperator i
 
   def NAME # _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, ZZ_d_mul_r, SMEMatrixArray>;
 
-  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2i64, sme_elm_idx0_7, tileslice16>;
-  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2f64, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv16i8,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv8i16,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv8f16,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv8bf16, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv4i32,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv4f32,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2i64,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2f64,  sme_elm_idx0_7, tileslice16>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
                                                 MatrixOp8,
@@ -3805,8 +3817,14 @@ multiclass sme2_mova_vec_to_array_vg4_multi<string mnemonic, SDPatternOperator i
 
   def NAME # _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, ZZZZ_d_mul_r, SMEMatrixArray>;
 
-  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2i64, sme_elm_idx0_7, tileslice16>;
-  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2f64, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv16i8,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv8i16,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv8f16,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv8bf16, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv4i32,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv4f32,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2i64,  sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2f64,  sme_elm_idx0_7, tileslice16>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
                                                 MatrixOp8,

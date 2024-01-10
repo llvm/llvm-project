@@ -116,9 +116,13 @@ public:
 
   inline void run10(int *List, int Length) {
     int i = 0;
-#pragma omp loop bind(teams)
+    int j = 0;
+    #pragma omp teams
     for (int i = 0; i < Length; i++) {
-      List[i] = i;
+      #pragma omp loop bind(teams)
+      for (int j = 0; j < Length; j++) {
+        List[i] = i+j;
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = entry
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
 // DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
@@ -102,7 +102,7 @@ func.func @get_svl() -> index {
   return %vscale : index
 }
 
-func.func @entry() attributes { enable_arm_streaming_ignore } {
+func.func @entry() {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index

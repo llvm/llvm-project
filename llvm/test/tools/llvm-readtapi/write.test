@@ -1,77 +1,34 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-readtapi %t/arm64.tbd 2>&1 | FileCheck %s
+; RUN: mkdir -p %t
+; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
+; RUN: llvm-readtapi %t/macho.dylib -o %t/out.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/out.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty 
 
-; CHECK-NOT: error 
-; CHECK-NOT: warning
-; CHECK: {
-; CHECK-NEXT:   "main_library": {
-; CHECK-NEXT:     "allowable_clients": [
-; CHECK-NEXT:       {
-; CHECK-NEXT:         "clients": [
-; CHECK-NEXT:           "ClientAll"
-; CHECK-NEXT:         ]
-; CHECK-NEXT:       }
-; CHECK-NEXT:     ],
-; CHECK-NEXT:     "exported_symbols": [
-; CHECK-NEXT:       {
-; CHECK-NEXT:         "data": {
-; CHECK-NEXT:           "global": [
-; CHECK-NEXT:             "_sym1"
-; CHECK-NEXT:           ],
-; CHECK-NEXT:           "objc_class": [
-; CHECK-NEXT:             "_A"
-; CHECK-NEXT:           ],
-; CHECK-NEXT:           "objc_ivar": [
-; CHECK-NEXT:             "_A._ivar1"
-; CHECK-NEXT:           ],
-; CHECK-NEXT:           "thread_local": [
-; CHECK-NEXT:             "_tlv1"
-; CHECK-NEXT:           ],
-; CHECK-NEXT:           "weak": [
-; CHECK-NEXT:             "_weak1"
-; CHECK-NEXT:           ]
-; CHECK-NEXT:         }
-; CHECK-NEXT:       }
-; CHECK-NEXT:     ],
-; CHECK-NEXT:     "install_names": [
-; CHECK-NEXT:       {
-; CHECK-NEXT:         "name": "/usr/lib/libfat.dylib"
-; CHECK-NEXT:       }
-; CHECK-NEXT:     ],
-; CHECK-NEXT:     "reexported_libraries": [
-; CHECK-NEXT:       {
-; CHECK-NEXT:         "names": [
-; CHECK-NEXT:           "/usr/lib/liball.dylib"
-; CHECK-NEXT:         ]
-; CHECK-NEXT:       }
-; CHECK-NEXT:     ],
-; CHECK-NEXT:     "target_info": [
-; CHECK-NEXT:       {
-; CHECK-NEXT:         "target": "arm64-macos"
-; CHECK-NEXT:       }
-; CHECK-NEXT:     ]
-; CHECK-NEXT:   },
-; CHECK-NEXT:   "tapi_tbd_version": 5
-; CHECK-NEXT: }
+; CHECK-NOT: error
+; CHECK-NOT: warning  
 
-
-;--- arm64.tbd
---- !tapi-tbd
-tbd-version:     4
-targets:         [ arm64-macos ]
-install-name:    '/usr/lib/libfat.dylib'
-allowable-clients:
-  - targets:         [ arm64-macos ]
-    clients:         [ ClientAll ]
-reexported-libraries:
-  - targets:         [ arm64-macos ]
-    libraries:       [ '/usr/lib/liball.dylib' ]
-exports:
-  - targets:         [ arm64-macos ]
-    symbols:         [ _sym1 ]
-    objc-classes:    [ _A ]
-    objc-ivars:      [ _A._ivar1 ]
-    weak-symbols:    [ _weak1 ]
-    thread-local-symbols: [ _tlv1 ]
-...
+;--- expected.tbd
+{
+  "main_library": {
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "macho-no-exports.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "10.10",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

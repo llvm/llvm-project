@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "SparseTensorDescriptor.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/SparseTensorDescriptor.h"
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"

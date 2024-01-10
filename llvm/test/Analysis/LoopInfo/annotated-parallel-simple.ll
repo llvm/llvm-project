@@ -33,5 +33,5 @@ for.end:
 !7 = distinct !{!7, !9} ; LoopID
 !9 = !{!"llvm.loop.parallel_accesses", !6}
 
-
-; CHECK: Parallel Loop
+; CHECK: Loop info for function 'func':
+; CHECK: Parallel Loop at depth 1 containing:

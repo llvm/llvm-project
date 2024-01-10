@@ -74,7 +74,7 @@ static std::string fileNameToURI(StringRef Filename) {
 
   // Get the root name to see if it has a URI authority.
   StringRef Root = sys::path::root_name(Filename);
-  if (Root.startswith("//")) {
+  if (Root.starts_with("//")) {
     // There is an authority, so add it to the URI.
     Ret += Root.drop_front(2).str();
   } else if (!Root.empty()) {
