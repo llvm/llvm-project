@@ -45,10 +45,8 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
-!llvm.ident = !{!9}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 18.0.0git (https://github.com/llvm/llvm-project.git 5dfcb3e5d1d16bb4f8fce52b3c089119ed977e7f)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "main.c", directory: "/home/hs/llvm-test", checksumkind: CSK_MD5, checksum: "68c28c3d0877bed08ff43db70c573802")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
@@ -56,7 +54,6 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !6 = !{i32 7, !"PIE Level", i32 2}
 !7 = !{i32 7, !"uwtable", i32 2}
 !8 = !{i32 7, !"frame-pointer", i32 2}
-!9 = !{!"clang version 18.0.0git (https://github.com/llvm/llvm-project.git 5dfcb3e5d1d16bb4f8fce52b3c089119ed977e7f)"}
 !10 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13, !13, !13}
