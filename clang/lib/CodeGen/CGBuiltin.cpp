@@ -820,14 +820,16 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
 }
 
 const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
-    ASTContext &Ctx, const RecordDecl *RD, uint64_t &Offset) {
+    ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
   unsigned FieldNo = 0;
+  bool IsUnion = RD->isUnion();
 
   for (const Decl *D : RD->decls()) {
     if (const auto *Field = dyn_cast<FieldDecl>(D);
-        Field && Decl::isFlexibleArrayMemberLike(
+        Field && (Name.empty() || Field->getNameAsString() == Name) &&
+        Decl::isFlexibleArrayMemberLike(
                      Ctx, Field, Field->getType(), StrictFlexArraysLevel,
                      /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
@@ -837,17 +839,33 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 
     if (const auto *Record = dyn_cast<RecordDecl>(D))
       if (const FieldDecl *Field =
-              FindFlexibleArrayMemberField(Ctx, Record, Offset)) {
+              FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
 
-    if (isa<FieldDecl>(D))
+    if (!IsUnion && isa<FieldDecl>(D))
       ++FieldNo;
   }
 
   return nullptr;
+}
+
+static unsigned CountCountedByAttrs(const RecordDecl *RD) {
+  unsigned Num = 0;
+
+  for (const Decl *D : RD->decls()) {
+    if (const auto *FD = dyn_cast<FieldDecl>(D);
+        FD && FD->hasAttr<CountedByAttr>()) {
+      return ++Num;
+    }
+
+    if (const auto *Rec = dyn_cast<RecordDecl>(D))
+      Num += CountCountedByAttrs(Rec);
+  }
+
+  return Num;
 }
 
 llvm::Value *
@@ -907,23 +925,52 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Get the flexible array member Decl.
   const RecordDecl *OuterRD = nullptr;
+  std::string FAMName;
   if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
     // Check if \p Base is referencing the FAM itself.
     const ValueDecl *VD = ME->getMemberDecl();
     OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
+    FAMName = VD->getNameAsString();
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     // Check if we're pointing to the whole struct.
     QualType Ty = DRE->getDecl()->getType();
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
     OuterRD = Ty->getAsRecordDecl();
+
+    // If we have a situation like this:
+    //
+    //     struct union_of_fams {
+    //         int flags;
+    //         union {
+    //             signed char normal_field;
+    //             struct {
+    //                 int count1;
+    //                 int arr1[] __counted_by(count1);
+    //             };
+    //             struct {
+    //                 signed char count2;
+    //                 int arr2[] __counted_by(count2);
+    //             };
+    //         };
+    //    };
+    //
+    // We don't konw which 'count' to use in this scenario:
+    //
+    //     size_t get_size(struct union_of_fams *p) {
+    //         return __builtin_dynamic_object_size(p, 1);
+    //     }
+    //
+    // Instead of calculating a wrong number, we give up.
+    if (CountCountedByAttrs(OuterRD) > 1)
+      return nullptr;
   }
 
   if (!OuterRD)
     return nullptr;
 
   uint64_t Offset = 0;
-  const FieldDecl *FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD, Offset);
+  const FieldDecl *FAMDecl = FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
   Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
   if (!FAMDecl || !FAMDecl->hasAttr<CountedByAttr>())

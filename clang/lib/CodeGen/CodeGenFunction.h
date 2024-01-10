@@ -3029,6 +3029,7 @@ public:
   // sub-structs, but must still be the last field.
   const FieldDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
                                                 const RecordDecl *RD,
+                                                StringRef Name,
                                                 uint64_t &Offset);
 
   /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns

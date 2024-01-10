@@ -1075,6 +1075,8 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
     if (const auto *Record = dyn_cast<RecordDecl>(D)) {
       ++FieldNo;
       if (getGEPIndicesToField(CGF, Record, FD, Indices)) {
+        if (RD->isUnion())
+          FieldNo = 0;
         Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
         return true;
       }
