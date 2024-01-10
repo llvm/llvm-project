@@ -2762,7 +2762,7 @@ struct RegPairInfo {
   unsigned Reg2 = AArch64::NoRegister;
   int FrameIdx;
   int Offset;
-  enum RegType { GPR, FPR64, FPR128, PPR, ZPR } Type;
+  enum RegType { GPR, FPR64, FPR128, ZPR, PPR } Type;
 
   RegPairInfo() = default;
 
@@ -2787,16 +2787,22 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
-unsigned findFreePredicateAsCounterReg(MachineFunction &MF) {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+static unsigned findFreePredicateAsCounterReg(MachineBasicBlock *MBB) {
+  MachineFunction *MF = MBB->getParent();
+
+  const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  LivePhysRegs LiveRegs(TRI);
+  getLiveRegsForEntryMBB(LiveRegs, *MBB);
+
   for (MCRegister PReg :
        {AArch64::PN8, AArch64::PN9, AArch64::PN10, AArch64::PN11, AArch64::PN12,
-        AArch64::PN13, AArch64::PN14, AArch64::PN15}) {
-    if (!MRI.isReserved(PReg))
+        AArch64::PN13, AArch64::PN14, AArch64::PN15}){
       return PReg;
   }
-  llvm_unreachable("cannot find a free predicate");
+  llvm_unreachable("No predicated register free");
 }
+
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -3085,17 +3091,18 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       std::swap(FrameIdxReg1, FrameIdxReg2);
     }
 
-    unsigned PnReg;
     unsigned PairRegs;
+    unsigned PnReg;
     if (RPI.isPaired() && RPI.isScalable()) {
       PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
       if (!PtrueCreated) {
         PtrueCreated = true;
-        PnReg = findFreePredicateAsCounterReg(MF);
+        PnReg = findFreePredicateAsCounterReg(&MBB);
         BuildMI(MBB, MI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
-            .setMIFlags(MachineInstr::FrameDestroy);
+            .setMIFlags(MachineInstr::FrameSetup);
       }
     }
+
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
     if (!MRI.isReserved(Reg1))
       MBB.addLiveIn(Reg1);
@@ -3149,8 +3156,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     DL = MBBI->getDebugLoc();
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
-
-  bool PtrueCreated = false;
   auto EmitMI = [&, PtrueCreated = false](const RegPairInfo &RPI) mutable -> MachineBasicBlock::iterator {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
@@ -3215,7 +3220,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
       if (!PtrueCreated) {
         PtrueCreated = true;
-        PnReg = findFreePredicateAsCounterReg(MF);
+        PnReg = findFreePredicateAsCounterReg(&MBB);
         BuildMI(MBB, MBBI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
             .setMIFlags(MachineInstr::FrameDestroy);
       }

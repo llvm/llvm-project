@@ -290,6 +290,3 @@ define void @fhalf(<vscale x 8 x half> %v) {
   call void @my_func()
   ret void
 }
-
-
-
