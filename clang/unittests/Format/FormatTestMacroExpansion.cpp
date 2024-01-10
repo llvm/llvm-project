@@ -256,8 +256,7 @@ TEST_F(FormatTestMacroExpansion,
 }
 
 TEST_F(FormatTestMacroExpansion, CommaAsOperator) {
-  FormatStyle Style = getGoogleStyle();
-  Style.ColumnLimit = 42;
+  FormatStyle Style = getGoogleStyleWithColumns(42);
   Style.Macros.push_back("MACRO(a, b, c)=a=(b); if(x) c");
   verifyFormat("MACRO(auto a,\n"
                "      looooongfunction(first, second,\n"
@@ -267,26 +266,24 @@ TEST_F(FormatTestMacroExpansion, CommaAsOperator) {
 }
 
 TEST_F(FormatTestMacroExpansion, ForcedBreakDiffers) {
-  FormatStyle Style = getGoogleStyle();
-  Style.ColumnLimit = 40;
+  FormatStyle Style = getGoogleStyleWithColumns(40);
   Style.Macros.push_back("MACRO(a, b)=a=(b)");
   verifyFormat("//\n"
                "MACRO(const type variable,\n"
                "      functtioncall(\n"
-               "          first, longsecondarg, third));\n",
+               "          first, longsecondarg, third));",
                Style);
 }
 
 TEST_F(FormatTestMacroExpansion,
        PreferNotBreakingBetweenReturnTypeAndFunction) {
-  FormatStyle Style = getGoogleStyle();
-  Style.ColumnLimit = 22;
+  FormatStyle Style = getGoogleStyleWithColumns(22);
   Style.Macros.push_back("MOCK_METHOD(r, n, a)=r n a");
   // In the expanded code, we parse a full function signature, and afterwards
   // know that we prefer not to break before the function name.
   verifyFormat("MOCK_METHOD(\n"
                "    type, variable,\n"
-               "    (type));\n",
+               "    (type));",
                Style);
 }
 
