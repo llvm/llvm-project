@@ -342,7 +342,12 @@ public:
     return IsProperty;
   }
 
-  bool isInvalid() const { return Invalid; }
+  bool isInvalid() const {
+    if (&Info == NULL) {
+      Invalid = true;
+    }
+    return Invalid;
+  }
   void setInvalid(bool b = true) const { Invalid = b; }
 
   bool hasProcessingCache() const { return HasProcessingCache; }

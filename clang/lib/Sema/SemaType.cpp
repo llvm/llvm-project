@@ -4240,6 +4240,9 @@ IdentifierInfo *Sema::getNSErrorIdent() {
 /// attribute list.
 static bool hasNullabilityAttr(const ParsedAttributesView &attrs) {
   for (const ParsedAttr &AL : attrs) {
+    if (AL.isInvalid()) {
+      continue;
+    }
     if (AL.getKind() == ParsedAttr::AT_TypeNonNull ||
         AL.getKind() == ParsedAttr::AT_TypeNullable ||
         AL.getKind() == ParsedAttr::AT_TypeNullableResult ||
