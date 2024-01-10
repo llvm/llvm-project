@@ -233,7 +233,7 @@ what to add to your calendar invite.
    * - Floating Point Working Group
      - Every 3rd Wednesday of the month
      - `gcal <https://www.google.com/calendar/event?eid=XzYwcTMwYzFnNjBvMzBlMWk2MG80YWMxZzYwcmo4Z3BsODhyajJjMWg4NHMzNGg5ZzYwczMwYzFnNjBvMzBjMWc3MG8zMmgxZzZsMzNlY2kyNjRwazhnOWc2NG8zMGMxZzYwbzMwYzFnNjBvMzBjMWc2MG8zMmMxZzYwbzMwYzFnNnAyajRkOWk4Z3BqNmNwaTc1MmpjY2hrNjRzazRoMjU2MTBqYWQyMThrbzMyZGk2OGNzMF8yMDIzMTExNVQyMTAwMDBaIGNhbGVuZGFyQGxsdm0ub3Jn&ctz=UTC>`__
-     - `Meeting details/agenda: TBD
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
 
 .. _office-hours:
 
