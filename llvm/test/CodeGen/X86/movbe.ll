@@ -162,3 +162,29 @@ define i64 @test6(ptr %x) nounwind {
   %bswap = call i64 @llvm.bswap.i64(i64 %load)
   ret i64 %bswap
 }
+
+define i64 @test7(i64 %x) nounwind {
+; CHECK-LABEL: test7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    bswapq %rax
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    retq
+;
+; SLM-LABEL: test7:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movq %rdi, %rax
+; SLM-NEXT:    bswapq %rax
+; SLM-NEXT:    retq
+;
+; EGPR-LABEL: test7:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; EGPR-NEXT:    bswapq %rax # encoding: [0x48,0x0f,0xc8]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %bswap = call i64 @llvm.bswap.i64(i64 %x)
+  ret i64 %bswap
+}

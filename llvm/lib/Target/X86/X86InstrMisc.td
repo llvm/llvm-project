@@ -1151,14 +1151,17 @@ let Predicates = [HasMOVBE, HasEGPR, In64BitMode] in {
                        EVEX, NoCD8, T_MAP4;
   }
   let SchedRW = [WriteALU] in {
-  def MOVBE16rr_EVEX : I<0x61, MRMDestReg, (outs), (ins GR16:$dst, GR16:$src),
-                         "movbe{w}\t{$src, $dst|$dst, $src}", []>,
+  def MOVBE16rr_EVEX : I<0x61, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
+                         "movbe{w}\t{$src, $dst|$dst, $src}", 
+                         [(set GR16:$dst, (bswap GR16:$src))]>,
                        EVEX, NoCD8, T_MAP4, PD;
-  def MOVBE32rr_EVEX : I<0x61, MRMDestReg, (outs), (ins GR32:$dst, GR32:$src),
-                         "movbe{l}\t{$src, $dst|$dst, $src}", []>,
+  def MOVBE32rr_EVEX : I<0x61, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
+                         "movbe{l}\t{$src, $dst|$dst, $src}", 
+                         [(set GR32:$dst, (bswap GR32:$src))]>,
                        EVEX, NoCD8, T_MAP4;
-  def MOVBE64rr_EVEX : RI<0x61, MRMDestReg, (outs), (ins GR64:$dst, GR64:$src),
-                          "movbe{q}\t{$src, $dst|$dst, $src}", []>,
+  def MOVBE64rr_EVEX : RI<0x61, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
+                          "movbe{q}\t{$src, $dst|$dst, $src}", 
+                          [(set GR64:$dst, (bswap GR64:$src))]>,
                        EVEX, NoCD8, T_MAP4;
 
   def MOVBE16rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
