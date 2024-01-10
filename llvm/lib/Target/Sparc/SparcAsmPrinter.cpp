@@ -236,7 +236,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   MCOperand RegO7   = MCOperand::createReg(SP::O7);
 
   // <StartLabel>:
-  //   call <EndLabel>
+  //   <GET-PC> // This will be either `call <EndLabel>` or `rd %pc, %o7`.
   // <SethiLabel>:
   //     sethi %hi(_GLOBAL_OFFSET_TABLE_+(<SethiLabel>-<StartLabel>)), <MO>
   // <EndLabel>:
@@ -249,8 +249,10 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
     MCOperand Callee = createPCXCallOP(EndLabel, OutContext);
     EmitCall(*OutStreamer, Callee, STI);
   } else {
-    // TODO make it possible to store PC in other registers
-    // so that leaf function optimization becomes possible.
+    // TODO find out whether it is possible to store PC
+    // in other registers, to enable leaf function optimization.
+    // (On the other hand, approx. over 97.8% of GETPCXes happen
+    // in non-leaf functions, so would this be worth the effort?)
     EmitRDPC(*OutStreamer, RegO7, STI);
   }
   OutStreamer->emitLabel(SethiLabel);
