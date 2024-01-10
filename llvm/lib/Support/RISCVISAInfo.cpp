@@ -232,8 +232,8 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
   for (const auto &E : ExtMap) {
-    std::string Version = std::to_string(E.second.Major) + "." +
-                          std::to_string(E.second.Minor);
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
     PrintExtension(E.first, Version, DescMap[E.first]);
   }
 
@@ -242,8 +242,8 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   for (const auto &E : SupportedExperimentalExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
   for (const auto &E : ExtMap) {
-    std::string Version = std::to_string(E.second.Major) + "." +
-                          std::to_string(E.second.Minor);
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
     PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
@@ -304,7 +304,8 @@ findDefaultVersion(StringRef ExtName) {
   return std::nullopt;
 }
 
-void RISCVISAInfo::addExtension(StringRef ExtName, RISCVISAInfo::ExtensionVersion Version) {
+void RISCVISAInfo::addExtension(StringRef ExtName,
+                                RISCVISAInfo::ExtensionVersion Version) {
   Exts[ExtName.str()] = Version;
 }
 
