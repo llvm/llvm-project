@@ -3358,8 +3358,18 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         break;
       continue;
     }
-    case OPC_CheckComplexPat: {
-      unsigned CPNum = MatcherTable[MatcherIndex++];
+    case OPC_CheckComplexPat:
+    case OPC_CheckComplexPat0:
+    case OPC_CheckComplexPat1:
+    case OPC_CheckComplexPat2:
+    case OPC_CheckComplexPat3:
+    case OPC_CheckComplexPat4:
+    case OPC_CheckComplexPat5:
+    case OPC_CheckComplexPat6:
+    case OPC_CheckComplexPat7: {
+      unsigned CPNum = Opcode == OPC_CheckComplexPat
+                           ? MatcherTable[MatcherIndex++]
+                           : Opcode - OPC_CheckComplexPat0;
       unsigned RecNo = MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid CheckComplexPat");
 
