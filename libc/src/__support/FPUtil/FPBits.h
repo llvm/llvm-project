@@ -162,9 +162,9 @@ protected:
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 2) // 0b1100...
           : bit_at(SIG_LEN - 1);                      // 0b1000...
 
-  // If a number x is a NAN, then it is a signalling NAN if:
-  //   SIGNALING_NAN_MASK & bits(x) != 0
-  LIBC_INLINE_VAR static constexpr StorageType SIGNALING_NAN_MASK =
+  // Mask to generate a default signaling NAN. Any NAN that is not
+  // a quiet NAN is considered a signaling NAN.
+  LIBC_INLINE_VAR static constexpr StorageType DEFAULT_SIGNALING_NAN =
       fp_type == FPType::X86_Binary80
           ? bit_at(SIG_LEN - 1) | bit_at(SIG_LEN - 3) // 0b1010...
           : bit_at(SIG_LEN - 2);                      // 0b0100...
@@ -356,7 +356,7 @@ public:
   }
 
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_SIG_MASK) == (EXP_MASK | QUIET_NAN_MASK);
+    return (bits & EXP_SIG_MASK) >= (EXP_MASK | QUIET_NAN_MASK);
   }
 
   LIBC_INLINE constexpr bool is_inf_or_nan() const {

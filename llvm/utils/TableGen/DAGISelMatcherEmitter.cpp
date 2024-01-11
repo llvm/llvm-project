@@ -60,10 +60,8 @@ class MatcherTableEmitter {
   // all the patterns with "identical" predicates.
   StringMap<TinyPtrVector<TreePattern *>> NodePredicatesByCodeToRun;
 
-  StringMap<unsigned> PatternPredicateMap;
   std::vector<std::string> PatternPredicates;
 
-  DenseMap<const ComplexPattern*, unsigned> ComplexPatternMap;
   std::vector<const ComplexPattern*> ComplexPatterns;
 
 
@@ -84,8 +82,50 @@ class MatcherTableEmitter {
   }
 
 public:
-  MatcherTableEmitter(const CodeGenDAGPatterns &cgp)
-      : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {}
+  MatcherTableEmitter(const Matcher *TheMatcher, const CodeGenDAGPatterns &cgp)
+      : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
+    // Record the usage of ComplexPattern.
+    DenseMap<const ComplexPattern *, unsigned> ComplexPatternUsage;
+    // Record the usage of PatternPredicate.
+    std::map<StringRef, unsigned> PatternPredicateUsage;
+
+    // Iterate the whole MatcherTable once and do some statistics.
+    std::function<void(const Matcher *)> Statistic = [&](const Matcher *N) {
+      while (N) {
+        if (auto *SM = dyn_cast<ScopeMatcher>(N))
+          for (unsigned I = 0; I < SM->getNumChildren(); I++)
+            Statistic(SM->getChild(I));
+        else if (auto *SOM = dyn_cast<SwitchOpcodeMatcher>(N))
+          for (unsigned I = 0; I < SOM->getNumCases(); I++)
+            Statistic(SOM->getCaseMatcher(I));
+        else if (auto *STM = dyn_cast<SwitchTypeMatcher>(N))
+          for (unsigned I = 0; I < STM->getNumCases(); I++)
+            Statistic(STM->getCaseMatcher(I));
+        else if (auto *CPM = dyn_cast<CheckComplexPatMatcher>(N))
+          ++ComplexPatternUsage[&CPM->getPattern()];
+        else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
+          ++PatternPredicateUsage[CPPM->getPredicate()];
+        N = N->getNext();
+      }
+    };
+    Statistic(TheMatcher);
+
+    // Sort ComplexPatterns by usage.
+    std::vector<std::pair<const ComplexPattern *, unsigned>> ComplexPatternList(
+        ComplexPatternUsage.begin(), ComplexPatternUsage.end());
+    sort(ComplexPatternList,
+         [](const auto &A, const auto &B) { return A.second > B.second; });
+    for (const auto &ComplexPattern : ComplexPatternList)
+      ComplexPatterns.push_back(ComplexPattern.first);
+
+    // Sort PatternPredicates by usage.
+    std::vector<std::pair<std::string, unsigned>> PatternPredicateList(
+        PatternPredicateUsage.begin(), PatternPredicateUsage.end());
+    sort(PatternPredicateList,
+         [](const auto &A, const auto &B) { return A.second > B.second; });
+    for (const auto &PatternPredicate : PatternPredicateList)
+      PatternPredicates.push_back(PatternPredicate.first);
+  }
 
   unsigned EmitMatcherList(const Matcher *N, const unsigned Indent,
                            unsigned StartIdx, raw_ostream &OS);
@@ -138,20 +178,10 @@ private:
   }
 
   unsigned getPatternPredicate(StringRef PredName) {
-    unsigned &Entry = PatternPredicateMap[PredName];
-    if (Entry == 0) {
-      PatternPredicates.push_back(PredName.str());
-      Entry = PatternPredicates.size();
-    }
-    return Entry-1;
+    return llvm::find(PatternPredicates, PredName) - PatternPredicates.begin();
   }
   unsigned getComplexPat(const ComplexPattern &P) {
-    unsigned &Entry = ComplexPatternMap[&P];
-    if (Entry == 0) {
-      ComplexPatterns.push_back(&P);
-      Entry = ComplexPatterns.size();
-    }
-    return Entry-1;
+    return llvm::find(ComplexPatterns, &P) - ComplexPatterns.begin();
   }
 
   unsigned getNodeXFormID(Record *Rec) {
@@ -486,13 +516,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     StringRef Pred = cast<CheckPatternPredicateMatcher>(N)->getPredicate();
     unsigned PredNo = getPatternPredicate(Pred);
     if (PredNo > 255)
-      OS << "OPC_CheckPatternPredicate2, TARGET_VAL(" << PredNo << "),";
+      OS << "OPC_CheckPatternPredicateTwoByte, TARGET_VAL(" << PredNo << "),";
+    else if (PredNo < 8)
+      OS << "OPC_CheckPatternPredicate" << PredNo << ',';
     else
       OS << "OPC_CheckPatternPredicate, " << PredNo << ',';
     if (!OmitComments)
       OS << " // " << Pred;
     OS << '\n';
-    return 2 + (PredNo > 255);
+    return 2 + (PredNo > 255) - (PredNo < 8);
   }
   case Matcher::CheckPredicate: {
     TreePredicateFn Pred = cast<CheckPredicateMatcher>(N)->getPredicate();
@@ -652,8 +684,13 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
   case Matcher::CheckComplexPat: {
     const CheckComplexPatMatcher *CCPM = cast<CheckComplexPatMatcher>(N);
     const ComplexPattern &Pattern = CCPM->getPattern();
-    OS << "OPC_CheckComplexPat, /*CP*/" << getComplexPat(Pattern) << ", /*#*/"
-       << CCPM->getMatchNumber() << ',';
+    unsigned PatternNo = getComplexPat(Pattern);
+    if (PatternNo < 8)
+      OS << "OPC_CheckComplexPat" << PatternNo << ", /*#*/"
+         << CCPM->getMatchNumber() << ',';
+    else
+      OS << "OPC_CheckComplexPat, /*CP*/" << PatternNo << ", /*#*/"
+         << CCPM->getMatchNumber() << ',';
 
     if (!OmitComments) {
       OS << " // " << Pattern.getSelectFunc();
@@ -665,7 +702,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
         OS << " + chain result";
     }
     OS << '\n';
-    return 3;
+    return PatternNo < 8 ? 2 : 3;
   }
 
   case Matcher::CheckAndImm: {
@@ -1267,7 +1304,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher,
   OS << "#endif\n\n";
 
   BeginEmitFunction(OS, "void", "SelectCode(SDNode *N)", false/*AddOverride*/);
-  MatcherTableEmitter MatcherEmitter(CGP);
+  MatcherTableEmitter MatcherEmitter(TheMatcher, CGP);
 
   // First we size all the children of the three kinds of matchers that have
   // them. This is done by sharing the code in EmitMatcher(). but we don't
