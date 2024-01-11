@@ -36,8 +36,6 @@ launchLocalExecutor(llvm::StringRef ExecutablePath);
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress);
 
-llvm::Error addDebugSupport(llvm::orc::ObjectLayer &ObjLayer);
-
 llvm::Expected<std::unique_ptr<llvm::orc::DefinitionGenerator>>
 loadDylib(llvm::orc::ExecutionSession &ES, llvm::StringRef RemotePath);
 

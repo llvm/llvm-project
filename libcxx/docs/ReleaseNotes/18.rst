@@ -41,9 +41,8 @@ What's New in Libc++ 18.0.0?
 
 Implemented Papers
 ------------------
-- P2093R14 Formatted output
-- P2539R4  Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
-
+- P2093R14 - Formatted output
+- P2539R4  - Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
@@ -57,6 +56,10 @@ Implemented Papers
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()
 - P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
+- P2821R5 - span.at()
+- P0521R0 - Proposed Resolution for CA 14 (shared_ptr use_count/unique)
+- P1759R6 - Native handles and file streams
+- P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
 
 
 Improvements and New Features
@@ -82,6 +85,9 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
   the function ``std::basic_string<...>::reserve()`` available.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
+  the function ``std::shared_ptr<...>::unique()`` available.
 
 
 Deprecations and Removals
@@ -165,6 +171,18 @@ ABI Affecting Changes
   and can cause code compiled against older libc++ versions but linked at runtime to a new version
   to throw a different exception when attempting allocations that are too large
   (``std::bad_alloc`` vs ``std::length_error``).
+
+- The layout of some views inside ``std::ranges`` that use the ``movable-box`` exposition-only type as an implementation 
+  detail has changed in order to fix a bug which could result in overwriting user data following the ``movable-box``
+  <https://github.com/llvm/llvm-project/issues/70506>. 
+  This was caused by incorrect usage of the ``[[no_unique_address]]`` attribute inside the implementation of ``movable-box``. 
+  This only affects the layout of the following views: ``take_while_view``, ``filter_view``, ``single_view``, ``drop_while_view``, 
+  ``repeat_view``, ``transform_view``, ``chunk_by_view``. In order to avoid silent breakage, an ABI tag has been added to 
+  these views such that their mangled name will be different starting in this version of libc++. 
+  As a result, attempting to call a function that expects one of these views will fail to link until the code has been rebuilt 
+  against a matching version of libc++. In practice, we believe it is unusual for these views to appear at ABI boundaries so this 
+  should not be a major problem for most users. However it is probably worth auditing ranges-heavy code for ABI boundaries that 
+  would contain these views, or for types that contain these views as members and which are passed across ABI boundaries.
 
 Build System Changes
 --------------------

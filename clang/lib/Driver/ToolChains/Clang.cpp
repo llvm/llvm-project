@@ -698,6 +698,17 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fcoverage-mapping");
   }
 
+  if (Args.hasFlag(options::OPT_fmcdc_coverage, options::OPT_fno_mcdc_coverage,
+                   false)) {
+    if (!Args.hasFlag(options::OPT_fcoverage_mapping,
+                      options::OPT_fno_coverage_mapping, false))
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << "-fcoverage-mcdc"
+          << "-fcoverage-mapping";
+
+    CmdArgs.push_back("-fcoverage-mcdc");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fcoverage_compilation_dir_EQ)) {
     if (A->getOption().matches(options::OPT_ffile_compilation_dir_EQ))
@@ -2072,12 +2083,9 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     StringRef Arch = riscv::getRISCVArch(Args, Triple);
     auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
         Arch, /*EnableExperimentalExtensions*/ true);
-    if (!ISAInfo) {
-      // Ignore parsing error.
-      consumeError(ISAInfo.takeError());
-    } else {
+    // Ignore parsing error.
+    if (!errorToBool(ISAInfo.takeError()))
       MinVLen = (*ISAInfo)->getMinVLen();
-    }
 
     // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
     // as integer as long as we have a MinVLen.
@@ -3203,13 +3211,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                    options::OPT_fstrict_float_cast_overflow, false))
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
 
-  if (const Arg *A = Args.getLastArg(options::OPT_fcx_limited_range))
+  if (Args.hasArg(options::OPT_fcx_limited_range))
     CmdArgs.push_back("-fcx-limited-range");
-  if (const Arg *A = Args.getLastArg(options::OPT_fcx_fortran_rules))
+  if (Args.hasArg(options::OPT_fcx_fortran_rules))
     CmdArgs.push_back("-fcx-fortran-rules");
-  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_limited_range))
+  if (Args.hasArg(options::OPT_fno_cx_limited_range))
     CmdArgs.push_back("-fno-cx-limited-range");
-  if (const Arg *A = Args.getLastArg(options::OPT_fno_cx_fortran_rules))
+  if (Args.hasArg(options::OPT_fno_cx_fortran_rules))
     CmdArgs.push_back("-fno-cx-fortran-rules");
 }
 

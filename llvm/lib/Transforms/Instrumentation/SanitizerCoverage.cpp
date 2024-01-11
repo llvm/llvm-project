@@ -603,7 +603,7 @@ void ModuleSanitizerCoverage::instrumentFunction(
     Function &F, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
   if (F.empty())
     return;
-  if (F.getName().find(".module_ctor") != std::string::npos)
+  if (F.getName().contains(".module_ctor"))
     return; // Should not instrument sanitizer init functions.
   if (F.getName().starts_with("__sanitizer_"))
     return; // Don't instrument __sanitizer_* callbacks.

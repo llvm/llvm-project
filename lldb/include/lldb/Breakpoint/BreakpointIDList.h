@@ -33,7 +33,7 @@ public:
 
   size_t GetSize() const;
 
-  const BreakpointID &GetBreakpointIDAtIndex(size_t index) const;
+  BreakpointID GetBreakpointIDAtIndex(size_t index) const;
 
   bool RemoveBreakpointIDAtIndex(size_t index);
 
@@ -47,9 +47,6 @@ public:
   bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
 
   bool FindBreakpointID(const char *bp_id, size_t *position) const;
-
-  void InsertStringArray(llvm::ArrayRef<const char *> string_array,
-                         CommandReturnObject &result);
 
   // Returns a pair consisting of the beginning and end of a breakpoint
   // ID range expression.  If the input string is not a valid specification,
@@ -66,7 +63,6 @@ public:
 
 private:
   BreakpointIDArray m_breakpoint_ids;
-  BreakpointID m_invalid_id;
 
   BreakpointIDList(const BreakpointIDList &) = delete;
   const BreakpointIDList &operator=(const BreakpointIDList &) = delete;

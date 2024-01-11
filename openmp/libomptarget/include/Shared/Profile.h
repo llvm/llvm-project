@@ -32,7 +32,7 @@ class Profiler {
     Int32Envar ProfileGranularity =
         Int32Envar("LIBOMPTARGET_PROFILE_GRANULARITY", 500);
 
-    llvm::timeTraceProfilerInitialize(ProfileGranularity /* us */,
+    llvm::timeTraceProfilerInitialize(ProfileGranularity /*us=*/,
                                       "libomptarget");
   }
 
@@ -96,5 +96,17 @@ public:
   std::string ProfileLocation = SI.getProfileLocation();                       \
   std::string RTM = RegionTypeMsg;                                             \
   llvm::TimeTraceScope TimeScope(__FUNCTION__, ProfileLocation + RTM)
+
+/// Time spend in the current scope, assigned to the regionType
+/// with details from runtime
+#define TIMESCOPE_WITH_DETAILS_AND_IDENT(RegionTypeMsg, Details, IDENT)        \
+  SourceInfo SI(IDENT);                                                        \
+  std::string ProfileLocation = SI.getProfileLocation();                       \
+  llvm::TimeTraceScope TimeScope(RegionTypeMsg, ProfileLocation + Details)
+
+/// Time spend in the current scope, assigned to the function name and source
+/// with details
+#define TIMESCOPE_WITH_DETAILS(Details)                                        \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, Details)
 
 #endif // OMPTARGET_SHARED_PROFILE_H

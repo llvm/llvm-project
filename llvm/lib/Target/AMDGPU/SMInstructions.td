@@ -29,6 +29,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let mayStore = 0;
   let mayLoad = 1;
   let hasSideEffects = 0;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
 
@@ -305,6 +306,10 @@ let SubtargetPredicate = HasScalarDwordx3Loads in
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_64, SReg_512>;
+defm S_LOAD_I8       : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U8       : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_I16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 
 let is_buffer = 1 in {
 defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
@@ -316,6 +321,10 @@ let SubtargetPredicate = HasScalarDwordx3Loads in
 defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128, SReg_128>;
 defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128, SReg_256>;
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128, SReg_512>;
+defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 }
 
 let SubtargetPredicate = HasScalarStores in {
@@ -977,20 +986,35 @@ def : GCNPat <
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
 
-multiclass SMPrefetchPat<string type, int cache_type> {
+def i32imm_zero : TImmLeaf <i32, [{
+  return Imm == 0;
+}]>;
+
+def i32imm_one : TImmLeaf <i32, [{
+  return Imm == 1;
+}]>;
+
+multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   def : GCNPat <
-    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, (i32 cache_type)),
+    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
   >;
 
   def : GCNPat <
-    (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, (i32 cache_type)),
+    (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
+  >;
+
+  def : GCNPat <
+    (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
+        (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),
+        0, (i32 SGPR_NULL), (i8 0))
   >;
 }
 
-defm : SMPrefetchPat<"INST", 0>;
-defm : SMPrefetchPat<"DATA", 1>;
+defm : SMPrefetchPat<"INST", i32imm_zero>;
+defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
@@ -1321,12 +1345,22 @@ defm S_LOAD_B128 : SM_Real_Loads_gfx12<0x02, "S_LOAD_DWORDX4">;
 defm S_LOAD_B256 : SM_Real_Loads_gfx12<0x03, "S_LOAD_DWORDX8">;
 defm S_LOAD_B512 : SM_Real_Loads_gfx12<0x04, "S_LOAD_DWORDX16">;
 
+defm S_LOAD_I8   : SM_Real_Loads_gfx12<0x08>;
+defm S_LOAD_U8   : SM_Real_Loads_gfx12<0x09>;
+defm S_LOAD_I16  : SM_Real_Loads_gfx12<0x0a>;
+defm S_LOAD_U16  : SM_Real_Loads_gfx12<0x0b>;
+
 defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx12<0x10, "S_BUFFER_LOAD_DWORD">;
 defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx12<0x11, "S_BUFFER_LOAD_DWORDX2">;
 defm S_BUFFER_LOAD_B96  : SM_Real_Loads_gfx12<0x15, "S_BUFFER_LOAD_DWORDX3">;
 defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx12<0x12, "S_BUFFER_LOAD_DWORDX4">;
 defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx12<0x13, "S_BUFFER_LOAD_DWORDX8">;
 defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx12<0x14, "S_BUFFER_LOAD_DWORDX16">;
+
+defm S_BUFFER_LOAD_I8  : SM_Real_Loads_gfx12<0x18>;
+defm S_BUFFER_LOAD_U8  : SM_Real_Loads_gfx12<0x19>;
+defm S_BUFFER_LOAD_I16 : SM_Real_Loads_gfx12<0x1a>;
+defm S_BUFFER_LOAD_U16 : SM_Real_Loads_gfx12<0x1b>;
 
 def S_DCACHE_INV_gfx12 : SMEM_Real_gfx12<0x021, S_DCACHE_INV>;
 

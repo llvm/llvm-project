@@ -311,80 +311,50 @@ struct TestTileConsumerFuseAndYieldProducerUsingSCFForOp
     // Collect list of operations that can be tiled and fused.
     llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
         collectTiledAndFusedOps(rootOp);
-    auto isIgnoredUser = [&](Operation *user, scf::ForOp outerMostTiledLoop) {
-      return tiledAndFusedOps.count(user) || isa<tensor::DimOp>(user) ||
-             outerMostTiledLoop->isAncestor(user);
+    llvm::SmallDenseMap<Operation *, bool> yielded;
+    auto isIgnoredUser = [&](Operation *user) {
+      return tiledAndFusedOps.count(user) || isa<tensor::DimOp>(user);
     };
-
-    // The rest of this method is similar to
-    // scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp, except that also
-    // yields replacements for values of the fused producer.
-
-    // 1. Tile the consumer.
-    SmallVector<OpResult> yieldedValuesToOrigValues;
-    FailureOr<scf::SCFTilingResult> tilingResult =
-        scf::tileUsingSCFForOp(rewriter, rootOp, options);
-    if (failed(tilingResult)) {
-      return rewriter.notifyMatchFailure(rootOp,
-                                         "failed to tile base operation");
-    }
-    yieldedValuesToOrigValues.append(rootOp->result_begin(),
-                                     rootOp->result_end());
-
-    // 2. Tiling each operation results in generation of slices. The source of
-    // these slices could be producers that can be fused into the tiled loops by
-    // computing the slices of these producers in-place. This results in more
-    // slices created for operands of the "fused producer". This open up more
-    // opportunities for fusion. Use a worklist to fuse greedily.
-    auto addCandidateSlices =
-        [](Operation *fusedOp, std::deque<tensor::ExtractSliceOp> &candidates) {
-          for (Value operand : fusedOp->getOperands())
-            if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
-              candidates.push_back(sliceOp);
-        };
-
-    std::deque<tensor::ExtractSliceOp> candidates;
-    addCandidateSlices(tilingResult->tiledOps.back(), candidates);
-    OpBuilder::InsertionGuard g(rewriter);
-    auto forLoops = llvm::to_vector(llvm::map_range(
-        tilingResult->loops, [](auto op) { return cast<scf::ForOp>(op); }));
-    while (!candidates.empty()) {
-      // Traverse the slices in BFS fashion.
-      tensor::ExtractSliceOp candidateSliceOp = candidates.front();
-      candidates.pop_front();
-
-      // Materialize the slice of the producer in place.
-      std::optional<scf::SCFFuseProducerOfSliceResult> fusedProducer =
-          tileAndFuseProducerOfSlice(rewriter, candidateSliceOp, forLoops);
-      if (!fusedProducer)
-        continue;
-
-      // Check if the fused producer has other uses that require the value
-      // to be yielded from within the tiled loop.
-      OpResult untiledProducer = fusedProducer->origProducer;
-      if (llvm::any_of(untiledProducer.getUsers(), [&](Operation *user) {
-            return !isIgnoredUser(user, forLoops.front());
-          })) {
-        yieldReplacementForFusedProducer(rewriter, candidateSliceOp,
-                                         fusedProducer.value(), forLoops);
-        yieldedValuesToOrigValues.push_back(untiledProducer);
-      }
-
-      // Add more fusion candidates to the worklist.
-      if (auto fusedProducerOp =
-              fusedProducer->tiledAndFusedProducer.getDefiningOp())
-        addCandidateSlices(fusedProducerOp, candidates);
-    }
-
-    scf::ForOp outermostLoop = forLoops.front();
-    for (auto [index, origVal] : llvm::enumerate(yieldedValuesToOrigValues)) {
-      Value replacement = outermostLoop.getResult(index);
-      rewriter.replaceUsesWithIf(origVal, replacement, [&](OpOperand &use) {
-        return !isIgnoredUser(use.getOwner(), outermostLoop);
+    for (Operation *op : tiledAndFusedOps) {
+      yielded[op] = llvm::any_of(op->getUsers(), [&](Operation *user) {
+        return !isIgnoredUser(user);
       });
     }
+
+    scf::SCFTileAndFuseOptions tileAndFuseOptions;
+    tileAndFuseOptions.setTilingOptions(options);
+    scf::SCFTileAndFuseOptions::ControlFnTy controlFn =
+        [&](tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
+            bool isDestinationOperand) {
+          Operation *owner = originalProducer.getOwner();
+          return std::make_tuple(true,
+                                 yielded.contains(owner) && yielded[owner]);
+        };
+    tileAndFuseOptions.setFusionControlFn(controlFn);
+
+    FailureOr<scf::SCFTileAndFuseResult> tileAndFuseResult =
+        scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
+            rewriter, rootOp, tileAndFuseOptions);
+    if (failed(tileAndFuseResult)) {
+      return rewriter.notifyMatchFailure(
+          rootOp, "failed to tile and fuse with op as root");
+    }
+
+    for (auto it : tileAndFuseResult->replacements) {
+      Value origVal = it.first;
+      Value replacement = it.second;
+      rewriter.replaceUsesWithIf(origVal, replacement, [&](OpOperand &use) {
+        Operation *user = use.getOwner();
+        return !isIgnoredUser(user) &&
+               !tileAndFuseResult->loops.front()->isAncestor(user);
+      });
+    }
+
     rewriter.eraseOp(rootOp);
-    filter.replaceTransformationFilter(rewriter, tilingResult->tiledOps.back());
+    for (auto tiledAndFusedOp : tileAndFuseResult->tiledAndFusedOps)
+      if (tiledAndFusedOp->hasAttr(kTransformMarker))
+        filter.replaceTransformationFilter(rewriter, tiledAndFusedOp);
+
     return success();
   }
 

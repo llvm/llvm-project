@@ -8490,12 +8490,12 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512F-NEXT:    vpermt2q %zmm31, %zmm23, %zmm12
 ; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm24 = [11,4,11,4,11,4,11,4]
 ; AVX512F-NEXT:    # zmm24 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm0
+; AVX512F-NEXT:    vmovdqa64 %zmm16, %zmm0
 ; AVX512F-NEXT:    vpermt2q %zmm31, %zmm24, %zmm0
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm8 = [12,5,12,5,12,5,12,5]
 ; AVX512F-NEXT:    # zmm8 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm0
+; AVX512F-NEXT:    vmovdqa64 %zmm16, %zmm0
 ; AVX512F-NEXT:    vpermt2q %zmm31, %zmm8, %zmm0
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    vbroadcasti32x4 {{.*#+}} zmm16 = [13,6,13,6,13,6,13,6]
