@@ -95,7 +95,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>}  @multi_vector_cvt_x2_f32_s3
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    scvtf { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    ret
-  %res = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x2.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
+  %res = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x2.nxv4f32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
   ret {<vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
@@ -108,7 +108,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    scvtf { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    ret
-  %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x4.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
+  %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x4.nxv4f32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
   ret {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
@@ -122,7 +122,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>}  @multi_vector_cvt_x2_f32_u3
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    ucvtf { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    ret
-  %res = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x2.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
+  %res = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x2.nxv4f32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1)
   ret {<vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
@@ -135,7 +135,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    ucvtf { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    ret
-  %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x4.nxv4i32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
+  %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x4.nxv4f32(<vscale x 4 x i32> %zn0, <vscale x 4 x i32> %zn1, <vscale x 4 x i32> %zn2, <vscale x 4 x i32> %zn3)
   ret {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
@@ -143,9 +143,9 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.fcvt.x2.nxv4f32(<vscale x 4 x floa
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.bfcvt.x2(<vscale x 4 x float>, <vscale x 4 x float>)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sve.fcvts.x2.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sve.fcvtu.x2.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>)
-declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>)
-declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>)
+declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x2.nxv4f32(<vscale x 4 x i32>,<vscale x 4 x i32>)
+declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x2.nxv4f32(<vscale x 4 x i32>,<vscale x 4 x i32>)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sve.fcvts.x4.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sve.fcvtu.x4.nxv4f32(<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>)
-declare {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x4.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
-declare {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x4.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
+declare {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.scvtf.x4.nxv4f32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
+declare {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sve.ucvtf.x4.nxv4f32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
