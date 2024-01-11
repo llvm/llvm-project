@@ -342,6 +342,51 @@ define amdgpu_ps float @v_test_cvt_bf16_f32_s(bfloat inreg  %v) {
   ret float %cvt
 }
 
+define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_v(<2 x float> %src) {
+; GCN-LABEL: v_test_cvt_v2f32_v2bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
+; GCN-NEXT:    ; return to shader part epilog
+  %res = fptrunc <2 x float> %src to <2 x bfloat>
+  %cast = bitcast <2 x bfloat> %res to float
+  ret float %cast
+}
+
+define amdgpu_ps float @v_test_cvt_v2f32_v2bf16_s(<2 x float> inreg %src) {
+; GCN-LABEL: v_test_cvt_v2f32_v2bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, s0, s1
+; GCN-NEXT:    ; return to shader part epilog
+  %res = fptrunc <2 x float> %src to <2 x bfloat>
+  %cast = bitcast <2 x bfloat> %res to float
+  ret float %cast
+}
+
+define amdgpu_ps float @v_test_cvt_f32_bf16_v(float %src) {
+; GCN-LABEL: v_test_cvt_f32_bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_f32_bf16_e32 v0, v0
+; GCN-NEXT:    ; return to shader part epilog
+  %trunc = fptrunc float %src to bfloat
+  %ext = fpext bfloat %trunc to float
+  ret float %ext
+}
+
+define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
+; GCN-LABEL: v_test_cvt_v2f64_v2bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
+; GCN-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v2
+; GCN-NEXT:    ; return to shader part epilog
+  %res = fptrunc <2 x double> %src to <2 x bfloat>
+  %cast = bitcast <2 x bfloat> %res to float
+  ret float %cast
+}
+
 define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; GCN-LABEL: llvm_sqrt_bf16_v:
 ; GCN:       ; %bb.0:
