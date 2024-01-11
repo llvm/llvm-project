@@ -29,7 +29,7 @@
 // CHECK: Mod (framework)
 // CHECK:   link Mod (framework)
 // CHECK: Mod_Private (framework)
-// CHECK:   link Mod_Private (framework)
+// CHECK:   link Mod (framework)
 
 // CHECK: Files:
 // CHECK: [[PREFIX]]/tu.m llvmcas://
