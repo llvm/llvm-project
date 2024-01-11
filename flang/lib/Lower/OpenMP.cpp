@@ -2029,18 +2029,20 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
-  // Get the original ThreadprivateOp corresponding to the symbol and use the
-  // symbol value from that operation to create one ThreadprivateOp copy
-  // operation inside the parallel region.
+  // If the symbol corresponds to the original ThreadprivateOp, use the symbol
+  // value from that operation to create one ThreadprivateOp copy operation
+  // inside the parallel region.
+  // In some cases, however, the symbol will correspond to the original,
+  // non-threadprivate variable. This can happen, for instance, with a common
+  // block, declared in a separate module, used by a parent procedure and
+  // privatized in its child procedure.
   auto genThreadprivateOp = [&](Fortran::lower::SymbolRef sym) -> mlir::Value {
-    mlir::Value symOriThreadprivateValue = converter.getSymbolAddress(sym);
-    mlir::Operation *op = symOriThreadprivateValue.getDefiningOp();
+    mlir::Value symValue = converter.getSymbolAddress(sym);
+    mlir::Operation *op = symValue.getDefiningOp();
     if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(op))
       op = declOp.getMemref().getDefiningOp();
-    assert(mlir::isa<mlir::omp::ThreadprivateOp>(op) &&
-           "Threadprivate operation not created");
-    mlir::Value symValue =
-        mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).getSymAddr();
+    if (mlir::isa<mlir::omp::ThreadprivateOp>(op))
+      symValue = mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).getSymAddr();
     return firOpBuilder.create<mlir::omp::ThreadprivateOp>(
         currentLocation, symValue.getType(), symValue);
   };
