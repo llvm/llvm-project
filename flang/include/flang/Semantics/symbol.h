@@ -145,7 +145,7 @@ private:
 
 // OpenACC routine information. Device independent info are stored on the
 // OpenACCRoutineInfo instance while device dependent info are stored
-// in as objects in the OpenACCRoutineDeviceTypeInfo list.
+// as objects in the OpenACCRoutineDeviceTypeInfo list.
 class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
 public:
   bool isNohost() const { return isNohost_; }
