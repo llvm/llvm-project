@@ -53,6 +53,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
@@ -301,9 +302,12 @@ public:
                      },
                      [&](Fortran::lower::pft::ModuleLikeUnit &m) {
                        lowerModuleDeclScope(m);
-                       for (Fortran::lower::pft::FunctionLikeUnit &f :
-                            m.nestedFunctions)
-                         declareFunction(f);
+                       for (Fortran::lower::pft::NestedUnit &unit :
+                            m.nestedUnits) {
+                         if (auto *f = std::get_if<
+                                 Fortran::lower::pft::FunctionLikeUnit>(&unit))
+                           declareFunction(*f);
+                       }
                      },
                      [&](Fortran::lower::pft::BlockDataUnit &b) {
                        if (!globalOmpRequiresSymbol)
@@ -320,13 +324,16 @@ public:
         [&]() { createIntrinsicModuleDefinitions(pft); });
 
     // Primary translation pass.
-    for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
+    std::list<Fortran::lower::pft::Program::Units> &units = pft.getUnits();
+    for (auto it = units.begin(); it != units.end(); it = std::next(it)) {
       std::visit(
           Fortran::common::visitors{
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
-              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
+                processSubprogramDirective(it, units.end(), d);
+              },
               [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
                 builder = new fir::FirOpBuilder(bridge.getModule(),
                                                 bridge.getKindMap());
@@ -336,7 +343,7 @@ public:
                 builder = nullptr;
               },
           },
-          u);
+          *it);
     }
 
     // Once all the code has been translated, create global runtime type info
@@ -385,13 +392,17 @@ public:
 
     // Compute the set of host associated entities from the nested functions.
     llvm::SetVector<const Fortran::semantics::Symbol *> escapeHost;
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      collectHostAssociatedVariables(f, escapeHost);
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        collectHostAssociatedVariables(*f, escapeHost);
+    }
     funit.setHostAssociatedSymbols(escapeHost);
 
     // Declare internal procedures
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      declareFunction(f);
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        declareFunction(*f);
+    }
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -4630,8 +4641,10 @@ private:
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      lowerFunc(f); // internal procedure
+    for (Fortran::lower::pft::NestedUnit &nested : funit.nestedUnits) {
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&nested))
+        lowerFunc(*f); // internal procedure
+    }
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -4655,8 +4668,16 @@ private:
 
   /// Lower functions contained in a module.
   void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    for (Fortran::lower::pft::FunctionLikeUnit &f : mod.nestedFunctions)
-      lowerFunc(f);
+    for (auto it = mod.nestedUnits.begin(); it != mod.nestedUnits.end();
+         it = std::next(it)) {
+      std::visit(
+          Fortran::common::visitors{
+              [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
+                processSubprogramDirective(it, mod.nestedUnits.end(), d);
+              }},
+          *it);
+    }
   }
 
   void setCurrentPosition(const Fortran::parser::CharBlock &position) {
@@ -4962,6 +4983,80 @@ private:
     if (ompDeviceCodeFound)
       Fortran::lower::genOpenMPRequires(getModuleOp().getOperation(),
                                         globalOmpRequiresSymbol);
+  }
+
+  /// Process compiler directives that apply to subprograms
+  template <typename ITERATOR>
+  void
+  processSubprogramDirective(ITERATOR it, ITERATOR endIt,
+                             Fortran::lower::pft::CompilerDirectiveUnit &d) {
+    auto *parserDirective = d.getIf<Fortran::parser::CompilerDirective>();
+    if (!parserDirective)
+      return;
+    auto *nvList =
+        std::get_if<std::list<Fortran::parser::CompilerDirective::NameValue>>(
+            &parserDirective->u);
+    if (!nvList)
+      return;
+
+    // get the function the directive applies to (hopefully the next unit)
+    mlir::func::FuncOp mlirFunc;
+    it = std::next(it);
+    if (it != endIt) {
+      auto *pftFunction =
+          std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&*it);
+      if (pftFunction) {
+        Fortran::lower::CalleeInterface callee{*pftFunction, *this};
+        mlirFunc = callee.getFuncOp();
+      }
+    }
+
+    for (const Fortran::parser::CompilerDirective::NameValue &nv : *nvList) {
+      std::string name = std::get<Fortran::parser::Name>(nv.t).ToString();
+
+      // arm streaming sve directives
+      auto streamingMode = mlir::arm_sme::ArmStreamingMode::Disabled;
+      if (name == "arm_streaming")
+        streamingMode = mlir::arm_sme::ArmStreamingMode::Streaming;
+      else if (name == "arm_locally_streaming")
+        streamingMode = mlir::arm_sme::ArmStreamingMode::StreamingLocally;
+      else if (name == "arm_streaming_compatible")
+        streamingMode = mlir::arm_sme::ArmStreamingMode::StreamingCompatible;
+      if (streamingMode != mlir::arm_sme::ArmStreamingMode::Disabled) {
+        if (!mlirFunc) {
+          // TODO: share diagnostic code with warnings elsewhere
+          // TODO: source location is printed as loc<"file.f90":line:col>
+          mlir::Location loc = genLocation(parserDirective->source);
+          llvm::errs() << loc << ": warning: ignoring directive '" << name
+                       << "' because it has no associated subprogram\n";
+          continue;
+        }
+        llvm::StringRef attrName =
+            mlir::arm_sme::stringifyArmStreamingMode(streamingMode);
+        mlir::UnitAttr unitAttr = mlir::UnitAttr::get(mlirFunc.getContext());
+        mlirFunc->setAttr(attrName, unitAttr);
+      }
+      auto zaMode = mlir::arm_sme::ArmZaMode::Disabled;
+      if (name == "arm_new_za")
+        zaMode = mlir::arm_sme::ArmZaMode::NewZA;
+      else if (name == "arm_shared_za")
+        zaMode = mlir::arm_sme::ArmZaMode::SharedZA;
+      else if (name == "arm_preserves_za")
+        zaMode = mlir::arm_sme::ArmZaMode::PreservesZA;
+      if (zaMode != mlir::arm_sme::ArmZaMode::Disabled) {
+        if (!mlirFunc) {
+          // TODO: share diagnostic code with warnings elsewhere
+          // TODO: source location is printed as loc<"file.f90":line:col>
+          mlir::Location loc = genLocation(parserDirective->source);
+          llvm::errs() << loc << ": warning: ignoring directive '" << name
+                       << "' because it has no associated subprogram\n";
+          continue;
+        }
+        llvm::StringRef attrName = mlir::arm_sme::stringifyArmZaMode(zaMode);
+        mlir::UnitAttr unitAttr = mlir::UnitAttr::get(mlirFunc.getContext());
+        mlirFunc->setAttr(attrName, unitAttr);
+      }
+    }
   }
 
   //===--------------------------------------------------------------------===//

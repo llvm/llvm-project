@@ -8425,7 +8425,34 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       }
     }
   } else {
-    Say(x.source, "Compiler directive was ignored"_warn_en_US);
+    bool handled{false};
+    if (const auto *nvList{
+            std::get_if<std::list<parser::CompilerDirective::NameValue>>(
+                &x.u)}) {
+      for (const parser::CompilerDirective::NameValue &nv : *nvList) {
+        std::string name{std::get<parser::Name>(nv.t).ToString()};
+        const std::initializer_list<const char *> handledAttrs{
+            "arm_streaming",
+            "arm_locally_streaming",
+            "arm_streaming_compatible",
+            "arm_shared_za",
+            "arm_new_za",
+            "arm_preserves_za",
+        };
+        if (std::find(handledAttrs.begin(), handledAttrs.end(), name) ==
+            handledAttrs.end()) {
+          // exit early so that subsequent recognised attributes can't change
+          // the result
+          handled = false;
+          break;
+        }
+        // this attribute was handled
+        handled = true;
+      }
+    }
+    if (!handled) {
+      Say(x.source, "Compiler directive was ignored"_warn_en_US);
+    }
   }
 }
 
