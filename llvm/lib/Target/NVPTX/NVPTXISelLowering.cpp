@@ -2019,9 +2019,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         DL, RetTy, Args, Outs, retAlignment,
         HasVAArgs
             ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                  CLI.NumFixedArgs,
-                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                      ->getAPIntValue()))
+                  CLI.NumFixedArgs, VADeclareParam->getConstantOperandAPInt(1)))
             : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();

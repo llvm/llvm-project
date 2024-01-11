@@ -1094,6 +1094,7 @@ clang-format
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
 - Add ``.clang-format-ignore`` files.
+- Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 
 libclang
 --------

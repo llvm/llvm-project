@@ -4822,8 +4822,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
     APInt UndefSrcElts(NumSrcElts, 0);
     SmallVector<APInt, 64> SrcEltBits;
-    auto *CN = cast<ConstantSDNode>(Op.getOperand(0).getOperand(0));
-    SrcEltBits.push_back(CN->getAPIntValue().zextOrTrunc(SrcEltSizeInBits));
+    const APInt &C = Op.getOperand(0).getConstantOperandAPInt(0);
+    SrcEltBits.push_back(C.zextOrTrunc(SrcEltSizeInBits));
     SrcEltBits.append(NumSrcElts - 1, APInt(SrcEltSizeInBits, 0));
     return CastBitData(UndefSrcElts, SrcEltBits);
   }
