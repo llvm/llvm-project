@@ -38,7 +38,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __args) {
   _LIBCPP_ASSERT_NON_NULL(__location != nullptr, "null pointer given to construct_at");
-  return ::new (std::__voidify(*__location)) _Tp(std::forward<_Args>(__args)...);
+  return ::new (const_cast<void*>(std::__voidify(*__location))) _Tp(std::forward<_Args>(__args)...);
 }
 
 #endif
@@ -49,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __construct_at(_Tp* __location, _Ar
   return std::construct_at(__location, std::forward<_Args>(__args)...);
 #else
   return _LIBCPP_ASSERT_NON_NULL(__location != nullptr, "null pointer given to construct_at"),
-         ::new (std::__voidify(*__location)) _Tp(std::forward<_Args>(__args)...);
+         ::new (const_cast<void*>(std::__voidify(*__location))) _Tp(std::forward<_Args>(__args)...);
 #endif
 }
 
