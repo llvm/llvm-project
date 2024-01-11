@@ -699,10 +699,10 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
   if (charLen == -1)
     charLen = _POSIX_LOGIN_NAME_MAX + 2;
 #endif
-  char input[charLen];
+  std::vector<char> input(charLen);
 
   FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input.data()), charLen);
 
   EXPECT_EQ(input[charLen - 1], ' ');
 }
