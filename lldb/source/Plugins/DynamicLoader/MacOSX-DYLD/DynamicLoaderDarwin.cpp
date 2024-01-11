@@ -1048,70 +1048,107 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  const uint32_t addr_size = m_process->GetAddressByteSize();
-  uint8_t buf[sizeof(lldb::addr_t) * 3];
-
   lldb_private::Address tls_addr;
-  if (module_sp->ResolveFileAddress(tls_file_addr, tls_addr)) {
-    Status error;
-    const size_t tsl_data_size = addr_size * 3;
-    Target &target = m_process->GetTarget();
-    if (target.ReadMemory(tls_addr, buf, tsl_data_size, error, true) ==
-        tsl_data_size) {
-      const ByteOrder byte_order = m_process->GetByteOrder();
-      DataExtractor data(buf, sizeof(buf), byte_order, addr_size);
-      lldb::offset_t offset = addr_size; // Skip the first pointer
-      const lldb::addr_t pthread_key = data.GetAddress(&offset);
-      const lldb::addr_t tls_offset = data.GetAddress(&offset);
-      if (pthread_key != 0) {
-        // First check to see if we have already figured out the location of
-        // TLS data for the pthread_key on a specific thread yet. If we have we
-        // can re-use it since its location will not change unless the process
-        // execs.
-        const tid_t tid = thread_sp->GetID();
-        auto tid_pos = m_tid_to_tls_map.find(tid);
-        if (tid_pos != m_tid_to_tls_map.end()) {
-          auto tls_pos = tid_pos->second.find(pthread_key);
-          if (tls_pos != tid_pos->second.end()) {
-            return tls_pos->second + tls_offset;
-          }
+  if (!module_sp->ResolveFileAddress(tls_file_addr, tls_addr))
+    return LLDB_INVALID_ADDRESS;
+
+  Target &target = m_process->GetTarget();
+  uint8_t buf[sizeof(lldb::addr_t) * 3];
+  const uint32_t addr_size = m_process->GetAddressByteSize();
+  const size_t tls_data_size = addr_size * 3;
+  Status error;
+  const size_t bytes_read = target.ReadMemory(
+      tls_addr, buf, tls_data_size, error, /*force_live_memory = */ true);
+  if (bytes_read != tls_data_size || error.Fail())
+    return LLDB_INVALID_ADDRESS;
+
+  DataExtractor data(buf, sizeof(buf), m_process->GetByteOrder(), addr_size);
+  lldb::offset_t offset = 0;
+  const lldb::addr_t thunk_addr = data.GetAddress(&offset);
+  const lldb::addr_t key = data.GetAddress(&offset);
+  const lldb::addr_t tls_offset = data.GetAddress(&offset);
+
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return LLVM_INVALID_ADDRESS;
+  CompilerType clang_void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+  EvaluateExpressionOptions options;
+  DiagnosticManager execution_errors;
+  ExecutionContext exe_ctx(thread_sp);
+
+  // On modern apple platforms, there is a small data structure that looks
+  // approximately like this:
+  // struct TLS_Thunk {
+  //  void *(*get_addr)(struct TLS_Thunk *);
+  //  size_t key;
+  //  size_t offset;
+  // }
+  //
+  // The strategy is to take get_addr from the structure, call it with the
+  // address of the containing TLS_Thunk structure, and add the offset to the
+  // resulting pointer.
+
+  if (thunk_addr != 0) {
+    Address thunk_load_addr;
+    if (target.ResolveLoadAddress(thunk_addr, thunk_load_addr)) {
+      const lldb::addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
+      ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
+          *thread_sp, thunk_load_addr, clang_void_ptr_type,
+          llvm::ArrayRef<lldb::addr_t>(tls_load_addr), options));
+
+      lldb::ExpressionResults results = m_process->RunThreadPlan(
+          exe_ctx, thread_plan_sp, options, execution_errors);
+      if (results == lldb::eExpressionCompleted) {
+        if (lldb::ValueObjectSP result_valobj_sp =
+                thread_plan_sp->GetReturnValueObject()) {
+          const lldb::addr_t pointer_to_tls_data =
+              result_valobj_sp->GetValueAsUnsigned(0);
+          if (pointer_to_tls_data)
+            return pointer_to_tls_data;
         }
-        StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
-        if (frame_sp) {
-          TypeSystemClangSP scratch_ts_sp =
-              ScratchTypeSystemClang::GetForTarget(target);
+      }
+    }
+  }
 
-          if (!scratch_ts_sp)
-            return LLDB_INVALID_ADDRESS;
+  // If the previous approach fails, we will attempt to fall back to the older
+  // implementation. In this scenario, the key element of TLS_Thunk is a pthread
+  // key type. This can be passed to pthread_getspecific to get the address
+  // of the TLS block, which we then add offset to.
 
-          CompilerType clang_void_ptr_type =
-              scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
-          Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
-          if (pthread_getspecific_addr.IsValid()) {
-            EvaluateExpressionOptions options;
+  if (key != 0) {
+    // First check to see if we have already figured out the location of
+    // TLS data for the pthread_key on a specific thread yet. If we have we
+    // can re-use it since its location will not change unless the process
+    // execs.
+    const tid_t tid = thread_sp->GetID();
+    auto tid_pos = m_tid_to_tls_map.find(tid);
+    if (tid_pos != m_tid_to_tls_map.end()) {
+      auto tls_pos = tid_pos->second.find(key);
+      if (tls_pos != tid_pos->second.end()) {
+        return tls_pos->second + tls_offset;
+      }
+    }
+    Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
+    if (pthread_getspecific_addr.IsValid()) {
 
-            lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
-                *thread_sp, pthread_getspecific_addr, clang_void_ptr_type,
-                llvm::ArrayRef<lldb::addr_t>(pthread_key), options));
+      lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
+          *thread_sp, pthread_getspecific_addr, clang_void_ptr_type,
+          llvm::ArrayRef<lldb::addr_t>(key), options));
 
-            DiagnosticManager execution_errors;
-            ExecutionContext exe_ctx(thread_sp);
-            lldb::ExpressionResults results = m_process->RunThreadPlan(
-                exe_ctx, thread_plan_sp, options, execution_errors);
+      lldb::ExpressionResults results = m_process->RunThreadPlan(
+          exe_ctx, thread_plan_sp, options, execution_errors);
 
-            if (results == lldb::eExpressionCompleted) {
-              lldb::ValueObjectSP result_valobj_sp =
-                  thread_plan_sp->GetReturnValueObject();
-              if (result_valobj_sp) {
-                const lldb::addr_t pthread_key_data =
-                    result_valobj_sp->GetValueAsUnsigned(0);
-                if (pthread_key_data) {
-                  m_tid_to_tls_map[tid].insert(
-                      std::make_pair(pthread_key, pthread_key_data));
-                  return pthread_key_data + tls_offset;
-                }
-              }
-            }
+      if (results == lldb::eExpressionCompleted) {
+        lldb::ValueObjectSP result_valobj_sp =
+            thread_plan_sp->GetReturnValueObject();
+        if (result_valobj_sp) {
+          const lldb::addr_t pthread_key_data =
+              result_valobj_sp->GetValueAsUnsigned(0);
+          if (pthread_key_data) {
+            m_tid_to_tls_map[tid].insert(std::make_pair(key, pthread_key_data));
+            return pthread_key_data + tls_offset;
           }
         }
       }
