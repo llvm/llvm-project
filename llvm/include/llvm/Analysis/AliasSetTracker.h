@@ -139,21 +139,6 @@ private:
   AliasSet()
       : RefCount(0), AliasAny(false), Access(NoAccess), Alias(SetMustAlias) {}
 
-  /// Return the real alias set this represents. If this has been merged with
-  /// another set and is forwarding, return the ultimate destination set. This
-  /// also implements the union-find collapsing as well.
-  AliasSet *getForwardedTarget(AliasSetTracker &AST) {
-    if (!Forward) return this;
-
-    AliasSet *Dest = Forward->getForwardedTarget(AST);
-    if (Dest != Forward) {
-      Dest->addRef();
-      Forward->dropRef(AST);
-      Forward = Dest;
-    }
-    return Dest;
-  }
-
   void removeFromTracker(AliasSetTracker &AST);
 
   void addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
@@ -250,6 +235,23 @@ private:
   AliasSet *AliasAnyAS = nullptr;
 
   void removeAliasSet(AliasSet *AS);
+
+  // Update an alias set field to point to its real destination. If the field is
+  // pointing to a set that has been merged with another set and is forwarding,
+  // the field is updated to point to the set obtained by following the
+  // forwarding links. The Forward fields of intermediate alias sets are
+  // collapsed as well, and alias set reference counts are updated to reflect
+  // the new situation.
+  void collapseForwardingIn(AliasSet *&AS) {
+    if (AS->Forward) {
+      collapseForwardingIn(AS->Forward);
+      // Swap out AS for AS->Forward, while updating reference counts.
+      AliasSet *NewAS = AS->Forward;
+      NewAS->addRef();
+      AS->dropRef(*this);
+      AS = NewAS;
+    }
+  }
 
   AliasSet &addPointer(MemoryLocation Loc, AliasSet::AccessLattice E);
   AliasSet *mergeAliasSetsForPointer(const MemoryLocation &MemLoc,

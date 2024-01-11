@@ -276,15 +276,9 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   // alias set associated with its pointer.
   AliasSet *&MapEntry = PointerMap[MemLoc.Ptr];
   if (MapEntry) {
-    AliasSet *AS = MapEntry->getForwardedTarget(*this);
-    if (is_contained(AS->MemoryLocs, MemLoc)) {
-      if (AS != MapEntry) {
-        AS->addRef();
-        MapEntry->dropRef(*this);
-        MapEntry = AS;
-      }
-      return *AS;
-    }
+    collapseForwardingIn(MapEntry);
+    if (is_contained(MapEntry->MemoryLocs, MemLoc))
+      return *MapEntry;
   }
 
   AliasSet *AS;
@@ -296,10 +290,8 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     // consistent.
     // This, of course, means that we will never need a merge here.
     AS = AliasAnyAS;
-  } else if (AliasSet *AliasAS = mergeAliasSetsForPointer(
-                 MemLoc,
-                 MapEntry ? MapEntry->getForwardedTarget(*this) : nullptr,
-                 MustAliasAll)) {
+  } else if (AliasSet *AliasAS =
+                 mergeAliasSetsForPointer(MemLoc, MapEntry, MustAliasAll)) {
     // Add it to the alias set it aliases.
     AS = AliasAS;
   } else {
@@ -313,12 +305,7 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   // Register selected alias set in pointer map (or ensure it is consistent with
   // earlier map entry after taking into account new merging).
   if (MapEntry) {
-    if (MapEntry->Forward) {
-      AliasSet *NewAS = MapEntry->getForwardedTarget(*this);
-      NewAS->addRef();
-      MapEntry->dropRef(*this);
-      MapEntry = NewAS;
-    }
+    collapseForwardingIn(MapEntry);
     assert(MapEntry == AS && "Memory locations with same pointer value cannot "
                              "be in different alias sets");
   } else {
