@@ -2034,23 +2034,25 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     return ToDCOrErr.takeError();
   }
 
-  DeclContext *ToDC = *ToDCOrErr;
-  // Remove all declarations, which may be in wrong order in the
-  // lexical DeclContext and then add them in the proper order.
-  for (auto *D : FromDC->decls()) {
-    if (!MightNeedReordering(D))
-      continue;
+  if (const auto *FromRD = dyn_cast<RecordDecl>(FromDC)) {
+    DeclContext *ToDC = *ToDCOrErr;
+    // Remove all declarations, which may be in wrong order in the
+    // lexical DeclContext and then add them in the proper order.
+    for (auto *D : FromRD->decls()) {
+      if (!MightNeedReordering(D))
+        continue;
 
-    assert(D && "DC contains a null decl");
-    if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
-      // Remove only the decls which we successfully imported.
-      assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
-      // Remove the decl from its wrong place in the linked list.
-      ToDC->removeDecl(ToD);
-      // Add the decl to the end of the linked list.
-      // This time it will be at the proper place because the enclosing for
-      // loop iterates in the original (good) order of the decls.
-      ToDC->addDeclInternal(ToD);
+      assert(D && "DC contains a null decl");
+      if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
+        // Remove only the decls which we successfully imported.
+        assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
+        // Remove the decl from its wrong place in the linked list.
+        ToDC->removeDecl(ToD);
+        // Add the decl to the end of the linked list.
+        // This time it will be at the proper place because the enclosing for
+        // loop iterates in the original (good) order of the decls.
+        ToDC->addDeclInternal(ToD);
+      }
     }
   }
 
@@ -9028,6 +9030,10 @@ class AttrImporter {
 public:
   AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
 
+  // Useful for accessing the imported attribute.
+  template <typename T> T *castAttrAs() { return cast<T>(ToAttr); }
+  template <typename T> const T *castAttrAs() const { return cast<T>(ToAttr); }
+
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function
   // 'importAttr', in the order that is expected by the attribute class.
@@ -9239,6 +9245,15 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     AI.importAttr(From,
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
+    break;
+  }
+  case attr::CountedBy: {
+    AI.cloneAttr(FromAttr);
+    const auto *CBA = cast<CountedByAttr>(FromAttr);
+    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
+    if (!SR)
+      return SR.takeError();
+    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
     break;
   }
 

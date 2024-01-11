@@ -2301,4 +2301,29 @@ TEST(CommandLineTest, SubCommandGroups) {
   EXPECT_FALSE(SC3.OptionsMap.contains("opt12"));
 }
 
+TEST(CommandLineTest, HelpWithEmptyCategory) {
+  cl::ResetCommandLineParser();
+
+  cl::OptionCategory Category1("First Category");
+  cl::OptionCategory Category2("Second Category");
+  StackOption<int> Opt1("opt1", cl::cat(Category1));
+  StackOption<int> Opt2("opt2", cl::cat(Category2));
+  cl::HideUnrelatedOptions(Category2);
+
+  const char *args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+  auto Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
+  Output = interceptStdout(
+      []() { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/true); });
+  EXPECT_EQ(std::string::npos, Output.find("First Category"))
+      << "An empty category should not be printed";
+
+  cl::ResetCommandLineParser();
+}
+
 } // anonymous namespace

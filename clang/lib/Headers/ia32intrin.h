@@ -26,51 +26,48 @@
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #endif
 
-/** Find the first set bit starting from the lsb. Result is undefined if
- *  input is 0.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSF </c> instruction or the
- *  <c> TZCNT </c> instruction.
- *
- *  \param __A
- *     A 32-bit integer operand.
- *  \returns A 32-bit integer containing the bit number.
- */
+/// Find the first set bit starting from the lsb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSF instruction or the
+///    \c TZCNT instruction.
+///
+/// \param __A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfd(int __A) {
   return __builtin_ctz((unsigned int)__A);
 }
 
-/** Find the first set bit starting from the msb. Result is undefined if
- *  input is 0.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSR </c> instruction or the
- *  <c> LZCNT </c> instruction and an <c> XOR </c>.
- *
- *  \param __A
- *     A 32-bit integer operand.
- *  \returns A 32-bit integer containing the bit number.
- */
+/// Find the first set bit starting from the msb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSR instruction or the
+///    \c LZCNT instruction and an \c XOR.
+///
+/// \param __A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrd(int __A) {
   return 31 - __builtin_clz((unsigned int)__A);
 }
 
-/** Swaps the bytes in the input. Converting little endian to big endian or
- *  vice versa.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSWAP </c> instruction.
- *
- *  \param __A
- *     A 32-bit integer operand.
- *  \returns A 32-bit integer containing the swapped bytes.
- */
+/// Swaps the bytes in the input. Converting little endian to big endian or
+///    vice versa.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSWAP instruction.
+///
+/// \param __A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the swapped bytes.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapd(int __A) {
   return (int)__builtin_bswap32((unsigned int)__A);
@@ -85,51 +82,48 @@ _bswap(int __A) {
 #define _bit_scan_reverse(A) __bsrd((A))
 
 #ifdef __x86_64__
-/** Find the first set bit starting from the lsb. Result is undefined if
- *  input is 0.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSF </c> instruction or the
- *  <c> TZCNT </c> instruction.
- *
- *  \param __A
- *     A 64-bit integer operand.
- *  \returns A 32-bit integer containing the bit number.
- */
+/// Find the first set bit starting from the lsb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSF instruction or the
+///    \c TZCNT instruction.
+///
+/// \param __A
+///    A 64-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfq(long long __A) {
   return (long long)__builtin_ctzll((unsigned long long)__A);
 }
 
-/** Find the first set bit starting from the msb. Result is undefined if
- *  input is 0.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSR </c> instruction or the
- *  <c> LZCNT </c> instruction and an <c> XOR </c>.
- *
- *  \param __A
- *     A 64-bit integer operand.
- *  \returns A 32-bit integer containing the bit number.
- */
+/// Find the first set bit starting from the msb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSR instruction or the
+///    \c LZCNT instruction and an \c XOR.
+///
+/// \param __A
+///    A 64-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrq(long long __A) {
   return 63 - __builtin_clzll((unsigned long long)__A);
 }
 
-/** Swaps the bytes in the input. Converting little endian to big endian or
- *  vice versa.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> BSWAP </c> instruction.
- *
- *  \param __A
- *     A 64-bit integer operand.
- *  \returns A 64-bit integer containing the swapped bytes.
- */
+/// Swaps the bytes in the input. Converting little endian to big endian or
+///    vice versa.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSWAP instruction.
+///
+/// \param __A
+///    A 64-bit integer operand.
+/// \returns A 64-bit integer containing the swapped bytes.
 static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapq(long long __A) {
   return (long long)__builtin_bswap64((unsigned long long)__A);
@@ -138,18 +132,17 @@ __bswapq(long long __A) {
 #define _bswap64(A) __bswapq((A))
 #endif
 
-/** Counts the number of bits in the source operand having a value of 1.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> POPCNT </c> instruction or a
- *  a sequence of arithmetic and logic ops to calculate it.
- *
- *  \param __A
- *     An unsigned 32-bit integer operand.
- *  \returns A 32-bit integer containing the number of bits with value 1 in the
- *     source operand.
- */
+/// Counts the number of bits in the source operand having a value of 1.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c POPCNT instruction or a
+///    a sequence of arithmetic and logic ops to calculate it.
+///
+/// \param __A
+///    An unsigned 32-bit integer operand.
+/// \returns A 32-bit integer containing the number of bits with value 1 in the
+///    source operand.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntd(unsigned int __A)
 {
@@ -159,18 +152,17 @@ __popcntd(unsigned int __A)
 #define _popcnt32(A) __popcntd((A))
 
 #ifdef __x86_64__
-/** Counts the number of bits in the source operand having a value of 1.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> POPCNT </c> instruction or a
- *  a sequence of arithmetic and logic ops to calculate it.
- *
- *  \param __A
- *     An unsigned 64-bit integer operand.
- *  \returns A 64-bit integer containing the number of bits with value 1 in the
- *     source operand.
- */
+/// Counts the number of bits in the source operand having a value of 1.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c POPCNT instruction or a
+///    a sequence of arithmetic and logic ops to calculate it.
+///
+/// \param __A
+///    An unsigned 64-bit integer operand.
+/// \returns A 64-bit integer containing the number of bits with value 1 in the
+///    source operand.
 static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntq(unsigned long long __A)
 {
@@ -207,123 +199,120 @@ __writeeflags(unsigned int __f)
 }
 #endif /* !__x86_64__ */
 
-/** Cast a 32-bit float value to a 32-bit unsigned integer value
- *
- *  \headerfile <x86intrin.h>
- *  This intrinsic corresponds to the <c> VMOVD / MOVD </c> instruction in x86_64,
- *  and corresponds to the <c> VMOVL / MOVL </c> instruction in ia32.
- *
- *  \param __A
- *     A 32-bit float value.
- *  \returns a 32-bit unsigned integer containing the converted value.
- */
+/// Cast a 32-bit float value to a 32-bit unsigned integer value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMOVD / \c MOVD instruction in x86_64,
+///    and corresponds to the \c VMOVL / \c MOVL instruction in ia32.
+///
+/// \param __A
+///    A 32-bit float value.
+/// \returns a 32-bit unsigned integer containing the converted value.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CAST
 _castf32_u32(float __A) {
   return __builtin_bit_cast(unsigned int, __A);
 }
 
-/** Cast a 64-bit float value to a 64-bit unsigned integer value
- *
- *  \headerfile <x86intrin.h>
- *  This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction in x86_64,
- *  and corresponds to the <c> VMOVL / MOVL </c> instruction in ia32.
- *
- *  \param __A
- *     A 64-bit float value.
- *  \returns a 64-bit unsigned integer containing the converted value.
- */
+/// Cast a 64-bit float value to a 64-bit unsigned integer value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMOVQ / \c MOVQ instruction in x86_64,
+///    and corresponds to the \c VMOVL / \c MOVL instruction in ia32.
+///
+/// \param __A
+///    A 64-bit float value.
+/// \returns a 64-bit unsigned integer containing the converted value.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CAST
 _castf64_u64(double __A) {
   return __builtin_bit_cast(unsigned long long, __A);
 }
 
-/** Cast a 32-bit unsigned integer value to a 32-bit float value
- *
- *  \headerfile <x86intrin.h>
- *  This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction in x86_64,
- *  and corresponds to the <c> FLDS </c> instruction in ia32.
- *
- *  \param __A
- *     A 32-bit unsigned integer value.
- *  \returns a 32-bit float value containing the converted value.
- */
+/// Cast a 32-bit unsigned integer value to a 32-bit float value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMOVQ / \c MOVQ instruction in x86_64,
+///    and corresponds to the \c FLDS instruction in ia32.
+///
+/// \param __A
+///    A 32-bit unsigned integer value.
+/// \returns a 32-bit float value containing the converted value.
 static __inline__ float __DEFAULT_FN_ATTRS_CAST
 _castu32_f32(unsigned int __A) {
   return __builtin_bit_cast(float, __A);
 }
 
-/** Cast a 64-bit unsigned integer value to a 64-bit float value
- *
- *  \headerfile <x86intrin.h>
- *  This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction in x86_64,
- *  and corresponds to the <c> FLDL </c> instruction in ia32.
- *
- *  \param __A
- *     A 64-bit unsigned integer value.
- *  \returns a 64-bit float value containing the converted value.
- */
+/// Cast a 64-bit unsigned integer value to a 64-bit float value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMOVQ / \c MOVQ instruction in x86_64,
+///    and corresponds to the \c FLDL instruction in ia32.
+///
+/// \param __A
+///    A 64-bit unsigned integer value.
+/// \returns a 64-bit float value containing the converted value.
 static __inline__ double __DEFAULT_FN_ATTRS_CAST
 _castu64_f64(unsigned long long __A) {
   return __builtin_bit_cast(double, __A);
 }
 
-/** Adds the unsigned integer operand to the CRC-32C checksum of the
- *     unsigned char operand.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> CRC32B </c> instruction.
- *
- *  \param __C
- *     An unsigned integer operand to add to the CRC-32C checksum of operand
- *     \a  __D.
- *  \param __D
- *     An unsigned 8-bit integer operand used to compute the CRC-32C checksum.
- *  \returns The result of adding operand \a __C to the CRC-32C checksum of
- *     operand \a __D.
- */
+/// Adds the unsigned integer operand to the CRC-32C checksum of the
+///     unsigned char operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CRC32B instruction.
+///
+/// \param __C
+///    An unsigned integer operand to add to the CRC-32C checksum of operand
+///    \a  __D.
+/// \param __D
+///    An unsigned 8-bit integer operand used to compute the CRC-32C checksum.
+/// \returns The result of adding operand \a __C to the CRC-32C checksum of
+///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CRC32
 __crc32b(unsigned int __C, unsigned char __D)
 {
   return __builtin_ia32_crc32qi(__C, __D);
 }
 
-/** Adds the unsigned integer operand to the CRC-32C checksum of the
- *     unsigned short operand.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> CRC32W </c> instruction.
- *
- *  \param __C
- *     An unsigned integer operand to add to the CRC-32C checksum of operand
- *     \a  __D.
- *  \param __D
- *     An unsigned 16-bit integer operand used to compute the CRC-32C checksum.
- *  \returns The result of adding operand \a __C to the CRC-32C checksum of
- *     operand \a __D.
- */
+/// Adds the unsigned integer operand to the CRC-32C checksum of the
+///    unsigned short operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CRC32W instruction.
+///
+/// \param __C
+///    An unsigned integer operand to add to the CRC-32C checksum of operand
+///    \a  __D.
+/// \param __D
+///    An unsigned 16-bit integer operand used to compute the CRC-32C checksum.
+/// \returns The result of adding operand \a __C to the CRC-32C checksum of
+///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CRC32
 __crc32w(unsigned int __C, unsigned short __D)
 {
   return __builtin_ia32_crc32hi(__C, __D);
 }
 
-/** Adds the unsigned integer operand to the CRC-32C checksum of the
- *     second unsigned integer operand.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> CRC32D </c> instruction.
- *
- *  \param __C
- *     An unsigned integer operand to add to the CRC-32C checksum of operand
- *     \a  __D.
- *  \param __D
- *     An unsigned 32-bit integer operand used to compute the CRC-32C checksum.
- *  \returns The result of adding operand \a __C to the CRC-32C checksum of
- *     operand \a __D.
- */
+/// Adds the unsigned integer operand to the CRC-32C checksum of the
+///    second unsigned integer operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CRC32D instruction.
+///
+/// \param __C
+///    An unsigned integer operand to add to the CRC-32C checksum of operand
+///    \a  __D.
+/// \param __D
+///    An unsigned 32-bit integer operand used to compute the CRC-32C checksum.
+/// \returns The result of adding operand \a __C to the CRC-32C checksum of
+///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CRC32
 __crc32d(unsigned int __C, unsigned int __D)
 {
@@ -331,21 +320,20 @@ __crc32d(unsigned int __C, unsigned int __D)
 }
 
 #ifdef __x86_64__
-/** Adds the unsigned integer operand to the CRC-32C checksum of the
- *     unsigned 64-bit integer operand.
- *
- *  \headerfile <x86intrin.h>
- *
- *  This intrinsic corresponds to the <c> CRC32Q </c> instruction.
- *
- *  \param __C
- *     An unsigned integer operand to add to the CRC-32C checksum of operand
- *     \a  __D.
- *  \param __D
- *     An unsigned 64-bit integer operand used to compute the CRC-32C checksum.
- *  \returns The result of adding operand \a __C to the CRC-32C checksum of
- *     operand \a __D.
- */
+/// Adds the unsigned integer operand to the CRC-32C checksum of the
+///    unsigned 64-bit integer operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CRC32Q instruction.
+///
+/// \param __C
+///    An unsigned integer operand to add to the CRC-32C checksum of operand
+///    \a  __D.
+/// \param __D
+///    An unsigned 64-bit integer operand used to compute the CRC-32C checksum.
+/// \returns The result of adding operand \a __C to the CRC-32C checksum of
+///    operand \a __D.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CRC32
 __crc32q(unsigned long long __C, unsigned long long __D)
 {
