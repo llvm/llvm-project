@@ -189,7 +189,7 @@ struct ElementwiseArithOpPattern : public OpConversionPattern<Op> {
                           "unsigned op pattern version");
     }
 
-    auto converter = this->getTypeConverter<SPIRVTypeConverter>();
+    auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
     auto overflowFlags = arith::IntegerOverflowFlags::none;
     if (auto overflowIface =
             dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(*op)) {
