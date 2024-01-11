@@ -446,6 +446,8 @@ public:
     /// inline cost heuristic, but it's a generic cost model to be used in other
     /// places (e.g., in loop unrolling).
     unsigned N = SI.getNumCases();
+    bool HasDefault =
+        !isa<UnreachableInst>(SI.getDefaultDest()->getFirstNonPHIOrDbg());
     const TargetLoweringBase *TLI = getTLI();
     const DataLayout &DL = this->getDataLayout();
 
@@ -454,7 +456,7 @@ public:
 
     // Early exit if both a jump table and bit test are not allowed.
     if (N < 1 || (!IsJTAllowed && DL.getIndexSizeInBits(0u) < N))
-      return N;
+      return N + HasDefault;
 
     APInt MaxCaseVal = SI.case_begin()->getCaseValue()->getValue();
     APInt MinCaseVal = MaxCaseVal;
@@ -474,23 +476,23 @@ public:
 
       if (TLI->isSuitableForBitTests(Dests.size(), N, MinCaseVal, MaxCaseVal,
                                      DL))
-        return 1;
+        return 1 + HasDefault;
     }
 
     // Check if suitable for a jump table.
     if (IsJTAllowed) {
       if (N < 2 || N < TLI->getMinimumJumpTableEntries())
-        return N;
+        return N + HasDefault;
       uint64_t Range =
           (MaxCaseVal - MinCaseVal)
               .getLimitedValue(std::numeric_limits<uint64_t>::max() - 1) + 1;
       // Check whether a range of clusters is dense enough for a jump table
       if (TLI->isSuitableForJumpTable(&SI, N, Range, PSI, BFI)) {
         JumpTableSize = Range;
-        return 1;
+        return 1 + HasDefault;
       }
     }
-    return N;
+    return N + HasDefault;
   }
 
   bool shouldBuildLookupTables() {

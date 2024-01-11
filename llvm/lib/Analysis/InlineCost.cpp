@@ -707,8 +707,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     if (JumpTableSize) {
       int64_t JTCost =
           static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
-
       addCost(JTCost);
+      if (NumCaseCluster > 1)
+        addCost((NumCaseCluster - 1) * 2 * InstrCost);
       return;
     }
 
@@ -1238,6 +1239,9 @@ private:
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
+      if (NumCaseCluster > 1)
+        increment(InlineCostFeatureIndex::case_cluster_penalty,
+                  (NumCaseCluster - 1) * CaseClusterCostMultiplier * InstrCost);
       return;
     }
 

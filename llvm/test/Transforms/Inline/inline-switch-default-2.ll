@@ -50,24 +50,7 @@ define i64 @foo1(i64 %0) {
 ;
 ; CHECK-LABEL: define i64 @foo1(
 ; CHECK-SAME: i64 [[TMP0:%.*]]) {
-; CHECK-NEXT:    switch i64 [[TMP0]], label [[DEFAULT_BRANCH_I:%.*]] [
-; CHECK-NEXT:      i64 0, label [[BRANCH_0_I:%.*]]
-; CHECK-NEXT:      i64 2, label [[BRANCH_2_I:%.*]]
-; CHECK-NEXT:      i64 4, label [[BRANCH_4_I:%.*]]
-; CHECK-NEXT:      i64 6, label [[BRANCH_6_I:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       branch_0.i:
-; CHECK-NEXT:    br label [[BAR1_EXIT:%.*]]
-; CHECK:       branch_2.i:
-; CHECK-NEXT:    br label [[BAR1_EXIT]]
-; CHECK:       branch_4.i:
-; CHECK-NEXT:    br label [[BAR1_EXIT]]
-; CHECK:       branch_6.i:
-; CHECK-NEXT:    br label [[BAR1_EXIT]]
-; CHECK:       default_branch.i:
-; CHECK-NEXT:    br label [[BAR1_EXIT]]
-; CHECK:       bar1.exit:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ], [ 3, [[DEFAULT_BRANCH_I]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @bar1(i64 [[TMP0]])
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = call i64 @bar1(i64 %0)

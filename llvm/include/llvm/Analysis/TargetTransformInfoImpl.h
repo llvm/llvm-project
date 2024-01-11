@@ -65,7 +65,9 @@ public:
     (void)PSI;
     (void)BFI;
     JTSize = 0;
-    return SI.getNumCases();
+    bool HasDefault =
+        !isa<UnreachableInst>(SI.getDefaultDest()->getFirstNonPHIOrDbg());
+    return SI.getNumCases() + HasDefault;
   }
 
   unsigned getInliningThresholdMultiplier() const { return 1; }

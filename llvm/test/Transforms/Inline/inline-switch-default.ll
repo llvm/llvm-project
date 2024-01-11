@@ -5,51 +5,17 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; FIXME: The `bar1` should not be inlined.
+; The `bar1` should not be inlined since there is a default branch.
 
 define i64 @foo1(i64 %0) {
 ; LOOKUPTABLE-LABEL: define i64 @foo1(
 ; LOOKUPTABLE-SAME: i64 [[TMP0:%.*]]) {
-; LOOKUPTABLE-NEXT:    switch i64 [[TMP0]], label [[DEFAULT_BRANCH_I:%.*]] [
-; LOOKUPTABLE-NEXT:      i64 0, label [[BRANCH_0_I:%.*]]
-; LOOKUPTABLE-NEXT:      i64 2, label [[BRANCH_2_I:%.*]]
-; LOOKUPTABLE-NEXT:      i64 4, label [[BRANCH_4_I:%.*]]
-; LOOKUPTABLE-NEXT:      i64 6, label [[BRANCH_6_I:%.*]]
-; LOOKUPTABLE-NEXT:    ]
-; LOOKUPTABLE:       branch_0.i:
-; LOOKUPTABLE-NEXT:    br label [[BAR1_EXIT:%.*]]
-; LOOKUPTABLE:       branch_2.i:
-; LOOKUPTABLE-NEXT:    br label [[BAR1_EXIT]]
-; LOOKUPTABLE:       branch_4.i:
-; LOOKUPTABLE-NEXT:    br label [[BAR1_EXIT]]
-; LOOKUPTABLE:       branch_6.i:
-; LOOKUPTABLE-NEXT:    br label [[BAR1_EXIT]]
-; LOOKUPTABLE:       default_branch.i:
-; LOOKUPTABLE-NEXT:    br label [[BAR1_EXIT]]
-; LOOKUPTABLE:       bar1.exit:
-; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ], [ 3, [[DEFAULT_BRANCH_I]] ]
+; LOOKUPTABLE-NEXT:    [[TMP2:%.*]] = call i64 @bar1(i64 [[TMP0]])
 ; LOOKUPTABLE-NEXT:    ret i64 [[TMP2]]
 ;
 ; SWITCH-LABEL: define i64 @foo1(
 ; SWITCH-SAME: i64 [[TMP0:%.*]]) {
-; SWITCH-NEXT:    switch i64 [[TMP0]], label [[DEFAULT_BRANCH_I:%.*]] [
-; SWITCH-NEXT:      i64 0, label [[BRANCH_0_I:%.*]]
-; SWITCH-NEXT:      i64 2, label [[BRANCH_2_I:%.*]]
-; SWITCH-NEXT:      i64 4, label [[BRANCH_4_I:%.*]]
-; SWITCH-NEXT:      i64 6, label [[BRANCH_6_I:%.*]]
-; SWITCH-NEXT:    ]
-; SWITCH:       branch_0.i:
-; SWITCH-NEXT:    br label [[BAR1_EXIT:%.*]]
-; SWITCH:       branch_2.i:
-; SWITCH-NEXT:    br label [[BAR1_EXIT]]
-; SWITCH:       branch_4.i:
-; SWITCH-NEXT:    br label [[BAR1_EXIT]]
-; SWITCH:       branch_6.i:
-; SWITCH-NEXT:    br label [[BAR1_EXIT]]
-; SWITCH:       default_branch.i:
-; SWITCH-NEXT:    br label [[BAR1_EXIT]]
-; SWITCH:       bar1.exit:
-; SWITCH-NEXT:    [[TMP2:%.*]] = phi i64 [ 5, [[BRANCH_0_I]] ], [ 9, [[BRANCH_2_I]] ], [ 2, [[BRANCH_4_I]] ], [ 7, [[BRANCH_6_I]] ], [ 3, [[DEFAULT_BRANCH_I]] ]
+; SWITCH-NEXT:    [[TMP2:%.*]] = call i64 @bar1(i64 [[TMP0]])
 ; SWITCH-NEXT:    ret i64 [[TMP2]]
 ;
   %2 = call i64 @bar1(i64 %0)
