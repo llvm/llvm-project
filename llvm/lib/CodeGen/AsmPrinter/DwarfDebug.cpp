@@ -3580,12 +3580,12 @@ void DwarfDebug::addAccelNameImpl(
     break;
   case AccelTableKind::Dwarf: {
     DWARF5AccelTable &Current = getCurrentDWARF5AccelTable();
-    assert((CurrentKind == DWARF5AccelTableKind::TU) ||
-           ((CurrentKind == DWARF5AccelTableKind::CU) &&
+    assert((&Current == &AccelTypeUnitsDebugNames) ||
+           ((&Current == &AccelDebugNames) &&
             (Unit.getUnitDie().getTag() != dwarf::DW_TAG_type_unit)) &&
                "Kind is CU but TU is being processed.");
-    assert((CurrentKind == DWARF5AccelTableKind::CU) ||
-           ((CurrentKind == DWARF5AccelTableKind::TU) &&
+    assert((&Current == &AccelDebugNames) ||
+           ((&Current == &AccelTypeUnitsDebugNames) &&
             (Unit.getUnitDie().getTag() == dwarf::DW_TAG_type_unit)) &&
                "Kind is TU but CU is being processed.");
     // The type unit can be discarded, so need to add references to final
