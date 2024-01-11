@@ -17,6 +17,86 @@
 namespace lldb_private {
 class Stream;
 
+/// Wraps either a FileSpec that represents a local file or a source
+/// file whose contents is known (for example because it can be
+/// reconstructed from debug info), but that hasn't been written to a
+/// file yet.
+class SupportFile {
+protected:
+  FileSpec m_file_spec;
+
+public:
+  SupportFile(const FileSpec &spec) : m_file_spec(spec) {}
+  SupportFile(const SupportFile &other) = delete;
+  SupportFile(SupportFile &&other) = default;
+  virtual ~SupportFile() = default;
+  bool operator==(const SupportFile &other) {
+    return m_file_spec == other.m_file_spec;
+  }
+  /// Return the file name only. Useful for resolving breakpoints by file name.
+  const FileSpec &GetSpecOnly() const { return m_file_spec; };
+  /// Materialize the file to disk and return the path to that temporary file.
+  virtual const FileSpec &Materialize() { return m_file_spec; }
+};
+
+/// A list of support files for a CompileUnit.
+class SupportFileList {
+public:
+  SupportFileList(){};
+  SupportFileList(const SupportFileList &) = delete;
+  SupportFileList(SupportFileList &&other) = default;
+
+  typedef std::vector<std::unique_ptr<SupportFile>> collection;
+  typedef collection::const_iterator const_iterator;
+  const_iterator begin() const { return m_files.begin(); }
+  const_iterator end() const { return m_files.end(); }
+
+  void Append(const FileSpec &file) {
+    return Append(std::make_unique<SupportFile>(file));
+  }
+  void Append(std::unique_ptr<SupportFile> &&file) {
+    m_files.push_back(std::move(file));
+  }
+  // FIXME: Only used by SymbolFilePDB. Replace with a DenseSet at call site.
+  bool AppendIfUnique(const FileSpec &file);
+  size_t GetSize() const { return m_files.size(); }
+  const FileSpec &GetFileSpecAtIndex(size_t idx) const;
+  size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
+  /// Find a compatible file index.
+  ///
+  /// Find the index of a compatible file in the file spec list that matches \a
+  /// file starting \a idx entries into the file spec list. A file is considered
+  /// compatible if:
+  /// - The file matches exactly (only filename if \a file has no directory)
+  /// - If \a file is relative and any file in the list has this same suffix
+  /// - If any file in the list is relative and the relative path is a suffix
+  ///   of \a file
+  ///
+  /// This is used to implement better matching for setting breakpoints in
+  /// source files where an IDE might specify a full path when setting the
+  /// breakpoint and debug info contains relative paths, if a user specifies
+  /// a relative path when setting a breakpoint.
+  ///
+  /// \param[in] idx
+  ///     An index into the file list.
+  ///
+  /// \param[in] file
+  ///     The file specification to search for.
+  ///
+  /// \return
+  ///     The index of the file that matches \a file if it is found,
+  ///     else UINT32_MAX is returned.
+  size_t FindCompatibleIndex(size_t idx, const FileSpec &file) const;
+
+  template <class... Args> void EmplaceBack(Args &&...args) {
+    m_files.push_back(
+        std::make_unique<SupportFile>(FileSpec(std::forward<Args>(args)...)));
+  }
+
+protected:
+  collection m_files; ///< A collection of FileSpec objects.
+};
+
 /// \class FileSpecList FileSpecList.h "lldb/Utility/FileSpecList.h"
 /// A file collection class.
 ///
@@ -113,32 +193,6 @@ public:
   ///     The index of the file that matches \a file if it is found,
   ///     else UINT32_MAX is returned.
   size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
-
-  /// Find a compatible file index.
-  ///
-  /// Find the index of a compatible file in the file spec list that matches \a
-  /// file starting \a idx entries into the file spec list. A file is considered
-  /// compatible if:
-  /// - The file matches exactly (only filename if \a file has no directory)
-  /// - If \a file is relative and any file in the list has this same suffix
-  /// - If any file in the list is relative and the relative path is a suffix
-  ///   of \a file
-  ///
-  /// This is used to implement better matching for setting breakpoints in
-  /// source files where an IDE might specify a full path when setting the
-  /// breakpoint and debug info contains relative paths, if a user specifies
-  /// a relative path when setting a breakpoint.
-  ///
-  /// \param[in] idx
-  ///     An index into the file list.
-  ///
-  /// \param[in] file
-  ///     The file specification to search for.
-  ///
-  /// \return
-  ///     The index of the file that matches \a file if it is found,
-  ///     else UINT32_MAX is returned.
-  size_t FindCompatibleIndex(size_t idx, const FileSpec &file) const;
 
   /// Get file at index.
   ///

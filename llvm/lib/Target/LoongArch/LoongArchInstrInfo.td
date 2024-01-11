@@ -69,6 +69,18 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 def loongarch_tail : SDNode<"LoongArchISD::TAIL", SDT_LoongArchCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;
+def loongarch_call_medium : SDNode<"LoongArchISD::CALL_MEDIUM", SDT_LoongArchCall,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                    SDNPVariadic]>;
+def loongarch_tail_medium : SDNode<"LoongArchISD::TAIL_MEDIUM", SDT_LoongArchCall,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                    SDNPVariadic]>;
+def loongarch_call_large : SDNode<"LoongArchISD::CALL_LARGE", SDT_LoongArchCall,
+                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                   SDNPVariadic]>;
+def loongarch_tail_large : SDNode<"LoongArchISD::TAIL_LARGE", SDT_LoongArchCall,
+                                  [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                   SDNPVariadic]>;
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
@@ -375,6 +387,10 @@ def simm20_lu12iw : SImm20Operand {
 
 def simm20_lu32id : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
+}
+
+def simm20_pcaddu18i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
 
 def simm21_lsl2 : Operand<OtherVT> {
@@ -832,7 +848,7 @@ def LU32I_D : Fmt1RI20<0x16000000, (outs GPR:$dst),
                        "$rd, $imm20">;
 }
 def LU52I_D : ALU_2RI12<0x03000000, simm12_lu52id>;
-def PCADDU18I : ALU_1RI20<0x1e000000, simm20>;
+def PCADDU18I : ALU_1RI20<0x1e000000, simm20_pcaddu18i>;
 def MUL_D     : ALU_3R<0x001d8000>;
 def MULH_D    : ALU_3R<0x001e0000>;
 def MULH_DU   : ALU_3R<0x001e8000>;
@@ -1395,16 +1411,43 @@ def : Pat<(brind GPR:$rj), (PseudoBRIND GPR:$rj, 0)>;
 def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
+// Function call with 'Small' code model.
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins simm26_symbol:$func)>;
+def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+
+// Function call with 'Medium' code model.
+let isCall = 1, Defs = [R1, R20], Size = 8 in
+def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_call_medium tglobaladdr:$func),
+          (PseudoCALL_MEDIUM tglobaladdr:$func)>;
+def : Pat<(loongarch_call_medium texternalsym:$func),
+          (PseudoCALL_MEDIUM texternalsym:$func)>;
+} // Predicates = [IsLA64]
+
+// Function call with 'Large' code model.
+let isCall = 1, Defs = [R1, R20], Size = 24 in
+def PseudoCALL_LARGE: Pseudo<(outs), (ins bare_symbol:$func)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_call_large tglobaladdr:$func),
+          (PseudoCALL_LARGE tglobaladdr:$func)>;
+def : Pat<(loongarch_call_large texternalsym:$func),
+          (PseudoCALL_LARGE texternalsym:$func)>;
+} // Predicates = [IsLA64]
 
 let isCall = 1, Defs = [R1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_call_medium GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
+def : Pat<(loongarch_call_large GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
+}
 
 let isCall = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0, Defs = [R1] in
 def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
@@ -1415,18 +1458,47 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
+// Tail call with 'Small' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
-def PseudoTAIL : Pseudo<(outs), (ins simm26_symbol:$dst)>;
+def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 def : Pat<(loongarch_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
+// Tail call with 'Medium' code model.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    Uses = [R3], Defs = [R20], Size = 8 in
+def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_tail_medium (iPTR tglobaladdr:$dst)),
+          (PseudoTAIL_MEDIUM tglobaladdr:$dst)>;
+def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
+          (PseudoTAIL_MEDIUM texternalsym:$dst)>;
+} // Predicates = [IsLA64]
+
+// Tail call with 'Large' code model.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    Uses = [R3], Defs = [R19, R20], Size = 24 in
+def PseudoTAIL_LARGE : Pseudo<(outs), (ins bare_symbol:$dst)>;
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_tail_large (iPTR tglobaladdr:$dst)),
+          (PseudoTAIL_LARGE tglobaladdr:$dst)>;
+def : Pat<(loongarch_tail_large (iPTR texternalsym:$dst)),
+          (PseudoTAIL_LARGE texternalsym:$dst)>;
+} // Predicates = [IsLA64]
+
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
                                 [(loongarch_tail GPRT:$rj)]>,
                          PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_tail_medium GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
+def : Pat<(loongarch_tail_large GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
+}
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
@@ -1438,6 +1510,19 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
+
+/// call36/taill36 macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], Size = 8, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL36 : Pseudo<(outs), (ins bare_symbol:$dst), [],
+                          "call36", "$dst">,
+                   Requires<[IsLA64]>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                          "tail36", "$tmp, $dst">,
+                   Requires<[IsLA64]>;
 
 /// Load address (la*) macro instructions.
 
@@ -1451,6 +1536,7 @@ def PseudoLA_ABS_LARGE : Pseudo<(outs GPR:$dst),
                                 "la.abs", "$dst, $src">;
 def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                             "la.pcrel", "$dst, $src">;
+let Defs = [R20], Size = 20 in
 def PseudoLA_PCREL_LARGE : Pseudo<(outs GPR:$dst),
                                   (ins GPR:$tmp, bare_symbol:$src), [],
                                   "la.pcrel", "$dst, $tmp, $src">,
@@ -1462,28 +1548,30 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in {
 def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                           "la.got", "$dst, $src">;
+def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ie", "$dst, $src">;
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.ld", "$dst, $src">;
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tls.gd", "$dst, $src">;
+let Defs = [R20], Size = 20 in {
 def PseudoLA_GOT_LARGE : Pseudo<(outs GPR:$dst),
                                 (ins GPR:$tmp, bare_symbol:$src), [],
                                 "la.got", "$dst, $tmp, $src">,
                          Requires<[IsLA64]>;
-def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tls.ie", "$dst, $src">;
 def PseudoLA_TLS_IE_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.ie", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tls.ld", "$dst, $src">;
 def PseudoLA_TLS_LD_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.ld", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
-def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
-                             "la.tls.gd", "$dst, $src">;
 def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
                                    (ins GPR:$tmp, bare_symbol:$src), [],
                                    "la.tls.gd", "$dst, $tmp, $src">,
                             Requires<[IsLA64]>;
+} // Defs = [R20], Size = 20
 }
 
 // Load address inst alias: "la", "la.global" and "la.local".

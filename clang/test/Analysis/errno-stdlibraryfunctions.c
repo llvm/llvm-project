@@ -74,3 +74,18 @@ void errno_mkdtemp(char *template) {
     if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
+
+void errno_getcwd(char *Buf, size_t Sz) {
+  char *Path = getcwd(Buf, Sz);
+  if (Sz == 0) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    clang_analyzer_eval(Path == NULL); // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else {
+    clang_analyzer_eval(Path == Buf);  // expected-warning{{TRUE}}
+    if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}

@@ -63,7 +63,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: At most one VECTOR clause can appear on the LOOP directive
+  !ERROR: At most one VECTOR clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop vector vector(128)
   do i = 1, N
     a(i) = 3.14
@@ -99,7 +99,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: At most one WORKER clause can appear on the LOOP directive
+  !ERROR: At most one WORKER clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop worker worker(10)
   do i = 1, N
     a(i) = 3.14
@@ -135,12 +135,28 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: At most one GANG clause can appear on the LOOP directive
+  !ERROR: At most one GANG clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
   !$acc loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14
   end do
   !$acc end parallel
+
+  !$acc loop gang device_type(default) gang(gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !ERROR: At most one GANG clause can appear on the PARALLEL LOOP directive or in group separated by the DEVICE_TYPE clause
+  !$acc parallel loop gang gang(gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop gang device_type(default) gang(gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
 
   !$acc parallel
   !$acc loop gang(gang_size)
@@ -282,5 +298,23 @@ program openacc_loop_validity
     if(i == 10) cycle
   end do
   !$acc end parallel
+
+  !$acc loop gang device_type(nvidia) gang(num: 8)
+  DO i = 1, n
+  END DO
+
+  !$acc loop vector device_type(default) vector(16)
+  DO i = 1, n
+  END DO
+
+  !$acc loop worker device_type(*) worker(8)
+  DO i = 1, n
+  END DO
+
+  !$acc loop device_type(multicore) collapse(2)
+  DO i = 1, n
+    DO j = 1, n
+    END DO
+  END DO
 
 end program openacc_loop_validity

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fms-extensions -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++23 -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -mllvm -emptyline-comment-coverage=false -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++2b -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
 int nop() { return 0; }
 struct S {
@@ -22,19 +23,49 @@ void foo() {                    // CHECK-NEXT: Gap,File 0, [[@LINE+1]]:21 -> [[@
 }                               // CHECK-NEXT: [[@LINE-2]]:9 -> [[@LINE-1]]:5 = #1
                                 // CHECK-NEXT: [[@LINE-2]]:5 -> [[@LINE-2]]:8 = #1
 
-// FIXME: Do not generate coverage for discarded branches in if consteval and if constexpr statements
-constexpr int check_consteval(int i) {
-    if consteval {
-      i++;
-    }
-    if !consteval {
-      i++;
-    }
-    if consteval {
-        return 42;
-    } else {
-        return i;
-    }
+// FIXME: Do not generate coverage for discarded branches in if constexpr
+// CHECK-LABEL: _Z30check_constexpr_true_with_elsei:
+int check_constexpr_true_with_else(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+                                // CHECK-NEXT: [[@LINE+2]]:16 -> [[@LINE+2]]:20 = #0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:16 -> [[@LINE+1]]:20 = 0, 0
+  if constexpr(true) {          // CHECK-NEXT: Gap,File 0, [[@LINE]]:21 -> [[@LINE]]:22 = #1
+    i *= 3;                     // CHECK-NEXT: [[@LINE-1]]:22 -> [[@LINE+1]]:4 = #1
+  } else {                      // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE]]:10 = (#0 - #1)
+    i *= 5;                     // CHECK-NEXT: [[@LINE-1]]:10 -> [[@LINE+1]]:4 = (#0 - #1)
+  }
+  return i;
+}
+
+// CHECK-LABEL: _Z33check_constexpr_true_without_elsei:
+int check_constexpr_true_without_else(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+                                // CHECK-NEXT: [[@LINE+2]]:16 -> [[@LINE+2]]:20 = #0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:16 -> [[@LINE+1]]:20 = 0, 0
+  if constexpr(true) {          // CHECK-NEXT: Gap,File 0, [[@LINE]]:21 -> [[@LINE]]:22 = #1
+    i *= 3;                     // CHECK-NEXT: [[@LINE-1]]:22 -> [[@LINE+1]]:4 = #1
+  }
+  return i;
+}
+
+// CHECK-LABEL: _Z31check_constexpr_false_with_elsei:
+int check_constexpr_false_with_else(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+                                // CHECK-NEXT: [[@LINE+2]]:16 -> [[@LINE+2]]:21 = #0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:16 -> [[@LINE+1]]:21 = 0, 0
+  if constexpr(false) {         // CHECK-NEXT: Gap,File 0, [[@LINE]]:22 -> [[@LINE]]:23 = #1
+    i *= 3;                     // CHECK-NEXT: File 0, [[@LINE-1]]:23 -> [[@LINE+1]]:4 = #1
+  } else {                      // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE]]:10 = (#0 - #1)
+    i *= 5;                     // CHECK-NEXT: File 0, [[@LINE-1]]:10 -> [[@LINE+1]]:4 = (#0 - #1)
+  }
+  return i;
+}
+
+// CHECK-LABEL: _Z34check_constexpr_false_without_elsei:
+int check_constexpr_false_without_else(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+                                // CHECK-NEXT: [[@LINE+2]]:16 -> [[@LINE+2]]:21 = #0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:16 -> [[@LINE+1]]:21 = 0, 0
+  if constexpr(false) {         // CHECK-NEXT: Gap,File 0, [[@LINE]]:22 -> [[@LINE]]:23 = #1
+    i *= 3;                     // CHECK-NEXT: File 0, [[@LINE-1]]:23 -> [[@LINE+1]]:4 = #1
+  }
+  return i;
 }
 
 // CHECK-LABEL: main:
@@ -74,10 +105,6 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:14 -> [[@LINE+1]]:20 = #6
   i = i == 0?i + 12:i + 10;     // CHECK-NEXT: File 0, [[@LINE]]:21 -> [[@LINE]]:27 = (#0 - #6)
 
-  // GH-57377
-  constexpr int c_i = check_consteval(0);
-  check_consteval(i);
-
   // GH-45481
   S s;                    
   s.the_prop = 0? 1 : 2;        // CHECK-NEXT: File 0, [[@LINE]]:16 -> [[@LINE]]:17 = #0
@@ -96,4 +123,52 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
 // CHECK-LABEL: _Z7ternaryv:
 void ternary() {
   true ? FOO : FOO; // CHECK-NOT: Gap,{{.*}}, [[@LINE]]:8 ->
+}
+
+// GH-57377
+// CHECK-LABEL: _Z40check_consteval_with_else_discarded_theni:
+// FIXME: Do not generate coverage for discarded <then> branch in if consteval
+constexpr int check_consteval_with_else_discarded_then(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+  if consteval {                        
+    i *= 3;                             // CHECK-NEXT: [[@LINE-1]]:16 -> [[@LINE+1]]:4 = #1
+  } else {                              // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE]]:10 = #0
+    i *= 5;                             // CHECK-NEXT: [[@LINE-1]]:10 -> [[@LINE+1]]:4 = #0
+  }
+  return i;                             // CHECK-NEXT: [[@LINE]]:3 -> [[@LINE]]:11 = (#0 + #1)
+}
+
+// CHECK-LABEL: _Z43check_notconsteval_with_else_discarded_elsei:
+// FIXME: Do not generate coverage for discarded <else> branch in if consteval
+constexpr int check_notconsteval_with_else_discarded_else(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+  if !consteval {                        
+    i *= 3;                             // CHECK-NEXT: [[@LINE-1]]:17 -> [[@LINE+1]]:4 = #0
+  } else {                              // CHECK-NEXT: Gap,File 0, [[@LINE]]:4 -> [[@LINE]]:10 = 0
+    i *= 5;                             // CHECK-NEXT: [[@LINE-1]]:10 -> [[@LINE+1]]:4 = 0
+  }
+  return i;
+}
+
+// CHECK-LABEL: _Z32check_consteval_branch_discardedi:
+// FIXME: Do not generate coverage for discarded <then> branch in if consteval
+constexpr int check_consteval_branch_discarded(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+  if consteval {                        
+    i *= 3;                             // CHECK-NEXT: [[@LINE-1]]:16 -> [[@LINE+1]]:4 = #1
+  }
+  return i;                             // CHECK-NEXT: [[@LINE]]:3 -> [[@LINE]]:11 = (#0 + #1)
+}
+
+// CHECK-LABEL: _Z30check_notconsteval_branch_kepti:
+constexpr int check_notconsteval_branch_kept(int i) { // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+  if !consteval {                        
+    i *= 3;                             // CHECK-NEXT: [[@LINE-1]]:17 -> [[@LINE+1]]:4 = #0
+  }
+  return i;
+}
+
+int instantiate_consteval(int i) {
+  i *= check_consteval_with_else_discarded_then(i);
+  i *= check_notconsteval_with_else_discarded_else(i);
+  i *= check_consteval_branch_discarded(i);
+  i *= check_notconsteval_branch_kept(i);
+  return i;
 }
