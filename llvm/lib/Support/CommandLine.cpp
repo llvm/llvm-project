@@ -164,7 +164,10 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
+  CommandLineParser() {
+    registerSubCommand(&SubCommand::getTopLevel());
+    registerSubCommand(&SubCommand::getAll());
+  }
 
   void ResetAllOptionOccurrences();
 
@@ -345,15 +348,15 @@ public:
 
     // For all options that have been registered for all subcommands, add the
     // option to this subcommand now.
-    assert(sub != &SubCommand::getAll() &&
-           "SubCommand::getAll() should not be registered");
-    for (auto &E : SubCommand::getAll().OptionsMap) {
-      Option *O = E.second;
-      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-          O->hasArgStr())
-        addOption(O, sub);
-      else
-        addLiteralOption(*O, sub, E.first());
+    if (sub != &SubCommand::getAll()) {
+      for (auto &E : SubCommand::getAll().OptionsMap) {
+        Option *O = E.second;
+        if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
+            O->hasArgStr())
+          addOption(O, sub);
+        else
+          addLiteralOption(*O, sub, E.first());
+      }
     }
   }
 
@@ -381,6 +384,7 @@ public:
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
     registerSubCommand(&SubCommand::getTopLevel());
+    registerSubCommand(&SubCommand::getAll());
 
     DefaultOptions.clear();
   }
@@ -528,8 +532,8 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
   // Find a subcommand with the edit distance == 1.
   SubCommand *NearestMatch = nullptr;
   for (auto *S : RegisteredSubCommands) {
-    assert(S != &SubCommand::getAll() &&
-           "SubCommand::getAll() is not expected in RegisteredSubCommands");
+    if (S == &SubCommand::getAll())
+      continue;
     if (S->getName().empty())
       continue;
 
