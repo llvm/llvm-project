@@ -49,9 +49,9 @@ entry:
 ; LARGE-SECUREPLT:   addi 30, 30, .LTOC-.L0$pb@l
 ; LARGE-SECUREPLT:   bl call_foo@PLT+32768
 
-; LARGE:      .section .bss.bar1,"aGw",@nobits,bar1,comdat
+; LARGE:      .section .bss.bar1,"awG",@nobits,bar1,comdat
 ; LARGE:      bar1:
-; LARGE:      .section .bss.bar2,"aGw",@nobits,bar1,comdat
+; LARGE:      .section .bss.bar2,"awG",@nobits,bar1,comdat
 ; LARGE:      bar2:
 ; LARGE:      .section .got2,"aw",@progbits
 ; LARGE-NEXT: .p2align 2

@@ -799,9 +799,8 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ;
 ; SSE41-LABEL: PR46586:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movzbl 3(%rdi), %eax
 ; SSE41-NEXT:    extractps $3, %xmm0, %ecx
-; SSE41-NEXT:    pextrb $3, %xmm1, %eax
 ; SSE41-NEXT:    xorl %edx, %edx
 ; SSE41-NEXT:    divl %ecx
 ; SSE41-NEXT:    movl %edx, %eax
@@ -809,9 +808,8 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ;
 ; AVX-LABEL: PR46586:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    movzbl 3(%rdi), %eax
 ; AVX-NEXT:    vextractps $3, %xmm0, %ecx
-; AVX-NEXT:    vpextrb $3, %xmm1, %eax
 ; AVX-NEXT:    xorl %edx, %edx
 ; AVX-NEXT:    divl %ecx
 ; AVX-NEXT:    movl %edx, %eax
