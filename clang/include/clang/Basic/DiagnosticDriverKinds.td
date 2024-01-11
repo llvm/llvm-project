@@ -786,4 +786,7 @@ def warn_android_unversioned_fallback : Warning<
   " directories will not be used in Clang 19. Provide a versioned directory"
   " for the target version or lower instead.">,
   InGroup<DiagGroup<"android-unversioned-fallback">>;
+
+def err_drv_triple_version_invalid : Error<
+  "version '%0' in target triple '%1' is invalid">;
 }

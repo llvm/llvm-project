@@ -36,11 +36,11 @@ public:
   const char *getNameAsCStr() const { return OffloadEntry.name; }
   __tgt_bin_desc *getBinaryDescription() const;
 
-  bool isCTor() { return hasFlags(OMP_DECLARE_TARGET_CTOR); }
-  bool isDTor() { return hasFlags(OMP_DECLARE_TARGET_DTOR); }
-  bool isLink() { return hasFlags(OMP_DECLARE_TARGET_LINK); }
+  bool isCTor() const { return hasFlags(OMP_DECLARE_TARGET_CTOR); }
+  bool isDTor() const { return hasFlags(OMP_DECLARE_TARGET_DTOR); }
+  bool isLink() const { return hasFlags(OMP_DECLARE_TARGET_LINK); }
 
-  bool hasFlags(OpenMPOffloadingDeclareTargetFlags Flags) {
+  bool hasFlags(OpenMPOffloadingDeclareTargetFlags Flags) const {
     return Flags & OffloadEntry.flags;
   }
 };
