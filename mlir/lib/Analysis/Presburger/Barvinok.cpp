@@ -144,3 +144,95 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
                             std::vector({numerator}),
                             std::vector({denominator}));
 }
+
+/// We use a recursive procedure to find a vector not orthogonal
+/// to a given set. Let the inputs be {x_1, ..., x_k}, all vectors of length n.
+///
+/// In the following,
+/// vs[:i] means the elements of vs up to and including the i'th one,
+/// <vs, us> means the dot product of v and u,
+/// vs ++ [v] means the vector vs with the new element v appended to it.
+///
+/// Suppose we have a vector vs which is not orthogonal to
+/// any of {x_1[:n-1], ..., x_k[:n-1]}.
+/// Then we need v s.t. <x_i, vs++[v]> != 0 for all i.
+/// => <x_i[:n-1], vs> + x_i[-1]*v != 0
+/// => v != - <x_i[:n-1], vs> / x_i[-1]
+/// We compute this value for all i, and then
+/// set v to be the maximum element of this set + 1. Thus
+/// v is outside the set as desired, and we append it to vs.
+///
+/// The base case is given in one dimension,
+/// where the vector [1] is not orthogonal to any
+/// of the input vectors (since they are all nonzero).
+Point getNonOrthogonalVector(std::vector<Point> vectors) {
+  unsigned dim = vectors[0].size();
+
+  SmallVector<Fraction> newPoint = {Fraction(1, 1)};
+  std::vector<Fraction> lowerDimDotProducts;
+  Fraction dotProduct;
+  Fraction maxDisallowedValue = Fraction(-1, 0),
+           disallowedValue = Fraction(0, 1);
+  Fraction newValue;
+
+  for (unsigned d = 2; d <= dim; d++) {
+    lowerDimDotProducts.clear();
+
+    // Compute the set of dot products <x_i[:d-1], vs> for each i.
+    for (Point vector : vectors) {
+      dotProduct = Fraction(0, 1);
+      for (unsigned i = 0; i < d - 1; i++)
+        dotProduct = dotProduct + vector[i] * newPoint[i];
+      lowerDimDotProducts.push_back(dotProduct);
+    }
+
+    // Compute - <x_i[:n-1], vs> / x_i[-1] for each i,
+    // and find the biggest such value.
+    for (unsigned i = 0; i < vectors.size(); i++) {
+      if (vectors[i][d - 1] == 0)
+        continue;
+      disallowedValue = - lowerDimDotProducts[i] / vectors[i][d - 1];
+      if (maxDisallowedValue < disallowedValue)
+        maxDisallowedValue = disallowedValue;
+    }
+
+    newValue = Fraction(ceil(maxDisallowedValue + Fraction(1, 1)), 1);
+    newPoint.append(1, newValue);
+  }
+  return newPoint;
+}
+
+/// We use the following recursive formula to find the coefficient of
+/// s^power in the rational function given by P(s)/Q(s).
+///
+/// Let P[i] denote the coefficient of s^i in the polynomial P(s).
+/// (P/Q)[r] =
+/// if (r == 0) then
+///   P[0]/Q[0]
+/// else
+///   (P[r] - {Σ_{i=1}^r (P/Q)[r-i] * Q[i])}/(Q[0])
+/// We therefore recursively call `getCoefficientInRationalFuncion` on
+/// all i \in [0, power).
+///
+/// https://math.ucdavis.edu/~deloera/researchsummary/
+/// barvinokalgorithm-latte1.pdf, p. 1285
+QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
+    unsigned power, std::vector<QuasiPolynomial> num,
+    std::vector<Fraction> den) {
+  if (power == 0)
+    return (num[0] / den[0]);
+
+  unsigned numParam = num[0].getNumInputs();
+
+  QuasiPolynomial t(numParam, Fraction(0, 1));
+
+  // The coefficient of s^power in the numerator.
+  if (power < num.size())
+    t = num[power];
+
+  unsigned limit = power + 1 < den.size() ? power + 1 : den.size();
+  for (unsigned i = 1; i < limit; ++i)
+    t = t - getCoefficientInRationalFunction(power - i, num, den) *
+                QuasiPolynomial(numParam, den[i]);
+  return (t / den[0]).simplify();
+}

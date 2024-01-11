@@ -27,6 +27,7 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include <optional>
 
 namespace mlir {
@@ -82,6 +83,13 @@ ConeH getDual(ConeV cone);
 /// The input cone must be unimodular; it assert-fails otherwise.
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
+
+/// Find the coefficient of a given power of s in a rational function
+/// given by P(s)/Q(s), where the coefficients in P are QuasiPolynomials,
+/// and those in Q are Fractions.
+QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
+                                                 std::vector<QuasiPolynomial>,
+                                                 std::vector<Fraction>);
 
 } // namespace detail
 } // namespace presburger
