@@ -41,7 +41,7 @@ static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
   }
 
   if (Constraint == "k") {
-    llvm::Type* Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
+    llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGF.getLLVMContext());
     return llvm::FixedVectorType::get(Int1Ty, Ty->getScalarSizeInBits());
   }
 
