@@ -385,15 +385,23 @@ void error_ftell(void) {
 }
 
 void error_ftello(void) {
-  FILE *F = tmpfile();
+  FILE *F = fopen("file", "r");
   if (!F)
     return;
-  long rc = ftello(F);
+  off_t rc = ftello(F);
   if (rc >= 0)
     clang_analyzer_warnIfReached();          // expected-warning {{REACHABLE}}
   else
     clang_analyzer_eval(rc == -1);           // expected-warning {{TRUE}}
   clang_analyzer_eval(feof(F) && ferror(F)); // expected-warning {{FALSE}}
+  StreamTesterChecker_make_feof_stream(F);
+  rc = ftello(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{TRUE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{FALSE}}
+  StreamTesterChecker_make_ferror_stream(F);
+  rc = ftello(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{FALSE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{TRUE}}
   fclose(F);
 }
 
