@@ -6956,8 +6956,8 @@ def ArmNewDocs : Documentation {
 The ``__arm_new`` keyword applies to function declarations and specifies
 that the function will create a new scope for state S.
 
-The attribute takes string arguments to instruct the compiler which state
-is shared.  The supported states for S are:
+The attribute takes string arguments to instruct the compiler for which state
+to create new scope.  The supported states for S are:
 
 * ``"za"`` for Matrix Storage (requires SME)
 
