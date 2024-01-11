@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
 v_bfrev_b32_e32 v5, v1
 // GFX11: encoding: [0x01,0x71,0x0a,0x7e]
@@ -46,50 +46,56 @@ v_bfrev_b32 v5, src_scc
 v_bfrev_b32 v255, 0xaf123456
 // GFX11: encoding: [0xff,0x70,0xfe,0x7f,0x56,0x34,0x12,0xaf]
 
-v_ceil_f16 v5, v1
+v_ceil_f16 v5.l, v1.l
 // GFX11: encoding: [0x01,0xb9,0x0a,0x7e]
 
-v_ceil_f16 v5, v127
+v_ceil_f16 v5.l, v127.l
 // GFX11: encoding: [0x7f,0xb9,0x0a,0x7e]
 
-v_ceil_f16 v5, s1
+v_ceil_f16 v5.l, v1.h
+// GFX11: encoding: [0x81,0xb9,0x0a,0x7e]
+
+v_ceil_f16 v5.l, v127.h
+// GFX11: encoding: [0xff,0xb9,0x0a,0x7e]
+
+v_ceil_f16 v5.l, s1
 // GFX11: encoding: [0x01,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, s105
+v_ceil_f16 v5.l, s105
 // GFX11: encoding: [0x69,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, vcc_lo
+v_ceil_f16 v5.l, vcc_lo
 // GFX11: encoding: [0x6a,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, vcc_hi
+v_ceil_f16 v5.l, vcc_hi
 // GFX11: encoding: [0x6b,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, ttmp15
+v_ceil_f16 v5.l, ttmp15
 // GFX11: encoding: [0x7b,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, m0
+v_ceil_f16 v5.l, m0
 // GFX11: encoding: [0x7d,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, exec_lo
+v_ceil_f16 v5.l, exec_lo
 // GFX11: encoding: [0x7e,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, exec_hi
+v_ceil_f16 v5.l, exec_hi
 // GFX11: encoding: [0x7f,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, null
+v_ceil_f16 v5.l, null
 // GFX11: encoding: [0x7c,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, -1
+v_ceil_f16 v5.l, -1
 // GFX11: encoding: [0xc1,0xb8,0x0a,0x7e]
 
-v_ceil_f16 v5, 0.5
-// GFX11: encoding: [0xf0,0xb8,0x0a,0x7e]
+v_ceil_f16 v127.l, 0.5
+// GFX11: encoding: [0xf0,0xb8,0xfe,0x7e]
 
-v_ceil_f16 v5, src_scc
-// GFX11: encoding: [0xfd,0xb8,0x0a,0x7e]
+v_ceil_f16 v5.h, src_scc
+// GFX11: encoding: [0xfd,0xb8,0x0a,0x7f]
 
-v_ceil_f16 v127, 0xfe0b
-// GFX11: encoding: [0xff,0xb8,0xfe,0x7e,0x0b,0xfe,0x00,0x00]
+v_ceil_f16 v127.h, 0xfe0b
+// GFX11: encoding: [0xff,0xb8,0xfe,0x7f,0x0b,0xfe,0x00,0x00]
 
 v_ceil_f32 v5, v1
 // GFX11: encoding: [0x01,0x45,0x0a,0x7e]

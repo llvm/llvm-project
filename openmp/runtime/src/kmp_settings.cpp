@@ -6171,9 +6171,9 @@ void __kmp_env_initialize(char const *string) {
     // specifier, even as substrings.
     //
     // I can't find a case-insensitive version of strstr on Windows* OS.
-    // Use the case-sensitive version for now.
+    // Use the case-sensitive version for now. AIX does the same.
 
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS || KMP_OS_AIX
 #define FIND strstr
 #else
 #define FIND strcasestr
