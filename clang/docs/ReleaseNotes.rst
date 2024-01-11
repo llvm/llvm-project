@@ -37,6 +37,12 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
+  ``--gcc-toolchain=``) is deprecated and will be removed. Specify
+  ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
+  <https://clang.llvm.org/docs/UsersManual.html#configuration-files>` as a
+  replacement.
+  (`#77537 <https://github.com/llvm/llvm-project/pull/77537>`_)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -202,6 +208,11 @@ C Language Changes
 - Enums will now be represented in TBAA metadata using their actual underlying
   integer type. Previously they were treated as chars, which meant they could
   alias with all other types.
+- Clang now supports the C-only attribute ``counted_by``. When applied to a
+  struct's flexible array member, it points to the struct field that holds the
+  number of elements in the flexible array member. This information can improve
+  the results of the array bound sanitizer and the
+  ``__builtin_dynamic_object_size`` builtin.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -705,6 +716,9 @@ Bug Fixes in This Version
 - Fix assertion crash due to failed scope restoring caused by too-early VarDecl
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
+- Clang now emits correct source location for code-coverage regions in `if constexpr`
+  and `if consteval` branches.
+  Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
 - Fix assertion failure when declaring a template friend function with
   a constrained parameter in a template class that declares a class method
   or lambda at different depth.
@@ -888,6 +902,9 @@ Bug Fixes to AST Handling
 - Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
+- Fixed a bug where range-loop-analysis checks for trivial copyability,
+  rather than trivial copy-constructibility
+  `Issue 47355 <https://github.com/llvm/llvm-project/issues/47355>`_
 - Fixed a bug where Template Instantiation failed to handle Lambda Expressions
   with certain types of Attributes.
   (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
@@ -1086,6 +1103,7 @@ clang-format
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
 - Add ``.clang-format-ignore`` files.
+- Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
@@ -1203,8 +1221,9 @@ Improvements
   (`c3a87ddad62a <https://github.com/llvm/llvm-project/commit/c3a87ddad62a6cc01acaccc76592bc6730c8ac3c>`_,
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
-- Improved the ``alpha.unix.Stream`` checker by modeling more functions like,
-  ``fflush``, ``fputs``, ``fgetc``, ``fputc``, ``fopen``, ``fdopen``, ``fgets``, ``tmpfile``.
+- Improved the ``alpha.unix.Stream`` checker by modeling more functions
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``
+  and no not recognize alternative ``fopen`` and ``tmpfile`` implementations.
   (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
   `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
@@ -1212,7 +1231,8 @@ Improvements
   `#71518 <https://github.com/llvm/llvm-project/pull/71518>`_,
   `#72016 <https://github.com/llvm/llvm-project/pull/72016>`_,
   `#70540 <https://github.com/llvm/llvm-project/pull/70540>`_,
-  `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_)
+  `#73638 <https://github.com/llvm/llvm-project/pull/73638>`_,
+  `#77331 <https://github.com/llvm/llvm-project/pull/77331>`_)
 
 - The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
   taint on ``strlen`` and ``strnlen`` calls, unless these are marked

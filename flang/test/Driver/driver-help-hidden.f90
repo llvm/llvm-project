@@ -122,11 +122,14 @@
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! CHECK-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! CHECK-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! CHECK-NEXT: -mrvv-vector-bits=<value>
+! CHECK-NEXT:                         Specify the size in bits of an RVV vector register
 ! CHECK-NEXT: -msve-vector-bits=<value>
 ! CHECK-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! CHECK-NEXT: --no-offload-arch=<value>
 ! CHECK-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! CHECK-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! CHECK-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! CHECK-NEXT: --offload-arch=<value>  Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). If 'native' is used the compiler will detect locally installed architectures. For HIP offloading, the device architecture can be followed by target ID features delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.
 ! CHECK-NEXT: --offload-device-only   Only compile for the offloading device.
 ! CHECK-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
