@@ -61,13 +61,13 @@ Fragment linkage header
 Header:
 | Entry  | Width | Description |
 | ------ | ----- | ----------- |
-| `NumFuncs` | 4b | Number of functions in the functions table |
+| `NumFuncs` | 4B | Number of functions in the functions table |
 
 The header is followed by Functions table with `NumFuncs` entries.
 | Entry  | Width | Description |
 | ------ | ------| ----------- |
-| `Address` | 8b | Function address in the output binary |
-| `NumEntries` | 4b | Number of address translation entries for a function |
+| `Address` | 8B | Function address in the output binary |
+| `NumEntries` | 4B | Number of address translation entries for a function |
 
 Function header is followed by `NumEntries` pairs of offsets for current
 function.
@@ -75,8 +75,8 @@ function.
 ### Address translation table
 | Entry  | Width | Description |
 | ------ | ------| ----------- |
-| `OutputAddr` | 4b | Function offset in output binary |
-| `InputAddr` | 4b | Function offset in input binary with `BRANCHENTRY` top bit |
+| `OutputAddr` | 4B | Function offset in output binary |
+| `InputAddr` | 4B | Function offset in input binary with `BRANCHENTRY` top bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
@@ -88,10 +88,10 @@ cold fragments with main (hot) fragment.
 Header:
 | Entry  | Width | Description |
 | ------ | ------------ | ----------- |
-| `NumColdEntries` | 4b | Number of split functions in the functions table |
+| `NumColdEntries` | 4B | Number of split functions in the functions table |
 
 `NumColdEntries` pairs of addresses follow:
 | Entry  | Width | Description |
 | ------ | ------| ----------- |
-| `ColdAddress` | 8b | Cold fragment address in output binary |
-| `HotAddress` | 8b | Hot fragment address in output binary |
+| `ColdAddress` | 8B | Cold fragment address in output binary |
+| `HotAddress` | 8B | Hot fragment address in output binary |

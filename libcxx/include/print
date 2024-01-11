@@ -122,6 +122,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt&, char32_t) = delete;
 template <class _OutIt>
   requires __utf16_code_unit<iter_value_t<_OutIt>>
 _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+  // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
+  // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-16");
 
   if (__value < 0x10000) {
@@ -137,6 +139,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value
 template <class _OutIt>
   requires __utf32_code_unit<iter_value_t<_OutIt>>
 _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+  // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
+  // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-32");
   *__out_it++ = __value;
 }
@@ -214,7 +218,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal(FILE* __stream) {
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
 __vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__stream, "__stream is a valid pointer to an output C stream");
+  _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
   string __str = std::vformat(__fmt, __args);
   if (__write_nl)
     __str.push_back('\n');
@@ -290,7 +294,7 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
                  [[maybe_unused]] string_view __fmt,
                  [[maybe_unused]] format_args __args,
                  [[maybe_unused]] bool __write_nl) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__stream, "__stream is a valid pointer to an output C stream");
+  _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
 
   // [print.fun]
   //   7 - Effects: If stream refers to a terminal capable of displaying

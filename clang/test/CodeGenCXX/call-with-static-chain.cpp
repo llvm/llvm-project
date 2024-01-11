@@ -25,8 +25,8 @@ void test() {
   // CHECK64: call i32 @f1(ptr nest noundef @f1
   __builtin_call_with_static_chain(f1(a, a, a, a), f1);
 
-  // CHECK32: call void @f2(ptr sret(%struct.B) align 4 %{{[0-9a-z]+}}, ptr nest noundef @f2)
-  // CHECK64: call void @f2(ptr sret(%struct.B) align 8 %{{[0-9a-z]+}}, ptr nest noundef @f2)
+  // CHECK32: call void @f2(ptr dead_on_unwind writable sret(%struct.B) align 4 %{{[0-9a-z]+}}, ptr nest noundef @f2)
+  // CHECK64: call void @f2(ptr dead_on_unwind writable sret(%struct.B) align 8 %{{[0-9a-z]+}}, ptr nest noundef @f2)
   __builtin_call_with_static_chain(f2(), f2);
 
   // CHECK32: call i64 @f3(ptr nest noundef @f3)
