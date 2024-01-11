@@ -99,7 +99,7 @@ public:
 
   /// Load all the external specialzations for the Decl and the corresponding
   /// template args.
-  virtual void
+  virtual bool
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs) override;
 

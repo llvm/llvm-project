@@ -100,9 +100,9 @@ ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
   return false;
 }
 
-void ExternalASTSource::LoadExternalSpecializations(
+bool ExternalASTSource::LoadExternalSpecializations(
     const Decl *D, ArrayRef<TemplateArgument> TemplateArgs) {
-  return;
+  return false;
 }
 
 void ExternalASTSource::completeVisibleDeclsMap(const DeclContext *DC) {}

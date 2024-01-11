@@ -799,7 +799,12 @@ protected:
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
                          void *&InsertPos, ProfileArguments &&...ProfileArgs);
 
-  void loadLazySpecializationsWithArgs(ArrayRef<TemplateArgument> TemplateArgs);
+  template <class EntryType, typename... ProfileArguments>
+  typename SpecEntryTraits<EntryType>::DeclType *
+  findLocalSpecialization(llvm::FoldingSetVector<EntryType> &Specs,
+                          void *&InsertPos, ProfileArguments &&... ProfileArgs);
+
+  bool loadLazySpecializationsWithArgs(ArrayRef<TemplateArgument> TemplateArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,

@@ -8092,19 +8092,27 @@ clang::GetTemplateArgsStableHash(ArrayRef<TemplateArgument> TemplateArgs) {
   return Hasher.CalculateHash();
 }
 
-void ASTReader::LoadExternalSpecializations(
+bool ASTReader::LoadExternalSpecializations(
     const Decl *D, ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
   auto It = SpecializationsLookups.find(D);
   if (It == SpecializationsLookups.end())
-    return;
+    return false;
 
   auto HashValue = GetTemplateArgsStableHash(TemplateArgs);
 
+  bool LoadedAnyDecls = false;
+
   Deserializing LookupResults(this);
-  for (DeclID ID : It->second.Table.find(HashValue))
+  for (DeclID ID : It->second.Table.find(HashValue)) {
+    if (GetExistingDecl(ID))
+      continue;
+    LoadedAnyDecls = true;
     GetDecl(ID);
+  }
+
+  return LoadedAnyDecls;
 }
 
 void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {
