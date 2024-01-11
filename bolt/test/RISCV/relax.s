@@ -6,7 +6,7 @@
 
 // CHECK:      Binary Function "_start" after building cfg {
 // CHECK:      jal ra, near_f
-// CHECK-NEXT: auipc ra, far_f@plt
+// CHECK-NEXT: auipc ra, far_f
 // CHECK-NEXT: jalr ra, 0xc(ra)
 // CHECK-NEXT: j near_f
 

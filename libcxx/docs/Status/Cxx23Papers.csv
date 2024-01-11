@@ -83,7 +83,7 @@
 "`P2502R2 <https://wg21.link/P2502R2>`__","LWG","``std::generator``: Synchronous Coroutine Generator for Ranges","July 2022","","","|ranges|"
 "`P2508R1 <https://wg21.link/P2508R1>`__","LWG","Exposing ``std::basic-format-string``","July 2022","|Complete|","15.0"
 "`P2513R4 <https://wg21.link/P2513R4>`__","LWG","``char8_t`` Compatibility and Portability Fixes","July 2022","",""
-"`P2517R1 <https://wg21.link/P2517R1>`__","LWG","Add a conditional ``noexcept`` specification to ``std::apply``","July 2022","",""
+"`P2517R1 <https://wg21.link/P2517R1>`__","LWG","Add a conditional ``noexcept`` specification to ``std::apply``","July 2022","|Complete|","3.9"
 "`P2520R0 <https://wg21.link/P2520R0>`__","LWG","``move_iterator`` should be a random access iterator","July 2022","|Complete| [#note-P2520R0]_","17.0","|ranges|"
 "`P2540R1 <https://wg21.link/P2540R1>`__","LWG","Empty Product for certain Views","July 2022","","","|ranges|"
 "`P2549R1 <https://wg21.link/P2549R1>`__","LWG","``std::unexpected`` should have ``error()`` as member accessor","July 2022","|Complete|","16.0"

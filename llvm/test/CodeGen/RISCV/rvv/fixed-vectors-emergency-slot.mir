@@ -18,7 +18,7 @@
   ; CHECK-NEXT:    addi a1, sp, 24
   ; CHECK-NEXT:    vs1r.v v25, (a1) # Unknown-size Folded Spill
   ; CHECK-NEXT:    ld a1, 0(sp)
-  ; CHECK-NEXT:    call fixedlen_vector_spillslot@plt
+  ; CHECK-NEXT:    call fixedlen_vector_spillslot
   ; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 48
   ; CHECK-NEXT:    ret
@@ -55,6 +55,6 @@ body:             |
     ; we have to allocate a virtual register to compute it.
     ; A later run of the the register scavenger won't find an available register
     ; either so it will have to spill one to the emergency spill slot.
-    PseudoCALL target-flags(riscv-plt) @fixedlen_vector_spillslot, csr_ilp32_lp64, implicit-def $x1, implicit-def $x2, implicit $x1, implicit $x5, implicit $x6, implicit $x7, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x28, implicit $x29, implicit $x30, implicit $x31
+    PseudoCALL target-flags(riscv-call) @fixedlen_vector_spillslot, csr_ilp32_lp64, implicit-def $x1, implicit-def $x2, implicit $x1, implicit $x5, implicit $x6, implicit $x7, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x28, implicit $x29, implicit $x30, implicit $x31
     PseudoRET
 ...

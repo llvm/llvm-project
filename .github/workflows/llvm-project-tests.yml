@@ -87,7 +87,7 @@ jobs:
           # enough cache space for all the tests to run at once and still
           # fit under the 10 GB limit.
           max-size: 500M
-          key: sccache-${{ matrix.os }}
+          key: ${{ matrix.os }}
           variant: sccache
       - name: Build and Test
         uses: llvm/actions/build-test-llvm-project@main
