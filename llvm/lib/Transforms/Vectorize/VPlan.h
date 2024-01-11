@@ -702,7 +702,8 @@ public:
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
-/// recipes must inherit from VPSingleDef instead of inheriting from both VPRecipeBase and VPValue separately.
+/// recipes must inherit from VPSingleDef instead of inheriting from both
+/// VPRecipeBase and VPValue separately.
 class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
                      public VPDef,
                      public VPUser {
@@ -816,7 +817,8 @@ public:
     return R->getVPDefID() == VPDefID;                                         \
   }
 
-/// VPSingleDef is a base class for recipes for modeling a sequence of one or more output IR that define a single result VPValue.
+/// VPSingleDef is a base class for recipes for modeling a sequence of one or
+/// more output IR that define a single result VPValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
@@ -1001,7 +1003,7 @@ protected:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
                       GEPFlagsTy GEPFlags, DebugLoc DL = {})
-      : VPRecipeBase(SC, Operands, DL), OpType(OperationType::GEPOp),
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::GEPOp),
         GEPFlags(GEPFlags) {}
 
 public:
@@ -1442,7 +1444,7 @@ public:
                         bool IsInBounds, DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlagsTy(IsInBounds), DL),
-        VPValue(this), IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 

@@ -8956,7 +8956,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       for (VPUser *U : Cur->users()) {
         auto *UserRecipe = dyn_cast<VPSingleDefRecipe>(U);
         if (!UserRecipe) {
-          assert(isa<VPLiveOut>(U) && "U must either be a VPSingleDef or VPLiveOut");
+          assert(isa<VPLiveOut>(U) &&
+                 "U must either be a VPSingleDef or VPLiveOut");
           continue;
         }
         Worklist.insert(UserRecipe);
