@@ -17,6 +17,9 @@
 
 using namespace llvm;
 
+/// NOTE: Assertions must be enabled for these tests to run.
+#ifndef NDEBUG
+
 namespace {
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
@@ -32,7 +35,6 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 /// the input IR) does not match the replacement function (derived from the
 /// VecDesc mapping).
 ///
-/// NOTE: Assertions must be enabled for these tests to run.
 class ReplaceWithVecLibTest : public ::testing::Test {
 
   std::string getLastLine(std::string Out) {
@@ -87,9 +89,6 @@ define <vscale x 4 x float> @foo(<vscale x 4 x float> %in){
 
 declare <vscale x 4 x float> @llvm.powi.f32.i32(<vscale x 4 x float>, i32) #0
 )IR";
-
-// Need assertions enabled for running the tests.
-#ifndef NDEBUG
 
 // The VFABI prefix in TLI describes signature which is matching the powi
 // intrinsic declaration.
