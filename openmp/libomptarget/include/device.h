@@ -159,7 +159,7 @@ struct DeviceTy {
   /// }
 
   /// Register \p Entry as an offload entry that is avalable on this device.
-  void addOffloadEntry(OffloadEntryTy &Entry);
+  void addOffloadEntry(const OffloadEntryTy &Entry);
 
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();
@@ -170,7 +170,7 @@ private:
 
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
-      llvm::DenseMap<llvm::StringRef, OffloadEntryTy *>;
+      llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
   ProtectedObj<DeviceOffloadEntriesMapTy> DeviceOffloadEntries;
 
   /// Handler to collect and organize host-2-device mapping information.

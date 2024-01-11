@@ -26,7 +26,7 @@ struct NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 
 struct Huge {
@@ -34,7 +34,7 @@ struct Huge {
 };
 Huge ret_huge() { return {}; }
 void pass_huge(Huge h) {}
-// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
 } // namespace check_structs
 
@@ -58,7 +58,7 @@ union NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 } // namespace check_unions
 
