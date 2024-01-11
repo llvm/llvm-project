@@ -60,10 +60,29 @@ public:
 
   static constexpr int64_t kNoLimit = -1;
 
-  /// Only ops within the scope are added to the worklist. If no scope is
-  /// specified, the closest enclosing region around the initial list of ops
-  /// (or the specified region, depending on which greedy rewrite entry point
-  /// is used) is used as a scope.
+  /// Only ops within the scope are allowed to be modified and are added to the
+  /// worklist.
+  ///
+  /// If out-of-scope IR is modified, an assertion will fail inside the greedy
+  /// pattern rewrite driver if expensive checks are enabled (as long as rewrite
+  /// patterns use the rewriter API correctly). We also allow attribute
+  /// modifications of the op that owns the scope region. (This is consistent
+  /// with the fact that passes are allowed to modify attributes of the
+  /// operation that they operate on.)
+  ///
+  /// The scope region must be isolated from above. This ensures that
+  /// out-of-scope ops are not affected by rewrites.
+  ///
+  /// If no scope is specified, it is set as follows:
+  /// * Single op greedy rewrite: a greedy rewrite is performed for every region
+  ///   of the op. (See below.) The scope is set to the respective region of
+  ///   each greedy write.
+  /// * Multi op greedy rewrite: the closest enclosing IsolatedFromAbove region
+  ///   around the initial list of ops. If there is no such region, the scope
+  ///   is `nullptr`. This is because multi-op greedy rewrites are allowed to
+  ///   modify top-level ops. (They are not allowed to erase top-level ops.)
+  /// * Single region greedy rewrite: the specified region. (The op that owns
+  ///   the region must be isolated from above.)
   Region *scope = nullptr;
 
   /// Strict mode can restrict the ops that are added to the worklist during
@@ -124,11 +143,9 @@ applyPatternsAndFoldGreedily(Region &region,
 /// This overload runs a separate greedy rewrite for each region of the
 /// specified op. A region scope can be set in the configuration parameter. By
 /// default, the scope is set to the region of the current greedy rewrite. Only
-/// in-scope ops are added to the worklist and only in-scope ops and the
-/// specified op itself are allowed to be modified by the patterns.
-///
-/// Note: The specified op may be modified, but it may not be removed by the
-/// patterns.
+/// in-scope ops are added to the worklist and only in-scope ops are allowed to
+/// be modified by the patterns. In addition, the attributes of the op that
+/// owns the scope region may also be modified.
 ///
 /// Returns "success" if the iterative process converged (i.e., fixpoint was
 /// reached) and no more patterns can be matched within the region. `changed`
