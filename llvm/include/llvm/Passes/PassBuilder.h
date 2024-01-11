@@ -743,6 +743,90 @@ bool parseAnalysisUtilityPasses(
 
   return false;
 }
+
+// These are special since they are only for testing purposes.
+
+/// No-op module pass which does nothing.
+struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    return PreservedAnalyses::all();
+  }
+};
+
+/// No-op module analysis.
+class NoOpModuleAnalysis : public AnalysisInfoMixin<NoOpModuleAnalysis> {
+  friend AnalysisInfoMixin<NoOpModuleAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  struct Result {};
+  Result run(Module &, ModuleAnalysisManager &) { return Result(); }
+};
+
+/// No-op CGSCC pass which does nothing.
+struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
+                        LazyCallGraph &, CGSCCUpdateResult &UR) {
+    return PreservedAnalyses::all();
+  }
+};
+
+/// No-op CGSCC analysis.
+class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
+  friend AnalysisInfoMixin<NoOpCGSCCAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  struct Result {};
+  Result run(LazyCallGraph::SCC &, CGSCCAnalysisManager &, LazyCallGraph &G) {
+    return Result();
+  }
+};
+
+/// No-op function pass which does nothing.
+struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    return PreservedAnalyses::all();
+  }
+};
+
+/// No-op function analysis.
+class NoOpFunctionAnalysis : public AnalysisInfoMixin<NoOpFunctionAnalysis> {
+  friend AnalysisInfoMixin<NoOpFunctionAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  struct Result {};
+  Result run(Function &, FunctionAnalysisManager &) { return Result(); }
+};
+
+/// No-op loop nest pass which does nothing.
+struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
+  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
+                        LoopStandardAnalysisResults &, LPMUpdater &) {
+    return PreservedAnalyses::all();
+  }
+};
+
+/// No-op loop pass which does nothing.
+struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
+  PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
+                        LoopStandardAnalysisResults &, LPMUpdater &) {
+    return PreservedAnalyses::all();
+  }
+};
+
+/// No-op loop analysis.
+class NoOpLoopAnalysis : public AnalysisInfoMixin<NoOpLoopAnalysis> {
+  friend AnalysisInfoMixin<NoOpLoopAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  struct Result {};
+  Result run(Loop &, LoopAnalysisManager &, LoopStandardAnalysisResults &) {
+    return Result();
+  }
+};
 }
 
 #endif
