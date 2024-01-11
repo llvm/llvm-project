@@ -303,9 +303,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
     // Notify the plugin about the new mapping.
     if (Device.notifyDataMapped(HstPtrBegin, Size))
-      return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              nullptr /* Entry */,
-              nullptr /* TargetPointer */};
+      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+              nullptr /*Entry=*/,
+              nullptr /*TargetPointer=*/};
   } else {
     // This entry is not present and we did not create a new entry for it.
     LR.TPR.Flags.IsPresent = false;
@@ -333,9 +333,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.TargetPointer = nullptr;
     } else if (LR.TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
                OFFLOAD_SUCCESS)
-      return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              nullptr /* Entry */,
-              nullptr /* TargetPointer */};
+      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+              nullptr /*Entry=*/,
+              nullptr /*TargetPointer=*/};
   } else {
     // If not a host pointer and no present modifier, we need to wait for the
     // event if it exists.
@@ -349,9 +349,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
           // If it fails to wait for the event, we need to return nullptr in
           // case of any data race.
           REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
-          return {{false /* IsNewEntry */, false /* IsHostPointer */},
-                  nullptr /* Entry */,
-                  nullptr /* TargetPointer */};
+          return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+                  nullptr /*Entry=*/,
+                  nullptr /*TargetPointer=*/};
         }
       }
     }

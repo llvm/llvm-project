@@ -6894,6 +6894,31 @@ protected:
 };
 } // namespace
 
+/// Returns the cost of the shuffle instructions with the given \p Kind, vector
+/// type \p Tp and optional \p Mask. Adds SLP-specifc cost estimation for insert
+/// subvector pattern.
+static InstructionCost
+getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
+               VectorType *Tp, ArrayRef<int> Mask = std::nullopt,
+               TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+               int Index = 0, VectorType *SubTp = nullptr,
+               ArrayRef<const Value *> Args = std::nullopt) {
+  if (Kind != TTI::SK_PermuteTwoSrc)
+    return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+  int NumSrcElts = Tp->getElementCount().getKnownMinValue();
+  int NumSubElts;
+  if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
+                             Mask, NumSrcElts, NumSubElts, Index)) {
+    if (Index + NumSubElts > NumSrcElts &&
+        Index + NumSrcElts <= static_cast<int>(Mask.size()))
+      return TTI.getShuffleCost(
+          TTI::SK_InsertSubvector,
+          FixedVectorType::get(Tp->getElementType(), Mask.size()), std::nullopt,
+          TTI::TCK_RecipThroughput, Index, Tp);
+  }
+  return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+}
+
 /// Merges shuffle masks and emits final shuffle instruction, if required. It
 /// supports shuffling of 2 input vectors. It implements lazy shuffles emission,
 /// when the actual shuffle instruction is generated only if this is actually
@@ -7141,15 +7166,15 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       std::optional<TTI::ShuffleKind> RegShuffleKind =
           CheckPerRegistersShuffle(SubMask);
       if (!RegShuffleKind) {
-        Cost += TTI.getShuffleCost(
-            *ShuffleKinds[Part],
+        Cost += ::getShuffleCost(
+            TTI, *ShuffleKinds[Part],
             FixedVectorType::get(VL.front()->getType(), NumElts), MaskSlice);
         continue;
       }
       if (*RegShuffleKind != TTI::SK_PermuteSingleSrc ||
           !ShuffleVectorInst::isIdentityMask(SubMask, EltsPerVector)) {
-        Cost += TTI.getShuffleCost(
-            *RegShuffleKind,
+        Cost += ::getShuffleCost(
+            TTI, *RegShuffleKind,
             FixedVectorType::get(VL.front()->getType(), EltsPerVector),
             SubMask);
       }
@@ -7222,8 +7247,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
       if (isEmptyOrIdentity(Mask, VF))
         return TTI::TCC_Free;
-      return TTI.getShuffleCost(TTI::SK_PermuteTwoSrc,
-                                cast<VectorType>(V1->getType()), Mask);
+      return ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
+                              cast<VectorType>(V1->getType()), Mask);
     }
     InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
       // Empty mask or identity mask are free.
@@ -8101,7 +8126,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
           Mask[I] =
               ((I >= InMask.size()) || InMask.test(I)) ? PoisonMaskElem : I;
-        Cost += TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
+        Cost +=
+            ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
       }
     }
     return Cost;
@@ -8428,8 +8454,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return I->getOpcode() == E->getAltOpcode();
           },
           Mask);
-      VecCost += TTIRef.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
-                                       FinalVecTy, Mask);
+      VecCost += ::getShuffleCost(TTIRef, TargetTransformInfo::SK_PermuteTwoSrc,
+                                  FinalVecTy, Mask);
       // Patterns like [fadd,fsub] can be combined into a single instruction
       // in x86. Reordering them into [fsub,fadd] blocks this pattern. So we
       // need to take into account their order when looking for the most used
@@ -9133,7 +9159,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         auto *FTy =
             FixedVectorType::get(TEs.back()->Scalars.front()->getType(), VF);
         InstructionCost C =
-            TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, FTy, Mask);
+            ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, FTy, Mask);
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                           << " for final shuffle of vector node and external "
                              "insertelement users.\n";
@@ -10596,7 +10622,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   inversePermutation(E->ReorderIndices, ReorderMask);
   if (!ReorderMask.empty())
     reorderScalars(GatheredScalars, ReorderMask);
-  auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF) {
+  auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
+                             unsigned I, unsigned SliceSize) {
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
@@ -10619,11 +10646,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
          Idx == 0) ||
         (Mask.size() == InputVF &&
          ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))) {
-      std::iota(Mask.begin(), Mask.end(), 0);
+      std::iota(std::next(Mask.begin(), I * SliceSize),
+                std::next(Mask.begin(), (I + 1) * SliceSize), 0);
     } else {
-      unsigned I =
+      unsigned IVal =
           *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
-      std::fill(Mask.begin(), Mask.end(), I);
+      std::fill(std::next(Mask.begin(), I * SliceSize),
+                std::next(Mask.begin(), (I + 1) * SliceSize), IVal);
     }
     return true;
   };
@@ -10872,7 +10901,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
       } else if (Vec1) {
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
-            cast<FixedVectorType>(Vec1->getType())->getNumElements());
+            cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
+            ExtractMask.size());
         ShuffleBuilder.add(Vec1, ExtractMask, /*ForExtracts=*/true);
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
       } else {
@@ -10898,7 +10928,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
           IsUsedInExpr &=
-              FindReusedSplat(VecMask, TEs.front()->getVectorFactor());
+              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
           ShuffleBuilder.add(*TEs.front(), VecMask);
           if (TEs.front()->VectorizedValue)
             IsNonPoisoned &=
@@ -11139,6 +11169,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
     case Instruction::ExtractElement: {
       Value *V = E->getSingleOperand(0);
+      if (const TreeEntry *TE = getTreeEntry(V))
+        V = TE->VectorizedValue;
       setInsertPointAfterBundle(E);
       V = FinalShuffle(V, E, VecTy, IsSigned);
       E->VectorizedValue = V;
@@ -11596,10 +11628,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       CallInst *CI = cast<CallInst>(VL0);
       setInsertPointAfterBundle(E);
 
-      Intrinsic::ID IID = Intrinsic::not_intrinsic;
-      if (Function *FI = CI->getCalledFunction())
-        IID = FI->getIntrinsicID();
-
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
       auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI);
@@ -11610,18 +11638,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       SmallVector<Value *> OpVecs;
       SmallVector<Type *, 2> TysForDecl;
       // Add return type if intrinsic is overloaded on it.
-      if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+      if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
-        if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
+        if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
           CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(I);
           OpVecs.push_back(CEI->getArgOperand(I));
-          if (isVectorIntrinsicWithOverloadTypeAtArg(IID, I))
+          if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
             TysForDecl.push_back(ScalarArg->getType());
           continue;
         }
@@ -11633,7 +11661,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
-        if (isVectorIntrinsicWithOverloadTypeAtArg(IID, I))
+        if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
           TysForDecl.push_back(OpVec->getType());
       }
 
@@ -11907,8 +11935,10 @@ Value *BoUpSLP::vectorizeTree(
         if (!Ex) {
           // "Reuse" the existing extract to improve final codegen.
           if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
-            Ex = Builder.CreateExtractElement(ES->getOperand(0),
-                                              ES->getOperand(1));
+            Value *V = ES->getVectorOperand();
+            if (const TreeEntry *ETE = getTreeEntry(V))
+              V = ETE->VectorizedValue;
+            Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
@@ -16224,7 +16254,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       for (auto *V : Candidates) {
         auto *GEP = cast<GetElementPtrInst>(V);
         auto *GEPIdx = GEP->idx_begin()->get();
-        assert(GEP->getNumIndices() == 1 || !isa<Constant>(GEPIdx));
+        assert(GEP->getNumIndices() == 1 && !isa<Constant>(GEPIdx));
         Bundle[BundleIndex++] = GEPIdx;
       }
 

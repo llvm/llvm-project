@@ -1,7 +1,7 @@
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICIVI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s

@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        test
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:  - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:  - Cost:            '9'
+; YAML-NEXT:  - Cost:            '3'
 ; YAML-NEXT:  - String:          ' and with tree size '
 ; YAML-NEXT:  - TreeSize:        '7'
 
@@ -19,20 +19,15 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr null, align 4
-; CHECK-NEXT:    [[V9IDX:%.*]] = getelementptr i8, ptr null, i32 4
-; CHECK-NEXT:    [[V14IDX:%.*]] = getelementptr i8, ptr null, i32 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <2 x float> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP6]], i32 0
-; CHECK-NEXT:    [[V0_0:%.*]] = select i1 [[TMP7]], float [[TMP0]], float 0.000000e+00
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP3]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP6]], i32 1
-; CHECK-NEXT:    [[V9_0:%.*]] = select i1 [[TMP9]], float [[TMP2]], float 0.000000e+00
-; CHECK-NEXT:    store float [[V0_0]], ptr null, align 4
-; CHECK-NEXT:    store float [[V9_0]], ptr [[V9IDX]], align 4
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[V14IDX]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP7]], <4 x float> [[TMP9]], <4 x float> zeroinitializer
+; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -788,10 +788,14 @@ cc_library(
     deps = [
         ":TestDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
+        "//mlir:IR",
         "//mlir:MeshDialect",
         "//mlir:MeshTransforms",
         "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Support",
         "//mlir:Transforms",
     ],
 )

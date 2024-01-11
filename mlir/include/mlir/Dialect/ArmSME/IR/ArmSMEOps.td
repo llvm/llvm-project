@@ -223,6 +223,21 @@ def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
   let defaultValue = "CombiningKind::Add";
 }
 
+def TypeSize : I32EnumAttr<"TypeSize", "Size of a vector element type", [
+  I32EnumAttrCase<"Byte"  , 0, "byte">,
+  I32EnumAttrCase<"Half"  , 1, "half">,
+  I32EnumAttrCase<"Word"  , 2, "word">,
+  I32EnumAttrCase<"Double", 3, "double">,
+]> {
+  let cppNamespace = "::mlir::arm_sme";
+  let genSpecializedAttr = 0;
+}
+
+def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
+                                   "type_size"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME op definitions
 //===----------------------------------------------------------------------===//
@@ -766,6 +781,35 @@ let arguments = (ins
       return std::nullopt;
     }
   }];
+}
+
+def StreamingVLOp : ArmSME_Op<"streaming_vl", [Pure]>
+{
+  let summary = "Query the streaming vector length";
+
+  let description = [{
+    This operation returns the streaming vector length (SVL) for a given type
+    size. Unlike `vector.vscale` the value returned is invariant to the
+    streaming mode.
+
+    Example:
+    ```mlir
+    // Streaming vector length in:
+    // - bytes (8-bit, SVL.B)
+    %svl_b = arm_sme.streaming_vl <byte>
+    // - half words (16-bit, SVL.H)
+    %svl_h = arm_sme.streaming_vl <half>
+    // - words (32-bit, SVL.W)
+    %svl_w = arm_sme.streaming_vl <word>
+    // - double words (64-bit, SVL.D)
+    %svl_d = arm_sme.streaming_vl <double>
+    ```
+  }];
+
+  let arguments = (ins ArmSME_TypeSizeAttr: $type_size);
+  let results = (outs Index);
+
+  let assemblyFormat = "$type_size attr-dict";
 }
 
 #endif // ARMSME_OPS

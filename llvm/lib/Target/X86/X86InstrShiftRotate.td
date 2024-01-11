@@ -868,7 +868,7 @@ let Predicates = [HasBMI2, NoEGPR] in {
   defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8, PD, REX_W;
 }
 
-let Predicates = [HasBMI2, HasEGPR] in {
+let Predicates = [HasBMI2, HasEGPR, In64BitMode] in {
   defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem, "_EVEX">, EVEX;
   defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem, "_EVEX">, REX_W, EVEX;
   defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem, "_EVEX">, T8, XS, EVEX;
