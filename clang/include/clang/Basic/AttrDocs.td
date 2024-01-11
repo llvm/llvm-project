@@ -57,6 +57,15 @@ global variable or function should be in after translation.
   let Heading = "section, __declspec(allocate)";
 }
 
+def CodeModelDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``model`` attribute allows overriding the translation unit's
+code model (specified by ``-mcmodel``) for a specific global variable.
+  }];
+  let Heading = "model";
+}
+
 def UsedDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -7671,9 +7680,12 @@ The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
 to a coroutine return type (`CRT`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
-All parameters of a function are considered to be lifetime bound. See `documentation`_
-of ``[[clang::lifetimebound]]`` for more details.
-if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+All parameters of a function are considered to be lifetime bound if the function returns a
+coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
+This lifetime bound analysis can be disabled for a coroutine wrapper or a coroutine by annotating the function
+with ``[[clang::coro_disable_lifetimebound]]`` function attribute .
+See `documentation`_ of ``[[clang::lifetimebound]]`` for details about lifetime bound analysis.
+
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
 
@@ -7703,7 +7715,7 @@ Both coroutines and coroutine wrappers are part of this analysis.
   };
 
   Task<int> coro(const int& a) { co_return a + 1; }
-  Task<int> [[clang::coro_wrapper]] coro_wrapper(const int& a, const int& b) {
+  [[clang::coro_wrapper]] Task<int> coro_wrapper(const int& a, const int& b) {
     return a > b ? coro(a) : coro(b);
   }
   Task<int> temporary_reference() {
@@ -7718,7 +7730,100 @@ Both coroutines and coroutine wrappers are part of this analysis.
     return coro(a); // warning: returning address of stack variable `a`.
   }
 
+This analysis can be disabled for all calls to a particular function by annotating the function
+with function attribute ``[[clang::coro_disable_lifetimebound]]``.
+For example, this could be useful for coroutine wrappers which accept reference parameters
+but do not pass them to the underlying coroutine or pass them by value.
+
+.. code-block:: c++
+
+  Task<int> coro(int a) { co_return a + 1; }
+  [[clang::coro_wrapper, clang::coro_disable_lifetimebound]] Task<int> coro_wrapper(const int& a) {
+    return coro(a + 1);
+  }
+  void use() {
+    auto task = coro_wrapper(1); // use of temporary is fine as the argument is not lifetime bound.
+  }
+
 .. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
 .. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
+}
+
+def CountedByDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+Clang supports the ``counted_by`` attribute on the flexible array member of a
+structure in C. The argument for the attribute is the name of a field member
+holding the count of elements in the flexible array. This information can be
+used to improve the results of the array bound sanitizer and the
+``__builtin_dynamic_object_size`` builtin. The ``count`` field member must be
+within the same non-anonymous, enclosing struct as the flexible array member.
+
+This example specifies that the flexible array member ``array`` has the number
+of elements allocated for it in ``count``:
+
+.. code-block:: c
+
+  struct bar;
+
+  struct foo {
+    size_t count;
+    char other;
+    struct bar *array[] __attribute__((counted_by(count)));
+  };
+
+This establishes a relationship between ``array`` and ``count``. Specifically,
+``array`` must have at least ``count`` number of elements available. It's the
+user's responsibility to ensure that this relationship is maintained through
+changes to the structure.
+
+In the following example, the allocated array erroneously has fewer elements
+than what's specified by ``p->count``. This would result in an out-of-bounds
+access not being detected.
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count + SIZE_INCR;
+  }
+
+The next example updates ``p->count``, but breaks the relationship requirement
+that ``p->array`` must have at least ``p->count`` number of elements available:
+
+.. code-block:: c
+
+  #define SIZE_INCR 42
+
+  struct foo *p;
+
+  void foo_alloc(size_t count) {
+    p = malloc(MAX(sizeof(struct foo),
+                   offsetof(struct foo, array[0]) + count * sizeof(struct bar *)));
+    p->count = count;
+  }
+
+  void use_foo(int index, int val) {
+    p->count += SIZE_INCR + 1; /* 'count' is now larger than the number of elements of 'array'. */
+    p->array[index] = val;     /* The sanitizer can't properly check this access. */
+  }
+
+In this example, an update to ``p->count`` maintains the relationship
+requirement:
+
+.. code-block:: c
+
+  void use_foo(int index, int val) {
+    if (p->count == 0)
+      return;
+    --p->count;
+    p->array[index] = val;
+  }
+  }];
 }

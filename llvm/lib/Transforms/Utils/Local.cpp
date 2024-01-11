@@ -3905,7 +3905,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     SmallVectorImpl<Instruction *> &InsertedInsts) {
   if (!match(I, m_Or(m_Value(), m_Value())) &&
       !match(I, m_FShl(m_Value(), m_Value(), m_Value())) &&
-      !match(I, m_FShr(m_Value(), m_Value(), m_Value())))
+      !match(I, m_FShr(m_Value(), m_Value(), m_Value())) &&
+      !match(I, m_BSwap(m_Value())))
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;

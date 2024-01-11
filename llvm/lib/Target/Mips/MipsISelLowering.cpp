@@ -2042,8 +2042,7 @@ SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   SDValue CCNode  = CondRes.getOperand(2);
-  Mips::CondCode CC =
-    (Mips::CondCode)cast<ConstantSDNode>(CCNode)->getZExtValue();
+  Mips::CondCode CC = (Mips::CondCode)CCNode->getAsZExtVal();
   unsigned Opc = invertFPCondCodeUser(CC) ? Mips::BRANCH_F : Mips::BRANCH_T;
   SDValue BrCode = DAG.getConstant(Opc, DL, MVT::i32);
   SDValue FCC0 = DAG.getRegister(Mips::FCC0, MVT::i32);

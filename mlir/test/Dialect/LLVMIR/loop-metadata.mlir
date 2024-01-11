@@ -90,7 +90,7 @@ llvm.func @loop_annotation() {
 // CHECK: #[[END_LOC:.*]] = loc("loop-metadata.mlir":52:4)
 #loc2 = loc("loop-metadata.mlir":52:4)
 
-#di_compile_unit = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
 // CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
 #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition>
 

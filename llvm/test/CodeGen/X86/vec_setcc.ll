@@ -308,9 +308,9 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; SSE2-LABEL: test_setcc_v3i1_v3i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
