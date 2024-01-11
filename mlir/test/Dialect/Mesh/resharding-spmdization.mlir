@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-mesh-resharding-spmdization %s | FileCheck %s
 
-mesh.cluster @mesh_1d(rank = 1, dim_sizes = 2)
-mesh.cluster @mesh_1d_dynamic(rank = 1, dim_sizes = ?)
+mesh.cluster @mesh_1d(shape = 2)
+mesh.cluster @mesh_1d_dynamic(shape = ?)
 
 // CHECK-LABEL: func @same_source_and_target_sharding
 func.func @same_source_and_target_sharding(

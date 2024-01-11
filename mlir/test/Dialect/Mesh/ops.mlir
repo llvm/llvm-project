@@ -1,21 +1,21 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // CHECK: mesh.cluster @mesh0
-mesh.cluster @mesh0(rank = 3, dim_sizes = 2x2x4)
+mesh.cluster @mesh0(shape = 2x2x4)
 
-// CHECK: mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
-mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
+// CHECK: mesh.cluster @mesh1(shape = 4x?)
+mesh.cluster @mesh1(shape = 4x?)
 
-// CHECK: mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
-mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
+// CHECK: mesh.cluster @mesh2(shape = ?x4)
+mesh.cluster @mesh2(shape = ?x4)
 
-// CHECK: mesh.cluster @mesh3
-mesh.cluster @mesh3(rank = 2)
+// CHECK: mesh.cluster @mesh3(shape = ?x?)
+mesh.cluster @mesh3(shape = ?x?)
 
-mesh.cluster @mesh4(rank = 1, dim_sizes = 3)
+mesh.cluster @mesh4(shape = 3)
 
-// CHECK: mesh.cluster @mesh5(rank = 1)
-mesh.cluster @mesh5(rank = 1, dim_sizes = [])
+// CHECK: mesh.cluster @mesh5(shape = ?)
+mesh.cluster @mesh5(shape = ?)
 
 // CHECK-LABEL: func @mesh_shard_encoding_fully_replicated
 func.func @mesh_shard_encoding_fully_replicated(
