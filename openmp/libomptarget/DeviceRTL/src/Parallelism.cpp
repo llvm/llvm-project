@@ -97,20 +97,20 @@ void __kmpc_parallel_spmd(IdentTy *ident, int32_t, int32_t if_expr,
     // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
                                           1u, TId == 0, ident,
-                                          /* ForceTeamState */ true);
+                                          /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
-                                     /* ForceTeamState */ true);
+                                     /*ForceTeamState=*/true);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
-                               /* ForceTeamState */ true);
+                               /*ForceTeamState=*/true);
 
     // Synchronize all threads after the main thread (TId == 0) set up the
     // team state properly.
     synchronize::threadsAligned(atomic::relaxed);
 
     state::ParallelTeamSize.assert_eq(NumThreads, ident,
-                                      /* ForceTeamState */ true);
-    icv::ActiveLevel.assert_eq(1u, ident, /* ForceTeamState */ true);
-    icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
+                                      /*ForceTeamState=*/true);
+    icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
+    icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
 
     if (TId < NumThreads)
       invokeMicrotask(TId, 0, fn, args, nargs);
@@ -124,9 +124,9 @@ void __kmpc_parallel_spmd(IdentTy *ident, int32_t, int32_t if_expr,
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned(atomic::acq_rel);
 
-  state::ParallelTeamSize.assert_eq(1u, ident, /* ForceTeamState */ true);
-  icv::ActiveLevel.assert_eq(0u, ident, /* ForceTeamState */ true);
-  icv::Level.assert_eq(0u, ident, /* ForceTeamState */ true);
+  state::ParallelTeamSize.assert_eq(1u, ident, /*ForceTeamState=*/true);
+  icv::ActiveLevel.assert_eq(0u, ident, /*ForceTeamState=*/true);
+  icv::Level.assert_eq(0u, ident, /*ForceTeamState=*/true);
 
   // Ensure we synchronize to create an aligned region around the assumptions.
   synchronize::threadsAligned(atomic::relaxed);
@@ -251,14 +251,14 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, true, ident,
-                                          /* ForceTeamState */ true);
+                                          /*ForceTeamState=*/true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
                                           (void *)nullptr, true, ident,
-                                          /* ForceTeamState */ true);
+                                          /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, true, ident,
-                                     /* ForceTeamState */ true);
+                                     /*ForceTeamState=*/true);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident,
-                               /* ForceTeamState */ true);
+                               /*ForceTeamState=*/true);
 
     // Master signals work to activate workers.
     synchronize::threads(atomic::seq_cst);

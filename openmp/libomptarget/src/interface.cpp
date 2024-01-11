@@ -313,11 +313,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS);
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
                 // ToDo: mhalk Do we need a check for TracingActive here?
                 InterfaceRAII TargetTraceRAII(
                     RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS);)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
@@ -414,11 +414,11 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS);
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
                 // ToDo: mhalk Do we need a check for TracingActive here?
                 InterfaceRAII TargetTraceRAII(
                     RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
-                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS);)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc = target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory,

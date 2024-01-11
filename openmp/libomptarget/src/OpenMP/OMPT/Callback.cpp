@@ -424,7 +424,7 @@ public:
 
   void finalize() {
     for (auto FinalizationFunction : RtlFinalizationFunctions)
-      FinalizationFunction(/* tool_data */ nullptr);
+      FinalizationFunction(/*tool_data=*/nullptr);
     RtlFinalizationFunctions.clear();
   }
 
@@ -514,7 +514,7 @@ void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
     // in this library so that callbacks maintained by this library are
     // retrieved.
     result->initialize(lookupCallbackByName,
-                       /* initial_device_num */ 0, /* tool_data */ nullptr);
+                       /*initial_device_num=*/0, /*tool_data=*/nullptr);
   }
   DP("Leave ompt_libomptarget_connect\n");
 }

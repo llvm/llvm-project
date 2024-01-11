@@ -94,7 +94,7 @@ private:
   void *suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
     void *Addr =
-        Device->allocate(1024, /* HstPtr */ nullptr, TARGET_ALLOC_DEFAULT);
+        Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
     Device->free(Addr);
     // Align Address to MaxMemoryAllocation
     Addr = (void *)alignPtr((Addr), MaxMemoryAllocation);
@@ -134,7 +134,7 @@ private:
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      MemoryStart = Device->allocate(TotalSize, /* HstPtr */ nullptr,
+      MemoryStart = Device->allocate(TotalSize, /*HstPtr=*/nullptr,
                                      TARGET_ALLOC_DEFAULT);
       if (MemoryStart)
         break;
@@ -769,12 +769,12 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true)) {
       performOmptCallback(device_initialize,
-                          /* device_num */ DeviceId +
+                          /*device_num=*/DeviceId +
                               Plugin.getDeviceIdStartIndex(),
-                          /* type */ getComputeUnitKind().c_str(),
-                          /* device */ DevicePtr,
-                          /* lookup */ ompt::lookupDeviceTracingFn,
-                          /* documentation */ nullptr);
+                          /*type=*/getComputeUnitKind().c_str(),
+                          /*device=*/DevicePtr,
+                          /*lookup=*/ompt::lookupDeviceTracingFn,
+                          /*documentation=*/nullptr);
     }
   }
 #endif
@@ -869,7 +869,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false)) {
       performOmptCallback(device_finalize,
-                          /* device_num */ DeviceId +
+                          /*device_num=*/DeviceId +
                               Plugin.getDeviceIdStartIndex());
     }
   }
@@ -934,14 +934,14 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(device_load,
-                        /* device_num */ DeviceId +
+                        /*device_num=*/DeviceId +
                             Plugin.getDeviceIdStartIndex(),
-                        /* FileName */ nullptr,
+                        /*FileName=*/nullptr,
                         /* File Offset */ 0,
-                        /* VmaInFile */ nullptr,
-                        /* ImgSize */ Bytes,
-                        /* HostAddr */ InputTgtImage->ImageStart,
-                        /* DeviceAddr */ nullptr,
+                        /*VmaInFile=*/nullptr,
+                        /*ImgSize=*/Bytes,
+                        /*HostAddr=*/InputTgtImage->ImageStart,
+                        /*DeviceAddr=*/nullptr,
                         /* FIXME: ModuleId */ 0);
   }
 #endif
@@ -2056,7 +2056,7 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
 int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                               int64_t Size) {
   return __tgt_rtl_data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                                     /* AsyncInfoPtr */ nullptr);
+                                     /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
@@ -2078,7 +2078,7 @@ int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
 int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
@@ -2102,7 +2102,7 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
                                        Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,

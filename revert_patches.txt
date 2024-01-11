@@ -10,5 +10,3 @@ Reverts: breaks ompt tests
 
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
-
-Reverts: [Libomptarget][NFC] Format in-line comments consistently (#77530)

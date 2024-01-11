@@ -2950,7 +2950,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Info.size = sizeof(hsa_amd_pointer_info_t);
 
     hsa_status_t Status =
-        hsa_amd_pointer_info(HstPtr, &Info, /* Allocator */ nullptr,
+        hsa_amd_pointer_info(HstPtr, &Info, /*Allocator=*/nullptr,
                              /* Number of accessible agents (out) */ nullptr,
                              /* Accessible agents */ nullptr);
     if (auto Err = Plugin::check(Status, "Error in hsa_amd_pointer_info: %s"))
