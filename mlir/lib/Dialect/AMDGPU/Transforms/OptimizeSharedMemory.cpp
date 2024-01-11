@@ -220,7 +220,6 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   return success();
 }
 
-namespace {
 struct OptimizeSharedMemoryPass
     : public amdgpu::impl::OptimizeSharedMemoryBase<OptimizeSharedMemoryPass> {
 public:
@@ -242,4 +241,3 @@ public:
     }
   }
 };
-} // namespace
