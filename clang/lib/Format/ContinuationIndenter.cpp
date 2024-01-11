@@ -703,7 +703,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   if (Current.is(tok::equal) &&
       (State.Line->First->is(tok::kw_for) || Current.NestingLevel == 0) &&
-      CurrentState.VariablePos == 0) {
+      CurrentState.VariablePos == 0 &&
+      (!Previous.Previous ||
+       Previous.Previous->isNot(TT_DesignatedInitializerPeriod))) {
     CurrentState.VariablePos = State.Column;
     // Move over * and & if they are bound to the variable name.
     const FormatToken *Tok = &Previous;
