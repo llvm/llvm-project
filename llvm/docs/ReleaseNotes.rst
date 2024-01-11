@@ -73,6 +73,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Minimum Clang version to build LLVM in C++20 configuration has been updated to clang-17.0.6.
+
 Changes to building LLVM
 ------------------------
 

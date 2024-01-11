@@ -13096,14 +13096,10 @@ bool BoUpSLP::collectValuesToDemote(
   if (isa<Constant>(V))
     return true;
 
-  // If the value is not a vectorized instruction in the expression and not used
-  // by the insertelement instruction and not used in multiple vector nodes, it
-  // cannot be demoted.
+  // If the value is not a vectorized instruction in the expression with only
+  // one use, it cannot be demoted.
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !getTreeEntry(I) || MultiNodeScalars.contains(I) ||
-      !Visited.insert(I).second || all_of(I->users(), [&](User *U) {
-        return isa<InsertElementInst>(U) && !getTreeEntry(U);
-      }))
+  if (!I || !I->hasOneUse() || !getTreeEntry(I) || !Visited.insert(I).second)
     return false;
 
   unsigned Start = 0;
@@ -13174,6 +13170,11 @@ bool BoUpSLP::collectValuesToDemote(
 }
 
 void BoUpSLP::computeMinimumValueSizes() {
+  // If there are no external uses, the expression tree must be rooted by a
+  // store. We can't demote in-memory values, so there is nothing to do here.
+  if (ExternalUses.empty())
+    return;
+
   // We only attempt to truncate integer expressions.
   auto &TreeRoot = VectorizableTree[0]->Scalars;
   auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
