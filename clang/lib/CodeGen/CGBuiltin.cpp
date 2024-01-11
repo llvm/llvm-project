@@ -16549,7 +16549,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
-#define PPC_CPU(Name, NumericID) .Case(Name, NumericID)
+#define PPC_LNX_CPU(Name, NumericID) .Case(Name, NumericID)
 #include "llvm/TargetParser/PPCTargetParser.def"
                             .Default(-1U);
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
@@ -16565,7 +16565,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     std::tie(FeatureWord, BitMask) =
         StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define PPC_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)             \
+#define PPC_LNX_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)         \
   .Case(Name, {FA_WORD, Bitmask})
 #include "llvm/TargetParser/PPCTargetParser.def"
             .Default({0, 0});

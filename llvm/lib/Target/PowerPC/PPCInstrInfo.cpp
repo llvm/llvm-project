@@ -3101,24 +3101,34 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   }
   case PPC::PPCLdFixedAddr: {
-    assert(Subtarget.isTargetLinux() &&
-           "Only Linux target is expected to contain PPCLdFixedAddr");
+    assert(Subtarget.getTargetTriple().isOSGlibc() &&
+           "Only targets with Glibc expected to contain PPCLdFixedAddr");
     int64_t Offset = 0;
     const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
     MI.setDesc(get(PPC::LWZ));
     uint64_t FAType = MI.getOperand(1).getImm();
-#undef PPC_FEATURE
-#undef PPC_CPU
+#undef PPC_LNX_FEATURE
+#undef PPC_LNX_CPU
+#define PPC_LNX_DEFINE_OFFSETS
 #include "llvm/TargetParser/PPCTargetParser.def"
-    // The HWCAP and HWCAP2 word offsets are reversed on big endian Linux.
-    if ((FAType == PPC_FAWORD_HWCAP && Subtarget.isLittleEndian()) ||
-        (FAType == PPC_FAWORD_HWCAP2 && !Subtarget.isLittleEndian()))
-      Offset = Subtarget.isPPC64() ? -0x7064 : -0x703C;
-    else if ((FAType == PPC_FAWORD_HWCAP2 && Subtarget.isLittleEndian()) ||
-             (FAType == PPC_FAWORD_HWCAP && !Subtarget.isLittleEndian()))
-      Offset = Subtarget.isPPC64() ? -0x7068 : -0x7040;
-    else if (FAType == PPC_FAWORD_CPUID)
-      Offset = Subtarget.isPPC64() ? -0x705C : -0x7034;
+    bool IsLE = Subtarget.isLittleEndian();
+    bool Is64 = Subtarget.isPPC64();
+    if (FAType == PPC_FAWORD_HWCAP) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP_OFFSET_LE64 : PPC_HWCAP_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP_OFFSET_BE64 : PPC_HWCAP_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_HWCAP2) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_LE64 : PPC_HWCAP2_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_BE64 : PPC_HWCAP2_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_CPUID) {
+      if (IsLE)
+        Offset = Is64 ? PPC_CPUID_OFFSET_LE64 : PPC_CPUID_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_CPUID_OFFSET_BE64 : PPC_CPUID_OFFSET_BE32;
+    }
     assert(Offset && "Do not know the offset for this fixed addr load");
     MI.removeOperand(1);
     Subtarget.getTargetMachine().setGlibcHWCAPAccess();
@@ -3126,9 +3136,9 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addImm(Offset)
         .addReg(Reg);
     return true;
-#undef PPC_FAWORD_HWCAP
-#undef PPC_FAWORD_HWCAP2
-#undef PPC_FAWORD_CPUID
+#define PPC_TGT_PARSER_UNDEF_MACROS
+#include "llvm/TargetParser/PPCTargetParser.def"
+#undef PPC_TGT_PARSER_UNDEF_MACROS
   }
   case PPC::DFLOADf32:
   case PPC::DFLOADf64:

@@ -880,14 +880,14 @@ ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
 }
 
 bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-#define PPC_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
+#define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
   return llvm::StringSwitch<bool>(FeatureStr)
 #include "llvm/TargetParser/PPCTargetParser.def"
       .Default(false);
 }
 
 bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
-#define PPC_CPU(NAME, NUM) .Case(NAME, true)
+#define PPC_LNX_CPU(NAME, NUM) .Case(NAME, true)
   return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
       .Default(false);

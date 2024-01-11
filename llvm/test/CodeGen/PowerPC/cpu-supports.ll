@@ -31,6 +31,7 @@ define dso_local signext i32 @test(i32 noundef signext %a) local_unnamed_addr #0
 ; BE64-NEXT:    addi r3, r3, -5
 ; BE64-NEXT:    extsw r3, r3
 ; BE64-NEXT:    blr
+; BE64:       .quad   __parse_hwcap_and_convert_at_platform
 ;
 ; BE32-LABEL: test:
 ; BE32:       # %bb.0: # %entry
@@ -51,6 +52,7 @@ define dso_local signext i32 @test(i32 noundef signext %a) local_unnamed_addr #0
 ; BE32-NEXT:  .LBB0_3: # %if.then2
 ; BE32-NEXT:    addi r3, r3, -5
 ; BE32-NEXT:    blr
+; BE32:       .long   __parse_hwcap_and_convert_at_platform
 ;
 ; LE-LABEL: test:
 ; LE:       # %bb.0: # %entry
@@ -74,6 +76,7 @@ define dso_local signext i32 @test(i32 noundef signext %a) local_unnamed_addr #0
 ; LE-NEXT:    addi r3, r3, -5
 ; LE-NEXT:    extsw r3, r3
 ; LE-NEXT:    blr
+; LE:       .quad   __parse_hwcap_and_convert_at_platform
 entry:
   %cpu_supports = tail call i32 @llvm.ppc.fixed.addr.ld(i32 2)
   %0 = and i32 %cpu_supports, 8388608

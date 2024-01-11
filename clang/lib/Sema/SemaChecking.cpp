@@ -2143,61 +2143,35 @@ static bool checkFPMathBuiltinElementType(Sema &S, SourceLocation Loc,
   return false;
 }
 
-/// SemaBuiltinCpuSupports - Handle __builtin_cpu_supports(char *).
-/// This checks that the target supports __builtin_cpu_supports and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuSupports(Sema &S, const TargetInfo &TI,
-                                   const TargetInfo *AuxTI, CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
+/// SemaBuiltinCpu{Supports|Is} - Handle __builtin_cpu_{supports|is}(char *).
+/// This checks that the target supports the builtin and that the string
+/// argument is constant and valid.
+static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
+                           unsigned BuiltinID) {
+  assert((BuiltinID == Builtin::BI__builtin_cpu_supports ||
+          BuiltinID == Builtin::BI__builtin_cpu_is) &&
+         "Expecting __builtin_cpu_...");
 
-  const TargetInfo *TheTI = nullptr;
-  if (TI.supportsCpuSupports())
-    TheTI = &TI;
-  else if (AuxTI && AuxTI->supportsCpuSupports())
-    TheTI = AuxTI;
-  else
+  bool IsCPUSupports = BuiltinID == Builtin::BI__builtin_cpu_supports;
+  if (IsCPUSupports && !TI.supportsCpuSupports())
+    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
+  if (!IsCPUSupports && !TI.supportsCpuIs())
     return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
 
+  Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
   // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
+  if (!isa<StringLiteral>(Arg))
     return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
            << Arg->getSourceRange();
 
   // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TheTI->validateCpuSupports(Feature))
+  StringRef Feature = cast<StringLiteral>(Arg)->getString();
+  if (IsCPUSupports && !TI.validateCpuSupports(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
            << Arg->getSourceRange();
-  return false;
-}
-
-/// SemaBuiltinCpuIs - Handle __builtin_cpu_is(char *).
-/// This checks that the target supports __builtin_cpu_is and
-/// that the string argument is constant and valid.
-static bool SemaBuiltinCpuIs(Sema &S, const TargetInfo &TI,
-                             const TargetInfo *AuxTI, CallExpr *TheCall) {
-  Expr *Arg = TheCall->getArg(0);
-
-  const TargetInfo *TheTI = nullptr;
-  if (TI.supportsCpuIs())
-    TheTI = &TI;
-  else if (AuxTI && AuxTI->supportsCpuIs())
-    TheTI = AuxTI;
-  else
-    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
-
-  // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
-
-  // Check the contents of the string.
-  StringRef Feature =
-      cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
-  if (!TheTI->validateCpuIs(Feature))
+  if (!IsCPUSupports && !TI.validateCpuIs(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
            << Arg->getSourceRange();
   return false;
@@ -2232,13 +2206,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   FPOptions FPO;
   switch (BuiltinID) {
   case Builtin::BI__builtin_cpu_supports:
-    if (SemaBuiltinCpuSupports(*this, Context.getTargetInfo(),
-                               Context.getAuxTargetInfo(), TheCall))
-      return ExprError();
-    break;
   case Builtin::BI__builtin_cpu_is:
-    if (SemaBuiltinCpuIs(*this, Context.getTargetInfo(),
-                         Context.getAuxTargetInfo(), TheCall))
+    if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_cpu_init:
