@@ -7,6 +7,11 @@
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -stats %s -S 2>&1 | FileCheck %s --check-prefix=STATS --check-prefix=IR
 
+;; Check that a smaller search depth limit blocks the tail call discovery
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+; RUN:  -memprof-tail-call-search-depth=1 -stats %s -S 2>&1 | FileCheck %s \
+; RUN:  --implicit-check-not=_Z3foov.memprof --implicit-check-not="found via tail calls"
+
 source_filename = "memprof-tailcall.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
