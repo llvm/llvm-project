@@ -833,6 +833,32 @@ std::string ObjectFile::GetObjectName() const {
   return GetFileSpec().GetFilename().str();
 }
 
+bool ObjectFile::CanBeTargetModule(Status *status) {
+  const char *reason;
+  switch (GetType()) {
+  case eTypeCoreFile:
+  case eTypeExecutable:
+  case eTypeDynamicLinker:
+  case eTypeObjectFile:
+  case eTypeSharedLibrary:
+    return true;
+  case eTypeDebugInfo:
+    reason = "debug info files aren't valid target modules, please specify an "
+             "executable";
+    break;
+  case eTypeStubLibrary:
+    reason = "stub libraries aren't valid target modules, please specify an "
+             "executable";
+    break;
+  default:
+    reason = "unsupported file type, please specify an executable";
+    break;
+  }
+  if (status)
+    *status = Status::FromErrorString(reason);
+  return false;
+}
+
 namespace llvm {
 namespace json {
 
