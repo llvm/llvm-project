@@ -8953,40 +8953,25 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
 
 static bool checkArmNewAttrMutualExclusion(Sema &S, const ParsedAttr &AL,
                                            const FunctionProtoType *FPT,
-                                           FunctionType::ArmStateValue State,
+                                           FunctionType::ArmStateValue CurrentState,
                                            StringRef StateName) {
-  std::string ArmNewStr =
-      std::string("'__arm_new(\"") + StateName.str() + "\")'";
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
 
-  if (State == FunctionType::ARM_In) {
-    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-        << ArmNewStr << std::string("'__arm_in(\"") + StateName.str() + "\")'"
-        << true;
-    AL.setInvalid();
-  }
-
-  if (State == FunctionType::ARM_Out) {
-    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-        << ArmNewStr << std::string("'__arm_out(\"") + StateName.str() + "\")'"
-        << true;
-    AL.setInvalid();
-  }
-
-  if (State == FunctionType::ARM_InOut) {
-    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-        << ArmNewStr
-        << std::string("'__arm_inout(\"") + StateName.str() + "\")'" << true;
-    AL.setInvalid();
-  }
-
-  if (State == FunctionType::ARM_Preserves) {
-    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-        << ArmNewStr
-        << std::string("'__arm_preserves(\"") + StateName.str() + "\")'"
-        << true;
-    AL.setInvalid();
-  }
-
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
   return AL.isInvalid();
 }
 
