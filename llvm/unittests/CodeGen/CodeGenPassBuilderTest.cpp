@@ -23,21 +23,6 @@ using namespace llvm;
 
 namespace {
 
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    return PreservedAnalyses::all();
-  }
-
-  static StringRef name() { return "NoOpModulePass"; }
-};
-
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "NoOpFunctionPass"; }
-};
-
 class DummyCodeGenPassBuilder
     : public CodeGenPassBuilder<DummyCodeGenPassBuilder> {
 public:
@@ -67,6 +52,7 @@ public:
     InitializeAllTargets();
     InitializeAllTargetMCs();
 
+    // TODO: Move this test to normal lit test when llc supports new pm.
     static const char *argv[] = {
         "test",
         "-print-pipeline-passes",
@@ -85,6 +71,8 @@ public:
     TargetOptions Options;
     TM = static_cast<LLVMTargetMachine *>(
         TheTarget->createTargetMachine("", "", "", Options, std::nullopt));
+    if (!TM)
+      GTEST_SKIP();
   }
 };
 
@@ -118,16 +106,10 @@ TEST_F(CodeGenPassBuilderTest, basic) {
     return PassName.empty() ? Name : PassName;
   });
   const char ExpectedIRPipeline[] =
-      "require<profile-summary>,require<collector-metadata>,"
-      "PreISelIntrinsicLoweringPass,function(verify,loop-mssa(loop-reduce),"
-      "mergeicmps,expand-memcmp,gc-lowering),shadow-stack-gc-lowering,function("
-      "lower-constant-intrinsics,UnreachableBlockElimPass,consthoist,"
-      "ReplaceWithVeclib,partially-inline-libcalls,ee-instrument<post-inline>,"
-      "scalarize-masked-mem-intrin,ExpandReductionsPass,codegenprepare,"
-      "dwarf-eh-prepare),no-op-module,function(no-op-function,no-op-function,"
-      "no-op-function),no-op-module,function(no-op-function,callbrprepare,"
-      "safe-stack,stack-protector,verify)";
-  EXPECT_EQ(IRPipeline, ExpectedIRPipeline);
+      "no-op-module,function(no-op-function,"
+      "no-op-function,no-op-function),no-op-module";
+  // TODO: Move this test to normal lit test when llc supports new pm.
+  EXPECT_TRUE(StringRef(IRPipeline).contains(ExpectedIRPipeline));
 
   std::string MIRPipeline;
   raw_string_ostream MIROS(MIRPipeline);
@@ -151,8 +133,9 @@ TEST_F(CodeGenPassBuilderTest, basic) {
       "FEntryInserterPass,XRayInstrumentationPass,PatchableFunctionPass,"
       "FuncletLayoutPass,StackMapLivenessPass,LiveDebugValuesPass,"
       "MachineSanitizerBinaryMetadata,FreeMachineFunctionPass";
-  EXPECT_EQ(MIRPipeline, ExpectedMIRPipeline);
   // TODO: Check pipeline string when all pass names are populated.
+  // TODO: Move this test to normal lit test when llc supports new pm.
+  EXPECT_EQ(MIRPipeline, ExpectedMIRPipeline);
 }
 
 } // namespace

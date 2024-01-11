@@ -187,9 +187,9 @@ protected:
                     "Only module pass and function pass are supported.");
 
       // Add Function Pass
-      if constexpr (is_detected<is_function_pass_t, PassT>::value)
+      if constexpr (is_detected<is_function_pass_t, PassT>::value) {
         FPM.addPass(std::forward<PassT>(Pass));
-      else {
+      } else {
         // Add Module Pass
         if (!FPM.isEmpty()) {
           MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
