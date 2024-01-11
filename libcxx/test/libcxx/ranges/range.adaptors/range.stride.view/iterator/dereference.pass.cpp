@@ -7,27 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: no-exceptions
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
+
+// constexpr decltype(auto) operator*() const
 
 #include "check_assertion.h"
 #include <ranges>
 
 int main(int, char**) {
   {
-    int range[]   = {1, 2, 3};
-    auto striv    = std::ranges::views::stride(range, 3);
-    auto striv_it = striv.begin();
-    ++striv_it;
-    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(striv_it), "Cannot dereference an iterator at the end.");
+    int range[] = {1, 2, 3};
+    auto view   = std::ranges::views::stride(range, 3);
+    auto it     = view.begin();
+    ++it;
+    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(it), "Cannot dereference an iterator at the end.");
   }
   {
-    int range[]   = {1, 2, 3};
-    auto striv    = std::ranges::views::stride(range, 4);
-    auto striv_it = striv.begin();
-    ++striv_it;
-    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(striv_it), "Cannot dereference an iterator at the end.");
+    int range[] = {1, 2, 3};
+    auto view   = std::ranges::views::stride(range, 4);
+    auto it     = view.begin();
+    ++it;
+    TEST_LIBCPP_ASSERT_FAILURE(*std::as_const(it), "Cannot dereference an iterator at the end.");
   }
   return 0;
 }
