@@ -13,6 +13,7 @@
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
+#include "ConditionaltostdminmaxCheck.h"
 #include "ConstReturnTypeCheck.h"
 #include "ContainerContainsCheck.h"
 #include "ContainerDataPointerCheck.h"
@@ -62,6 +63,8 @@ namespace readability {
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<ConditionaltostdminmaxCheck>(
+        "readability-ConditionalToStdMinMax");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(

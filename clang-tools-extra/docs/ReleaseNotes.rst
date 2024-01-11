@@ -224,6 +224,12 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
+- New :doc:`readability-ConditionalToStdMinMax
+  <clang-tidy/checks/readability/ConditionalToStdMinMax>` check.
+
+  Replaces certain conditional statements with equivalent std::min or std::max expressions, 
+  improving readability and promoting the use of standard library functions.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
