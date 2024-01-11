@@ -47,7 +47,7 @@ void Progress::Increment(uint64_t amount,
   if (amount > 0) {
     std::lock_guard<std::mutex> guard(m_mutex);
     if (updated_detail)
-      m_details = *updated_detail;
+      m_details = std::move(updated_detail.value());
     // Watch out for unsigned overflow and make sure we don't increment too
     // much and exceed m_total.
     if (m_total && (amount > (m_total - m_completed)))
@@ -62,8 +62,7 @@ void Progress::ReportProgress() {
   if (!m_complete) {
     // Make sure we only send one notification that indicates the progress is
     // complete, and only modify m_complete is m_total isn't null.
-    if (m_total)
-      m_complete = m_completed == m_total;
+    m_complete = m_completed == m_total;
     Debugger::ReportProgress(m_id, m_title, m_details, m_completed, m_total,
                              m_debugger_id);
   }
