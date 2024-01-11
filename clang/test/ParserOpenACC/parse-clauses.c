@@ -365,7 +365,7 @@ void VarListClauses() {
 #pragma acc serial copy(s.array[s.value]), seq
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
-#pragma acc serial copy(s.array[s.value : 5]), seq
+#pragma acc serial copy(s.array[s.value], s.array[s.value :5] ), seq
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(HasMem.MemArr[3].array[1]), seq
@@ -398,6 +398,13 @@ void VarListClauses() {
   // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(HasMem.MemArr[3:]), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value : 5]), seq
 }
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}

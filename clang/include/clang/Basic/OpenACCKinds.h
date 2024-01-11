@@ -101,6 +101,8 @@ enum class OpenACCClauseKind {
   /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
   /// 'declare'.
   Copy,
+  /// 'use_device' clause, allowed on 'host_data' construct.
+  UseDevice,
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
