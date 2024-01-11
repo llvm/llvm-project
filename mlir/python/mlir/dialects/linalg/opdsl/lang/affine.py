@@ -103,7 +103,7 @@ class AffineBuildState:
             if not self.allow_new_dims:
                 raise ValueError(
                     f"New dimensions not allowed in the current affine expression: "
-                    f"Requested '{dimname}', Availble: {self.all_dims}"
+                    f"Requested '{dimname}', Available: {self.all_dims}"
                 )
             pos = len(self.all_dims)
             self.all_dims[dimname] = pos
@@ -117,7 +117,7 @@ class AffineBuildState:
             if not self.allow_new_symbols:
                 raise ValueError(
                     f"New symbols not allowed in the current affine expression: "
-                    f"Requested '{symname}', Availble: {self.all_symbols}"
+                    f"Requested '{symname}', Available: {self.all_symbols}"
                 )
             pos = len(self.all_symbols)
             self.all_symbols[symname] = pos

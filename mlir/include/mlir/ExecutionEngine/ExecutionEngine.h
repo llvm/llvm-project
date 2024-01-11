@@ -151,7 +151,7 @@ public:
   llvm::Expected<void (*)(void **)> lookupPacked(StringRef name) const;
 
   /// Looks up the original function with the given name and returns a
-  /// pointer to it. This is not necesarily a packed function. Propagates
+  /// pointer to it. This is not necessarily a packed function. Propagates
   /// errors in case of failure.
   llvm::Expected<void *> lookup(StringRef name) const;
 

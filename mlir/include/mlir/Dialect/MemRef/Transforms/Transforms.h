@@ -96,7 +96,7 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// It returns the new allocation if the original allocation was multi-buffered
 /// and returns failure() otherwise.
 /// When `skipOverrideAnalysis`, the pass will apply the transformation
-/// without checking thwt the buffer is overrided at the beginning of each
+/// without checking thwt the buffer is overriden at the beginning of each
 /// iteration. This implies that user knows that there is no data carried across
 /// loop iterations. Example:
 /// ```

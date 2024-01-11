@@ -12,7 +12,7 @@
 // dialects and lower level NVVM dialect. This allow representing PTX specific
 // operations while using MLIR high level concepts like memref and 2-D vector.
 //
-// Ops semantic are going to be based on vendor specific PTX defintion:
+// Ops semantic are going to be based on vendor specific PTX definition:
 // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html
 //
 //===----------------------------------------------------------------------===//
@@ -38,7 +38,7 @@ def NVGPU_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
-  
+
   let extraClassDeclaration = [{
     /// Return true if the given MemRefType has an integer address
     /// space that matches the NVVM shared memory address space or
@@ -70,9 +70,9 @@ def TensorMapSwizzleNone : I32EnumAttrCase<"SWIZZLE_NONE", 0, "none">;
 def TensorMapSwizzle32B  : I32EnumAttrCase<"SWIZZLE_32B", 1, "swizzle_32b">;
 def TensorMapSwizzle64B  : I32EnumAttrCase<"SWIZZLE_64B", 2, "swizzle_64b">;
 def TensorMapSwizzle128B : I32EnumAttrCase<"SWIZZLE_128B", 3, "swizzle_128b">;
-def TensorMapSwizzleKind : I32EnumAttr<"TensorMapSwizzleKind", 
+def TensorMapSwizzleKind : I32EnumAttr<"TensorMapSwizzleKind",
                                 "Tensor map swizzling mode of shared memory banks",
-  [ TensorMapSwizzleNone, TensorMapSwizzle32B, TensorMapSwizzle64B, 
+  [ TensorMapSwizzleNone, TensorMapSwizzle32B, TensorMapSwizzle64B,
     TensorMapSwizzle128B]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::nvgpu";
@@ -82,9 +82,9 @@ def TensorMapL2PromoNone : I32EnumAttrCase<"L2PROMO_NONE", 0, "none">;
 def TensorMapL2Promo64B  : I32EnumAttrCase<"L2PROMO_64B", 1, "l2promo_64b">;
 def TensorMapL2Promo128B : I32EnumAttrCase<"L2PROMO_128B", 2, "l2promo_128b">;
 def TensorMapL2Promo256B : I32EnumAttrCase<"L2PROMO_256B", 3, "l2promo_256b">;
-def TensorMapL2PromoKind : I32EnumAttr<"TensorMapL2PromoKind", 
+def TensorMapL2PromoKind : I32EnumAttr<"TensorMapL2PromoKind",
                                 "Tensor map L2 promotion type",
-  [ TensorMapL2PromoNone, TensorMapL2Promo64B, TensorMapL2Promo128B, 
+  [ TensorMapL2PromoNone, TensorMapL2Promo64B, TensorMapL2Promo128B,
     TensorMapL2Promo256B]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::nvgpu";
@@ -92,7 +92,7 @@ def TensorMapL2PromoKind : I32EnumAttr<"TensorMapL2PromoKind",
 
 def TensorMapOOBZero : I32EnumAttrCase<"OOB_ZERO", 0, "zero">;
 def TensorMapOOBNaN  : I32EnumAttrCase<"OOB_NAN", 1, "nan">;
-def TensorMapOOBKind : I32EnumAttr<"TensorMapOOBKind", 
+def TensorMapOOBKind : I32EnumAttr<"TensorMapOOBKind",
                                 "Tensor map out-of-bounds fill type",
   [ TensorMapOOBZero, TensorMapOOBNaN]> {
   let genSpecializedAttr = 0;
@@ -102,7 +102,7 @@ def TensorMapOOBKind : I32EnumAttr<"TensorMapOOBKind",
 def TensorMapInterleaveNone : I32EnumAttrCase<"INTERLEAVE_NONE", 0, "none">;
 def TensorMapInterleave16B  : I32EnumAttrCase<"INTERLEAVE_16B", 1, "interleave_16b">;
 def TensorMapInterleave32B  : I32EnumAttrCase<"INTERLEAVE_32B", 2, "interleave_32b">;
-def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind", 
+def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
                                 "Tensor map interleave layout type",
   [ TensorMapInterleaveNone, TensorMapInterleave16B, TensorMapInterleave32B]> {
   let genSpecializedAttr = 0;
@@ -138,16 +138,16 @@ def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",
 def NVGPU_MBarrierGroup : NVGPU_Type<"MBarrierGroup", "mbarrier.group", []> {
   let summary = "mbarrier barrier type";
   let description = [{
-    This is the type for one or more mbarrier object in shared memory that is 
+    This is the type for one or more mbarrier object in shared memory that is
     used to synchronize a variable number of threads.
 
     If `num_barriers` is not set, the number of mbarrier objects is 1.
 
-    A mbarrier object is 64 bit with 8 byte alignment. The mbarrier object 
+    A mbarrier object is 64 bit with 8 byte alignment. The mbarrier object
     can be initiated and invalidated.
 
     [See for more details in PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#size-and-alignment-of-mbarrier-object)
-  }];    
+  }];
   let parameters = (ins "Attribute":$memorySpace, DefaultValuedParameter<"unsigned", "1">:$num_barriers);
   let assemblyFormat = "`<` struct(params) `>`";
   let builders = [
@@ -168,8 +168,8 @@ def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.des
                         EnumParameter<TensorMapOOBKind>:$oob,
                         EnumParameter<TensorMapInterleaveKind>:$interleave);
   let description = [{
-    `nvgpu.tma.descriptor` is a type that represents a TMA descriptor. It is 
-    128-byte object either in constant space or kernel paramater.    
+    `nvgpu.tma.descriptor` is a type that represents a TMA descriptor. It is
+    128-byte object either in constant space or kernel parameter.
   }];
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -177,9 +177,9 @@ def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.des
 def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "warpgroup.descriptor", []> {
   let summary = "Warpgroup matrix descriptor type";
   let description = [{
-  The descriptor specifies the properties of the matrix in shared memory that 
-  is a multiplicand in the matrix multiply and accumulate operation. 
-  
+  The descriptor specifies the properties of the matrix in shared memory that
+  is a multiplicand in the matrix multiply and accumulate operation.
+
   The descriptor is a 64-bit value contained in a register with the following:
   ```
   +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
@@ -190,10 +190,10 @@ def NVGPU_WarpgroupMatrixDescriptor : NVGPU_Type<"WarpgroupMatrixDescriptor", "w
   | BaseAddr|  0  | LeadingDim|  0  |   Stride  |  0  |Offst|     0     |Swzle|
   +---------+-----+-----------+-----+-----------+-----+-----+-----------+-----+
   ```
-   
-  [See for more details in PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor) 
-  
-  }];  
+
+  [See for more details in PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor)
+
+  }];
   let parameters = (ins "MemRefType":$tensor);
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -202,12 +202,12 @@ def NVGPU_WarpgroupAccumulator : NVGPU_Type<"WarpgroupAccumulator", "warpgroup.a
   let parameters = (ins "VectorType":$fragmented);
   let assemblyFormat = "`<` struct(params) `>`";
   let description = [{
-    This type represents the result matrix obtained from `nvgpu.warpgroup.mma`. 
-    The `$fragmented` type signifies the distributed or fragmented result 
-    vector that is collectively owned by all the threads in the warp-group 
+    This type represents the result matrix obtained from `nvgpu.warpgroup.mma`.
+    The `$fragmented` type signifies the distributed or fragmented result
+    vector that is collectively owned by all the threads in the warp-group
     that executed `nvgpu.warpgroup.mma`.
     [See the details of register fragment layout for accumulator matrix D]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d)
   }];
 }
 
@@ -271,7 +271,7 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
   let description = [{
     The `nvgpu.mma.sync` op represents the warp-level matrix-multiply-and-
     accumulate (mma) operation that is compatible with `nvvm.mma.sync`.
-    The operands and results vector sizes are thread-level onwership to
+    The operands and results vector sizes are thread-level ownership to
     the warp-level mma operation shape. `mmaShape` attribute holds the
     warp-level matrix-multiply shape.
 
@@ -492,12 +492,12 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
 def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
   let summary = "Creates a `nvgpu.mbarrier` object.";
   let description = [{
-    The Op generates one or more `mbarrier` object, which is a barrier created in 
+    The Op generates one or more `mbarrier` object, which is a barrier created in
     shared memory and supports various synchronization behaviors for threads.
 
     The `mbarrier` object has the following type and alignment requirements:
       Type: .b64, Alignment: 8, Memory space: .shared
-    
+
     Example:
     ```mlir
       %barrier = nvgpu.mbarrier.create -> !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
@@ -529,7 +529,7 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
   let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
+    Checks whether the mbarrier object has completed the phase. It is is a
     non-blocking instruction which tests for the completion of the phase.
 
     Example:
@@ -545,7 +545,7 @@ def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
 def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
   let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive`.";
   let description = [{
-    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    The Op performs arrive-on operation on the `mbarrier` object and returns a
     `nvgpu.mbarrier.token`.
 
     For more information, see
@@ -564,7 +564,7 @@ let assemblyFormat = "$barriers `[` $mbarId `]` attr-dict `:` type($barriers) `-
 def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []> {
   let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive.nocomplete` as non-blocking.";
   let description = [{
-    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    The Op performs arrive-on operation on the `mbarrier` object and returns a
     `nvgpu.mbarrier.token`.
 
     The Op does not cause the `nvgpu.mbarrier` to complete its current phase.
@@ -583,13 +583,13 @@ def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []
 def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
   let summary = "Performs expect_tx operation on the `nvgpu.mbarrier.arrive`";
   let description = [{
-    A thread executing the Op performs an expect-tx operation on the mbarrier 
-    object at the location specified by the address operand $barrier. The 
-    expect-tx operation, with an $txcount argument, increases the tx-count of 
-    an mbarrier object by the value specified by $txcount. This makes the 
-    current phase of the mbarrier object to expect and track the completion of 
+    A thread executing the Op performs an expect-tx operation on the mbarrier
+    object at the location specified by the address operand $barrier. The
+    expect-tx operation, with an $txcount argument, increases the tx-count of
+    an mbarrier object by the value specified by $txcount. This makes the
+    current phase of the mbarrier object to expect and track the completion of
     additional asynchronous transactions.
-    
+
     The `$txCount` specifies the number of element to the expect-tx operation.
 
     Example:
@@ -604,10 +604,10 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let summary = "Waits for the `nvgpu.mbarrier` to complete its current phase.";
   let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
-    potentially blocking instruction which tests for the completion of the 
-    phase. Suspended thread resumes execution when the specified phase completes 
-    OR before the phase completes following a system-dependent time limit. 
+    Checks whether the mbarrier object has completed the phase. It is is a
+    potentially blocking instruction which tests for the completion of the
+    phase. Suspended thread resumes execution when the specified phase completes
+    OR before the phase completes following a system-dependent time limit.
 
     Example:
     ```mlir
@@ -616,13 +616,13 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
 
   }];
   let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$phase, Index:$ticks, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";
 }
 
 def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
   let summary = "Prefetch given `nvgpu.tensormap.descriptor` ";
   let description = [{
-    The Op brings the cache line containing the given `$tmaDescriptor` for 
+    The Op brings the cache line containing the given `$tmaDescriptor` for
     subsequent use by the `tma.async.load` instruction.
   }];
   let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
@@ -634,27 +634,27 @@ def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
 def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]> {
   let summary = "TMA asynchronous load";
   let description = [{
-    The Op loads a tile memory region from global memory to shared memory by 
+    The Op loads a tile memory region from global memory to shared memory by
     Tensor Memory Access (TMA).
-    
+
     `$tensorMapDescriptor` is tensor map descriptor which has information about
     tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
 
-    The Op uses `$barrier` mbarrier based completion mechanism. 
-  }];  
+    The Op uses `$barrier` mbarrier based completion mechanism.
+  }];
   let arguments = (ins  Arg<AnyMemRef, "", [MemWriteAt<0, FullEffect>]>:$dst,
                         NVGPU_MBarrierGroup:$barriers,
                         NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
-                        Variadic<Index>:$coordinates, 
+                        Variadic<Index>:$coordinates,
                         Index:$mbarId,
                         Optional<I16>:$multicastMask,
                         Optional<I1>:$predicate);
   let assemblyFormat = [{
-    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` 
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]`
       `to` $dst
       (`multicast_mask` `=` $multicastMask^ )?
       (`,` `predicate` `=` $predicate^)?
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers)
       `->` type($dst)
   }];
   let hasVerifier = 1;
@@ -664,11 +664,11 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
 def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let summary = "TMA create descriptor";
   let description = [{
-    The Op creates a tensor map descriptor object representing tiled memory 
-    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The 
+    The Op creates a tensor map descriptor object representing tiled memory
+    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The
     descriptor is used by Tensor Memory Access (TMA).
 
-    The `tensor` is the source tensor to be tiled. 
+    The `tensor` is the source tensor to be tiled.
 
     The `boxDimensions` is the size of the tiled memory region in each dimension.
 
@@ -688,15 +688,15 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
 def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descriptor", []> {
   let summary = "Generate a warpgroup matrix descriptor";
   let description = [{
-  This Op builds a `nvgpu.warpgroup.descriptor` that is used by 
-  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and 
+  This Op builds a `nvgpu.warpgroup.descriptor` that is used by
+  `nvgpu.warpgroup.mma` to perform warpgroup-level matrix multiply and
   accumulate.
 
-  The descriptor specifies the properties of the matrix in shared memory that 
-  is a multiplicand in the matrix multiply and accumulate operation. 
-  }];  
+  The descriptor specifies the properties of the matrix in shared memory that
+  is a multiplicand in the matrix multiply and accumulate operation.
+  }];
   let results = (outs NVGPU_WarpgroupMatrixDescriptor:$descriptor);
-  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$tensor, 
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead]>:$tensor,
                        NVGPU_TensorMapDescriptor:$tensorMap);
   let assemblyFormat = [{$tensor `,` $tensorMap attr-dict `:` type($tensor) `,` type($tensorMap) `->` type($descriptor)}];
   let hasVerifier = 1;
@@ -704,42 +704,42 @@ def NVGPU_WarpgroupGenerateDescriptorOp : NVGPU_Op<"warpgroup.generate.descripto
 
 def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
   let description = [{
-    The `nvgpu.warpgroup.mma` op performs the warpgroup-level (4 warps) 
-    matrix-multiply-and-accumulate (mma) operation that results in 
-    `nvvm.wgmma.mma_async`. 
-    
-    The operands are `descriptorA` and `descriptorB` that are wgmma matrix 
-    descriptors that shows the properties of the matrix in shared memory. The 
-    results are thread-level ownership to the warpgroup-level mma operation 
+    The `nvgpu.warpgroup.mma` op performs the warpgroup-level (4 warps)
+    matrix-multiply-and-accumulate (mma) operation that results in
+    `nvvm.wgmma.mma_async`.
+
+    The operands are `descriptorA` and `descriptorB` that are wgmma matrix
+    descriptors that shows the properties of the matrix in shared memory. The
+    results are thread-level ownership to the warpgroup-level mma operation
     shape. The shape is deduced from the descriptor types and output vector.
 
-    The Op encapsulates multiple `nvvm.wgmma.mma_async` operations to complete 
-    the given shape. As `nvvm.wgmma.async` Op, or its corresponding PTX 
-    instruction, is asynchronous, this Op groups the `nvvm.wgmma.async` and 
-    surrounds them between `wgmma.fence.aligned` and 
+    The Op encapsulates multiple `nvvm.wgmma.mma_async` operations to complete
+    the given shape. As `nvvm.wgmma.async` Op, or its corresponding PTX
+    instruction, is asynchronous, this Op groups the `nvvm.wgmma.async` and
+    surrounds them between `wgmma.fence.aligned` and
     `wgmma.commit.group.sync.aligned`, `wgmma.wait.group.sync.aligned` Ops.
 
     Example:
     ```mlir
-      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2: 
-                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>, 
-                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>, 
+      %r1,%r2 = nvgpu.warpgroup.mma %descA, %descB, %acc1, %acc2:
+                 !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>,
+                 !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
-                 -> 
+                 ->
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
                  !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
     ```
   }];
 
-  let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA, 
-                       NVGPU_WarpgroupMatrixDescriptor:$descriptorB,                                               
+  let arguments = (ins NVGPU_WarpgroupMatrixDescriptor:$descriptorA,
+                       NVGPU_WarpgroupMatrixDescriptor:$descriptorB,
                        DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
                        NVGPU_WarpgroupAccumulator:$matrixC);
   let results = (outs NVGPU_WarpgroupAccumulator:$matrixD);
-  let assemblyFormat = [{    
+  let assemblyFormat = [{
     $descriptorA`,` $descriptorB`,` $matrixC attr-dict
     `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
   }];
@@ -748,29 +748,29 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
 
 def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
   let description = [{
-    The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result 
-    in $matrixD to given memref. 
+    The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result
+    in $matrixD to given memref.
 
     [See the details of register fragment layout for accumulator matrix D]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d)
 
     Note that, the op must be run with warp group.
   }];
 
   let arguments = (ins NVGPU_WarpgroupAccumulator:$matrixD,
                        Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
-  
+
   let assemblyFormat = [{
     $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
   }];
   let hasVerifier = 1;
 }
 
-def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {  
+def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulator"> {
   let summary = "Initializes the accumulator matrix";
 
   let description = [{
-    This Op generates and initializes the accumulator matrix for 
+    This Op generates and initializes the accumulator matrix for
     `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate.
   }];
   let results = (outs NVGPU_WarpgroupAccumulator:$matrixC);

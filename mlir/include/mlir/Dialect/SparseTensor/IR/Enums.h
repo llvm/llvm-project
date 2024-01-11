@@ -319,7 +319,7 @@ constexpr std::optional<LevelType> buildLevelType(LevelFormat lf, bool ordered,
 }
 
 //
-// Ensure the above methods work as indended.
+// Ensure the above methods work as intended.
 //
 
 static_assert(

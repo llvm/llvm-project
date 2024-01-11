@@ -1682,7 +1682,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
     The operation takes a scalar input and return a `!gpu.mma_matrix` where
     each element of is equal to the operand constant. The destination
-    mma_matrix type must have elememt type equal to the constant type. Since
+    mma_matrix type must have element type equal to the constant type. Since
     the layout of `!gpu.mma_matrix` is opaque this only support setting all the
     elements to the same value.
 

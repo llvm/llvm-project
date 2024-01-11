@@ -386,7 +386,7 @@ def SparseGPUCodegen : Pass<"sparse-gpu-codegen", "ModuleOp"> {
 }
 
 def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"> {
-  let summary = "Lower sparse storage specifer to llvm structure";
+  let summary = "Lower sparse storage specifier to llvm structure";
   let description = [{
      This pass rewrites sparse tensor storage specifier-related operations into
      LLVMDialect, and converts sparse tensor storage specifier into an llvm.struct.

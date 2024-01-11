@@ -250,7 +250,7 @@ public:
   explicit PresburgerSet(const PresburgerRelation &set);
 
   /// These operations are the same as the ones in PresburgeRelation, they just
-  /// forward the arguement and return the result as a set instead of a
+  /// forward the argument and return the result as a set instead of a
   /// relation.
   PresburgerSet unionSet(const PresburgerRelation &set) const;
   PresburgerSet intersect(const PresburgerRelation &set) const;

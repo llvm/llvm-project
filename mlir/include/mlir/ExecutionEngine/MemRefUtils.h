@@ -125,7 +125,7 @@ allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
 
 /// Convenient callback to "visit" a memref element by element.
 /// This takes a reference to an individual element as well as the coordinates.
-/// It can be used in conjuction with a StridedMemrefIterator.
+/// It can be used in conjunction with a StridedMemrefIterator.
 template <typename T>
 using ElementWiseVisitor = llvm::function_ref<void(T &ptr, ArrayRef<int64_t>)>;
 

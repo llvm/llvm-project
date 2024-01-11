@@ -148,7 +148,7 @@ class FuncOp(FuncOp):
           * `func_op`: The `func` op being defined.
 
         By default, the function name will be the Python function `__name__`. This
-        can be overriden by passing the `name` argument to the decorator.
+        can be overridden by passing the `name` argument to the decorator.
 
         If `results` is not specified, then the decorator will implicitly
         insert a `ReturnOp` with the `Value`'s returned from the decorated

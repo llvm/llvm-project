@@ -46,7 +46,7 @@ public:
 
   /// Construct a matrix with the specified number of rows and columns.
   /// The number of reserved rows and columns will be at least the number
-  /// specified, and will always be sufficient to accomodate the number of rows
+  /// specified, and will always be sufficient to accommodate the number of rows
   /// and columns specified.
   ///
   /// Initially, the entries are initialized to ero.

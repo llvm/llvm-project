@@ -85,7 +85,7 @@ public:
 
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
-  /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
+  /// appropriate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
   TargetOptions(
       TypeID typeID, StringRef toolkitPath = {},
       ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
