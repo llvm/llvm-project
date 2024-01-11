@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Object
   Support
+  DWARFLinkerBase
   DWARFLinker
   AsmPrinter
   TargetParser

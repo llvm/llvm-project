@@ -104,7 +104,14 @@ def foldable_fneg : GICombineRule<
          [{ return Helper.matchFoldableFneg(*${ffn}, ${matchinfo}); }]),
   (apply [{ Helper.applyFoldableFneg(*${ffn}, ${matchinfo}); }])>;
 
-def sign_exension_in_reg_matchdata : GIDefMatchData<"MachineInstr *">;
+// Detects s_mul_u64 instructions whose higher bits are zero/sign extended.
+def smulu64 : GICombineRule<
+  (defs root:$smul, unsigned_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_MUL):$smul,
+         [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
+  (apply [{ applyCombine_s_mul_u64(*${smul}, ${matchinfo}); }])>;
+
+def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 
 def sign_extension_in_reg : GICombineRule<
   (defs root:$sign_inreg, sign_exension_in_reg_matchdata:$matchinfo),
@@ -149,7 +156,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq, sign_extension_in_reg]> {
+   rcp_sqrt_to_rsq, sign_extension_in_reg, smulu64]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
