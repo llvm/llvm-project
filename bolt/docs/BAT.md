@@ -89,8 +89,8 @@ Delta encoding means that only the difference with the previous corresponding
 entry is encoded. Input offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputAddr` | Continuous, Delta, ULEB128 | Function offset in output binary |
-| `InputAddr` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
+| `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
