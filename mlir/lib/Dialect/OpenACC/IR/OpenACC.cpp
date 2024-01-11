@@ -2182,6 +2182,95 @@ void printRoutineGangClause(OpAsmPrinter &p, Operation *op, UnitAttr gang,
       << " : " << gangDim.getType() << ")";
 }
 
+static ParseResult parseDeviceTypeArrayAttr(OpAsmParser &parser, mlir::ArrayAttr &deviceTypes) {
+  llvm::SmallVector<mlir::Attribute> attributes;
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    deviceTypes = ArrayAttr::get(parser.getContext(), attributes);
+    return success();
+  }
+
+  // Parse device type attributes
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (parser.parseAttribute(attributes.emplace_back()))
+            return failure();
+          return success();
+        })))
+      return failure();
+    if (parser.parseRSquare() || parser.parseRParen())
+      return failure();
+  }
+  deviceTypes = ArrayAttr::get(parser.getContext(), attributes);
+  return success();
+}
+
+static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
+  if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
+    return true;
+  return false;
+}
+
+static void printDeviceTypeArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
+    std::optional<mlir::ArrayAttr> deviceTypes) {
+
+  if (hasDeviceTypeValues(deviceTypes) && deviceTypes->size() == 1) {
+    auto deviceTypeAttr =
+        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[0]);
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+      return;
+  }
+
+  if (!hasDeviceTypeValues(deviceTypes))
+    return;
+  
+  p << "([";
+  llvm::interleaveComma(*deviceTypes, p,
+        [&](mlir::Attribute attr) { 
+          auto dTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+          p << dTypeAttr;
+      });
+  p << "])";
+}
+
+bool RoutineOp::hasWorker() {
+  return hasWorker(mlir::acc::DeviceType::None);
+}
+
+bool RoutineOp::hasWorker(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getWorker()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+bool RoutineOp::hasVector() {
+  return hasWorker(mlir::acc::DeviceType::None);
+}
+
+bool RoutineOp::hasVector(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getVector()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
+bool RoutineOp::hasSeq() {
+  return hasWorker(mlir::acc::DeviceType::None);
+}
+
+bool RoutineOp::hasSeq(mlir::acc::DeviceType deviceType) {
+  if (auto arrayAttr = getSeq()) {
+    if (findSegment(*arrayAttr, deviceType))
+      return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
