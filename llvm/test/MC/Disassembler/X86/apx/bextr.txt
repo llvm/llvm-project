@@ -1,38 +1,37 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
-# CHECK: {nf}	bextr	r10d, edx, ecx
-# CHECK: encoding: [0x62,0x72,0x74,0x0c,0xf7,0xd2]
-         {nf}	bextr	r10d, edx, ecx
+# ATT:   {nf}	bextrl	%ecx, %edx, %r10d
+# INTEL: {nf}	bextr	r10d, edx, ecx
+0x62,0x72,0x74,0x0c,0xf7,0xd2
 
-# CHECK: bextr	r10d, edx, ecx
-# CHECK: encoding: [0x62,0x72,0x74,0x08,0xf7,0xd2]
-         bextr	r10d, edx, ecx
+# ATT:   bextrl	%ecx, %edx, %r10d
+# INTEL: bextr	r10d, edx, ecx
+0x62,0x72,0x74,0x08,0xf7,0xd2
 
-# CHECK: {nf}	bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
-# CHECK: encoding: [0x62,0xf2,0x74,0x0c,0xf7,0x94,0x98,0x7b,0x00,0x00,0x00]
-         {nf}	bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
+# ATT:   {nf}	bextrl	%ecx, 123(%rax,%rbx,4), %edx
+# INTEL: {nf}	bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
+0x62,0xf2,0x74,0x0c,0xf7,0x54,0x98,0x7b
 
-# CHECK: bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
-# CHECK: encoding: [0x62,0xf2,0x74,0x08,0xf7,0x94,0x98,0x7b,0x00,0x00,0x00]
-         bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
+# ATT:   bextrl	%ecx, 123(%rax,%rbx,4), %edx
+# INTEL: bextr	edx, dword ptr [rax + 4*rbx + 123], ecx
+0x62,0xf2,0x74,0x08,0xf7,0x54,0x98,0x7b
 
-# CHECK: {nf}	bextr	r11, r15, r9
-# CHECK: encoding: [0x62,0x52,0xb4,0x0c,0xf7,0xdf]
-         {nf}	bextr	r11, r15, r9
+# ATT:   {nf}	bextrq	%r9, %r15, %r11
+# INTEL: {nf}	bextr	r11, r15, r9
+0x62,0x52,0xb4,0x0c,0xf7,0xdf
 
-# CHECK: bextr	r11, r15, r9
-# CHECK: encoding: [0x62,0x52,0xb4,0x08,0xf7,0xdf]
-         bextr	r11, r15, r9
+# ATT:   bextrq	%r9, %r15, %r11
+# INTEL: bextr	r11, r15, r9
+0x62,0x52,0xb4,0x08,0xf7,0xdf
 
-# CHECK: {nf}	bextr	r15, qword ptr [rax + 4*rbx + 123], r9
-# CHECK: encoding: [0x62,0x72,0xb4,0x0c,0xf7,0xbc,0x98,0x7b,0x00,0x00,0x00]
-         {nf}	bextr	r15, qword ptr [rax + 4*rbx + 123], r9
+# ATT:   {nf}	bextrq	%r9, 123(%rax,%rbx,4), %r15
+# INTEL: {nf}	bextr	r15, qword ptr [rax + 4*rbx + 123], r9
+0x62,0x72,0xb4,0x0c,0xf7,0x7c,0x98,0x7b
 
-# CHECK: bextr	r15, qword ptr [rax + 4*rbx + 123], r9
-# CHECK: encoding: [0x62,0x72,0xb4,0x08,0xf7,0xbc,0x98,0x7b,0x00,0x00,0x00]
-         bextr	r15, qword ptr [rax + 4*rbx + 123], r9
-
+# ATT:   bextrq	%r9, 123(%rax,%rbx,4), %r15
+# INTEL: bextr	r15, qword ptr [rax + 4*rbx + 123], r9
+0x62,0x72,0xb4,0x08,0xf7,0x7c,0x98,0x7b
 
 # ATT:   bextrl	%r18d, %r22d, %r26d
 # INTEL: bextr	r26d, r22d, r18d
