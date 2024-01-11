@@ -2769,13 +2769,6 @@ public:
       // Consume operators with higher precedence.
       parse(Precedence + 1);
 
-      // Do not assign fake parenthesis to tokens that are part of an
-      // unexpanded macro call. The line within the macro call contains
-      // the parenthesis and commas, and we will not find operators within
-      // that structure.
-      if (Current && Current->MacroParent)
-        break;
-
       int CurrentPrecedence = getCurrentPrecedence();
 
       if (Precedence == CurrentPrecedence && Current &&
@@ -2919,6 +2912,13 @@ private:
 
   void addFakeParenthesis(FormatToken *Start, prec::Level Precedence,
                           FormatToken *End = nullptr) {
+    // Do not assign fake parenthesis to tokens that are part of an
+    // unexpanded macro call. The line within the macro call contains
+    // the parenthesis and commas, and we will not find operators within
+    // that structure.
+    if (Start->MacroParent)
+      return;
+
     Start->FakeLParens.push_back(Precedence);
     if (Precedence > prec::Unknown)
       Start->StartsBinaryExpression = true;
