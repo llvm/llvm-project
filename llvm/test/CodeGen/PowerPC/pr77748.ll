@@ -14,13 +14,13 @@
 ; LE-NEXT: 	.byte	28
 ; LE-NEXT: 	.byte	12
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 ; LE-NEXT: 	.byte	31
-; LE-NEXT: 	.byte	16
+; LE-NEXT: 	.byte	15
 
 ; BE-LABEL: .LCPI0_0:
 ; BE-NEXT: 	.byte	0
