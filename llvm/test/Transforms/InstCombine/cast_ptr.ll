@@ -115,9 +115,7 @@ define i1 @test4(i32 %A) {
 
 define i1 @test4_icmp_with_var(i32 %A1, i32 %A2) {
 ; CHECK-LABEL: @test4_icmp_with_var(
-; CHECK-NEXT:    [[B1:%.*]] = inttoptr i32 [[A1:%.*]] to ptr
-; CHECK-NEXT:    [[B2:%.*]] = inttoptr i32 [[A2:%.*]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt ptr [[B1]], [[B2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A1:%.*]], [[A2:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B1 = inttoptr i32 %A1 to ptr
@@ -128,8 +126,7 @@ define i1 @test4_icmp_with_var(i32 %A1, i32 %A2) {
 
 define i1 @test4_cmp_with_nonnull_constant(i32 %A) {
 ; CHECK-LABEL: @test4_cmp_with_nonnull_constant(
-; CHECK-NEXT:    [[B:%.*]] = inttoptr i32 [[A:%.*]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[B]], inttoptr (i32 1 to ptr)
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = inttoptr i32 %A to ptr
@@ -139,10 +136,7 @@ define i1 @test4_cmp_with_nonnull_constant(i32 %A) {
 
 define i1 @test4_cmp_eq_0_or_1(i32 %x) {
 ; CHECK-LABEL: @test4_cmp_eq_0_or_1(
-; CHECK-NEXT:    [[CAST:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CAST]], inttoptr (i32 1 to ptr)
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[TOBOOL]], [[CMP]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp ult i32 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %cast = inttoptr i32 %x to ptr
@@ -154,10 +148,8 @@ define i1 @test4_cmp_eq_0_or_1(i32 %x) {
 
 define i1 @test4_icmp_with_var_mismatched_type(i32 %A1, i64 %A2) {
 ; CHECK-LABEL: @test4_icmp_with_var_mismatched_type(
-; CHECK-NEXT:    [[B1:%.*]] = inttoptr i32 [[A1:%.*]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A2:%.*]] to i32
-; CHECK-NEXT:    [[B2:%.*]] = inttoptr i32 [[TMP1]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt ptr [[B1]], [[B2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[TMP1]], [[A1:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B1 = inttoptr i32 %A1 to ptr
