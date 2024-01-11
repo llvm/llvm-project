@@ -65,7 +65,7 @@ private:
 
     return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
            : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
+                           : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
   }
 
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
