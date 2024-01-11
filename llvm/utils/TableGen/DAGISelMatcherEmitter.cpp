@@ -60,7 +60,6 @@ class MatcherTableEmitter {
   // all the patterns with "identical" predicates.
   StringMap<TinyPtrVector<TreePattern *>> NodePredicatesByCodeToRun;
 
-  StringMap<unsigned> PatternPredicateMap;
   std::vector<std::string> PatternPredicates;
 
   std::vector<const ComplexPattern*> ComplexPatterns;
@@ -87,6 +86,8 @@ public:
       : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
     // Record the usage of ComplexPattern.
     DenseMap<const ComplexPattern *, unsigned> ComplexPatternUsage;
+    // Record the usage of PatternPredicate.
+    std::map<StringRef, unsigned> PatternPredicateUsage;
 
     // Iterate the whole MatcherTable once and do some statistics.
     std::function<void(const Matcher *)> Statistic = [&](const Matcher *N) {
@@ -102,6 +103,8 @@ public:
             Statistic(STM->getCaseMatcher(I));
         else if (auto *CPM = dyn_cast<CheckComplexPatMatcher>(N))
           ++ComplexPatternUsage[&CPM->getPattern()];
+        else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
+          ++PatternPredicateUsage[CPPM->getPredicate()];
         N = N->getNext();
       }
     };
@@ -114,6 +117,14 @@ public:
          [](const auto &A, const auto &B) { return A.second > B.second; });
     for (const auto &ComplexPattern : ComplexPatternList)
       ComplexPatterns.push_back(ComplexPattern.first);
+
+    // Sort PatternPredicates by usage.
+    std::vector<std::pair<std::string, unsigned>> PatternPredicateList(
+        PatternPredicateUsage.begin(), PatternPredicateUsage.end());
+    sort(PatternPredicateList,
+         [](const auto &A, const auto &B) { return A.second > B.second; });
+    for (const auto &PatternPredicate : PatternPredicateList)
+      PatternPredicates.push_back(PatternPredicate.first);
   }
 
   unsigned EmitMatcherList(const Matcher *N, const unsigned Indent,
@@ -167,12 +178,7 @@ private:
   }
 
   unsigned getPatternPredicate(StringRef PredName) {
-    unsigned &Entry = PatternPredicateMap[PredName];
-    if (Entry == 0) {
-      PatternPredicates.push_back(PredName.str());
-      Entry = PatternPredicates.size();
-    }
-    return Entry-1;
+    return llvm::find(PatternPredicates, PredName) - PatternPredicates.begin();
   }
   unsigned getComplexPat(const ComplexPattern &P) {
     return llvm::find(ComplexPatterns, &P) - ComplexPatterns.begin();
@@ -510,13 +516,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     StringRef Pred = cast<CheckPatternPredicateMatcher>(N)->getPredicate();
     unsigned PredNo = getPatternPredicate(Pred);
     if (PredNo > 255)
-      OS << "OPC_CheckPatternPredicate2, TARGET_VAL(" << PredNo << "),";
+      OS << "OPC_CheckPatternPredicateTwoByte, TARGET_VAL(" << PredNo << "),";
+    else if (PredNo < 8)
+      OS << "OPC_CheckPatternPredicate" << PredNo << ',';
     else
       OS << "OPC_CheckPatternPredicate, " << PredNo << ',';
     if (!OmitComments)
       OS << " // " << Pred;
     OS << '\n';
-    return 2 + (PredNo > 255);
+    return 2 + (PredNo > 255) - (PredNo < 8);
   }
   case Matcher::CheckPredicate: {
     TreePredicateFn Pred = cast<CheckPredicateMatcher>(N)->getPredicate();
