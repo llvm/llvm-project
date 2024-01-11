@@ -220,20 +220,26 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, std::vector<QuasiPolynomial> num,
     std::vector<Fraction> den) {
-  if (power == 0)
-    return (num[0] / den[0]);
 
   unsigned numParam = num[0].getNumInputs();
+  unsigned limit;
 
-  QuasiPolynomial t(numParam, Fraction(0, 1));
+  std::vector<QuasiPolynomial> coefficients(power + 1,
+                                            QuasiPolynomial(numParam, 0));
 
-  // The coefficient of s^power in the numerator.
-  if (power < num.size())
-    t = num[power];
+  coefficients[0] = num[0] / den[0];
 
-  unsigned limit = power + 1 < den.size() ? power + 1 : den.size();
-  for (unsigned i = 1; i < limit; ++i)
-    t = t - getCoefficientInRationalFunction(power - i, num, den) *
-                QuasiPolynomial(numParam, den[i]);
-  return (t / den[0]).simplify();
+  for (unsigned i = 1; i <= power; i++) {
+    if (i < num.size())
+      coefficients[i] = num[i];
+
+    limit = i + 1 < den.size() ? i + 1 : den.size();
+
+    for (unsigned j = 1; j < limit; j++)
+      coefficients[i] = coefficients[i] -
+                        coefficients[i - j] * QuasiPolynomial(numParam, den[j]);
+
+    coefficients[i] = coefficients[i] / den[0];
+  }
+  return (coefficients[power]).simplify();
 }
