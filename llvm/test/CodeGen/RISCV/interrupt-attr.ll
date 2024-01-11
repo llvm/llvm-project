@@ -63,7 +63,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV32-NEXT:    sw t4, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
-; CHECK-RV32-NEXT:    call otherfoo@plt
+; CHECK-RV32-NEXT:    call otherfoo
 ; CHECK-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw t0, 56(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw t1, 52(sp) # 4-byte Folded Reload
@@ -134,7 +134,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV32-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
-; CHECK-RV32-F-NEXT:    call otherfoo@plt
+; CHECK-RV32-F-NEXT:    call otherfoo
 ; CHECK-RV32-F-NEXT:    lw ra, 188(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    lw t0, 184(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    lw t1, 180(sp) # 4-byte Folded Reload
@@ -237,7 +237,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV32-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV32-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV32-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
-; CHECK-RV32-FD-NEXT:    call otherfoo@plt
+; CHECK-RV32-FD-NEXT:    call otherfoo
 ; CHECK-RV32-FD-NEXT:    lw ra, 316(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    lw t0, 312(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    lw t1, 308(sp) # 4-byte Folded Reload
@@ -308,7 +308,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64-NEXT:    sd t4, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    sd t6, 0(sp) # 8-byte Folded Spill
-; CHECK-RV64-NEXT:    call otherfoo@plt
+; CHECK-RV64-NEXT:    call otherfoo
 ; CHECK-RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld t0, 112(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld t1, 104(sp) # 8-byte Folded Reload
@@ -379,7 +379,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64-F-NEXT:    fsw ft9, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV64-F-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV64-F-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
-; CHECK-RV64-F-NEXT:    call otherfoo@plt
+; CHECK-RV64-F-NEXT:    call otherfoo
 ; CHECK-RV64-F-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; CHECK-RV64-F-NEXT:    ld t0, 240(sp) # 8-byte Folded Reload
 ; CHECK-RV64-F-NEXT:    ld t1, 232(sp) # 8-byte Folded Reload
@@ -482,7 +482,7 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
-; CHECK-RV64-FD-NEXT:    call otherfoo@plt
+; CHECK-RV64-FD-NEXT:    call otherfoo
 ; CHECK-RV64-FD-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    ld t0, 368(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    ld t1, 360(sp) # 8-byte Folded Reload
@@ -563,7 +563,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV32-NEXT:    sw t5, 16(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw t6, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi s0, sp, 80
-; CHECK-RV32-NEXT:    call otherfoo@plt
+; CHECK-RV32-NEXT:    call otherfoo
 ; CHECK-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw t1, 68(sp) # 4-byte Folded Reload
@@ -637,7 +637,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV32-F-NEXT:    fsw ft10, 16(sp) # 4-byte Folded Spill
 ; CHECK-RV32-F-NEXT:    fsw ft11, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32-F-NEXT:    addi s0, sp, 208
-; CHECK-RV32-F-NEXT:    call otherfoo@plt
+; CHECK-RV32-F-NEXT:    call otherfoo
 ; CHECK-RV32-F-NEXT:    lw ra, 204(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    lw t0, 200(sp) # 4-byte Folded Reload
 ; CHECK-RV32-F-NEXT:    lw t1, 196(sp) # 4-byte Folded Reload
@@ -743,7 +743,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV32-FD-NEXT:    fsd ft10, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV32-FD-NEXT:    fsd ft11, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV32-FD-NEXT:    addi s0, sp, 336
-; CHECK-RV32-FD-NEXT:    call otherfoo@plt
+; CHECK-RV32-FD-NEXT:    call otherfoo
 ; CHECK-RV32-FD-NEXT:    lw ra, 332(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    lw t0, 328(sp) # 4-byte Folded Reload
 ; CHECK-RV32-FD-NEXT:    lw t1, 324(sp) # 4-byte Folded Reload
@@ -817,7 +817,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64-NEXT:    sd t5, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    sd t6, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-NEXT:    addi s0, sp, 144
-; CHECK-RV64-NEXT:    call otherfoo@plt
+; CHECK-RV64-NEXT:    call otherfoo
 ; CHECK-RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld t0, 128(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld t1, 120(sp) # 8-byte Folded Reload
@@ -891,7 +891,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64-F-NEXT:    fsw ft10, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV64-F-NEXT:    fsw ft11, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV64-F-NEXT:    addi s0, sp, 272
-; CHECK-RV64-F-NEXT:    call otherfoo@plt
+; CHECK-RV64-F-NEXT:    call otherfoo
 ; CHECK-RV64-F-NEXT:    ld ra, 264(sp) # 8-byte Folded Reload
 ; CHECK-RV64-F-NEXT:    ld t0, 256(sp) # 8-byte Folded Reload
 ; CHECK-RV64-F-NEXT:    ld t1, 248(sp) # 8-byte Folded Reload
@@ -997,7 +997,7 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64-FD-NEXT:    fsd ft10, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64-FD-NEXT:    fsd ft11, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64-FD-NEXT:    addi s0, sp, 400
-; CHECK-RV64-FD-NEXT:    call otherfoo@plt
+; CHECK-RV64-FD-NEXT:    call otherfoo
 ; CHECK-RV64-FD-NEXT:    ld ra, 392(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    ld t0, 384(sp) # 8-byte Folded Reload
 ; CHECK-RV64-FD-NEXT:    ld t1, 376(sp) # 8-byte Folded Reload
