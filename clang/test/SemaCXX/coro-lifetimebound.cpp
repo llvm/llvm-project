@@ -180,7 +180,7 @@ Co<int> foo_wrapper(const int& x) { return foo(x); }
 }
 
 struct S{
-[[clang::coro_wrapper, clang::coro_disable_lifetimebound]] 
+[[clang::coro_wrapper, clang::coro_disable_lifetimebound]]
 Co<int> member(const int& x) { return foo(x); }
 };
 

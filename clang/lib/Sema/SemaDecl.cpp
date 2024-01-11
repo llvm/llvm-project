@@ -15845,8 +15845,11 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
-  // Allow `get_return_object()`.
-  if (isGetReturnObject(FD))
+  // Allow some_promise_type::get_return_object().
+  // Since we are still in the promise definition, we can only do this
+  // heuristically as the promise may not be yet associated to a coroutine.
+  if (isa<CXXMethodDecl>(FD) && FD->getDeclName().isIdentifier() &&
+      FD->getName().equals("get_return_object") && FD->param_empty())
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;

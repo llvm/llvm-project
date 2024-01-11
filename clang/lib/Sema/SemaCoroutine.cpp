@@ -297,6 +297,26 @@ struct ReadySuspendResumeResult {
   bool IsInvalid;
 };
 
+// Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
+// attributes to `get_return_object`.
+static void handleGetReturnObject(Sema &S, MemberExpr *ME) {
+  if (!ME || !ME->getMemberDecl() || !ME->getMemberDecl()->getAsFunction())
+    return;
+  auto *MD = ME->getMemberDecl()->getAsFunction();
+  auto* RetType = MD->getReturnType()->getAsRecordDecl();
+  if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
+    return;
+  // `get_return_object` should be allowed to return coro_return_type.
+  if (!MD->hasAttr<CoroWrapperAttr>())
+    MD->addAttr(
+        CoroWrapperAttr::CreateImplicit(S.getASTContext(), MD->getLocation()));
+  // Object arg of `__promise.get_return_object()` is not lifetimebound.
+  if (RetType->hasAttr<CoroLifetimeBoundAttr>() &&
+      !MD->hasAttr<CoroDisableLifetimeBoundAttr>())
+    MD->addAttr(CoroDisableLifetimeBoundAttr::CreateImplicit(
+        S.getASTContext(), MD->getLocation()));
+}
+
 static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
                                   StringRef Name, MultiExprArg Args) {
   DeclarationNameInfo NameInfo(&S.PP.getIdentifierTable().get(Name), Loc);
@@ -319,6 +339,8 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
+  if (Name.equals("get_return_object"))
+    handleGetReturnObject(S, dyn_cast<MemberExpr>(Result.get()));
   auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
   return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
 }
