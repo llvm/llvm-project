@@ -5929,15 +5929,22 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (ToD)
     return ToD;
 
-  bool IsFriendTemplate = D->getFriendObjectKind() != Decl::FOK_None;
-  bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
-                                            : DC->isDependentContext();
-  bool DependentFriend = IsFriendTemplate && IsDependentContext;
+  // Should check if a declaration is friend in a dependent context.
+  // Such templates are not linked together in a declaration chain.
+  // The ASTImporter strategy is to map existing forward declarations to
+  // imported ones only if strictly necessary, otherwise import these as new
+  // forward declarations. In case of the "dependent friend" declarations, new
+  // declarations are created, but not linked in a declaration chain.
+  auto IsDependentFriend = [](ClassTemplateDecl *TD) {
+    return TD->getFriendObjectKind() != Decl::FOK_None &&
+           TD->getLexicalDeclContext()->isDependentContext();
+  };
+  bool DependentFriend = IsDependentFriend(D);
 
   ClassTemplateDecl *FoundByLookup = nullptr;
 
   // We may already have a template of the same name; try to find and match it.
-  if (!DependentFriend && !DC->isFunctionOrMethod()) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
     for (auto *FoundDecl : FoundDecls) {
@@ -5953,10 +5960,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
         // FIXME: sufficient conditon for 'IgnoreTemplateParmDepth'?
         bool IgnoreTemplateParmDepth =
-            FoundTemplate->getFriendObjectKind() != Decl::FOK_None &&
-            !D->specializations().empty();
+            (FoundTemplate->getFriendObjectKind() != Decl::FOK_None) !=
+            (D->getFriendObjectKind() != Decl::FOK_None);
         if (IsStructuralMatch(D, FoundTemplate, /*Complain=*/true,
                               IgnoreTemplateParmDepth)) {
+          if (DependentFriend || IsDependentFriend(FoundTemplate))
+            continue;
+
           ClassTemplateDecl *TemplateWithDef =
               getTemplateDefinition(FoundTemplate);
           if (D->isThisDeclarationADefinition() && TemplateWithDef)
