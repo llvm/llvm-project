@@ -1716,14 +1716,14 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
-  if (!SIInstrInfo::isWMMA(*MI))
+  if (!SIInstrInfo::isWMMA(*MI) && !SIInstrInfo::isSWMMAC(*MI))
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   auto IsHazardFn = [MI, TII, TRI](const MachineInstr &I) {
-    if (!SIInstrInfo::isWMMA(I))
+    if (!SIInstrInfo::isWMMA(I) && !SIInstrInfo::isSWMMAC(I))
       return false;
 
     // Src0(matrix A) or Src1(matrix B) of the current wmma instruction overlaps
