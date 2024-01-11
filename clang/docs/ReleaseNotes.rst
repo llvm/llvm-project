@@ -719,7 +719,9 @@ Bug Fixes in This Version
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
   and `if consteval` branches.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
-
+- Fix an issue where clang cannot find conversion function with template
+  parameter when instantiation of template class.
+  Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1099,6 +1101,7 @@ clang-format
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
 - Add ``.clang-format-ignore`` files.
+- Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 
 libclang
 --------

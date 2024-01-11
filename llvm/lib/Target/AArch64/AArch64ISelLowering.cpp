@@ -4513,8 +4513,7 @@ static SDValue skipExtensionForVectorMULL(SDValue N, SelectionDAG &DAG) {
   SDLoc dl(N);
   SmallVector<SDValue, 8> Ops;
   for (unsigned i = 0; i != NumElts; ++i) {
-    ConstantSDNode *C = cast<ConstantSDNode>(N.getOperand(i));
-    const APInt &CInt = C->getAPIntValue();
+    const APInt &CInt = N.getConstantOperandAPInt(i);
     // Element types smaller than 32 bits are not legal, so use i32 elements.
     // The values are implicitly truncated so sext vs. zext doesn't matter.
     Ops.push_back(DAG.getConstant(CInt.zextOrTrunc(32), dl, MVT::i32));

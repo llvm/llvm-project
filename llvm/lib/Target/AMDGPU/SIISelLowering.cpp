@@ -8181,12 +8181,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 // SGPR_NULL to avoid generating an extra s_mov with zero.
 static SDValue selectSOffset(SDValue SOffset, SelectionDAG &DAG,
                              const GCNSubtarget *Subtarget) {
-  if (Subtarget->hasRestrictedSOffset())
-    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(SOffset)) {
-      if (SOffsetConst->isZero()) {
-        return DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32);
-      }
-    }
+  if (Subtarget->hasRestrictedSOffset() && isNullConstant(SOffset))
+    return DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32);
   return SOffset;
 }
 

@@ -1483,7 +1483,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     Example:
 
     ```mlir
-    acc.loop {
+    acc.loop gang vector {
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
@@ -1492,10 +1492,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
         }
       }
       acc.yield
-    } attributes {
-      collapse = [3], gang = [#acc.device_type<none>],
-      vector = [#acc.device_type<none>]
-    }
+    } attributes { collapse = [3] }
     ```
   }];
 
@@ -1613,13 +1610,14 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
     oilist(
-        `gang` `` `(` custom<GangClause>($gangOperands, type($gangOperands),
+        `gang` `` custom<GangClause>($gangOperands, type($gangOperands),
             $gangOperandsArgType, $gangOperandsDeviceType,
-            $gangOperandsSegments) `)`
-      | `worker` `` `(` custom<DeviceTypeOperands>($workerNumOperands,
-            type($workerNumOperands), $workerNumOperandsDeviceType) `)`
-      | `vector` `` `(` custom<DeviceTypeOperands>($vectorOperands,
-            type($vectorOperands), $vectorOperandsDeviceType) `)`
+            $gangOperandsSegments, $gang)
+      | `worker` `` custom<DeviceTypeOperandsWithKeywordOnly>(
+            $workerNumOperands, type($workerNumOperands),
+            $workerNumOperandsDeviceType, $worker)
+      | `vector` `` custom<DeviceTypeOperandsWithKeywordOnly>($vectorOperands,
+            type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
             $privateOperands, type($privateOperands), $privatizations) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
