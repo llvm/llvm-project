@@ -75,7 +75,7 @@ def testArithValue():
         f64_t = F64Type.get()
 
         with InsertionPoint(module.body):
-            a = arith.constant(value=FloatAttr.get(f16_t, 42.42))
+            a = arith.constant(f16_t, 42.42)
             # CHECK: ArithValue(%cst = arith.constant 4.240
             print(a)
 
@@ -83,12 +83,12 @@ def testArithValue():
             # CHECK: ArithValue(%0 = arith.addf %cst, %cst : f16)
             print(b)
 
-            a = arith.constant(value=FloatAttr.get(f32_t, 42.42))
+            a = arith.constant(f32_t, 42.42)
             b = a - a
             # CHECK: ArithValue(%1 = arith.subf %cst_0, %cst_0 : f32)
             print(b)
 
-            a = arith.constant(value=FloatAttr.get(f64_t, 42.42))
+            a = arith.constant(f64_t, 42.42)
             b = a * a
             # CHECK: ArithValue(%2 = arith.mulf %cst_1, %cst_1 : f64)
             print(b)

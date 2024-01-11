@@ -180,7 +180,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
 
   // Scan the instruction list to find a register assigned with a const
   // value that can be combined with the current instruction (a load or store)
-  // using base addressing with writeback. Scan backwards.
+  // using base addressing with writeback. Scan forwards.
   MachineBasicBlock::iterator
   findMatchingConstOffsetBackward(MachineBasicBlock::iterator I, unsigned Limit,
                                   unsigned &Offset);
@@ -221,7 +221,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // Find and merge a base register updates before or after a ld/st instruction.
   bool tryToMergeLdStUpdate(MachineBasicBlock::iterator &MBBI);
 
-  // Find and merge a index ldr/st instruction into a base ld/st instruction.
+  // Find and merge a index ldr/st instructions into a base ld/st instruction.
   bool tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI, int Scale);
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
@@ -511,34 +511,8 @@ static unsigned getBaseAddressOpcode(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has no base address equivalent!");
-  case AArch64::LDRBroX:
-    return AArch64::LDRBui;
   case AArch64::LDRBBroX:
     return AArch64::LDRBBui;
-  case AArch64::LDRSBXroX:
-    return AArch64::LDRSBXui;
-  case AArch64::LDRSBWroX:
-    return AArch64::LDRSBWui;
-  case AArch64::LDRHroX:
-    return AArch64::LDRHui;
-  case AArch64::LDRHHroX:
-    return AArch64::LDRHHui;
-  case AArch64::LDRSHXroX:
-    return AArch64::LDRSHXui;
-  case AArch64::LDRSHWroX:
-    return AArch64::LDRSHWui;
-  case AArch64::LDRWroX:
-    return AArch64::LDRWui;
-  case AArch64::LDRSroX:
-    return AArch64::LDRSui;
-  case AArch64::LDRSWroX:
-    return AArch64::LDRSWui;
-  case AArch64::LDRDroX:
-    return AArch64::LDRDui;
-  case AArch64::LDRXroX:
-    return AArch64::LDRXui;
-  case AArch64::LDRQroX:
-    return AArch64::LDRQui;
   }
 }
 
@@ -790,30 +764,9 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   default:
     return false;
   // Scaled instructions.
-  // TODO: Add more index address stores.
-  case AArch64::LDRBroX:
+  // TODO: Add more index address loads/stores.
   case AArch64::LDRBBroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSBWroX:
     Scale = 1;
-    return true;
-  case AArch64::LDRHroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSHWroX:
-    Scale = 2;
-    return true;
-  case AArch64::LDRWroX:
-  case AArch64::LDRSroX:
-  case AArch64::LDRSWroX:
-    Scale = 4;
-    return true;
-  case AArch64::LDRDroX:
-  case AArch64::LDRXroX:
-    Scale = 8;
-    return true;
-  case AArch64::LDRQroX:
-    Scale = 16;
     return true;
   }
 }

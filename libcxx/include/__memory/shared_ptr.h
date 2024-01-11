@@ -723,7 +723,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __cntrl_ ? __cntrl_->use_count() : 0; }
 
-  _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
+#if _LIBCPP_STD_VER < 20 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE)
+  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return get() != nullptr; }
 
@@ -1164,12 +1166,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(nullptr_t, const shared_ptr<_Tp>& _
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT {
-  return less<_Tp*>()(__x.get(), nullptr);
+  return less<typename shared_ptr<_Tp>::element_type*>()(__x.get(), nullptr);
 }
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT {
-  return less<_Tp*>()(nullptr, __x.get());
+  return less<typename shared_ptr<_Tp>::element_type*>()(nullptr, __x.get());
 }
 
 template <class _Tp>

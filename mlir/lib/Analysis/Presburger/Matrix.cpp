@@ -63,6 +63,16 @@ unsigned Matrix<T>::appendExtraRow(ArrayRef<T> elems) {
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::transpose() const {
+  Matrix<T> transp(nColumns, nRows);
+  for (unsigned row = 0; row < nRows; ++row)
+    for (unsigned col = 0; col < nColumns; ++col)
+      transp(col, row) = at(row, col);
+
+  return transp;
+}
+
+template <typename T>
 void Matrix<T>::resizeHorizontally(unsigned newNColumns) {
   if (newNColumns < nColumns)
     removeColumns(newNColumns, nColumns - newNColumns);
@@ -452,6 +462,9 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
   if (detM == 0)
     return MPInt(0);
 
+  if (!inverse)
+    return detM;
+
   *inverse = IntMatrix(nRows, nColumns);
   for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nColumns; j++)
@@ -642,5 +655,4 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
-  return;
 }

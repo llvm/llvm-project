@@ -55,6 +55,7 @@
 using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
+using namespace llvm::dwarf_linker;
 
 namespace {
 enum ID {
@@ -373,7 +374,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());

@@ -2764,7 +2764,9 @@ static bool isConstant(const MachineInstr &MI) {
 void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
     const MachineRegisterInfo &MRI, SmallVectorImpl<GEPInfo> &AddrInfo) const {
 
-  const MachineInstr *PtrMI = MRI.getUniqueVRegDef(Load.getOperand(1).getReg());
+  unsigned OpNo = Load.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
+  const MachineInstr *PtrMI =
+      MRI.getUniqueVRegDef(Load.getOperand(OpNo).getReg());
 
   assert(PtrMI);
 
@@ -2816,6 +2818,10 @@ bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return true;
+
+  if (MI.getOpcode() == AMDGPU::G_PREFETCH)
+    return RBI.getRegBank(MI.getOperand(0).getReg(), *MRI, TRI)->getID() ==
+           AMDGPU::SGPRRegBankID;
 
   const Instruction *I = dyn_cast<Instruction>(Ptr);
   return I && I->getMetadata("amdgpu.uniform");

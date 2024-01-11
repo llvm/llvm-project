@@ -536,7 +536,8 @@ TEST(FileSpecTest, TestGetComponents) {
 }
 
 TEST(FileSpecTest, TestChecksum) {
-  Checksum checksum({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+  Checksum checksum(llvm::MD5::MD5Result{
+      {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}});
   FileSpec file_spec("/foo/bar", FileSpec::Style::posix, checksum);
   EXPECT_TRUE(static_cast<bool>(file_spec.GetChecksum()));
   EXPECT_EQ(file_spec.GetChecksum(), checksum);

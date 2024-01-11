@@ -108,20 +108,12 @@ getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
     LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
     LLVM_FALLTHROUGH;
-  case file_magic::macho_universal_binary: {
-    auto IFOrErr = DylibReader::get(Buffer->getMemBufferRef());
-    if (!IFOrErr)
-      ExitOnErr(IFOrErr.takeError());
-    IF = std::move(*IFOrErr);
+  case file_magic::macho_universal_binary:
+    IF = ExitOnErr(DylibReader::get(Buffer->getMemBufferRef()));
     break;
-  }
-  case file_magic::tapi_file: {
-    auto IFOrErr = TextAPIReader::get(Buffer->getMemBufferRef());
-    if (!IFOrErr)
-      ExitOnErr(IFOrErr.takeError());
-    IF = std::move(*IFOrErr);
+  case file_magic::tapi_file:
+    IF = ExitOnErr(TextAPIReader::get(Buffer->getMemBufferRef()));
     break;
-  }
   default:
     reportError(Filename + ": unsupported file type");
   }
@@ -170,10 +162,7 @@ static bool handleMergeAction(const Context &Ctx) {
       Out = std::move(IF);
       continue;
     }
-    auto ResultIF = Out->merge(IF.get());
-    if (!ResultIF)
-      ExitOnErr(ResultIF.takeError());
-    Out = std::move(ResultIF.get());
+    Out = ExitOnErr(Out->merge(IF.get()));
   }
   return handleWriteAction(Ctx, std::move(Out));
 }

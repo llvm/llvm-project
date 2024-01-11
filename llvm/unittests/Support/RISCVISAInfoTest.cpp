@@ -477,25 +477,45 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 }
 
-TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
+TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   auto MaybeISAInfo1 =
       RISCVISAInfo::parseArchString("rv64im_zicond", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo1)->toFeatureVector(),
+  EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+m", "+experimental-zicond"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zicond_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
               ElementsAre("+e", "+experimental-zicond", "+xventanacondops"));
 }
 
-TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {
+TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
   auto MaybeISAInfo =
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo)->toFeatureVector(), ElementsAre("+m"));
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+m"));
+}
+
+TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(false, false),
+              ElementsAre("+m", "+xmadeup"));
+}
+
+TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
+  auto MaybeISAInfo = RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  auto Features = (*MaybeISAInfo)->toFeatures(true);
+  EXPECT_GT(Features.size(), 1UL);
+  EXPECT_EQ(Features.front(), "+m");
+  // Every feature after should be a negative feature
+  for (auto &NegativeExt : llvm::drop_begin(Features))
+    EXPECT_TRUE(NegativeExt.substr(0, 1) == "-");
 }
 
 TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
@@ -734,7 +754,6 @@ R"(All available -march extensions for RISC-V
     xcvmac              1.0
     xcvmem              1.0
     xcvsimd             1.0
-    xsfcie              1.0
     xsfvcp              1.0
     xsfvfnrclipxfqf     1.0
     xsfvfwmaccqqq       1.0
@@ -755,9 +774,12 @@ R"(All available -march extensions for RISC-V
 
 Experimental extensions
     zicfilp             0.4       This is a long dummy description
+    zicfiss             0.4
     zicond              1.0
+    zimop               0.1
     zacas               1.0
     zfbfmin             0.8
+    zcmop               0.2
     ztso                0.1
     zvfbfmin            0.8
     zvfbfwma            0.8
