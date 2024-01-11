@@ -2349,20 +2349,20 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBB.Hash = Hash;
         YamlBB.Index = BlockMap.at(Offset).first;
         const auto &SuccBlockIt = Branches.IntraIndex.find(Offset);
-        if (SuccBlockIt != Branches.IntraIndex.end()) {
-          uint64_t TotalCount{0};
-          for (const auto &[SuccOffset, SuccIdx] : SuccBlockIt->second) {
-            unsigned SuccBid = BlockMap.at(SuccOffset).first;
-            const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
-            yaml::bolt::SuccessorInfo YamlSI;
-            YamlSI.Index = SuccBid;
-            YamlSI.Count = BI.Branches;
-            YamlSI.Mispreds = BI.Mispreds;
-            YamlBB.Successors.emplace_back(YamlSI);
-            TotalCount += YamlSI.Count;
-          }
-          YamlBB.ExecCount = TotalCount;
+        if (SuccBlockIt == Branches.IntraIndex.end())
+          continue;
+        uint64_t TotalCount{0};
+        for (const auto &[SuccOffset, SuccIdx] : SuccBlockIt->second) {
+          unsigned SuccBid = BlockMap.at(SuccOffset).first;
+          const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
+          yaml::bolt::SuccessorInfo YamlSI;
+          YamlSI.Index = SuccBid;
+          YamlSI.Count = BI.Branches;
+          YamlSI.Mispreds = BI.Mispreds;
+          YamlBB.Successors.emplace_back(YamlSI);
+          TotalCount += YamlSI.Count;
         }
+        YamlBB.ExecCount = TotalCount;
         if (YamlBB.ExecCount || !YamlBB.Successors.empty())
           YamlBF.Blocks.emplace_back(YamlBB);
       }
