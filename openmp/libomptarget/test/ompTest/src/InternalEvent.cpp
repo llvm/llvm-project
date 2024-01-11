@@ -13,7 +13,7 @@ std::string makeHexString(uint64_t Data, bool IsPointer = true,
   if (Data == 0 && IsPointer)
     return "(nil)";
 
-  static std::ostringstream os;
+  thread_local std::ostringstream os;
   // Clear the content of the stream
   os.str(std::string());
 
