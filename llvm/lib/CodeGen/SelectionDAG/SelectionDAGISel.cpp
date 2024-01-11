@@ -2712,9 +2712,13 @@ CheckPatternPredicate(unsigned Opcode, const unsigned char *MatcherTable,
 
 /// CheckNodePredicate - Implements OP_CheckNodePredicate.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
-CheckNodePredicate(const unsigned char *MatcherTable, unsigned &MatcherIndex,
-                   const SelectionDAGISel &SDISel, SDNode *N) {
-  return SDISel.CheckNodePredicate(N, MatcherTable[MatcherIndex++]);
+CheckNodePredicate(unsigned Opcode, const unsigned char *MatcherTable,
+                   unsigned &MatcherIndex, const SelectionDAGISel &SDISel,
+                   SDNode *N) {
+  unsigned PredNo = Opcode == SelectionDAGISel::OPC_CheckPredicate
+                        ? MatcherTable[MatcherIndex++]
+                        : Opcode - SelectionDAGISel::OPC_CheckPredicate0;
+  return SDISel.CheckNodePredicate(N, PredNo);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -2868,7 +2872,15 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
     Result = !::CheckPatternPredicate(Opcode, Table, Index, SDISel);
     return Index;
   case SelectionDAGISel::OPC_CheckPredicate:
-    Result = !::CheckNodePredicate(Table, Index, SDISel, N.getNode());
+  case SelectionDAGISel::OPC_CheckPredicate0:
+  case SelectionDAGISel::OPC_CheckPredicate1:
+  case SelectionDAGISel::OPC_CheckPredicate2:
+  case SelectionDAGISel::OPC_CheckPredicate3:
+  case SelectionDAGISel::OPC_CheckPredicate4:
+  case SelectionDAGISel::OPC_CheckPredicate5:
+  case SelectionDAGISel::OPC_CheckPredicate6:
+  case SelectionDAGISel::OPC_CheckPredicate7:
+    Result = !::CheckNodePredicate(Opcode, Table, Index, SDISel, N.getNode());
     return Index;
   case SelectionDAGISel::OPC_CheckOpcode:
     Result = !::CheckOpcode(Table, Index, N.getNode());
@@ -3359,8 +3371,16 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckPatternPredicate(Opcode, MatcherTable, MatcherIndex, *this))
         break;
       continue;
+    case SelectionDAGISel::OPC_CheckPredicate0:
+    case SelectionDAGISel::OPC_CheckPredicate1:
+    case SelectionDAGISel::OPC_CheckPredicate2:
+    case SelectionDAGISel::OPC_CheckPredicate3:
+    case SelectionDAGISel::OPC_CheckPredicate4:
+    case SelectionDAGISel::OPC_CheckPredicate5:
+    case SelectionDAGISel::OPC_CheckPredicate6:
+    case SelectionDAGISel::OPC_CheckPredicate7:
     case OPC_CheckPredicate:
-      if (!::CheckNodePredicate(MatcherTable, MatcherIndex, *this,
+      if (!::CheckNodePredicate(Opcode, MatcherTable, MatcherIndex, *this,
                                 N.getNode()))
         break;
       continue;
