@@ -558,6 +558,9 @@ private:
   unsigned redDepOnLevel(TensorId tid, Level lvl) const;
 
   SparseIterator &getCurIterator(TensorId tid, Level lvl) const {
+    if (dependentLvlMap[tid][lvl].empty())
+      return *iters[tid][lvl].back();
+
     assert(redDepOnLevel(tid, lvl) >= 1);
     return *iters[tid][lvl][redDepOnLevel(tid, lvl) - 1];
   }

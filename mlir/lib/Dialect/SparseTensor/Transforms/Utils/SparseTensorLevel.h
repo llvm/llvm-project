@@ -81,9 +81,9 @@ protected:
                  MutableArrayRef<Value> itVals)
       : kind(kind), tid(tid), lvl(lvl), crd(nullptr), itVals(itVals){};
 
-  SparseIterator(IterKind kind, const SparseIterator *wrap)
-      : kind(kind), tid(wrap->tid), lvl(wrap->lvl), crd(nullptr),
-        itVals(wrap->itVals){};
+  SparseIterator(IterKind kind, const SparseIterator &wrap)
+      : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
+        itVals(wrap.itVals){};
 
 public:
   virtual ~SparseIterator() = default;
@@ -93,8 +93,7 @@ public:
   ValueRange getItVals() const { return itVals; };
   void seek(ValueRange vals) {
     assert(vals.size() == itVals.size());
-    for (unsigned i = 0, e = vals.size(); i < e; i++)
-      itVals[i] = vals[i];
+    std::copy(vals.begin(), vals.end(), itVals.begin());
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
@@ -132,11 +131,13 @@ public:
   //
 
   // Get the current position and the optional *position high* (for non-unique
-  // iterators), the value should be able to uniquely identify the sparse range
-  // for the next level. See SparseTensorLevel::peekRangeAt();
+  // iterators), the value is essentially the number of sparse coordinate that
+  // the iterator is current visiting. It should be able to uniquely identify
+  // the sparse range for the next level. See SparseTensorLevel::peekRangeAt();
   //
-  // Not every type of iterator supports the operations, e.g., non-empty
-  // subsection iterator does not.
+  // Not every type of iterator supports the operation, e.g., non-empty
+  // subsection iterator does not because it represent a range of coordinates
+  // instead of just one.
   virtual std::pair<Value, Value> getCurPosition() const {
     llvm_unreachable("unsupported");
   };
@@ -148,7 +149,7 @@ public:
   virtual std::pair<Value, Value> genForCond(OpBuilder &b, Location l) {
     assert(randomAccessible());
     // Random-access iterator is traversed by coordinate, i.e., [curCrd, UB).
-    return {deref(b, l), upperBound(b, l)};
+    return {getCrd(), upperBound(b, l)};
   }
 
   virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
@@ -196,6 +197,7 @@ public:
 
 protected:
   void updateCrd(Value crd) { this->crd = crd; }
+  void relinkItVals(MutableArrayRef<Value> itVals) { this->itVals = itVals; }
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.
@@ -205,7 +207,7 @@ private:
   Value crd; // The sparse coordinate used to coiterate;
 
   // A range of value that together defines the current state of the
-  // iterator.
+  // iterator. Only loop variants should be included.
   //
   // For trivial iterators, it is the position; for dedup iterators, it consists
   // of the positon and the segment high, for non-empty subsection iterator, it

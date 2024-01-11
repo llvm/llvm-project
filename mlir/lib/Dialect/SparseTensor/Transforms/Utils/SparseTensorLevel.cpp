@@ -34,6 +34,7 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 #define ANDI(lhs, rhs) (b.create<arith::AndIOp>(l, (lhs), (rhs)).getResult())
 #define SUBI(lhs, rhs) (b.create<arith::SubIOp>(l, (lhs), (rhs)).getResult())
 #define MULI(lhs, rhs) (b.create<arith::MulIOp>(l, (lhs), (rhs)).getResult())
+#define MINUI(lhs, rhs) (b.create<arith::MinUIOp>(l, (lhs), (rhs)).getResult())
 #define REMUI(lhs, rhs) (b.create<arith::RemUIOp>(l, (lhs), (rhs)).getResult())
 #define DIVUI(lhs, rhs) (b.create<arith::DivUIOp>(l, (lhs), (rhs)).getResult())
 #define SELECT(c, lhs, rhs)                                                    \
@@ -159,16 +160,28 @@ public:
 // File local helpers
 //===----------------------------------------------------------------------===//
 
-static ValueRange
-genWhenInBound(OpBuilder &b, Location l, SparseIterator &it, ValueRange elseRet,
-               llvm::function_ref<void(OpBuilder &, Location, Value)> builder) {
+static scf::ValueVector genWhenInBound(
+    OpBuilder &b, Location l, SparseIterator &it, ValueRange elseRet,
+    llvm::function_ref<scf::ValueVector(OpBuilder &, Location, Value)>
+        builder) {
+  // Value isNotEnd = it.genNotEnd(b, l);
+  // Value crd = it.deref(b, l);
+  // scf::ValueVector ret = builder(b, l, crd);
+
+  // scf::ValueVector res;
+  // for (auto [notEnd, end] : llvm::zip_equal(ret, elseRet)) {
+  //   res.push_back(SELECT(isNotEnd, notEnd, end));
+  // };
+  // return res;
+
   // !it.end() ? callback(*crd) : resOOB;
   TypeRange ifRetTypes = elseRet.getTypes();
   auto ifOp = b.create<scf::IfOp>(l, ifRetTypes, it.genNotEnd(b, l), true);
 
   b.setInsertionPointToStart(ifOp.thenBlock());
   Value crd = it.deref(b, l);
-  builder(b, l, crd);
+  scf::ValueVector ret = builder(b, l, crd);
+  YIELD(ret);
 
   b.setInsertionPointToStart(ifOp.elseBlock());
   YIELD(elseRet);
@@ -398,10 +411,10 @@ class FilterIterator : public SparseIterator {
   Value genShouldFilter(OpBuilder &b, Location l);
 
 public:
-  FilterIterator(std::unique_ptr<SparseIterator> &&w, Value offset,
+  FilterIterator(std::unique_ptr<SparseIterator> &&wrap, Value offset,
                  Value stride, Value size)
-      : SparseIterator(IterKind::kFilter, w.get()), offset(offset),
-        stride(stride), size(size), wrap(std::move(w)) {}
+      : SparseIterator(IterKind::kFilter, *wrap), offset(offset),
+        stride(stride), size(size), wrap(std::move(wrap)) {}
 
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
@@ -449,47 +462,19 @@ public:
   std::unique_ptr<SparseIterator> wrap;
 };
 
-class SubSectIterator;
 class NonEmptySubSectIterator : public SparseIterator {
-
-  // The sliced pointer buffer is organized as:
-  //     [[itVal0, itVal1, ..., pNx0],
-  //      [itVal0, itVal1, ..., pNx0],
-  //      ...]
-  Value allocSubSectPosBuf(OpBuilder &b, Location l) {
-    return b.create<memref::AllocaOp>(
-        l,
-        MemRefType::get({ShapedType::kDynamic, tupleSz + 1}, b.getIndexType()),
-        maxTupleCnt);
-  }
-
-  SmallVector<Value> loadItVals(OpBuilder &b, Location l, Value tupleId) const {
-    SmallVector<Value> ret;
-    for (unsigned i = 0; i < tupleSz; i++) {
-      Value v = b.create<memref::LoadOp>(l, subSectPosBuf,
-                                         ValueRange{tupleId, C_IDX(i)});
-      ret.push_back(v);
-    }
-    return ret;
-  }
-
-  void storeItVals(OpBuilder &b, Location l, Value tupleId, ValueRange itVals) {
-    assert(itVals.size() == tupleSz);
-    for (unsigned i = 0; i < tupleSz; i++) {
-      b.create<memref::StoreOp>(l, itVals[i], subSectPosBuf,
-                                ValueRange{tupleId, C_IDX(i)});
-    }
-  }
-
 public:
+  using TraverseBuilder = llvm::function_ref<scf::ValueVector(
+      OpBuilder &, Location, const SparseIterator *, ValueRange)>;
+
   NonEmptySubSectIterator(OpBuilder &b, Location l,
                           const SparseIterator *parent,
-                          std::unique_ptr<SparseIterator> &&wrap,
+                          std::unique_ptr<SparseIterator> &&delegate,
                           Value subSectSz, unsigned stride)
-      : SparseIterator(IterKind::kNonEmptySubSect, wrap->tid, wrap->lvl,
+      : SparseIterator(IterKind::kNonEmptySubSect, delegate->tid, delegate->lvl,
                        /*itVals=*/subSectMeta),
         subSectSz(subSectSz), stride(stride), parent(parent),
-        wrap(std::move(wrap)) {
+        delegate(std::move(delegate)) {
 
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
     assert(stride == 1);
@@ -508,36 +493,93 @@ public:
     // We don't need an extra buffer to find subsections on dense levels.
     if (randomAccessible())
       return;
-
-    tupleSz = this->wrap->serialize().size();
+    // The number of values we need to store to serialize the wrapped iterator.
+    tupleSz = this->delegate->serialize().size();
     subSectPosBuf = allocSubSectPosBuf(b, l);
   }
-
-  bool randomAccessible() const override { return wrap->randomAccessible(); };
-  bool iteratableByFor() const override { return randomAccessible(); };
-  Value upperBound(OpBuilder &b, Location l) const override {
-    auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
-    Value parentUB =
-        p && p->lvl == lvl ? p->upperBound(b, l) : wrap->upperBound(b, l);
-    return ADDI(SUBI(parentUB, subSectSz), C_IDX(1));
-  };
 
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
     return from->kind == IterKind::kNonEmptySubSect;
   }
 
+  // The sliced pointer buffer is organized as:
+  //     [[itVal0, itVal1, ..., pNx0],
+  //      [itVal0, itVal1, ..., pNx0],
+  //      ...]
+  Value allocSubSectPosBuf(OpBuilder &b, Location l) {
+    return b.create<memref::AllocaOp>(
+        l,
+        MemRefType::get({ShapedType::kDynamic, tupleSz + 1}, b.getIndexType()),
+        maxTupleCnt);
+  }
+
+  void storeNxLvlStart(OpBuilder &b, Location l, Value tupleId,
+                       Value start) const {
+    b.create<memref::StoreOp>(l, start, subSectPosBuf,
+                              ValueRange{tupleId, C_IDX(tupleSz)});
+  }
+
+  Value loadNxLvlStart(OpBuilder &b, Location l, Value tupleId) const {
+    return b.create<memref::LoadOp>(l, subSectPosBuf,
+                                    ValueRange{tupleId, C_IDX(tupleSz)});
+  }
+
+  void storeItVals(OpBuilder &b, Location l, Value tupleId,
+                   ValueRange itVals) const {
+    assert(itVals.size() == tupleSz);
+    for (unsigned i = 0; i < tupleSz; i++) {
+      b.create<memref::StoreOp>(l, itVals[i], subSectPosBuf,
+                                ValueRange{tupleId, C_IDX(i)});
+    }
+  }
+
+  SmallVector<Value> loadItVals(OpBuilder &b, Location l, Value tupleId) const {
+    SmallVector<Value> ret;
+    for (unsigned i = 0; i < tupleSz; i++) {
+      Value v = b.create<memref::LoadOp>(l, subSectPosBuf,
+                                         ValueRange{tupleId, C_IDX(i)});
+      ret.push_back(v);
+    }
+    return ret;
+  }
+
+  bool isSubSectRoot() const {
+    return !parent || !llvm::isa<NonEmptySubSectIterator>(parent);
+  }
+
+  ValueRange genSubSectTraverseTillRoot(OpBuilder &b, Location l,
+                                        ValueRange reduc,
+                                        TraverseBuilder builder) const;
+
+  bool randomAccessible() const override {
+    return delegate->randomAccessible();
+  };
+  bool iteratableByFor() const override { return randomAccessible(); };
+  Value upperBound(OpBuilder &b, Location l) const override {
+    auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
+    Value parentUB =
+        p && p->lvl == lvl ? p->upperBound(b, l) : delegate->upperBound(b, l);
+    return ADDI(SUBI(parentUB, subSectSz), C_IDX(1));
+  };
+
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override;
 
   void locate(OpBuilder &b, Location l, Value crd) override {
     Value absOff = crd;
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
-    if (p && p->lvl == lvl)
-      absOff = ADDI(crd, p->getAbsOff());
+    if (isSubSectRoot())
+      delegate->locate(b, l, absOff);
+    else
+      assert(p->lvl + 1 == lvl);
 
-    wrap->locate(b, l, absOff);
     seek(ValueRange{absOff, absOff, C_TRUE});
     updateCrd(crd);
+  }
+
+  Value toSubSectCrd(OpBuilder &b, Location l, Value wrapCrd) const {
+    assert(stride == 1);
+    return SUBI(wrapCrd, getAbsOff());
   }
 
   Value genNotEnd(OpBuilder &b, Location l) override { return getNotEnd(); };
@@ -571,36 +613,72 @@ public:
   const unsigned stride;
 
   const SparseIterator *parent;
-  std::unique_ptr<SparseIterator> wrap;
+  std::unique_ptr<SparseIterator> delegate;
 
   Value subSectMeta[3]; // minCrd, absolute offset, notEnd
+};
 
-  friend SubSectIterator;
+class SubSectIterator;
+
+// A simple helper that helps generating code to traverse a subsection, used
+// by both `NonEmptySubSectIterator`and `SubSectIterator`.
+struct SubSectIterHelper {
+  explicit SubSectIterHelper(const SubSectIterator &iter);
+  explicit SubSectIterHelper(const NonEmptySubSectIterator &subSect);
+
+  // Delegate methods.
+  void deserializeFromTupleId(OpBuilder &b, Location l, Value tupleId);
+  void locate(OpBuilder &b, Location l, Value crd);
+  Value genNotEnd(OpBuilder &b, Location l);
+  Value deref(OpBuilder &b, Location l);
+  ValueRange forward(OpBuilder &b, Location l);
+
+  const NonEmptySubSectIterator &subSect;
+  SparseIterator &wrap;
 };
 
 class SubSectIterator : public SparseIterator {
-  Value fromWrapCrd(OpBuilder &b, Location l, Value wrapCrd) {
-    assert(stride == 1);
-    return SUBI(wrapCrd, subSect.getAbsOff());
-  }
+  // RAII to sync iterator values between the wrap the iterator and the
+  // SubSectIterator.
+  struct WrapItValSyncer {
+    explicit WrapItValSyncer(SubSectIterator &it) : it(it) {
+      if (!it.randomAccessible())
+        it.wrap->seek(it.getItVals().drop_back());
+    }
+    ~WrapItValSyncer() {
+      if (!it.randomAccessible()) {
+        ValueRange wrapItVals = it.wrap->getItVals();
+        std::copy(wrapItVals.begin(), wrapItVals.end(), it.itVals.begin());
+      }
+    }
+    SubSectIterator &it;
+  };
 
 public:
   SubSectIterator(const NonEmptySubSectIterator &subSect,
                   const SparseIterator &parent,
                   std::unique_ptr<SparseIterator> &&wrap, Value size,
                   unsigned stride)
-      : SparseIterator(IterKind::kSubSect, wrap.get()), subSect(subSect),
-        parent(parent), wrap(std::move(wrap)), size(size), stride(stride) {
+      : SparseIterator(IterKind::kSubSect, *wrap), itVals(), subSect(subSect),
+        wrap(std::move(wrap)), parent(parent), size(size), stride(stride),
+        helper(*this) {
     assert(stride == 1 && "Not implemented.");
     assert(subSect.tid == tid && subSect.lvl == lvl);
-    // The immediate parents of a subsection iterator is either a non-empty
-    // subsect iterator or another subsection iterator for the previous level
-    // depending on the index varaiables' reduction order.
-    assert(parent.kind == IterKind::kNonEmptySubSect ||
-           parent.kind == IterKind::kSubSect);
-    assert(parent.kind != IterKind::kNonEmptySubSect || &parent == &subSect);
     assert(parent.kind != IterKind::kSubSect || parent.lvl + 1 == lvl);
+
+    if (!randomAccessible()) {
+      // We maintain a extra counter to count the actually sparse coordinate
+      // included in the subsection.
+      unsigned itValSz = this->wrap->getItVals().size() + 1;
+      itVals.resize(itValSz, nullptr);
+      relinkItVals(itVals);
+    }
   };
+
+  // For LLVM-style RTTI.
+  static bool classof(const SparseIterator *from) {
+    return from->kind == IterKind::kSubSect;
+  }
 
   bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
@@ -609,55 +687,85 @@ public:
     return wrap->getCurPosition();
   };
 
+  Value getNxLvlTupleId(OpBuilder &b, Location l) const {
+    if (randomAccessible()) {
+      return ADDI(getCrd(), nxLvlTupleStart);
+    };
+    return ADDI(itVals.back(), nxLvlTupleStart);
+  }
+
   void genInit(OpBuilder &b, Location l, const SparseIterator *) override {
-    if (llvm::isa<NonEmptySubSectIterator>(parent)) {
-      if (randomAccessible()) {
-        // We continue from the parent's offset.
-        wrap->deserialize(subSect.wrap->serialize());
-        return;
+    WrapItValSyncer syncer(*this);
+    if (randomAccessible()) {
+      if (auto *p = llvm::dyn_cast<SubSectIterator>(&parent)) {
+        assert(p->lvl + 1 == lvl);
+        wrap->genInit(b, l, p);
+        // Linearize the dense subsection index.
+        nxLvlTupleStart = MULI(size, p->getNxLvlTupleId(b, l));
+      } else {
+        assert(subSect.lvl == lvl && subSect.isSubSectRoot());
+        wrap->deserialize(subSect.delegate->serialize());
+        nxLvlTupleStart = C_IDX(0);
       }
-      // Else deserializing from the cached values.
-      wrap->deserialize(subSect.loadItVals(b, l, C_IDX(0)));
-    } else {
-      llvm_unreachable("Not implemented");
+      return;
     }
+    assert(!randomAccessible());
+    assert(itVals.size() == wrap->getItVals().size() + 1);
+    // Extra counter that counts the number of actually visited coordinates in
+    // the sparse subsection.
+    itVals.back() = C_IDX(0);
+    Value tupleId;
+    if (auto *p = llvm::dyn_cast<SubSectIterator>(&parent)) {
+      assert(p->lvl + 1 == lvl);
+      tupleId = p->getNxLvlTupleId(b, l);
+    } else {
+      assert(subSect.lvl == lvl && subSect.isSubSectRoot());
+      tupleId = C_IDX(0);
+    }
+    nxLvlTupleStart = subSect.loadNxLvlStart(b, l, tupleId);
+    helper.deserializeFromTupleId(b, l, tupleId);
   }
 
   void locate(OpBuilder &b, Location l, Value crd) override {
-    Value absCrd = ADDI(crd, subSect.getAbsOff());
-    wrap->locate(b, l, absCrd);
+    WrapItValSyncer syncer(*this);
+    helper.locate(b, l, crd);
     updateCrd(crd);
   }
 
   Value genNotEnd(OpBuilder &b, Location l) override {
-    assert(!wrap->randomAccessible());
-    ValueRange r = genWhenInBound(
-        b, l, *wrap, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
-          Value crd = fromWrapCrd(b, l, wrapCrd);
-          // crd < size
-          YIELD(CMPI(ult, crd, size));
-        });
-    assert(r.size() == 1);
-    return r.front();
+    WrapItValSyncer syncer(*this);
+    return helper.genNotEnd(b, l);
   }
 
   Value deref(OpBuilder &b, Location l) override {
-    Value wrapCrd = wrap->deref(b, l);
-    Value crd = fromWrapCrd(b, l, wrapCrd);
+    WrapItValSyncer syncer(*this);
+    Value crd = helper.deref(b, l);
     updateCrd(crd);
     return crd;
   };
 
   ValueRange forward(OpBuilder &b, Location l) override {
-    return wrap->forward(b, l);
+    {
+      WrapItValSyncer syncer(*this);
+      helper.forward(b, l);
+    }
+    assert(!randomAccessible());
+    assert(itVals.size() == wrap->getItVals().size() + 1);
+    itVals.back() = ADDI(itVals.back(), C_IDX(1));
+    return getItVals();
   };
 
+  SmallVector<Value> itVals;
+  Value nxLvlTupleStart;
+
   const NonEmptySubSectIterator &subSect;
+  std::unique_ptr<SparseIterator> wrap;
   const SparseIterator &parent;
 
-  std::unique_ptr<SparseIterator> wrap;
   Value size;
   unsigned stride;
+
+  SubSectIterHelper helper;
 };
 
 } // namespace
@@ -725,10 +833,11 @@ Value FilterIterator::genCrdNotLegitPredicate(OpBuilder &b, Location l,
 }
 
 Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
-  ValueRange r = genWhenInBound(
-      b, l, *wrap, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
+  auto r = genWhenInBound(
+      b, l, *wrap, C_FALSE,
+      [this](OpBuilder &b, Location l, Value wrapCrd) -> scf::ValueVector {
         Value notLegit = genCrdNotLegitPredicate(b, l, wrapCrd);
-        YIELD(notLegit);
+        return {notLegit};
       });
 
   assert(r.size() == 1);
@@ -737,11 +846,12 @@ Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
 
 Value FilterIterator::genNotEnd(OpBuilder &b, Location l) {
   assert(!wrap->randomAccessible());
-  ValueRange r = genWhenInBound(
-      b, l, *wrap, C_FALSE, [this](OpBuilder &b, Location l, Value wrapCrd) {
+  auto r = genWhenInBound(
+      b, l, *wrap, C_FALSE,
+      [this](OpBuilder &b, Location l, Value wrapCrd) -> scf::ValueVector {
         Value crd = fromWrapCrd(b, l, wrapCrd);
         // crd < size
-        YIELD(CMPI(ult, crd, size));
+        return {CMPI(ult, crd, size)};
       });
   assert(r.size() == 1);
   return r.front();
@@ -762,13 +872,14 @@ ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
         linkNewScope(ivs);
         ValueRange cont =
             genWhenInBound(b, l, *wrap, C_FALSE,
-                           [this](OpBuilder &b, Location l, Value wrapCrd) {
+                           [this](OpBuilder &b, Location l,
+                                  Value wrapCrd) -> scf::ValueVector {
                              // crd < size && !legit();
                              Value notLegit =
                                  genCrdNotLegitPredicate(b, l, wrapCrd);
                              Value crd = fromWrapCrd(b, l, wrapCrd);
                              Value ret = ANDI(CMPI(ult, crd, size), notLegit);
-                             YIELD(ret);
+                             return {ret};
                            });
         b.create<scf::ConditionOp>(l, cont.front(), ivs);
       },
@@ -784,31 +895,201 @@ ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
   return getItVals();
 }
 
+SubSectIterHelper::SubSectIterHelper(const NonEmptySubSectIterator &subSect)
+    : subSect(subSect), wrap(*subSect.delegate) {}
+
+SubSectIterHelper::SubSectIterHelper(const SubSectIterator &iter)
+    : subSect(iter.subSect), wrap(*iter.wrap) {}
+
+void SubSectIterHelper::deserializeFromTupleId(OpBuilder &b, Location l,
+                                               Value tupleId) {
+  assert(!subSect.randomAccessible());
+  wrap.deserialize(subSect.loadItVals(b, l, tupleId));
+}
+
+void SubSectIterHelper::locate(OpBuilder &b, Location l, Value crd) {
+  Value absCrd = ADDI(crd, subSect.getAbsOff());
+  wrap.locate(b, l, absCrd);
+}
+
+Value SubSectIterHelper::genNotEnd(OpBuilder &b, Location l) {
+  assert(!wrap.randomAccessible());
+  auto r = genWhenInBound(
+      b, l, wrap, C_FALSE,
+      [this](OpBuilder &b, Location l, Value wrapCrd) -> scf::ValueVector {
+        Value crd = SUBI(wrapCrd, subSect.getAbsOff());
+        // crd < size
+        return {CMPI(ult, crd, subSect.subSectSz)};
+      });
+  assert(r.size() == 1);
+  return r.front();
+}
+
+Value SubSectIterHelper::deref(OpBuilder &b, Location l) {
+  Value wrapCrd = wrap.deref(b, l);
+  Value crd = subSect.toSubSectCrd(b, l, wrapCrd);
+  return crd;
+}
+
+ValueRange SubSectIterHelper::forward(OpBuilder &b, Location l) {
+  return wrap.forward(b, l);
+}
+
+ValueRange NonEmptySubSectIterator::genSubSectTraverseTillRoot(
+    OpBuilder &b, Location l, ValueRange reduc, TraverseBuilder builder) const {
+  // Set up the helper to help traverse a sparse subsection.
+  SubSectIterHelper helper(*this);
+  if (!randomAccessible()) {
+    // The subsection tree have been expanded till the level and cached,
+    // traverse all the leaves and expanded to the next level.
+    SmallVector<Value> iterArgs;
+    iterArgs.push_back(C_IDX(0));
+    iterArgs.append(reduc.begin(), reduc.end());
+    auto forEachLeaf = b.create<scf::ForOp>(
+        l, /*lb=*/C_IDX(0), /*ub=*/tupleCnt, /*step=*/C_IDX(1), iterArgs,
+        [&helper, &builder](OpBuilder &b, Location l, Value tupleId,
+                            ValueRange iterArgs) {
+          // Deserialize the iterator at the cached position (tupleId).
+          helper.deserializeFromTupleId(b, l, tupleId);
+
+          Value cnt = iterArgs.front();
+          // Record the number of leaf nodes included in the subsection.
+          // The number indicates the starting tupleId for the next level that
+          // is corresponding to the current node.
+          helper.subSect.storeNxLvlStart(b, l, tupleId, cnt);
+
+          SmallVector<Value> whileArgs(helper.wrap.getItVals());
+          whileArgs.append(iterArgs.begin(), iterArgs.end());
+
+          auto whileOp = b.create<scf::WhileOp>(
+              l, ValueRange(whileArgs).getTypes(), whileArgs,
+              /*beforeBuilder=*/
+              [&helper](OpBuilder &b, Location l, ValueRange ivs) {
+                helper.wrap.linkNewScope(ivs);
+                b.create<scf::ConditionOp>(l, helper.genNotEnd(b, l), ivs);
+              },
+              /*afterBuilder=*/
+              [&helper, &builder](OpBuilder &b, Location l, ValueRange ivs) {
+                ValueRange remIter = helper.wrap.linkNewScope(ivs);
+                Value cnt = remIter.front();
+                ValueRange userIter = remIter.drop_front();
+                scf::ValueVector userNx = builder(b, l, &helper.wrap, userIter);
+
+                SmallVector<Value> nxIter = helper.forward(b, l);
+                nxIter.push_back(ADDI(cnt, C_IDX(1)));
+                nxIter.append(userNx.begin(), userNx.end());
+                YIELD(nxIter);
+              });
+          ValueRange res = helper.wrap.linkNewScope(whileOp.getResults());
+          YIELD(res);
+        });
+    return forEachLeaf.getResults().drop_front();
+  }
+
+  assert(randomAccessible());
+  // Helper lambda that traverse the current dense subsection range.
+  auto visitDenseSubSect = [&, this](OpBuilder &b, Location l,
+                                     const SparseIterator *parent,
+                                     ValueRange reduc) {
+    assert(!parent || parent->lvl + 1 == lvl);
+    delegate->genInit(b, l, parent);
+    auto forOp = b.create<scf::ForOp>(
+        l, /*lb=*/C_IDX(0), /*ub=*/subSectSz, /*step=*/C_IDX(1), reduc,
+        [&](OpBuilder &b, Location l, Value crd, ValueRange iterArgs) {
+          helper.locate(b, l, crd);
+          scf::ValueVector nx = builder(b, l, &helper.wrap, iterArgs);
+          YIELD(nx);
+        });
+    return forOp.getResults();
+  };
+
+  if (isSubSectRoot()) {
+    return visitDenseSubSect(b, l, parent, reduc);
+  }
+  // Else, this is not the root, recurse until root.
+  auto *p = llvm::cast<NonEmptySubSectIterator>(parent);
+  assert(p->lvl + 1 == lvl);
+  return p->genSubSectTraverseTillRoot(b, l, reduc, visitDenseSubSect);
+}
+
 void NonEmptySubSectIterator::genInit(OpBuilder &b, Location l,
                                       const SparseIterator *) {
-  auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
-  if (p) {
-    llvm_unreachable("Not implemented");
-  } else {
-    wrap->genInit(b, l, parent);
-    Value c0 = C_IDX(0);
+  Value c0 = C_IDX(0);
+  if (!isSubSectRoot()) {
+    assert(parent->lvl + 1 == lvl);
+    // We can not call wrap->genInit() here to initialize the wrapped iterator,
+    // because the parent of the curent iterator is still unresolved.
     if (randomAccessible()) {
       seek({/*minCrd=*/c0, /*offset=*/c0, /*notEnd=*/C_TRUE});
       return;
     }
-    // Handle sparse subsection iterator.
-    tupleCnt = C_IDX(1);
-    SmallVector<Value> elseRet{c0, c0, /*notEnd=*/C_FALSE};
-    ValueRange meta = genWhenInBound(
-        b, l, *wrap, elseRet, [this](OpBuilder &b, Location l, Value crd) {
-          Value offset = offsetFromMinCrd(b, l, crd, subSectSz);
-          YIELD((ValueRange{crd, offset, C_TRUE}));
-        });
 
-    seek(meta);
-    SmallVector<Value> itVals = wrap->serialize();
-    storeItVals(b, l, c0, itVals);
+    auto *p = cast<NonEmptySubSectIterator>(parent);
+
+    SmallVector<Value, 3> reduc = {
+        C_IDX(-1), // minCrd (max signless integer)
+        c0,        // tupleId
+    };
+
+    ValueRange result = p->genSubSectTraverseTillRoot(
+        b, l, reduc,
+        [this](OpBuilder &b, Location l, const SparseIterator *parent,
+               ValueRange reduc) -> scf::ValueVector {
+          assert(parent->lvl + 1 == lvl && reduc.size() == 2);
+          Value minCrd = reduc.front();
+          Value tupleId = reduc.back();
+
+          // Initialize the subsection range.
+          SubSectIterHelper helper(*this);
+          helper.wrap.genInit(b, l, parent);
+
+          // Update minCrd.
+          minCrd = genWhenInBound(b, l, helper.wrap, minCrd,
+                                  [minCrd](OpBuilder &b, Location l,
+                                           Value crd) -> scf::ValueVector {
+                                    Value min = MINUI(crd, minCrd);
+                                    return {min};
+                                  })
+                       .front();
+
+          // Cache the sparse range.
+          storeItVals(b, l, tupleId, helper.wrap.serialize());
+          tupleId = ADDI(tupleId, C_IDX(1));
+          return {minCrd, tupleId};
+        });
+    assert(result.size() == 2);
+    tupleCnt = result.back();
+
+    Value minCrd = result.front();
+    Value absOff = offsetFromMinCrd(b, l, minCrd, subSectSz);
+    Value notEnd = CMPI(ne, minCrd, C_IDX(-1));
+    seek({minCrd, absOff, notEnd});
+    return;
   }
+
+  // This is the root level of the subsection, which means that it is resolved
+  // to one node.
+  assert(isSubSectRoot());
+
+  delegate->genInit(b, l, parent);
+  if (randomAccessible()) {
+    seek({/*minCrd=*/c0, /*offset=*/c0, /*notEnd=*/C_TRUE});
+    return;
+  }
+
+  // Only have one root node.
+  tupleCnt = C_IDX(1);
+  // Cache the sparse range.
+  storeItVals(b, l, c0, delegate->serialize());
+  SmallVector<Value> elseRet{c0, c0, /*notEnd=*/C_FALSE};
+  auto meta = genWhenInBound(
+      b, l, *delegate, elseRet,
+      [this](OpBuilder &b, Location l, Value crd) -> scf::ValueVector {
+        Value offset = offsetFromMinCrd(b, l, crd, subSectSz);
+        return {crd, offset, C_TRUE};
+      });
+
+  seek(meta);
 }
 
 ValueRange NonEmptySubSectIterator::forward(OpBuilder &b, Location l) {
@@ -844,37 +1125,39 @@ ValueRange NonEmptySubSectIterator::forward(OpBuilder &b, Location l) {
     //    offset = minCrd - size + 1;
     // }
     b.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    ValueRange loopArgs{upperBound(b, l), // nextMinCrd
-                        C_FALSE};         // isNotEnd
+    ValueRange loopArgs{C_IDX(-1), // nextMinCrd
+                        C_FALSE};  // isNotEnd
     auto loopNest = scf::buildLoopNest(
         b, l, c0, tupleCnt, c1, loopArgs,
         [this](OpBuilder &b, Location l, ValueRange ivs,
                ValueRange iterArgs) -> scf::ValueVector {
           Value tupleId = ivs.front();
-          SmallVector<Value> itVals = loadItVals(b, l, tupleId);
-          wrap->deserialize(itVals);
+          SubSectIterHelper helper(*this);
+          helper.deserializeFromTupleId(b, l, tupleId);
+
           return genWhenInBound(
-              b, l, *wrap, /*elseRet=*/iterArgs,
-              [this, iterArgs, tupleId](OpBuilder &b, Location l, Value crd) {
+              b, l, *delegate, /*elseRet=*/iterArgs,
+              [this, iterArgs, tupleId](OpBuilder &b, Location l,
+                                        Value crd) -> scf::ValueVector {
                 // if coord == minCrd
                 //   wrap->forward();
                 Value isMin = CMPI(eq, crd, getMinCrd());
-                wrap->forwardIf(b, l, isMin);
+                delegate->forwardIf(b, l, isMin);
                 // Update the forwarded iterator values if needed.
                 auto ifIsMin = b.create<scf::IfOp>(l, isMin, false);
                 b.setInsertionPointToStart(&ifIsMin.getThenRegion().front());
-                storeItVals(b, l, tupleId, wrap->serialize());
+                storeItVals(b, l, tupleId, delegate->serialize());
                 b.setInsertionPointAfter(ifIsMin);
                 // if (!wrap.end())
                 //  yield(min(nxMinCrd, *wrap), true)
                 Value nxMin = iterArgs[0];
-                ValueRange ret = genWhenInBound(
-                    b, l, *wrap, /*elseRet=*/iterArgs,
-                    [nxMin](OpBuilder &b, Location l, Value crd) {
-                      Value nx = SELECT(CMPI(ult, crd, nxMin), crd, nxMin);
-                      YIELD((ValueRange{nx, C_TRUE}));
-                    });
-                YIELD(ret);
+                return genWhenInBound(b, l, *delegate, /*elseRet=*/iterArgs,
+                                      [nxMin](OpBuilder &b, Location l,
+                                              Value crd) -> scf::ValueVector {
+                                        Value nx = b.create<arith::MinUIOp>(
+                                            l, crd, nxMin);
+                                        return {nx, C_TRUE};
+                                      });
               });
         });
 
@@ -893,7 +1176,7 @@ ValueRange NonEmptySubSectIterator::forward(OpBuilder &b, Location l) {
 
   // We should at least forward the offset by one.
   Value minAbsOff = ADDI(getAbsOff(), c1);
-  nxAbsOff = SELECT(CMPI(ugt, minAbsOff, nxAbsOff), minAbsOff, nxAbsOff);
+  nxAbsOff = b.create<arith::MaxUIOp>(l, minAbsOff, nxAbsOff);
 
   assert(stride == 1 && "Not yet implemented");
 

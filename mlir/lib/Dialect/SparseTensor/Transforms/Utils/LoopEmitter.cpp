@@ -543,17 +543,19 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
     std::sort(depRedOrder.begin(), depRedOrder.end(),
               [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
 
+    SmallVector<SparseIterator *> lastIter(tensors.size(), nullptr);
     for (auto [loop, t, lvl] : depRedOrder) {
       std::pair<LoopId, unsigned> curDep = remDepStack[t][lvl].back();
       assert(curDep.first == loop);
       remDepStack[t][lvl].pop_back();
 
       auto lvlIt = makeLevelIterator(builder, loc, t, lvl);
-      const SparseIterator *parent =
-          lvl == 0 && iters[t][lvl].empty()
-              ? nullptr
-              : (!iters[t][lvl].empty() ? iters[t][lvl].back().get()
-                                        : iters[t][lvl - 1].back().get());
+      const SparseIterator *parent = lastIter[t];
+      if (!parent && lvl > 0) {
+        if (dependentLvlMap[t][lvl - 1].empty()) {
+          parent = iters[t][lvl - 1].back().get();
+        }
+      }
 
       std::unique_ptr<SparseIterator> it;
       if (!remDepStack[t][lvl].empty()) {
@@ -571,6 +573,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
         it = makeTraverseSubSectIterator(subSectIter, *parent, std::move(lvlIt),
                                          size, curDep.second);
       }
+      lastIter[t] = it.get();
       iters[t][lvl].emplace_back(std::move(it));
     }
   }
@@ -1343,10 +1346,10 @@ void LoopEmitter::genDenseAffineAddress(OpBuilder &builder, Location loc,
                                         TensorLevel tidLvl,
                                         AffineExpr lvlExpr) {
   auto [tid, lvl] = unpackTensorLevel(tidLvl);
-  assert(isDenseLT(lvlTypes[tid][lvl]));
-  // For dense levels, the vel-coordinate also serves as the position.
+  auto &it = getCurIterator(tid, lvl);
+  assert(it.kind == IterKind::kTrivial && it.randomAccessible());
   Value lvlCrd = genAffine(builder, loc, lvlExpr);
-  posits[tid][lvl] = genAddress(builder, loc, tid, lvl, lvlCrd);
+  it.locate(builder, loc, lvlCrd);
 }
 
 void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
@@ -1359,7 +1362,11 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 
   const SparseIterator *parent =
       hasParent ? nullptr : iters[tid][lvl - 1].back().get();
-  getCurIterator(tid, lvl).genInit(builder, loc, parent);
+  auto &it = getCurIterator(tid, lvl);
+  it.genInit(builder, loc, parent);
+  if (it.randomAccessible()) {
+    it.locate(builder, loc, C_IDX(0));
+  }
 }
 
 void LoopEmitter::enterTensorsAtDenseLvls(
