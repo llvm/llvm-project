@@ -1270,6 +1270,8 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     // IOS.
     Version = VersionTuple(10, 4);
     break;
+  case XROS:
+    llvm_unreachable("OSX version isn't relevant for xrOS");
   case DriverKit:
     llvm_unreachable("OSX version isn't relevant for DriverKit");
   }
@@ -1324,6 +1326,8 @@ VersionTuple Triple::getWatchOSVersion() const {
   }
   case IOS:
     llvm_unreachable("conflicting triple info");
+  case XROS:
+    llvm_unreachable("watchOS version isn't relevant for xrOS");
   case DriverKit:
     llvm_unreachable("DriverKit doesn't have a WatchOS version");
   }
