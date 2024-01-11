@@ -476,7 +476,6 @@ def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
-  let isAllocatable = 0;
 }
 
 // Make AllocationOrder as similar as G8RC's to avoid potential spilling.
