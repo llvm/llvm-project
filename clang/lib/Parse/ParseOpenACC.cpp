@@ -87,16 +87,29 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
 
+  // TODO: ERICH: add new clauses here.
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
+    .Case("attach",OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("copy", OpenACCClauseKind::Copy)
       .Case("default", OpenACCClauseKind::Default)
+      .Case("delete", OpenACCClauseKind::Delete)
+      .Case("detach", OpenACCClauseKind::Detach)
+      .Case("device", OpenACCClauseKind::Device)
+      .Case("device_resident", OpenACCClauseKind::DeviceResident)
+      .Case("deviceptr", OpenACCClauseKind::DevicePtr)
       .Case("finalize", OpenACCClauseKind::Finalize)
+      .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
+      .Case("host", OpenACCClauseKind::Host)
       .Case("if", OpenACCClauseKind::If)
       .Case("if_present", OpenACCClauseKind::IfPresent)
       .Case("independent", OpenACCClauseKind::Independent)
+      .Case("link", OpenACCClauseKind::Link)
+      .Case("no_create", OpenACCClauseKind::NoCreate)
       .Case("nohost", OpenACCClauseKind::NoHost)
+      .Case("present", OpenACCClauseKind::Present)
+      .Case("private", OpenACCClauseKind::Private)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
@@ -331,14 +344,55 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   return DirKind;
 }
 
+enum ClauseParensKind {
+  None,
+  Optional,
+  Required
+};
+
+ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
+  switch (Kind) {
+  case OpenACCClauseKind::Self:
+    return ClauseParensKind::Optional;
+
+  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::If:
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::UseDevice:
+  case OpenACCClauseKind::NoCreate:
+  case OpenACCClauseKind::Present:
+  case OpenACCClauseKind::DevicePtr:
+  case OpenACCClauseKind::Attach:
+  case OpenACCClauseKind::Detach:
+  case OpenACCClauseKind::Private:
+  case OpenACCClauseKind::FirstPrivate:
+  case OpenACCClauseKind::Delete:
+  case OpenACCClauseKind::DeviceResident:
+  case OpenACCClauseKind::Device:
+  case OpenACCClauseKind::Link:
+  case OpenACCClauseKind::Host:
+    return ClauseParensKind::Required;
+
+  case OpenACCClauseKind::Auto:
+  case OpenACCClauseKind::Finalize:
+  case OpenACCClauseKind::IfPresent:
+  case OpenACCClauseKind::Independent:
+  case OpenACCClauseKind::Invalid:
+  case OpenACCClauseKind::NoHost:
+  case OpenACCClauseKind::Seq:
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector:
+    return ClauseParensKind::None;
+  }
+  llvm_unreachable("Unhandled clause kind");
+}
+
 bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
-  return Kind == OpenACCClauseKind::Self;
+  return getClauseParensKind(Kind) == ClauseParensKind::Optional;
 }
 
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
-  return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If ||
-         Kind == OpenACCClauseKind::Copy ||
-         Kind == OpenACCClauseKind::UseDevice;
+  return getClauseParensKind(Kind) == ClauseParensKind::Required;
 }
 
 ExprResult ParseOpenACCConditionalExpr(Parser &P) {
@@ -463,8 +517,20 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
         return true;
       break;
     }
-    case OpenACCClauseKind::UseDevice:
+    case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::Detach:
+    case OpenACCClauseKind::Device:
+    case OpenACCClauseKind::DeviceResident:
+    case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::Host:
+    case OpenACCClauseKind::Link:
+    case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::Present:
+    case OpenACCClauseKind::Private:
+    case OpenACCClauseKind::UseDevice:
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
