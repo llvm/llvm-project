@@ -2178,7 +2178,7 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
 
   TestLexer Lexer(Allocator, Buffers, Style);
   AdditionalKeywords Keywords(Lexer.IdentTable);
-  auto Annotate = [&Lexer, &Style](llvm::StringRef Code) {
+  auto Annotate = [&Lexer](llvm::StringRef Code) {
     return Lexer.annotate(Code);
   };
 
