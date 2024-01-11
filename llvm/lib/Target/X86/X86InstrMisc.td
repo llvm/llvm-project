@@ -229,7 +229,7 @@ def PUSHA16  : I<0x60, RawFrm, (outs), (ins), "pushaw", []>,
                OpSize16, Requires<[Not64BitMode]>;
 }
 
-let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32], Predicates = [NoEGPR] in {
+let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32], Predicates = [NoNDD] in {
 // This instruction is a consequence of BSWAP32r observing operand size. The
 // encoding is valid, but the behavior is undefined.
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
@@ -1150,30 +1150,31 @@ let Predicates = [HasMOVBE, HasEGPR, In64BitMode] in {
                          [(store (bswap GR64:$src), addr:$dst)]>,
                        EVEX, NoCD8, T_MAP4;
   }
-  let SchedRW = [WriteALU] in {
-  def MOVBE16rr_EVEX : I<0x61, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
-                         "movbe{w}\t{$src, $dst|$dst, $src}", 
-                         [(set GR16:$dst, (bswap GR16:$src))]>,
-                       EVEX, NoCD8, T_MAP4, PD;
-  def MOVBE32rr_EVEX : I<0x61, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
-                         "movbe{l}\t{$src, $dst|$dst, $src}", 
-                         [(set GR32:$dst, (bswap GR32:$src))]>,
-                       EVEX, NoCD8, T_MAP4;
-  def MOVBE64rr_EVEX : RI<0x61, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
-                          "movbe{q}\t{$src, $dst|$dst, $src}", 
-                          [(set GR64:$dst, (bswap GR64:$src))]>,
-                       EVEX, NoCD8, T_MAP4;
+}
 
-  def MOVBE16rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
-                             "movbe{w}\t{$src, $dst|$dst, $src}", []>,
-                           EVEX, NoCD8, T_MAP4, PD;
-  def MOVBE32rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
-                             "movbe{l}\t{$src, $dst|$dst, $src}", []>,
-                           EVEX, NoCD8, T_MAP4;
-  def MOVBE64rr_EVEX_REV : RI<0x60, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
-                              "movbe{q}\t{$src, $dst|$dst, $src}", []>,
-                           EVEX, NoCD8, T_MAP4;
-  }
+let SchedRW = [WriteALU], Predicates = [HasMOVBE, HasNDD, In64BitMode] in {
+def MOVBE16rr_EVEX : I<0x61, MRMDestReg, (outs GR16:$dst), (ins GR16:$src),
+                        "movbe{w}\t{$src, $dst|$dst, $src}",
+                        [(set GR16:$dst, (bswap GR16:$src))]>,
+                      EVEX, NoCD8, T_MAP4, PD;
+def MOVBE32rr_EVEX : I<0x61, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
+                        "movbe{l}\t{$src, $dst|$dst, $src}",
+                        [(set GR32:$dst, (bswap GR32:$src))]>,
+                      EVEX, NoCD8, T_MAP4;
+def MOVBE64rr_EVEX : RI<0x61, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
+                        "movbe{q}\t{$src, $dst|$dst, $src}",
+                        [(set GR64:$dst, (bswap GR64:$src))]>,
+                      EVEX, NoCD8, T_MAP4;
+
+def MOVBE16rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
+                            "movbe{w}\t{$src, $dst|$dst, $src}", []>,
+                          EVEX, NoCD8, T_MAP4, PD;
+def MOVBE32rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
+                            "movbe{l}\t{$src, $dst|$dst, $src}", []>,
+                          EVEX, NoCD8, T_MAP4;
+def MOVBE64rr_EVEX_REV : RI<0x60, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
+                            "movbe{q}\t{$src, $dst|$dst, $src}", []>,
+                          EVEX, NoCD8, T_MAP4;
 }
 
 //===----------------------------------------------------------------------===//
