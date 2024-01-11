@@ -284,7 +284,8 @@ private:
   /// succeed.
   PatternType inferNamedOperandType(const InstructionPattern &IP,
                                     StringRef OpName,
-                                    const TypeEquivalenceClasses &TECs) const;
+                                    const TypeEquivalenceClasses &TECs,
+                                    bool AllowSelf = false) const;
 
   const Record &RuleDef;
   SmallVector<InstructionPattern *, 8> MatchPats;
@@ -427,8 +428,8 @@ PatternType CombineRuleOperandTypeChecker::inferImmediateType(
         continue;
 
       // Named operand with the same name, try to infer that.
-      if (PatternType InferTy =
-              inferNamedOperandType(IP, Op.getOperandName(), TECs))
+      if (PatternType InferTy = inferNamedOperandType(IP, Op.getOperandName(),
+                                                      TECs, /*AllowSelf=*/true))
         return InferTy;
     }
   }
@@ -438,16 +439,17 @@ PatternType CombineRuleOperandTypeChecker::inferImmediateType(
 
 PatternType CombineRuleOperandTypeChecker::inferNamedOperandType(
     const InstructionPattern &IP, StringRef OpName,
-    const TypeEquivalenceClasses &TECs) const {
+    const TypeEquivalenceClasses &TECs, bool AllowSelf) const {
   // This is the simplest possible case, we just need to find a TEC that
-  // contains OpName. Look at all other operands in equivalence class and try to
-  // find a suitable one.
+  // contains OpName. Look at all operands in equivalence class and try to
+  // find a suitable one. If `AllowSelf` is true, the operand itself is also
+  // considered suitable.
 
   // Check for a def of a matched pattern. This is guaranteed to always
   // be a register so we can blindly use that.
   StringRef GoodOpName;
   for (auto It = TECs.findLeader(OpName); It != TECs.member_end(); ++It) {
-    if (*It == OpName)
+    if (!AllowSelf && *It == OpName)
       continue;
 
     const auto LookupRes = MatchOpTable.lookup(*It);
@@ -2316,7 +2318,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
           M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
     }
 
-    DstMI.addRenderer<TempRegRenderer>(TempRegID);
+    DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
   }
 
   // Render MIFlags

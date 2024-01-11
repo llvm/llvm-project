@@ -164,6 +164,9 @@ def True : Predicate<"true">;
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
+// Explicit records for arch-accelerated SM versions
+def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
+
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
                           "&& Subtarget->getPTXVersion() >= 64)">;

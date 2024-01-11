@@ -314,9 +314,6 @@ protected:
   Worklist worklist;
 #endif // MLIR_GREEDY_REWRITE_RANDOMIZER_SEED
 
-  /// Non-pattern based folder for operations.
-  OperationFolder folder;
-
   /// Configuration information for how to simplify.
   const GreedyRewriteConfig config;
 
@@ -358,7 +355,7 @@ private:
 GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     MLIRContext *ctx, const FrozenRewritePatternSet &patterns,
     const GreedyRewriteConfig &config)
-    : PatternRewriter(ctx), folder(ctx, this), config(config), matcher(patterns)
+    : PatternRewriter(ctx), config(config), matcher(patterns)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
       , debugFingerPrints(this)
@@ -429,15 +426,79 @@ bool GreedyPatternRewriteDriver::processWorklist() {
       continue;
     }
 
-    // Try to fold this op.
-    if (succeeded(folder.tryToFold(op))) {
-      LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
-      changed = true;
+    // Try to fold this op. Do not fold constant ops. That would lead to an
+    // infinite folding loop, as every constant op would be folded to an
+    // Attribute and then immediately be rematerialized as a constant op, which
+    // is then put on the worklist.
+    if (!op->hasTrait<OpTrait::ConstantLike>()) {
+      SmallVector<OpFoldResult> foldResults;
+      if (succeeded(op->fold(foldResults))) {
+        LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
+        if (foldResults.empty()) {
+          // Op was modified in-place.
+          notifyOperationModified(op);
+          changed = true;
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-      if (config.scope && failed(verify(config.scope->getParentOp())))
-        llvm::report_fatal_error("IR failed to verify after folding");
+          if (config.scope && failed(verify(config.scope->getParentOp())))
+            llvm::report_fatal_error("IR failed to verify after folding");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-      continue;
+          continue;
+        }
+
+        // Op results can be replaced with `foldResults`.
+        assert(foldResults.size() == op->getNumResults() &&
+               "folder produced incorrect number of results");
+        OpBuilder::InsertionGuard g(*this);
+        setInsertionPoint(op);
+        SmallVector<Value> replacements;
+        bool materializationSucceeded = true;
+        for (auto [ofr, resultType] :
+             llvm::zip_equal(foldResults, op->getResultTypes())) {
+          if (auto value = ofr.dyn_cast<Value>()) {
+            assert(value.getType() == resultType &&
+                   "folder produced value of incorrect type");
+            replacements.push_back(value);
+            continue;
+          }
+          // Materialize Attributes as SSA values.
+          Operation *constOp = op->getDialect()->materializeConstant(
+              *this, ofr.get<Attribute>(), resultType, op->getLoc());
+
+          if (!constOp) {
+            // If materialization fails, cleanup any operations generated for
+            // the previous results.
+            llvm::SmallDenseSet<Operation *> replacementOps;
+            for (Value replacement : replacements) {
+              assert(replacement.use_empty() &&
+                     "folder reused existing op for one result but constant "
+                     "materialization failed for another result");
+              replacementOps.insert(replacement.getDefiningOp());
+            }
+            for (Operation *op : replacementOps) {
+              eraseOp(op);
+            }
+
+            materializationSucceeded = false;
+            break;
+          }
+
+          assert(constOp->hasTrait<OpTrait::ConstantLike>() &&
+                 "materializeConstant produced op that is not a ConstantLike");
+          assert(constOp->getResultTypes()[0] == resultType &&
+                 "materializeConstant produced incorrect result type");
+          replacements.push_back(constOp->getResult(0));
+        }
+
+        if (materializationSucceeded) {
+          replaceOp(op, replacements);
+          changed = true;
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+          if (config.scope && failed(verify(config.scope->getParentOp())))
+            llvm::report_fatal_error("IR failed to verify after folding");
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+          continue;
+        }
+      }
     }
 
     // Try to match one of the patterns. The rewriter is automatically
@@ -592,7 +653,6 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
 
   addOperandsToWorklist(op->getOperands());
   worklist.remove(op);
-  folder.notifyRemoval(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
     strictModeFilteredOps.erase(op);
@@ -672,16 +732,6 @@ private:
 } // namespace
 
 LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
-  auto insertKnownConstant = [&](Operation *op) {
-    // Check for existing constants when populating the worklist. This avoids
-    // accidentally reversing the constant order during processing.
-    Attribute constValue;
-    if (matchPattern(op, m_Constant(&constValue)))
-      if (!folder.insertKnownConstant(op, constValue))
-        return true;
-    return false;
-  };
-
   bool continueRewrites = false;
   int64_t iteration = 0;
   MLIRContext *ctx = getContext();
@@ -691,7 +741,21 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
         config.maxIterations != GreedyRewriteConfig::kNoLimit)
       break;
 
+    // New iteration: start with an empty worklist.
     worklist.clear();
+
+    // `OperationFolder` CSE's constant ops (and may move them into parents
+    // regions to enable more aggressive CSE'ing).
+    OperationFolder folder(getContext(), this);
+    auto insertKnownConstant = [&](Operation *op) {
+      // Check for existing constants when populating the worklist. This avoids
+      // accidentally reversing the constant order during processing.
+      Attribute constValue;
+      if (matchPattern(op, m_Constant(&constValue)))
+        if (!folder.insertKnownConstant(op, constValue))
+          return true;
+      return false;
+    };
 
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.

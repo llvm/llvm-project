@@ -69,6 +69,9 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
   EXPECT_EQ(negnum.uintval(), static_cast<uint32_t>(0xBF900000));
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBF900000 = (S: 1, E: 0x007F, M: 0x00100000)");
+
+  FloatBits quiet_nan = FloatBits(FloatBits::build_quiet_nan(1));
+  EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
 TEST(LlvmLibcFPBitsTest, DoubleType) {
@@ -129,6 +132,9 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_EQ(negnum.uintval(), static_cast<uint64_t>(0xBFF2000000000000));
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFF2000000000000 = (S: 1, E: 0x03FF, M: 0x0002000000000000)");
+
+  DoubleBits quiet_nan = DoubleBits(DoubleBits::build_quiet_nan(1));
+  EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
 #ifdef LIBC_TARGET_ARCH_IS_X86
@@ -210,6 +216,9 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
       LIBC_NAMESPACE::str(negnum).c_str(),
       "0x000000000000BFFF9000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
+
+  LongDoubleBits quiet_nan = LongDoubleBits(LongDoubleBits::build_quiet_nan(1));
+  EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #else
 TEST(LlvmLibcFPBitsTest, LongDoubleType) {
@@ -284,6 +293,9 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
+
+  LongDoubleBits quiet_nan = LongDoubleBits(LongDoubleBits::build_quiet_nan(1));
+  EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 #endif
 }
 #endif
@@ -357,5 +369,8 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
+
+  Float128Bits quiet_nan = Float128Bits(Float128Bits::build_quiet_nan(1));
+  EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #endif // LIBC_COMPILER_HAS_FLOAT128

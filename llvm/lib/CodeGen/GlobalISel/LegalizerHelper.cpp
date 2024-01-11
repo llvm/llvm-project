@@ -958,6 +958,13 @@ static RTLIB::Libcall
 getStateLibraryFunctionFor(MachineInstr &MI, const TargetLowering &TLI) {
   RTLIB::Libcall RTLibcall;
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_GET_FPENV:
+    RTLibcall = RTLIB::FEGETENV;
+    break;
+  case TargetOpcode::G_SET_FPENV:
+  case TargetOpcode::G_RESET_FPENV:
+    RTLibcall = RTLIB::FESETENV;
+    break;
   case TargetOpcode::G_GET_FPMODE:
     RTLibcall = RTLIB::FEGETMODE;
     break;
@@ -1232,18 +1239,21 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     MI.eraseFromParent();
     return Result;
   }
+  case TargetOpcode::G_GET_FPENV:
   case TargetOpcode::G_GET_FPMODE: {
     LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
+  case TargetOpcode::G_SET_FPENV:
   case TargetOpcode::G_SET_FPMODE: {
     LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
+  case TargetOpcode::G_RESET_FPENV:
   case TargetOpcode::G_RESET_FPMODE: {
     LegalizeResult Result =
         createResetStateLibcall(MIRBuilder, MI, LocObserver);
@@ -4718,6 +4728,9 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*imm*/});
   GISEL_VECREDUCE_CASES_NONSEQ
     return fewerElementsVectorReductions(MI, TypeIdx, NarrowTy);
+  case TargetOpcode::G_VECREDUCE_SEQ_FADD:
+  case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
+    return fewerElementsVectorSeqReductions(MI, TypeIdx, NarrowTy);
   case G_SHUFFLE_VECTOR:
     return fewerElementsVectorShuffle(MI, TypeIdx, NarrowTy);
   case G_FPOWI:
@@ -4947,6 +4960,36 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
                 .getReg(0);
     }
   }
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
+                                                  unsigned int TypeIdx,
+                                                  LLT NarrowTy) {
+  auto [DstReg, DstTy, ScalarReg, ScalarTy, SrcReg, SrcTy] =
+      MI.getFirst3RegLLTs();
+  if (!NarrowTy.isScalar() || TypeIdx != 2 || DstTy != ScalarTy ||
+      DstTy != NarrowTy)
+    return UnableToLegalize;
+
+  assert((MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FADD ||
+          MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FMUL) &&
+         "Unexpected vecreduce opcode");
+  unsigned ScalarOpc = MI.getOpcode() == TargetOpcode::G_VECREDUCE_SEQ_FADD
+                           ? TargetOpcode::G_FADD
+                           : TargetOpcode::G_FMUL;
+
+  SmallVector<Register> SplitSrcs;
+  unsigned NumParts = SrcTy.getNumElements();
+  extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs);
+  Register Acc = ScalarReg;
+  for (unsigned i = 0; i < NumParts; i++)
+    Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]})
+              .getReg(0);
+
+  MIRBuilder.buildCopy(DstReg, Acc);
   MI.eraseFromParent();
   return Legalized;
 }
