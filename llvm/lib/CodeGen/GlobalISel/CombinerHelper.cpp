@@ -3939,7 +3939,8 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   SmallSetVector<MachineInstr *, 8> SrcMIs;
   SmallDenseMap<MachineInstr *, MachineInstr *, 8> OldToNewSrcMap;
   for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); SrcIdx += 2) {
-    auto *SrcMI = MRI.getVRegDef(MI.getOperand(SrcIdx).getReg());
+    auto SrcReg = MI.getOperand(SrcIdx).getReg();
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (!SrcMIs.insert(SrcMI))
       continue;
 
@@ -3952,7 +3953,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
     Builder.setInsertPt(*SrcMI->getParent(), InsertPt);
     Builder.setDebugLoc(MI.getDebugLoc());
     auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy,
-                                          SrcMI->getOperand(0).getReg());
+                                          SrcReg);
     OldToNewSrcMap[SrcMI] = NewExt;
   }
 
