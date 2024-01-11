@@ -99,6 +99,39 @@ LLCAS_PUBLIC llcas_cas_t llcas_cas_create(llcas_cas_options_t, char **error);
 LLCAS_PUBLIC void llcas_cas_dispose(llcas_cas_t);
 
 /**
+ * Get the local storage size of the CAS/cache data in bytes.
+ *
+ * \param error optional pointer to receive an error message if an error
+ * occurred. If set, the memory it points to needs to be released via
+ * \c llcas_string_dispose.
+ * \returns the local storage size of the CAS/cache data, or -1 if the
+ * implementation does not support reporting such size, or -2 if an error
+ * occurred.
+ */
+LLCAS_PUBLIC int64_t llcas_cas_get_ondisk_size(llcas_cas_t, char **error);
+
+/**
+ * Set the size for limiting disk storage growth.
+ *
+ * \param size_limit the maximum size limit in bytes. 0 means no limit. Negative
+ * values are invalid.
+ * \param error optional pointer to receive an error message if an error
+ * occurred. If set, the memory it points to needs to be released via
+ * \c llcas_string_dispose.
+ * \returns true if there was an error, false otherwise.
+ */
+LLCAS_PUBLIC bool
+llcas_cas_set_ondisk_size_limit(llcas_cas_t, int64_t size_limit, char **error);
+
+/**
+ * Prune local storage to reduce its size according to the desired size limit.
+ * Pruning can happen concurrently with other operations.
+ *
+ * \returns true if there was an error, false otherwise.
+ */
+LLCAS_PUBLIC bool llcas_cas_prune_ondisk_data(llcas_cas_t, char **error);
+
+/**
  * \returns the hash schema name that the plugin is using. The string memory it
  * points to needs to be released via \c llcas_string_dispose.
  */

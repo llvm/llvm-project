@@ -291,6 +291,33 @@ llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
 
 void llcas_cas_dispose(llcas_cas_t c_cas) { delete unwrap(c_cas); }
 
+int64_t llcas_cas_get_ondisk_size(llcas_cas_t c_cas, char **error) {
+  return unwrap(c_cas)->DB->getStorageSize();
+}
+
+bool llcas_cas_set_ondisk_size_limit(llcas_cas_t c_cas, int64_t size_limit,
+                                     char **error) {
+  std::optional<uint64_t> SizeLimit;
+  if (size_limit < 0) {
+    return reportError(
+        llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "invalid size limit passed to llcas_cas_set_ondisk_size_limit"),
+        error, true);
+  }
+  if (size_limit > 0) {
+    SizeLimit = size_limit;
+  }
+  unwrap(c_cas)->DB->setSizeLimit(SizeLimit);
+  return false;
+}
+
+bool llcas_cas_prune_ondisk_data(llcas_cas_t c_cas, char **error) {
+  if (Error E = unwrap(c_cas)->DB->collectGarbage())
+    return reportError(std::move(E), error, true);
+  return false;
+}
+
 void llcas_cas_options_set_client_version(llcas_cas_options_t, unsigned major,
                                           unsigned minor) {
   // Ignore for now.
