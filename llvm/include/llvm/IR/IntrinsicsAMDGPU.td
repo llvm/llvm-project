@@ -2496,6 +2496,27 @@ def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmin_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
+class AMDGPUGlobalLoadTr<LLVMType data_ty> :
+  Intrinsic<
+    [data_ty],
+    [global_ptr_ty],
+    [IntrReadMem, IntrWillReturn, IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+// Wave32
+// <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))
+// <8 x i16> @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1))
+// <8 x half> @llvm.amdgcn.global.load.tr.b128.v8f16(ptr addrspace(1))
+// Wave64
+// <2 x i32> @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))
+// <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))
+// <4 x half> @llvm.amdgcn.global.load.tr.b128.v4f16(ptr addrspace(1))
+
+def int_amdgcn_global_load_tr_b64 : AMDGPUGlobalLoadTr<llvm_any_ty>;
+def int_amdgcn_global_load_tr_b128 : AMDGPUGlobalLoadTr<llvm_any_ty>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
