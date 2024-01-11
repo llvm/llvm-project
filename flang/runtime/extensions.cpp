@@ -100,7 +100,14 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 // CALL GETLOG(USRNAME)
 void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-  const int nameMaxLen{LOGIN_NAME_MAX + 1};
+  int nameMaxLen;
+#ifdef LOGIN_NAME_MAX
+  nameMaxLen = LOGIN_NAME_MAX + 1;
+#else
+  nameMaxLen = sysconf(_SC_LOGIN_NAME_MAX) + 1;
+  if (nameMaxLen == -1)
+    nameMaxLen = _POSIX_LOGIN_NAME_MAX + 1;
+#endif
   char str[nameMaxLen];
 
   int error{getlogin_r(str, nameMaxLen)};

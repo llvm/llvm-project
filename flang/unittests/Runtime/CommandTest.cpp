@@ -691,7 +691,14 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
   // guarantee 1 char longer than max, last char should be pad space
-  const int charLen{LOGIN_NAME_MAX + 2};
+  int charLen;
+#ifdef LOGIN_NAME_MAX
+  charLen = LOGIN_NAME_MAX + 2;
+#else
+  charLen = sysconf(_SC_LOGIN_NAME_MAX) + 2;
+  if (charLen == -1)
+    charLen = _POSIX_LOGIN_NAME_MAX + 2;
+#endif
   char input[charLen];
 
   FORTRAN_PROCEDURE_NAME(getlog)
