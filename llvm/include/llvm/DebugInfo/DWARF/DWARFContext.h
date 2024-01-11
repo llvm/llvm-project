@@ -127,6 +127,9 @@ private:
 
   std::unique_ptr<const DWARFObject> DObj;
 
+  /// Binary containing debug information after objcopy --only-keep-debug
+  object::OwningBinary<object::ObjectFile> GnuLink;
+
   // When set parses debug_info.dwo/debug_abbrev.dwo manually and populates CU
   // Index, and TU Index for DWARF5.
   bool ParseCUTUIndexManually = false;
@@ -138,7 +141,9 @@ public:
                    WithColor::defaultErrorHandler,
                std::function<void(Error)> WarningHandler =
                    WithColor::defaultWarningHandler,
-               bool ThreadSafe = false);
+               bool ThreadSafe = false,
+               object::OwningBinary<object::ObjectFile> GnuLink =
+                   object::OwningBinary<object::ObjectFile>());
   ~DWARFContext() override;
 
   DWARFContext(DWARFContext &) = delete;

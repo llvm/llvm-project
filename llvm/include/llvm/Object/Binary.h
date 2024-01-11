@@ -202,6 +202,7 @@ public:
   OwningBinary(std::unique_ptr<T> Bin, std::unique_ptr<MemoryBuffer> Buf);
   OwningBinary(OwningBinary<T>&& Other);
   OwningBinary<T> &operator=(OwningBinary<T> &&Other);
+  void operator()(OwningBinary<T> &&Other);
 
   std::pair<std::unique_ptr<T>, std::unique_ptr<MemoryBuffer>> takeBinary();
 
@@ -222,6 +223,12 @@ OwningBinary<T>::OwningBinary(OwningBinary &&Other)
 
 template <typename T>
 OwningBinary<T> &OwningBinary<T>::operator=(OwningBinary &&Other) {
+  Bin = std::move(Other.Bin);
+  Buf = std::move(Other.Buf);
+  return *this;
+}
+
+template <typename T> void OwningBinary<T>::operator()(OwningBinary &&Other) {
   Bin = std::move(Other.Bin);
   Buf = std::move(Other.Buf);
   return *this;

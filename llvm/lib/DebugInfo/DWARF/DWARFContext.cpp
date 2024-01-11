@@ -741,21 +741,19 @@ public:
   }
 };
 
-
-
 DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
                            std::string DWPName,
                            std::function<void(Error)> RecoverableErrorHandler,
                            std::function<void(Error)> WarningHandler,
-                           bool ThreadSafe)
-    : DIContext(CK_DWARF),
-      RecoverableErrorHandler(RecoverableErrorHandler),
-      WarningHandler(WarningHandler), DObj(std::move(DObj)) {
-        if (ThreadSafe)
-          State = std::make_unique<ThreadSafeState>(*this, DWPName);
-        else
-          State = std::make_unique<ThreadUnsafeDWARFContextState>(*this, DWPName);
-      }
+                           bool ThreadSafe, OwningBinary<ObjectFile> GnuLink)
+    : DIContext(CK_DWARF), RecoverableErrorHandler(RecoverableErrorHandler),
+      WarningHandler(WarningHandler), DObj(std::move(DObj)),
+      GnuLink(std::move(GnuLink)) {
+  if (ThreadSafe)
+    State = std::make_unique<ThreadSafeState>(*this, DWPName);
+  else
+    State = std::make_unique<ThreadUnsafeDWARFContextState>(*this, DWPName);
+}
 
 DWARFContext::~DWARFContext() = default;
 
@@ -2415,13 +2413,37 @@ DWARFContext::create(const object::ObjectFile &Obj,
                      std::function<void(Error)> RecoverableErrorHandler,
                      std::function<void(Error)> WarningHandler,
                      bool ThreadSafe) {
+  const object::ObjectFile *ObjPtr = &Obj;
+  OwningBinary<ObjectFile> GnuLinkObj;
+  for (const llvm::object::SectionRef &Section : Obj.sections()) {
+    Expected<StringRef> SectionNameOrErr = Section.getName();
+    if (SectionNameOrErr && *SectionNameOrErr == ".gnu_debuglink") {
+      Expected<StringRef> ContentsOrErr = Section.getContents();
+      if (ContentsOrErr) {
+        DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(),
+                           Obj.getBytesInAddress());
+        uint64_t GnuDebuglinkOffset = 0;
+        const char *GnuLink = Data.getCStr(&GnuDebuglinkOffset, 0);
+        Expected<OwningBinary<ObjectFile>> GnuLinkObjTempOrErr =
+            object::ObjectFile::createObjectFile(GnuLink);
+        if (GnuLinkObjTempOrErr) {
+          GnuLinkObj = std::move(GnuLinkObjTempOrErr.get());
+          ObjPtr = GnuLinkObj.getBinary();
+        } else {
+          consumeError(GnuLinkObjTempOrErr.takeError());
+        }
+      } else {
+        consumeError(ContentsOrErr.takeError());
+      }
+    } else {
+      consumeError(SectionNameOrErr.takeError());
+    }
+  }
   auto DObj = std::make_unique<DWARFObjInMemory>(
-      Obj, L, RecoverableErrorHandler, WarningHandler, RelocAction);
-  return std::make_unique<DWARFContext>(std::move(DObj),
-                                        std::move(DWPName),
-                                        RecoverableErrorHandler,
-                                        WarningHandler,
-                                        ThreadSafe);
+      *ObjPtr, L, RecoverableErrorHandler, WarningHandler, RelocAction);
+  return std::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName),
+                                        RecoverableErrorHandler, WarningHandler,
+                                        ThreadSafe, std::move(GnuLinkObj));
 }
 
 std::unique_ptr<DWARFContext>
