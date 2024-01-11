@@ -4999,6 +4999,19 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
+.. _ShortReturnTypeColumn:
+
+**ShortReturnTypeColumn** (``Unsigned``) :versionbadge:`clang-format 19` :ref:`¶ <ShortReturnTypeColumn>`
+  When ``AlwaysBreakAfterReturnType`` is ``None``, line breaks are prevented
+  after short return types. This configures the column limit for a type
+  to be regarded as short.
+
+
+  .. note::
+
+   This isn't the length of the type itself, but the column where it
+   finishes. I.e. it includes indentation, etc.
+
 .. _SkipMacroDefinitionBody:
 
 **SkipMacroDefinitionBody** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinitionBody>`

@@ -3932,6 +3932,17 @@ struct FormatStyle {
   /// \version 13
   unsigned ShortNamespaceLines;
 
+  /// When ``AlwaysBreakAfterReturnType`` is ``None``, line breaks are prevented
+  /// after short return types. This configures the column limit for a type
+  /// to be regarded as short.
+  ///
+  /// \note
+  ///  This isn't the length of the type itself, but the column where it
+  ///  finishes. I.e. it includes indentation, etc.
+  /// \endnote
+  /// \version 19
+  unsigned ShortReturnTypeColumn;
+
   /// Do not format macro definition body.
   /// \version 18
   bool SkipMacroDefinitionBody;
@@ -4899,6 +4910,7 @@ struct FormatStyle {
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
+           ShortReturnTypeColumn == R.ShortReturnTypeColumn &&
            SkipMacroDefinitionBody == R.SkipMacroDefinitionBody &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&

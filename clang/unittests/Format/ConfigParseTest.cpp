@@ -261,6 +261,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
   CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
               PenaltyReturnTypeOnItsOwnLine, 1234u);
+  CHECK_PARSE("ShortReturnTypeColumn: 1234", ShortReturnTypeColumn, 1234u);
   CHECK_PARSE("SpacesBeforeTrailingComments: 1234",
               SpacesBeforeTrailingComments, 1234u);
   CHECK_PARSE("IndentWidth: 32", IndentWidth, 32u);
