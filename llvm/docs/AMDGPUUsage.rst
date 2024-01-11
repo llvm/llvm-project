@@ -5813,6 +5813,18 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                               be reordered by
                                                               hardware.
 
+     load         *none*       *none*         - constant - !volatile & !nontemporal
+
+                                                           1. s_load/s_buffer_load
+
+                                                         - !volatile & nontemporal
+
+                                                           1. s_load/s_buffer_load glc=1 slc=1
+
+                                                         - volatile
+
+                                                           1. s_load/s_buffer_load glc=1
+
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
