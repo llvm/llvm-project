@@ -13,6 +13,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRCIREnumsGen
   MLIRCIROpsIncGen
   MLIRCIRASTAttrInterfacesIncGen
+  MLIRCIROpInterfacesIncGen
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinTypeInterfacesIncGen
   MLIRFunctionInterfacesIncGen
