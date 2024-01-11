@@ -372,7 +372,7 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
-  void setNonKernelFunctionInitialState() {
+  void setStateOnFunctionEntryOrReturn() {
     setScoreUB(STORE_CNT, getWaitCountMax(STORE_CNT));
     PendingEvents |= WaitEventMaskForInst[STORE_CNT];
   }
@@ -2214,6 +2214,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // Act as a wait on everything
       ScoreBrackets->applyWaitcnt(
           AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts()));
+      ScoreBrackets->setStateOnFunctionEntryOrReturn();
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
@@ -2680,7 +2681,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
         ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
         SmemAccessCounter);
-    NonKernelInitialState->setNonKernelFunctionInitialState();
+    NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
