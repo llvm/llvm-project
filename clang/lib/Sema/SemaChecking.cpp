@@ -2147,16 +2147,24 @@ static bool checkFPMathBuiltinElementType(Sema &S, SourceLocation Loc,
 /// This checks that the target supports the builtin and that the string
 /// argument is constant and valid.
 static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
-                           unsigned BuiltinID) {
+                           const TargetInfo *AuxTI, unsigned BuiltinID) {
   assert((BuiltinID == Builtin::BI__builtin_cpu_supports ||
           BuiltinID == Builtin::BI__builtin_cpu_is) &&
          "Expecting __builtin_cpu_...");
 
   bool IsCPUSupports = BuiltinID == Builtin::BI__builtin_cpu_supports;
-  if (IsCPUSupports && !TI.supportsCpuSupports())
+  const TargetInfo *TheTI = &TI;
+  auto SupportsBI = [=](const TargetInfo *TInfo) {
+    return TInfo && ((IsCPUSupports && TInfo->supportsCpuSupports()) ||
+                     (!IsCPUSupports && TInfo->supportsCpuIs()));
+  };
+  if (!SupportsBI(&TI) && SupportsBI(AuxTI))
+    TheTI = AuxTI;
+
+  if (IsCPUSupports && !TheTI->supportsCpuSupports())
     return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
-  if (!IsCPUSupports && !TI.supportsCpuIs())
+  if (!IsCPUSupports && !TheTI->supportsCpuIs())
     return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
 
@@ -2168,10 +2176,10 @@ static bool SemaBuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
 
   // Check the contents of the string.
   StringRef Feature = cast<StringLiteral>(Arg)->getString();
-  if (IsCPUSupports && !TI.validateCpuSupports(Feature))
+  if (IsCPUSupports && !TheTI->validateCpuSupports(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_supports)
            << Arg->getSourceRange();
-  if (!IsCPUSupports && !TI.validateCpuIs(Feature))
+  if (!IsCPUSupports && !TheTI->validateCpuIs(Feature))
     return S.Diag(TheCall->getBeginLoc(), diag::err_invalid_cpu_is)
            << Arg->getSourceRange();
   return false;
@@ -2207,7 +2215,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   switch (BuiltinID) {
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
-    if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall, BuiltinID))
+    if (SemaBuiltinCpu(*this, Context.getTargetInfo(), TheCall,
+                       Context.getAuxTargetInfo(), BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_cpu_init:
