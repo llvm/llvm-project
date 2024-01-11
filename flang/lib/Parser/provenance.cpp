@@ -476,8 +476,8 @@ std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     // cookedRange may start (resp. end) in a macro expansion while it does not
     // end (resp. start) in this macro expansion. Attempt to build a range
     // over the replaced source.
-    Provenance firstStart = allSources.GetReplacedProvenance(first.start());
-    Provenance lastStart = allSources.GetReplacedProvenance(last.start());
+    Provenance firstStart{allSources.GetReplacedProvenance(first.start())};
+    Provenance lastStart{allSources.GetReplacedProvenance(last.start())};
     if (firstStart <= lastStart) {
       return {ProvenanceRange{firstStart, lastStart - firstStart + 1}};
     } else {
