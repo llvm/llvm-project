@@ -252,31 +252,50 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
+  const llvm::Triple &T = getTarget().getTriple();
+  // If we encounter a try statement on in an OpenMP target region offloaded to
+  // a GPU, we treat it as a basic block.
+  const bool IsTargetDevice =
+      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
+  assert(IsTargetDevice && "NYI");
+
   auto tryLoc = getLoc(S.getBeginLoc());
   auto numHandlers = S.getNumHandlers();
 
-  // FIXME(cir): create scope, and add catchOp to the lastest possible position
+  // FIXME(cir): add catchOp to the lastest possible position
   // inside the cleanup block.
+  auto scopeLoc = getLoc(S.getSourceRange());
+  auto res = mlir::success();
 
-  // Create the skeleton for the catch statements.
-  auto catchOp = builder.create<mlir::cir::CatchOp>(
-      tryLoc, // FIXME(cir): we can do better source location here.
-      [&](mlir::OpBuilder &b, mlir::Location loc,
-          mlir::OperationState &result) {
-        mlir::OpBuilder::InsertionGuard guard(b);
-        for (int i = 0, e = numHandlers; i != e; ++i) {
-          auto *r = result.addRegion();
-          builder.createBlock(r);
+  builder.create<mlir::cir::ScopeOp>(
+      scopeLoc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        CIRGenFunction::LexicalScope lexScope{*this, loc,
+                                              builder.getInsertionBlock()};
+
+        // Create the skeleton for the catch statements.
+        auto catchOp = builder.create<mlir::cir::CatchOp>(
+            tryLoc, // FIXME(cir): we can do better source location here.
+            [&](mlir::OpBuilder &b, mlir::Location loc,
+                mlir::OperationState &result) {
+              mlir::OpBuilder::InsertionGuard guard(b);
+              for (int i = 0, e = numHandlers; i != e; ++i) {
+                auto *r = result.addRegion();
+                builder.createBlock(r);
+              }
+            });
+
+        enterCXXTryStmt(S, catchOp);
+
+        if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed()) {
+          res = mlir::failure();
+          return;
         }
+
+        exitCXXTryStmt(S);
       });
 
-  enterCXXTryStmt(S, catchOp);
-  llvm_unreachable("NYI");
-
-  if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
-    return mlir::failure();
-  exitCXXTryStmt(S);
-  return mlir::success();
+  return res;
 }
 
 /// Emit the structure of the dispatch block for the given catch scope.
