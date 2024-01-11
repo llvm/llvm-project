@@ -7,10 +7,15 @@ endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-# `llvm-project/llvm/CMakeLists.txt` adds the following directive
-# `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-# We undo it to be able to precisely control what is getting included.
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
+set_directory_properties(PROPERTIES
+  # `llvm-project/llvm/CMakeLists.txt` adds the following directive
+  # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})` We
+  # undo it to be able to precisely control what is getting included.
+  INCLUDE_DIRECTORIES ""
+  # `llvm/cmake/modules/HandleLLVMOptions.cmake` uses `add_compile_definitions`
+  # to set a few preprocessor defines which we do not want.
+  COMPILE_DEFINITIONS ""
+)
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
