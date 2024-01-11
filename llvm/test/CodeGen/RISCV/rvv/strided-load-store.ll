@@ -129,6 +129,28 @@ define <vscale x 1 x i64> @straightline_offset_add(ptr %p, i64 %offset) {
   ret <vscale x 1 x i64> %x
 }
 
+define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i64 %offset) {
+; CHECK-LABEL: @straightline_offset_disjoint_or(
+; CHECK-NEXT:    [[STEP:%.*]] = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
+; CHECK-NEXT:    [[STEP_SHL:%.*]] = shl <vscale x 1 x i64> [[STEP]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[OFFSETV:%.*]] = or disjoint <vscale x 1 x i64> [[STEP_SHL]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr i32, ptr [[P:%.*]], <vscale x 1 x i64> [[OFFSETV]]
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[PTRS]], i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i64> poison)
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
+;
+  %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
+  %step.shl = shl <vscale x 1 x i64> %step, shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %offsetv = or disjoint <vscale x 1 x i64> %step.shl, shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
+  %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offsetv
+  %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
+  <vscale x 1 x ptr> %ptrs,
+  i32 8,
+  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer),
+  <vscale x 1 x i64> poison
+  )
+  ret <vscale x 1 x i64> %x
+}
+
 define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
 ; CHECK-LABEL: @straightline_offset_shl(
 ; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> poison, ptr [[P:%.*]], i64 32, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
