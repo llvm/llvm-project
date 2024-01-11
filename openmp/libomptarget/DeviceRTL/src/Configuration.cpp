@@ -23,7 +23,8 @@ using namespace ompx;
 [[gnu::weak]] extern const uint32_t __omp_rtl_debug_kind = 0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_thread_state = 0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_nested_parallelism = 0;
-[[gnu::weak]] extern const uint32_t __omp_rtl_assume_threads_oversubscription = 0;
+[[gnu::weak]] extern const uint32_t __omp_rtl_assume_threads_oversubscription =
+    0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_teams_oversubscription = 0;
 
 // This variable should be visibile to the plugin so we override the default
