@@ -579,7 +579,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Select the recommended relocation type R_RISCV_CALL_PLT.
   if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_PLT);
+    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
 
   MachineInstrBuilder Call =
       MIRBuilder

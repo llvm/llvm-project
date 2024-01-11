@@ -2351,46 +2351,46 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         YamlBB.Hash = Hash;
         YamlBB.Index = BlockMap.at(Offset).first;
         const auto &SuccBlockIt = Branches.IntraIndex.find(Offset);
-        if (SuccBlockIt != Branches.IntraIndex.end()) {
-          uint64_t TotalCount{0};
-          for (const auto &[SuccOffset, SuccIdx] : SuccBlockIt->second) {
-            unsigned SuccBid = BlockMap.at(SuccOffset).first;
-            const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
-            yaml::bolt::SuccessorInfo YamlSI;
-            YamlSI.Index = SuccBid;
-            YamlSI.Count = BI.Branches;
-            YamlSI.Mispreds = BI.Mispreds;
-            YamlBB.Successors.emplace_back(YamlSI);
-            TotalCount += YamlSI.Count;
-          }
-          YamlBB.ExecCount = TotalCount;
+        if (SuccBlockIt == Branches.IntraIndex.end())
+          continue;
+        uint64_t TotalCount{0};
+        for (const auto &[SuccOffset, SuccIdx] : SuccBlockIt->second) {
+          unsigned SuccBid = BlockMap.at(SuccOffset).first;
+          const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccIdx);
+          yaml::bolt::SuccessorInfo YamlSI;
+          YamlSI.Index = SuccBid;
+          YamlSI.Count = BI.Branches;
+          YamlSI.Mispreds = BI.Mispreds;
+          YamlBB.Successors.emplace_back(YamlSI);
+          TotalCount += YamlSI.Count;
         }
+        YamlBB.ExecCount = TotalCount;
         // Iterate over BRANCHENTRY records in the current block
         for (uint32_t BranchOffset : BFBranches[Offset]) {
           const auto &CallToIt = Branches.InterIndex.find(BranchOffset);
-          if (CallToIt != Branches.InterIndex.end()) {
-            for (const auto &[CallToLoc, CallToIdx] : CallToIt->second) {
-              const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
-              yaml::bolt::CallSiteInfo YamlCSI;
-              YamlCSI.DestId = 0; // designated for unknown functions
-              YamlCSI.EntryDiscriminator = 0;
-              YamlCSI.Count = BI.Branches;
-              YamlCSI.Mispreds = BI.Mispreds;
-              YamlCSI.Offset = BranchOffset - Offset;
-              BinaryData *CallTargetBD = BC.getBinaryDataByName(CallToLoc.Name);
-              if (!CallTargetBD) {
-                YamlBB.CallSites.emplace_back(YamlCSI);
-                continue;
-              }
-              BinaryFunction *CallTargetBF =
-                  BC.getBinaryFunctionAtAddress(CallTargetBD->getAddress());
-              if (!CallTargetBF) {
-                YamlBB.CallSites.emplace_back(YamlCSI);
-                continue;
-              }
-              YamlCSI.DestId = CallTargetBF->getFunctionNumber();
+          if (CallToIt == Branches.InterIndex.end())
+            continue;
+          for (const auto &[CallToLoc, CallToIdx] : CallToIt->second) {
+            const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
+            yaml::bolt::CallSiteInfo YamlCSI;
+            YamlCSI.DestId = 0; // designated for unknown functions
+            YamlCSI.EntryDiscriminator = 0;
+            YamlCSI.Count = BI.Branches;
+            YamlCSI.Mispreds = BI.Mispreds;
+            YamlCSI.Offset = BranchOffset - Offset;
+            BinaryData *CallTargetBD = BC.getBinaryDataByName(CallToLoc.Name);
+            if (!CallTargetBD) {
               YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
             }
+            BinaryFunction *CallTargetBF =
+                BC.getBinaryFunctionAtAddress(CallTargetBD->getAddress());
+            if (!CallTargetBF) {
+              YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
+            }
+            YamlCSI.DestId = CallTargetBF->getFunctionNumber();
+            YamlBB.CallSites.emplace_back(YamlCSI);
           }
         }
         if (YamlBB.ExecCount || !YamlBB.Successors.empty() ||
