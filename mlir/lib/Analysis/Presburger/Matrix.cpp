@@ -63,6 +63,16 @@ unsigned Matrix<T>::appendExtraRow(ArrayRef<T> elems) {
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::transpose() const {
+  Matrix<T> transp(nColumns, nRows);
+  for (unsigned row = 0; row < nRows; ++row)
+    for (unsigned col = 0; col < nColumns; ++col)
+      transp(col, row) = at(row, col);
+
+  return transp;
+}
+
+template <typename T>
 void Matrix<T>::resizeHorizontally(unsigned newNColumns) {
   if (newNColumns < nColumns)
     removeColumns(newNColumns, nColumns - newNColumns);

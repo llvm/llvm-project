@@ -103,6 +103,12 @@ public:
   /// Returns the alloca memory space identifier.
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
 
+  /// Returns the program memory space identifier.
+  StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;
+
+  /// Returns the global memory space identifier.
+  StringAttr getGlobalMemorySpaceIdentifier(MLIRContext *context) const;
+
   /// Returns the stack alignment identifier.
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
 

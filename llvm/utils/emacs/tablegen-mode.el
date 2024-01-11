@@ -1,6 +1,7 @@
 ;;; tablegen-mode.el --- Major mode for TableGen description files (part of LLVM project)
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
+;; Version: 1.0
 
 ;;; Commentary:
 ;; A major mode for TableGen description files in LLVM.

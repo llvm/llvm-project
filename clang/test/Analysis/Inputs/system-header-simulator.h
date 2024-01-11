@@ -13,6 +13,7 @@ typedef __typeof(sizeof(int)) size_t;
 typedef long long __int64_t;
 typedef __int64_t __darwin_off_t;
 typedef __darwin_off_t fpos_t;
+typedef int off_t;
 
 typedef struct _FILE FILE;
 #define SEEK_SET 0 /* Seek from beginning of file. */
@@ -53,8 +54,11 @@ int fgetc(FILE *stream);
 char *fgets(char *restrict str, int count, FILE *restrict stream);
 int fputc(int ch, FILE *stream);
 int fputs(const char *restrict s, FILE *restrict stream);
+int ungetc(int c, FILE *stream);
 int fseek(FILE *__stream, long int __off, int __whence);
+int fseeko(FILE *__stream, off_t __off, int __whence);
 long int ftell(FILE *__stream);
+off_t ftello(FILE *__stream);
 void rewind(FILE *__stream);
 int fgetpos(FILE *restrict stream, fpos_t *restrict pos);
 int fsetpos(FILE *stream, const fpos_t *pos);
