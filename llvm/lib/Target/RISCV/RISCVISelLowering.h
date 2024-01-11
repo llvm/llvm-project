@@ -618,9 +618,7 @@ public:
 
   bool preferZeroCompareBranch() const override { return true; }
 
-  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
-  }
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override;
   Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                 AtomicOrdering Ord) const override;
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -699,6 +697,10 @@ public:
   bool isMulAddWithConstProfitable(SDValue AddNode,
                                    SDValue ConstNode) const override;
 
+  TargetLoweringBase::AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,

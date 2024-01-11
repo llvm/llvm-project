@@ -2,15 +2,24 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-WMO %s
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-WMO,RV32IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-TSO %s
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-TSO,RV32IA-TSO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO %s
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-WMO,RV64IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-TSO %s
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-TSO,RV64IA-TSO-NOZACAS %s
+
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-WMO,RV32IA-WMO-ZACAS %s
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-TSO,RV32IA-TSO-ZACAS %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-WMO,RV64IA-WMO-ZACAS %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-TSO,RV64IA-TSO-ZACAS %s
 
 
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+seq-cst-trailing-fence -verify-machineinstrs < %s \
@@ -671,15 +680,15 @@ define i64 @atomic_load_i64_unordered(ptr %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_load_i64_unordered:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a1, 0
-; RV32IA-NEXT:    call __atomic_load_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_load_i64_unordered:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a1, 0
+; RV32IA-NOZACAS-NEXT:    call __atomic_load_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i64_unordered:
 ; RV64I:       # %bb.0:
@@ -695,6 +704,35 @@ define i64 @atomic_load_i64_unordered(ptr %a) nounwind {
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    ld a0, 0(a0)
 ; RV64IA-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomic_load_i64_unordered:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    li a2, 0
+; RV32IA-ZACAS-NEXT:    li a3, 0
+; RV32IA-ZACAS-NEXT:    amocas.d a2, a2, (a0)
+; RV32IA-ZACAS-NEXT:    mv a0, a2
+; RV32IA-ZACAS-NEXT:    mv a1, a3
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_unordered:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i64_unordered:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
   %1 = load atomic i64, ptr %a unordered, align 8
   ret i64 %1
 }
@@ -710,15 +748,15 @@ define i64 @atomic_load_i64_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_load_i64_monotonic:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a1, 0
-; RV32IA-NEXT:    call __atomic_load_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_load_i64_monotonic:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a1, 0
+; RV32IA-NOZACAS-NEXT:    call __atomic_load_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i64_monotonic:
 ; RV64I:       # %bb.0:
@@ -734,6 +772,35 @@ define i64 @atomic_load_i64_monotonic(ptr %a) nounwind {
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    ld a0, 0(a0)
 ; RV64IA-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomic_load_i64_monotonic:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    li a2, 0
+; RV32IA-ZACAS-NEXT:    li a3, 0
+; RV32IA-ZACAS-NEXT:    amocas.d a2, a2, (a0)
+; RV32IA-ZACAS-NEXT:    mv a0, a2
+; RV32IA-ZACAS-NEXT:    mv a1, a3
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_monotonic:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i64_monotonic:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
   %1 = load atomic i64, ptr %a monotonic, align 8
   ret i64 %1
 }
@@ -749,15 +816,15 @@ define i64 @atomic_load_i64_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_load_i64_acquire:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a1, 2
-; RV32IA-NEXT:    call __atomic_load_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_load_i64_acquire:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a1, 2
+; RV32IA-NOZACAS-NEXT:    call __atomic_load_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i64_acquire:
 ; RV64I:       # %bb.0:
@@ -779,6 +846,44 @@ define i64 @atomic_load_i64_acquire(ptr %a) nounwind {
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    ld a0, 0(a0)
 ; RV64IA-TSO-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomic_load_i64_acquire:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    li a2, 0
+; RV32IA-WMO-ZACAS-NEXT:    li a3, 0
+; RV32IA-WMO-ZACAS-NEXT:    amocas.d.aq a2, a2, (a0)
+; RV32IA-WMO-ZACAS-NEXT:    mv a0, a2
+; RV32IA-WMO-ZACAS-NEXT:    mv a1, a3
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomic_load_i64_acquire:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    li a2, 0
+; RV32IA-TSO-ZACAS-NEXT:    li a3, 0
+; RV32IA-TSO-ZACAS-NEXT:    amocas.d a2, a2, (a0)
+; RV32IA-TSO-ZACAS-NEXT:    mv a0, a2
+; RV32IA-TSO-ZACAS-NEXT:    mv a1, a3
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_acquire:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a1, 2
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i64_acquire:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a1, 2
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_acquire:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
@@ -805,15 +910,15 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_load_i64_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a1, 5
-; RV32IA-NEXT:    call __atomic_load_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_load_i64_seq_cst:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a1, 5
+; RV32IA-NOZACAS-NEXT:    call __atomic_load_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_load_i64_seq_cst:
 ; RV64I:       # %bb.0:
@@ -838,6 +943,44 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; RV64IA-TSO-NEXT:    ld a0, 0(a0)
 ; RV64IA-TSO-NEXT:    ret
 ;
+; RV32IA-WMO-ZACAS-LABEL: atomic_load_i64_seq_cst:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    li a2, 0
+; RV32IA-WMO-ZACAS-NEXT:    li a3, 0
+; RV32IA-WMO-ZACAS-NEXT:    amocas.d.aqrl a2, a2, (a0)
+; RV32IA-WMO-ZACAS-NEXT:    mv a0, a2
+; RV32IA-WMO-ZACAS-NEXT:    mv a1, a3
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomic_load_i64_seq_cst:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    li a2, 0
+; RV32IA-TSO-ZACAS-NEXT:    li a3, 0
+; RV32IA-TSO-ZACAS-NEXT:    amocas.d a2, a2, (a0)
+; RV32IA-TSO-ZACAS-NEXT:    mv a0, a2
+; RV32IA-TSO-ZACAS-NEXT:    mv a1, a3
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_seq_cst:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a1, 5
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i64_seq_cst:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a1, 5
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i64_seq_cst:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, rw
@@ -852,6 +995,420 @@ define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
   %1 = load atomic i64, ptr %a seq_cst, align 8
   ret i64 %1
+}
+
+define i128 @atomic_load_i128_unordered(ptr %a) nounwind {
+; RV32I-LABEL: atomic_load_i128_unordered:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __atomic_load
+; RV32I-NEXT:    lw a0, 20(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 12(sp)
+; RV32I-NEXT:    lw a3, 8(sp)
+; RV32I-NEXT:    sw a0, 12(s0)
+; RV32I-NEXT:    sw a1, 8(s0)
+; RV32I-NEXT:    sw a2, 4(s0)
+; RV32I-NEXT:    sw a3, 0(s0)
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_load_i128_unordered:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv s0, a0
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 0
+; RV32IA-NEXT:    call __atomic_load
+; RV32IA-NEXT:    lw a0, 20(sp)
+; RV32IA-NEXT:    lw a1, 16(sp)
+; RV32IA-NEXT:    lw a2, 12(sp)
+; RV32IA-NEXT:    lw a3, 8(sp)
+; RV32IA-NEXT:    sw a0, 12(s0)
+; RV32IA-NEXT:    sw a1, 8(s0)
+; RV32IA-NEXT:    sw a2, 4(s0)
+; RV32IA-NEXT:    sw a3, 0(s0)
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_load_i128_unordered:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    call __atomic_load_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_load_i128_unordered:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a1, 0
+; RV64IA-NOZACAS-NEXT:    call __atomic_load_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomic_load_i128_unordered:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    li a2, 0
+; RV64IA-ZACAS-NEXT:    li a3, 0
+; RV64IA-ZACAS-NEXT:    amocas.q a2, a2, (a0)
+; RV64IA-ZACAS-NEXT:    mv a0, a2
+; RV64IA-ZACAS-NEXT:    mv a1, a3
+; RV64IA-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i128_unordered:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i128_unordered:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  %1 = load atomic i128, ptr %a unordered, align 16
+  ret i128 %1
+}
+
+define i128 @atomic_load_i128_monotonic(ptr %a) nounwind {
+; RV32I-LABEL: atomic_load_i128_monotonic:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __atomic_load
+; RV32I-NEXT:    lw a0, 20(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 12(sp)
+; RV32I-NEXT:    lw a3, 8(sp)
+; RV32I-NEXT:    sw a0, 12(s0)
+; RV32I-NEXT:    sw a1, 8(s0)
+; RV32I-NEXT:    sw a2, 4(s0)
+; RV32I-NEXT:    sw a3, 0(s0)
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_load_i128_monotonic:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv s0, a0
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 0
+; RV32IA-NEXT:    call __atomic_load
+; RV32IA-NEXT:    lw a0, 20(sp)
+; RV32IA-NEXT:    lw a1, 16(sp)
+; RV32IA-NEXT:    lw a2, 12(sp)
+; RV32IA-NEXT:    lw a3, 8(sp)
+; RV32IA-NEXT:    sw a0, 12(s0)
+; RV32IA-NEXT:    sw a1, 8(s0)
+; RV32IA-NEXT:    sw a2, 4(s0)
+; RV32IA-NEXT:    sw a3, 0(s0)
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_load_i128_monotonic:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a1, 0
+; RV64I-NEXT:    call __atomic_load_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_load_i128_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a1, 0
+; RV64IA-NOZACAS-NEXT:    call __atomic_load_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomic_load_i128_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    li a2, 0
+; RV64IA-ZACAS-NEXT:    li a3, 0
+; RV64IA-ZACAS-NEXT:    amocas.q a2, a2, (a0)
+; RV64IA-ZACAS-NEXT:    mv a0, a2
+; RV64IA-ZACAS-NEXT:    mv a1, a3
+; RV64IA-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i128_monotonic:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i128_monotonic:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a1, 0
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  %1 = load atomic i128, ptr %a monotonic, align 16
+  ret i128 %1
+}
+
+define i128 @atomic_load_i128_acquire(ptr %a) nounwind {
+; RV32I-LABEL: atomic_load_i128_acquire:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 2
+; RV32I-NEXT:    call __atomic_load
+; RV32I-NEXT:    lw a0, 20(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 12(sp)
+; RV32I-NEXT:    lw a3, 8(sp)
+; RV32I-NEXT:    sw a0, 12(s0)
+; RV32I-NEXT:    sw a1, 8(s0)
+; RV32I-NEXT:    sw a2, 4(s0)
+; RV32I-NEXT:    sw a3, 0(s0)
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_load_i128_acquire:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv s0, a0
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 2
+; RV32IA-NEXT:    call __atomic_load
+; RV32IA-NEXT:    lw a0, 20(sp)
+; RV32IA-NEXT:    lw a1, 16(sp)
+; RV32IA-NEXT:    lw a2, 12(sp)
+; RV32IA-NEXT:    lw a3, 8(sp)
+; RV32IA-NEXT:    sw a0, 12(s0)
+; RV32IA-NEXT:    sw a1, 8(s0)
+; RV32IA-NEXT:    sw a2, 4(s0)
+; RV32IA-NEXT:    sw a3, 0(s0)
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_load_i128_acquire:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a1, 2
+; RV64I-NEXT:    call __atomic_load_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_load_i128_acquire:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a1, 2
+; RV64IA-NOZACAS-NEXT:    call __atomic_load_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomic_load_i128_acquire:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    li a2, 0
+; RV64IA-WMO-ZACAS-NEXT:    li a3, 0
+; RV64IA-WMO-ZACAS-NEXT:    amocas.q.aq a2, a2, (a0)
+; RV64IA-WMO-ZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-ZACAS-NEXT:    mv a1, a3
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomic_load_i128_acquire:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    li a2, 0
+; RV64IA-TSO-ZACAS-NEXT:    li a3, 0
+; RV64IA-TSO-ZACAS-NEXT:    amocas.q a2, a2, (a0)
+; RV64IA-TSO-ZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-ZACAS-NEXT:    mv a1, a3
+; RV64IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i128_acquire:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a1, 2
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i128_acquire:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a1, 2
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  %1 = load atomic i128, ptr %a acquire, align 16
+  ret i128 %1
+}
+
+define i128 @atomic_load_i128_seq_cst(ptr %a) nounwind {
+; RV32I-LABEL: atomic_load_i128_seq_cst:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 5
+; RV32I-NEXT:    call __atomic_load
+; RV32I-NEXT:    lw a0, 20(sp)
+; RV32I-NEXT:    lw a1, 16(sp)
+; RV32I-NEXT:    lw a2, 12(sp)
+; RV32I-NEXT:    lw a3, 8(sp)
+; RV32I-NEXT:    sw a0, 12(s0)
+; RV32I-NEXT:    sw a1, 8(s0)
+; RV32I-NEXT:    sw a2, 4(s0)
+; RV32I-NEXT:    sw a3, 0(s0)
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_load_i128_seq_cst:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv s0, a0
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 5
+; RV32IA-NEXT:    call __atomic_load
+; RV32IA-NEXT:    lw a0, 20(sp)
+; RV32IA-NEXT:    lw a1, 16(sp)
+; RV32IA-NEXT:    lw a2, 12(sp)
+; RV32IA-NEXT:    lw a3, 8(sp)
+; RV32IA-NEXT:    sw a0, 12(s0)
+; RV32IA-NEXT:    sw a1, 8(s0)
+; RV32IA-NEXT:    sw a2, 4(s0)
+; RV32IA-NEXT:    sw a3, 0(s0)
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_load_i128_seq_cst:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a1, 5
+; RV64I-NEXT:    call __atomic_load_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_load_i128_seq_cst:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a1, 5
+; RV64IA-NOZACAS-NEXT:    call __atomic_load_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomic_load_i128_seq_cst:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    li a2, 0
+; RV64IA-WMO-ZACAS-NEXT:    li a3, 0
+; RV64IA-WMO-ZACAS-NEXT:    amocas.q.aqrl a2, a2, (a0)
+; RV64IA-WMO-ZACAS-NEXT:    mv a0, a2
+; RV64IA-WMO-ZACAS-NEXT:    mv a1, a3
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomic_load_i128_seq_cst:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    li a2, 0
+; RV64IA-TSO-ZACAS-NEXT:    li a3, 0
+; RV64IA-TSO-ZACAS-NEXT:    amocas.q a2, a2, (a0)
+; RV64IA-TSO-ZACAS-NEXT:    mv a0, a2
+; RV64IA-TSO-ZACAS-NEXT:    mv a1, a3
+; RV64IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_load_i128_seq_cst:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a1, 5
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_load_i128_seq_cst:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a1, 5
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_load_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  %1 = load atomic i128, ptr %a seq_cst, align 16
+  ret i128 %1
 }
 
 define void @atomic_store_i8_unordered(ptr %a, i8 %b) nounwind {
@@ -1495,15 +2052,15 @@ define void @atomic_store_i64_unordered(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_store_i64_unordered:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_store_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_store_i64_unordered:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a3, 0
+; RV32IA-NOZACAS-NEXT:    call __atomic_store_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i64_unordered:
 ; RV64I:       # %bb.0:
@@ -1519,6 +2076,46 @@ define void @atomic_store_i64_unordered(ptr %a, i64 %b) nounwind {
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    sd a1, 0(a0)
 ; RV64IA-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomic_store_i64_unordered:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-ZACAS-NEXT:    mv a3, a2
+; RV32IA-ZACAS-NEXT:    mv a2, a1
+; RV32IA-ZACAS-NEXT:  .LBB32_1: # %atomicrmw.start
+; RV32IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-ZACAS-NEXT:    mv a6, a4
+; RV32IA-ZACAS-NEXT:    mv a7, a5
+; RV32IA-ZACAS-NEXT:    amocas.d a6, a2, (a0)
+; RV32IA-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-ZACAS-NEXT:    mv a4, a6
+; RV32IA-ZACAS-NEXT:    mv a5, a7
+; RV32IA-ZACAS-NEXT:    bnez a1, .LBB32_1
+; RV32IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_unordered:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i64_unordered:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i64 %b, ptr %a unordered, align 8
   ret void
 }
@@ -1534,15 +2131,15 @@ define void @atomic_store_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_store_i64_monotonic:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a3, 0
-; RV32IA-NEXT:    call __atomic_store_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_store_i64_monotonic:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a3, 0
+; RV32IA-NOZACAS-NEXT:    call __atomic_store_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i64_monotonic:
 ; RV64I:       # %bb.0:
@@ -1558,6 +2155,46 @@ define void @atomic_store_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    sd a1, 0(a0)
 ; RV64IA-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: atomic_store_i64_monotonic:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-ZACAS-NEXT:    mv a3, a2
+; RV32IA-ZACAS-NEXT:    mv a2, a1
+; RV32IA-ZACAS-NEXT:  .LBB33_1: # %atomicrmw.start
+; RV32IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-ZACAS-NEXT:    mv a6, a4
+; RV32IA-ZACAS-NEXT:    mv a7, a5
+; RV32IA-ZACAS-NEXT:    amocas.d a6, a2, (a0)
+; RV32IA-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-ZACAS-NEXT:    mv a4, a6
+; RV32IA-ZACAS-NEXT:    mv a5, a7
+; RV32IA-ZACAS-NEXT:    bnez a1, .LBB33_1
+; RV32IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_monotonic:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i64_monotonic:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i64 %b, ptr %a monotonic, align 8
   ret void
 }
@@ -1573,15 +2210,15 @@ define void @atomic_store_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_store_i64_release:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a3, 3
-; RV32IA-NEXT:    call __atomic_store_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_store_i64_release:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a3, 3
+; RV32IA-NOZACAS-NEXT:    call __atomic_store_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i64_release:
 ; RV64I:       # %bb.0:
@@ -1603,6 +2240,66 @@ define void @atomic_store_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    sd a1, 0(a0)
 ; RV64IA-TSO-NEXT:    ret
+;
+; RV32IA-WMO-ZACAS-LABEL: atomic_store_i64_release:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-WMO-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a2
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a1
+; RV32IA-WMO-ZACAS-NEXT:  .LBB34_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a6, a4
+; RV32IA-WMO-ZACAS-NEXT:    mv a7, a5
+; RV32IA-WMO-ZACAS-NEXT:    amocas.d.rl a6, a2, (a0)
+; RV32IA-WMO-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-WMO-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-WMO-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-WMO-ZACAS-NEXT:    mv a4, a6
+; RV32IA-WMO-ZACAS-NEXT:    mv a5, a7
+; RV32IA-WMO-ZACAS-NEXT:    bnez a1, .LBB34_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomic_store_i64_release:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-TSO-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a2
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a1
+; RV32IA-TSO-ZACAS-NEXT:  .LBB34_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a6, a4
+; RV32IA-TSO-ZACAS-NEXT:    mv a7, a5
+; RV32IA-TSO-ZACAS-NEXT:    amocas.d a6, a2, (a0)
+; RV32IA-TSO-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-TSO-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-TSO-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-TSO-ZACAS-NEXT:    mv a4, a6
+; RV32IA-TSO-ZACAS-NEXT:    mv a5, a7
+; RV32IA-TSO-ZACAS-NEXT:    bnez a1, .LBB34_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_release:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a3, 3
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i64_release:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a3, 3
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_release:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
@@ -1629,15 +2326,15 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: atomic_store_i64_seq_cst:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:    addi sp, sp, -16
-; RV32IA-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IA-NEXT:    li a3, 5
-; RV32IA-NEXT:    call __atomic_store_8
-; RV32IA-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IA-NEXT:    addi sp, sp, 16
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: atomic_store_i64_seq_cst:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV32IA-NOZACAS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-NOZACAS-NEXT:    li a3, 5
+; RV32IA-NOZACAS-NEXT:    call __atomic_store_8
+; RV32IA-NOZACAS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV32IA-NOZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i64_seq_cst:
 ; RV64I:       # %bb.0:
@@ -1661,6 +2358,66 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64IA-TSO-NEXT:    fence rw, rw
 ; RV64IA-TSO-NEXT:    ret
 ;
+; RV32IA-WMO-ZACAS-LABEL: atomic_store_i64_seq_cst:
+; RV32IA-WMO-ZACAS:       # %bb.0:
+; RV32IA-WMO-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-WMO-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-WMO-ZACAS-NEXT:    mv a3, a2
+; RV32IA-WMO-ZACAS-NEXT:    mv a2, a1
+; RV32IA-WMO-ZACAS-NEXT:  .LBB35_1: # %atomicrmw.start
+; RV32IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-WMO-ZACAS-NEXT:    mv a6, a4
+; RV32IA-WMO-ZACAS-NEXT:    mv a7, a5
+; RV32IA-WMO-ZACAS-NEXT:    amocas.d.aqrl a6, a2, (a0)
+; RV32IA-WMO-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-WMO-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-WMO-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-WMO-ZACAS-NEXT:    mv a4, a6
+; RV32IA-WMO-ZACAS-NEXT:    mv a5, a7
+; RV32IA-WMO-ZACAS-NEXT:    bnez a1, .LBB35_1
+; RV32IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-WMO-ZACAS-NEXT:    ret
+;
+; RV32IA-TSO-ZACAS-LABEL: atomic_store_i64_seq_cst:
+; RV32IA-TSO-ZACAS:       # %bb.0:
+; RV32IA-TSO-ZACAS-NEXT:    lw a5, 4(a0)
+; RV32IA-TSO-ZACAS-NEXT:    lw a4, 0(a0)
+; RV32IA-TSO-ZACAS-NEXT:    mv a3, a2
+; RV32IA-TSO-ZACAS-NEXT:    mv a2, a1
+; RV32IA-TSO-ZACAS-NEXT:  .LBB35_1: # %atomicrmw.start
+; RV32IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-TSO-ZACAS-NEXT:    mv a6, a4
+; RV32IA-TSO-ZACAS-NEXT:    mv a7, a5
+; RV32IA-TSO-ZACAS-NEXT:    amocas.d a6, a2, (a0)
+; RV32IA-TSO-ZACAS-NEXT:    xor a1, a7, a5
+; RV32IA-TSO-ZACAS-NEXT:    xor a4, a6, a4
+; RV32IA-TSO-ZACAS-NEXT:    or a1, a4, a1
+; RV32IA-TSO-ZACAS-NEXT:    mv a4, a6
+; RV32IA-TSO-ZACAS-NEXT:    mv a5, a7
+; RV32IA-TSO-ZACAS-NEXT:    bnez a1, .LBB35_1
+; RV32IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV32IA-TSO-ZACAS-NEXT:    ret
+;
+; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_seq_cst:
+; RV32IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    li a3, 5
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i64_seq_cst:
+; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    li a3, 5
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_8
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
+;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_seq_cst:
 ; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-WMO-TRAILING-FENCE-NEXT:    fence rw, w
@@ -1676,3 +2433,480 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
   store atomic i64 %b, ptr %a seq_cst, align 8
   ret void
 }
+
+define void @atomic_store_i128_unordered(ptr %a, i128 %b) nounwind {
+; RV32I-LABEL: atomic_store_i128_unordered:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a3, a0
+; RV32I-NEXT:    lw a0, 12(a1)
+; RV32I-NEXT:    lw a2, 8(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a2, 16(sp)
+; RV32I-NEXT:    sw a4, 12(sp)
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __atomic_store
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_store_i128_unordered:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv a3, a0
+; RV32IA-NEXT:    lw a0, 12(a1)
+; RV32IA-NEXT:    lw a2, 8(a1)
+; RV32IA-NEXT:    lw a4, 4(a1)
+; RV32IA-NEXT:    lw a1, 0(a1)
+; RV32IA-NEXT:    sw a0, 20(sp)
+; RV32IA-NEXT:    sw a2, 16(sp)
+; RV32IA-NEXT:    sw a4, 12(sp)
+; RV32IA-NEXT:    sw a1, 8(sp)
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    mv a1, a3
+; RV32IA-NEXT:    li a3, 0
+; RV32IA-NEXT:    call __atomic_store
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_store_i128_unordered:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    call __atomic_store_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_store_i128_unordered:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a3, 0
+; RV64IA-NOZACAS-NEXT:    call __atomic_store_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomic_store_i128_unordered:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-ZACAS-NEXT:    mv a3, a2
+; RV64IA-ZACAS-NEXT:    mv a2, a1
+; RV64IA-ZACAS-NEXT:  .LBB36_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a6, a4
+; RV64IA-ZACAS-NEXT:    mv a7, a5
+; RV64IA-ZACAS-NEXT:    amocas.q a6, a2, (a0)
+; RV64IA-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-ZACAS-NEXT:    mv a4, a6
+; RV64IA-ZACAS-NEXT:    mv a5, a7
+; RV64IA-ZACAS-NEXT:    bnez a1, .LBB36_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i128_unordered:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i128_unordered:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  store atomic i128 %b, ptr %a unordered, align 16
+  ret void
+}
+
+define void @atomic_store_i128_monotonic(ptr %a, i128 %b) nounwind {
+; RV32I-LABEL: atomic_store_i128_monotonic:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a3, a0
+; RV32I-NEXT:    lw a0, 12(a1)
+; RV32I-NEXT:    lw a2, 8(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a2, 16(sp)
+; RV32I-NEXT:    sw a4, 12(sp)
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __atomic_store
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_store_i128_monotonic:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv a3, a0
+; RV32IA-NEXT:    lw a0, 12(a1)
+; RV32IA-NEXT:    lw a2, 8(a1)
+; RV32IA-NEXT:    lw a4, 4(a1)
+; RV32IA-NEXT:    lw a1, 0(a1)
+; RV32IA-NEXT:    sw a0, 20(sp)
+; RV32IA-NEXT:    sw a2, 16(sp)
+; RV32IA-NEXT:    sw a4, 12(sp)
+; RV32IA-NEXT:    sw a1, 8(sp)
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    mv a1, a3
+; RV32IA-NEXT:    li a3, 0
+; RV32IA-NEXT:    call __atomic_store
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_store_i128_monotonic:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a3, 0
+; RV64I-NEXT:    call __atomic_store_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_store_i128_monotonic:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a3, 0
+; RV64IA-NOZACAS-NEXT:    call __atomic_store_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: atomic_store_i128_monotonic:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-ZACAS-NEXT:    mv a3, a2
+; RV64IA-ZACAS-NEXT:    mv a2, a1
+; RV64IA-ZACAS-NEXT:  .LBB37_1: # %atomicrmw.start
+; RV64IA-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-ZACAS-NEXT:    mv a6, a4
+; RV64IA-ZACAS-NEXT:    mv a7, a5
+; RV64IA-ZACAS-NEXT:    amocas.q a6, a2, (a0)
+; RV64IA-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-ZACAS-NEXT:    mv a4, a6
+; RV64IA-ZACAS-NEXT:    mv a5, a7
+; RV64IA-ZACAS-NEXT:    bnez a1, .LBB37_1
+; RV64IA-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i128_monotonic:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i128_monotonic:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a3, 0
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  store atomic i128 %b, ptr %a monotonic, align 16
+  ret void
+}
+
+define void @atomic_store_i128_release(ptr %a, i128 %b) nounwind {
+; RV32I-LABEL: atomic_store_i128_release:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    lw a0, 12(a1)
+; RV32I-NEXT:    lw a2, 8(a1)
+; RV32I-NEXT:    lw a3, 4(a1)
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a2, 16(sp)
+; RV32I-NEXT:    sw a3, 12(sp)
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 3
+; RV32I-NEXT:    mv a1, a4
+; RV32I-NEXT:    call __atomic_store
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_store_i128_release:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv a4, a0
+; RV32IA-NEXT:    lw a0, 12(a1)
+; RV32IA-NEXT:    lw a2, 8(a1)
+; RV32IA-NEXT:    lw a3, 4(a1)
+; RV32IA-NEXT:    lw a1, 0(a1)
+; RV32IA-NEXT:    sw a0, 20(sp)
+; RV32IA-NEXT:    sw a2, 16(sp)
+; RV32IA-NEXT:    sw a3, 12(sp)
+; RV32IA-NEXT:    sw a1, 8(sp)
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 3
+; RV32IA-NEXT:    mv a1, a4
+; RV32IA-NEXT:    call __atomic_store
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_store_i128_release:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a3, 3
+; RV64I-NEXT:    call __atomic_store_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_store_i128_release:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a3, 3
+; RV64IA-NOZACAS-NEXT:    call __atomic_store_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomic_store_i128_release:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-WMO-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a2
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a1
+; RV64IA-WMO-ZACAS-NEXT:  .LBB38_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a6, a4
+; RV64IA-WMO-ZACAS-NEXT:    mv a7, a5
+; RV64IA-WMO-ZACAS-NEXT:    amocas.q.rl a6, a2, (a0)
+; RV64IA-WMO-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-WMO-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-WMO-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-WMO-ZACAS-NEXT:    mv a4, a6
+; RV64IA-WMO-ZACAS-NEXT:    mv a5, a7
+; RV64IA-WMO-ZACAS-NEXT:    bnez a1, .LBB38_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomic_store_i128_release:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-TSO-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a2
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a1
+; RV64IA-TSO-ZACAS-NEXT:  .LBB38_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a6, a4
+; RV64IA-TSO-ZACAS-NEXT:    mv a7, a5
+; RV64IA-TSO-ZACAS-NEXT:    amocas.q a6, a2, (a0)
+; RV64IA-TSO-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-TSO-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-TSO-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-TSO-ZACAS-NEXT:    mv a4, a6
+; RV64IA-TSO-ZACAS-NEXT:    mv a5, a7
+; RV64IA-TSO-ZACAS-NEXT:    bnez a1, .LBB38_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i128_release:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a3, 3
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i128_release:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a3, 3
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  store atomic i128 %b, ptr %a release, align 16
+  ret void
+}
+
+define void @atomic_store_i128_seq_cst(ptr %a, i128 %b) nounwind {
+; RV32I-LABEL: atomic_store_i128_seq_cst:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a4, a0
+; RV32I-NEXT:    lw a0, 12(a1)
+; RV32I-NEXT:    lw a2, 8(a1)
+; RV32I-NEXT:    lw a3, 4(a1)
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    sw a0, 20(sp)
+; RV32I-NEXT:    sw a2, 16(sp)
+; RV32I-NEXT:    sw a3, 12(sp)
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    li a0, 16
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    li a3, 5
+; RV32I-NEXT:    mv a1, a4
+; RV32I-NEXT:    call __atomic_store
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV32IA-LABEL: atomic_store_i128_seq_cst:
+; RV32IA:       # %bb.0:
+; RV32IA-NEXT:    addi sp, sp, -32
+; RV32IA-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32IA-NEXT:    mv a4, a0
+; RV32IA-NEXT:    lw a0, 12(a1)
+; RV32IA-NEXT:    lw a2, 8(a1)
+; RV32IA-NEXT:    lw a3, 4(a1)
+; RV32IA-NEXT:    lw a1, 0(a1)
+; RV32IA-NEXT:    sw a0, 20(sp)
+; RV32IA-NEXT:    sw a2, 16(sp)
+; RV32IA-NEXT:    sw a3, 12(sp)
+; RV32IA-NEXT:    sw a1, 8(sp)
+; RV32IA-NEXT:    li a0, 16
+; RV32IA-NEXT:    addi a2, sp, 8
+; RV32IA-NEXT:    li a3, 5
+; RV32IA-NEXT:    mv a1, a4
+; RV32IA-NEXT:    call __atomic_store
+; RV32IA-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    ret
+;
+; RV64I-LABEL: atomic_store_i128_seq_cst:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    li a3, 5
+; RV64I-NEXT:    call __atomic_store_16
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: atomic_store_i128_seq_cst:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, -16
+; RV64IA-NOZACAS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-NOZACAS-NEXT:    li a3, 5
+; RV64IA-NOZACAS-NEXT:    call __atomic_store_16
+; RV64IA-NOZACAS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-NOZACAS-NEXT:    addi sp, sp, 16
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-WMO-ZACAS-LABEL: atomic_store_i128_seq_cst:
+; RV64IA-WMO-ZACAS:       # %bb.0:
+; RV64IA-WMO-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-WMO-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-WMO-ZACAS-NEXT:    mv a3, a2
+; RV64IA-WMO-ZACAS-NEXT:    mv a2, a1
+; RV64IA-WMO-ZACAS-NEXT:  .LBB39_1: # %atomicrmw.start
+; RV64IA-WMO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-WMO-ZACAS-NEXT:    mv a6, a4
+; RV64IA-WMO-ZACAS-NEXT:    mv a7, a5
+; RV64IA-WMO-ZACAS-NEXT:    amocas.q.aqrl a6, a2, (a0)
+; RV64IA-WMO-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-WMO-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-WMO-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-WMO-ZACAS-NEXT:    mv a4, a6
+; RV64IA-WMO-ZACAS-NEXT:    mv a5, a7
+; RV64IA-WMO-ZACAS-NEXT:    bnez a1, .LBB39_1
+; RV64IA-WMO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-WMO-ZACAS-NEXT:    ret
+;
+; RV64IA-TSO-ZACAS-LABEL: atomic_store_i128_seq_cst:
+; RV64IA-TSO-ZACAS:       # %bb.0:
+; RV64IA-TSO-ZACAS-NEXT:    ld a5, 8(a0)
+; RV64IA-TSO-ZACAS-NEXT:    ld a4, 0(a0)
+; RV64IA-TSO-ZACAS-NEXT:    mv a3, a2
+; RV64IA-TSO-ZACAS-NEXT:    mv a2, a1
+; RV64IA-TSO-ZACAS-NEXT:  .LBB39_1: # %atomicrmw.start
+; RV64IA-TSO-ZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-TSO-ZACAS-NEXT:    mv a6, a4
+; RV64IA-TSO-ZACAS-NEXT:    mv a7, a5
+; RV64IA-TSO-ZACAS-NEXT:    amocas.q a6, a2, (a0)
+; RV64IA-TSO-ZACAS-NEXT:    xor a1, a7, a5
+; RV64IA-TSO-ZACAS-NEXT:    xor a4, a6, a4
+; RV64IA-TSO-ZACAS-NEXT:    or a1, a4, a1
+; RV64IA-TSO-ZACAS-NEXT:    mv a4, a6
+; RV64IA-TSO-ZACAS-NEXT:    mv a5, a7
+; RV64IA-TSO-ZACAS-NEXT:    bnez a1, .LBB39_1
+; RV64IA-TSO-ZACAS-NEXT:  # %bb.2: # %atomicrmw.end
+; RV64IA-TSO-ZACAS-NEXT:    ret
+;
+; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i128_seq_cst:
+; RV64IA-WMO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    li a3, 5
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-WMO-TRAILING-FENCE-NEXT:    ret
+;
+; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i128_seq_cst:
+; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, -16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    li a3, 5
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    call __atomic_store_16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    addi sp, sp, 16
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
+  store atomic i128 %b, ptr %a seq_cst, align 16
+  ret void
+}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32IA-TSO-NOZACAS: {{.*}}
+; RV32IA-WMO-NOZACAS: {{.*}}
+; RV64IA-TSO-NOZACAS: {{.*}}
+; RV64IA-WMO-NOZACAS: {{.*}}

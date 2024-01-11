@@ -629,7 +629,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtA()) {
-    setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
+    unsigned MaxAtomicSize = Subtarget.getXLen();
+    if (Subtarget.hasStdExtZacas())
+      MaxAtomicSize = 2 * Subtarget.getXLen();
+    setMaxAtomicSizeInBitsSupported(MaxAtomicSize);
     setMinCmpXchgSizeInBits(32);
   } else if (Subtarget.hasForcedAtomics()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
@@ -1338,6 +1341,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD_SUB, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Expand);
+    if (Subtarget.hasStdExtZacas())
+      setOperationAction(ISD::ATOMIC_CMP_SWAP,
+                         Subtarget.is64Bit() ? MVT::i128 : MVT::i64, Custom);
   }
 
   if (Subtarget.hasForcedAtomics()) {
@@ -11237,6 +11243,76 @@ static SDValue customLegalizeToWOpWithSExt(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
 }
 
+// Create an even/odd pair of X registers holding integer value V.
+static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V, MVT VT,
+                                 MVT SubRegVT) {
+  SDLoc DL(V.getNode());
+  auto [VLo, VHi] = DAG.SplitScalar(V, DL, SubRegVT, SubRegVT);
+  SDValue RegClass =
+      DAG.getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32);
+  SDValue SubReg0 = DAG.getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32);
+  SDValue SubReg1 = DAG.getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32);
+  const SDValue Ops[] = {RegClass, VLo, SubReg0, VHi, SubReg1};
+  return SDValue(
+      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::Untyped, Ops), 0);
+}
+
+static void ReplaceCMP_SWAP_2XLenResults(SDNode *N,
+                                         SmallVectorImpl<SDValue> &Results,
+                                         SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  assert(N->getValueType(0) == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) &&
+         "AtomicCmpSwap on types less than 2*XLen should be legal");
+  assert(Subtarget.hasStdExtZacas());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Ops[] = {
+      createGPRPairNode(DAG, N->getOperand(2), VT, XLenVT), // Compare value
+      N->getOperand(1),                                     // Ptr
+      createGPRPairNode(DAG, N->getOperand(3), VT, XLenVT), // Store value
+      N->getOperand(0),                                     // Chain in
+  };
+
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+
+  bool Is64Bit = Subtarget.is64Bit();
+  unsigned Opcode;
+  if (Subtarget.hasStdExtZtso()) {
+    Opcode = Subtarget.is64Bit() ? RISCV::AMOCAS_Q : RISCV::AMOCAS_D_RV32;
+  } else {
+    switch (MemOp->getMergedOrdering()) {
+    default:
+      llvm_unreachable("Unexpected ordering!");
+    case AtomicOrdering::Monotonic:
+      Opcode = Is64Bit ? RISCV::AMOCAS_Q : RISCV::AMOCAS_D_RV32;
+      break;
+    case AtomicOrdering::Acquire:
+      Opcode = Is64Bit ? RISCV::AMOCAS_Q_AQ : RISCV::AMOCAS_D_RV32_AQ;
+      break;
+    case AtomicOrdering::Release:
+      Opcode = Is64Bit ? RISCV::AMOCAS_Q_RL : RISCV::AMOCAS_D_RV32_RL;
+      break;
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      Opcode = Is64Bit ? RISCV::AMOCAS_Q_AQ_RL : RISCV::AMOCAS_D_RV32_AQ_RL;
+      break;
+    }
+  }
+
+  SDLoc DL(N);
+  MachineSDNode *CmpSwap = DAG.getMachineNode(
+      Opcode, DL, DAG.getVTList(MVT::Untyped, MVT::Other), Ops);
+  DAG.setNodeMemRefs(CmpSwap, {MemOp});
+
+  SDValue Lo = DAG.getTargetExtractSubreg(RISCV::sub_gpr_even, DL, XLenVT,
+                                          SDValue(CmpSwap, 0));
+  SDValue Hi = DAG.getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, XLenVT,
+                                          SDValue(CmpSwap, 0));
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, VT, Lo, Hi));
+  Results.push_back(SDValue(CmpSwap, 1));
+}
+
 void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                              SmallVectorImpl<SDValue> &Results,
                                              SelectionDAG &DAG) const {
@@ -11244,6 +11320,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::ATOMIC_CMP_SWAP:
+    ReplaceCMP_SWAP_2XLenResults(N, Results, DAG, Subtarget);
+    break;
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
@@ -19003,6 +19082,20 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  // We don't need a fence for 2*Xlen. We can use Zacas.
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getType()->getPrimitiveSizeInBits() != 2 * Subtarget.getXLen();
+
+  // We don't need a fence for 2*Xlen. We can use Zacas.
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() !=
+           2 * Subtarget.getXLen();
+
+  return false;
+}
+
 Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
@@ -19037,6 +19130,30 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 }
 
 TargetLowering::AtomicExpansionKind
+RISCVTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  unsigned Size = LI->getType()->getPrimitiveSizeInBits();
+
+  if (Size != 2 * Subtarget.getXLen())
+    return AtomicExpansionKind::None;
+
+  // With Zacas we can use amocas for 2*XLen types.
+  assert(Subtarget.hasStdExtZacas() && "Unexpected extension");
+  return AtomicExpansionKind::CmpXChg;
+}
+
+TargetLowering::AtomicExpansionKind
+RISCVTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
+
+  if (Size != 2 * Subtarget.getXLen())
+    return AtomicExpansionKind::None;
+
+  // With Zacas we can use amocas for 2*XLen types.
+  assert(Subtarget.hasStdExtZacas() && "Unexpected extension");
+  return AtomicExpansionKind::Expand;
+}
+
+TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
   // point operations can't be used in an lr/sc sequence without breaking the
@@ -19053,7 +19170,12 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
-  return AtomicExpansionKind::None;
+  if (Size != 2 * Subtarget.getXLen())
+    return AtomicExpansionKind::None;
+
+  // With Zacas we can use amocas for 2*XLen types.
+  assert(Subtarget.hasStdExtZacas() && "Unexpected extension");
+  return AtomicExpansionKind::CmpXChg;
 }
 
 static Intrinsic::ID
