@@ -36,6 +36,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       return 1;
     return 0;
   };
+  // We ignore the last byte is size is odd.
   const auto count = size / 2;
   const char *a = reinterpret_cast<const char *>(data);
   const char *b = reinterpret_cast<const char *>(data) + count;
