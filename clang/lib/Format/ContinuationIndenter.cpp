@@ -768,13 +768,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
-  auto isOpeningBracket = [&](const FormatToken &Tok) {
-    auto isStartOfBracedList = [&](const FormatToken &Tok) {
+  const auto IsOpeningBracket = [&](const FormatToken &Tok) {
+    const auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
              Style.Cpp11BracedListStyle;
     };
     if (Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) ||
-        isStartOfBracedList(Tok)) {
+        IsStartOfBracedList()) {
       if (!Tok.Previous)
         return true;
       if (Tok.Previous->isIf())
@@ -786,7 +786,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
-      isOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
+      IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
