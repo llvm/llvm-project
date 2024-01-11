@@ -862,7 +862,7 @@ Bug Fixes to C++ Support
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
 
-- Fix an issue that the object argument of ``static operator()`` and ``static operator[]`` is not evaluate.
+- Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
   Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
 
 
