@@ -15,4 +15,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
+// UNSUPPORTED: clang-modules-build
+
 #include <memory> // expected-warning@* 1+ {{macro '_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS' has been marked as deprecated}}
