@@ -4675,6 +4675,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         conditionalCompilationEnd();
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
+      FormatTok->MustBreakBeforeFinalized = true;
     }
 
     auto IsFirstNonCommentOnLine = [](bool FirstNonCommentOnLine,
@@ -4891,6 +4892,7 @@ void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
     Line->Tokens.back().Tok->MustBreakBefore = true;
+    Line->Tokens.back().Tok->MustBreakBeforeFinalized = true;
     MustBreakBeforeNextToken = false;
   }
 }
