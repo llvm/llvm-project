@@ -1244,9 +1244,21 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
-static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
+static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy, const SmallVectorImpl<Type *>& ParamTys) {
+  dbgs() << "getVectorIntrinsicInstrCost entry, ID == " << ID << ", name = " << Intrinsic::getName(ID) << ", compare with " << Intrinsic::getName(Intrinsic::vector_reduce_add) << "(" << Intrinsic::vector_reduce_add << ")\n";
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
+  else if (ID == Intrinsic::vector_reduce_add) {
+    dbgs() << "getVectorIntrinsicInstrCost is reduce_add intrinsic\n";
+    auto *VTy = cast<FixedVectorType>(ParamTys.front());
+    switch (VTy->getNumElements()) {
+      default: return -1;
+      case 2: return 3;
+      case 4: return 5;
+      case 8: return 7;
+      case 16: return 11;
+    }
+  }
   return -1;
 }
 
@@ -1254,7 +1266,7 @@ InstructionCost
 SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   InstructionCost Cost =
-      getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType());
+      getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType(), ICA.getArgTypes());
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
