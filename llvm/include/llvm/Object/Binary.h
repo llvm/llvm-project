@@ -231,7 +231,6 @@ OwningBinary<T> &OwningBinary<T>::operator=(OwningBinary &&Other) {
 template <typename T> void OwningBinary<T>::operator()(OwningBinary &&Other) {
   Bin = std::move(Other.Bin);
   Buf = std::move(Other.Buf);
-  return *this;
 }
 
 template <typename T>
