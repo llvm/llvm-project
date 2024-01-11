@@ -145,6 +145,28 @@ that also enables ThinTLO, use the following command:
       -DPGO_INSTRUMENT_LTO=Thin \
       <path to source>/llvm
 
+By default, clang will generate profile data by compiling the Sema.cpp
+file (and all its dependencies, e.g. TableGen).  However, you can also
+tell clang use an external project for generating profile data that may
+be a better fit for your use case.  The project you specify must either
+be a lit test suite (use the CLANG_PGO_TRAINING_DATA option) or a CMake
+project (use the CLANG_PERF_TRAINING_DATA_SOURCE_DIR option).
+
+For example, If you wanted to use the
+`LLVM Test Suite <https://github.com/llvm/llvm-test-suite/>`_ to generate
+profile data you would use the following command:
+
+.. code-block:: console
+  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/home/fedora/llvm-test-suite/ \
+       -DBOOTSTRAP_CLANG_PERF_TRAINING_DEPS=runtimes
+
+The BOOTSTRAP_ prefixes tells CMake to pass the variables on to the instrumented
+stage two build.  And the CLANG_PERF_TRAINING_DEPS option let's you specify
+additional build targets to build before building the external project.  The
+LLVM Test Suite requires compiler-rt to build, so we need to add the
+`runtimes` target as a dependency.
+
 After configuration, building the stage2-instrumented-generate-profdata target
 will automatically build the stage1 compiler, build the instrumented compiler
 with the stage1 compiler, and then run the instrumented compiler against the
