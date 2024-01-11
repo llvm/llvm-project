@@ -3151,10 +3151,9 @@ void TransposeOp::getAsmResultNames(
 /// Build a strided memref type by applying `permutationMap` to `memRefType`.
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
-  auto rank = memRefType.getRank();
   auto originalSizes = memRefType.getShape();
   auto [originalStrides, offset] = getStridesAndOffset(memRefType);
-  assert(originalStrides.size() == static_cast<unsigned>(rank));
+  assert(originalStrides.size() == static_cast<unsigned>(memRefType.getRank()));
 
   // Compute permuted sizes and strides.
   auto sizes = applyPermutationMap<int64_t>(permutationMap, originalSizes);
