@@ -782,6 +782,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                     tok::kw_switch);
     }
+    return false;
   };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
