@@ -106,7 +106,7 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
       ValCounterValues[I] += IterationValCounterValues[I];
   }
 
-  std::unordered_map<ValidationEvent, int64_t> ValidationInfo;
+  std::map<ValidationEvent, int64_t> ValidationInfo;
   for (size_t I = 0; I < ValidationCounters.size(); ++I)
     ValidationInfo[ValidationCounters[I]] = ValCounterValues[I];
 

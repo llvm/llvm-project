@@ -81,7 +81,7 @@ struct BenchmarkMeasure {
   // A helper to create an unscaled BenchmarkMeasure.
   static BenchmarkMeasure
   Create(std::string Key, double Value,
-         std::unordered_map<ValidationEvent, int64_t> ValCounters) {
+         std::map<ValidationEvent, int64_t> ValCounters) {
     return {Key, Value, Value, ValCounters};
   }
   std::string Key;
@@ -92,7 +92,7 @@ struct BenchmarkMeasure {
   // the whole snippet.
   double PerSnippetValue;
   // These are the validation counter values.
-  std::unordered_map<ValidationEvent, int64_t> ValidationCounters;
+  std::map<ValidationEvent, int64_t> ValidationCounters;
 };
 
 // The result of an instruction benchmark.

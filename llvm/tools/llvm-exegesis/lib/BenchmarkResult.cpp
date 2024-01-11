@@ -209,11 +209,9 @@ Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
 }
 
 template <>
-struct CustomMappingTraits<
-    std::unordered_map<exegesis::ValidationEvent, int64_t>> {
-  static void
-  inputOne(IO &Io, StringRef KeyStr,
-           std::unordered_map<exegesis::ValidationEvent, int64_t> &VI) {
+struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       std::map<exegesis::ValidationEvent, int64_t> &VI) {
     Expected<exegesis::ValidationEvent> Key = stringToValidationEvent(KeyStr);
     if (!Key) {
       Io.setError("Key is not a valid validation event");
@@ -222,8 +220,7 @@ struct CustomMappingTraits<
     Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
   }
 
-  static void
-  output(IO &Io, std::unordered_map<exegesis::ValidationEvent, int64_t> &VI) {
+  static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
     for (auto &IndividualVI : VI) {
       Io.mapRequired(validationEventToString(IndividualVI.first),
                      IndividualVI.second);
