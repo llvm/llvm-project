@@ -20,6 +20,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "systemztti"
@@ -1284,9 +1286,35 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
   return NumVectorMemOps + NumPermutes;
 }
 
-static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
+static int
+getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+                            const SmallVectorImpl<Type *> &ParamTys) {
   if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
     return getNumVectorRegs(RetTy); // VPERM
+
+  if (ID == Intrinsic::vector_reduce_add) {
+    // Retrieve number and size of elements for the vector op
+    auto *VTy = cast<FixedVectorType>(ParamTys.front());
+    unsigned NumElements = VTy->getNumElements();
+    unsigned ScalarSize = VTy->getScalarSizeInBits();
+    // For scalar sizes >128 bits, we fall back to the generic cost estimate
+    if (ScalarSize > SystemZ::VectorBits)
+      return -1;
+    // How many elements can a single vector register hold
+    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
+    // How many vector regs are needed to represent the input elements (V)
+    unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
+    // How many instructions are needed for the final sum of vector elems (S)
+    unsigned LastVectorHandling =
+        2 * Log2_32_Ceil(std::min(NumElements, MaxElemsPerVector));
+    // We use vector adds to create a sum vector, which takes
+    // V/2 + V/4 + ... = V - 1 operations.
+    // Then, we need S operations to sum up the elements of that sum vector,
+    // for a total of V + S - 1 operations.
+    int Cost = VectorRegsNeeded + LastVectorHandling - 1;
+    assert(Cost > 0 && "Predicted cost of vector.reduce.add must be > 0");
+    return Cost;
+  }
   return -1;
 }
 
@@ -1294,7 +1322,7 @@ InstructionCost
 SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   InstructionCost Cost =
-      getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType());
+      getVectorIntrinsicInstrCost(ICA.getID(), ICA.getReturnType(), ICA.getArgTypes());
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
