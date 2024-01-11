@@ -113,7 +113,7 @@ void RISCVTargetELFStreamer::emitDirectiveOptionArch(
     return;
   }
   auto &ISAInfo = *ParseResult;
-  std::vector<std::string> NewFeatures = ISAInfo->toFeatureVector();
+  std::vector<std::string> NewFeatures = ISAInfo->toFeatures();
   for (RISCVOptionArchArg Arg : Args) {
     switch (Arg.Type) {
     case RISCVOptionArchArgType::Minus:
