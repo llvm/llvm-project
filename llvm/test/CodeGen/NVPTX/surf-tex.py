@@ -1,6 +1,6 @@
 # RUN: %python %s --target=cuda --tests=suld,sust,tex,tld4 --gen-list=%t.list > %t-cuda.ll
-# RUN: llc -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll --check-prefixes=CHECK,CHECK-CUDA
-# RUN: %if ptxas %{ llc -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
+# RUN: llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | FileCheck %t-cuda.ll --check-prefixes=CHECK,CHECK-CUDA
+# RUN: %if ptxas %{ llc -mcpu=sm_60 -mattr=+ptx43 %t-cuda.ll -verify-machineinstrs -o - | %ptxas-verify %}
 
 # We only need to run this second time for texture tests, because
 # there is a difference between unified and non-unified intrinsics.
