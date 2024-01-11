@@ -303,7 +303,7 @@ static void handleGetReturnObject(Sema &S, MemberExpr *ME) {
   if (!ME || !ME->getMemberDecl() || !ME->getMemberDecl()->getAsFunction())
     return;
   auto *MD = ME->getMemberDecl()->getAsFunction();
-  auto* RetType = MD->getReturnType()->getAsRecordDecl();
+  auto *RetType = MD->getReturnType()->getAsRecordDecl();
   if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
     return;
   // `get_return_object` should be allowed to return coro_return_type.
