@@ -1543,7 +1543,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           TLI, NullIsValidLocation)))
     return AliasResult::NoAlias;
 
-  if (CtxI && EnableSeparateStorageAnalysis) {
+  if (EnableSeparateStorageAnalysis) {
     for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
       if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
@@ -1559,10 +1559,30 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
         const Value *HintO1 = getUnderlyingObject(Hint1);
         const Value *HintO2 = getUnderlyingObject(Hint2);
 
-        if (((O1 == HintO1 && O2 == HintO2) ||
-             (O1 == HintO2 && O2 == HintO1)) &&
-            isValidAssumeForContext(Assume, CtxI, DT))
-          return AliasResult::NoAlias;
+        auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
+          if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+            return isValidAssumeForContext(Assume, PtrI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          if (const Argument *PtrA = dyn_cast<Argument>(Ptr)) {
+            const Instruction *FirstI =
+                &*PtrA->getParent()->getEntryBlock().begin();
+            return isValidAssumeForContext(Assume, FirstI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          return false;
+        };
+
+        if ((O1 == HintO1 && O2 == HintO2) || (O1 == HintO2 && O2 == HintO1)) {
+          // Note that we go back to V1 and V2 for the
+          // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
+          // so strictly more assumptions are valid for them.
+          if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
+                                               /* AllowEphemerals */ true)) ||
+              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
+            return AliasResult::NoAlias;
+          }
+        }
       }
     }
   }

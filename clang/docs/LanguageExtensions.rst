@@ -829,6 +829,7 @@ to ``float``; see below for more information on this emulation.
   see below.
 
 * ``_Float16`` is supported on the following targets:
+
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
@@ -837,6 +838,7 @@ to ``float``; see below for more information on this emulation.
   * RISC-V (natively if Zfh or Zhinx is available)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
+
   * 32-bit ARM
   * 64-bit ARM (AArch64)
   * RISC-V
