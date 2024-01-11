@@ -147,6 +147,7 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
   if (Spec == "standard") {
     PBP.Scope = "non-leaf";
     PBP.BranchTargetEnforcement = true;
+    PBP.GuardedControlStack = true;
     return true;
   }
 
@@ -171,6 +172,10 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
         else
           break;
       }
+      continue;
+    }
+    if (Opt == "gcs") {
+      PBP.GuardedControlStack = true;
       continue;
     }
     if (Opt == "")
