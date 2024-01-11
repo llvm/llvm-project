@@ -41,9 +41,8 @@ What's New in Libc++ 18.0.0?
 
 Implemented Papers
 ------------------
-- P2093R14 Formatted output
-- P2539R4  Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
-
+- P2093R14 - Formatted output
+- P2539R4  - Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?
 - P2497R0 - Testing for success or failure of ``<charconv>`` functions
 - P2697R1 - Interfacing ``bitset`` with ``string_view``
 - P2443R1 - ``views::chunk_by``
@@ -57,7 +56,10 @@ Implemented Papers
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()
 - P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
+- P2821R5 - span.at()
 - P0521R0 - Proposed Resolution for CA 14 (shared_ptr use_count/unique)
+- P1759R6 - Native handles and file streams
+- P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
 
 
 Improvements and New Features

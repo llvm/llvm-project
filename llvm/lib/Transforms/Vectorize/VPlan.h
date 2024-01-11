@@ -900,15 +900,18 @@ public:
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
 
+protected:
+  struct GEPFlagsTy {
+    char IsInBounds : 1;
+    GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
+  };
+
 private:
   struct DisjointFlagsTy {
     char IsDisjoint : 1;
   };
   struct ExactFlagsTy {
     char IsExact : 1;
-  };
-  struct GEPFlagsTy {
-    char IsInBounds : 1;
   };
   struct NonNegFlagsTy {
     char NonNeg : 1;
@@ -994,12 +997,21 @@ public:
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
 
+protected:
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      GEPFlagsTy GEPFlags, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), OpType(OperationType::GEPOp),
+        GEPFlags(GEPFlags) {}
+
+public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
-           R->getVPDefID() == VPRecipeBase::VPReplicateSC;
+           R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
+           R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
   /// Drop all poison-generating flags.
@@ -1421,15 +1433,16 @@ public:
 /// A recipe to compute the pointers for widened memory accesses of IndexTy for
 /// all parts. If IsReverse is true, compute pointers for accessing the input in
 /// reverse order per part.
-class VPVectorPointerRecipe : public VPSingleDefRecipe {
+class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *IndexedTy;
   bool IsReverse;
 
 public:
   VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsReverse,
-                        DebugLoc DL)
-      : VPSingleDefRecipe(VPDef::VPVectorPointerSC, {Ptr}, DL),
-        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+                        bool IsInBounds, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
+                            GEPFlagsTy(IsInBounds), DL),
+        VPValue(this), IndexedTy(IndexedTy), IsReverse(IsReverse) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 

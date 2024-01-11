@@ -120,7 +120,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return false;
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::Or:
     case Instruction::ICmp:
+    case Instruction::Select:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
@@ -1307,9 +1309,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
     Value *Ptr = State.get(getOperand(0), VPIteration(0, 0));
-    bool InBounds = false;
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
-      InBounds = GEP->isInBounds();
+    bool InBounds = isInBounds();
     if (IsReverse) {
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.

@@ -10,10 +10,33 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
+#include "terminator.h"
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include <ctime>
+
+#ifdef _WIN32
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
+    Fortran::runtime::Terminator terminator) {
+  int error{ctime_s(buffer, bufsize, &cur_time)};
+  RUNTIME_CHECK(terminator, error == 0);
+}
+#elif _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || \
+    _POSIX_SOURCE
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
+    Fortran::runtime::Terminator terminator) {
+  const char *res{ctime_r(&cur_time, buffer)};
+  RUNTIME_CHECK(terminator, res != nullptr);
+}
+#else
+inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
+    Fortran::runtime::Terminator terminator) {
+  buffer[0] = '\0';
+  terminator.Crash("fdate is not supported.");
+}
+#endif
 
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 // System is posix-compliant and has getlogin_r
@@ -42,6 +65,26 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
   IONAME(EndIoStatement)(cookie);
 }
 } // namespace io
+
+// CALL FDATE(DATE)
+void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
+  // Day Mon dd hh:mm:ss yyyy\n\0 is 26 characters, e.g.
+  // Tue May 26 21:51:03 2015\n\0
+  char str[26];
+  // Insufficient space, fill with spaces and return.
+  if (length < 24) {
+    std::memset(arg, ' ', length);
+    return;
+  }
+
+  Terminator terminator{__FILE__, __LINE__};
+  std::time_t current_time;
+  std::time(&current_time);
+  CtimeBuffer(str, sizeof(str), current_time, terminator);
+
+  // Pad space on the last two byte `\n\0`, start at index 24 included.
+  CopyAndPad(arg, str, length, 24);
+}
 
 // RESULT = IARGC()
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
