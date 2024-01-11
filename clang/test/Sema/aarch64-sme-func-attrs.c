@@ -356,16 +356,10 @@ void valid_state_attrs_in_in2(void) __arm_in("za", "za");
 
 // expected-cpp-error@+2 {{missing state for '__arm_in'}}
 // expected-error@+1 {{missing state for '__arm_in'}}
-void invalid_state_attrs_no_arg1(void) __arm_in;
-// expected-cpp-error@+2 {{missing state for '__arm_in'}}
-// expected-error@+1 {{missing state for '__arm_in'}}
-void invalid_state_attrs_no_arg2(void) __arm_in();
+void invalid_state_attrs_no_arg1(void) __arm_in();
 // expected-cpp-error@+2 {{missing state for '__arm_new'}}
 // expected-error@+1 {{missing state for '__arm_new'}}
-__arm_new void invalid_state_attrs_no_arg2(void);
-// expected-cpp-error@+2 {{missing state for '__arm_new'}}
-// expected-error@+1 {{missing state for '__arm_new'}}
-__arm_new() void invalid_state_attrs_no_arg3(void);
+__arm_new() void invalid_state_attrs_no_arg2(void);
 
 // expected-cpp-error@+2 {{conflicting attributes for state 'za'}}
 // expected-error@+1 {{conflicting attributes for state 'za'}}

@@ -256,13 +256,10 @@ protected:
   }
 };
 
-enum class KeywordAttributeParseArgumentsKind { None, Optional, Required };
-
-inline KeywordAttributeParseArgumentsKind
-getKeywordAttributeParseArgumentsKind(tok::TokenKind Kind) {
+inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
   switch (Kind) {
   default:
-    return KeywordAttributeParseArgumentsKind::None;
+    return false;
 #define KEYWORD_ATTRIBUTE(NAME, HASARG)                                        \
   case tok::kw_##NAME:                                                         \
     return HASARG;

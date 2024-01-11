@@ -3561,27 +3561,12 @@ void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,
       if (!isRegularKeywordAttribute(S))
         continue;
       std::vector<Record *> Args = R->getValueAsListOfDefs("Args");
-      bool HasArgs = false;
-      bool HasOptionalArgs = false;
-      for (const auto *Arg : Args) {
-        if (Arg->getValueAsBit("Fake"))
-          continue;
-        HasArgs = true;
-        if (Arg->getValueAsBit("Optional"))
-          HasOptionalArgs = true;
-        else
-          break;
-      }
+      bool HasArgs = llvm::any_of(
+          Args, [](const Record *Arg) { return !Arg->getValueAsBit("Fake"); });
 
       OS << "KEYWORD_ATTRIBUTE("
-         << S.getSpellingRecord().getValueAsString("Name") << ", ";
-      if (HasOptionalArgs)
-        OS << "KeywordAttributeParseArgumentsKind::Optional";
-      else if (HasArgs)
-        OS << "KeywordAttributeParseArgumentsKind::Required";
-      else
-        OS << "KeywordAttributeParseArgumentsKind::None";
-      OS << ")\n";
+         << S.getSpellingRecord().getValueAsString("Name") << ", "
+         << (HasArgs ? "true" : "false") << ")\n";
     }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }

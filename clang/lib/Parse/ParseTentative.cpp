@@ -895,8 +895,7 @@ bool Parser::TrySkipAttributes() {
       // expected in the case of the Objective-C message send syntax.
       ConsumeBracket();
     } else if (Tok.isRegularKeywordAttribute() &&
-               getKeywordAttributeParseArgumentsKind(Tok.getKind()) ==
-                   KeywordAttributeParseArgumentsKind::None) {
+               !doesKeywordAttributeTakeArgs(Tok.getKind())) {
       ConsumeToken();
     } else {
       ConsumeToken();

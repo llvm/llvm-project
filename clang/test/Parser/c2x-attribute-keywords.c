@@ -117,3 +117,10 @@ void f11(void) {
 struct __arm_inout("za") S4 *s; // expected-error {{'__arm_inout' cannot appear here}}
 struct S5 {};
 int c = sizeof(struct __arm_inout("za") S5); // expected-error {{'__arm_inout' cannot appear here}}
+
+void invalid_parentheses1() __arm_inout; // expected-error {{expected '(' after ''__arm_inout''}}
+void invalid_parentheses2() __arm_inout(; // expected-error {{expected string literal as argument of '__arm_inout' attribute}}
+void invalid_parentheses3() __arm_inout((); // expected-error {{expected string literal as argument of '__arm_inout' attribute}}
+void invalid_parentheses4() __arm_inout); // expected-error {{expected '(' after ''__arm_inout''}} \
+                                          // expected-error {{expected function body after function declarator}}
+void invalid_parentheses5() __arm_inout(());  // expected-error {{expected string literal as argument of '__arm_inout' attribute}}

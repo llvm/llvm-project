@@ -1890,10 +1890,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         if (!SkipUntil(tok::r_paren, StopAtSemi))
           break;
       } else if (Tok.isRegularKeywordAttribute()) {
-        auto ParseArgsKind =
-            getKeywordAttributeParseArgumentsKind(Tok.getKind());
+        bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
         ConsumeToken();
-        if (ParseArgsKind != KeywordAttributeParseArgumentsKind::None) {
+        if (TakesArgs) {
           BalancedDelimiterTracker T(*this, tok::l_paren);
           if (!T.consumeOpen())
             T.skipToEnd();
@@ -4547,18 +4546,16 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     SourceLocation Loc = Tok.getLocation();
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     ParsedAttr::Form Form = ParsedAttr::Form(Tok.getKind());
-    KeywordAttributeParseArgumentsKind ParseArgsKind =
-        getKeywordAttributeParseArgumentsKind(Tok.getKind());
+    bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
     ConsumeToken();
-    if (ParseArgsKind == KeywordAttributeParseArgumentsKind::Required &&
-        !Tok.is(tok::l_paren))
-      Diag(Tok.getLocation(), diag::err_expected_lparen_after) << AttrName;
-    if (ParseArgsKind != KeywordAttributeParseArgumentsKind::None &&
-        Tok.is(tok::l_paren))
-      ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
-                               /*ScopeName*/ nullptr,
-                               /*ScopeLoc*/ Loc, Form);
-    else
+    if (TakesArgs) {
+      if (!Tok.is(tok::l_paren))
+        Diag(Tok.getLocation(), diag::err_expected_lparen_after) << AttrName;
+      else
+        ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
+                                 /*ScopeName*/ nullptr,
+                                 /*ScopeLoc*/ Loc, Form);
+    } else
       Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
     return;
   }
@@ -4726,8 +4723,7 @@ SourceLocation Parser::SkipCXX11Attributes() {
       T.skipToEnd();
       EndLoc = T.getCloseLocation();
     } else if (Tok.isRegularKeywordAttribute() &&
-               getKeywordAttributeParseArgumentsKind(Tok.getKind()) ==
-                   KeywordAttributeParseArgumentsKind::None) {
+               !doesKeywordAttributeTakeArgs(Tok.getKind())) {
       EndLoc = Tok.getLocation();
       ConsumeToken();
     } else {
