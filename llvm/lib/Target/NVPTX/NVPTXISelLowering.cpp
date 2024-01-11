@@ -854,6 +854,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setMinCmpXchgSizeInBits(32);
+  setMaxAtomicSizeInBitsSupported(64);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -2018,9 +2019,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         DL, RetTy, Args, Outs, retAlignment,
         HasVAArgs
             ? std::optional<std::pair<unsigned, const APInt &>>(std::make_pair(
-                  CLI.NumFixedArgs,
-                  cast<ConstantSDNode>(VADeclareParam->getOperand(1))
-                      ->getAPIntValue()))
+                  CLI.NumFixedArgs, VADeclareParam->getConstantOperandAPInt(1)))
             : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
@@ -2296,7 +2295,7 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (VT == MVT::v2f16 || VT == MVT::v2bf16)
       Value = cast<ConstantFPSDNode>(Operand)->getValueAPF().bitcastToAPInt();
     else if (VT == MVT::v2i16 || VT == MVT::v4i8)
-      Value = cast<ConstantSDNode>(Operand)->getAPIntValue();
+      Value = Operand->getAsAPIntVal();
     else
       llvm_unreachable("Unsupported type");
     // i8 values are carried around as i16, so we need to zero out upper bits,
@@ -5811,7 +5810,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Get the intrinsic ID
-  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  unsigned IntrinNo = Intrin.getNode()->getAsZExtVal();
   switch (IntrinNo) {
   default:
     return;
