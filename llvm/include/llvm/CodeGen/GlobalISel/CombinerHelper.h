@@ -910,6 +910,9 @@ private:
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
 
+  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
+  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
+
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,

@@ -337,7 +337,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXXABI_USE_LLVM_UNWINDER:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.

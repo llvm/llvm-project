@@ -23,7 +23,9 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
@@ -38,7 +40,9 @@
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
+#include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -487,6 +491,7 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   AddIRPass addIRPass(MPM, Opt.DebugPM);
   // `ProfileSummaryInfo` is always valid.
   addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+  addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
   addISelPasses(addIRPass);
 
   AddMachinePass addPass(MFPM);
@@ -642,6 +647,9 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(GCLoweringPass());
+  // FIXME: `ShadowStackGCLoweringPass` now is a
+  // module pass, so it will trigger assertion.
+  // See comment of `AddingFunctionPasses`
   addPass(ShadowStackGCLoweringPass());
   addPass(LowerConstantIntrinsicsPass());
 
@@ -729,7 +737,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
 template <typename Derived>
 void CodeGenPassBuilder<Derived>::addCodeGenPrepare(AddIRPass &addPass) const {
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableCGP)
-    addPass(CodeGenPreparePass());
+    addPass(CodeGenPreparePass(&TM));
   // TODO: Default ctor'd RewriteSymbolPass is no-op.
   // addPass(RewriteSymbolPass());
 }
@@ -744,7 +752,7 @@ void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addPass(SafeStackPass(&TM));
-  addPass(StackProtectorPass());
+  addPass(StackProtectorPass(&TM));
 
   if (Opt.PrintISelInput)
     addPass(PrintFunctionPass(dbgs(),
