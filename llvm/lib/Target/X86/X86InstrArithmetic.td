@@ -1128,22 +1128,22 @@ multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
   }
   let Predicates = [HasNDD] in {
     def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
-	      (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
+              (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
     def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
-	      (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
+              (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
     def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
-	      (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+              (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
     def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
-	      (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
     def : Pat<(OpNode (load addr:$dst), relocImm8_su:$src),
-	      (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
+              (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
     def : Pat<(OpNode (load addr:$dst), relocImm16_su:$src),
-	      (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
+              (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
     def : Pat<(OpNode (load addr:$dst), relocImm32_su:$src),
-	      (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
+              (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
     def : Pat<(OpNode (load addr:$dst), i64relocImmSExt32_su:$src),
-	      (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
+              (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
   }
 }
 
