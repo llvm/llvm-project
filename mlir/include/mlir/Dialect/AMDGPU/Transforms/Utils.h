@@ -17,7 +17,7 @@ namespace amdgpu {
 /// - Considers memref::LoadOp,  vector::LoadOp,  vector::TransferReadOp
 /// - Considers memref::StoreOp, vector::StoreOp, vector::TransferWriteOp
 /// - Excludes subview op
-Operation::operand_range getIndices(Operation *op);
+std::optional<Operation::operand_range> getIndices(Operation *op);
 void setIndices(Operation *op, ArrayRef<Value> indices);
 
 } // namespace amdgpu

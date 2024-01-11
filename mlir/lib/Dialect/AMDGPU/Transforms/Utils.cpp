@@ -15,7 +15,7 @@
 using namespace mlir;
 using namespace mlir::amdgpu;
 
-Operation::operand_range amdgpu::getIndices(Operation *op) {
+std::optional<Operation::operand_range> amdgpu::getIndices(Operation *op) {
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.getIndices();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
@@ -28,7 +28,7 @@ Operation::operand_range amdgpu::getIndices(Operation *op) {
     return transferReadOp.getIndices();
   if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
     return transferWriteOp.getIndices();
-  llvm_unreachable("unsupported op type");
+  return std::nullopt;
 }
 
 void amdgpu::setIndices(Operation *op, ArrayRef<Value> indices) {
@@ -44,5 +44,4 @@ void amdgpu::setIndices(Operation *op, ArrayRef<Value> indices) {
     return transferReadOp.getIndicesMutable().assign(indices);
   if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
     return transferWriteOp.getIndicesMutable().assign(indices);
-  llvm_unreachable("unsupported op type");
 }

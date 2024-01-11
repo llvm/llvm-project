@@ -138,13 +138,13 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
   if (llvm::any_of(readOps, [](Operation *op) {
         return !isa<memref::LoadOp, vector::LoadOp, vector::TransferReadOp>(
                    op) ||
-               amdgpu::getIndices(op).size() < 2;
+               amdgpu::getIndices(op)->size() < 2;
       }))
     return failure();
   if (llvm::any_of(writeOps, [](Operation *op) {
         return !isa<memref::StoreOp, vector::StoreOp, vector::TransferWriteOp>(
                    op) ||
-               amdgpu::getIndices(op).size() < 2;
+               amdgpu::getIndices(op)->size() < 2;
       }))
     return failure();
 
@@ -199,7 +199,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     builder.setInsertionPoint(shmWriteOp);
 
     auto indices = amdgpu::getIndices(shmWriteOp);
-    SmallVector<Value, 4> transformedIndices(indices.begin(), indices.end());
+    SmallVector<Value, 4> transformedIndices(indices->begin(), indices->end());
     transformIndices(builder, shmWriteOp->getLoc(), transformedIndices,
                      memRefType, srcDim, tgtDim);
     amdgpu::setIndices(shmWriteOp, transformedIndices);
@@ -211,7 +211,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
     builder.setInsertionPoint(shmReadOp);
 
     auto indices = amdgpu::getIndices(shmReadOp);
-    SmallVector<Value, 4> transformedIndices(indices.begin(), indices.end());
+    SmallVector<Value, 4> transformedIndices(indices->begin(), indices->end());
     transformIndices(builder, shmReadOp->getLoc(), transformedIndices,
                      memRefType, srcDim, tgtDim);
     amdgpu::setIndices(shmReadOp, transformedIndices);
