@@ -5040,7 +5040,8 @@ class BranchPreloadMII<string mnemonic, bits<8> opcode>
 // operation and one that acts as a comparison against zero.
 // Note that the comparison against zero operation is not available if we
 // have vector support, since load-and-test instructions will partially
-// clobber the target (vector) register.
+// clobber the target (vector) register. It should also not be used if the
+// destination is used as it may actually be clobbered (if source is a SNaN).
 multiclass LoadAndTestRRE<string mnemonic, bits<16> opcode,
                           RegisterOperand cls> {
   def "" : UnaryRRE<mnemonic, opcode, null_frag, cls, cls>;

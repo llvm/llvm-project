@@ -9181,13 +9181,22 @@ MachineBasicBlock *SystemZTargetLowering::emitTransactionBegin(
 }
 
 MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
-    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode,
+    unsigned CmpOpcode) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
-
   Register SrcReg = MI.getOperand(0).getReg();
+
+  // This instruction will raise an exception if the input is a SNaN.
+  //  MI.clearFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // XXX Worthwile?  Regallochints for dead def instead?
+  if (!Subtarget.hasVector() && MRI->hasOneNonDBGUser(SrcReg)) {
+    MI.setDesc(TII->get(CmpOpcode));
+    return MBB;
+  }
 
   // Create new virtual register of the same class as source.
   const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
@@ -9437,12 +9446,12 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGIN, true);
   case SystemZ::TBEGINC:
     return emitTransactionBegin(MI, MBB, SystemZ::TBEGINC, true);
-  case SystemZ::LTEBRCompare_VecPseudo:
-    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTEBR);
-  case SystemZ::LTDBRCompare_VecPseudo:
-    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTDBR);
-  case SystemZ::LTXBRCompare_VecPseudo:
-    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTXBR);
+  case SystemZ::LTEBRCompare_Pseudo:
+    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTEBR, SystemZ::LTEBRCompare);
+  case SystemZ::LTDBRCompare_Pseudo:
+    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTDBR, SystemZ::LTDBRCompare);
+  case SystemZ::LTXBRCompare_Pseudo:
+    return emitLoadAndTestCmp0(MI, MBB, SystemZ::LTXBR, SystemZ::LTXBRCompare);
 
   case SystemZ::PROBED_ALLOCA:
     return emitProbedAlloca(MI, MBB);

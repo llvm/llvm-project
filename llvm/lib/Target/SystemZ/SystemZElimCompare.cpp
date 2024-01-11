@@ -115,12 +115,6 @@ static bool preservesValueOf(MachineInstr &MI, unsigned Reg) {
   case SystemZ::LTR:
   case SystemZ::LTGR:
   case SystemZ::LTGFR:
-  case SystemZ::LER:
-  case SystemZ::LDR:
-  case SystemZ::LXR:
-  case SystemZ::LTEBR:
-  case SystemZ::LTDBR:
-  case SystemZ::LTXBR:
     if (MI.getOperand(1).getReg() == Reg)
       return true;
   }
@@ -569,7 +563,7 @@ bool SystemZElimCompare::optimizeCompareZero(
 
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted, like
-  // LTEBRCompare %f0s, %f0s; %f2s = LER %f0s  =>  LTEBRCompare %f2s, %f0s
+  // LTGR %r0d, %r0d; %r1d = LGR %r0d  =>  LTGR %r1d, %r0d          XXXX
   auto MIRange = llvm::make_range(
       std::next(MachineBasicBlock::iterator(&Compare)), MBB.end());
   for (MachineInstr &MI : llvm::make_early_inc_range(MIRange)) {
