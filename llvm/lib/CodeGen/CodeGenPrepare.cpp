@@ -550,7 +550,8 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<TargetLibraryAnalysis>();
+  PA.preserve<TargetIRAnalysis>();
   PA.preserve<LoopAnalysis>();
   return PA;
 }

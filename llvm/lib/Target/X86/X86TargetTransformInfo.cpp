@@ -2232,6 +2232,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   static const TypeConversionCostTblEntry AVX512FConversionTbl[] = {
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v8f32,  1 },
     { ISD::FP_EXTEND, MVT::v8f64,   MVT::v16f32, 3 },
+    { ISD::FP_EXTEND, MVT::v16f64,  MVT::v16f32, 4 }, // 2*vcvtps2pd+vextractf64x4
     { ISD::FP_ROUND,  MVT::v8f32,   MVT::v8f64,  1 },
 
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i8,   3 }, // sext+vpslld+vptestmd
