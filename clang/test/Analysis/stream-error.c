@@ -348,9 +348,6 @@ void error_fseek_0(void) {
   } else {
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
-    // Error flags should not change.
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   }
   fclose(F);
 }
@@ -368,12 +365,6 @@ void error_fseeko_0(void) {
     // expected-warning@-2 {{TRUE}}
     clang_analyzer_eval(IsFEof);
     // expected-warning@-1 {{FALSE}}
-    // Error flags should not change.
-    clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
-    if (IsFError)
-      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   } else {
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
@@ -388,21 +379,33 @@ void error_ftell(void) {
   FILE *F = fopen("file", "r");
   if (!F)
     return;
-  long Ret = ftell(F);
-  if (!(Ret >= 0)) {
-    clang_analyzer_eval(Ret == -1L); // expected-warning {{TRUE}}
-  }
+  long rc = ftell(F);
+  if (rc >= 0)
+    clang_analyzer_warnIfReached();          // expected-warning {{REACHABLE}}
+  else
+    clang_analyzer_eval(rc == -1);           // expected-warning {{TRUE}}
+  clang_analyzer_eval(feof(F) && ferror(F)); // expected-warning {{FALSE}}
+  StreamTesterChecker_make_feof_stream(F);
+  rc = ftell(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{TRUE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{FALSE}}
+  StreamTesterChecker_make_ferror_stream(F);
+  rc = ftell(F);
+  clang_analyzer_eval(feof(F));              // expected-warning {{FALSE}}
+  clang_analyzer_eval(ferror(F));            // expected-warning {{TRUE}}
   fclose(F);
 }
 
 void error_ftello(void) {
-  FILE *F = fopen("file", "r");
+  FILE *F = tmpfile();
   if (!F)
     return;
-  off_t Ret = ftello(F);
-  if (!(Ret == -1)) {
-    clang_analyzer_eval(Ret >= 0);   // expected-warning {{TRUE}}
-  }
+  long rc = ftello(F);
+  if (rc >= 0)
+    clang_analyzer_warnIfReached();          // expected-warning {{REACHABLE}}
+  else
+    clang_analyzer_eval(rc == -1);           // expected-warning {{TRUE}}
+  clang_analyzer_eval(feof(F) && ferror(F)); // expected-warning {{FALSE}}
   fclose(F);
 }
 
