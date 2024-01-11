@@ -307,19 +307,7 @@ void error_fseeko(void) {
     // expected-warning@-1 {{FALSE}}
     // expected-warning@-2 {{TRUE}}
     clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
-    // Error flags should not change.
-    if (IsFEof)
-      clang_analyzer_eval(feof(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
-    if (IsFError)
-      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
-    // Error flags should not change.
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   }
@@ -366,9 +354,6 @@ void error_fseeko_0(void) {
     clang_analyzer_eval(IsFEof);
     // expected-warning@-1 {{FALSE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
-    // Error flags should not change.
     clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
     clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
   }
