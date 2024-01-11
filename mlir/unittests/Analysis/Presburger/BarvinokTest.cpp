@@ -83,4 +83,18 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
           {{{8, 47, -17}, {-7, -41, 15}, {1, 5, -2}}}));
 }
 
-TEST(BarvinokTest, getNonOrthonalVector)
+TEST(BarvinokTest, getNonOrthogonalVector) {
+  std::vector<Point> vectors = {Point({1, 2, 3, 4}), Point({-1, 0, 1, 1}),
+                                Point({2, 7, 0, 0}), Point({0, 0, 0, 0})};
+  Point nonOrth = getNonOrthogonalVector(vectors);
+
+  for (unsigned i = 0; i < 3; i++)
+    EXPECT_FALSE(dotProduct(nonOrth, vectors[i]) == 0);
+
+  vectors = {Point({0, 1, 3}), Point({-2, -1, 1}), Point({6, 3, 0}),
+             Point({0, 0, -3}), Point({5, 0, -1})};
+  nonOrth = getNonOrthogonalVector(vectors);
+
+  for (const Point &vector : vectors)
+    EXPECT_FALSE(dotProduct(nonOrth, vector) == 0);
+}
