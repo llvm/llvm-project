@@ -5900,9 +5900,8 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       // combiner tries to merge the s_buffer_load_u8 with a sext instruction
       // (performSignExtendInRegCombine()) and it replaces s_buffer_load_u8 with
       // s_buffer_load_i8.
-      assert(Subtarget->hasScalarSubwordLoads() &&
-             "s_buffer_load_{u8, i8} are supported "
-             "in GFX12 (or newer) architectures.");
+      if (!Subtarget->hasScalarSubwordLoads())
+        return;
       SDValue Op = SDValue(N, 0);
       SDValue Rsrc = Op.getOperand(1);
       SDValue Offset = Op.getOperand(2);
