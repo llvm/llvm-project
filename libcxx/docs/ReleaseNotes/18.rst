@@ -121,7 +121,7 @@ Deprecations and Removals
   in LLVM 19. This macro used to re-enable redundant members of ``std::allocator<T>`` like ``pointer``,
   ``reference``, ``rebind``, ``address``, ``max_size``, ``construct``, ``destroy``, and the two-argument
   overload of ``allocate``. However, this led to the library being non-conforming due to incorrect
-  constexpr-ness. As a result the macro is being deprecated and will be removed in LLVM 19.
+  constexpr-ness.
 
 Upcoming Deprecations and Removals
 ----------------------------------
