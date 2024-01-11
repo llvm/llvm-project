@@ -161,6 +161,10 @@ public:
       ProvenanceRange def, ProvenanceRange use, const std::string &expansion);
   ProvenanceRange AddCompilerInsertion(std::string);
 
+  // If provenance is in an expanded macro, return the starting provenance of
+  // the replaced macro. Otherwise, return the input provenance.
+  Provenance GetReplacedProvenance(Provenance) const;
+
   bool IsValid(Provenance at) const { return range_.Contains(at); }
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
@@ -229,7 +233,8 @@ public:
   void set_number(int n) { number_ = n; }
 
   CharBlock AsCharBlock() const { return CharBlock{data_}; }
-  std::optional<ProvenanceRange> GetProvenanceRange(CharBlock) const;
+  std::optional<ProvenanceRange> GetProvenanceRange(
+      CharBlock, const AllSources &) const;
   std::optional<CharBlock> GetCharBlock(ProvenanceRange) const;
 
   // The result of a Put() is the offset that the new data
