@@ -391,13 +391,18 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
                                  /*posTupleNum=*/Value(), std::nullopt, 0);
     if (dimGetter && !isSynTensor(tid)) {
       for (Level l = 0; l < lvlRank; l++) {
-        dependentLvlMap[tid][l] = dimGetter(tid, l);
+        std::vector<std::pair<LoopId, unsigned>> deps = dimGetter(tid, l);
+        // Sort the loop by order.
+        std::sort(deps.begin(), deps.end(),
+                  [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+
+        dependentLvlMap[tid][l] = std::move(deps);
         unsigned depends = dependentLvlMap[tid][l].size();
         if (depends == 0)
           continue;
-        sliceMeta[tid][l].assign(depends, std::make_pair(nullptr, 0));
+        sliceMeta[tid][l].reserve(depends);
         // We need `depends - 1` slices to fully reduce the affine expression.
-        slicePosBuffer[tid][l].assign(depends - 1, nullptr);
+        slicePosBuffer[tid][l].reserve(depends - 1);
       }
     }
   }
@@ -487,35 +492,70 @@ void LoopEmitter::initializeLoopEmit(
     // hoist the code ouside if-conditions.
   }
 
-  Type indexType = builder.getIndexType();
-  Value c0 = constantZero(builder, loc, indexType);
+  initSliceDriven(builder, loc);
+}
+
+void LoopEmitter::initSliceDriven(OpBuilder &builder, Location loc) {
+  Value c0 = C_IDX(0);
   for (TensorId t = 0, e = tensors.size(); t < e; t++) {
     auto rtp = dyn_cast<RankedTensorType>(tensors[t].getType());
     if (!rtp)
       continue;
 
     Level lvlRank = SparseTensorType(rtp).getLvlRank();
-    for (Level lvl = 0; lvl < lvlRank; lvl++) {
-      if (!dependentLvlMap[t][lvl].empty()) {
-        ArrayRef<std::pair<TensorLevel, unsigned>> depLvls =
-            dependentLvlMap[t][lvl];
-        // Needs at least two operands to form a non-trivial affine expression.
-        assert(depLvls.size() == sliceMeta[t][lvl].size());
 
-        Value size = c0;
-        for (int e = depLvls.size() - 1; e >= 0; e--) {
-          auto [dt, dl] = unpackTensorLevel(depLvls[e].first);
-          unsigned stride = depLvls[e].second;
-          Value stridedSize = lvlSizes[dt][dl];
-          if (stride != 1)
-            stridedSize = MULI(stridedSize, C_IDX(stride));
-          size = ADDI(size, stridedSize);
-          sliceMeta[t][lvl][e] = std::make_pair(size, stride);
-        }
+    // Compute the dependency reduction order.
+    auto remDepStack = dependentLvlMap;
+    std::vector<std::tuple<LoopId, TensorId, Level>> depRedOrder;
+    for (Level lvl = 0; lvl < lvlRank; lvl++) {
+      // Reverse queue into a stack.
+      std::reverse(remDepStack[t][lvl].begin(), remDepStack[t][lvl].end());
+      for (auto [loop, coeff] : dependentLvlMap[t][lvl])
+        depRedOrder.emplace_back(std::make_tuple(loop, t, lvl));
+    }
+
+    if (depRedOrder.empty())
+      continue;
+    std::sort(depRedOrder.begin(), depRedOrder.end(),
+              [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
+
+    for (auto [loop, t, lvl] : depRedOrder) {
+      std::pair<LoopId, unsigned> curDep = remDepStack[t][lvl].back();
+      assert(curDep.first == loop);
+      Value size = c0;
+      for (auto [loop, stride] : remDepStack[t][lvl]) {
+        // The synthetic tensor high defines the loop upper bound.
+        Value loopHi = highs[getSynTensorId()][loop];
+        size = ADDI(size, MULI(loopHi, C_IDX(stride)));
       }
+      sliceMeta[t][lvl].emplace_back(size, curDep.second);
+      remDepStack[t][lvl].pop_back();
+
+      // Generate caches required to fast compute next-non-empty slices with
+      // increasing offset for slice-base loop.
+      // We do not need cache for dense levels.
+      if (!remDepStack[t][lvl].empty() && !isDenseLT(lvls[t][lvl]->getLT())) {
+        Value cnt = C_IDX(1);
+        for (int preLvl = lvl - 1; preLvl >= 0; preLvl--) {
+          if (remDepStack[t][preLvl].empty())
+            break;
+          assert(remDepStack[t][preLvl].size() == 1 && "Not implemented");
+          auto [loop, stride] = remDepStack[t][preLvl].back();
+          assert(stride == 1 && "Not yet implemented");
+          // Accumlate the size required to cache the pLo for the slice.
+          // E.g., if we want to cache the pIdx for slice<d0xd1xf64> on the
+          // second level. We at most need a memref<d0xindex>.
+          //
+          // NOTE: this is apparently an over-approximation when the previous
+          // level is compressed, and we can compute a precise memory size
+          // inside the loops. But that would also requires us to allocate/free
+          // memory in loops.
+          cnt = MULI(highs[getSynTensorId()][loop], cnt);
+        }
+        slicePosBuffer[t][lvl].push_back(allocSlicePosBuf(builder, loc, cnt));
+      } // else fully resolved.
     }
   }
-  localInsertPos = builder.getInsertionPoint()->getPrevNode();
 }
 
 void LoopEmitter::categorizeLoopCondition(
@@ -1878,9 +1918,6 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   // simple dim expression in between).
   assert(lvl == *sliceStack[tid].back().slicedOnLvl + 1);
 
-  // Check slice stack integrity.
-  assert(slicePosBuffer[tid][lvl - 1].size() == sliceStack[tid].back().depth);
-
   SmallVector<const SliceInfo *> unResSlices;
   std::optional<std::pair<TensorId, Level>> firstResLvl;
   for (Level curLvl = lvl; curLvl >= 1; curLvl--) {
@@ -2005,37 +2042,6 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
   auto baseEnc = getSparseTensorEncoding(tensors[tid].getType());
   if (baseEnc.isSlice())
     llvm_unreachable("TODO: not yet implemented");
-
-  // Generate caches required to fast compute next-non-empty slices with
-  // increasing offset for slice-base loop.
-  // We do not need cache for dense levels.
-  if (slicePosBuffer[tid][lvl][0] == nullptr && !isDenseLT(lvlType)) {
-    OpBuilder::InsertionGuard guard(builder);
-    // The buffer can be reused, and the size is loop invariant: it only
-    // depends on the iteration graph's toposort.
-    builder.setInsertionPointAfter(localInsertPos);
-    Value tupleCnt = C_IDX(1);
-    // Accumlates the size required to cache the pLo for the slice.
-    // E.g., if we want to cache the pIdx for slice<d0xd1xf64> on the second
-    // level. We at most need to a memref<d0xindex>.
-    // NOTE: this is apperantly an over-approximation when the previous
-    // level is compressed, and we can compute a precise memory size
-    // inside the loops. But that would also requires us to allocate/free
-    // memorys in loops.
-    // TODO: Maybe using allocaScopeOp inside the loop to resolve the issue?
-    for (Level curLevel = lvl;
-         curLevel >= 1 && !lvlFullyResolved(tid, curLevel - 1); curLevel--) {
-      // We only handle cases when all the previously unresolved levels are
-      // fully reduced.
-      assert(depFullyReduced(tid, curLevel - 1));
-      assert(!sliceMeta[tid][curLevel - 1].empty());
-      auto [sz, stride] = sliceMeta[tid][curLevel - 1].back();
-      assert(stride == 1 && "Not yet implemented");
-      tupleCnt = MULI(tupleCnt, sz);
-    }
-    for (Value &cache : slicePosBuffer[tid][lvl])
-      cache = allocSlicePosBuf(builder, loc, tupleCnt);
-  }
 
   if (sliceInfo.isInitialTensor() ||
       (lvl >= 1 && lvlFullyResolved(tid, lvl - 1))) {

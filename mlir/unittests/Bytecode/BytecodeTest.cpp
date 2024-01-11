@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -15,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -85,4 +87,64 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   checkResourceAttribute(*module);
   checkResourceAttribute(*roundTripModule);
+}
+
+namespace {
+/// A custom operation for the purpose of showcasing how discardable attributes
+/// are handled in absence of properties.
+class OpWithoutProperties : public Op<OpWithoutProperties> {
+public:
+  // Begin boilerplate.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpWithoutProperties)
+  using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() {
+    static StringRef attributeNames[] = {StringRef("inherent_attr")};
+    return ArrayRef(attributeNames);
+  };
+  static StringRef getOperationName() {
+    return "test_op_properties.op_without_properties";
+  }
+  // End boilerplate.
+};
+
+// A trivial supporting dialect to register the above operation.
+class TestOpPropertiesDialect : public Dialect {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOpPropertiesDialect)
+  static constexpr StringLiteral getDialectNamespace() {
+    return StringLiteral("test_op_properties");
+  }
+  explicit TestOpPropertiesDialect(MLIRContext *context)
+      : Dialect(getDialectNamespace(), context,
+                TypeID::get<TestOpPropertiesDialect>()) {
+    addOperations<OpWithoutProperties>();
+  }
+};
+} // namespace
+
+constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+    "test_op_properties.op_without_properties"()
+      {inherent_attr = 42, other_attr = 56} : () -> ()
+)mlir";
+
+TEST(Bytecode, OpWithoutProperties) {
+  MLIRContext context;
+  context.getOrLoadDialect<TestOpPropertiesDialect>();
+  ParserConfig config(&context);
+  OwningOpRef<Operation *> op =
+      parseSourceString(withoutPropertiesAttrsSrc, config);
+
+  std::string bytecode;
+  llvm::raw_string_ostream os(bytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os)));
+  std::unique_ptr<Block> block = std::make_unique<Block>();
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(os.str(), "string-buffer"), block.get(), config)));
+  Operation *roundtripped = &block->front();
+  EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
+  EXPECT_TRUE(roundtripped->getInherentAttr("inherent_attr") != std::nullopt);
+  EXPECT_TRUE(roundtripped->getDiscardableAttr("other_attr") != Attribute());
+
+  EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
+              OperationEquivalence::computeHash(roundtripped));
 }

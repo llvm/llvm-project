@@ -3199,7 +3199,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       return true;
     }
     break;
-  case ISD::FP_ROUND:
+  case ISD::FP_ROUND: {
+    EVT VT = Node->getValueType(0);
+    if (VT.getScalarType() == MVT::bf16) {
+      Results.push_back(
+          DAG.getNode(ISD::FP_TO_BF16, SDLoc(Node), VT, Node->getOperand(0)));
+      break;
+    }
+
+    LLVM_FALLTHROUGH;
+  }
   case ISD::BITCAST:
     if ((Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
                                  Node->getValueType(0), dl)))
@@ -3226,12 +3235,19 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       return true;
     }
     break;
-  case ISD::FP_EXTEND:
-    if ((Tmp1 = EmitStackConvert(Node->getOperand(0),
-                                 Node->getOperand(0).getValueType(),
-                                 Node->getValueType(0), dl)))
+  case ISD::FP_EXTEND: {
+    SDValue Op = Node->getOperand(0);
+    EVT SrcVT = Op.getValueType();
+    EVT DstVT = Node->getValueType(0);
+    if (SrcVT.getScalarType() == MVT::bf16) {
+      Results.push_back(DAG.getNode(ISD::BF16_TO_FP, SDLoc(Node), DstVT, Op));
+      break;
+    }
+
+    if ((Tmp1 = EmitStackConvert(Op, SrcVT, DstVT, dl)))
       Results.push_back(Tmp1);
     break;
+  }
   case ISD::BF16_TO_FP: {
     // Always expand bf16 to f32 casts, they lower to ext + shift.
     //
@@ -4908,7 +4924,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
 static MVT getPromotedVectorElementType(const TargetLowering &TLI,
                                         MVT EltVT, MVT NewEltVT) {
   unsigned OldEltsPerNewElt = EltVT.getSizeInBits() / NewEltVT.getSizeInBits();
-  MVT MidVT = MVT::getVectorVT(NewEltVT, OldEltsPerNewElt);
+  MVT MidVT = OldEltsPerNewElt == 1
+                  ? NewEltVT
+                  : MVT::getVectorVT(NewEltVT, OldEltsPerNewElt);
   assert(TLI.isTypeLegal(MidVT) && "unexpected");
   return MidVT;
 }
@@ -5352,6 +5370,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
+  case ISD::FCANONICALIZE:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(
@@ -5394,7 +5413,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
 
     assert(NVT.isVector() && OVT.getSizeInBits() == NVT.getSizeInBits() &&
            "Invalid promote type for build_vector");
-    assert(NewEltVT.bitsLT(EltVT) && "not handled");
+    assert(NewEltVT.bitsLE(EltVT) && "not handled");
 
     MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
 
@@ -5405,7 +5424,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     }
 
     SDLoc SL(Node);
-    SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SL, NVT, NewOps);
+    SDValue Concat =
+        DAG.getNode(MidVT == NewEltVT ? ISD::BUILD_VECTOR : ISD::CONCAT_VECTORS,
+                    SL, NVT, NewOps);
     SDValue CvtVec = DAG.getNode(ISD::BITCAST, SL, OVT, Concat);
     Results.push_back(CvtVec);
     break;

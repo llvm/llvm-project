@@ -1582,22 +1582,27 @@ def Vector_LoadOp : Vector_Op<"load"> {
     vector. If the memref element type is vector, it should match the result
     vector type.
 
-    Example 1: 1-D vector load on a scalar memref.
+    Example: 0-D vector load on a scalar memref.
+    ```mlir
+    %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %base[%i, %j] : memref<100x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector load on a vector memref.
+    Example: 1-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector load on a scalar memref.
+    Example:  2-D vector load on a scalar memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector load on a vector memref.
+    Example:  2-D vector load on a vector memref.
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1608,12 +1613,12 @@ def Vector_LoadOp : Vector_Op<"load"> {
     loaded out of bounds. Not all targets may support out-of-bounds vector
     loads.
 
-    Example 5:  Potential out-of-bound vector load.
+    Example:  Potential out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bound vector load.
+    Example:  Explicit out-of-bound vector load.
     ```mlir
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
@@ -1621,8 +1626,9 @@ def Vector_LoadOp : Vector_Op<"load"> {
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
-      Variadic<Index>:$indices);
-  let results = (outs AnyVector:$result);
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+  let results = (outs AnyVectorOfAnyRank:$result);
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1660,22 +1666,27 @@ def Vector_StoreOp : Vector_Op<"store"> {
     to store. If the memref element type is vector, it should match the type
     of the value to store.
 
-    Example 1: 1-D vector store on a scalar memref.
+    Example: 0-D vector store on a scalar memref.
+    ```mlir
+    vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<f32>
+    ```
+
+    Example: 1-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
     ```
 
-    Example 2: 1-D vector store on a vector memref.
+    Example: 1-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<8xf32>>, vector<8xf32>
     ```
 
-    Example 3:  2-D vector store on a scalar memref.
+    Example:  2-D vector store on a scalar memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xf32>, vector<4x8xf32>
     ```
 
-    Example 4:  2-D vector store on a vector memref.
+    Example:  2-D vector store on a vector memref.
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
@@ -1685,21 +1696,24 @@ def Vector_StoreOp : Vector_Op<"store"> {
     target-specific. No assumptions should be made on the memory written out of
     bounds. Not all targets may support out-of-bounds vector stores.
 
-    Example 5:  Potential out-of-bounds vector store.
+    Example:  Potential out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%index] : memref<?xf32>, vector<8xf32>
     ```
 
-    Example 6:  Explicit out-of-bounds vector store.
+    Example:  Explicit out-of-bounds vector store.
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
   }];
 
-  let arguments = (ins AnyVector:$valueToStore,
+  let arguments = (ins
+      AnyVectorOfAnyRank:$valueToStore,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$base,
-      Variadic<Index>:$indices);
+      Variadic<Index>:$indices,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal
+  );
 
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {

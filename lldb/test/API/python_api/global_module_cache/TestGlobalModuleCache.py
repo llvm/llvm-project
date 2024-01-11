@@ -26,6 +26,13 @@ class GlobalModuleCacheTestCase(TestBase):
         # a previous build, so sleep a bit here to ensure that the touch is later.
         time.sleep(2)
         try:
+            # Make sure dst is writeable before trying to write to it.
+            subprocess.run(
+                ["chmod", "777", dst],
+                stdin=None,
+                capture_output=False,
+                encoding="utf-8",
+            )
             shutil.copy(src, dst)
         except:
             self.fail(f"Could not copy {src} to {dst}")
@@ -45,11 +52,13 @@ class GlobalModuleCacheTestCase(TestBase):
     # This test tests for the desired behavior as an expected fail.
     @skipIfWindows
     @expectedFailureAll
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_TwoTargetsOneDebugger(self):
         self.do_test(False, True)
 
     @skipIfWindows
     @expectedFailureAll
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_OneTargetTwoDebuggers(self):
         self.do_test(True, False)
 

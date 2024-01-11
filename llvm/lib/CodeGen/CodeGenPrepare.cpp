@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -301,7 +302,8 @@ using ValueToSExts = MapVector<Value *, SExts>;
 
 class TypePromotionTransaction;
 
-class CodeGenPrepare : public FunctionPass {
+class CodeGenPrepare {
+  friend class CodeGenPrepareLegacyPass;
   const TargetMachine *TM = nullptr;
   const TargetSubtargetInfo *SubtargetInfo = nullptr;
   const TargetLowering *TLI = nullptr;
@@ -365,6 +367,8 @@ class CodeGenPrepare : public FunctionPass {
   std::unique_ptr<DominatorTree> DT;
 
 public:
+  CodeGenPrepare(){};
+  CodeGenPrepare(const TargetMachine *TM) : TM(TM){};
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
 
@@ -374,15 +378,7 @@ public:
   /// to insert such BB into FreshBBs for huge function.
   SmallSet<BasicBlock *, 32> FreshBBs;
 
-  static char ID; // Pass identification, replacement for typeid
-
-  CodeGenPrepare() : FunctionPass(ID) {
-    initializeCodeGenPreparePass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void releaseMemory() override {
+  void releaseMemory() {
     // Clear per function information.
     InsertedInsts.clear();
     PromotedInsts.clear();
@@ -391,17 +387,7 @@ public:
     BFI.reset();
   }
 
-  StringRef getPassName() const override { return "CodeGen Prepare"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // FIXME: When we can selectively preserve passes, preserve the domtree.
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addUsedIfAvailable<BasicBlockSectionsProfileReader>();
-  }
+  bool run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   template <typename F>
@@ -488,45 +474,108 @@ private:
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   void verifyBFIUpdates(Function &F);
+  bool _run(Function &F);
+};
+
+class CodeGenPrepareLegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  CodeGenPrepareLegacyPass() : FunctionPass(ID) {
+    initializeCodeGenPrepareLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override;
+
+  StringRef getPassName() const override { return "CodeGen Prepare"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    // FIXME: When we can selectively preserve passes, preserve the domtree.
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
+  }
 };
 
 } // end anonymous namespace
 
-char CodeGenPrepare::ID = 0;
+char CodeGenPrepareLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
+bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+  auto TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  CodeGenPrepare CGP(TM);
+  CGP.DL = &F.getParent()->getDataLayout();
+  CGP.SubtargetInfo = TM->getSubtargetImpl(F);
+  CGP.TLI = CGP.SubtargetInfo->getTargetLowering();
+  CGP.TRI = CGP.SubtargetInfo->getRegisterInfo();
+  CGP.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+  CGP.TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  CGP.LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  CGP.BPI.reset(new BranchProbabilityInfo(F, *CGP.LI));
+  CGP.BFI.reset(new BlockFrequencyInfo(F, *CGP.BPI, *CGP.LI));
+  CGP.PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto BBSPRWP =
+      getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
+  CGP.BBSectionsProfileReader = BBSPRWP ? &BBSPRWP->getBBSPR() : nullptr;
+
+  return CGP._run(F);
+}
+
+INITIALIZE_PASS_BEGIN(CodeGenPrepareLegacyPass, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
-INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
+INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(CodeGenPrepare, DEBUG_TYPE, "Optimize for code generation",
-                    false, false)
+INITIALIZE_PASS_END(CodeGenPrepareLegacyPass, DEBUG_TYPE,
+                    "Optimize for code generation", false, false)
 
-FunctionPass *llvm::createCodeGenPreparePass() { return new CodeGenPrepare(); }
+FunctionPass *llvm::createCodeGenPrepareLegacyPass() {
+  return new CodeGenPrepareLegacyPass();
+}
 
-bool CodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
+PreservedAnalyses CodeGenPreparePass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  CodeGenPrepare CGP(TM);
 
+  bool Changed = CGP.run(F, AM);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<TargetLibraryAnalysis>();
+  PA.preserve<TargetIRAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
+}
+
+bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   DL = &F.getParent()->getDataLayout();
-
-  bool EverMadeChange = false;
-
-  TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   TRI = SubtargetInfo->getRegisterInfo();
-  TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  TLInfo = &AM.getResult<TargetLibraryAnalysis>(F);
+  TTI = &AM.getResult<TargetIRAnalysis>(F);
+  LI = &AM.getResult<LoopAnalysis>(F);
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   BBSectionsProfileReader =
-      getAnalysisIfAvailable<BasicBlockSectionsProfileReader>();
+      AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
+  return _run(F);
+}
+
+bool CodeGenPrepare::_run(Function &F) {
+  bool EverMadeChange = false;
+
   OptSize = F.hasOptSize();
   // Use the basic-block-sections profile to promote hot functions to .text.hot
   // if requested.
@@ -4776,7 +4825,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
             cast<ConstantInt>(AddrInst->getOperand(i))->getZExtValue();
         ConstantOffset += SL->getElementOffset(Idx);
       } else {
-        TypeSize TS = DL.getTypeAllocSize(GTI.getIndexedType());
+        TypeSize TS = GTI.getSequentialElementStride(DL);
         if (TS.isNonZero()) {
           // The optimisations below currently only work for fixed offsets.
           if (TS.isScalable())

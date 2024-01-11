@@ -3593,8 +3593,9 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (isa<ConstantInt>(C))
     return createIntegerExpression(C);
 
-  if (Ty.isFloatTy() || Ty.isDoubleTy()) {
-    const APFloat &APF = cast<ConstantFP>(&C)->getValueAPF();
+  auto *FP = dyn_cast<ConstantFP>(&C);
+  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+    const APFloat &APF = FP->getValueAPF();
     return DIB.createConstantValueExpression(
         APF.bitcastToAPInt().getZExtValue());
   }
@@ -3904,7 +3905,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     SmallVectorImpl<Instruction *> &InsertedInsts) {
   if (!match(I, m_Or(m_Value(), m_Value())) &&
       !match(I, m_FShl(m_Value(), m_Value(), m_Value())) &&
-      !match(I, m_FShr(m_Value(), m_Value(), m_Value())))
+      !match(I, m_FShr(m_Value(), m_Value(), m_Value())) &&
+      !match(I, m_BSwap(m_Value())))
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;

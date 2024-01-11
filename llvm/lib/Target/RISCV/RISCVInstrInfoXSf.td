@@ -349,24 +349,30 @@ multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
       : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
 }
 
-multiclass VPseudoSiFiveVQMACC<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
   foreach m = MxListVF8 in
     let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
 }
 
+multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
+  foreach m = [V_MF2, V_M1, V_M2, V_M4] in
+    let VLMul = m.value in
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+}
+
 multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
-  foreach m = MxListFW in
+  foreach m = MxListVF2 in
     let VLMul = m.value in
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
-  foreach m = MxListVF4 in
+  foreach i = 0-4 in
     let hasSideEffects = 0 in
-      defm "Pseudo" # NAME : VPseudoBinaryRoundingMode<!if(!eq(m.vrclass, VRM8),
-                                                           VRM2, VR),
-                                                       m.vrclass, FPR32, m,
+      defm "Pseudo" # NAME : VPseudoBinaryRoundingMode<MxListW[i].vrclass,
+                                                       MxListVF4[i].vrclass,
+                                                       FPR32, MxListW[i],
                                                        Constraint, /*sew*/0,
                                                        UsesVXRM=0>;
 }
@@ -400,17 +406,17 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACC;
-  defm VQMACC_2x8x2   : VPseudoSiFiveVQMACC;
-  defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACC;
-  defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACC;
+  defm VQMACCU_2x8x2  : VPseudoSiFiveVQMACCDOD;
+  defm VQMACC_2x8x2   : VPseudoSiFiveVQMACCDOD;
+  defm VQMACCUS_2x8x2 : VPseudoSiFiveVQMACCDOD;
+  defm VQMACCSU_2x8x2 : VPseudoSiFiveVQMACCDOD;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACC;
-  defm VQMACC_4x8x4   : VPseudoSiFiveVQMACC;
-  defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACC;
-  defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACC;
+  defm VQMACCU_4x8x4  : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACC_4x8x4   : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACCQOQ;
+  defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACCQOQ;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {
@@ -566,16 +572,25 @@ multiclass VPatVMACC<string intrinsic, string instruction, string kind,
   }
 }
 
-defset list<VTypeInfoToWide> VQMACCInfoPairs = {
+defset list<VTypeInfoToWide> VQMACCDODInfoPairs = {
   def : VTypeInfoToWide<VI8M1, VI32M1>;
   def : VTypeInfoToWide<VI8M2, VI32M2>;
   def : VTypeInfoToWide<VI8M4, VI32M4>;
   def : VTypeInfoToWide<VI8M8, VI32M8>;
 }
 
-multiclass VPatVQMACC<string intrinsic, string instruction, string kind>
-    : VPatVMACC<intrinsic, instruction, kind, VQMACCInfoPairs, vint8m1_t>;
+defset list<VTypeInfoToWide> VQMACCQOQInfoPairs = {
+  def : VTypeInfoToWide<VI8MF2, VI32M1>;
+  def : VTypeInfoToWide<VI8M1, VI32M2>;
+  def : VTypeInfoToWide<VI8M2, VI32M4>;
+  def : VTypeInfoToWide<VI8M4, VI32M8>;
+}
 
+multiclass VPatVQMACCDOD<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCDODInfoPairs, vint8m1_t>;
+
+multiclass VPatVQMACCQOQ<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, VQMACCQOQInfoPairs, vint8m1_t>;
 
 multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
@@ -594,7 +609,7 @@ multiclass VPatVFNRCLIP<string intrinsic, string instruction> {
     defvar Vti = pair.Vti;
     defvar Wti = pair.Wti;
     defm : VPatBinaryRoundingMode<"int_riscv_sf_" # intrinsic,
-                                  "Pseudo" # instruction # "_" # Wti.LMul.MX,
+                                  "Pseudo" # instruction # "_" # Vti.LMul.MX,
                                   Vti.Vector, Wti.Vector, Wti.Scalar, Vti.Mask,
                                   Vti.Log2SEW, Vti.RegClass,
                                   Wti.RegClass, Wti.ScalarRegClass>;
@@ -637,17 +652,17 @@ let Predicates = [HasVendorXSfvcp] in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod] in {
-  defm : VPatVQMACC<"vqmaccu_2x8x2", "VQMACCU", "2x8x2">;
-  defm : VPatVQMACC<"vqmacc_2x8x2", "VQMACC", "2x8x2">;
-  defm : VPatVQMACC<"vqmaccus_2x8x2", "VQMACCUS", "2x8x2">;
-  defm : VPatVQMACC<"vqmaccsu_2x8x2", "VQMACCSU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccu_2x8x2", "VQMACCU", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmacc_2x8x2", "VQMACC", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccus_2x8x2", "VQMACCUS", "2x8x2">;
+  defm : VPatVQMACCDOD<"vqmaccsu_2x8x2", "VQMACCSU", "2x8x2">;
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq] in {
-  defm : VPatVQMACC<"vqmaccu_4x8x4", "VQMACCU", "4x8x4">;
-  defm : VPatVQMACC<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
-  defm : VPatVQMACC<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
-  defm : VPatVQMACC<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccu_4x8x4", "VQMACCU", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
+  defm : VPatVQMACCQOQ<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq] in {
@@ -658,27 +673,3 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
   defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
 }
-
-let Predicates = [HasVendorXSfcie] in {
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0, DecoderNamespace = "XSfcie" in {
-def SF_CFLUSH_D_L1 : RVInstI<0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1), "cflush.d.l1","$rs1">,
-                             Sched<[]> {
-  let rd = 0;
-  let imm12 = {0b1111,0b1100,0b0000};
-}
-
-def SF_CDISCARD_D_L1 : RVInstI<0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1), "cdiscard.d.l1","$rs1">,
-                               Sched<[]> {
-  let rd = 0;
-  let imm12 = {0b1111,0b1100,0b0010};
-}
-
-def SF_CEASE : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "cease","">,  Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = {0b0011,0b0000,0b0101};
-}
-}
-def : InstAlias<"cflush.d.l1", (SF_CFLUSH_D_L1 X0)>;
-def : InstAlias<"cdiscard.d.l1", (SF_CDISCARD_D_L1 X0)>;
-} // Predicates = [HasVendorXScie]

@@ -46,44 +46,6 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
   return Builder.CreateFCmp(NewPred, LHS, RHS);
 }
 
-/// Transform BITWISE_OP(BSWAP(A),BSWAP(B)) or
-/// BITWISE_OP(BSWAP(A), Constant) to BSWAP(BITWISE_OP(A, B))
-/// \param I Binary operator to transform.
-/// \return Pointer to node that must replace the original binary operator, or
-///         null pointer if no transformation was made.
-static Value *SimplifyBSwap(BinaryOperator &I,
-                            InstCombiner::BuilderTy &Builder) {
-  assert(I.isBitwiseLogicOp() && "Unexpected opcode for bswap simplifying");
-
-  Value *OldLHS = I.getOperand(0);
-  Value *OldRHS = I.getOperand(1);
-
-  Value *NewLHS;
-  if (!match(OldLHS, m_BSwap(m_Value(NewLHS))))
-    return nullptr;
-
-  Value *NewRHS;
-  const APInt *C;
-
-  if (match(OldRHS, m_BSwap(m_Value(NewRHS)))) {
-    // OP( BSWAP(x), BSWAP(y) ) -> BSWAP( OP(x, y) )
-    if (!OldLHS->hasOneUse() && !OldRHS->hasOneUse())
-      return nullptr;
-    // NewRHS initialized by the matcher.
-  } else if (match(OldRHS, m_APInt(C))) {
-    // OP( BSWAP(x), CONSTANT ) -> BSWAP( OP(x, BSWAP(CONSTANT) ) )
-    if (!OldLHS->hasOneUse())
-      return nullptr;
-    NewRHS = ConstantInt::get(I.getType(), C->byteSwap());
-  } else
-    return nullptr;
-
-  Value *BinOp = Builder.CreateBinOp(I.getOpcode(), NewLHS, NewRHS);
-  Function *F = Intrinsic::getDeclaration(I.getModule(), Intrinsic::bswap,
-                                          I.getType());
-  return Builder.CreateCall(F, BinOp);
-}
-
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
 /// (V < Lo || V >= Hi). This method expects that Lo < Hi. IsSigned indicates
 /// whether to treat V, Lo, and Hi as signed or not.
@@ -2159,6 +2121,64 @@ Instruction *InstCombinerImpl::foldBinOpOfDisplacedShifts(BinaryOperator &I) {
   return BinaryOperator::Create(ShiftOp, NewC, ShAmt);
 }
 
+// Fold and/or/xor with two equal intrinsic IDs:
+// bitwise(fshl (A, B, ShAmt), fshl(C, D, ShAmt))
+// -> fshl(bitwise(A, C), bitwise(B, D), ShAmt)
+// bitwise(fshr (A, B, ShAmt), fshr(C, D, ShAmt))
+// -> fshr(bitwise(A, C), bitwise(B, D), ShAmt)
+// bitwise(bswap(A), bswap(B)) -> bswap(bitwise(A, B))
+// bitwise(bswap(A), C) -> bswap(bitwise(A, bswap(C)))
+// bitwise(bitreverse(A), bitreverse(B)) -> bitreverse(bitwise(A, B))
+// bitwise(bitreverse(A), C) -> bitreverse(bitwise(A, bitreverse(C)))
+static Instruction *
+foldBitwiseLogicWithIntrinsics(BinaryOperator &I,
+                               InstCombiner::BuilderTy &Builder) {
+  assert(I.isBitwiseLogicOp() && "Should and/or/xor");
+  if (!I.getOperand(0)->hasOneUse())
+    return nullptr;
+  IntrinsicInst *X = dyn_cast<IntrinsicInst>(I.getOperand(0));
+  if (!X)
+    return nullptr;
+
+  IntrinsicInst *Y = dyn_cast<IntrinsicInst>(I.getOperand(1));
+  if (Y && (!Y->hasOneUse() || X->getIntrinsicID() != Y->getIntrinsicID()))
+    return nullptr;
+
+  Intrinsic::ID IID = X->getIntrinsicID();
+  const APInt *RHSC;
+  // Try to match constant RHS.
+  if (!Y && (!(IID == Intrinsic::bswap || IID == Intrinsic::bitreverse) ||
+             !match(I.getOperand(1), m_APInt(RHSC))))
+    return nullptr;
+
+  switch (IID) {
+  case Intrinsic::fshl:
+  case Intrinsic::fshr: {
+    if (X->getOperand(2) != Y->getOperand(2))
+      return nullptr;
+    Value *NewOp0 =
+        Builder.CreateBinOp(I.getOpcode(), X->getOperand(0), Y->getOperand(0));
+    Value *NewOp1 =
+        Builder.CreateBinOp(I.getOpcode(), X->getOperand(1), Y->getOperand(1));
+    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    return CallInst::Create(F, {NewOp0, NewOp1, X->getOperand(2)});
+  }
+  case Intrinsic::bswap:
+  case Intrinsic::bitreverse: {
+    Value *NewOp0 = Builder.CreateBinOp(
+        I.getOpcode(), X->getOperand(0),
+        Y ? Y->getOperand(0)
+          : ConstantInt::get(I.getType(), IID == Intrinsic::bswap
+                                              ? RHSC->byteSwap()
+                                              : RHSC->reverseBits()));
+    Function *F = Intrinsic::getDeclaration(I.getModule(), IID, I.getType());
+    return CallInst::Create(F, {NewOp0});
+  }
+  default:
+    return nullptr;
+  }
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2192,9 +2212,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   // (A|B)&(A|C) -> A|(B&C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
-    return replaceInstUsesWith(I, V);
-
-  if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *R = foldBinOpShiftWithShift(I))
@@ -2686,6 +2703,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return Folded;
 
   if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
+    return Res;
+
+  if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
   return nullptr;
@@ -3347,9 +3367,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyBSwap(I, Builder))
-    return replaceInstUsesWith(I, V);
-
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
@@ -3513,8 +3530,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateOr(Op0, C);
 
   // ((B | C) & A) | B -> B | (A & C)
-  if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
+  if (match(Op0, m_c_And(m_c_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))
     return BinaryOperator::CreateOr(Op1, Builder.CreateAnd(A, C));
+
+  // B | ((B | C) & A) -> B | (A & C)
+  if (match(Op1, m_c_And(m_c_Or(m_Specific(Op0), m_Value(C)), m_Value(A))))
+    return BinaryOperator::CreateOr(Op0, Builder.CreateAnd(A, C));
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
     return DeMorgan;
@@ -3872,6 +3893,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
+  // (X & C1) | C2 -> X & (C1 | C2) iff (X & C2) == C2
+  if (match(Op0, m_OneUse(m_And(m_Value(X), m_APInt(C1)))) &&
+      match(Op1, m_APInt(C2))) {
+    KnownBits KnownX = computeKnownBits(X, /*Depth*/ 0, &I);
+    if ((KnownX.One & *C2) == *C2)
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *C1 | *C2));
+  }
+
+  if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
+    return Res;
+
   return nullptr;
 }
 
@@ -3956,35 +3988,50 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   const APInt *LC, *RC;
   if (match(LHS1, m_APInt(LC)) && match(RHS1, m_APInt(RC)) &&
       LHS0->getType() == RHS0->getType() &&
-      LHS0->getType()->isIntOrIntVectorTy() &&
-      (LHS->hasOneUse() || RHS->hasOneUse())) {
+      LHS0->getType()->isIntOrIntVectorTy()) {
     // Convert xor of signbit tests to signbit test of xor'd values:
     // (X > -1) ^ (Y > -1) --> (X ^ Y) < 0
     // (X <  0) ^ (Y <  0) --> (X ^ Y) < 0
     // (X > -1) ^ (Y <  0) --> (X ^ Y) > -1
     // (X <  0) ^ (Y > -1) --> (X ^ Y) > -1
     bool TrueIfSignedL, TrueIfSignedR;
-    if (isSignBitCheck(PredL, *LC, TrueIfSignedL) &&
+    if ((LHS->hasOneUse() || RHS->hasOneUse()) &&
+        isSignBitCheck(PredL, *LC, TrueIfSignedL) &&
         isSignBitCheck(PredR, *RC, TrueIfSignedR)) {
       Value *XorLR = Builder.CreateXor(LHS0, RHS0);
       return TrueIfSignedL == TrueIfSignedR ? Builder.CreateIsNeg(XorLR) :
                                               Builder.CreateIsNotNeg(XorLR);
     }
 
-    // (X > C) ^ (X < C + 2) --> X != C + 1
-    // (X < C + 2) ^ (X > C) --> X != C + 1
-    // Considering the correctness of this pattern, we should avoid that C is
-    // non-negative and C + 2 is negative, although it will be matched by other
-    // patterns.
-    const APInt *C1, *C2;
-    if ((PredL == CmpInst::ICMP_SGT && match(LHS1, m_APInt(C1)) &&
-         PredR == CmpInst::ICMP_SLT && match(RHS1, m_APInt(C2))) ||
-        (PredL == CmpInst::ICMP_SLT && match(LHS1, m_APInt(C2)) &&
-         PredR == CmpInst::ICMP_SGT && match(RHS1, m_APInt(C1))))
-      if (LHS0 == RHS0 && *C1 + 2 == *C2 &&
-          (C1->isNegative() || C2->isNonNegative()))
-        return Builder.CreateICmpNE(LHS0,
-                                    ConstantInt::get(LHS0->getType(), *C1 + 1));
+    // Fold (icmp pred1 X, C1) ^ (icmp pred2 X, C2)
+    // into a single comparison using range-based reasoning.
+    if (LHS0 == RHS0) {
+      ConstantRange CR1 = ConstantRange::makeExactICmpRegion(PredL, *LC);
+      ConstantRange CR2 = ConstantRange::makeExactICmpRegion(PredR, *RC);
+      auto CRUnion = CR1.exactUnionWith(CR2);
+      auto CRIntersect = CR1.exactIntersectWith(CR2);
+      if (CRUnion && CRIntersect)
+        if (auto CR = CRUnion->exactIntersectWith(CRIntersect->inverse())) {
+          if (CR->isFullSet())
+            return ConstantInt::getTrue(I.getType());
+          if (CR->isEmptySet())
+            return ConstantInt::getFalse(I.getType());
+
+          CmpInst::Predicate NewPred;
+          APInt NewC, Offset;
+          CR->getEquivalentICmp(NewPred, NewC, Offset);
+
+          if ((Offset.isZero() && (LHS->hasOneUse() || RHS->hasOneUse())) ||
+              (LHS->hasOneUse() && RHS->hasOneUse())) {
+            Value *NewV = LHS0;
+            Type *Ty = LHS0->getType();
+            if (!Offset.isZero())
+              NewV = Builder.CreateAdd(NewV, ConstantInt::get(Ty, Offset));
+            return Builder.CreateICmp(NewPred, NewV,
+                                      ConstantInt::get(Ty, NewC));
+          }
+        }
+    }
   }
 
   // Instead of trying to imitate the folds for and/or, decompose this 'xor'
@@ -4480,9 +4527,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (SimplifyDemandedInstructionBits(I))
     return &I;
 
-  if (Value *V = SimplifyBSwap(I, Builder))
-    return replaceInstUsesWith(I, V);
-
   if (Instruction *R = foldNot(I))
     return R;
 
@@ -4770,6 +4814,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Folded;
 
   if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
+    return Res;
+
+  if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
   return nullptr;

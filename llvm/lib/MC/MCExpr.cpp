@@ -704,8 +704,14 @@ static void AttemptToFoldSymbolOffsetDifference(
       }
 
       int64_t Num;
+      unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
+      } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
+                 AF && Layout && AF->hasEmitNops() &&
+                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
+                     *AF, Count)) {
+        Displacement += Asm->computeFragmentSize(*Layout, *AF);
       } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();

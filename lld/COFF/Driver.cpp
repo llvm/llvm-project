@@ -1951,6 +1951,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   parseMerge(".00cfg=.rdata");
   parseMerge(".bss=.data");
 
+  if (isArm64EC(config->machine))
+    parseMerge(".wowthk=.text");
+
   if (config->mingw) {
     parseMerge(".ctors=.rdata");
     parseMerge(".dtors=.rdata");

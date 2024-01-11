@@ -761,6 +761,12 @@ def FeatureShaderCyclesRegister : SubtargetFeature<"shader-cycles-register",
   "Has SHADER_CYCLES hardware register"
 >;
 
+def FeatureShaderCyclesHiLoRegisters : SubtargetFeature<"shader-cycles-hi-lo-registers",
+  "HasShaderCyclesHiLoRegisters",
+  "true",
+  "Has SHADER_CYCLES_HI/LO hardware registers"
+>;
+
 def FeatureMadMacF32Insts : SubtargetFeature<"mad-mac-f32-insts",
   "HasMadMacF32Insts",
   "true",
@@ -1100,8 +1106,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureTrue16BitInsts
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
+   FeatureTrue16BitInsts
   ]
 >;
 
@@ -1469,7 +1475,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister,
+   FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1969,6 +1975,8 @@ def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
 
 def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
   AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
+
+def HasShaderCyclesHiLoRegisters : Predicate<"Subtarget->hasShaderCyclesHiLoRegisters()">;
 
 def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
   AssemblerPredicate<(all_of FeatureFP8Insts)>;

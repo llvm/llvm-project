@@ -1718,6 +1718,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
+
+  auto Style = getLLVMStyle();
+  Style.TypeNames.push_back("time_t");
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsCtorAndDtorDeclNames) {
@@ -2317,6 +2324,11 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
   EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("Foo foo[] = {[0]{}};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
@@ -2490,6 +2502,15 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+}
+
+TEST_F(TokenAnnotatorTest, StreamOperator) {
+  auto Tokens = annotate("\"foo\\n\" << aux << \"foo\\n\" << \"foo\";");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_FALSE(Tokens[1]->MustBreakBefore);
+  EXPECT_FALSE(Tokens[3]->MustBreakBefore);
+  // Only break between string literals if the former ends with \n.
+  EXPECT_TRUE(Tokens[5]->MustBreakBefore);
 }
 
 } // namespace

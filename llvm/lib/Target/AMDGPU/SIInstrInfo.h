@@ -138,12 +138,21 @@ private:
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
 
+  void splitScalarSMulU64(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                          MachineDominatorTree *MDT) const;
+
+  void splitScalarSMulPseudo(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                             MachineDominatorTree *MDT) const;
+
   void splitScalar64BitXnor(SIInstrWorklist &Worklist, MachineInstr &Inst,
                             MachineDominatorTree *MDT = nullptr) const;
 
   void splitScalar64BitBCNT(SIInstrWorklist &Worklist,
                             MachineInstr &Inst) const;
   void splitScalar64BitBFE(SIInstrWorklist &Worklist, MachineInstr &Inst) const;
+  void splitScalar64BitCountOp(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                               unsigned Opcode,
+                               MachineDominatorTree *MDT = nullptr) const;
   void movePackToVALU(SIInstrWorklist &Worklist, MachineRegisterInfo &MRI,
                       MachineInstr &Inst) const;
 

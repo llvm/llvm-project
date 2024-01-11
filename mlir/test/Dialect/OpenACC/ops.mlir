@@ -11,7 +11,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
   %async = arith.constant 1 : i64
 
   acc.parallel async(%async: i64) {
-    acc.loop gang vector {
+    acc.loop {
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
@@ -25,7 +25,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
         }
       }
       acc.yield
-    } attributes { collapse = 3 }
+    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
     acc.yield
   }
 
@@ -38,7 +38,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:   %{{.*}} = arith.constant 1 : index
 //  CHECK-NEXT:   [[ASYNC:%.*]] = arith.constant 1 : i64
 //  CHECK-NEXT:   acc.parallel async([[ASYNC]] : i64) {
-//  CHECK-NEXT:     acc.loop gang vector {
+//  CHECK-NEXT:     acc.loop {
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -52,7 +52,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {collapse = 3 : i64}
+//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], gang = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -80,7 +80,7 @@ func.func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
         }
       }
       acc.yield
-    } attributes {seq}
+    } attributes {seq = [#acc.device_type<none>]}
     acc.yield
   }
 
@@ -106,7 +106,7 @@ func.func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {seq}
+//  CHECK-NEXT:     } attributes {seq = [#acc.device_type<none>]}
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -137,10 +137,10 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
   acc.data dataOperands(%pa, %pb, %pc, %pd: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
     %private = acc.private varPtr(%c : memref<10xf32>) -> memref<10xf32>
-    acc.parallel num_gangs(%numGangs: i64) num_workers(%numWorkers: i64) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
-      acc.loop gang {
+    acc.parallel num_gangs({%numGangs: i64}) num_workers(%numWorkers: i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %private : memref<10xf32>) {
+      acc.loop {
         scf.for %x = %lb to %c10 step %st {
-          acc.loop worker {
+          acc.loop {
             scf.for %y = %lb to %c10 step %st {
               %axy = memref.load %a[%x, %y] : memref<10x10xf32>
               %bxy = memref.load %b[%x, %y] : memref<10x10xf32>
@@ -148,7 +148,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
               memref.store %tmp, %c[%y] : memref<10xf32>
             }
             acc.yield
-          }
+          } attributes {worker = [#acc.device_type<none>]}
 
           acc.loop {
             // for i = 0 to 10 step 1
@@ -160,10 +160,10 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
               memref.store %z, %d[%x] : memref<10xf32>
             }
             acc.yield
-          } attributes {seq}
+          } attributes {seq = [#acc.device_type<none>]}
         }
         acc.yield
-      }
+      } attributes {gang = [#acc.device_type<none>]}
       acc.yield
     }
     acc.terminator
@@ -180,10 +180,10 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK:        acc.data dataOperands(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT:     %[[P_ARG2:.*]] = acc.private varPtr([[ARG2]] : memref<10xf32>) -> memref<10xf32> 
-// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
-// CHECK-NEXT:       acc.loop gang {
+// CHECK-NEXT:     acc.parallel num_gangs({[[NUMGANG]] : i64}) num_workers([[NUMWORKERS]] : i64 [#acc.device_type<nvidia>]) private(@privatization_memref_10_f32 -> %[[P_ARG2]] : memref<10xf32>) {
+// CHECK-NEXT:       acc.loop {
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
-// CHECK-NEXT:           acc.loop worker {
+// CHECK-NEXT:           acc.loop {
 // CHECK-NEXT:             scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 // CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
@@ -191,7 +191,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
-// CHECK-NEXT:           }
+// CHECK-NEXT:           } attributes {worker = [#acc.device_type<none>]}
 // CHECK-NEXT:           acc.loop {
 // CHECK-NEXT:             scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
@@ -200,10 +200,10 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
-// CHECK-NEXT:           } attributes {seq}
+// CHECK-NEXT:           } attributes {seq = [#acc.device_type<none>]}
 // CHECK-NEXT:         }
 // CHECK-NEXT:         acc.yield
-// CHECK-NEXT:       }
+// CHECK-NEXT:       } attributes {gang = [#acc.device_type<none>]}
 // CHECK-NEXT:       acc.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:     acc.terminator
@@ -218,15 +218,15 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
   %i32Value = arith.constant 128 : i32
   %idxValue = arith.constant 8 : index
 
-  acc.loop gang worker vector {
+  acc.loop {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  } attributes {vector = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
+  acc.loop gang({num=%i64Value: i64}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop gang(num=%i64Value: i64) {
-    "test.openacc_dummy_op"() : () -> ()
-    acc.yield
-  }
-  acc.loop gang(static=%i64Value: i64) {
+  acc.loop gang({static=%i64Value: i64}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -254,31 +254,31 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop gang(num=%i64Value: i64) worker vector {
+  acc.loop gang({num=%i64Value: i64}) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  } attributes {vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
+  acc.loop gang({num=%i64Value: i64, static=%i64Value: i64}) worker(%i64Value: i64) vector(%i64Value: i64) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop gang(num=%i64Value: i64, static=%i64Value: i64) worker(%i64Value: i64) vector(%i64Value: i64) {
+  acc.loop gang({num=%i32Value: i32, static=%idxValue: index}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop gang(num=%i32Value: i32, static=%idxValue: index) {
+  acc.loop tile({%i64Value : i64, %i64Value : i64}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i64Value, %i64Value : i64, i64) {
+  acc.loop tile({%i32Value : i32, %i32Value : i32}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i32Value, %i32Value : i32, i32) {
+  acc.loop gang({static=%i64Value: i64, num=%i64Value: i64}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop gang(static=%i64Value: i64, num=%i64Value: i64) {
-    "test.openacc_dummy_op"() : () -> ()
-    acc.yield
-  }
-  acc.loop gang(dim=%i64Value : i64, static=%i64Value: i64) {
+  acc.loop gang({dim=%i64Value : i64, static=%i64Value: i64}) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -293,15 +293,15 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
 // CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK-NEXT: [[I32VALUE:%.*]] = arith.constant 128 : i32
 // CHECK-NEXT: [[IDXVALUE:%.*]] = arith.constant 8 : index
-// CHECK:      acc.loop gang worker vector {
+// CHECK:      acc.loop {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: } attributes {gang = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
+// CHECK:      acc.loop gang({num=[[I64VALUE]] : i64}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) {
-// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
-// CHECK-NEXT:   acc.yield
-// CHECK-NEXT: }
-// CHECK:      acc.loop gang(static=[[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang({static=[[I64VALUE]] : i64}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
@@ -329,31 +329,31 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) worker vector {
+// CHECK:      acc.loop gang({num=[[I64VALUE]] : i64}) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: } attributes {vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
+// CHECK:      acc.loop gang({num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64}) worker([[I64VALUE]] : i64) vector([[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) worker([[I64VALUE]] : i64) vector([[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang({num=[[I32VALUE]] : i32, static=[[IDXVALUE]] : index}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I32VALUE]] : i32, static=[[IDXVALUE]] : index) {
+// CHECK:      acc.loop tile({[[I64VALUE]] : i64, [[I64VALUE]] : i64}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I64VALUE]], [[I64VALUE]] : i64, i64) {
+// CHECK:      acc.loop tile({[[I32VALUE]] : i32, [[I32VALUE]] : i32}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I32VALUE]], [[I32VALUE]] : i32, i32) {
+// CHECK:      acc.loop gang({static=[[I64VALUE]] : i64, num=[[I64VALUE]] : i64}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
-// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
-// CHECK-NEXT:   acc.yield
-// CHECK-NEXT: }
-// CHECK:      acc.loop gang(dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang({dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64}) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
@@ -439,25 +439,25 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel async(%idxValue: index) {
   }
-  acc.parallel wait(%i64value: i64) {
+  acc.parallel wait({%i64value: i64}) {
   }
-  acc.parallel wait(%i32value: i32) {
+  acc.parallel wait({%i32value: i32}) {
   }
-  acc.parallel wait(%idxValue: index) {
+  acc.parallel wait({%idxValue: index}) {
   }
-  acc.parallel wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.parallel wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
-  acc.parallel num_gangs(%i64value: i64) {
+  acc.parallel num_gangs({%i64value: i64}) {
   }
-  acc.parallel num_gangs(%i32value: i32) {
+  acc.parallel num_gangs({%i32value: i32}) {
   }
-  acc.parallel num_gangs(%idxValue: index) {
+  acc.parallel num_gangs({%idxValue: index}) {
   }
-  acc.parallel num_gangs(%i64value, %i64value, %idxValue : i64, i64, index) {
+  acc.parallel num_gangs({%i64value: i64, %i64value: i64, %idxValue: index}) {
   }
-  acc.parallel num_workers(%i64value: i64) {
+  acc.parallel num_workers(%i64value: i64 [#acc.device_type<nvidia>]) {
   }
-  acc.parallel num_workers(%i32value: i32) {
+  acc.parallel num_workers(%i32value: i32 [#acc.device_type<default>]) {
   }
   acc.parallel num_workers(%idxValue: index) {
   }
@@ -492,25 +492,25 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: }
 // CHECK:      acc.parallel async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[IDXVALUE]] : index) {
+// CHECK:      acc.parallel wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.parallel wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel num_gangs({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel num_gangs({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
+// CHECK:      acc.parallel num_gangs({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]], [[I64VALUE]], [[IDXVALUE]] : i64, i64, index) {
+// CHECK:      acc.parallel num_gangs({[[I64VALUE]] : i64, [[I64VALUE]] : i64, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
+// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64 [#acc.device_type<nvidia>]) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32) {
+// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32 [#acc.device_type<default>]) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_workers([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
@@ -590,13 +590,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial async(%idxValue: index) {
   }
-  acc.serial wait(%i64value: i64) {
+  acc.serial wait({%i64value: i64}) {
   }
-  acc.serial wait(%i32value: i32) {
+  acc.serial wait({%i32value: i32}) {
   }
-  acc.serial wait(%idxValue: index) {
+  acc.serial wait({%idxValue: index}) {
   }
-  acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.serial wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
   %firstprivate = acc.firstprivate varPtr(%b : memref<10xf32>) -> memref<10xf32>
   acc.serial private(@privatization_memref_10_f32 -> %a : memref<10xf32>, @privatization_memref_10_10_f32 -> %c : memref<10x10xf32>) firstprivate(@firstprivatization_memref_10xf32 -> %firstprivate : memref<10xf32>) {
@@ -627,13 +627,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.serial async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I64VALUE]] : i64) {
+// CHECK:      acc.serial wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I32VALUE]] : i32) {
+// CHECK:      acc.serial wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[IDXVALUE]] : index) {
+// CHECK:      acc.serial wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.serial wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
 // CHECK:      %[[FIRSTP:.*]] = acc.firstprivate varPtr([[ARGB]] : memref<10xf32>) -> memref<10xf32>
 // CHECK:      acc.serial firstprivate(@firstprivatization_memref_10xf32 -> %[[FIRSTP]] : memref<10xf32>) private(@privatization_memref_10_f32 -> [[ARGA]] : memref<10xf32>, @privatization_memref_10_10_f32 -> [[ARGC]] : memref<10x10xf32>) {
@@ -665,13 +665,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.kernels async(%idxValue: index) {
   }
-  acc.kernels wait(%i64value: i64) {
+  acc.kernels wait({%i64value: i64}) {
   }
-  acc.kernels wait(%i32value: i32) {
+  acc.kernels wait({%i32value: i32}) {
   }
-  acc.kernels wait(%idxValue: index) {
+  acc.kernels wait({%idxValue: index}) {
   }
-  acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  acc.kernels wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -699,13 +699,13 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: }
 // CHECK:      acc.kernels async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I64VALUE]] : i64) {
+// CHECK:      acc.kernels wait({[[I64VALUE]] : i64}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I32VALUE]] : i32) {
+// CHECK:      acc.kernels wait({[[I32VALUE]] : i32}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
+// CHECK:      acc.kernels wait({[[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
-// CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK:      acc.kernels wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -836,11 +836,11 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   %w1 = arith.constant 1 : i64
-  acc.data wait(%w1 : i64) {
+  acc.data wait({%w1 : i64}) {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   %wd1 = arith.constant 1 : i64
-  acc.data wait_devnum(%wd1 : i64) wait(%w1 : i64) {
+  acc.data wait_devnum(%wd1 : i64) wait({%w1 : i64}) {
   } attributes { defaultAttr = #acc<defaultvalue none>, wait }
 
   return
@@ -951,10 +951,10 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
-// CHECK:      acc.data wait(%{{.*}} : i64) {
+// CHECK:      acc.data wait({%{{.*}} : i64}) {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
-// CHECK:      acc.data wait_devnum(%{{.*}} : i64) wait(%{{.*}} : i64) {
+// CHECK:      acc.data wait_devnum(%{{.*}} : i64) wait({%{{.*}} : i64}) {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
 // -----

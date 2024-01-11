@@ -346,8 +346,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = true;
           Width = 1;
         } else if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
-                   AMDGPU::VGPR_LO16RegClass.contains(Reg) ||
-                   AMDGPU::VGPR_HI16RegClass.contains(Reg)) {
+                   AMDGPU::VGPR_16RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 1;
         } else if (AMDGPU::AGPR_32RegClass.contains(Reg) ||

@@ -93,7 +93,7 @@ createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   StringRef Data((const char *)Image.ImageStart,
                  target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
   std::unique_ptr<MemoryBuffer> MB = MemoryBuffer::getMemBuffer(
-      Data, /* BufferName */ "", /* RequiresNullTerminator */ false);
+      Data, /*BufferName=*/"", /*RequiresNullTerminator=*/false);
   return createModuleFromMemoryBuffer(MB, Context);
 }
 
@@ -186,7 +186,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /* DisableVerify */ false, MMIWP);
+                          /*DisableVerify=*/false, MMIWP);
 
   PM.run(M);
 }
@@ -196,8 +196,8 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
                    unsigned OptLevel) {
 
   auto RemarksFileOrErr = setupLLVMOptimizationRemarks(
-      M.getContext(), /* RemarksFilename */ "", /* RemarksPasses */ "",
-      /* RemarksFormat */ "", /* RemarksWithHotness */ false);
+      M.getContext(), /*RemarksFilename=*/"", /*RemarksPasses=*/"",
+      /*RemarksFormat=*/"", /*RemarksWithHotness=*/false);
   if (Error E = RemarksFileOrErr.takeError())
     return std::move(E);
   if (*RemarksFileOrErr)
@@ -330,24 +330,18 @@ JITEngine::process(const __tgt_device_image &Image,
   return &Image;
 }
 
-bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
+Expected<bool> JITEngine::checkBitcodeImage(StringRef Buffer) const {
   TimeTraceScope TimeScope("Check bitcode image");
 
-  if (!isImageBitcode(Image))
-    return false;
-
-  StringRef Data(reinterpret_cast<const char *>(Image.ImageStart),
-                 target::getPtrDiff(Image.ImageEnd, Image.ImageStart));
-  auto MB = MemoryBuffer::getMemBuffer(Data, /*BufferName=*/"",
-                                       /*RequiresNullTerminator=*/false);
-  if (!MB)
-    return false;
+  assert(identify_magic(Buffer) == file_magic::bitcode &&
+         "Input is not bitcode");
 
   LLVMContext Context;
-  SMDiagnostic Diagnostic;
-  std::unique_ptr<Module> M =
-      llvm::getLazyIRModule(std::move(MB), Diagnostic, Context,
-                            /*ShouldLazyLoadMetadata=*/true);
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Buffer, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
 
-  return M && Triple(M->getTargetTriple()).getArch() == TT.getArch();
+  return Triple(M.getTargetTriple()).getArch() == TT.getArch();
 }

@@ -480,6 +480,12 @@ def IsolatedRegionsOp : TEST_Op<"isolated_regions", [IsolatedFromAbove]> {
   let assemblyFormat = "attr-dict-with-keyword $regions";
 }
 
+def AllocaScopeRegionOp : TEST_Op<"alloca_scope_region",
+                                  [AutomaticAllocationScope]> {
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "attr-dict-with-keyword $region";
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -2204,6 +2210,18 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
 
   let assemblyFormat = [{
     `iter` $nextIterArg `exit` $exitArg attr-dict
+  }];
+}
+
+def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
+    NoTerminator,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorRegions"]>
+  ]> {
+  let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let assemblyFormat = [{
+    $arg attr-dict custom<SwitchCases>($cases, $caseRegions)
   }];
 }
 
