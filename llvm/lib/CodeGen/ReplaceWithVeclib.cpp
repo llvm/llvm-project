@@ -184,9 +184,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
              "ParamPos has invalid range.");
       Type *OrigTy = CI->getArgOperand(VFParam.ParamPos)->getType();
       if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                          << ": Will not replace. Wrong type at index "
-                          << VFParam.ParamPos << ": " << *OrigTy << "\n");
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Will not replace: " << ScalarName
+                          << ". Wrong type at index " << VFParam.ParamPos
+                          << ": " << *OrigTy << "\n");
         return false;
       }
     }

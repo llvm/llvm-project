@@ -31,6 +31,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 /// allows checking that the pass won't crash when the function to replace (from
 /// the input IR) does not match the replacement function (derived from the
 /// VecDesc mapping).
+///
+/// NOTE: Assertions must be enabled for these tests to run.
 class ReplaceWithVecLibTest : public ::testing::Test {
 
   std::string getLastLine(std::string Out) {
@@ -86,7 +88,7 @@ define <vscale x 4 x float> @foo(<vscale x 4 x float> %in){
 declare <vscale x 4 x float> @llvm.powi.f32.i32(<vscale x 4 x float>, i32) #0
 )IR";
 
-// With assertions on, perform stricter checks by verifying the debug output.
+// Need assertions enabled for running the tests.
 #ifndef NDEBUG
 
 // The VFABI prefix in TLI describes signature which is matching the powi
@@ -105,29 +107,8 @@ TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
   VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
                          ElementCount::getScalable(4), /*Masked*/ true,
                          "_ZGVsMxvv"};
-  EXPECT_EQ(
-      run(IncorrectVD, IR),
-      "replace-with-veclib: Will not replace. Wrong type at index 1: i32");
-}
-
-// Without assertions, check that tests don't crash.
-#else
-
-// The VFABI prefix in TLI describes signature which is matching the powi
-// intrinsic declaration.
-TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
-  VecDesc CorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvu_powi",
-                       ElementCount::getScalable(4), /*Masked*/ true,
-                       "_ZGVsMxvu"};
-  EXPECT_EQ(run(CorrectVD, IR), "");
-}
-
-// The VFABI prefix in TLI describes signature which is not matching the powi
-// intrinsic declaration.
-TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
-  VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
-                         ElementCount::getScalable(4), /*Masked*/ true,
-                         "_ZGVsMxvv"};
-  EXPECT_EQ(run(IncorrectVD, IR), "");
+  EXPECT_EQ(run(IncorrectVD, IR),
+            "replace-with-veclib: Will not replace: llvm.powi.f32.i32. Wrong "
+            "type at index 1: i32");
 }
 #endif
