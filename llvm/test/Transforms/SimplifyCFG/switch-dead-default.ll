@@ -2,7 +2,6 @@
 ; RUN: opt %s -S -passes='simplifycfg<switch-to-lookup>' -simplifycfg-require-and-preserve-domtree=1 -switch-range-to-icmp | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-
 declare void @foo(i32)
 
 define void @test(i1 %a) {
@@ -315,13 +314,21 @@ default:
 declare void @llvm.assume(i1)
 
 define zeroext i1 @test8(i128 %a) {
+; We should not transform conditions wider than 64 bit.
 ; CHECK-LABEL: define zeroext i1 @test8(
 ; CHECK-SAME: i128 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i128 [[A]], 3894222643901120721397872246915072
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i128 [[TMP0]], 1
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i1 false, i1 true
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    switch i128 [[TMP0]], label [[LOR_RHS:%.*]] [
+; CHECK-NEXT:      i128 1298074214633706907132624082305024, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i128 2596148429267413814265248164610048, label [[LOR_END]]
+; CHECK-NEXT:      i128 3894222643901120721397872246915072, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[LOR_RHS]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
 entry:
   %0 = and i128 %a, 3894222643901120721397872246915072
