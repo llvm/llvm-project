@@ -184,24 +184,28 @@ add_gen_header(
     .llvm-libc-macros.generic_error_number_macros
 )
 
-add_gen_header(
-  signal
-  DEF_FILE signal.h.def
-  PARAMS
-    platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
-  GEN_HDR signal.h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/signal.h.in
-  DEPENDS
-    .llvm-libc-macros.signal_macros
-    .llvm-libc-types.sig_atomic_t
-    .llvm-libc-types.sigset_t
-    .llvm-libc-types.struct_sigaction
-    .llvm-libc-types.union_sigval
-    .llvm-libc-types.siginfo_t
-    .llvm-libc-types.stack_t
-    .llvm-libc-types.pid_t
-)
+if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
+  add_gen_header(
+    signal
+    DEF_FILE signal.h.def
+    PARAMS
+      platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
+    GEN_HDR signal.h
+    DATA_FILES
+      ../config/${LIBC_TARGET_OS}/signal.h.in
+    DEPENDS
+      .llvm-libc-macros.signal_macros
+      .llvm-libc-types.sig_atomic_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.struct_sigaction
+      .llvm-libc-types.union_sigval
+      .llvm-libc-types.siginfo_t
+      .llvm-libc-types.stack_t
+      .llvm-libc-types.pid_t
+  )
+else()
+  message(STATUS "Skipping header signal.h as the target config is missing")
+endif()
 
 add_gen_header(
   stdio
