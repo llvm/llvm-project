@@ -6772,7 +6772,9 @@ def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
 def warn_fast_floatingpoint_eq : Warning<
-  "explicit comparison with %0 when the program is assumed to not use or produce %0">,
+  "use of %select{infinity|NaN}0 will always be 'false' because "
+  "%select{infinity|NaN}0 will not be produced according to the currently "
+  "enabled floating-point options">,
   InGroup<TautologicalConstantCompare>;
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
