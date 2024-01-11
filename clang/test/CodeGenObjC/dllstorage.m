@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=ios -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fdeclspec -fobjc-runtime=gnustep-2.0 -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-NF %s
 // RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=macosx -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-IR %s
 // RUN: %clang_cc1 -triple i686-windows-itanium -fms-extensions -fobjc-runtime=objfw -fdeclspec -fobjc-exceptions -S -emit-llvm -o - %s | FileCheck -allow-deprecated-dag-overlap -check-prefix CHECK-FW %s
 
@@ -12,6 +13,8 @@ __declspec(dllimport)
 // CHECK-IR-DAG: @"OBJC_METACLASS_$_I" = external dllimport global %struct._class_t
 // CHECK-IR-DAG: @"OBJC_CLASS_$_I" = external dllimport global %struct._class_t
 
+// CHECK-NF-DAG: @"$_OBJC_CLASS_I" = external dllimport global ptr
+
 __declspec(dllexport)
 @interface J : I
 @end
@@ -22,12 +25,17 @@ __declspec(dllexport)
 // CHECK-FW-DAG: @_OBJC_METACLASS_J = dso_local dllexport global
 // CHECK-FW-DAG: @_OBJC_CLASS_J = dso_local dllexport global
 
+// CHECK-NF-DAG: @"$_OBJC_METACLASS_J" = internal global
+// CHECK-NF-DAG: @"$_OBJC_CLASS_J" = dllexport global
+
 @implementation J {
   id _ivar;
 }
 @end
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_J._ivar" = global i32
+
+// CHECK-NF-DAG: @"__objc_ivar_offset_J._ivar.\01" = hidden global i32
 
 @interface K : J
 @end
@@ -38,12 +46,17 @@ __declspec(dllexport)
 // CHECK-FW-DAG: @_OBJC_METACLASS_K = dso_local global
 // CHECK-FW-DAG: @_OBJC_CLASS_K = dso_local global
 
+// CHECK-NF-DAG: @"$_OBJC_METACLASS_K" = internal global
+// CHECK-NF-DAG: @"$_OBJC_CLASS_K" = global
+
 @implementation K {
   id _ivar;
 }
 @end
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_K._ivar" = global i32
+
+// CHECK-NF-DAG: @"__objc_ivar_offset_K._ivar.\01" = hidden global i32
 
 __declspec(dllexport)
 @interface L : K
@@ -54,6 +67,9 @@ __declspec(dllexport)
 
 // CHECK-FW-DAG: @_OBJC_METACLASS_L = dso_local dllexport global
 // CHECK-FW-DAG: @_OBJC_CLASS_L = dso_local dllexport global
+
+// CHECK-NF-DAG: @"$_OBJC_METACLASS_L" = internal global
+// CHECK-NF-DAG: @"$_OBJC_CLASS_L" = dllexport global
 
 @implementation L {
   id _none;
@@ -78,6 +94,12 @@ __declspec(dllexport)
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._package" = global i32
 // CHECK-IR-DAG: @"OBJC_IVAR_$_L._private" = global i32
 
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._none.\01" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._public.\01" = dso_local dllexport global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._protected.\01" = dso_local dllexport global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._package.\01" = hidden global i32
+// CHECK-NF-DAG: @"__objc_ivar_offset_L._private.\01" = hidden global i32
+
 __declspec(dllimport)
 @interface M : I {
   @public
@@ -89,6 +111,9 @@ __declspec(dllimport)
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
 
+// CHECK-NF-DAG: @"$_OBJC_REF_CLASS_M" = external dllimport global ptr
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.\01" = external global i32
+
 __declspec(dllexport)
 __attribute__((__objc_exception__))
 @interface N : I
@@ -96,6 +121,8 @@ __attribute__((__objc_exception__))
 
 // CHECK-FW-DAG: @_OBJC_METACLASS_N = dso_local dllexport global
 // CHECK-FW-DAG: @_OBJC_CLASS_N = dso_local dllexport global
+
+// CHECK-NF-DAG: @"$_OBJC_CLASS_N" = dllexport global
 
 @implementation N : I
 @end
@@ -123,6 +150,8 @@ id f(Q *q) {
 }
 
 // CHECK-IR-DAG: @"OBJC_IVAR_$_M._ivar" = external dllimport global i32
+
+// CHECK-NF-DAG: @"__objc_ivar_offset_M._ivar.\01" = external global i32
 
 int g(void) {
   @autoreleasepool {

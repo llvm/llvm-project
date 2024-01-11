@@ -154,8 +154,9 @@ tools.extend(
         ToolSubst("toyc-ch5", unresolved="ignore"),
         ToolSubst("toyc-ch6", unresolved="ignore"),
         ToolSubst("toyc-ch7", unresolved="ignore"),
-        ToolSubst('transform-opt-ch2', unresolved='ignore'),
-        ToolSubst('transform-opt-ch3', unresolved='ignore'),
+        ToolSubst("transform-opt-ch2", unresolved="ignore"),
+        ToolSubst("transform-opt-ch3", unresolved="ignore"),
+        ToolSubst("transform-opt-ch4", unresolved="ignore"),
         ToolSubst("%mlir_lib_dir", config.mlir_lib_dir, unresolved="ignore"),
         ToolSubst("%mlir_src_dir", config.mlir_src_root, unresolved="ignore"),
     ]

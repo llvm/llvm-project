@@ -263,9 +263,16 @@ private:
       {{{"fputs"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
+      {{{"ungetc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
+      {{{"fseeko"}, 3},
+       {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
+       {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+      {{{"ftello"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
       {{{"fflush"}, 1},
        {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
@@ -331,6 +338,9 @@ private:
 
   void evalFputx(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C, bool IsSingleChar) const;
+
+  void evalUngetc(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
 
   void preFseek(const FnDescription *Desc, const CallEvent &Call,
                 CheckerContext &C) const;
@@ -916,6 +926,45 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(StateFailed);
 }
 
+void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  // Generate a transition for the success state.
+  std::optional<NonLoc> PutVal = Call.getArgSVal(0).getAs<NonLoc>();
+  if (!PutVal)
+    return;
+  ProgramStateRef StateNotFailed =
+      State->BindExpr(CE, C.getLocationContext(), *PutVal);
+  StateNotFailed =
+      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // Add transition for the failed state.
+  // Failure of 'ungetc' does not result in feof or ferror state.
+  // If the PutVal has value of EofVal the function should "fail", but this is
+  // the same transition as the success state.
+  // In this case only one state transition is added by the analyzer (the two
+  // new states may be similar).
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+  StateFailed =
+      StateFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateFailed);
+}
+
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -1068,10 +1117,10 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal,
-                            SVB.makeZeroVal(C.getASTContext().LongTy),
-                            SVB.getConditionType())
-                  .getAs<DefinedOrUnknownSVal>();
+  auto Cond =
+      SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(Call.getResultType()),
+                    SVB.getConditionType())
+          .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
   StateNotFailed = StateNotFailed->assume(*Cond, true);
@@ -1079,7 +1128,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
+      CE, C.getLocationContext(), SVB.makeIntVal(-1, Call.getResultType()));
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.

@@ -14,7 +14,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +26,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -297,29 +295,20 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
-// The PGO name has the format [<filepath>;]<linkage-name> where <filepath>; is
-// provided if linkage is local and <linkage-name> is the mangled function
-// name. The filepath is used to discriminate possibly identical function names.
-// ; is used because it is unlikely to be found in either <filepath> or
-// <linkage-name>.
+// The PGO name has the format [<filepath>;]<mangled-name> where <filepath>; is
+// provided if linkage is local and is used to discriminate possibly identical
+// mangled names. ";" is used because it is unlikely to be found in either
+// <filepath> or <mangled-name>.
 //
 // Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. <filepath> is used to discriminate between
-// possibly identical function names when linkage is local and <function-name>
-// simply comes from F.getName(). This caused trouble for Objective-C functions
-// which commonly have :'s in their names. Also, since <function-name> is not
-// mangled, they cannot be passed to Mach-O linkers via -order_file. We still
-// need to compute this name to lookup functions from profiles built by older
-// compilers.
+// [<filepath>:]<mangled-name>. This caused trouble for Objective-C functions
+// which commonly have :'s in their names. We still need to compute this name to
+// lookup functions from profiles built by older compilers.
 static std::string
 getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
-  SmallString<64> Name;
-  // FIXME: Mangler's handling is kept outside of `getGlobalIdentifier` for now.
-  // For more details please check issue #74565.
-  Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
-  return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
+  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
