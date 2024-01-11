@@ -3364,7 +3364,7 @@ Multiple occurrences accumulate prefixes.  For example,
 
 Specifying Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^
-Indicating that a line expects an error or a warning is simple. Put a comment
+Indicating that a line expects an error or a warning is easy. Put a comment
 on the line that has the diagnostic, use
 ``expected-{error,warning,remark,note}`` to tag if it's an expected error,
 warning, remark, or note (respectively), and place the expected text between
@@ -3372,6 +3372,9 @@ warning, remark, or note (respectively), and place the expected text between
 enough to ensure that the correct diagnostic was emitted. (Note: full text
 should be included in test cases unless there is a compelling reason to use
 truncated text instead.)
+
+For a full description of the matching behavior, including more complex
+matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
 
 Here's an example of the most commonly used way to specify expected
 diagnostics:
@@ -3458,8 +3461,33 @@ A range can also be specified by ``<n>-<m>``. For example:
 
 In this example, the diagnostic may appear only once, if at all.
 
+.. _DiagnosticMatching:
+
+Matching Modes
+~~~~~~~~~~~~~~
+
+The default matching mode is simple string, which looks for the expected text
+that appears between the first `{{` and `}}` pair of the comment. The string is
+interpreted just as-is, with one exception: the sequence `\n` is converted to a
+single newline character. This mode matches the emitted diagnostic when the
+text appears as a substring at any position of the emitted message.
+
+To enable matching against desired strings that contain `}}` or `{{`, the
+string-mode parser accepts opening delimiters of more than two curly braces,
+like `{{{`. It then looks for a closing delimiter of equal "width" (i.e `}}}`).
+For example:
+
+.. code-block:: c++
+
+  // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
+
+The intent is to allow the delimeter to be wider than the longest `{` or `}`
+brace sequence in the content, so that if your expected text contains `{{{`
+(three braces) it may be delimited with `{{{{` (four braces), and so on.
+
 Regex matching mode may be selected by appending ``-re`` to the diagnostic type
-and including regexes wrapped in double curly braces in the directive, such as:
+and including regexes wrapped in double curly braces (`{{` and `}}`) in the
+directive, such as:
 
 .. code-block:: text
 
@@ -3471,6 +3499,8 @@ Examples matching error: "variable has incomplete type 'struct s'"
 
   // expected-error {{variable has incomplete type 'struct s'}}
   // expected-error {{variable has incomplete type}}
+  // expected-error {{{variable has incomplete type}}}
+  // expected-error {{{{variable has incomplete type}}}}
 
   // expected-error-re {{variable has type 'struct {{.}}'}}
   // expected-error-re {{variable has type 'struct {{.*}}'}}
