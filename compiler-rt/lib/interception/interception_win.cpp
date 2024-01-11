@@ -946,6 +946,11 @@ bool OverrideFunction(
 static void **InterestingDLLsAvailable() {
   static const char *InterestingDLLs[] = {
       "kernel32.dll",
+      "msvcr100d.dll",                // VS2010
+      "msvcr110d.dll",                // VS2012
+      "msvcr120d.dll",                // VS2013
+      "vcruntime140d.dll",            // VS2015
+      "ucrtbased.dll",  // Universal CRT
       "msvcr100.dll",      // VS2010
       "msvcr110.dll",      // VS2012
       "msvcr120.dll",      // VS2013
