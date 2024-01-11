@@ -221,7 +221,7 @@ mlir::amdgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
 }
 
 namespace {
-class OptimizeSharedMemoryPass
+struct OptimizeSharedMemoryPass
     : public amdgpu::impl::OptimizeSharedMemoryBase<OptimizeSharedMemoryPass> {
 public:
   OptimizeSharedMemoryPass() = default;
