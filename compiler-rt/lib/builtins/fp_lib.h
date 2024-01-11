@@ -379,7 +379,7 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 #elif defined(QUAD_PRECISION)
 // The generic implementation only works for ieee754 floating point. For other
 // floating point types, continue to rely on the libm implementation for now.
-#if defined(CRT_HAS_TF_MODE) && defined(CRT_HAS_IEEE_TF)
+#if defined(CRT_HAS_IEEE_TF) && defined(CRT_HAS_128BIT)
 static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return __compiler_rt_logbX(x);
 }
