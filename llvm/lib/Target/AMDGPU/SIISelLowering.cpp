@@ -891,6 +891,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         MVT::v2bf16, Legal);
   }
 
+  if (Subtarget->hasBF16TransInsts()) {
+    setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -4056,15 +4060,16 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op.getOpcode() == ISD::STRICT_FP_EXTEND;
   SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
 
-  if (SrcVT.getScalarType() != MVT::bf16)
+  if (SrcVT.getScalarType() != MVT::bf16 ||
+      (Subtarget->hasBF16ConversionInsts() && DstVT == MVT::f32))
     return Op;
 
   SDLoc SL(Op);
   SDValue BitCast =
       DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
 
-  EVT DstVT = Op.getValueType();
   if (IsStrict)
     llvm_unreachable("Need STRICT_BF16_TO_FP");
 

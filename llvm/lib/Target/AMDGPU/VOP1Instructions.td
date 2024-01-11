@@ -171,10 +171,11 @@ multiclass VOP1Inst_t16<string opName,
 }
 
 multiclass VOP1Inst_BF16<string opName, VOPProfile P,
-                        SDPatternOperator node = null_frag> :
-  VOP1Inst_t16<opName, P> {
-  defvar DstVT = !if(!eq(P.DstVT, f16), i16, P.DstVT);
-  def : GCNPat<(DstVT (node i16:$src)),
+                        SDPatternOperator node_i16,
+                        SDPatternOperator node_bf16 = null_frag> :
+  VOP1Inst_t16<opName, P, node_bf16> {
+  defvar DstVT = !if(!eq(P.DstVT, bf16), i16, P.DstVT);
+  def : GCNPat<(DstVT (node_i16 i16:$src)),
                (!cast<VOP1_Pseudo>(NAME#"_fake16_e32") $src)> {
           // Dummy fields to be able to instantiate GCNPat here.
           field bit TRANS;
@@ -335,7 +336,7 @@ let OtherPredicates = [HasTrue16BitInsts] in
 defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_Fake16<VOP_F32_F16>, any_fpextend>;
 
 let SubtargetPredicate = HasBF16ConversionInsts in
-defm V_CVT_F32_BF16 : VOP1Inst_BF16 <"v_cvt_f32_bf16", VOP_F32_F16, int_amdgcn_cvt_f32_bf16>;
+defm V_CVT_F32_BF16 : VOP1Inst_BF16 <"v_cvt_f32_bf16", VOP_F32_BF16, int_amdgcn_cvt_f32_bf16, any_fpextend>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -534,17 +535,17 @@ defm V_COS_F16 : VOP1Inst_t16 <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
 
 let SubtargetPredicate = HasTanhInsts in {
 defm V_TANH_F16  : VOP1Inst_t16 <"v_tanh_f16",  VOP_F16_F16, int_amdgcn_tanh>;
-defm V_TANH_BF16 : VOP1Inst_BF16 <"v_tanh_bf16", VOP_F16_F16, int_amdgcn_tanh_bf16>;
+defm V_TANH_BF16 : VOP1Inst_BF16 <"v_tanh_bf16", VOP_BF16_BF16, int_amdgcn_tanh_bf16>;
 }
 
 let SubtargetPredicate = HasBF16TransInsts in {
-defm V_RCP_BF16  : VOP1Inst_BF16 <"v_rcp_bf16",  VOP_F16_F16, int_amdgcn_rcp_bf16>;
-defm V_SQRT_BF16 : VOP1Inst_BF16 <"v_sqrt_bf16", VOP_F16_F16, int_amdgcn_sqrt_bf16>;
-defm V_RSQ_BF16  : VOP1Inst_BF16 <"v_rsq_bf16",  VOP_F16_F16, int_amdgcn_rsq_bf16>;
-defm V_LOG_BF16  : VOP1Inst_BF16 <"v_log_bf16",  VOP_F16_F16, int_amdgcn_log_bf16>;
-defm V_EXP_BF16  : VOP1Inst_BF16 <"v_exp_bf16",  VOP_F16_F16, int_amdgcn_exp_bf16>;
-defm V_SIN_BF16  : VOP1Inst_BF16 <"v_sin_bf16",  VOP_F16_F16, int_amdgcn_sin_bf16>;
-defm V_COS_BF16  : VOP1Inst_BF16 <"v_cos_bf16",  VOP_F16_F16, int_amdgcn_cos_bf16>;
+defm V_RCP_BF16  : VOP1Inst_BF16 <"v_rcp_bf16",  VOP_BF16_BF16, int_amdgcn_rcp_bf16>;
+defm V_SQRT_BF16 : VOP1Inst_BF16 <"v_sqrt_bf16", VOP_BF16_BF16, int_amdgcn_sqrt_bf16, any_amdgcn_sqrt>;
+defm V_RSQ_BF16  : VOP1Inst_BF16 <"v_rsq_bf16",  VOP_BF16_BF16, int_amdgcn_rsq_bf16>;
+defm V_LOG_BF16  : VOP1Inst_BF16 <"v_log_bf16",  VOP_BF16_BF16, int_amdgcn_log_bf16, AMDGPUlogf16>;
+defm V_EXP_BF16  : VOP1Inst_BF16 <"v_exp_bf16",  VOP_BF16_BF16, int_amdgcn_exp_bf16, AMDGPUexpf16>;
+defm V_SIN_BF16  : VOP1Inst_BF16 <"v_sin_bf16",  VOP_BF16_BF16, int_amdgcn_sin_bf16>;
+defm V_COS_BF16  : VOP1Inst_BF16 <"v_cos_bf16",  VOP_BF16_BF16, int_amdgcn_cos_bf16>;
 }
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
