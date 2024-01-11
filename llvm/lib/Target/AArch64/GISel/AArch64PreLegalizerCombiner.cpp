@@ -435,11 +435,9 @@ bool matchExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   if ((DstTy.getScalarSizeInBits() == 16 &&
        ExtSrcTy.getNumElements() % 8 == 0 && ExtSrcTy.getNumElements() < 256) ||
       (DstTy.getScalarSizeInBits() == 32 &&
-       ExtSrcTy.getNumElements() % 4 == 0 &&
-       ExtSrcTy.getNumElements() < 65536) ||
+       ExtSrcTy.getNumElements() % 4 == 0) ||
       (DstTy.getScalarSizeInBits() == 64 &&
-       ExtSrcTy.getNumElements() % 4 == 0 &&
-       ExtSrcTy.getNumElements() < 4294967296)) {
+       ExtSrcTy.getNumElements() % 4 == 0)) {
     std::get<0>(MatchInfo) = ExtSrcReg;
     return true;
   }
@@ -493,8 +491,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
   LLT MidScalarLLT = LLT::scalar(MidScalarSize);
-  Register zeroReg =
-      B.buildConstant(LLT::scalar(64), 0)->getOperand(0).getReg();
+  Register zeroReg = B.buildConstant(LLT::scalar(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
@@ -505,17 +502,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
           B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                               : TargetOpcode::G_ZEXT,
                        {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
-              ->getOperand(0)
-              .getReg();
+              .getReg(0);
     }
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
     LLT addlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
                                       : LLT::fixed_vector(2, 64);
-    Register addlvReg = B.buildInstr(Opc, {addlvTy}, {WorkingRegisters[I]})
-                            ->getOperand(0)
-                            .getReg();
+    Register addlvReg =
+        B.buildInstr(Opc, {addlvTy}, {WorkingRegisters[I]}).getReg(0);
 
     // The output from {U/S}ADDLV gets placed in the lowest lane of a v4i32 or
     // v2i64 register.
@@ -525,15 +520,13 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     if (MidScalarSize == 32 || MidScalarSize == 64) {
       WorkingRegisters[I] = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
                                          {MidScalarLLT}, {addlvReg, zeroReg})
-                                ->getOperand(0)
-                                .getReg();
+                                .getReg(0);
     } else {
       Register extractReg = B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
                                          {LLT::scalar(32)}, {addlvReg, zeroReg})
-                                ->getOperand(0)
-                                .getReg();
+                                .getReg(0);
       WorkingRegisters[I] =
-          B.buildTrunc({MidScalarLLT}, {extractReg})->getOperand(0).getReg();
+          B.buildTrunc({MidScalarLLT}, {extractReg}).getReg(0);
     }
   }
 
