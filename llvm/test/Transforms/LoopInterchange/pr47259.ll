@@ -13,7 +13,11 @@
 ;;     }
 ;; }
 
-; CHECK: Loops interchanged.
+
+; CHECK:  Confused dependency between:
+; CHECK:    store i32 %xor, ptr %arrayidx6, align 4
+; CHECK:    %1 = load i32, ptr %0, align 4
+; CHECK-NOT: Loops interchanged.
 
 @a = global i32 0, align 4
 @f = global ptr @a, align 8

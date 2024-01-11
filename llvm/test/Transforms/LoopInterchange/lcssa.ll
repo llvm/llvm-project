@@ -180,7 +180,7 @@ for.end16:                                        ; preds = %for.exit
 ; REMARK: Interchanged
 ; REMARK-NEXT: lcssa_05
 
-define void @lcssa_05(ptr %ptr) {
+define void @lcssa_05(ptr noalias %ptr) {
 entry:
   br label %outer.header
 
@@ -225,7 +225,7 @@ for.end16:                                        ; preds = %for.exit
 ; REMARK: UnsupportedExitPHI
 ; REMARK-NEXT: lcssa_06
 
-define void @lcssa_06(ptr %ptr, ptr %ptr1) {
+define void @lcssa_06(ptr %ptr, ptr noalias %ptr1) {
 entry:
   br label %outer.header
 

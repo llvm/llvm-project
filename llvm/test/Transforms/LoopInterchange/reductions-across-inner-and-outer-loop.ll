@@ -156,7 +156,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test4
 
-define i64 @test4(ptr %Arr, ptr %dst) {
+define i64 @test4(ptr %Arr, ptr noalias %dst) {
 entry:
   %gep.dst = getelementptr inbounds i64, ptr %dst, i64 42
   br label %for1.header
@@ -234,7 +234,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        test5
 
-define float @test5(ptr %Arr, ptr %Arr2) {
+define float @test5(ptr %Arr, ptr noalias %Arr2) {
 entry:
   br label %outer.header
 
@@ -274,7 +274,7 @@ for.exit:                                         ; preds = %outer.inc
 ; REMARKS-NEXT: Name:            UnsupportedPHIOuter
 ; REMARKS-NEXT: Function:        test6
 
-define float @test6(ptr %Arr, ptr %Arr2) {
+define float @test6(ptr %Arr, ptr noalias %Arr2) {
 entry:
   br label %outer.header
 

@@ -27,7 +27,7 @@
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr43326-triply-nested
 
-define void @pr43326-triply-nested(ptr %e, ptr %f) {
+define void @pr43326-triply-nested(ptr noalias %e, ptr %f) {
 entry:
   br label %for.outermost.header
 

@@ -123,6 +123,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+
+        if (D->isConfused()) {
+          LLVM_DEBUG(dbgs() << "  Confused dependency between:\n"
+                            << "  " << *Src << "\n"
+                            << "  " << *Dst << "\n");
+          return false;
+        }
         // If the direction vector is negative, normalize it to
         // make it non-negative.
         if (D->normalize(SE))
