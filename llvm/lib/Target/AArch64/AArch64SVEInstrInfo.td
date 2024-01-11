@@ -1397,17 +1397,17 @@ let Predicates = [HasSVEorSME] in {
                         (RegImmInst Z_q:$Zt, PPR3bAny:$Pg, GPR64sp:$base, (i64 0))>;
   }
 
-  // ld1quw/st1quw
+  // ld1quw/st1qw
   defm : sve_ld1q_pat<nxv4i32, nxv1i1, int_aarch64_sve_ld1uwq, LD1W_Q, LD1W_Q_IMM, am_sve_regreg_lsl2>;
   defm : sve_ld1q_pat<nxv4f32, nxv1i1, int_aarch64_sve_ld1uwq, LD1W_Q, LD1W_Q_IMM, am_sve_regreg_lsl2>;
-  defm : sve_st1q_pat<nxv4i32, nxv1i1, int_aarch64_sve_st1uwq, ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
-  defm : sve_st1q_pat<nxv4f32, nxv1i1, int_aarch64_sve_st1uwq, ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
+  defm : sve_st1q_pat<nxv4i32, nxv1i1, int_aarch64_sve_st1wq,  ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
+  defm : sve_st1q_pat<nxv4f32, nxv1i1, int_aarch64_sve_st1wq,  ST1W_Q, ST1W_Q_IMM, am_sve_regreg_lsl2>;
 
-  // ld1qud/st1qud
+  // ld1qud/st1qd
   defm : sve_ld1q_pat<nxv2i64, nxv1i1, int_aarch64_sve_ld1udq, LD1D_Q, LD1D_Q_IMM, am_sve_regreg_lsl3>;
   defm : sve_ld1q_pat<nxv2f64, nxv1i1, int_aarch64_sve_ld1udq, LD1D_Q, LD1D_Q_IMM, am_sve_regreg_lsl3>;
-  defm : sve_st1q_pat<nxv2i64, nxv1i1, int_aarch64_sve_st1udq, ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
-  defm : sve_st1q_pat<nxv2f64, nxv1i1, int_aarch64_sve_st1udq, ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
+  defm : sve_st1q_pat<nxv2i64, nxv1i1, int_aarch64_sve_st1dq,  ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
+  defm : sve_st1q_pat<nxv2f64, nxv1i1, int_aarch64_sve_st1dq,  ST1D_Q, ST1D_Q_IMM, am_sve_regreg_lsl3>;
 
 } // End HasSVEorSME
 
@@ -4006,7 +4006,9 @@ defm WHILEHS_CXX  : sve2p1_int_while_rr_pn<"whilehs", 0b100>;
 defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
 defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
 defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
+} // End HasSVE2p1_or_HasSME2
 
+let Predicates = [HasSVEorSME] in {
 
 // Aliases for existing SVE instructions for which predicate-as-counter are
 // accepted as an operand to the instruction
@@ -4025,7 +4027,7 @@ def : InstAlias<"mov $Pd, $Pn",
 
 def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
 
-} // End HasSVE2p1_or_HasSME2
+}
 
 //===----------------------------------------------------------------------===//
 // Non-widening BFloat16 to BFloat16 instructions
@@ -4095,7 +4097,7 @@ defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv", int_aarch64_sve_fmaxqv>;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv", int_aarch64_sve_fminqv>;
 
 defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
-defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq_lane>;
+defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq>;
 
 defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;
 defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov", int_aarch64_sve_pmov_to_vector_lane_merging, int_aarch64_sve_pmov_to_vector_lane_zeroing>;

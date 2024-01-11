@@ -275,14 +275,15 @@ class AnnotatedLine;
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
-        MustBreakBefore(false), IsUnterminatedLiteral(false),
-        CanBreakBefore(false), ClosesTemplateDeclaration(false),
-        StartsBinaryExpression(false), EndsBinaryExpression(false),
-        PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), ClosesRequiresClause(false),
-        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
-        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
-        TypeIsFinalized(false), Type(TT_Unknown) {}
+        MustBreakBefore(false), MustBreakBeforeFinalized(false),
+        IsUnterminatedLiteral(false), CanBreakBefore(false),
+        ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
+        EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
+        ContinuesLineCommentSection(false), Finalized(false),
+        ClosesRequiresClause(false), EndsCppAttributeGroup(false),
+        BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
+        Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -317,6 +318,10 @@ struct FormatToken {
   /// This happens for example when a preprocessor directive ended directly
   /// before the token.
   unsigned MustBreakBefore : 1;
+
+  /// Whether MustBreakBefore is finalized during parsing and must not
+  /// be reset between runs.
+  unsigned MustBreakBeforeFinalized : 1;
 
   /// Set to \c true if this token is an unterminated literal.
   unsigned IsUnterminatedLiteral : 1;
@@ -416,10 +421,14 @@ public:
   /// to another one please use overwriteFixedType, or even better remove the
   /// need to reassign the type.
   void setFinalizedType(TokenType T) {
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     Type = T;
     TypeIsFinalized = true;
   }
   void overwriteFixedType(TokenType T) {
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     TypeIsFinalized = false;
     setType(T);
   }

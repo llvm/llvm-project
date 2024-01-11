@@ -63,29 +63,33 @@ __attribute__ ((target("branch-protection=pac-ret+pc+bti")))
 void pauthlr_bti() {}
 // CHECK: define{{.*}} void @pauthlr_bti()  #[[#PAUTHLR_BTI:]]
 
+__attribute__ ((target("branch-protection=gcs")))
+void gcs() {}
+// CHECK: define{{.*}} void @gcs() #[[#GCS:]]
 
-// CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="none"
 
-// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}} "sign-return-address"="none"
 
-// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "branch-target-enforcement"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PACBKEY]] = { {{.*}}"branch-target-enforcement"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PACBKEY]] = { {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "branch-target-enforcement"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PACBKEYLEAF]] = { {{.*}} "branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
 
 
-// CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAUTHLR]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_BKEY]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_BKEY]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_LEAF]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_LEAF]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="false" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
 
-// CHECK-DAG: attributes #[[#PAUTHLR_BTI]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="true" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// CHECK-DAG: attributes #[[#PAUTHLR_BTI]] = { {{.*}}"branch-protection-pauth-lr"="true" {{.*}}"branch-target-enforcement"="true" "guarded-control-stack"="false" {{.*}}"sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
 
+// CHECK-DAG: attributes #[[#GCS]] = { {{.*}}"branch-target-enforcement"="false" "guarded-control-stack"="true" {{.*}} "sign-return-address"="none"
