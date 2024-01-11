@@ -470,6 +470,7 @@ struct ErrorNonSelfAMDGPU : ErrorGenericBase {
  private:
   void PrintStack();
   void PrintThreadsAndAddresses();
+  void PrintMallocStack();
 };
 
 // clang-format off

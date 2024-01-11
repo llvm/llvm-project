@@ -692,7 +692,6 @@ void ErrorNonSelfAMDGPU::PrintStack() {
     symbolizer.SymbolizePC(callstack[0] - cb_loc.vma_adjust, source_location);
     // release all allocated comgr objects.
     symbolizer.Release();
-    CloseFile((fd_t)cb_loc.fd);
   }
 #endif
   Printf("%s", source_location.data());
@@ -714,18 +713,80 @@ void ErrorNonSelfAMDGPU::PrintThreadsAndAddresses() {
   Printf("%s\n", str.data());
 }
 
+static uptr ScanForMagicDown(uptr start, uptr lo, uptr magic0, uptr magic1) {
+  for (uptr p = start; p >= lo; p -= sizeof(uptr)) {
+    if (((uptr*)p)[0] == magic0 && ((uptr*)p)[1] == magic1)
+      return p;
+  }
+  return 0;
+}
+
+static uptr ScanForMagicUp(uptr start, uptr hi, uptr magic0, uptr magic1) {
+  for (uptr p = start; p < hi; p += sizeof(uptr)) {
+    if (((uptr*)p)[0] == magic0 && ((uptr*)p)[1] == magic1)
+      return p;
+  }
+  return 0;
+}
+
+void ErrorNonSelfAMDGPU::PrintMallocStack() {
+  // Facts about asan malloc on device
+  const uptr magic = 0xfedcba1ee1abcdefULL;
+  const uptr offset = 32;
+  const uptr min_chunk_size = 96;
+  const uptr min_alloc_size = 48;
+
+  Decorator d;
+  HeapAddressDescription addr_description;
+  
+  if (GetHeapAddressInformation(device_address[0], access_size,
+              &addr_description) &&
+      addr_description.chunk_access.chunk_size >= min_chunk_size) {
+    uptr lo = addr_description.chunk_access.chunk_begin;
+    uptr hi = lo + addr_description.chunk_access.chunk_size - min_alloc_size;
+    uptr start = RoundDownTo(device_address[0], sizeof(uptr));
+
+    uptr plo = ScanForMagicDown(start, lo, magic, lo);
+    if (plo) {
+      callstack[0] = ((uptr*)plo)[2];
+      Printf("%s%p is %u bytes above an address from a %sdevice malloc "
+              "(or free) call of size %u from%s\n",
+              d.Location(), device_address[0],
+              (int)(device_address[0] - (plo+offset)),
+              d.Allocation(), ((int*)plo)[7], d.Default());
+      PrintStack();
+    }
+
+    uptr phi = ScanForMagicUp(start, hi, magic, lo);
+    if (phi) {
+      callstack[0] = ((uptr*)phi)[2];
+      Printf("%s%p is %u bytes below an address from a %sdevice malloc "
+              "(or free) call of size %u from%s\n",
+              d.Location(), device_address[0],
+              (int)((phi+offset) - device_address[0]),
+
+              d.Allocation(), ((int*)phi)[7], d.Default());
+      PrintStack();
+    }
+  }
+}
+
 void ErrorNonSelfAMDGPU::Print() {
   Decorator d;
   Printf("%s", d.Error());
   Report("ERROR: AddressSanitizer: %s on amdgpu device %zu at pc %p\n",
          bug_descr, device_id, callstack[0]);
-  Printf("%s", d.Default());
   Printf("%s%s of size %zu in workgroup id (%zu,%zu,%zu)\n", d.Access(),
          (is_write ? "WRITE" : "READ"), access_size, wg.idx, wg.idy, wg.idz);
   Printf("%s", d.Default());
   PrintStack();
   Printf("%s", d.Location());
   PrintThreadsAndAddresses();
+  Printf("%s", d.Default());
+  if (shadow_val == kAsanHeapFreeMagic ||
+      shadow_val == kAsanHeapLeftRedzoneMagic) {
+    PrintMallocStack();
+  }
   addr_description.Print(bug_descr, true);
   Printf("%s", d.Default());
   // print shadow memory region for single address
