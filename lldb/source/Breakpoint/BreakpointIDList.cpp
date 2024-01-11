@@ -20,17 +20,15 @@ using namespace lldb_private;
 
 // class BreakpointIDList
 
-BreakpointIDList::BreakpointIDList()
-    : m_invalid_id(LLDB_INVALID_BREAK_ID, LLDB_INVALID_BREAK_ID) {}
+BreakpointIDList::BreakpointIDList() : m_breakpoint_ids() {}
 
 BreakpointIDList::~BreakpointIDList() = default;
 
 size_t BreakpointIDList::GetSize() const { return m_breakpoint_ids.size(); }
 
-const BreakpointID &
-BreakpointIDList::GetBreakpointIDAtIndex(size_t index) const {
+BreakpointID BreakpointIDList::GetBreakpointIDAtIndex(size_t index) const {
   return ((index < m_breakpoint_ids.size()) ? m_breakpoint_ids[index]
-                                            : m_invalid_id);
+                                            : BreakpointID());
 }
 
 bool BreakpointIDList::RemoveBreakpointIDAtIndex(size_t index) {
@@ -80,19 +78,6 @@ bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
     return false;
 
   return FindBreakpointID(*bp_id, position);
-}
-
-void BreakpointIDList::InsertStringArray(
-    llvm::ArrayRef<const char *> string_array, CommandReturnObject &result) {
-  if(string_array.empty())
-    return;
-
-  for (const char *str : string_array) {
-    auto bp_id = BreakpointID::ParseCanonicalReference(str);
-    if (bp_id)
-      m_breakpoint_ids.push_back(*bp_id);
-  }
-  result.SetStatus(eReturnStatusSuccessFinishNoResult);
 }
 
 //  This function takes OLD_ARGS, which is usually the result of breaking the

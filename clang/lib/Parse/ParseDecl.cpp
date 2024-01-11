@@ -2661,7 +2661,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // ProduceConstructorSignatureHelp only on VarDecls.
       ExpressionStarts = SetPreferredType;
     }
-    if (ParseExpressionList(Exprs, ExpressionStarts)) {
+
+    bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
+
+    InitScope.pop();
+
+    if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
         Actions.ProduceConstructorSignatureHelp(
             ThisVarDecl->getType()->getCanonicalTypeInternal(),
@@ -2674,7 +2679,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     } else {
       // Match the ')'.
       T.consumeClose();
-      InitScope.pop();
 
       ExprResult Initializer = Actions.ActOnParenListExpr(T.getOpenLocation(),
                                                           T.getCloseLocation(),
@@ -3483,7 +3487,8 @@ void Parser::ParseDeclarationSpecifiers(
 
     case tok::coloncolon: // ::foo::bar
       // C++ scope specifier.  Annotate and loop, or bail out on error.
-      if (TryAnnotateCXXScopeToken(EnteringContext)) {
+      if (getLangOpts().CPlusPlus &&
+          TryAnnotateCXXScopeToken(EnteringContext)) {
         if (!DS.hasTypeSpecifier())
           DS.SetTypeSpecError();
         goto DoneWithDeclSpec;

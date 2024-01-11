@@ -173,5 +173,70 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from) {
   ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
 }
 
+RT_API_ATTRS const char *EnsureNullTerminated(
+    const char *str, std::size_t length, Terminator &terminator) {
+  if (std::memchr(str, '\0', length) == nullptr) {
+    char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
+    std::memcpy(newCmd, str, length);
+    newCmd[length] = '\0';
+    return newCmd;
+  } else {
+    return str;
+  }
+}
+
+RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
+  return value && value->IsAllocated() &&
+      value->type() == TypeCode(TypeCategory::Character, 1) &&
+      value->rank() == 0;
+}
+
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
+  // Check that our descriptor is allocated and is a scalar integer with
+  // kind != 1 (i.e. with a large enough decimal exponent range).
+  return intVal && intVal->IsAllocated() && intVal->rank() == 0 &&
+      intVal->type().IsInteger() && intVal->type().GetCategoryAndKind() &&
+      intVal->type().GetCategoryAndKind()->second != 1;
+}
+
+RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
+    const char *rawValue, std::size_t rawValueLength, const Descriptor *errmsg,
+    std::size_t offset) {
+
+  const std::int64_t toCopy{std::min(static_cast<std::int64_t>(rawValueLength),
+      static_cast<std::int64_t>(value.ElementBytes() - offset))};
+  if (toCopy < 0) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+
+  if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
+    return ToErrmsg(errmsg, StatValueTooShort);
+  }
+
+  return StatOk;
+}
+
+RT_API_ATTRS void StoreIntToDescriptor(
+    const Descriptor *length, std::int64_t value, Terminator &terminator) {
+  auto typeCode{length->type().GetCategoryAndKind()};
+  int kind{typeCode->second};
+  ApplyIntegerKind<StoreIntegerAt, void>(
+      kind, terminator, *length, /* atIndex = */ 0, value);
+}
+
+template <int KIND> struct FitsInIntegerKind {
+  RT_API_ATTRS bool operator()([[maybe_unused]] std::int64_t value) {
+    if constexpr (KIND >= 8) {
+      return true;
+    } else {
+      return value <=
+          std::numeric_limits<
+              CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>>::max();
+    }
+  }
+};
+
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime
