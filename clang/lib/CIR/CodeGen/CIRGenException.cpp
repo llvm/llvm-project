@@ -330,7 +330,6 @@ void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
   for (unsigned I = 0; I != NumHandlers; ++I) {
     const CXXCatchStmt *C = S.getHandler(I);
 
-    // FIXME: hook the CIR block for the right catch region here.
     mlir::Block *Handler = &catchOp.getRegion(I).getBlocks().front();
     if (C->getExceptionDecl()) {
       // FIXME: Dropping the reference type on the type into makes it
