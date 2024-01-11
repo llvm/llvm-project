@@ -13875,6 +13875,21 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                getLLVMStyleWithColumns(35));
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaa, {},\n"
                "                               aaaaaaaaaaaaaaaaaaaaaaa);");
+
+  // No possible column formats, don't want the optimal paths penalized.
+  verifyFormat(
+      "waarudo::unit desk = {\n"
+      "    .s = \"desk\", .p = p, .b = [] { return w::r{3, 10} * w::m; }};");
+  verifyFormat("SomeType something1([](const Input &i) -> Output { return "
+               "Output{1, 2}; },\n"
+               "                    [](const Input &i) -> Output { return "
+               "Output{1, 2}; });");
+  FormatStyle NoBinPacking = getLLVMStyle();
+  NoBinPacking.BinPackParameters = false;
+  verifyFormat("waarudo::unit desk = {\n"
+               "    .s = \"desk\", .p = p, .b = [] { return w::r{3, 10, 1, 1, "
+               "1, 1} * w::m; }};",
+               NoBinPacking);
 }
 
 TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
