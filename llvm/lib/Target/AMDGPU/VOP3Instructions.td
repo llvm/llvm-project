@@ -733,6 +733,10 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
   let HasClamp = 0;
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
+  let HasSrc0Mods = 0;
+  let HasSrc1Mods = 0;
+  let HasSrc2Mods = 0;
+  let HasOMod = 0;
 }
 
 def VOP3_PERMLANE_VAR_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, untyped]>, VOP3_OPSEL> {
