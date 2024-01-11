@@ -33,6 +33,14 @@ using namespace ompx;
   gnu::visibility("protected")]] DeviceEnvironmentTy
     CONSTANT(__omp_rtl_device_environment);
 
+uint32_t config::getAssumeTeamsOversubscription() {
+  return __omp_rtl_assume_teams_oversubscription;
+}
+
+uint32_t config::getAssumeThreadsOversubscription() {
+  return __omp_rtl_assume_threads_oversubscription;
+}
+
 uint32_t config::getDebugKind() {
   return __omp_rtl_debug_kind & __omp_rtl_device_environment.DeviceDebugKind;
 }
