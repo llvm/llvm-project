@@ -5678,10 +5678,10 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   assert(FromType->isRecordType());
 
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
-  // [class.dtor]p2:
+  // C++98 [class.dtor]p2:
   //   A destructor can be invoked for a const, volatile or const volatile
   //   object.
-  // [over.match.funcs.general]p4.2:
+  // C++98 [over.match.funcs]p4:
   //   For static member functions, the implicit object parameter is considered
   //   to match any object (since if the function is selected, the object is
   //   discarded).
