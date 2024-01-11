@@ -1746,6 +1746,42 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_EQ(Triple::dxil, T.getLittleEndianArchVariant().getArch());
 }
 
+TEST(TripleTest, XROS) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm64-apple-xros");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "xros");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(0), Version);
+
+  T = Triple("arm64-apple-visionos1.2");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "visionos1.2");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1, 2), Version);
+
+  T = Triple("arm64-apple-xros1-simulator");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isSimulatorEnvironment());
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(17), Version);
+}
+
 TEST(TripleTest, getOSVersion) {
   Triple T;
   VersionTuple Version;
