@@ -10,6 +10,7 @@ add_clang_library(MLIRCIR
   MLIRCIREnumsGen
   MLIRSymbolInterfacesIncGen
   MLIRCIRASTAttrInterfacesIncGen
+  MLIRCIROpInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

@@ -12,4 +12,13 @@ function(add_clang_mlir_attr_interface interface)
   add_dependencies(mlir-generic-headers MLIRCIR${interface}IncGen)
 endfunction()
 
+function(add_clang_mlir_op_interface interface)
+  set(LLVM_TARGET_DEFINITIONS ${interface}.td)
+  mlir_tablegen(${interface}.h.inc -gen-op-interface-decls)
+  mlir_tablegen(${interface}.cpp.inc -gen-op-interface-defs)
+  add_public_tablegen_target(MLIR${interface}IncGen)
+  add_dependencies(mlir-generic-headers MLIR${interface}IncGen)
+endfunction()
+
 add_clang_mlir_attr_interface(ASTAttrInterfaces)
+add_clang_mlir_op_interface(CIROpInterfaces)

@@ -43,6 +43,7 @@ using namespace mlir::cir;
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
+#include "clang/CIR/Interfaces/CIROpInterfaces.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
@@ -1953,26 +1954,27 @@ LogicalResult cir::FuncOp::verify() {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-/// Get the argument operands to the called function.
-OperandRange cir::CallOp::getArgOperands() {
-  return {arg_operand_begin(), arg_operand_end()};
+mlir::Operation::operand_iterator cir::CallOp::arg_operand_begin() {
+  auto arg_begin = operand_begin();
+  if (!getCallee())
+    arg_begin++;
+  return arg_begin;
+}
+mlir::Operation::operand_iterator cir::CallOp::arg_operand_end() {
+  return operand_end();
 }
 
-MutableOperandRange cir::CallOp::getArgOperandsMutable() {
-  return getOperandsMutable();
+/// Return the operand at index 'i', accounts for indirect call.
+Value cir::CallOp::getArgOperand(unsigned i) {
+  if (!getCallee())
+    i++;
+  return getOperand(i);
 }
-
-/// Return the callee of this operation
-CallInterfaceCallable cir::CallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-}
-
-/// Set the callee for this operation.
-void cir::CallOp::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-  if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-    (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-  setOperand(0, callee.get<mlir::Value>());
+/// Return the number of operands, , accounts for indirect call.
+unsigned cir::CallOp::getNumArgOperands() {
+  if (!getCallee())
+    return this->getOperation()->getNumOperands() - 1;
+  return this->getOperation()->getNumOperands();
 }
 
 LogicalResult

@@ -40,6 +40,7 @@ add_clang_library(clangCIR
   MLIRCIR
   MLIRCIROpsIncGen
   MLIRCIRASTAttrInterfacesIncGen
+  MLIRCIROpInterfacesIncGen
   ${dialect_libs}
 
   LINK_LIBS
@@ -49,7 +50,7 @@ add_clang_library(clangCIR
   ${dialect_libs}
   MLIRCIR
   MLIRCIRTransforms
-  MLIRCIRASTAttrInterfaces
+  MLIRCIRInterfaces
   MLIRAffineToStandard
   MLIRAnalysis
   MLIRDLTIDialect
