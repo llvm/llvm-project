@@ -1,6 +1,10 @@
+include(LLVMExternalProjectUtils)
+
 set(CLANG_PGO_TRAINING_DATA "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH
   "The path to a lit testsuite containing samples for PGO and order file generation"
   )
+set(CLANG_PGO_TRAINING_DATA_SOURCE_DIR OFF CACHE STRING "Path to source directory containing cmake project with source files to use for generating pgo data")
+set(CLANG_PERF_TRAINING_DEPS "" CACHE STRING "Extra dependencies needed to build the PGO training data.")
 
 if(LLVM_BUILD_INSTRUMENTED)
   configure_lit_site_cfg(
@@ -28,7 +32,21 @@ if(LLVM_BUILD_INSTRUMENTED)
     add_custom_target(generate-profdata
       COMMAND "${Python3_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/perf-helper.py merge ${LLVM_PROFDATA} ${CMAKE_CURRENT_BINARY_DIR}/clang.profdata ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_BINARY_DIR}/profiles/
       COMMENT "Merging profdata"
-      DEPENDS generate-profraw check-clang check-llvm)
+      DEPENDS generate-profraw)
+    if (CLANG_PGO_TRAINING_DATA_SOURCE_DIR)
+      llvm_ExternalProject_Add(generate-profraw-external ${CLANG_PGO_TRAINING_DATA_SOURCE_DIR}
+              USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw)
+      add_dependencies(generate-profdata generate-profraw-external)
+    else()
+      # Default to compiling a file from clang. This also builds all the
+      # dependencies needed to build this file, like TableGen.
+      set(generate_profraw_clang_sema tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.o)
+      llvm_ExternalProject_Add(generate-profraw-clang ${CMAKE_CURRENT_SOURCE_DIR}/../../../llvm
+              USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw
+              EXTRA_TARGETS generate_profraw_clang_sema
+              CMAKE_ARGS -DLLVM_ENABLE_PROJECTS=clang)
+      add_dependencies(generate-profdata generate_profraw_clang_sema)
+    endif()
   endif()
 endif()
 
