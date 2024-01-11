@@ -233,7 +233,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     HasScopeSpecifier = true;
   }
 
-  else if (getLangOpts().CPlusPlus26 && !HasScopeSpecifier &&
+  else if (!HasScopeSpecifier &&
            Tok.is(tok::identifier) && GetLookAheadToken(1).is(tok::ellipsis) &&
            GetLookAheadToken(2).is(tok::l_square)) {
     SourceLocation Start = Tok.getLocation();
@@ -241,7 +241,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     SourceLocation CCLoc;
     SourceLocation EndLoc = ParseIndexedTypeNamePack(DS);
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
-      return false;
+      return true;
+
     QualType Type = Actions.ActOnPackIndexingType(
         DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
         DS.getEllipsisLoc());
@@ -644,8 +645,7 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
   }
 
   // Might be a pack index expression!
-  if (getLangOpts().CPlusPlus26)
-    E = tryParseCXXPackIndexingExpression(E);
+  E = tryParseCXXPackIndexingExpression(E);
 
   if (!E.isInvalid() && !E.isUnset() && Tok.is(tok::less))
     checkPotentialAngleBracket(E);
@@ -1865,7 +1865,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   }
 
   // pack-index-specifier
-  if (getLangOpts().CPlusPlus26 && GetLookAheadToken(1).is(tok::ellipsis) &&
+  if (GetLookAheadToken(1).is(tok::ellipsis) &&
       GetLookAheadToken(2).is(tok::l_square)) {
     DeclSpec DS(AttrFactory);
     ParseIndexedTypeNamePack(DS);

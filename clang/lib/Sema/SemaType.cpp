@@ -9825,7 +9825,10 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
     Diag(EllipsisLoc, diag::err_expected_name_of_pack) << Pattern;
     return QualType();
   }
-  return BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+  if(!Type.isNull())
+      Diag(Loc, getLangOpts().CPlusPlus26? diag::ext_pack_indexing : diag::warn_cxx23_pack_indexing);
+  return Type;
 }
 
 QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,

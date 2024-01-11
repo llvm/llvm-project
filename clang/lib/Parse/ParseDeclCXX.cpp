@@ -1247,12 +1247,15 @@ SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
       DS.SetTypeSpecError();
       return IndexExpr.isInvalid() ? StartLoc : IndexExpr.get()->getEndLoc();
     }
+
+    DS.SetRangeStart(StartLoc);
+    DS.SetRangeEnd(T.getCloseLocation());
+
     if (IndexExpr.isInvalid()) {
       DS.SetTypeSpecError();
       return T.getCloseLocation();
     }
-    DS.SetRangeStart(StartLoc);
-    DS.SetRangeEnd(T.getCloseLocation());
+
     DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc, PrevSpec, DiagID, Type,
                        Policy);
     DS.SetPackIndexingExpr(EllipsisLoc, IndexExpr.get());

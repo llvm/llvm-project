@@ -1090,8 +1090,12 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
         << PackExpression;
     return ExprError();
   }
-  return BuildPackIndexingExpr(PackExpression, EllipsisLoc, IndexExpr,
+  ExprResult Res = BuildPackIndexingExpr(PackExpression, EllipsisLoc, IndexExpr,
                                RSquareLoc);
+  if(!Res.isInvalid())
+    Diag(Res.get()->getBeginLoc(), getLangOpts().CPlusPlus26?
+                                       diag::ext_pack_indexing : diag::warn_cxx23_pack_indexing);
+  return Res;
 }
 
 ExprResult
