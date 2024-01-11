@@ -71,24 +71,60 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   // FIXME: Used for 8-bit mul, ignore result upper 8 bits.
   // This probably ought to be moved to a def : Pat<> if the
   // syntax can be accepted.
-  let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
-                  [(set AL, (node AL, GR8:$src1)), (implicit EFLAGS)]>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32r : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
-  let Defs = [AL,EFLAGS,AX], Uses = [AL] in
-  def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
-                  [(set AL, (node AL, (loadi8 addr:$src1))), (implicit EFLAGS)]>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX] in
-  def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
-  def 32m : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
-  def 64m : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
+  let Defs = [AL, EFLAGS, AX], Uses = [AL] in
+    def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
+                       [(set AL, (node AL, GR8:$src1)), (implicit EFLAGS)]>;
+  let Defs = [AX, DX, EFLAGS], Uses = [AX] in
+    def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
+    def 32r : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
+    def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
+  let Defs = [AL, EFLAGS, AX], Uses = [AL] in
+    def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
+                       [(set AL, (node AL, (loadi8 addr:$src1))), (implicit EFLAGS)]>;
+  let Defs = [AX, DX, EFLAGS], Uses = [AX] in
+    def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
+    def 32m : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, OpSize32;
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
+    def 64m : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, Requires<[In64BitMode]>;
+
+  let Predicates = [In64BitMode] in {
+    let Defs = [AL, AX], Uses = [AL] in
+      def 8r_NF : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8, []>, NF;
+    let Defs = [AX, DX], Uses = [AX] in
+      def 16r_NF : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, NF, PD;
+    let Defs = [EAX, EDX], Uses = [EAX] in
+      def 32r_NF : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, NF;
+    let Defs = [RAX, RDX], Uses = [RAX] in
+      def 64r_NF : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>, NF;
+    let Defs = [AL, AX], Uses = [AL] in
+      def 8m_NF : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8, []>, NF;
+    let Defs = [AX, DX], Uses = [AX] in
+      def 16m_NF : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, NF, PD;
+    let Defs = [EAX, EDX], Uses = [EAX] in
+      def 32m_NF : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, NF;
+    let Defs = [RAX, RDX], Uses = [RAX] in
+      def 64m_NF : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, NF;
+
+    let Defs = [AL, EFLAGS, AX], Uses = [AL] in
+      def 8r_EVEX : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8, []>, PL;
+    let Defs = [AX, DX, EFLAGS], Uses = [AX] in
+      def 16r_EVEX : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, PL, PD;
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
+      def 32r_EVEX : MulDivOpR<o, RegMRM, m, Xi32, WriteIMul32, []>, PL;
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
+      def 64r_EVEX : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>, PL;
+    let Defs = [AL, EFLAGS, AX], Uses = [AL] in
+      def 8m_EVEX : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8, []>, PL;
+    let Defs = [AX, DX, EFLAGS], Uses = [AX] in
+      def 16m_EVEX : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, PL, PD;
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
+      def 32m_EVEX : MulDivOpM<o, MemMRM, m, Xi32, WriteIMul32, []>, PL;
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
+      def 64m_EVEX : MulDivOpM<o, MemMRM, m, Xi64, WriteIMul64, []>, PL;
+  }
 }
 
 defm MUL : Mul<0xF7, "mul", MRM4r, MRM4m, mul>;
@@ -99,54 +135,141 @@ multiclass Div<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   defvar sched16 = !if(!eq(m, "div"), WriteDiv16, WriteIDiv16);
   defvar sched32 = !if(!eq(m, "div"), WriteDiv32, WriteIDiv32);
   defvar sched64 = !if(!eq(m, "div"), WriteDiv64, WriteIDiv64);
-  let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8r  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16r : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32r : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64r : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>;
-  let Defs = [AL,AH,EFLAGS], Uses = [AX] in
-  def 8m  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>;
-  let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
-  def 16m : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
-  let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in
-  def 32m : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
-  let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
-  def 64m : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
-}
-let hasSideEffects = 1 in { // so that we don't speculatively execute
-defm DIV: Div<0xF7, "div", MRM6r, MRM6m>;
-defm IDIV: Div<0xF7, "idiv", MRM7r, MRM7m>;
+  let Defs = [AL, AH, EFLAGS], Uses = [AX] in
+    def 8r  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>;
+  let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
+    def 16r : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, OpSize16;
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
+    def 32r : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, OpSize32;
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
+    def 64r : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>;
+  let Defs = [AL, AH, EFLAGS], Uses = [AX] in
+    def 8m  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>;
+  let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
+    def 16m : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, OpSize16;
+  let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
+    def 32m : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, OpSize32;
+  let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
+    def 64m : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, Requires<[In64BitMode]>;
+
+  let Predicates = [In64BitMode] in {
+    let Defs = [AL, AH], Uses = [AX] in
+      def 8r_NF  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>, NF;
+    let Defs = [AX, DX], Uses = [AX, DX] in
+      def 16r_NF : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, NF, PD;
+    let Defs = [EAX, EDX], Uses = [EAX, EDX] in
+      def 32r_NF : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, NF;
+    let Defs = [RAX, RDX], Uses = [RAX, RDX] in
+      def 64r_NF : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>, NF;
+    let Defs = [AL, AH], Uses = [AX] in
+      def 8m_NF  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>, NF;
+    let Defs = [AX, DX], Uses = [AX, DX] in
+      def 16m_NF : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, NF, PD;
+    let Defs = [EAX, EDX], Uses = [EAX, EDX] in
+      def 32m_NF : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, NF;
+    let Defs = [RAX, RDX], Uses = [RAX, RDX] in
+      def 64m_NF : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, NF;
+
+    let Defs = [AL, AH, EFLAGS], Uses = [AX] in
+      def 8r_EVEX  : MulDivOpR<o, RegMRM, m, Xi8, sched8, []>, PL;
+    let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
+      def 16r_EVEX : MulDivOpR<o, RegMRM, m, Xi16, sched16, []>, PL, PD;
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
+      def 32r_EVEX : MulDivOpR<o, RegMRM, m, Xi32, sched32, []>, PL;
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
+      def 64r_EVEX : MulDivOpR<o, RegMRM, m, Xi64, sched64, []>, PL;
+    let Defs = [AL, AH, EFLAGS], Uses = [AX] in
+      def 8m_EVEX  : MulDivOpM<o, MemMRM, m, Xi8, sched8, []>, PL;
+    let Defs = [AX, DX, EFLAGS], Uses = [AX, DX] in
+      def 16m_EVEX : MulDivOpM<o, MemMRM, m, Xi16, sched16, []>, PL, PD;
+    let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EDX] in
+      def 32m_EVEX : MulDivOpM<o, MemMRM, m, Xi32, sched32, []>, PL;
+    let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RDX] in
+      def 64m_EVEX : MulDivOpM<o, MemMRM, m, Xi64, sched64, []>, PL;
+  }
 }
 
-class IMulOpRR<X86TypeInfo t, X86FoldableSchedWrite sched>
-  : BinOpRR_RF<0xAF, "imul", t, X86smul_flag>, TB {
+let hasSideEffects = 1 in { // so that we don't speculatively execute
+  defm DIV: Div<0xF7, "div", MRM6r, MRM6m>;
+  defm IDIV: Div<0xF7, "idiv", MRM7r, MRM7m>;
+}
+
+class IMulOpRR_R<X86TypeInfo t, X86FoldableSchedWrite sched, bit ndd = 0>
+  : BinOpRR_R<0xAF, "imul", t, ndd> {
   let Form = MRMSrcReg;
   let SchedRW = [sched];
   // X = IMUL Y, Z --> X = IMUL Z, Y
   let isCommutable = 1;
 }
-class IMulOpRM<X86TypeInfo t, X86FoldableSchedWrite sched>
-  : BinOpRM_RF<0xAF, "imul", t, X86smul_flag>, TB {
-let Form = MRMSrcMem;
-let SchedRW = [sched.Folded, sched.ReadAfterFold];
+class IMulOpRR_RF<X86TypeInfo t, X86FoldableSchedWrite sched, bit ndd = 0>
+  : BinOpRR_RF<0xAF, "imul", t, X86smul_flag, ndd> {
+  let Form = MRMSrcReg;
+  let SchedRW = [sched];
+  // X = IMUL Y, Z --> X = IMUL Z, Y
+  let isCommutable = 1;
+}
+class IMulOpRM_R<X86TypeInfo t, X86FoldableSchedWrite sched, bit ndd = 0>
+  : BinOpRM_R<0xAF, "imul", t, ndd> {
+  let Form = MRMSrcMem;
+  let SchedRW = [sched.Folded, sched.ReadAfterFold];
+}
+class IMulOpRM_RF<X86TypeInfo t, X86FoldableSchedWrite sched, bit ndd = 0>
+  : BinOpRM_RF<0xAF, "imul", t, X86smul_flag, ndd> {
+  let Form = MRMSrcMem;
+  let SchedRW = [sched.Folded, sched.ReadAfterFold];
 }
 
-def IMUL16rr : IMulOpRR<Xi16, WriteIMul16Reg>, OpSize16;
-def IMUL32rr : IMulOpRR<Xi32, WriteIMul32Reg>, OpSize32;
-def IMUL64rr : IMulOpRR<Xi64, WriteIMul64Reg>;
-def IMUL16rm : IMulOpRM<Xi16, WriteIMul16Reg>, OpSize16;
-def IMUL32rm : IMulOpRM<Xi32, WriteIMul32Reg>, OpSize32;
-def IMUL64rm : IMulOpRM<Xi64, WriteIMul64Reg>;
+let Predicates = [NoNDD] in {
+  def IMUL16rr : IMulOpRR_RF<Xi16, WriteIMul16Reg>, TB, OpSize16;
+  def IMUL32rr : IMulOpRR_RF<Xi32, WriteIMul32Reg>, TB, OpSize32;
+  def IMUL64rr : IMulOpRR_RF<Xi64, WriteIMul64Reg>, TB;
+  def IMUL16rm : IMulOpRM_RF<Xi16, WriteIMul16Reg>, TB, OpSize16;
+  def IMUL32rm : IMulOpRM_RF<Xi32, WriteIMul32Reg>, TB, OpSize32;
+  def IMUL64rm : IMulOpRM_RF<Xi64, WriteIMul64Reg>, TB;
+}
+let Predicates = [HasNDD, In64BitMode] in {
+  def IMUL16rr_ND : IMulOpRR_RF<Xi16, WriteIMul16Reg, 1>, PD;
+  def IMUL32rr_ND : IMulOpRR_RF<Xi32, WriteIMul32Reg, 1>;
+  def IMUL64rr_ND : IMulOpRR_RF<Xi64, WriteIMul64Reg, 1>;
+  def IMUL16rm_ND : IMulOpRM_RF<Xi16, WriteIMul16Reg, 1>, PD;
+  def IMUL32rm_ND : IMulOpRM_RF<Xi32, WriteIMul32Reg, 1>;
+  def IMUL64rm_ND : IMulOpRM_RF<Xi64, WriteIMul64Reg, 1>;
+}
+
+let Predicates = [In64BitMode], Pattern = [(null_frag)] in {
+  def IMUL16rr_NF : IMulOpRR_R<Xi16, WriteIMul16Reg>, NF, PD;
+  def IMUL32rr_NF : IMulOpRR_R<Xi32, WriteIMul32Reg>, NF;
+  def IMUL64rr_NF : IMulOpRR_R<Xi64, WriteIMul64Reg>, NF;
+  def IMUL16rm_NF : IMulOpRM_R<Xi16, WriteIMul16Reg>, NF, PD;
+  def IMUL32rm_NF : IMulOpRM_R<Xi32, WriteIMul32Reg>, NF;
+  def IMUL64rm_NF : IMulOpRM_R<Xi64, WriteIMul64Reg>, NF;
+
+  def IMUL16rr_NF_ND : IMulOpRR_R<Xi16, WriteIMul16Reg, 1>, EVEX_NF, PD;
+  def IMUL32rr_NF_ND : IMulOpRR_R<Xi32, WriteIMul32Reg, 1>, EVEX_NF;
+  def IMUL64rr_NF_ND : IMulOpRR_R<Xi64, WriteIMul64Reg, 1>, EVEX_NF;
+  def IMUL16rm_NF_ND : IMulOpRM_R<Xi16, WriteIMul16Reg, 1>, EVEX_NF, PD;
+  def IMUL32rm_NF_ND : IMulOpRM_R<Xi32, WriteIMul32Reg, 1>, EVEX_NF;
+  def IMUL64rm_NF_ND : IMulOpRM_R<Xi64, WriteIMul64Reg, 1>, EVEX_NF;
+
+  def IMUL16rr_EVEX : IMulOpRR_RF<Xi16, WriteIMul16Reg>, PL, PD;
+  def IMUL32rr_EVEX : IMulOpRR_RF<Xi32, WriteIMul32Reg>, PL;
+  def IMUL64rr_EVEX : IMulOpRR_RF<Xi64, WriteIMul64Reg>, PL;
+  def IMUL16rm_EVEX : IMulOpRM_RF<Xi16, WriteIMul16Reg>, PL, PD;
+  def IMUL32rm_EVEX : IMulOpRM_RF<Xi32, WriteIMul32Reg>, PL;
+  def IMUL64rm_EVEX : IMulOpRM_RF<Xi64, WriteIMul64Reg>, PL;
+}
 
 class IMulOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpRI8<0x6B, "imul", binop_ndd_args, t, MRMSrcReg,
-             (outs t.RegClass:$dst)>, DefEFLAGS {
+             (outs t.RegClass:$dst)> {
   let SchedRW = [sched];
 }
 class IMulOpRI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI<0x69, "imul", binop_ndd_args, t, MRMSrcReg,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched];
+}
+class IMulOpRI_RF<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpRI<0x69, "imul", binop_ndd_args, t, MRMSrcReg,
             (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS, (X86smul_flag t.RegClass:$src1,
@@ -154,12 +277,16 @@ class IMulOpRI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
   let SchedRW = [sched];
 }
 class IMulOpMI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
-  : BinOpMI8<"imul", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)>,
-    DefEFLAGS {
+  : BinOpMI8<"imul", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)> {
   let Opcode = 0x6B;
   let SchedRW = [sched.Folded];
 }
 class IMulOpMI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI<0x69, "imul", binop_ndd_args, t, MRMSrcMem,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched.Folded];
+}
+class IMulOpMI_RF<X86TypeInfo t, X86FoldableSchedWrite sched>
   : BinOpMI<0x69, "imul", binop_ndd_args, t, MRMSrcMem,
             (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS, (X86smul_flag (t.LoadNode addr:$src1),
@@ -167,20 +294,46 @@ class IMulOpMI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
     DefEFLAGS {
   let SchedRW = [sched.Folded];
 }
-def IMUL16rri8 : IMulOpRI8_R<Xi16, WriteIMul16Imm>, OpSize16;
-def IMUL32rri8 : IMulOpRI8_R<Xi32, WriteIMul32Imm>, OpSize32;
-def IMUL64rri8 : IMulOpRI8_R<Xi64, WriteIMul64Imm>;
-def IMUL16rri  : IMulOpRI_R<Xi16, WriteIMul16Imm>, OpSize16;
-def IMUL32rri  : IMulOpRI_R<Xi32, WriteIMul32Imm>, OpSize32;
-def IMUL64rri32 : IMulOpRI_R<Xi64, WriteIMul64Imm>;
+def IMUL16rri8 : IMulOpRI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
+def IMUL32rri8 : IMulOpRI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
+def IMUL64rri8 : IMulOpRI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS;
+def IMUL16rri  : IMulOpRI_RF<Xi16, WriteIMul16Imm>, OpSize16;
+def IMUL32rri  : IMulOpRI_RF<Xi32, WriteIMul32Imm>, OpSize32;
+def IMUL64rri32 : IMulOpRI_RF<Xi64, WriteIMul64Imm>;
+def IMUL16rmi8 : IMulOpMI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, OpSize16;
+def IMUL32rmi8 : IMulOpMI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, OpSize32;
+def IMUL64rmi8 : IMulOpMI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS;
+def IMUL16rmi  : IMulOpMI_RF<Xi16, WriteIMul16Imm>, OpSize16;
+def IMUL32rmi  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, OpSize32;
+def IMUL64rmi32 : IMulOpMI_RF<Xi64, WriteIMul64Imm>;
 
-def IMUL16rmi8 : IMulOpMI8_R<Xi16, WriteIMul16Imm>, OpSize16;
-def IMUL32rmi8 : IMulOpMI8_R<Xi32, WriteIMul32Imm>, OpSize32;
-def IMUL64rmi8 : IMulOpMI8_R<Xi64, WriteIMul64Imm>;
-def IMUL16rmi  : IMulOpMI_R<Xi16, WriteIMul16Imm>, OpSize16;
-def IMUL32rmi  : IMulOpMI_R<Xi32, WriteIMul32Imm>, OpSize32;
-def IMUL64rmi32 : IMulOpMI_R<Xi64, WriteIMul64Imm>;
+let Predicates = [In64BitMode] in {
+  def IMUL16rri8_NF : IMulOpRI8_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rri8_NF : IMulOpRI8_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rri8_NF : IMulOpRI8_R<Xi64, WriteIMul64Imm>, NF;
+  def IMUL16rri_NF  : IMulOpRI_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rri_NF  : IMulOpRI_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rri32_NF : IMulOpRI_R<Xi64, WriteIMul64Imm>, NF;
+  def IMUL16rmi8_NF : IMulOpMI8_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rmi8_NF : IMulOpMI8_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rmi8_NF : IMulOpMI8_R<Xi64, WriteIMul64Imm>, NF;
+  def IMUL16rmi_NF  : IMulOpMI_R<Xi16, WriteIMul16Imm>, NF, PD;
+  def IMUL32rmi_NF  : IMulOpMI_R<Xi32, WriteIMul32Imm>, NF;
+  def IMUL64rmi32_NF : IMulOpMI_R<Xi64, WriteIMul64Imm>, NF;
 
+  def IMUL16rri8_EVEX : IMulOpRI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
+  def IMUL32rri8_EVEX : IMulOpRI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
+  def IMUL64rri8_EVEX : IMulOpRI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
+  def IMUL16rri_EVEX  : IMulOpRI_RF<Xi16, WriteIMul16Imm>, PL, PD;
+  def IMUL32rri_EVEX  : IMulOpRI_RF<Xi32, WriteIMul32Imm>, PL;
+  def IMUL64rri32_EVEX : IMulOpRI_RF<Xi64, WriteIMul64Imm>, PL;
+  def IMUL16rmi8_EVEX : IMulOpMI8_R<Xi16, WriteIMul16Imm>, DefEFLAGS, PL, PD;
+  def IMUL32rmi8_EVEX : IMulOpMI8_R<Xi32, WriteIMul32Imm>, DefEFLAGS, PL;
+  def IMUL64rmi8_EVEX : IMulOpMI8_R<Xi64, WriteIMul64Imm>, DefEFLAGS, PL;
+  def IMUL16rmi_EVEX  : IMulOpMI_RF<Xi16, WriteIMul16Imm>, PL, PD;
+  def IMUL32rmi_EVEX  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, PL;
+  def IMUL64rmi32_EVEX : IMulOpMI_RF<Xi64, WriteIMul64Imm>, PL;
+}
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
@@ -954,43 +1107,85 @@ def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
 
 // Patterns for basic arithmetic ops with relocImm for the immediate field.
 multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
-  def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
-            (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
-            (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
-            (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
-            (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+  let Predicates = [NoNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
+              (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
+              (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
+              (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
-  def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), relocImm16_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), relocImm32_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt32_su:$src), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm16_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), relocImm32_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(store (OpNode (load addr:$dst), i64relocImmSExt32_su:$src), addr:$dst),
+              (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
+  let Predicates = [HasNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
+              (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2),
+              (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
+              (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+
+    def : Pat<(OpNode (load addr:$dst), relocImm8_su:$src),
+              (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), relocImm16_su:$src),
+              (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), relocImm32_su:$src),
+              (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(OpNode (load addr:$dst), i64relocImmSExt32_su:$src),
+              (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
 }
 
 multiclass ArithBinOp_RFF_relocImm_Pats<SDNode OpNodeFlag> {
-  def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
-  def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
-  def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
-  def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
-            (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+  let Predicates = [NoNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
-  def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS), addr:$dst),
-            (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"16mi") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"32mi") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(store (OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS), addr:$dst),
+              (!cast<Instruction>(NAME#"64mi32") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
+  let Predicates = [HasNDD] in {
+    def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"8ri_ND") GR8:$src1, relocImm8_su:$src2)>;
+    def : Pat<(OpNodeFlag GR16:$src1, relocImm16_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
+    def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2, EFLAGS),
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
+
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm8_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"8mi_ND") addr:$dst, relocImm8_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm16_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"16mi_ND") addr:$dst, relocImm16_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), relocImm32_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"32mi_ND") addr:$dst, relocImm32_su:$src)>;
+    def : Pat<(OpNodeFlag (load addr:$dst), i64relocImmSExt32_su:$src, EFLAGS),
+              (!cast<Instruction>(NAME#"64mi32_ND") addr:$dst, i64relocImmSExt32_su:$src)>;
+  }
 }
 
 multiclass ArithBinOp_F_relocImm_Pats<SDNode OpNodeFlag> {

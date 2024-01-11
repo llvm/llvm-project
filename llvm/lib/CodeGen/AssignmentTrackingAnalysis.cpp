@@ -1,3 +1,11 @@
+//===-- AssignmentTrackingAnalysis.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "LiveDebugValues/LiveDebugValues.h"
 #include "llvm/ADT/BitVector.h"
@@ -2551,6 +2559,32 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
     for (auto &BB : Fn)
       removeRedundantDbgLocs(&BB, *FnVarLocs);
   }
+}
+
+FunctionVarLocs
+DebugAssignmentTrackingAnalysis::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  if (!isAssignmentTrackingEnabled(*F.getParent()))
+    return FunctionVarLocs();
+
+  auto &DL = F.getParent()->getDataLayout();
+
+  FunctionVarLocsBuilder Builder;
+  analyzeFunction(F, DL, &Builder);
+
+  // Save these results.
+  FunctionVarLocs Results;
+  Results.init(Builder);
+  return Results;
+}
+
+AnalysisKey DebugAssignmentTrackingAnalysis::Key;
+
+PreservedAnalyses
+DebugAssignmentTrackingPrinterPass::run(Function &F,
+                                        FunctionAnalysisManager &FAM) {
+  FAM.getResult<DebugAssignmentTrackingAnalysis>(F).print(OS, F);
+  return PreservedAnalyses::all();
 }
 
 bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
