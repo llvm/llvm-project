@@ -13,14 +13,14 @@ define void @foo(i32 %i) nounwind {
 ; CHECK-NEXT:    li a1, 5
 ; CHECK-NEXT:    bne a0, a1, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %if.then
-; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    j .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %if.then2
-; CHECK-NEXT:    call bar@plt
+; CHECK-NEXT:    call bar
 ; CHECK-NEXT:  .LBB0_4: # %if.end3
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:    tail bar
 entry:
   switch i32 %i, label %if.end3 [
     i32 5, label %if.then
@@ -46,9 +46,9 @@ define void @foo_tail(i1 %i) nounwind {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:    tail bar
 ; CHECK-NEXT:  .LBB1_2: # %if.else
-; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:    tail bar
 entry:
   br i1 %i, label %if.then, label %if.else
 

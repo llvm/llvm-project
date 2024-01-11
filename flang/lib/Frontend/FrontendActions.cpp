@@ -743,9 +743,6 @@ void CodeGenAction::generateLLVMIR() {
 
   MLIRToLLVMPassPipelineConfig config(level, opts);
 
-  const auto targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;
     config.VScaleMax = vsr->second;

@@ -1031,6 +1031,41 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
       TypeSummaryImplSP(new StringSummaryFormat(
           eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
+
+  // Chrono calendar types
+
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::day$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "day=${var.__d_%u}")));
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxChronoMonthSummaryProvider,
+                "libc++ std::chrono::month summary provider",
+                "^std::__[[:alnum:]]+::chrono::month$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::year$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "year=${var.__y_}")));
+
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::month_day$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__m_} ${var.__d_}")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::month_day_last$", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__m_} day=last")));
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider,
+      "libc++ std::chrono::year_month_day summary provider",
+      "^std::__[[:alnum:]]+::chrono::year_month_day$",
+      eTypeOptionHideChildren | eTypeOptionHideValue, true);
 }
 
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
