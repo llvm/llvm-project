@@ -865,6 +865,7 @@ set(files
   __utility/unreachable.h
   __variant/monostate.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array

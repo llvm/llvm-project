@@ -630,6 +630,10 @@ module std_private_verbose_abort     [system] {
   header "__verbose_abort"
   export *
 }
+module std_private_verbose_trap      [system] {
+  header "__verbose_trap"
+  export *
+}
 
 module std_private_algorithm_adjacent_find                               [system] { header "__algorithm/adjacent_find.h" }
 module std_private_algorithm_all_of                                      [system] { header "__algorithm/all_of.h" }

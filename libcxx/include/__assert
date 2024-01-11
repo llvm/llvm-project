@@ -12,16 +12,39 @@
 
 #include <__config>
 #include <__verbose_abort>
+#include <__verbose_trap>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+// _LIBCPP_ASSERT_IMPL
+
+#if defined(_LIBCPP_VERBOSE_TRAP_IMPL_OVERRIDE)
+
+#define _LIBCPP_ASSERT_IMPL(error_message, ...) _LIBCPP_VERBOSE_TRAP_IMPL_OVERRIDE(__VA_ARGS__)
+
+#elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+
+#define _LIBCPP_ASSERT_IMPL(error_message, ...) ((void)error_message, _LIBCPP_VERBOSE_ABORT(__VA_ARGS__))
+
+#else
+
+void __use(const char*, ...);
+#define _LIBCPP_ASSERT_IMPL(error_message, ...) (decltype(__use(__VA_ARGS__))(), _LIBCPP_VERBOSE_TRAP(error_message))
+
+#endif
+
+// _LIBCPP_ASSERT
+
 #define _LIBCPP_ASSERT(expression, message)                                                                            \
   (__builtin_expect(static_cast<bool>(expression), 1)                                                                  \
        ? (void)0                                                                                                       \
-       : _LIBCPP_VERBOSE_ABORT(                                                                                        \
+       : _LIBCPP_ASSERT_IMPL(                                                                                          \
+             message,                                                                                                  \
              "%s:%d: assertion %s failed: %s\n", __builtin_FILE(), __builtin_LINE(), #expression, message))
+
+// _LIBCPP_ASSUME
 
 // TODO: __builtin_assume can currently inhibit optimizations. Until this has been fixed and we can add
 //       assumptions without a clear optimization intent, disable that to avoid worsening the code generation.

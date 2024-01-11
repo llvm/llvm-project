@@ -89,6 +89,8 @@ def generate_map(include):
             continue
         elif i == "__verbose_abort":
             continue
+        elif i == "__verbose_trap":
+            continue
         else:
             panic(i)
 
