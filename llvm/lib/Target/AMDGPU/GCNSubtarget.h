@@ -1128,6 +1128,8 @@ public:
 
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
 
+  bool hasLdsWaitVMSRC() const { return getGeneration() >= GFX12; }
+
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() >= GFX11;
   }
