@@ -29,8 +29,10 @@ class X86Subtarget;
 namespace X86 {
 
 enum AsmComments {
+  // For instr that was compressed from EVEX to LEGACY.
+  AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
-  AC_EVEX_2_VEX = MachineInstr::TAsmComments
+  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1
 };
 
 /// Return a pair of condition code for the given predicate and whether

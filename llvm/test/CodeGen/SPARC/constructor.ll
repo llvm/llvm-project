@@ -17,11 +17,11 @@ entry:
 ; CTOR:      .section      .ctors,"aw"
 ; CTOR-NEXT: .p2align      2
 ; CTOR-NEXT: .word  f
-; CTOR-NEXT: .section      .ctors.65520,"aGw"
+; CTOR-NEXT: .section      .ctors.65520,"awG",@progbits,v,comdat{{$}}
 ; CTOR-NEXT: .p2align      2
 ; CTOR-NEXT: .word  g
 
-; INIT-ARRAY:    .section  .init_array.15,"aGw"
+; INIT-ARRAY:    .section  .init_array.15,"awG",@init_array,v,comdat{{$}}
 ; INIT-ARRAY-NEXT: .p2align  2
 ; INIT-ARRAY-NEXT: .word g
 ; INIT-ARRAY-NEXT: .section  .init_array,"aw"
