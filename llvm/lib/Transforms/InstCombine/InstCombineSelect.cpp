@@ -1779,6 +1779,26 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     }
   }
 
+  // (X == Y) ? (X << 1) : (X + Y) --> (X + Y)
+  // (X == Y) ? (Y << 1) : (X + Y) --> (X + Y)
+  {
+    Value *X, *Y;
+    if ((Pred == ICmpInst::ICMP_EQ) &&
+        (match(CmpLHS, m_Value(X)) && match(CmpRHS, m_Value(Y))) &&
+        (((match(TrueVal, m_Shl(m_Specific(X), m_One()))) &&
+          (match(FalseVal, m_c_Add(m_Specific(X), m_Specific(Y))))) ||
+         ((match(TrueVal, m_Shl(m_Specific(Y), m_One()))) &&
+          (match(FalseVal, m_c_Add(m_Specific(X), m_Specific(Y))))))) {
+      auto *TI = dyn_cast<Instruction>(TrueVal);
+      auto *FI = dyn_cast<Instruction>(FalseVal);
+      Value *V = Builder.CreateAdd(
+          X, Y, "",
+          /*HasNUW*/ TI->hasNoUnsignedWrap() && FI->hasNoUnsignedWrap(),
+          /*HasNSW*/ TI->hasNoSignedWrap() && FI->hasNoSignedWrap());
+      return replaceInstUsesWith(SI, V);
+    }
+  }
+
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
     return V;
