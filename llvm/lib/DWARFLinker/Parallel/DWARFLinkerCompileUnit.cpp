@@ -12,6 +12,7 @@
 #include "DIEGenerator.h"
 #include "DependencyTracker.h"
 #include "SyntheticTypeNameBuilder.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/Support/DJB.h"
@@ -245,20 +246,6 @@ void CompileUnit::cleanupDataAfterClonning() {
   TypeEntries = SmallVector<TypeEntry *>();
   Dependencies.reset(nullptr);
   getOrigUnit().clear();
-}
-
-/// Make a best effort to guess the
-/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
-static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
-  SmallString<128> Result;
-  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-  StringRef Base = sys::path::parent_path(SysRoot);
-  if (sys::path::filename(Base) != "SDKs")
-    return Result;
-  Base = sys::path::parent_path(Base);
-  Result = Base;
-  Result += "/Toolchains";
-  return Result;
 }
 
 /// Collect references to parseable Swift interfaces in imported
@@ -1696,14 +1683,6 @@ CompileUnit::getDirAndFilenameFromLineTable(
     return std::nullopt;
 
   return getDirAndFilenameFromLineTable(FileIdx);
-}
-
-static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
-  // Debug info can contain paths from any OS, not necessarily
-  // an OS we're currently running on. Moreover different compilation units can
-  // be compiled on different operating systems and linked together later.
-  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
-         sys::path::is_absolute(Path, sys::path::Style::windows);
 }
 
 std::optional<std::pair<StringRef, StringRef>>
