@@ -846,8 +846,10 @@ public:
 
   /// Return the first instruction in MBB after I that is not a PHI, label or
   /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block.
-  iterator SkipPHIsLabelsAndDebug(iterator I, bool SkipPseudoOp = true);
+  /// basic block. \p Reg is the register being used by a spill or defined for a
+  /// restore/split during register allocation.
+  iterator SkipPHIsLabelsAndDebug(iterator I, Register Reg = Register(),
+                                  bool SkipPseudoOp = true);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().

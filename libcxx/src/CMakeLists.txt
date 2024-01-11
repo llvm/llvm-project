@@ -84,11 +84,13 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    fstream.cpp
     include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
     iostream.cpp
     locale.cpp
+    ostream.cpp
     regex.cpp
     strstream.cpp
     )
@@ -323,7 +325,7 @@ endif()
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
-  experimental/memory_resource.cpp
+  experimental/keep.cpp
   )
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")

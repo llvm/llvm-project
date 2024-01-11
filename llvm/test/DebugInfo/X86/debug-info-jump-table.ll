@@ -24,8 +24,8 @@ define dso_local void @foo(i32 noundef %cond) local_unnamed_addr #0 !dbg !42 {
 ;CHECK: Initial selection DAG: %bb.{{[0-9]+}} 'foo:entry'
 ;CHECK: SelectionDAG has 5 nodes:
 ;CHECK:     [[TMP1:t.*]]: ch,glue = EntryToken
-;CHECK:   [[TMP2:t.*]]: i64,ch = CopyFromReg [[TMP1]], Register:i64 %{{[0-9]+}}
-;CHECK:   t{{[0-9]+}}: ch = br_jt [[TMP2]]:1, JumpTable:i64<0>, [[TMP2]]
+;CHECK:   [[TMP2:t.*]]: i64,ch = CopyFromReg [[TMP1]], Register:i64 %{{[0-9]+}}, jump_table.c:4:3
+;CHECK:   t{{[0-9]+}}: ch = br_jt [[TMP2]]:1, JumpTable:i64<0>, [[TMP2]], jump_table.c:4:3
 
 entry:
   call void @llvm.dbg.value(metadata i32 %cond, metadata !47, metadata !DIExpression()), !dbg !48

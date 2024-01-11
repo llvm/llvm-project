@@ -124,7 +124,7 @@ defm GRX32 : SystemZRegClass<"GRX32", [i32], 32,
                                R12L,R12H,R13L,R13H,R14L,R14H,R15L,R15H)
                              ]>;
 
-// The architecture doesn't really have any i128 support, so model the
+// On machines without SIMD support, i128 is not a legal type, so model the
 // register pairs as untyped instead.
 // XPLINK64: Allocate all registers in natural order
 defm GR128 : SystemZRegClass<"GR128", [untyped], 128,
@@ -285,7 +285,8 @@ defm VF128 : SystemZRegClass<"VF128",
 
 // All vector registers.
 defm VR128 : SystemZRegClass<"VR128",
-                             [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64, f128],
+                             [v16i8, v8i16, v4i32, v2i64, i128,
+                              v4f32, v2f64, f128],
                              128, (add (sequence "V%u", 0, 7),
                                        (sequence "V%u", 16, 31),
                                        (sequence "V%u", 8, 15))>;
@@ -305,7 +306,7 @@ def v128b   : TypedReg<v16i8,   VR128>;
 def v128h   : TypedReg<v8i16,   VR128>;
 def v128f   : TypedReg<v4i32,   VR128>;
 def v128g   : TypedReg<v2i64,   VR128>;
-def v128q   : TypedReg<v16i8,   VR128>;
+def v128q   : TypedReg<i128,    VR128>;
 def v128sb  : TypedReg<v4f32,   VR128>;
 def v128db  : TypedReg<v2f64,   VR128>;
 def v128xb  : TypedReg<f128,    VR128>;

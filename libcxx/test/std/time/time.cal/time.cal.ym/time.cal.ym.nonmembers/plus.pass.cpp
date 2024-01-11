@@ -29,10 +29,10 @@
 
 #include "test_macros.h"
 
-using year = std::chrono::year;
-using years = std::chrono::years;
-using month = std::chrono::month;
-using months = std::chrono::months;
+using year       = std::chrono::year;
+using years      = std::chrono::years;
+using month      = std::chrono::month;
+using months     = std::chrono::months;
 using year_month = std::chrono::year_month;
 
 // year_month + years
@@ -40,10 +40,8 @@ constexpr bool test_ym_plus_y() {
   ASSERT_NOEXCEPT(std::declval<year_month>() + std::declval<years>());
   ASSERT_NOEXCEPT(std::declval<years>() + std::declval<year_month>());
 
-  ASSERT_SAME_TYPE(
-      year_month, decltype(std::declval<year_month>() + std::declval<years>()));
-  ASSERT_SAME_TYPE(
-      year_month, decltype(std::declval<years>() + std::declval<year_month>()));
+  ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() + std::declval<years>()));
+  ASSERT_SAME_TYPE(year_month, decltype(std::declval<years>() + std::declval<year_month>()));
 
   year_month ym{year{1234}, std::chrono::January};
   for (int i = 0; i <= 10; ++i) {
@@ -64,10 +62,17 @@ constexpr bool test_ym_plus_m() {
   ASSERT_NOEXCEPT(std::declval<year_month>() + std::declval<months>());
   ASSERT_NOEXCEPT(std::declval<months>() + std::declval<year_month>());
 
-  ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() +
-                                        std::declval<months>()));
-  ASSERT_SAME_TYPE(year_month, decltype(std::declval<months>() +
-                                        std::declval<year_month>()));
+  ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() + std::declval<months>()));
+  ASSERT_SAME_TYPE(year_month, decltype(std::declval<months>() + std::declval<year_month>()));
+
+  {
+    // [time.cal.ym.nonmembers]/4
+    // Returns: A year_month value z such that z.ok() && z - ym == dm is true.
+    year_month ym = {year{1234}, std::chrono::January};
+    months dm     = months{42};
+    year_month z  = ym + dm;
+    assert(z.ok() && z - ym == dm);
+  }
 
   year_month ym{year{1234}, std::chrono::January};
   for (int i = 0; i <= 11; ++i) {
@@ -89,7 +94,6 @@ constexpr bool test_ym_plus_m() {
     assert(ym2.month() == month(1 + i % 12));
     assert(ym1 == ym2);
   }
-
   return true;
 }
 

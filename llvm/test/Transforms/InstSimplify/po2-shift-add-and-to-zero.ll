@@ -35,12 +35,7 @@ define i64 @f1() #0 {
 ; CHECK-LABEL: define i64 @f1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK-NEXT:    ret i64 0
 ;
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -55,24 +50,19 @@ entry:
 define i64 @test_pow2_or_zero(i64 %arg) {
 ; CHECK-LABEL: define i64 @test_pow2_or_zero
 ; CHECK-SAME: (i64 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[ARG]]
-; CHECK-NEXT:    [[X:%.*]] = and i64 [[NEG]], [[ARG]]
-; CHECK-NEXT:    [[SHL1:%.*]] = shl i64 [[X]], 4
-; CHECK-NEXT:    [[SHL2:%.*]] = shl i64 [[X]], 3
-; CHECK-NEXT:    [[MASK:%.*]] = add i64 [[SHL2]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[SHL1]], [[MASK]]
-; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK-NEXT:    ret i64 0
 ;
   %neg = sub i64 0, %arg
   %x = and i64 %neg, %arg
   %shl1 = shl i64 %x, 4
   %shl2 = shl i64 %x, 3
   %mask = add i64 %shl2, -1
-  %rem = and i64 %shl1, %mask
+  %rem = and i64 %mask, %shl1
   ret i64 %rem
 }
 
 ;; Make sure it doesn't work if the value isn't known to be a power of 2.
+;; In this case a vscale without a `vscale_range` attribute on the function.
 define i64 @no_pow2() {
 ; CHECK-LABEL: define i64 @no_pow2() {
 ; CHECK-NEXT:  entry:
@@ -89,6 +79,70 @@ entry:
   %2 = shl i64 %0, 3
   %3 = add i64 %2, -1
   %rem = and i64 %1, %3
+  ret i64 %rem
+}
+
+;; Make sure it doesn't work if the shift on the -1 side is greater
+define i64 @minus_shift_greater(i64 %arg) {
+; CHECK-LABEL: define i64 @minus_shift_greater
+; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[ARG]]
+; CHECK-NEXT:    [[X:%.*]] = and i64 [[NEG]], [[ARG]]
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i64 [[X]], 3
+; CHECK-NEXT:    [[SHL2:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[MASK:%.*]] = add i64 [[SHL2]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[SHL1]], [[MASK]]
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+  %neg = sub i64 0, %arg
+  %x = and i64 %neg, %arg
+  %shl1 = shl i64 %x, 3
+  %shl2 = shl i64 %x, 4
+  %mask = add i64 %shl2, -1
+  %rem = and i64 %shl1, %mask
+  ret i64 %rem
+}
+
+;; Make sure it doesn't work if the subtract isn't one.
+define i64 @sub2(i64 %arg) {
+; CHECK-LABEL: define i64 @sub2
+; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[ARG]]
+; CHECK-NEXT:    [[X:%.*]] = and i64 [[NEG]], [[ARG]]
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[SHL2:%.*]] = shl i64 [[X]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = add i64 [[SHL2]], -2
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[SHL1]], [[MASK]]
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+  %neg = sub i64 0, %arg
+  %x = and i64 %neg, %arg
+  %shl1 = shl i64 %x, 4
+  %shl2 = shl i64 %x, 3
+  %mask = add i64 %shl2, -2
+  %rem = and i64 %shl1, %mask
+  ret i64 %rem
+}
+
+;; Make sure it doesn't work with a right shift
+;; Make sure it doesn't work if the subtract isn't one.
+define i64 @rightshift(i64 %arg) {
+; CHECK-LABEL: define i64 @rightshift
+; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[ARG]]
+; CHECK-NEXT:    [[X:%.*]] = and i64 [[NEG]], [[ARG]]
+; CHECK-NEXT:    [[SHL1:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[SHL2:%.*]] = lshr i64 [[X]], 3
+; CHECK-NEXT:    [[MASK:%.*]] = add i64 [[SHL2]], -1
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[SHL1]], [[MASK]]
+; CHECK-NEXT:    ret i64 [[REM]]
+;
+  %neg = sub i64 0, %arg
+  %x = and i64 %neg, %arg
+  %shl1 = shl i64 %x, 4
+  %shl2 = lshr i64 %x, 3
+  %mask = add i64 %shl2, -1
+  %rem = and i64 %shl1, %mask
   ret i64 %rem
 }
 

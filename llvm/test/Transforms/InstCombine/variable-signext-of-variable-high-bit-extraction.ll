@@ -301,7 +301,7 @@ define i32 @n8_extrause_bad(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[SIGNBIT_POSITIONED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT_POSITIONED]])
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr exact i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %skip_high = sub i32 64, %nbits
@@ -334,7 +334,7 @@ define i32 @n9(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[NUM_HIGH_BITS_TO_SMEAR_NARROW:%.*]] = sub i32 32, [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[SIGNBIT_POSITIONED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr exact i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %skip_high = sub i32 63, %nbits ; not 64
@@ -365,7 +365,7 @@ define i32 @n10(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[NUM_HIGH_BITS_TO_SMEAR_NARROW:%.*]] = sub i32 31, [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[SIGNBIT_POSITIONED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr exact i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %skip_high = sub i32 64, %nbits
@@ -396,7 +396,7 @@ define i32 @n11(i64 %data, i32 %nbits1, i32 %nbits2) {
 ; CHECK-NEXT:    [[NUM_HIGH_BITS_TO_SMEAR_NARROW:%.*]] = sub i32 32, [[NBITS2:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[SIGNBIT_POSITIONED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr exact i32 [[SIGNBIT_POSITIONED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %skip_high = sub i32 64, %nbits1 ; not %nbits2
@@ -493,7 +493,7 @@ define i32 @n13_extrause(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[HIGHBITS_CLEANED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    call void @use32(i32 [[HIGHBITS_CLEANED]])
-; CHECK-NEXT:    [[RES:%.*]] = lshr i32 [[HIGHBITS_CLEANED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[RES:%.*]] = lshr exact i32 [[HIGHBITS_CLEANED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %skip_high = sub i32 64, %nbits
@@ -555,7 +555,7 @@ define i32 @n14_extrause(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[NUM_HIGH_BITS_TO_SMEAR_NARROW]])
 ; CHECK-NEXT:    [[HIGHBITS_CLEANED:%.*]] = shl i32 [[EXTRACTED_NARROW]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    call void @use32(i32 [[HIGHBITS_CLEANED]])
-; CHECK-NEXT:    [[RES:%.*]] = lshr i32 [[HIGHBITS_CLEANED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
+; CHECK-NEXT:    [[RES:%.*]] = lshr exact i32 [[HIGHBITS_CLEANED]], [[NUM_HIGH_BITS_TO_SMEAR_NARROW]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %skip_high = sub i32 64, %nbits

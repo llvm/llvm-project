@@ -4,9 +4,9 @@
 
 // CHECK-LABEL:   func.func @empty_sparse_vector(
 //  CHECK-SAME:     %[[VAL_0:.*]]: index) -> (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
-//       CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
-//       CHECK:     %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f64
-//       CHECK:     %[[VAL_3:.*]] = arith.constant 0 : index
+//   CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f64
+//   CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 0 : index
 //       CHECK:     %[[VAL_4:.*]] = memref.alloc() : memref<16xindex>
 //       CHECK:     %[[VAL_5:.*]] = memref.cast %[[VAL_4]] : memref<16xindex> to memref<?xindex>
 //       CHECK:     linalg.fill ins(%[[VAL_3]] : index) outs(%[[VAL_4]] : memref<16xindex>)

@@ -54,8 +54,8 @@ public:
   bool isUnordered() const { return getMMO().isUnordered(); }
 
   /// Returns the size in bytes of the memory access.
-  uint64_t getMemSize() const { return getMMO().getSize();
-  } /// Returns the size in bits of the memory access.
+  uint64_t getMemSize() const { return getMMO().getSize(); }
+  /// Returns the size in bits of the memory access.
   uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
@@ -558,6 +558,24 @@ public:
   }
 };
 
+/// Represents a G_PHI.
+class GPhi : public GenericMachineInstr {
+public:
+  /// Returns the number of incoming values.
+  unsigned getNumIncomingValues() const { return (getNumOperands() - 1) / 2; }
+  /// Returns the I'th incoming vreg.
+  Register getIncomingValue(unsigned I) {
+    return getOperand(I * 2 + 1).getReg();
+  }
+  /// Returns the I'th incoming basic block.
+  MachineBasicBlock *getIncomingBlock(unsigned I) {
+    return getOperand(I * 2 + 2).getMBB();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_PHI;
+  }
+};
 
 } // namespace llvm
 

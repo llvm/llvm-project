@@ -1290,14 +1290,6 @@ public:
     return (*this)[size() - 1];
   }
 
-  /// Compare this range with another.
-  template <typename OtherT> bool operator==(const OtherT &rhs) const {
-    return std::equal(begin(), end(), rhs.begin(), rhs.end());
-  }
-  template <typename OtherT> bool operator!=(const OtherT &rhs) const {
-    return !(*this == rhs);
-  }
-
   /// Return the size of this range.
   size_t size() const { return count; }
 
@@ -1360,6 +1352,23 @@ protected:
   /// The size from the owning range.
   ptrdiff_t count;
 };
+/// Compare this range with another.
+/// FIXME: Make me a member function instead of friend when it works in C++20.
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator==(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename OtherT, typename DerivedT, typename BaseT, typename T,
+          typename PointerT, typename ReferenceT>
+bool operator!=(const indexed_accessor_range_base<DerivedT, BaseT, T, PointerT,
+                                                  ReferenceT> &lhs,
+                const OtherT &rhs) {
+  return !(lhs == rhs);
+}
 } // end namespace detail
 
 /// This class provides an implementation of a range of

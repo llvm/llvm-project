@@ -1203,6 +1203,54 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nanf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanf
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nan_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nan
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nanl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanl
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
 # FIXME: These tests are currently spurious for NVPTX.
 if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
@@ -1247,6 +1295,54 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.nextafterl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_fp_unittest(
+    nexttoward_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttoward_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttoward
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+
+  add_fp_unittest(
+    nexttowardf_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttowardf_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttowardf
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
+
+add_fp_unittest(
+  nexttowardl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardl_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nexttowardl
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fp_bits
 )

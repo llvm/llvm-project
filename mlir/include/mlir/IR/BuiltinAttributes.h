@@ -1044,6 +1044,8 @@ public:
   /// Creates a distinct attribute that associates a referenced attribute with a
   /// unique identifier.
   static DistinctAttr create(Attribute referencedAttr);
+
+  static constexpr StringLiteral name = "builtin.distinct";
 };
 
 //===----------------------------------------------------------------------===//

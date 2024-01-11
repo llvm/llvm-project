@@ -520,6 +520,8 @@ llvm.func @discardable_use_tree() {
   %4 = llvm.bitcast %3 : !llvm.ptr to !llvm.ptr
   llvm.intr.lifetime.start 2, %3 : !llvm.ptr
   llvm.intr.lifetime.start 2, %4 : !llvm.ptr
+  %5 = llvm.intr.invariant.start 2, %3 : !llvm.ptr
+  llvm.intr.invariant.end %5, 2, %3 : !llvm.ptr
   llvm.return
 }
 

@@ -179,6 +179,10 @@ add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
 
+add_math_entrypoint_object(nan)
+add_math_entrypoint_object(nanf)
+add_math_entrypoint_object(nanl)
+
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)
 add_math_entrypoint_object(nearbyintl)
@@ -186,6 +190,10 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
+
+add_math_entrypoint_object(nexttoward)
+add_math_entrypoint_object(nexttowardf)
+add_math_entrypoint_object(nexttowardl)
 
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)

@@ -72,6 +72,7 @@ public:
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
   std::string computeSysRoot() const override;
+  SanitizerMask getSupportedSanitizers() const override;
 
 private:
   using OrderedMultilibs =

@@ -152,6 +152,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
@@ -391,6 +392,8 @@ public:
     IncompleteOnly = 3,
   };
 
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -501,6 +504,11 @@ public:
   // Indicates whether we should keep all nullptr checks for pointers
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
+
+  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
+  // This exists so that we can override the macro value and test our incomplete
+  // implementation on real-world examples.
+  std::string OpenACCMacroOverride;
 
   LangOptions();
 
@@ -735,6 +743,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

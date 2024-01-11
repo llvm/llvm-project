@@ -1876,6 +1876,12 @@ public:
   const llvm::APSInt *getSymVal(ProgramStateRef State,
                                 SymbolRef Sym) const override;
 
+  const llvm::APSInt *getSymMinVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
+
+  const llvm::APSInt *getSymMaxVal(ProgramStateRef State,
+                                   SymbolRef Sym) const override;
+
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override;
 
@@ -2861,6 +2867,22 @@ const llvm::APSInt *RangeConstraintManager::getSymVal(ProgramStateRef St,
                                                       SymbolRef Sym) const {
   const RangeSet *T = getConstraint(St, Sym);
   return T ? T->getConcreteValue() : nullptr;
+}
+
+const llvm::APSInt *RangeConstraintManager::getSymMinVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMinValue();
+}
+
+const llvm::APSInt *RangeConstraintManager::getSymMaxVal(ProgramStateRef St,
+                                                         SymbolRef Sym) const {
+  const RangeSet *T = getConstraint(St, Sym);
+  if (!T || T->isEmpty())
+    return nullptr;
+  return &T->getMaxValue();
 }
 
 //===----------------------------------------------------------------------===//

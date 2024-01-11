@@ -40,8 +40,10 @@ struct TestFn {
       A a(T(1));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
 
-      std::atomic<bool> is_ready[2] = {false, false};
-      auto f                        = [&](int index) {
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(1));
         is_ready[index].store(true);
 
@@ -63,8 +65,10 @@ struct TestFn {
       volatile A a(T(2));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
 
-      std::atomic<bool> is_ready[2] = {false, false};
-      auto f                        = [&](int index) {
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(2));
         is_ready[index].store(true);
 

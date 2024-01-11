@@ -1,4 +1,4 @@
-//===- LvlTypeParser.h - `DimLevelType` parser ----------------------------===//
+//===- LvlTypeParser.h - `LevelType` parser ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,7 +58,7 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     return failure();
   }
 
-  ERROR_IF(!isValidDLT(static_cast<DimLevelType>(properties)),
+  ERROR_IF(!isValidLT(static_cast<LevelType>(properties)),
            "invalid level type: level format doesn't support the properties");
   return properties;
 }
@@ -70,9 +70,9 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
   ERROR_IF(failed(parser.parseOptionalKeyword(&strVal)),
            "expected valid level property (e.g. nonordered, nonunique or high)")
   if (strVal.compare("nonunique") == 0) {
-    *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonunique);
+    *properties |= static_cast<uint8_t>(LevelPropertyNondefault::Nonunique);
   } else if (strVal.compare("nonordered") == 0) {
-    *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonordered);
+    *properties |= static_cast<uint8_t>(LevelPropertyNondefault::Nonordered);
   } else {
     parser.emitError(loc, "unknown level property: ") << strVal;
     return failure();

@@ -2612,6 +2612,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   if (IRFunctionArgs.hasSRetArg()) {
     llvm::AttrBuilder SRETAttrs(getLLVMContext());
     SRETAttrs.addStructRetAttr(getTypes().ConvertTypeForMem(RetTy));
+    SRETAttrs.addAttribute(llvm::Attribute::Writable);
+    SRETAttrs.addAttribute(llvm::Attribute::DeadOnUnwind);
     hasUsedSRet = true;
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
@@ -5607,6 +5609,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CI = Builder.CreateInvoke(IRFuncTy, CalleePtr, Cont, InvokeDest, IRCallArgs,
                               BundleList);
     EmitBlock(Cont);
+  }
+  if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
+      CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
+    SetSqrtFPAccuracy(CI);
   }
   if (callOrInvoke)
     *callOrInvoke = CI;

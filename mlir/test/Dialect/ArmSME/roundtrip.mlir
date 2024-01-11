@@ -1,197 +1,78 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// arm_sme.cast_tile_to_vector
+// arm_sme.get_tile
 //===----------------------------------------------------------------------===//
 
-func.func @arm_sme_cast_tile_to_vector_i8(%tile_id : i8) -> vector<[16]x[16]xi8> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i8 to vector<[16]x[16]xi8>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i8 to vector<[16]x[16]xi8>
-  return %0 : vector<[16]x[16]xi8>
+
+func.func @arm_sme_get_tile_i8() {
+  // CHECK: arm_sme.get_tile : vector<[16]x[16]xi8>
+  %0 = arm_sme.get_tile : vector<[16]x[16]xi8>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_i16(%tile_id : i16) -> vector<[8]x[8]xi16> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i16 to vector<[8]x[8]xi16>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i16 to vector<[8]x[8]xi16>
-  return %0 : vector<[8]x[8]xi16>
+func.func @arm_sme_get_tile_i16() {
+  // CHECK: arm_sme.get_tile : vector<[8]x[8]xi16>
+  %0 = arm_sme.get_tile : vector<[8]x[8]xi16>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_i32(%tile_id : i32) -> vector<[4]x[4]xi32> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i32 to vector<[4]x[4]xi32>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
-  return %0 : vector<[4]x[4]xi32>
+func.func @arm_sme_get_tile_i32() {
+  // CHECK: arm_sme.get_tile : vector<[4]x[4]xi32>
+  %0 = arm_sme.get_tile : vector<[4]x[4]xi32>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_i64(%tile_id : i64) -> vector<[2]x[2]xi64> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i64 to vector<[2]x[2]xi64>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i64 to vector<[2]x[2]xi64>
-  return %0 : vector<[2]x[2]xi64>
+func.func @arm_sme_get_tile_i64() {
+  // CHECK: arm_sme.get_tile : vector<[2]x[2]xi64>
+  %0 = arm_sme.get_tile : vector<[2]x[2]xi64>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_i128(%tile_id : i128) -> vector<[1]x[1]xi128> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i128 to vector<[1]x[1]xi128>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i128 to vector<[1]x[1]xi128>
-  return %0 : vector<[1]x[1]xi128>
+func.func @arm_sme_get_tile_i128() {
+  // CHECK: arm_sme.get_tile : vector<[1]x[1]xi128>
+  %0 = arm_sme.get_tile : vector<[1]x[1]xi128>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_f16(%tile_id : i16) -> vector<[8]x[8]xf16> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i16 to vector<[8]x[8]xf16>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i16 to vector<[8]x[8]xf16>
-  return %0 : vector<[8]x[8]xf16>
+func.func @arm_sme_get_tile_f16() {
+  // CHECK: arm_sme.get_tile : vector<[8]x[8]xf16>
+  %0 = arm_sme.get_tile : vector<[8]x[8]xf16>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_bf16(%tile_id : i16) -> vector<[8]x[8]xbf16> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i16 to vector<[8]x[8]xbf16>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i16 to vector<[8]x[8]xbf16>
-  return %0 : vector<[8]x[8]xbf16>
+func.func @arm_sme_get_tile_bf16() {
+  // CHECK: arm_sme.get_tile : vector<[8]x[8]xbf16>
+  %0 = arm_sme.get_tile : vector<[8]x[8]xbf16>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_f32(%tile_id : i32) -> vector<[4]x[4]xf32> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i32 to vector<[4]x[4]xf32>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xf32>
-  return %0 : vector<[4]x[4]xf32>
+func.func @arm_sme_get_tile_f32() {
+  // CHECK: arm_sme.get_tile : vector<[4]x[4]xf32>
+  %0 = arm_sme.get_tile : vector<[4]x[4]xf32>
+  return
 }
 
 // -----
 
-func.func @arm_sme_cast_tile_to_vector_f64(%tile_id : i64) -> vector<[2]x[2]xf64> {
-  // CHECK: arm_sme.cast_tile_to_vector {{.*}} : i64 to vector<[2]x[2]xf64>
-  %0 = arm_sme.cast_tile_to_vector %tile_id : i64 to vector<[2]x[2]xf64>
-  return %0 : vector<[2]x[2]xf64>
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.cast_vector_to_tile
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_i8(%vector : vector<[16]x[16]xi8>) -> i8 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[16]x[16]xi8> to i8
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[16]x[16]xi8> to i8
-  return %0 : i8
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_i16(%vector : vector<[8]x[8]xi16>) -> i16 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[8]x[8]xi16> to i16
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[8]x[8]xi16> to i16
-  return %0 : i16
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_i32(%vector : vector<[4]x[4]xi32>) -> i32 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[4]x[4]xi32> to i32
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[4]x[4]xi32> to i32
-  return %0 : i32
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_i64(%vector : vector<[2]x[2]xi64>) -> i64 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[2]x[2]xi64> to i64
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[2]x[2]xi64> to i64
-  return %0 : i64
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_i128(%vector : vector<[1]x[1]xi128>) -> i128 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[1]x[1]xi128> to i128
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[1]x[1]xi128> to i128
-  return %0 : i128
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_f16(%vector : vector<[8]x[8]xf16>) -> i16 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[8]x[8]xf16> to i16
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[8]x[8]xf16> to i16
-  return %0 : i16
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_bf16(%vector : vector<[8]x[8]xbf16>) -> i16 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[8]x[8]xbf16> to i16
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[8]x[8]xbf16> to i16
-  return %0 : i16
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_f32(%vector : vector<[4]x[4]xf32>) -> i32 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[4]x[4]xf32> to i32
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[4]x[4]xf32> to i32
-  return %0 : i32
-}
-
-// -----
-
-func.func @arm_sme_cast_vector_to_tile_f64(%vector : vector<[2]x[2]xf64>) -> i64 {
-  // CHECK: arm_sme.cast_vector_to_tile {{.*}} : vector<[2]x[2]xf64> to i64
-  %0 = arm_sme.cast_vector_to_tile %vector : vector<[2]x[2]xf64> to i64
-  return %0 : i64
-}
-
-//===----------------------------------------------------------------------===//
-// arm_sme.get_tile_id
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @arm_sme_get_tile_id_i8() -> i8 {
-  // CHECK: arm_sme.get_tile_id : i8
-  %0 = arm_sme.get_tile_id : i8
-  return %0 : i8
-}
-
-// -----
-
-func.func @arm_sme_get_tile_id_i16() -> i16 {
-  // CHECK: arm_sme.get_tile_id : i16
-  %0 = arm_sme.get_tile_id : i16
-  return %0 : i16
-}
-
-// -----
-
-func.func @arm_sme_get_tile_id_i32() -> i32 {
-  // CHECK: arm_sme.get_tile_id : i32
-  %0 = arm_sme.get_tile_id : i32
-  return %0 : i32
-}
-
-// -----
-
-func.func @arm_sme_get_tile_id_i64() -> i64 {
-  // CHECK: arm_sme.get_tile_id : i64
-  %0 = arm_sme.get_tile_id : i64
-  return %0 : i64
-}
-
-// -----
-
-func.func @arm_sme_get_tile_id_i128() -> i128 {
-  // CHECK: arm_sme.get_tile_id : i128
-  %0 = arm_sme.get_tile_id : i128
-  return %0 : i128
+func.func @arm_sme_get_tile_f64() {
+  // CHECK: arm_sme.get_tile : vector<[2]x[2]xf64>
+  %0 = arm_sme.get_tile : vector<[2]x[2]xf64>
+  return
 }
 
 //===----------------------------------------------------------------------===//
@@ -1213,4 +1094,40 @@ func.func @arm_sme_outerproduct_with_everything(%vecA: vector<[16]xi8>, %vecB: v
   // CHECK: arm_sme.outerproduct {{.*}}, {{.*}} kind<sub> acc({{.*}}) masks({{.*}}, {{.*}}) : vector<[16]xi8>, vector<[16]xi8>
   %result = arm_sme.outerproduct %vecA, %vecB kind<sub> acc(%acc) masks(%maskA, %maskB) : vector<[16]xi8>, vector<[16]xi8>
   return %result : vector<[16]x[16]xi8>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.streaming_vl
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_streaming_vl_bytes() -> index {
+  // CHECK: arm_sme.streaming_vl <byte>
+  %svl_b = arm_sme.streaming_vl <byte>
+  return %svl_b : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_half_words() -> index {
+  // CHECK: arm_sme.streaming_vl <half>
+  %svl_h = arm_sme.streaming_vl <half>
+  return %svl_h : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_words() -> index {
+  // CHECK: arm_sme.streaming_vl <word>
+  %svl_w = arm_sme.streaming_vl <word>
+  return %svl_w : index
+}
+
+// -----
+
+func.func @arm_sme_streaming_vl_double_words() -> index {
+  // CHECK: arm_sme.streaming_vl <double>
+  %svl_d = arm_sme.streaming_vl <double>
+  return %svl_d : index
 }

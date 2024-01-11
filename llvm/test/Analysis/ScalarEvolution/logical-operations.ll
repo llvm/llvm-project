@@ -436,7 +436,7 @@ define ptr @tautological_select_like_phi(i32 %tc) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 100
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 100
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 101
+; CHECK-NEXT:  Loop %loop: Trip multiple is 101
 ;
 entry:
   br label %loop

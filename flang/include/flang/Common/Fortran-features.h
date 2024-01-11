@@ -53,7 +53,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
     F202XAllocatableBreakingChange, DimMustBePresent, CommonBlockPadding,
-    LogicalVsCBool, BindCCharLength)
+    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

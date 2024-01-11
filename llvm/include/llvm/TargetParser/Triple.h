@@ -112,6 +112,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
     ARMSubArch_v9_2a,
@@ -432,6 +433,12 @@ public:
   /// Get the operating system and optional environment components as a single
   /// string (separated by a '-' if the environment component is present).
   StringRef getOSAndEnvironmentName() const;
+
+  /// Get the version component of the environment component as a single
+  /// string (the version after the environment).
+  ///
+  /// For example, "fooos1.2.3" would return "1.2.3".
+  StringRef getEnvironmentVersionString() const;
 
   /// @}
   /// @name Convenience Predicates

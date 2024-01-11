@@ -24,13 +24,15 @@ uintptr_t *__fini_array_start [[gnu::visibility("protected")]];
 uintptr_t *__fini_array_end [[gnu::visibility("protected")]];
 }
 
-using InitCallback = void(int, char **, char **);
+// Nvidia requires that the signature of the function pointers match. This means
+// we cannot support the extended constructor arguments.
+using InitCallback = void(void);
 using FiniCallback = void(void);
 
-static void call_init_array_callbacks(int argc, char **argv, char **env) {
+static void call_init_array_callbacks(int, char **, char **) {
   size_t init_array_size = __init_array_end - __init_array_start;
   for (size_t i = 0; i < init_array_size; ++i)
-    reinterpret_cast<InitCallback *>(__init_array_start[i])(argc, argv, env);
+    reinterpret_cast<InitCallback *>(__init_array_start[i])();
 }
 
 static void call_fini_array_callbacks() {

@@ -38,7 +38,7 @@ unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
 
 TypeSize
 R600TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-  return TypeSize::Fixed(32);
+  return TypeSize::getFixed(32);
 }
 
 unsigned R600TTIImpl::getMinVectorRegisterBitWidth() const { return 32; }

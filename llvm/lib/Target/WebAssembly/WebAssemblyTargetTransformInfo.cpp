@@ -40,11 +40,11 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(64);
+    return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::Fixed(getST()->hasSIMD128() ? 128 : 64);
+    return TypeSize::getFixed(getST()->hasSIMD128() ? 128 : 64);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::Scalable(0);
+    return TypeSize::getScalable(0);
   }
 
   llvm_unreachable("Unsupported register kind");

@@ -67,7 +67,7 @@ void test() {
         typename SyncBuf::int_type ret = sync_buf.sputc(c);
         assert(ret == typename SyncBuf::int_type(c));
       }
-      // The synchchronization happens upon destruction of sync_buf.
+      // The synchronization happens upon destruction of sync_buf.
       assert(buf.str().empty());
       assert(stats.allocated_size >= 1024);
     }
@@ -92,7 +92,7 @@ void test() {
         ret = new_sync_buf.sputc(c);
         assert(ret == typename SyncBuf::int_type(c));
 
-        // The synchchronization happens upon destruction of new_sync_buf.
+        // The synchronization happens upon destruction of new_sync_buf.
         assert(buf.str().empty());
         assert(stats.allocated_size >= 2);
       }
@@ -129,7 +129,7 @@ void test() {
         ret = new_sync_buf.sputc(c);
         assert(ret == typename SyncBuf::int_type(c));
 
-        // The synchchronization happens upon destruction of new_sync_buf.
+        // The synchronization happens upon destruction of new_sync_buf.
         assert(buf.str().empty());
       }
       assert(buf.str().size() == 2);

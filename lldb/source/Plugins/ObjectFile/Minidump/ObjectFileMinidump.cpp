@@ -78,19 +78,16 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
 
   builder.AddMiscInfo(process_sp);
 
-  if (target.GetArchitecture().GetMachine() == llvm::Triple::ArchType::x86_64) {
-    error = builder.AddThreadList(process_sp);
-    if (error.Fail())
-      return false;
+  error = builder.AddThreadList(process_sp);
+  if (error.Fail())
+    return false;
 
-    error = builder.AddException(process_sp);
-    if (error.Fail())
-      return false;
+  // Add any exceptions but only if there are any in any threads.
+  builder.AddExceptions(process_sp);
 
-    error = builder.AddMemoryList(process_sp, core_style);
-    if (error.Fail())
-      return false;
-  }
+  error = builder.AddMemoryList(process_sp, core_style);
+  if (error.Fail())
+    return false;
 
   if (target.GetArchitecture().GetTriple().getOS() ==
       llvm::Triple::OSType::Linux) {

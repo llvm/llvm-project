@@ -1255,6 +1255,10 @@ class Enc_58a8bf : OpcodeHexagon {
   bits <5> Rx32;
   let Inst{20-16} = Rx32{4-0};
 }
+class Enc_598f6c : OpcodeHexagon {
+  bits <5> Rtt32;
+  let Inst{12-8} = Rtt32{4-0};
+}
 class Enc_5a18b3 : OpcodeHexagon {
   bits <11> Ii;
   let Inst{21-20} = Ii{10-9};

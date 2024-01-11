@@ -46,19 +46,16 @@ define i32 @test(i32 %a, i1 %c) {
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
   ; PRESELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-  ; PRESELECTION-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s8) = G_TRUNC [[COPY1]](s32)
-  ; PRESELECTION-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:gpr(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
-  ; PRESELECTION-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; PRESELECTION-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 100000
-  ; PRESELECTION-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:gpr(s32) = G_CONSTANT_FOLD_BARRIER [[C1]]
-  ; PRESELECTION-NEXT:   [[ANYEXT:%[0-9]+]]:gpr(s32) = G_ANYEXT [[ASSERT_ZEXT]](s8)
+  ; PRESELECTION-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 100000
+  ; PRESELECTION-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:gpr(s32) = G_CONSTANT_FOLD_BARRIER [[C]]
+  ; PRESELECTION-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; PRESELECTION-NEXT:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[ANYEXT]], [[C2]]
+  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[COPY1]], [[C2]]
   ; PRESELECTION-NEXT:   G_BRCOND [[AND]](s32), %bb.3
   ; PRESELECTION-NEXT:   G_BR %bb.2
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT: bb.2.common.ret:
-  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI %7(s32), %bb.3, [[C]](s32), %bb.1
+  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI %7(s32), %bb.3, [[C1]](s32), %bb.1
   ; PRESELECTION-NEXT:   $w0 = COPY [[PHI]](s32)
   ; PRESELECTION-NEXT:   RET_ReallyLR implicit $w0
   ; PRESELECTION-NEXT: {{  $}}
@@ -78,8 +75,8 @@ define i32 @test(i32 %a, i1 %c) {
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; POSTSELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-  ; POSTSELECTION-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; POSTSELECTION-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 100000
+  ; POSTSELECTION-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; POSTSELECTION-NEXT:   TBNZW [[COPY1]], 0, %bb.3
   ; POSTSELECTION-NEXT:   B %bb.2
   ; POSTSELECTION-NEXT: {{  $}}

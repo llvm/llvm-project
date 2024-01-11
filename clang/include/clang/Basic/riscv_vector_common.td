@@ -41,7 +41,7 @@
 //   x: float16_t (half)
 //   f: float32_t (float)
 //   d: float64_t (double)
-//   b: bfloat16_t (bfloat16)
+//   y: bfloat16_t (bfloat16)
 //
 // This way, given an LMUL, a record with a TypeRange "sil" will cause the
 // definition of 3 builtins. Each type "t" in the TypeRange (in this example

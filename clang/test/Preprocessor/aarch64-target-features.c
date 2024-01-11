@@ -45,10 +45,12 @@
 // CHECK-NOT: __ARM_PCS_VFP 1
 // CHECK-NOT: __ARM_SIZEOF_MINIMAL_ENUM 1
 // CHECK-NOT: __ARM_SIZEOF_WCHAR_T 2
+// CHECK-NOT: __ARM_FEATURE_COPROC
 // CHECK-NOT: __ARM_FEATURE_SVE
 // CHECK-NOT: __ARM_FEATURE_DOTPROD
 // CHECK-NOT: __ARM_FEATURE_PAC_DEFAULT
 // CHECK-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-NOT: __ARM_FEATURE_GCS_DEFAULT
 // CHECK-NOT: __ARM_BF16_FORMAT_ALTERNATIVE 1
 // CHECK-NOT: __ARM_FEATURE_BF16 1
 // CHECK-NOT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
@@ -207,6 +209,7 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -586,6 +589,20 @@
 // CHECK-SYS128: __ARM_FEATURE_SYSREG128 1
 // CHECK-NOSYS128-NOT: __ARM_FEATURE_SYSREG128 1
 
+// ================== Check Armv8.9-A/Armv9.4-A Guarded Control Stack (FEAT_GCS)
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a     -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOGCS,CHECK-NOGCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a     -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOGCS,CHECK-NOGCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a+gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-GCS,CHECK-NOGCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a+gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-GCS,CHECK-NOGCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a     -mbranch-protection=gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOGCS,CHECK-GCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a     -mbranch-protection=gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-NOGCS,CHECK-GCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.9-a+gcs -mbranch-protection=gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-GCS,CHECK-GCS-DEFAULT %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv9.4-a+gcs -mbranch-protection=gcs -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-GCS,CHECK-GCS-DEFAULT %s
+// CHECK-GCS: __ARM_FEATURE_GCS 1
+// CHECK-NOGCS-NOT: __ARM_FEATURE_GCS 1
+// CHECK-GCS-DEFAULT: __ARM_FEATURE_GCS_DEFAULT 1
+// CHECK-NOGCS-DEFAULT-NOT: __ARM_FEATURE_GCS_DEFAULT 1
+
 // ================== Check default macros for Armv8.1-A and later
 // RUN: %clang -target aarch64-none-elf -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
 // RUN: %clang -target aarch64-none-elf -march=armv8.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-BEFORE-V83,CHECK-BEFORE-V85     %s
@@ -599,6 +616,8 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1

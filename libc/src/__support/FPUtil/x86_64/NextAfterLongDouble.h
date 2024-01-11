@@ -16,6 +16,7 @@
 #endif
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 #include <stdint.h>
@@ -38,27 +39,28 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
 
   // Convert pseudo subnormal number to normal number.
   if (from_bits.get_implicit_bit() == 1 &&
-      from_bits.get_unbiased_exponent() == 0) {
-    from_bits.set_unbiased_exponent(1);
+      from_bits.get_biased_exponent() == 0) {
+    from_bits.set_biased_exponent(1);
   }
 
-  using UIntType = FPBits::UIntType;
-  constexpr UIntType SIGN_VAL = (UIntType(1) << 79);
-  constexpr UIntType MANTISSA_MASK =
-      (UIntType(1) << MantissaWidth<long double>::VALUE) - 1;
-  UIntType int_val = from_bits.uintval();
+  using StorageType = FPBits::StorageType;
+  constexpr StorageType SIGN_VAL = (StorageType(1) << 79);
+  constexpr StorageType FRACTION_MASK = FPBits::FRACTION_MASK;
+  StorageType int_val = from_bits.uintval();
   if (from < 0.0l) {
     if (from > to) {
       if (int_val == (SIGN_VAL + FPBits::MAX_SUBNORMAL)) {
         // We deal with normal/subnormal boundary separately to avoid
         // dealing with the implicit bit.
         int_val = SIGN_VAL + FPBits::MIN_NORMAL;
-      } else if ((int_val & MANTISSA_MASK) == MANTISSA_MASK) {
+      } else if ((int_val & FRACTION_MASK) == FRACTION_MASK) {
         from_bits.set_mantissa(0);
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
+        if (from_bits.is_inf())
+          raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;
       } else {
         ++int_val;
@@ -68,11 +70,11 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // We deal with normal/subnormal boundary separately to avoid
         // dealing with the implicit bit.
         int_val = SIGN_VAL + FPBits::MAX_SUBNORMAL;
-      } else if ((int_val & MANTISSA_MASK) == 0) {
-        from_bits.set_mantissa(MANTISSA_MASK);
+      } else if ((int_val & FRACTION_MASK) == 0) {
+        from_bits.set_mantissa(FRACTION_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
         return from_bits;
       } else {
         --int_val;
@@ -87,11 +89,11 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     if (from > to) {
       if (int_val == FPBits::MIN_NORMAL) {
         int_val = FPBits::MAX_SUBNORMAL;
-      } else if ((int_val & MANTISSA_MASK) == 0) {
-        from_bits.set_mantissa(MANTISSA_MASK);
+      } else if ((int_val & FRACTION_MASK) == 0) {
+        from_bits.set_mantissa(FRACTION_MASK);
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() - 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
         return from_bits;
       } else {
         --int_val;
@@ -99,12 +101,14 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     } else {
       if (int_val == FPBits::MAX_SUBNORMAL) {
         int_val = FPBits::MIN_NORMAL;
-      } else if ((int_val & MANTISSA_MASK) == MANTISSA_MASK) {
+      } else if ((int_val & FRACTION_MASK) == FRACTION_MASK) {
         from_bits.set_mantissa(0);
         // Incrementing exponent might overflow the value to infinity,
         // which is what is expected. Since NaNs are handling separately,
         // it will never overflow "beyond" infinity.
-        from_bits.set_unbiased_exponent(from_bits.get_unbiased_exponent() + 1);
+        from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
+        if (from_bits.is_inf())
+          raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         return from_bits;
       } else {
         ++int_val;
@@ -112,8 +116,11 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     }
   }
 
+  StorageType implicit_bit = int_val & (StorageType(1) << FPBits::FRACTION_LEN);
+  if (implicit_bit == StorageType(0))
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
   return cpp::bit_cast<long double>(int_val);
-  // TODO: Raise floating point exceptions as required by the standard.
 }
 
 } // namespace fputil

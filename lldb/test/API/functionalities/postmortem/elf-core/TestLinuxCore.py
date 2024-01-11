@@ -578,9 +578,9 @@ class LinuxCoreTestCase(TestBase):
         # The N/Z/C/V bits are always present so just check for those.
         self.expect("register read cpsr", substrs=["= (N = 0, Z = 0, C = 0, V = 0"])
         self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
-        # AHP/DN/FZ/RMMode always present, others may vary.
+        # AHP/DN/FZ/RMode always present, others may vary.
         self.expect(
-            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMMode = 0"]
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
         )
 
     @skipIfLLVMTargetMissing("AArch64")

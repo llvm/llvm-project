@@ -181,6 +181,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
     return inferScalarType(R->getOperand(0));
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingInstr())->getType();
+  case Instruction::Store:
+    // FIXME: VPReplicateRecipes with store opcodes still define a result
+    // VPValue, so we need to handle them here. Remove the code here once this
+    // is modeled accurately in VPlan.
+    return Type::getVoidTy(Ctx);
   default:
     break;
   }

@@ -21,7 +21,7 @@ func.func @sparse_dce_convert(%arg0: tensor<64xf32>) {
 }
 
 // CHECK-LABEL: func @sparse_dce_getters(
-//  CHECK-SAME: %[[A:.*]]: tensor<64xf32, #sparse_tensor.encoding<{{{.*}}}>>)
+//  CHECK-SAME: %[[A:.*]]: tensor<64xf32, #sparse{{[0-9]*}}>)
 //   CHECK-NOT: sparse_tensor.positions
 //   CHECK-NOT: sparse_tensor.coordinates
 //   CHECK-NOT: sparse_tensor.values
@@ -68,7 +68,7 @@ func.func @sparse_get_specifier_dce_fold(%arg0: !sparse_tensor.storage_specifier
 #COO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 // CHECK-LABEL: func @sparse_reorder_coo(
-//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf32, #sparse{{[0-9]*}}>
 //   CHECK-NOT: %[[R:.*]] = sparse_tensor.reorder_coo
 //       CHECK: return %[[A]]
 func.func @sparse_reorder_coo(%arg0 : tensor<?x?xf32, #COO>) -> tensor<?x?xf32, #COO> {

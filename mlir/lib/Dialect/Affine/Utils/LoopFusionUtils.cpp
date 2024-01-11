@@ -243,7 +243,6 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   return loopDepth;
 }
 
-// TODO: Prevent fusion of loop nests with side-effecting operations.
 // TODO: This pass performs some computation that is the same for all the depths
 // (e.g., getMaxLoopDepth). Implement a version of this utility that processes
 // all the depths at once or only the legal maximal depth for maximal fusion.

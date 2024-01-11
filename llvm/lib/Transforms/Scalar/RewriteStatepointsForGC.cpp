@@ -1251,6 +1251,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   VerifyStates();
 #endif
 
+  // get the data layout to compare the sizes of base/derived pointer values
+  [[maybe_unused]] auto &DL =
+      cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
@@ -1258,6 +1261,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     auto *BDV = Pair.first;
     Value *Base = Pair.second.getBaseValue();
     assert(BDV && Base);
+    // Whenever we have a derived ptr(s), their base
+    // ptr(s) must be of the same size, not necessarily the same type
+    assert(DL.getTypeAllocSize(BDV->getType()) ==
+               DL.getTypeAllocSize(Base->getType()) &&
+           "Derived and base values should have same size");
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
@@ -1967,19 +1975,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
-    // Emit store into the related alloca
-    // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
-    // the correct type according to alloca.
+    // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(Relocate->getNextNode());
-    Value *CastedRelocatedValue =
-      Builder.CreateBitCast(Relocate,
-                            cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(Relocate, ".casted", ""));
-
-    new StoreInst(CastedRelocatedValue, Alloca,
-                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
+    new StoreInst(Relocate, Alloca, Relocate->getNextNode());
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2049,7 +2048,7 @@ static void relocationViaAlloca(
   for (const auto &Info : Records)
     for (auto RematerializedValuePair : Info.RematerializedValues) {
       Value *OriginalValue = RematerializedValuePair.second;
-      if (AllocaMap.count(OriginalValue) != 0)
+      if (AllocaMap.contains(OriginalValue))
         continue;
 
       emitAllocaFor(OriginalValue);
@@ -2612,13 +2611,9 @@ static bool inlineGetBaseAndOffset(Function &F,
       Value *Base =
           findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
-      auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
-          Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
-      if (BaseBC != Base)
-        DVCache[BaseBC] = Base;
-      Callsite->replaceAllUsesWith(BaseBC);
-      if (!BaseBC->hasName())
-        BaseBC->takeName(Callsite);
+      Callsite->replaceAllUsesWith(Base);
+      if (!Base->hasName())
+        Base->takeName(Callsite);
       Callsite->eraseFromParent();
       break;
     }

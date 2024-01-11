@@ -17,10 +17,11 @@ participate in the project using GitHub.
 
 Branches
 ========
-Do not create any branches in the llvm/llvm-project repository.  This repository
-is reserved for official project branches only.  We may relax this rule in
-the future if needed to support "stacked" pull request, but in that case only
-branches being used for "stacked" pull requests will be allowed.
+
+It is possible to create branches that starts with `users/<username>/`, however this is
+intended to be able to support "stacked" pull-request. Do not create any branches in the
+llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
+aren't associated with a pull-request **will be deleted**.
 
 Pull Requests
 =============

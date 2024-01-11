@@ -59,6 +59,13 @@ struct IsVariableHelper
         }
       }
       return false;
+    } else if constexpr (std::is_same_v<T, SomeType>) {
+      if (std::holds_alternative<ProcedureDesignator>(x.u) ||
+          std::holds_alternative<ProcedureRef>(x.u)) {
+        return false; // procedure pointer
+      } else {
+        return (*this)(x.u);
+      }
     } else {
       return (*this)(x.u);
     }
@@ -1082,11 +1089,12 @@ bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
 
 // Common handling for procedure pointer compatibility of left- and right-hand
 // sides.  Returns nullopt if they're compatible.  Otherwise, it returns a
-// message that needs to be augmented by the names of the left and right sides
+// message that needs to be augmented by the names of the left and right sides.
 std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
-    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible);
+    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
+    std::optional<std::string> &warning);
 
 // Scalar constant expansion
 class ScalarConstantExpander {
@@ -1178,6 +1186,12 @@ private:
   ConstantSubscripts &&lbounds_;
 };
 
+// Predicate: should two expressions be considered identical for the purposes
+// of determining whether two procedure interfaces are compatible, modulo
+// naming of corresponding dummy arguments?
+std::optional<bool> AreEquivalentInInterface(
+    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1213,10 +1227,12 @@ bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
 bool IsLenTypeParameter(const Symbol &);
 bool IsExtensibleType(const DerivedTypeSpec *);
+bool IsSequenceOrBindCType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
+bool IsNotifyType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
 bool IsTeamType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?
@@ -1253,6 +1269,8 @@ const Symbol *FindFunctionResult(const Symbol &);
 bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 
 common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
+
+std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 } // namespace Fortran::semantics
 

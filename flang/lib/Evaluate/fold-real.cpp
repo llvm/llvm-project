@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
 #include "fold-reduction.h"
 
 namespace Fortran::evaluate {
@@ -269,6 +270,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
               }
               return result.value;
             }));
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
@@ -446,7 +449,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: matmul
   return Expr<T>{std::move(funcRef)};
 }
 

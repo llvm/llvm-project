@@ -1116,9 +1116,9 @@ std::optional<APInt>
 llvm::getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
           getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
-    std::optional<ValueAndVReg> ValAndVReg =
-        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
-    return ValAndVReg->Value;
+    if (std::optional<ValueAndVReg> ValAndVReg =
+        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
+      return ValAndVReg->Value;
   }
 
   return std::nullopt;

@@ -8,11 +8,57 @@ define i64 @test_s_bitreplicate_constant() {
 ; GFX11-LABEL: test_s_bitreplicate_constant:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], 0x85fe3a92
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xfccc30c
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0xc033fffc
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 u0x85FE3A92)
+  ret i64 %br
+}
+
+define i64 @test_s_bitreplicate_constant_zero() {
+; GFX11-LABEL: test_s_bitreplicate_constant_zero:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 0)
+  ret i64 %br
+}
+
+define i64 @test_s_bitreplicate_constant_neg_one() {
+; GFX11-LABEL: test_s_bitreplicate_constant_neg_one:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, -1 :: v_dual_mov_b32 v1, -1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 -1)
+  ret i64 %br
+}
+
+define i64 @test_s_bitreplicate_constant_undef() {
+; GFX11-LABEL: test_s_bitreplicate_constant_undef:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 undef)
+  ret i64 %br
+}
+
+define i64 @test_s_bitreplicate_constant_poison() {
+; GFX11-LABEL: test_s_bitreplicate_constant_poison:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_bitreplicate_b64_b32 s[0:1], s0
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %br = call i64 @llvm.amdgcn.s.bitreplicate(i32 poison)
   ret i64 %br
 }
 

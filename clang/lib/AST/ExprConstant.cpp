@@ -32,6 +32,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExprConstShared.h"
 #include "Interp/Context.h"
 #include "Interp/Frame.h"
 #include "Interp/State.h"
@@ -640,6 +641,10 @@ namespace {
       return false;
     }
 
+    /// Whether we're in a context where [[msvc::constexpr]] evaluation is
+    /// permitted. See MSConstexprDocs for description of permitted contexts.
+    bool CanEvalMSConstexpr = false;
+
   private:
     APValue &createLocal(APValue::LValueBase Base, const void *Key, QualType T,
                          ScopeKind Scope);
@@ -672,6 +677,19 @@ namespace {
 
   private:
     llvm::TimeTraceScope TimeScope;
+  };
+
+  /// RAII object used to change the current ability of
+  /// [[msvc::constexpr]] evaulation.
+  struct MSConstexprContextRAII {
+    CallStackFrame &Frame;
+    bool OldValue;
+    explicit MSConstexprContextRAII(CallStackFrame &Frame, bool Value)
+        : Frame(Frame), OldValue(Frame.CanEvalMSConstexpr) {
+      Frame.CanEvalMSConstexpr = Value;
+    }
+
+    ~MSConstexprContextRAII() { Frame.CanEvalMSConstexpr = OldValue; }
   };
 }
 
@@ -4622,11 +4640,13 @@ struct IncDecSubobjectHandler {
     if (Old) *Old = APValue(Value);
 
     APFloat One(Value.getSemantics(), 1);
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat::opStatus St;
     if (AccessKind == AK_Increment)
-      Value.add(One, APFloat::rmNearestTiesToEven);
+      St = Value.add(One, RM);
     else
-      Value.subtract(One, APFloat::rmNearestTiesToEven);
-    return true;
+      St = Value.subtract(One, RM);
+    return checkFloatingPointResult(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -5543,11 +5563,14 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::LabelStmtClass:
     return EvaluateStmt(Result, Info, cast<LabelStmt>(S)->getSubStmt(), Case);
 
-  case Stmt::AttributedStmtClass:
-    // As a general principle, C++11 attributes can be ignored without
-    // any semantic impact.
-    return EvaluateStmt(Result, Info, cast<AttributedStmt>(S)->getSubStmt(),
-                        Case);
+  case Stmt::AttributedStmtClass: {
+    const auto *AS = cast<AttributedStmt>(S);
+    const auto *SS = AS->getSubStmt();
+    MSConstexprContextRAII ConstexprContext(
+        *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
+                               isa<ReturnStmt>(SS));
+    return EvaluateStmt(Result, Info, SS, Case);
+  }
 
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
@@ -5618,7 +5641,9 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   }
 
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && Body)
+  if (Definition && Body &&
+      (Definition->isConstexpr() || (Info.CurrentCall->CanEvalMSConstexpr &&
+                                        Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -8489,14 +8514,24 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return false;
 
     if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(VD)) {
+      const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
+
+      // Static lambda function call operators can't have captures. We already
+      // diagnosed this, so bail out here.
+      if (MD->isStatic()) {
+        assert(Info.CurrentCall->This == nullptr &&
+               "This should not be set for a static call operator");
+        return false;
+      }
+
       // Start with 'Result' referring to the complete closure object...
-      if (auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
-          MD->isExplicitObjectMemberFunction()) {
+      if (MD->isExplicitObjectMemberFunction()) {
         APValue *RefValue =
             Info.getParamSlot(Info.CurrentCall->Arguments, MD->getParamDecl(0));
         Result.setFrom(Info.Ctx, *RefValue);
       } else
         Result = *Info.CurrentCall->This;
+
       // ... then update it to refer to the field of the closure object
       // that represents the capture.
       if (!HandleLValueMember(Info, E, Result, FD))
@@ -8615,7 +8650,7 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
     Result.set(E);
   } else {
     Value = &Info.CurrentCall->createTemporary(
-        E, E->getType(),
+        E, Inner->getType(),
         E->getStorageDuration() == SD_FullExpression ? ScopeKind::FullExpression
                                                      : ScopeKind::Block,
         Result);
@@ -11492,40 +11527,10 @@ bool IntExprEvaluator::CheckReferencedDecl(const Expr* E, const Decl* D) {
   return false;
 }
 
-/// Values returned by __builtin_classify_type, chosen to match the values
-/// produced by GCC's builtin.
-enum class GCCTypeClass {
-  None = -1,
-  Void = 0,
-  Integer = 1,
-  // GCC reserves 2 for character types, but instead classifies them as
-  // integers.
-  Enum = 3,
-  Bool = 4,
-  Pointer = 5,
-  // GCC reserves 6 for references, but appears to never use it (because
-  // expressions never have reference type, presumably).
-  PointerToDataMember = 7,
-  RealFloat = 8,
-  Complex = 9,
-  // GCC reserves 10 for functions, but does not use it since GCC version 6 due
-  // to decay to pointer. (Prior to version 6 it was only used in C++ mode).
-  // GCC claims to reserve 11 for pointers to member functions, but *actually*
-  // uses 12 for that purpose, same as for a class or struct. Maybe it
-  // internally implements a pointer to member as a struct?  Who knows.
-  PointerToMemberFunction = 12, // Not a bug, see above.
-  ClassOrStruct = 12,
-  Union = 13,
-  // GCC reserves 14 for arrays, but does not use it since GCC version 6 due to
-  // decay to pointer. (Prior to version 6 it was only used in C++ mode).
-  // GCC reserves 15 for strings, but actually uses 5 (pointer) for string
-  // literals.
-};
-
 /// EvaluateBuiltinClassifyType - Evaluate __builtin_classify_type the same way
 /// as GCC.
-static GCCTypeClass
-EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
+GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
+                                         const LangOptions &LangOpts) {
   assert(!T->isDependentType() && "unexpected dependent type");
 
   QualType CanTy = T.getCanonicalType();
@@ -11644,18 +11649,22 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     return EvaluateBuiltinClassifyType(
         CanTy->castAs<AtomicType>()->getValueType(), LangOpts);
 
-  case Type::BlockPointer:
   case Type::Vector:
   case Type::ExtVector:
+    return GCCTypeClass::Vector;
+
+  case Type::BlockPointer:
   case Type::ConstantMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::BitInt:
-    // GCC classifies vectors as None. We follow its lead and classify all
-    // other types that don't fit into the regular classification the same way.
+    // Classify all other types that don't fit into the regular
+    // classification the same way.
     return GCCTypeClass::None;
+
+  case Type::BitInt:
+    return GCCTypeClass::BitInt;
 
   case Type::LValueReference:
   case Type::RValueReference:
@@ -15672,12 +15681,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // this doesn't escape.
   MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
   APValue::LValueBase Base(&BaseMTE);
-
   Info.setEvaluatingDecl(Base, Result.Val);
-  LValue LVal;
-  LVal.set(Base);
 
-  {
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
+      return false;
+  } else {
+    LValue LVal;
+    LVal.set(Base);
     // C++23 [intro.execution]/p5
     // A full-expression is [...] a constant-expression
     // So we need to make sure temporary objects are destroyed after having
@@ -15686,10 +15697,10 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
         Result.HasSideEffects || !Scope.destroy())
       return false;
-  }
 
-  if (!Info.discardCleanups())
-    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+    if (!Info.discardCleanups())
+      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+  }
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))

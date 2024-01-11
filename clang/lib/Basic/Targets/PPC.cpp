@@ -53,7 +53,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
-      HasFloat128 = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {

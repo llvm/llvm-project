@@ -1984,7 +1984,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
     return BaseT::isLoweredToCall(F);
 
   // Assume all Arm-specific intrinsics map to an instruction.
-  if (F->getName().startswith("llvm.arm"))
+  if (F->getName().starts_with("llvm.arm"))
     return false;
 
   switch (F->getIntrinsicID()) {

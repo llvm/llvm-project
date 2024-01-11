@@ -262,7 +262,7 @@
 "`3742 <https://wg21.link/LWG3742>`__","``deque::prepend_range`` needs to permute","February 2023","","","|ranges|"
 "`3790 <https://wg21.link/LWG3790>`__","`P1467 <https://wg21.link/P1467>`__ accidentally changed ``nexttoward``'s signature","February 2023","","",""
 "`3819 <https://wg21.link/LWG3819>`__","``reference_meows_from_temporary`` should not use ``is_meowible``","February 2023","","",""
-"`3821 <https://wg21.link/LWG3821>`__","``uses_allocator_construction_args`` should have overload for ``pair-like``","February 2023","|Complete|","18.0.0",""
+"`3821 <https://wg21.link/LWG3821>`__","``uses_allocator_construction_args`` should have overload for ``pair-like``","February 2023","|Complete|","18.0",""
 "`3834 <https://wg21.link/LWG3834>`__","Missing ``constexpr`` for ``std::intmax_t`` math functions in ``<cinttypes>``","February 2023","","",""
 "`3839 <https://wg21.link/LWG3839>`__","``range_formatter``'s ``set_separator``, ``set_brackets``, and ``underlying`` functions should be ``noexcept``","February 2023","|Complete|","17.0","|format|"
 "`3841 <https://wg21.link/LWG3841>`__","``<version>`` should not be ""all freestanding""","February 2023","","",""

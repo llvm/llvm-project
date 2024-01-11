@@ -23,7 +23,7 @@ namespace llvm {
 namespace dsymutil {
 
 StringRef SymbolMapTranslator::operator()(StringRef Input) {
-  if (!Input.startswith("__hidden#") && !Input.startswith("___hidden#"))
+  if (!Input.starts_with("__hidden#") && !Input.starts_with("___hidden#"))
     return Input;
 
   bool MightNeedUnderscore = false;
@@ -131,7 +131,7 @@ SymbolMapTranslator SymbolMapLoader::Load(StringRef InputFile,
   bool MangleNames = false;
 
   // Check version string first.
-  if (!LHS.startswith("BCSymbolMap Version:")) {
+  if (!LHS.starts_with("BCSymbolMap Version:")) {
     // Version string not present, warns but try to parse it.
     WithColor::warning() << SymbolMapPath
                          << " is missing version string: assuming 1.0.\n";

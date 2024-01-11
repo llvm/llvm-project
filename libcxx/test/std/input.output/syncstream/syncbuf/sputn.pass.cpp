@@ -66,7 +66,7 @@ void test() {
       std::streamsize ret = sync_buf.sputn(expected.data(), expected.size());
       assert(ret == 1024);
 
-      // The synchchronization happens upon destruction of sync_buf.
+      // The synchronization happens upon destruction of sync_buf.
       assert(buf.str().empty());
       assert(stats.allocated_size >= 1024);
     }
@@ -87,7 +87,7 @@ void test() {
         ret = new_sync_buf.sputn(expected.data(), expected.size());
         assert(ret == 1024);
 
-        // The synchchronization happens upon destruction of new_sync_buf.
+        // The synchronization happens upon destruction of new_sync_buf.
         assert(buf.str().empty());
         assert(stats.allocated_size >= 2048);
       }
@@ -116,7 +116,7 @@ void test() {
         ret = new_sync_buf.sputn(expected.data(), expected.size());
         assert(ret == 1024);
 
-        // The synchchronization happens upon destruction of new_sync_buf.
+        // The synchronization happens upon destruction of new_sync_buf.
         assert(buf.str().empty());
       }
       assert(buf.str() == expected + expected);

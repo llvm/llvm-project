@@ -277,6 +277,15 @@ private:
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
 
+  // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
+  // Otherwise, return std::nullopt
+  // Currently it matches:
+  // - LHS = (select c, a, b), RHS = (select c, b, a)
+  // - LHS = (phi [a, BB0], [b, BB1]), RHS = (phi [b, BB0], [a, BB1])
+  // - LHS = min(a, b), RHS = max(a, b)
+  std::optional<std::pair<Value *, Value *>> matchSymmetricPair(Value *LHS,
+                                                                Value *RHS);
+
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
   Instruction *simplifyMaskedGather(IntrinsicInst &II);
@@ -459,6 +468,7 @@ public:
     // use counts.
     SmallVector<Value *> Ops(I.operands());
     Worklist.remove(&I);
+    DC.removeValue(&I);
     I.eraseFromParent();
     for (Value *Op : Ops)
       Worklist.handleUseCountDecrement(Op);
@@ -548,7 +558,7 @@ public:
   bool SimplifyDemandedInstructionBits(Instruction &Inst, KnownBits &Known);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
-                                    APInt &UndefElts, unsigned Depth = 0,
+                                    APInt &PoisonElts, unsigned Depth = 0,
                                     bool AllowMultipleUsers = false) override;
 
   /// Canonicalize the position of binops relative to shufflevector.
@@ -631,9 +641,8 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
-  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
-                                      Value *Z, ICmpInst::Predicate Pred);
-  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
+  Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
+                                  Value *Z, ICmpInst::Predicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -647,6 +656,8 @@ public:
                                       ConstantInt *C);
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, TruncInst *Trunc,
                                      const APInt &C);
+  Instruction *foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                           const SimplifyQuery &Q);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,
                                    const APInt &C);
   Instruction *foldICmpXorConstant(ICmpInst &Cmp, BinaryOperator *Xor,
@@ -689,6 +700,8 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
+  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
+                                   Value *Op1, ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
@@ -737,13 +750,11 @@ class Negator final {
   using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
   BuilderTy Builder;
 
-  const SimplifyQuery &SQ;
-
   const bool IsTrulyNegation;
 
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation);
+  Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;

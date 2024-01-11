@@ -97,7 +97,8 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
     unsigned NumOps = Inst.getNumOperands();
-    if (isBranch(Inst) || Inst.getOpcode() == LoongArch::BL) {
+    if ((isBranch(Inst) && !isIndirectBranch(Inst)) ||
+        Inst.getOpcode() == LoongArch::BL) {
       Target = Addr + Inst.getOperand(NumOps - 1).getImm();
       return true;
     }

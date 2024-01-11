@@ -423,7 +423,8 @@ class my_other_templated_class : my_templated_class<  my_class>, private my_deri
 
 template<typename t_t>
 using mysuper_tpl_t = my_other_templated_class  <:: FOO_NS  ::my_class>;
-// CHECK-FIXES: {{^}}using mysuper_tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'mysuper_tpl_t'
+// CHECK-FIXES: {{^}}using mysuper_Tpl_t = CMyOtherTemplatedClass  <:: foo_ns  ::CMyClass>;{{$}}
 
 const int global_Constant = 6;
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'global_Constant'

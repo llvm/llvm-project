@@ -290,6 +290,21 @@ memref<2 x vector<4x8 x f32>
 Tensor types cannot be converted to the LLVM dialect. Operations on tensors must
 be [bufferized](Bufferization.md) before being converted.
 
+### Conversion of LLVM Container Types with Non-Compatible Element Types
+
+Progressive lowering may result in there LLVM container types, such
+as LLVM dialect structures, containing non-compatible types:
+`!llvm.struct<(index)>`. Such types are converted recursively using the rules
+described above.
+
+Identified structures are converted to _new_ structures that have their
+identifiers prefixed with `_Converted.` since the bodies of identified types
+cannot be updated once initialized. Such names are considered _reserved_ and
+must not appear in the input code (in practice, C reserves names starting with
+`_` and a capital, and `.` cannot appear in valid C types anyway). If they do
+and have a different body than the result of the conversion, the type conversion
+will stop.
+
 ### Calling Conventions
 
 Calling conventions provides a mechanism to customize the conversion of function

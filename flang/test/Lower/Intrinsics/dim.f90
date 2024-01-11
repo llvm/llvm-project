@@ -8,7 +8,7 @@ subroutine dim_testr(x, y, z)
 ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<f32>
 ! CHECK: %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK: %[[VAL_6:.*]] = arith.subf %[[VAL_3]], %[[VAL_4]] {{.*}}: f32
-! CHECK: %[[VAL_7:.*]] = arith.cmpf ogt, %[[VAL_6]], %[[VAL_5]] : f32
+! CHECK: %[[VAL_7:.*]] = arith.cmpf ogt, %[[VAL_6]], %[[VAL_5]] {{.*}} : f32
 ! CHECK: %[[VAL_8:.*]] = arith.select %[[VAL_7]], %[[VAL_6]], %[[VAL_5]] : f32
 ! CHECK: fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<f32>
 ! CHECK: return

@@ -5223,11 +5223,8 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
     return BinaryOp(Op);
 
   case Instruction::Or: {
-    // LLVM loves to convert `add` of operands with no common bits
-    // into an `or`. But SCEV really doesn't deal with `or` that well,
-    // so try extra hard to recognize this `or` as an `add`.
-    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1),
-                            SimplifyQuery(DL, &DT, &AC, CxtI)))
+    // Convert or disjoint into add nuw nsw.
+    if (cast<PossiblyDisjointInst>(Op)->isDisjoint())
       return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
                       /*IsNSW=*/true, /*IsNUW=*/true);
     return BinaryOp(Op);
@@ -7917,9 +7914,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         //    expression. We already checked that ShlAmt < BitWidth, so
         //    the multiplier, 1 << (ShlAmt - AShrAmt), fits into TruncTy as
         //    ShlAmt - AShrAmt < Amt.
-        uint64_t ShlAmt = ShlAmtCI->getZExtValue();
-        if (ShlAmtCI->getValue().ult(BitWidth) && ShlAmt >= AShrAmt) {
-          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt, ShlAmt - AShrAmt);
+        const APInt &ShlAmt = ShlAmtCI->getValue();
+        if (ShlAmt.ult(BitWidth) && ShlAmt.uge(AShrAmt)) {
+          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt,
+                                          ShlAmtCI->getZExtValue() - AShrAmt);
           const SCEV *CompositeExpr =
               getMulExpr(AddTruncateExpr, getConstant(Mul));
           if (L->getOpcode() != Instruction::Shl)
@@ -8408,6 +8406,44 @@ void ScalarEvolution::forgetValue(Value *V) {
   visitAndClearUsers(Worklist, Visited, ToForget);
 
   forgetMemoizedResults(ToForget);
+}
+
+void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
+  if (!isSCEVable(V->getType()))
+    return;
+
+  // If SCEV looked through a trivial LCSSA phi node, we might have SCEV's
+  // directly using a SCEVUnknown/SCEVAddRec defined in the loop. After an
+  // extra predecessor is added, this is no longer valid. Find all Unknowns and
+  // AddRecs defined in the loop and invalidate any SCEV's making use of them.
+  if (const SCEV *S = getExistingSCEV(V)) {
+    struct InvalidationRootCollector {
+      Loop *L;
+      SmallVector<const SCEV *, 8> Roots;
+
+      InvalidationRootCollector(Loop *L) : L(L) {}
+
+      bool follow(const SCEV *S) {
+        if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
+          if (auto *I = dyn_cast<Instruction>(SU->getValue()))
+            if (L->contains(I))
+              Roots.push_back(S);
+        } else if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+          if (L->contains(AddRec->getLoop()))
+            Roots.push_back(S);
+        }
+        return true;
+      }
+      bool isDone() const { return false; }
+    };
+
+    InvalidationRootCollector C(L);
+    visitAll(S, C);
+    forgetMemoizedResults(C.Roots);
+  }
+
+  // Also perform the normal invalidation.
+  forgetValue(V);
 }
 
 void ScalarEvolution::forgetLoopDispositions() { LoopDispositions.clear(); }
@@ -12875,7 +12911,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart))
+      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
+
+      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
+          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
         return true;
 
       // (RHS > Start - 1) implies RHS >= Start.

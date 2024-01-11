@@ -108,7 +108,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
-#include <limits>
 #include <numeric>
 #include <optional>
 #include <tuple>
@@ -1194,7 +1193,7 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
       OpA->getType() != OpB->getType())
     return std::nullopt;
 
-  uint64_t Stride = DL.getTypeAllocSize(GTIA.getIndexedType());
+  uint64_t Stride = GTIA.getSequentialElementStride(DL);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))

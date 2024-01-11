@@ -101,7 +101,7 @@ public:
 
   // Check if a non-common symbol should be extracted to override a common
   // definition.
-  bool shouldExtractForCommon(StringRef name);
+  bool shouldExtractForCommon(StringRef name) const;
 
   // .got2 in the current file. This is used by PPC32 -fPIC/-fPIE to compute
   // offsets in PLT call stubs.
@@ -133,7 +133,7 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool justSymbols = false;
 
-  std::string getSrcMsg(const Symbol &sym, InputSectionBase &sec,
+  std::string getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
                         uint64_t offset);
 
   // On PPC64 we need to keep track of which files contain small code model
@@ -255,7 +255,8 @@ public:
     return getSymbol(symIndex);
   }
 
-  std::optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
+  std::optional<llvm::DILineInfo> getDILineInfo(const InputSectionBase *,
+                                                uint64_t);
   std::optional<std::pair<std::string, unsigned>>
   getVariableLoc(StringRef name);
 

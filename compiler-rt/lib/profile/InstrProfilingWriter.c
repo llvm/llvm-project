@@ -262,8 +262,6 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const char *BitmapBegin, const char *BitmapEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
                    const char *NamesEnd, int SkipNameDataWrite) {
-  int ProfileCorrelation = __llvm_profile_has_correlation();
-
   /* Calculate size of sections. */
   const uint64_t DataSectionSize =
       __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -302,7 +300,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #endif
 
   /* The data and names sections are omitted in lightweight mode. */
-  if (ProfileCorrelation) {
+  if (NumData == 0 && NamesSize == 0) {
     Header.CountersDelta = 0;
     Header.NamesDelta = 0;
   }
@@ -318,22 +316,21 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
-      {ProfileCorrelation ? NULL : DataBegin, sizeof(uint8_t), DataSectionSize,
-       0},
+      {DataBegin, sizeof(uint8_t), DataSectionSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesBeforeCounters, 1},
       {CountersBegin, sizeof(uint8_t), CountersSectionSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {BitmapBegin, sizeof(uint8_t), NumBitmapBytes, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterBitmapBytes, 1},
-      {(SkipNameDataWrite || ProfileCorrelation) ? NULL : NamesBegin,
-       sizeof(uint8_t), NamesSize, 0},
+      {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
   if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;
 
   /* Value profiling is not yet supported in continuous mode and profile
    * correlation mode. */
-  if (__llvm_profile_is_continuous_mode_enabled() || ProfileCorrelation)
+  if (__llvm_profile_is_continuous_mode_enabled() ||
+      (NumData == 0 && NamesSize == 0))
     return 0;
 
   return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);

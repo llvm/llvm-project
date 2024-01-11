@@ -142,21 +142,21 @@ define i32 @nearbyint(i32 %arg) {
 
 define i32 @rint(i32 %arg) {
 ; FAST-LABEL: 'rint'
-; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.rint.f32(float undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.rint.f64(double undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.rint.v8f64(<8 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.rint.f32(float undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.rint.f64(double undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x double> @llvm.rint.v8f64(<8 x double> undef)
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'rint'
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.rint.f32(float undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.rint.f32(float undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.rint.f64(double undef)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
@@ -164,21 +164,21 @@ define i32 @rint(i32 %arg) {
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; FAST-SIZE-LABEL: 'rint'
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.rint.f32(float undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.rint.f64(double undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.rint.v8f64(<8 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.rint.f32(float undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.rint.f64(double undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x double> @llvm.rint.v8f64(<8 x double> undef)
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'rint'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.rint.f32(float undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = call float @llvm.rint.f32(float undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x float> @llvm.rint.v4f32(<4 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x float> @llvm.rint.v8f32(<8 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x float> @llvm.rint.v16f32(<16 x float> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.rint.f64(double undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
@@ -194,6 +194,64 @@ define i32 @rint(i32 %arg) {
   %V2F64 = call <2 x double> @llvm.rint.v2f64(<2 x double> undef)
   %V4F64 = call <4 x double> @llvm.rint.v4f64(<4 x double> undef)
   %V8F64 = call <8 x double> @llvm.rint.v8f64(<8 x double> undef)
+
+  ret i32 undef
+}
+
+define i32 @roundeven(i32 %arg) {
+; FAST-LABEL: 'roundeven'
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.roundeven.f32(float undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.roundeven.f64(double undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; SLOW-LABEL: 'roundeven'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.roundeven.f32(float undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.roundeven.f64(double undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
+;
+; FAST-SIZE-LABEL: 'roundeven'
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.roundeven.f32(float undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.roundeven.f64(double undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; SLOW-SIZE-LABEL: 'roundeven'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.roundeven.f32(float undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F32 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = call double @llvm.roundeven.f64(double undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+  %F32 = call float @llvm.roundeven.f32(float undef)
+  %V4F32 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> undef)
+  %V8F32 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> undef)
+  %V16F32 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> undef)
+
+  %F64 = call double @llvm.roundeven.f64(double undef)
+  %V2F64 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> undef)
+  %V4F64 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> undef)
+  %V8F64 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> undef)
 
   ret i32 undef
 }
@@ -295,6 +353,16 @@ declare double @llvm.rint.f64(double)
 declare <2 x double> @llvm.rint.v2f64(<2 x double>)
 declare <4 x double> @llvm.rint.v4f64(<4 x double>)
 declare <8 x double> @llvm.rint.v8f64(<8 x double>)
+
+declare float @llvm.roundeven.f32(float)
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float>)
+declare <8 x float> @llvm.roundeven.v8f32(<8 x float>)
+declare <16 x float> @llvm.roundeven.v16f32(<16 x float>)
+
+declare double @llvm.roundeven.f64(double)
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double>)
+declare <4 x double> @llvm.roundeven.v4f64(<4 x double>)
+declare <8 x double> @llvm.roundeven.v8f64(<8 x double>)
 
 declare float @llvm.trunc.f32(float)
 declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
