@@ -2182,7 +2182,8 @@ void printRoutineGangClause(OpAsmPrinter &p, Operation *op, UnitAttr gang,
       << " : " << gangDim.getType() << ")";
 }
 
-static ParseResult parseDeviceTypeArrayAttr(OpAsmParser &parser, mlir::ArrayAttr &deviceTypes) {
+static ParseResult parseDeviceTypeArrayAttr(OpAsmParser &parser,
+                                            mlir::ArrayAttr &deviceTypes) {
   llvm::SmallVector<mlir::Attribute> attributes;
   // Keyword only
   if (failed(parser.parseOptionalLParen())) {
@@ -2213,8 +2214,9 @@ static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
   return false;
 }
 
-static void printDeviceTypeArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
-    std::optional<mlir::ArrayAttr> deviceTypes) {
+static void
+printDeviceTypeArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                         std::optional<mlir::ArrayAttr> deviceTypes) {
 
   if (hasDeviceTypeValues(deviceTypes) && deviceTypes->size() == 1) {
     auto deviceTypeAttr =
@@ -2225,19 +2227,16 @@ static void printDeviceTypeArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
 
   if (!hasDeviceTypeValues(deviceTypes))
     return;
-  
+
   p << "([";
-  llvm::interleaveComma(*deviceTypes, p,
-        [&](mlir::Attribute attr) { 
-          auto dTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-          p << dTypeAttr;
-      });
+  llvm::interleaveComma(*deviceTypes, p, [&](mlir::Attribute attr) {
+    auto dTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    p << dTypeAttr;
+  });
   p << "])";
 }
 
-bool RoutineOp::hasWorker() {
-  return hasWorker(mlir::acc::DeviceType::None);
-}
+bool RoutineOp::hasWorker() { return hasWorker(mlir::acc::DeviceType::None); }
 
 bool RoutineOp::hasWorker(mlir::acc::DeviceType deviceType) {
   if (auto arrayAttr = getWorker()) {
@@ -2247,9 +2246,7 @@ bool RoutineOp::hasWorker(mlir::acc::DeviceType deviceType) {
   return false;
 }
 
-bool RoutineOp::hasVector() {
-  return hasWorker(mlir::acc::DeviceType::None);
-}
+bool RoutineOp::hasVector() { return hasWorker(mlir::acc::DeviceType::None); }
 
 bool RoutineOp::hasVector(mlir::acc::DeviceType deviceType) {
   if (auto arrayAttr = getVector()) {
@@ -2259,9 +2256,7 @@ bool RoutineOp::hasVector(mlir::acc::DeviceType deviceType) {
   return false;
 }
 
-bool RoutineOp::hasSeq() {
-  return hasWorker(mlir::acc::DeviceType::None);
-}
+bool RoutineOp::hasSeq() { return hasWorker(mlir::acc::DeviceType::None); }
 
 bool RoutineOp::hasSeq(mlir::acc::DeviceType deviceType) {
   if (auto arrayAttr = getSeq()) {
