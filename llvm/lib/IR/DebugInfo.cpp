@@ -195,7 +195,7 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(M, DVI->getVariable());
+    processVariable(DVI->getVariable());
   else if (auto *DDKI = dyn_cast<DbgDefKillIntrinsic>(&I))
     processLifetime(DDKI->getLifetime());
 
@@ -214,7 +214,7 @@ void DebugInfoFinder::processLocation(const Module &M, const DILocation *Loc) {
 }
 
 void DebugInfoFinder::processDPValue(const Module &M, const DPValue &DPV) {
-  processVariable(M, DPV.getVariable());
+  processVariable(DPV.getVariable());
   processLocation(M, DPV.getDebugLoc().get());
 }
 
@@ -289,12 +289,18 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processType(TVal->getType());
     }
   }
+
+  for (auto *N : SP->getRetainedNodes()) {
+    if (auto *Var = dyn_cast_or_null<DILocalVariable>(N)) {
+      processVariable(Var);
+    }
+  }
 }
 
-void DebugInfoFinder::processVariable(const Module &M,
-                                      const DILocalVariable *DV) {
+void DebugInfoFinder::processVariable(DILocalVariable *DV) {
   if (!NodesSeen.insert(DV).second)
     return;
+  LVs.push_back(DV);
   processScope(DV->getScope());
   processType(DV->getType());
 }

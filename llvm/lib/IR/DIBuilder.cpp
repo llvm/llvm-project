@@ -32,7 +32,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
-      AllEnumTypes.assign(ETs.begin(), ETs.end());
+      EnumTypes.assign(ETs.begin(), ETs.end());
     if (const auto &RTs = CUNode->getRetainedTypes())
       AllRetainTypes.assign(RTs.begin(), RTs.end());
     if (const auto &GVs = CUNode->getGlobalVariables())
@@ -69,10 +69,10 @@ void DIBuilder::finalize() {
     return;
   }
 
-  if (!AllEnumTypes.empty())
-    CUNode->replaceEnumTypes(MDTuple::get(
-        VMContext, SmallVector<Metadata *, 16>(AllEnumTypes.begin(),
-                                               AllEnumTypes.end())));
+  if (!EnumTypes.empty())
+    CUNode->replaceEnumTypes(
+        MDTuple::get(VMContext, SmallVector<Metadata *, 16>(EnumTypes.begin(),
+                                                            EnumTypes.end())));
 
   SmallVector<Metadata *, 16> RetainValues;
   // Declarations and definitions of the same type may be retained. Some
@@ -340,11 +340,14 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIScope *Context, uint32_t AlignInBits,
                                         DINode::DIFlags Flags,
                                         DINodeArray Annotations) {
-  return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
-                            AlignInBits, 0, std::nullopt, dwarf::DW_MSPACE_LLVM_none,
-                            Flags, nullptr,
-                            Annotations);
+  auto *T =
+      DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File, LineNo,
+                         getNonCompileUnitScope(Context), Ty, 0, AlignInBits, 0,
+                         std::nullopt, dwarf::DW_MSPACE_LLVM_none,
+                         Flags, nullptr, Annotations);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(T);
+  return T;
 }
 
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
@@ -495,6 +498,8 @@ DICompositeType *DIBuilder::createClassType(
       OffsetInBits, Flags, Elements, RunTimeLang, VTableHolder,
       cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);
   trackIfUnresolved(R);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
   return R;
 }
 
@@ -508,6 +513,8 @@ DICompositeType *DIBuilder::createStructType(
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits, 0,
       Flags, Elements, RunTimeLang, VTableHolder, nullptr, UniqueIdentifier);
   trackIfUnresolved(R);
+  if (isa_and_nonnull<DILocalScope>(Context))
+    getSubprogramNodesTrackingVector(Context).emplace_back(R);
   return R;
 }
 
@@ -520,6 +527,8 @@ DICompositeType *DIBuilder::createUnionType(
       getNonCompileUnitScope(Scope), nullptr, SizeInBits, AlignInBits, 0, Flags,
       Elements, RunTimeLang, nullptr, nullptr, UniqueIdentifier);
   trackIfUnresolved(R);
+  if (isa_and_nonnull<DILocalScope>(Scope))
+    getSubprogramNodesTrackingVector(Scope).emplace_back(R);
   return R;
 }
 
@@ -554,7 +563,10 @@ DIBuilder::createEnumerationType(DIScope *Scope, StringRef Name, DIFile *File,
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
       IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements,
       RunTimeLang, nullptr, nullptr, UniqueIdentifier);
-  AllEnumTypes.emplace_back(CTy);
+  if (isa_and_nonnull<DILocalScope>(Scope))
+    getSubprogramNodesTrackingVector(Scope).emplace_back(CTy);
+  else
+    EnumTypes.emplace_back(CTy);
   trackIfUnresolved(CTy);
   return CTy;
 }
@@ -635,7 +647,8 @@ void DIBuilder::retainType(DIScope *T) {
   assert((isa<DIType>(T) || (isa<DISubprogram>(T) &&
                              cast<DISubprogram>(T)->isDefinition() == false)) &&
          "Expected type or subprogram declaration");
-  AllRetainTypes.emplace_back(T);
+  if (!isa_and_nonnull<DILocalScope>(T->getScope()))
+    AllRetainTypes.emplace_back(T);
 }
 
 DIBasicType *DIBuilder::createUnspecifiedParameter() { return nullptr; }
@@ -652,6 +665,8 @@ DIBuilder::createForwardDecl(unsigned Tag, StringRef Name, DIScope *Scope,
       SizeInBits, AlignInBits, 0, DINode::FlagFwdDecl, nullptr, RuntimeLang,
       nullptr, nullptr, UniqueIdentifier);
   trackIfUnresolved(RetTy);
+  if (isa_and_nonnull<DILocalScope>(Scope))
+    getSubprogramNodesTrackingVector(Scope).emplace_back(RetTy);
   return RetTy;
 }
 
@@ -668,6 +683,8 @@ DICompositeType *DIBuilder::createReplaceableCompositeType(
           nullptr, Annotations)
           .release();
   trackIfUnresolved(RetTy);
+  if (isa_and_nonnull<DILocalScope>(Scope))
+    getSubprogramNodesTrackingVector(Scope).emplace_back(RetTy);
   return RetTy;
 }
 

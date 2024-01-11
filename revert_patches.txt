@@ -10,3 +10,6 @@ Reverts: breaks ompt tests
 
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
+
+Reverts:  breaks build of AS
+Revert "[runtimes] Use LLVM libunwind from libc++abi by default (#77687)"

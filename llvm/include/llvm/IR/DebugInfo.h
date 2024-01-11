@@ -109,7 +109,7 @@ public:
   void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  void processVariable(const Module &M, const DILocalVariable *DVI);
+  void processVariable(DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
   // Process a DPValue, much like a DbgVariableIntrinsic.
@@ -131,6 +131,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processLocalVariable(DILocalVariable *DV);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   // FIXME: The use of "heterogeneous" is just to disambiguate from the
@@ -150,6 +151,8 @@ public:
       SmallVectorImpl<DIGlobalVariable *>::const_iterator;
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
+  using local_variable_iterator =
+      SmallVectorImpl<DILocalVariable *>::const_iterator;
 
   iterator_range<compile_unit_iterator> compile_units() const {
     return make_range(CUs.begin(), CUs.end());
@@ -167,6 +170,9 @@ public:
   heterogeneous_global_variables() const {
     return make_range(HGVs.begin(), HGVs.end());
   }
+  iterator_range<local_variable_iterator> local_variables() const {
+    return make_range(LVs.begin(), LVs.end());
+  }
 
   iterator_range<type_iterator> types() const {
     return make_range(TYs.begin(), TYs.end());
@@ -179,6 +185,7 @@ public:
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
   unsigned heterogeneous_global_variable_count() const { return HGVs.size(); }
+  unsigned local_variable_count() const { return LVs.size(); }
   unsigned subprogram_count() const { return SPs.size(); }
   unsigned type_count() const { return TYs.size(); }
   unsigned scope_count() const { return Scopes.size(); }
@@ -188,6 +195,7 @@ private:
   SmallVector<DISubprogram *, 8> SPs;
   SmallVector<DIGlobalVariableExpression *, 8> GVs;
   SmallVector<DIGlobalVariable *, 8> HGVs;
+  SmallVector<DILocalVariable *, 8> LVs;
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
   SmallPtrSet<const MDNode *, 32> NodesSeen;

@@ -648,7 +648,7 @@ if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   # these bugs are fixed, we need to disable dead store eliminations
   # based on object lifetime.
   # ASO has trouble digesting the flag: -fno-lifetime-dse
-  #add_flag_if_supported("-fno-lifetime-dse" CMAKE_CXX_FLAGS)
+  # add_flag_if_supported("-fno-lifetime-dse" CMAKE_CXX_FLAGS)
 endif ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
 
 # Modules enablement for GCC-compatible compilers:
