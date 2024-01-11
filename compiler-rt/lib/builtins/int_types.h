@@ -194,11 +194,11 @@ typedef long double tf_float;
 // Use long double instead of __float128 if it matches the IEEE 128-bit format
 // or the IBM hexadecimal format.
 #define CRT_LDBL_128BIT
-#if __LDBL_MANT_DIG__ == 113
 #define CRT_HAS_F128
+#if __LDBL_MANT_DIG__ == 113
 #define CRT_HAS_IEEE_TF
-#endif
 #define CRT_LDBL_IEEE_F128
+#endif
 typedef long double tf_float;
 #define TF_C(x) x##L
 #elif defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
