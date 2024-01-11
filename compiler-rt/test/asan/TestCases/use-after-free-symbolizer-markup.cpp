@@ -1,5 +1,5 @@
 // COM: End to end test for the sanitizer symbolizer markup. Since it uses debug info
-// COM: to do offline symbolization we only check that the current module is correctly symbolized  
+// COM: to do offline symbolization we only check that the current module is correctly symbolized
 // REQUIRES: linux
 // RUN: %clangxx_asan %s -Wl,--build-id=0x12345678 -o %t.main
 // RUN: mkdir -p %t/.build-id/12
@@ -9,9 +9,8 @@
 
 #include <stdlib.h>
 
-[[gnu::noinline]]
-char *alloc() {
-  char *x = (char*)malloc(10 * sizeof(char));
+[[gnu::noinline]] char *alloc() {
+  char *x = (char *)malloc(10 * sizeof(char));
   return x;
 }
 int main() {
@@ -26,7 +25,7 @@ int main() {
 // CHECK: {{0x.* is located 5 bytes inside of 10-byte region .0x.*,0x.*}}
 // CHECK: {{freed by thread T0 here:}}
 // CHECK: {{    #1 0x.* main .*use-after-free-symbolizer-markup.cpp:}}[[@LINE-9]]
-// CHECK: {{previously allocated by thread T0 here:}} 
+// CHECK: {{previously allocated by thread T0 here:}}
 // CHECK: {{    #1 0x.* alloc\(\) .*use-after-free-symbolizer-markup.cpp:}}[[@LINE-16]]
 // CHECK: {{    #2 0x.* main .*use-after-free-symbolizer-markup.cpp:}}[[@LINE-13]]
 // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
