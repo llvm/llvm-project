@@ -168,14 +168,15 @@ namespace {
 /// Converts elementwise unary, binary and ternary arith operations to SPIR-V
 /// operations. Op can potentially support overflow flags.
 template <typename Op, typename SPIRVOp>
-struct ElementwiseArithOpPattern : public OpConversionPattern<Op> {
+struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
   using OpConversionPattern<Op>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     assert(adaptor.getOperands().size() <= 3);
-    Type dstType = this->getTypeConverter()->convertType(op.getType());
+    auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
+    Type dstType = converter->convertType(op.getType());
     if (!dstType) {
       return rewriter.notifyMatchFailure(
           op->getLoc(),
@@ -189,7 +190,6 @@ struct ElementwiseArithOpPattern : public OpConversionPattern<Op> {
                           "unsigned op pattern version");
     }
 
-    auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
     auto overflowFlags = arith::IntegerOverflowFlags::none;
     if (auto overflowIface =
             dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(*op)) {
