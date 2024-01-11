@@ -73,10 +73,12 @@ Function header is followed by `NumEntries` pairs of offsets for current
 function.
 
 ### Address translation table
+Delta encoding means that only the difference with the previous corresponding
+entry is encoded. Offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputAddr` | ULEB128 | Function offset in output binary |
-| `InputAddr` | ULEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| `OutputOffset` | Delta, ULEB128 | Function offset in output binary |
+| `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
