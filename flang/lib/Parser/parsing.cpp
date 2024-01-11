@@ -132,8 +132,7 @@ void Parsing::EmitPreprocessedSource(
       ++sourceLine;
       directive.clear();
     } else {
-      auto provenance{
-          cooked().GetProvenanceRange(CharBlock{&atChar, 1}, allSources)};
+      auto provenance{cooked().GetProvenanceRange(CharBlock{&atChar, 1})};
 
       // Preserves original case of the character
       const auto getOriginalChar{[&](char ch) {

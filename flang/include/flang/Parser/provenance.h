@@ -229,12 +229,13 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  explicit CookedSource(AllSources &allSources) : allSources_{allSources} {};
+
   int number() const { return number_; }
   void set_number(int n) { number_ = n; }
 
   CharBlock AsCharBlock() const { return CharBlock{data_}; }
-  std::optional<ProvenanceRange> GetProvenanceRange(
-      CharBlock, const AllSources &) const;
+  std::optional<ProvenanceRange> GetProvenanceRange(CharBlock) const;
   std::optional<CharBlock> GetCharBlock(ProvenanceRange) const;
 
   // The result of a Put() is the offset that the new data
@@ -261,6 +262,7 @@ public:
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  AllSources &allSources_;
   int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
