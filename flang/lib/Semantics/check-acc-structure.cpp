@@ -225,7 +225,8 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   case llvm::acc::Directive::ACCD_serial_loop:
     // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        computeConstructOnlyAllowedAfterDeviceTypeClauses);
+        computeConstructOnlyAllowedAfterDeviceTypeClauses |
+            loopOnlyAllowedAfterDeviceTypeClauses);
     if (doCons) {
       const parser::Block &block{std::get<parser::Block>(doCons->t)};
       CheckNoBranching(block, GetContext().directive, beginBlockDir.source);
@@ -388,11 +389,8 @@ CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
 CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
-CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
-CHECK_SIMPLE_CLAUSE(Vector, ACCC_vector)
 CHECK_SIMPLE_CLAUSE(Wait, ACCC_wait)
-CHECK_SIMPLE_CLAUSE(Worker, ACCC_worker)
 CHECK_SIMPLE_CLAUSE(Write, ACCC_write)
 CHECK_SIMPLE_CLAUSE(Unknown, ACCC_unknown)
 
@@ -536,8 +534,28 @@ void AccStructureChecker::Enter(const parser::AccClause::DeviceType &d) {
   }
 }
 
+void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_vector);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_device_type);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_worker);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_worker, llvm::acc::Clause::ACCC_device_type);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Tile &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_tile);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_tile, llvm::acc::Clause::ACCC_device_type);
+}
+
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
   CheckAllowed(llvm::acc::Clause::ACCC_gang);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_device_type);
 
   if (g.v) {
     bool hasNum = false;
@@ -665,6 +683,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
 
 void AccStructureChecker::Enter(const parser::AccClause::Collapse &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_collapse);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_collapse, llvm::acc::Clause::ACCC_device_type);
   const parser::AccCollapseArg &accCollapseArg = x.v;
   const auto &collapseValue{
       std::get<parser::ScalarIntConstantExpr>(accCollapseArg.t)};

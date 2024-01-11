@@ -1,58 +1,58 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop worker {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop vector {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang worker {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang vector {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop worker vector {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang worker vector {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
@@ -62,10 +62,31 @@ acc.loop {
 
 // -----
 
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in gang attribute}}
+acc.loop {
+  acc.yield
+} attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in worker attribute}}
+acc.loop {
+  acc.yield
+} attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in vector attribute}}
+acc.loop {
+  acc.yield
+} attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
 // expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
 acc.loop {
   acc.yield
-} attributes {auto_, seq}
+} attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>]}
 
 // -----
 
@@ -368,7 +389,7 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
 // -----
 
 // expected-error@+1 {{expected ')'}}
-acc.loop gang(static=%i64Value: i64, num=%i64Value: i64 {
+acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -437,7 +458,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 // -----
 
 // expected-error@+1 {{new value expected after comma}}
-acc.loop gang(static=%i64Value: i64, ) {
+acc.loop gang({static=%i64Value: i64, ) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -454,7 +475,7 @@ func.func @fct1(%0 : !llvm.ptr) -> () {
 // -----
 
 // expected-error@+1 {{expect at least one of num, dim or static values}}
-acc.loop gang() {
+acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }

@@ -312,6 +312,11 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
       if (origYield.getDefiningOp() == peeledScalarOperation) {
         yieldedVals.push_back(origYield);
       } else {
+        // Do not materialize any new ops inside of the decomposed LinalgOp,
+        // as that would trigger another application of the rewrite pattern
+        // (infinite loop).
+        OpBuilder::InsertionGuard g(rewriter);
+        rewriter.setInsertionPoint(peeledGenericOp);
         yieldedVals.push_back(
             getZero(rewriter, genericOp.getLoc(), origYield.getType()));
       }
