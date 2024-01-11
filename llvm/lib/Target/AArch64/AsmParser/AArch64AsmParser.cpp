@@ -6110,6 +6110,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_AddSubLSLImm3ShiftLarge:
     return Error(Loc,
       "expected 'lsl' with optional integer in range [0, 7]");
+  case Match_InvalidSVEPNRasPPRPredicateBReg:
+    return Error(Loc,
+                 "Expected predicate-as-counter register name with .B suffix");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -6690,6 +6693,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorListStrided4x16:
   case Match_InvalidSVEVectorListStrided4x32:
   case Match_InvalidSVEVectorListStrided4x64:
+  case Match_InvalidSVEPNRasPPRPredicateBReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

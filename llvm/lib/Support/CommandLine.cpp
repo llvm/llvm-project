@@ -2474,8 +2474,7 @@ protected:
     for (OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
       const auto &CategoryOptions = CategorizedOptions[Category];
-      bool IsEmptyCategory = CategoryOptions.empty();
-      if (!ShowHidden && IsEmptyCategory)
+      if (CategoryOptions.empty())
         continue;
 
       // Print category information.
@@ -2488,12 +2487,6 @@ protected:
       else
         outs() << "\n";
 
-      // When using --help-hidden explicitly state if the category has no
-      // options associated with it.
-      if (IsEmptyCategory) {
-        outs() << "  This option category has no options.\n";
-        continue;
-      }
       // Loop over the options in the category and print.
       for (const Option *Opt : CategoryOptions)
         Opt->printOptionInfo(MaxArgLen);

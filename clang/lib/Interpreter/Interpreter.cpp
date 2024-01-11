@@ -148,6 +148,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   // We do C++ by default; append right after argv[0] if no "-x" given
   ClangArgv.insert(ClangArgv.end(), "-Xclang");
   ClangArgv.insert(ClangArgv.end(), "-fincremental-extensions");
+  ClangArgv.insert(ClangArgv.end(), "-mcpu=native");
   ClangArgv.insert(ClangArgv.end(), "-c");
 
   // Put a dummy C++ file on to ensure there's at least one compile job for the

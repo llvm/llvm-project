@@ -111,8 +111,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
 
 class VOP2_Real_Gen <VOP2_Pseudo ps, GFXGen Gen, string real_name = ps.Mnemonic> :
   VOP2_Real <ps, Gen.Subtarget, real_name> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -437,7 +437,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
   let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
-                       Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel, 0/*IsVOP3P*/>.ret;
+                       Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
   let InsVOPDXDeferred =
@@ -1275,8 +1275,8 @@ class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps, int subtarget,
 class VOP2_DPP16_Gen<bits<6> op, VOP2_DPP_Pseudo ps, GFXGen Gen,
                  string opName = ps.OpName, VOPProfile p = ps.Pfl> :
     VOP2_DPP16<op, ps, Gen.Subtarget, opName, p> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -1300,12 +1300,12 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
 
   let OtherPredicates = ps.OtherPredicates;
 }
- 
+
 class VOP2_DPP8_Gen<bits<6> op, VOP2_Pseudo ps, GFXGen Gen,
                     VOPProfile p = ps.Pfl> :
     VOP2_DPP8<op, ps, p> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
