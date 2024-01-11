@@ -23,12 +23,23 @@ using namespace ompx;
 [[gnu::weak]] extern const uint32_t __omp_rtl_debug_kind = 0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_thread_state = 0;
 [[gnu::weak]] extern const uint32_t __omp_rtl_assume_no_nested_parallelism = 0;
+[[gnu::weak]] extern const uint32_t __omp_rtl_assume_threads_oversubscription =
+    0;
+[[gnu::weak]] extern const uint32_t __omp_rtl_assume_teams_oversubscription = 0;
 
 // This variable should be visibile to the plugin so we override the default
 // hidden visibility.
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility("protected")]] DeviceEnvironmentTy
     CONSTANT(__omp_rtl_device_environment);
+
+uint32_t config::getAssumeTeamsOversubscription() {
+  return __omp_rtl_assume_teams_oversubscription;
+}
+
+uint32_t config::getAssumeThreadsOversubscription() {
+  return __omp_rtl_assume_threads_oversubscription;
+}
 
 uint32_t config::getDebugKind() {
   return __omp_rtl_debug_kind & __omp_rtl_device_environment.DeviceDebugKind;

@@ -60,6 +60,7 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> has_sve  = 0; // Scratch VGPR Enable
   bits<1> lds = 0;
   bits<1> sve = 0;
+  bits<1> has_offset = 1;
 
   let SubtargetPredicate = !if(is_flat_global, HasFlatGlobalInsts,
     !if(is_flat_scratch, HasFlatScratchInsts, HasFlatAddressSpace));
@@ -182,7 +183,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{51-50} = cpol{4-3}; // scope
   let Inst{62-55} = !if(ps.has_data, vdata{7-0}, ?);
   let Inst{71-64} = !if(ps.has_vaddr, vaddr, ?);
-  let Inst{95-72} = offset;
+  let Inst{95-72} = !if(ps.has_offset, offset, ?);
 }
 
 class GlobalSaddrTable <bit is_saddr, string Name = ""> {
@@ -214,7 +215,6 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
   let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
-  let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -236,7 +236,6 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
   let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
-  let maybeAtomic = 1;
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -262,7 +261,6 @@ class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let maybeAtomic = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
@@ -329,7 +327,6 @@ class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let maybeAtomic = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 }
 
@@ -338,6 +335,34 @@ multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass
     GlobalSaddrTable<0, opName>;
   def _SADDR : FLAT_Global_Store_AddTid_Pseudo<opName, regClass, 1>,
     GlobalSaddrTable<1, opName>;
+}
+
+class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = null_frag> :
+  FLAT_Pseudo<opName, (outs), (ins CPol:$cpol), "$cpol", [(node)]> {
+
+  let AsmMatchConverter = "";
+
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let is_flat_global = 1;
+
+  let has_offset = 0;
+  let has_saddr = 0;
+  let enabled_saddr = 0;
+  let saddr_value = 0;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_vaddr = 0;
+  let has_glc = 0;
+  let has_dlc = 0;
+  let glcValue = 0;
+  let dlcValue = 0;
+  let has_sccb = 0;
+  let sccbValue = 0;
+  let has_sve = 0;
+  let lds = 0;
+  let sve = 0;
 }
 
 class FlatScratchInst <string sv_op, string mode> {
@@ -372,7 +397,6 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
   let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
-  let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -401,7 +425,6 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
   let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
-  let maybeAtomic = 1;
 }
 
 multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedOutput = 0> {
@@ -491,7 +514,6 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
     let has_vdst = 0;
     let has_sccb  = 1;
     let sccbValue = 0;
-    let maybeAtomic = 1;
     let IsAtomicNoRet = 1;
 }
 
@@ -928,6 +950,10 @@ defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dwor
 
 let SubtargetPredicate = isGFX12Plus in {
   defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : FLAT_Global_Atomic_Pseudo <"global_atomic_ordered_add_b64", VReg_64, i64>;
+
+  def GLOBAL_INV    : FLAT_Global_Invalidate_Writeback<"global_inv">;
+  def GLOBAL_WB     : FLAT_Global_Invalidate_Writeback<"global_wb">;
+  def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
 
 } // End is_flat_global = 1
@@ -2661,6 +2687,10 @@ defm GLOBAL_ATOMIC_MIN_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x051, "GLOBAL_A
 defm GLOBAL_ATOMIC_MAX_NUM_F32     : VGLOBAL_Real_Atomics_gfx12<0x052, "GLOBAL_ATOMIC_FMAX", "global_atomic_max_num_f32", true, "global_atomic_max_f32">;
 defm GLOBAL_ATOMIC_ADD_F32         : VGLOBAL_Real_Atomics_gfx12<0x056, "GLOBAL_ATOMIC_ADD_F32", "global_atomic_add_f32">;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073, "GLOBAL_ATOMIC_ORDERED_ADD_B64", "global_atomic_ordered_add_b64">;
+
+defm GLOBAL_INV                    : VFLAT_Real_Base_gfx12<0x02b, "GLOBAL_INV", "global_inv">;
+defm GLOBAL_WB                     : VFLAT_Real_Base_gfx12<0x02c, "GLOBAL_WB", "global_wb">;
+defm GLOBAL_WBINV                  : VFLAT_Real_Base_gfx12<0x04f, "GLOBAL_WBINV", "global_wbinv">;
 
 // ENC_VSCRATCH.
 defm SCRATCH_LOAD_U8               : VSCRATCH_Real_AllAddr_gfx12<0x10, "SCRATCH_LOAD_UBYTE", "scratch_load_u8", true>;
