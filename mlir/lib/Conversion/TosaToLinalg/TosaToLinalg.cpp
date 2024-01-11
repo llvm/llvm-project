@@ -2363,7 +2363,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 
     auto real_el_ty = cast<FloatType>(
         cast<ShapedType>(input_real.getType()).getElementType());
-    auto imag_el_ty = cast<FloatType>(
+    [[maybe_unused]] auto imag_el_ty = cast<FloatType>(
         cast<ShapedType>(input_imag.getType()).getElementType());
 
     assert(real_el_ty == imag_el_ty);
@@ -2372,8 +2372,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
     SmallVector<Value> dynamicSizes;
 
     // Get [N, H, W]
-    ArrayRef<OpFoldResult> dims =
-        tensor::getMixedSizes(rewriter, loc, input_real);
+    auto dims = tensor::getMixedSizes(rewriter, loc, input_real);
 
     SmallVector<int64_t, 3> staticSizes;
     dispatchIndexOpFoldResults(dims, dynamicSizes, staticSizes);
