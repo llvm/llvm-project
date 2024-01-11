@@ -66,9 +66,10 @@ unsigned Localizer::getNumPhiUses(MachineOperand &Op) const {
 
   Register SrcReg = Op.getReg();
   unsigned NumUses = 0;
-  for (unsigned I = 0, NumVals = MI->getNumIncomingValues(); I < NumVals; ++I)
+  for (unsigned I = 0, NumVals = MI->getNumIncomingValues(); I < NumVals; ++I) {
     if (MI->getIncomingValue(I) == SrcReg)
       ++NumUses;
+  }
   return NumUses;
 }
 
