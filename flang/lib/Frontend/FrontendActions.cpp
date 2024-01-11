@@ -709,60 +709,77 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
+static std::optional<std::pair<unsigned, unsigned>>
+getAArch64VScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+
+  if (langOpts.VScaleMin || langOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
+
+  std::string featuresStr = ci.getTargetFeatures();
+  if (featuresStr.find("+sve") != std::string::npos)
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  return std::nullopt;
+}
+
+static std::optional<std::pair<unsigned, unsigned>>
+getRISCVVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  auto parseResult = llvm::RISCVISAInfo::parseFeatures(
+      triple.isRISCV64() ? 64 : 32, targetOpts.featuresAsWritten);
+  if (!parseResult) {
+    std::string buffer;
+    llvm::raw_string_ostream outputErrMsg(buffer);
+    handleAllErrors(parseResult.takeError(), [&](llvm::StringError &errMsg) {
+      outputErrMsg << errMsg.getMessage();
+    });
+    ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
+        << outputErrMsg.str();
+    return std::nullopt;
+  }
+
+  llvm::RISCVISAInfo *const isaInfo = parseResult->get();
+
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned vscaleMin = isaInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
+
+  if (langOpts.VScaleMin || langOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    vscaleMin = std::max(vscaleMin, langOpts.VScaleMin);
+    unsigned vscaleMax = langOpts.VScaleMax;
+    if (vscaleMax != 0 && vscaleMax < vscaleMin)
+      vscaleMax = vscaleMin;
+    return std::pair<unsigned, unsigned>(vscaleMin ? vscaleMin : 1, vscaleMax);
+  }
+
+  if (vscaleMin > 0) {
+    unsigned vscaleMax = isaInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(vscaleMin, vscaleMax);
+  }
+
+  return std::nullopt;
+}
+
 // TODO: We should get this from TargetInfo. However, that depends on
 // too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
 getVScaleRange(CompilerInstance &ci) {
   const auto &langOpts = ci.getInvocation().getLangOpts();
-  const auto targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
+  const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
 
-  if (triple.isAArch64()) {
-    if (langOpts.VScaleMin || langOpts.VScaleMax)
-      return std::pair<unsigned, unsigned>(
-          langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
+  if (triple.isAArch64())
+    return getAArch64VScaleRange(ci);
+  if (triple.isRISCV())
+    return getRISCVVScaleRange(ci);
 
-    std::string featuresStr = ci.getTargetFeatures();
-    if (featuresStr.find("+sve") != std::string::npos)
-      return std::pair<unsigned, unsigned>(1, 16);
-  } else if (triple.isRISCV()) {
-    auto parseResult = llvm::RISCVISAInfo::parseFeatures(
-        triple.isRISCV64() ? 64 : 32, targetOpts.featuresAsWritten);
-    if (!parseResult) {
-      std::string buffer;
-      llvm::raw_string_ostream outputErrMsg(buffer);
-      handleAllErrors(parseResult.takeError(), [&](llvm::StringError &errMsg) {
-        outputErrMsg << errMsg.getMessage();
-      });
-      ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
-          << outputErrMsg.str();
-      return std::nullopt;
-    }
-
-    llvm::RISCVISAInfo *const isaInfo = parseResult->get();
-
-    // RISCV::RVVBitsPerBlock is 64.
-    unsigned vscaleMin = isaInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
-
-    if (langOpts.VScaleMin || langOpts.VScaleMax) {
-      // Treat Zvl*b as a lower bound on vscale.
-      vscaleMin = std::max(vscaleMin, langOpts.VScaleMin);
-      unsigned vscaleMax = langOpts.VScaleMax;
-      if (vscaleMax != 0 && vscaleMax < vscaleMin)
-        vscaleMax = vscaleMin;
-      return std::pair<unsigned, unsigned>(vscaleMin ? vscaleMin : 1,
-                                           vscaleMax);
-    }
-
-    if (vscaleMin > 0) {
-      unsigned vscaleMax = isaInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
-      return std::make_pair(vscaleMin, vscaleMax);
-    }
-  } else {
-    if (langOpts.VScaleMin || langOpts.VScaleMax)
-      return std::pair<unsigned, unsigned>(
-          langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
-  }
+  if (langOpts.VScaleMin || langOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
 
   return std::nullopt;
 }
