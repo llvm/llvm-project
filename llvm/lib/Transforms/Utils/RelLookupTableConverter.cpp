@@ -18,10 +18,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
+static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV,
+                                          unsigned PointerSize) {
   // If lookup table has more than one user,
   // do not generate a relative lookup table.
   // This is to simplify the analysis that needs to be done for this pass.
@@ -60,10 +62,12 @@ static bool shouldConvertToRelLookupTable(Module &M, GlobalVariable &GV) {
   if (!Array)
     return false;
 
-  // If values are not 64-bit pointers, do not generate a relative lookup table.
+  // If values are not pointers of the full width permitted by the
+  // architecture, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
   Type *ElemType = Array->getType()->getElementType();
-  if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
+  if (!ElemType->isPointerTy() ||
+      DL.getPointerTypeSizeInBits(ElemType) != PointerSize)
     return false;
 
   for (const Use &Op : Array->operands()) {
@@ -96,8 +100,8 @@ static GlobalVariable *createRelLookupTable(Function &Func,
   ConstantArray *LookupTableArr =
       cast<ConstantArray>(LookupTable.getInitializer());
   unsigned NumElts = LookupTableArr->getType()->getNumElements();
-  ArrayType *IntArrayTy =
-      ArrayType::get(Type::getInt32Ty(M.getContext()), NumElts);
+  Type *IntTy = Type::getInt32Ty(M.getContext());
+  ArrayType *IntArrayTy = ArrayType::get(IntTy, NumElts);
 
   GlobalVariable *RelLookupTable = new GlobalVariable(
     M, IntArrayTy, LookupTable.isConstant(), LookupTable.getLinkage(),
@@ -115,7 +119,9 @@ static GlobalVariable *createRelLookupTable(Function &Func,
     Constant *Target = llvm::ConstantExpr::getPtrToInt(Element, IntPtrTy);
     Constant *Sub = llvm::ConstantExpr::getSub(Target, Base);
     Constant *RelOffset =
-        llvm::ConstantExpr::getTrunc(Sub, Type::getInt32Ty(M.getContext()));
+        IntPtrTy->getScalarSizeInBits() > IntTy->getScalarSizeInBits()
+            ? llvm::ConstantExpr::getTrunc(Sub, IntTy)
+            : Sub;
     RelLookupTableContents[Idx++] = RelOffset;
   }
 
@@ -183,8 +189,13 @@ static bool convertToRelativeLookupTables(
 
   bool Changed = false;
 
+  auto Triple = llvm::Triple(M.getTargetTriple());
+  unsigned PointerSize = Triple.isArch64Bit()   ? 64
+                         : Triple.isArch32Bit() ? 32
+                                                : 16;
+
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
-    if (!shouldConvertToRelLookupTable(M, GV))
+    if (!shouldConvertToRelLookupTable(M, GV, PointerSize))
       continue;
 
     convertToRelLookupTable(GV);
