@@ -723,7 +723,9 @@ Bug Fixes in This Version
   a constrained parameter in a template class that declares a class method
   or lambda at different depth.
   Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
-
+- Fix an issue where clang cannot find conversion function with template
+  parameter when instantiation of template class.
+  Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
