@@ -908,8 +908,8 @@ public:
           func.getArgument(fixup.index + 1).replaceAllUsesWith(bitcast);
           func.front().eraseArgument(fixup.index + 1);
           LLVM_DEBUG(llvm::dbgs()
-                     << "old argument: " << oldArgTy.getEleTy()
-                     << ", repl: " << load << ", new argument: "
+                     << "old argument: " << oldArgTy << ", repl: " << bitcast
+                     << ", new argument: "
                      << func.getArgument(fixup.index).getType() << '\n');
         } break;
         case FixupTy::Codes::CharPair: {
