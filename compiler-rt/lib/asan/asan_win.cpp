@@ -265,9 +265,6 @@ void PlatformTSDDtor(void *tsd) { AsanThread::TSDDtor(tsd); }
 
 // ---------------------- Various stuff ---------------- {{{
 void *AsanDoesNotSupportStaticLinkage() {
-#if defined(_DEBUG)
-#error Please build the runtime with a non-debug CRT: /MD or /MT
-#endif
   return 0;
 }
 
