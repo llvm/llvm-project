@@ -9,7 +9,7 @@
 #include "DWARFLinkerImpl.h"
 #include "DIEGenerator.h"
 #include "DependencyTracker.h"
-#include "Utils.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
