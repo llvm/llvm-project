@@ -108,12 +108,13 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
   if (nameMaxLen == -1)
     nameMaxLen = _POSIX_LOGIN_NAME_MAX + 1;
 #endif
-  char str[nameMaxLen];
+  std::vector<char> str(nameMaxLen);
 
-  int error{getlogin_r(str, nameMaxLen)};
+  int error{getlogin_r(str.data(), nameMaxLen)};
   if (error == 0) {
     // no error: find first \0 in string then pad from there
-    CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
+    CopyAndPad(reinterpret_cast<char *>(arg), str.data(), length,
+        std::strlen(str.data()));
   } else {
     // error occur: get username from environment variable
     GetUsernameEnvVar("LOGNAME", arg, length);
