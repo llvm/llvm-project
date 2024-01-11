@@ -221,31 +221,17 @@ public:
     }
 
     template <class IntType>
-    bool GetItemAtIndexAsInteger(size_t idx, IntType &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
+    std::optional<IntType> GetItemAtIndexAsInteger(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
         if constexpr (std::numeric_limits<IntType>::is_signed) {
-          if (auto signed_value = value_sp->GetAsSignedInteger()) {
-            result = static_cast<IntType>(signed_value->GetValue());
-            return true;
-          }
+          if (auto *signed_value = item_sp->GetAsSignedInteger())
+            return static_cast<IntType>(signed_value->GetValue());
         } else {
-          if (auto unsigned_value = value_sp->GetAsUnsignedInteger()) {
-            result = static_cast<IntType>(unsigned_value->GetValue());
-            return true;
-          }
+          if (auto *unsigned_value = item_sp->GetAsUnsignedInteger())
+            return static_cast<IntType>(unsigned_value->GetValue());
         }
       }
-      return false;
-    }
-
-    template <class IntType>
-    bool GetItemAtIndexAsInteger(size_t idx, IntType &result,
-                                 IntType default_val) const {
-      bool success = GetItemAtIndexAsInteger(idx, result);
-      if (!success)
-        result = default_val;
-      return success;
+      return {};
     }
 
     std::optional<llvm::StringRef> GetItemAtIndexAsString(size_t idx) const {

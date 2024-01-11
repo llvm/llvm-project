@@ -3165,11 +3165,11 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:8
-; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:12
-; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:20
-; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:16
-; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:4
+; VI-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:4
+; VI-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:8
+; VI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:20
+; VI-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:16
+; VI-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:12
 ; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0
@@ -3178,15 +3178,13 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    buffer_store_dword v20, off, s[4:7], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    buffer_store_dword v16, off, s[4:7], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    buffer_store_dword v17, off, s[4:7], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v18, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v19, off, s[4:7], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    buffer_store_dword v20, off, s[4:7], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    buffer_store_dwordx2 v[16:17], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3205,11 +3203,11 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:12
-; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:20
-; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:16
-; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    buffer_load_dword v19, off, s[0:3], s32 offset:8
+; GFX9-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:20
+; GFX9-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:16
+; GFX9-NEXT:    buffer_load_dword v20, off, s[0:3], s32 offset:12
 ; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_store_dwordx4 v[12:15], off, s[4:7], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -3219,15 +3217,13 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v20, off, s[4:7], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v16, off, s[4:7], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    buffer_store_dword v17, off, s[4:7], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v18, off, s[4:7], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v19, off, s[4:7], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dword v20, off, s[4:7], 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_dwordx2 v[16:17], off, s[4:7], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3236,11 +3232,11 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x5
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
-; GFX11-NEXT:    scratch_load_b32 v32, off, s32 offset:4
-; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:8
-; GFX11-NEXT:    scratch_load_b32 v34, off, s32 offset:12
-; GFX11-NEXT:    scratch_load_b32 v35, off, s32 offset:20
-; GFX11-NEXT:    scratch_load_b32 v36, off, s32 offset:16
+; GFX11-NEXT:    scratch_load_b32 v33, off, s32 offset:20
+; GFX11-NEXT:    scratch_load_b32 v34, off, s32 offset:4
+; GFX11-NEXT:    scratch_load_b32 v35, off, s32 offset:8
+; GFX11-NEXT:    scratch_load_b32 v36, off, s32 offset:12
+; GFX11-NEXT:    scratch_load_b32 v32, off, s32 offset:16
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt vmcnt(5)
@@ -3260,20 +3256,17 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-NEXT:    buffer_store_b32 v32, off, s[0:3], 0 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    buffer_store_b32 v33, off, s[0:3], 0 dlc
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-NEXT:    buffer_store_b32 v34, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-NEXT:    buffer_store_b32 v35, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    buffer_store_b32 v36, off, s[0:3], 0 dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_store_b64 v[32:33], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   store volatile <32 x i32> %arg0, ptr addrspace(1) undef
