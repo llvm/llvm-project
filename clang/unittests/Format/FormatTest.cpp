@@ -20931,6 +20931,12 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
       "};",
       Style);
 
+  verifyNoCrash("Foo foo[] = {\n"
+                "    [0] = {1, 1},\n"
+                "    [1] { 1, 1, },\n"
+                "    [2] { 1, 1, },\n"
+                "};");
+
   verifyFormat("return GradForUnaryCwise(g, {\n"
                "                                {{\"sign\"}, \"Sign\",  "
                "  {\"x\", \"dy\"}},\n"
@@ -21172,6 +21178,12 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "    {56, 5,     \"!!\"                                    }\n"
       "};",
       Style);
+
+  verifyNoCrash("Foo foo[] = {\n"
+                "    [0] = {1, 1},\n"
+                "    [1] { 1, 1, },\n"
+                "    [2] { 1, 1, },\n"
+                "};");
 
   verifyFormat("return GradForUnaryCwise(g, {\n"
                "                                {{\"sign\"}, \"Sign\", {\"x\", "
