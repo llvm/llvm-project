@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc %s
 define dso_local void @main(ptr %addr, ptr %src, ptr %dst) personality ptr @__CxxFrameHandler3 !dbg !11 {
 entry:
