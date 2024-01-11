@@ -80,3 +80,15 @@ bool mlir::tblgen::isPythonReserved(StringRef str) {
   reserved.insert("type");
   return reserved.contains(str);
 }
+
+std::string
+mlir::tblgen::getAttributeNameSpace(llvm::SmallVector<StringRef> namespaces) {
+  std::string namespace_;
+  if (namespaces[0] == "mlir")
+    namespace_ = llvm::join(llvm::drop_begin(namespaces), "_");
+  else
+    namespace_ = llvm::join(namespaces, "_");
+  std::transform(namespace_.begin(), namespace_.end(), namespace_.begin(),
+                 tolower);
+  return namespace_;
+}

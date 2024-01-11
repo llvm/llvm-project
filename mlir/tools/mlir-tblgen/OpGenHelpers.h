@@ -28,6 +28,9 @@ getRequestedOpDefinitions(const llvm::RecordKeeper &recordKeeper);
 /// Regenerate using python -c"print(set(sorted(__import__('keyword').kwlist)))"
 bool isPythonReserved(llvm::StringRef str);
 
+std::string
+getAttributeNameSpace(llvm::SmallVector<llvm::StringRef> namespaces);
+
 } // namespace tblgen
 } // namespace mlir
 

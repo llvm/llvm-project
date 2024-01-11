@@ -105,7 +105,14 @@ static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
     return true;
   }
 
-  os << llvm::formatv("@register_attribute_builder(\"{0}\")\n",
+  llvm::SmallVector<StringRef> namespaces;
+  enumAttr.getStorageType().ltrim("::").split(namespaces, "::");
+  namespaces = llvm::SmallVector<StringRef>{llvm::drop_end(namespaces)};
+  std::string namespace_ = getAttributeNameSpace(namespaces);
+  if (!namespace_.empty())
+    namespace_ += "_";
+
+  os << llvm::formatv("@register_attribute_builder(\"{0}{1}\")\n", namespace_,
                       enumAttr.getAttrDefName());
   os << llvm::formatv("def _{0}(x, context):\n",
                       enumAttr.getAttrDefName().lower());
@@ -120,11 +127,33 @@ static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
 /// Emits an attribute builder for the given dialect enum attribute to support
 /// automatic conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
-static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
-                                            StringRef formatString,
+static bool emitDialectEnumAttributeBuilder(const AttrOrTypeDef &attr,
                                             raw_ostream &os) {
-  os << llvm::formatv("@register_attribute_builder(\"{0}\")\n", attrDefName);
-  os << llvm::formatv("def _{0}(x, context):\n", attrDefName.lower());
+  StringRef mnemonic = attr.getMnemonic().value();
+  std::optional<StringRef> assemblyFormat = attr.getAssemblyFormat();
+  StringRef dialect = attr.getDialect().getName();
+  std::string formatString;
+  if (assemblyFormat == "`<` $value `>`")
+    formatString =
+        llvm::formatv("#{0}.{1}<{{str(x)}>", dialect, mnemonic).str();
+  else if (assemblyFormat == "$value")
+    formatString =
+        llvm::formatv("#{0}<{1} {{str(x)}>", dialect, mnemonic).str();
+  else {
+    llvm::errs()
+        << "unsupported assembly format for python enum bindings generation";
+    return true;
+  }
+
+  llvm::SmallVector<StringRef> namespaces;
+  attr.getStorageNamespace().ltrim("::").split(namespaces, "::");
+  std::string namespace_ = getAttributeNameSpace(namespaces);
+  if (!namespace_.empty())
+    namespace_ += "_";
+
+  os << llvm::formatv("@register_attribute_builder(\"{0}{1}\")\n", namespace_,
+                      attr.getName());
+  os << llvm::formatv("def _{0}(x, context):\n", attr.getName().lower());
   os << llvm::formatv("    return "
                       "_ods_ir.Attribute.parse(f'{0}', context=context)\n\n",
                       formatString);
@@ -142,29 +171,10 @@ static bool emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
     emitEnumClass(enumAttr, os);
     emitAttributeBuilder(enumAttr, os);
   }
-  for (auto &it : recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
-    AttrOrTypeDef attr(&*it);
-    if (!attr.getMnemonic()) {
-      llvm::errs() << "enum case " << attr
-                   << " needs mnemonic for python enum bindings generation";
-      return true;
-    }
-    StringRef mnemonic = attr.getMnemonic().value();
-    std::optional<StringRef> assemblyFormat = attr.getAssemblyFormat();
-    StringRef dialect = attr.getDialect().getName();
-    if (assemblyFormat == "`<` $value `>`") {
-      emitDialectEnumAttributeBuilder(
-          attr.getName(),
-          llvm::formatv("#{0}.{1}<{{str(x)}>", dialect, mnemonic).str(), os);
-    } else if (assemblyFormat == "$value") {
-      emitDialectEnumAttributeBuilder(
-          attr.getName(),
-          llvm::formatv("#{0}<{1} {{str(x)}>", dialect, mnemonic).str(), os);
-    } else {
-      llvm::errs()
-          << "unsupported assembly format for python enum bindings generation";
-      return true;
-    }
+  for (const auto &it :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
+    const AttrOrTypeDef attr(&*it);
+    return emitDialectEnumAttributeBuilder(attr, os);
   }
 
   return false;
