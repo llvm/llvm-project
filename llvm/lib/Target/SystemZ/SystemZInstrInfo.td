@@ -13,9 +13,10 @@ def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
-// The callseq_start node requires the hasSideEffects flag, even though these
-// instructions are noops on SystemZ.
-let hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
+// These pseudos are removed after instruction selection while updating the
+// values of MaxcallFrameSize and AdjustsStack which are needed during frame
+// lowering.  The callseq_start node requires the hasSideEffects flag.
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, hasSideEffects = 1 in {
   def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                                 [(callseq_start timm:$amt1, timm:$amt2)]>;
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
