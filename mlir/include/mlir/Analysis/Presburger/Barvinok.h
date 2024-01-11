@@ -84,6 +84,12 @@ ConeH getDual(ConeV cone);
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
 
+/// Find a vector that is not orthogonal to any of the given vectors,
+/// i.e., has nonzero dot product with those of the given vectors
+/// that are not null.
+/// If any of the vectors is null, it is ignored.
+Point getNonOrthonalVector(std::vector<Point> vectors);
+
 /// Find the coefficient of a given power of s in a rational function
 /// given by P(s)/Q(s), where the coefficients in P are QuasiPolynomials,
 /// and those in Q are Fractions.

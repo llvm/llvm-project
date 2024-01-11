@@ -165,7 +165,8 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// The base case is given in one dimension,
 /// where the vector [1] is not orthogonal to any
 /// of the input vectors (since they are all nonzero).
-Point getNonOrthogonalVector(std::vector<Point> vectors) {
+Point mlir::presburger::detail::getNonOrthonalVector(
+    std::vector<Point> vectors) {
   unsigned dim = vectors[0].size();
 
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
@@ -179,7 +180,7 @@ Point getNonOrthogonalVector(std::vector<Point> vectors) {
     lowerDimDotProducts.clear();
 
     // Compute the set of dot products <x_i[:d-1], vs> for each i.
-    for (Point vector : vectors) {
+    for (const Point &vector : vectors) {
       dotProduct = Fraction(0, 1);
       for (unsigned i = 0; i < d - 1; i++)
         dotProduct = dotProduct + vector[i] * newPoint[i];
@@ -188,10 +189,10 @@ Point getNonOrthogonalVector(std::vector<Point> vectors) {
 
     // Compute - <x_i[:n-1], vs> / x_i[-1] for each i,
     // and find the biggest such value.
-    for (unsigned i = 0; i < vectors.size(); i++) {
+    for (unsigned i = 0, e = vectors.size(); i < e; ++i) {
       if (vectors[i][d - 1] == 0)
         continue;
-      disallowedValue = - lowerDimDotProducts[i] / vectors[i][d - 1];
+      disallowedValue = -lowerDimDotProducts[i] / vectors[i][d - 1];
       if (maxDisallowedValue < disallowedValue)
         maxDisallowedValue = disallowedValue;
     }

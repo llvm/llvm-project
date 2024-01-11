@@ -82,3 +82,5 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
           1, {1}, {makeFracMatrix(2, 3, {{-83, -100, -41}, {-22, -27, -15}})},
           {{{8, 47, -17}, {-7, -41, 15}, {1, 5, -2}}}));
 }
+
+TEST(BarvinokTest, non)
