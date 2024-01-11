@@ -63,15 +63,30 @@ private:
   class SignalHandle {
   public:
     ~SignalHandle() { m_mainloop.UnregisterSignal(m_signo, m_callback_it); }
+#if defined(__QNX__)
+    std::weak_ptr<siginfo_t> GetSiginfo() const { return m_siginfo; }
+#endif
 
   private:
     SignalHandle(MainLoopPosix &mainloop, int signo,
+#if defined(__QNX__)
+                 std::list<Callback>::iterator callback_it,
+                 std::weak_ptr<siginfo_t> siginfo)
+        : m_mainloop(mainloop), m_signo(signo), m_callback_it(callback_it),
+          m_siginfo(siginfo) {
+    }
+#else
                  std::list<Callback>::iterator callback_it)
-        : m_mainloop(mainloop), m_signo(signo), m_callback_it(callback_it) {}
+        : m_mainloop(mainloop), m_signo(signo), m_callback_it(callback_it) {
+    }
+#endif
 
     MainLoopPosix &m_mainloop;
     int m_signo;
     std::list<Callback>::iterator m_callback_it;
+#if defined(__QNX__)
+    std::weak_ptr<siginfo_t> m_siginfo;
+#endif
 
     friend class MainLoopPosix;
     SignalHandle(const SignalHandle &) = delete;
@@ -81,6 +96,9 @@ private:
   struct SignalInfo {
     std::list<Callback> callbacks;
     struct sigaction old_action;
+#if defined(__QNX__)
+    std::shared_ptr<siginfo_t> siginfo;
+#endif
     bool was_blocked : 1;
   };
   class RunImpl;

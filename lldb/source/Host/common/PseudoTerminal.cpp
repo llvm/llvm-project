@@ -72,6 +72,24 @@ llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
         std::error_code(errno, std::generic_category()));
   }
 
+#if defined(FD_CLOEXEC)
+  // Enable the close-on-exec flag for the primary file descriptor if it hasn't
+  // already been enabled.
+  // NB: In multithreaded programs, using fcntl to set the close-on-exec flag at
+  // the same time as another thread performs a fork plus execve risks a race
+  // condition that may unintentionally leak the file descriptor to the program
+  // executed in the child process but, apparently, we don't launch processes
+  // for debugging from within multithreaded contexts at the moment.
+  int flags = ::fcntl(m_primary_fd, F_GETFD);
+  if (flags == -1)
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
+  if (!(flags & FD_CLOEXEC))
+    if (::fcntl(m_primary_fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+#endif
+
   // Grant access to the secondary pseudo terminal
   if (::grantpt(m_primary_fd) < 0) {
     std::error_code EC(errno, std::generic_category());
@@ -124,7 +142,13 @@ std::string PseudoTerminal::GetSecondaryName() const {
     buf[0] = '\0';
     int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
     UNUSED_IF_ASSERT_DISABLED(r);
+#if defined(__QNX__)
+    // ptsname_r returns a pointer to a null-terminated string containing the
+    // pathname of the corresponding slave device on success on QNX.
+    assert(r != 0);
+#else
     assert(r == 0);
+#endif
     return buf;
 #if defined(__APPLE__)
   } else {

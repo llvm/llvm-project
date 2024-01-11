@@ -24,6 +24,10 @@ else()
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "QNX")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessQNX)
+endif()
+
 if(APPLE_EMBEDDED)
   if(LLDB_CODESIGN_IDENTITY)
     # Use explicit LLDB identity

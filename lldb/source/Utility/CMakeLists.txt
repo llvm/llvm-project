@@ -23,6 +23,10 @@ if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
     list(APPEND LLDB_SYSTEM_LIBS atomic)
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "QNX")
+    list(APPEND LLDB_SYSTEM_LIBS socket)
+endif()
+
 add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   AddressableBits.cpp
   ArchSpec.cpp

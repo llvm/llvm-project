@@ -10,6 +10,7 @@
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
+#include "Plugins/Process/Utility/QNXSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
@@ -36,6 +37,8 @@ lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
     return std::make_shared<FreeBSDSignals>();
   case llvm::Triple::NetBSD:
     return std::make_shared<NetBSDSignals>();
+  case llvm::Triple::QNX:
+    return std::make_shared<QNXSignals>();
   default:
     return std::make_shared<UnixSignals>();
   }
