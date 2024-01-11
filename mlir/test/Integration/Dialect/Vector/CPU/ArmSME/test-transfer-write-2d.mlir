@@ -96,12 +96,6 @@ func.func @initialize_memory(%d0 : index, %d1 : index) -> memref<?x?xf32> {
   return %A : memref<?x?xf32>
 }
 
-// This will be made a streaming function by enable-arm-streaming so return SVL.
-func.func @get_svl() -> index {
-  %vscale = vector.vscale
-  return %vscale : index
-}
-
 func.func @entry() {
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
@@ -111,8 +105,7 @@ func.func @entry() {
   //
   // Allocate enough memory to load a 32-bit tile plus a tiny bit more to test
   // non-zero offsets while remaining inbounds.
-  %svl = call @get_svl() : () -> index
-  %svl_s = arith.muli %c4, %svl : index
+  %svl_s = arm_sme.streaming_vl <word>
   %svl_s_plus_two = arith.addi %svl_s, %c2 : index
   %A = call @initialize_memory(%svl_s_plus_two, %svl_s_plus_two) : (index, index) -> memref<?x?xf32>
 

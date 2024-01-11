@@ -423,7 +423,7 @@ if(runtimes)
       endif()
     endforeach()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND 
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
       (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
     if(TARGET libc-hdrgen)
       set(libc_tools libc-hdrgen)

@@ -151,38 +151,11 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     """
     Lit test format for the C++ Standard Library conformance test suite.
 
-    This test format is based on top of the ShTest format -- it basically
-    creates a shell script performing the right operations (compile/link/run)
-    based on the extension of the test file it encounters. It supports files
-    with the following extensions:
-
-    FOO.pass.cpp            - Compiles, links and runs successfully
-    FOO.pass.mm             - Same as .pass.cpp, but for Objective-C++
-
-    FOO.compile.pass.cpp    - Compiles successfully, link and run not attempted
-    FOO.compile.pass.mm     - Same as .compile.pass.cpp, but for Objective-C++
-    FOO.compile.fail.cpp    - Does not compile successfully
-
-    FOO.link.pass.cpp       - Compiles and links successfully, run not attempted
-    FOO.link.pass.mm        - Same as .link.pass.cpp, but for Objective-C++
-    FOO.link.fail.cpp       - Compiles successfully, but fails to link
-
-    FOO.sh.<anything>       - A builtin Lit Shell test
-
-    FOO.gen.<anything>      - A .sh test that generates one or more Lit tests on the
-                              fly. Executing this test must generate one or more files
-                              as expected by LLVM split-file, and each generated file
-                              leads to a separate Lit test that runs that file as
-                              defined by the test format. This can be used to generate
-                              multiple Lit tests from a single source file, which is
-                              useful for testing repetitive properties in the library.
-                              Be careful not to abuse this since this is not a replacement
-                              for usual code reuse techniques.
-
-    FOO.verify.cpp          - Compiles with clang-verify. This type of test is
-                              automatically marked as UNSUPPORTED if the compiler
-                              does not support Clang-verify.
-
+    Lit tests are contained in files that follow a certain pattern, which determines the semantics of the test.
+    Under the hood, we basically generate a builtin Lit shell test that follows the ShTest format, and perform
+    the appropriate operations (compile/link/run). See
+    https://libcxx.llvm.org/TestingLibcxx.html#test-names
+    for a complete description of those semantics.
 
     Substitution requirements
     ===============================
@@ -199,30 +172,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     file), all three of %{flags}, %{compile_flags} and %{link_flags} will be used
     in the same command line. In other words, the test format doesn't perform
     separate compilation and linking steps in this case.
-
-
-    Additional supported directives
-    ===============================
-    In addition to everything that's supported in Lit ShTests, this test format
-    also understands the following directives inside test files:
-
-        // FILE_DEPENDENCIES: file, directory, /path/to/file
-
-            This directive expresses that the test requires the provided files
-            or directories in order to run. An example is a test that requires
-            some test input stored in a data file. When a test file contains
-            such a directive, this test format will collect them and copy them
-            to the directory represented by %T. The intent is that %T contains
-            all the inputs necessary to run the test, such that e.g. execution
-            on a remote host can be done by simply copying %T to the host.
-
-        // ADDITIONAL_COMPILE_FLAGS: flag1 flag2 flag3
-
-            This directive will cause the provided flags to be added to the
-            %{compile_flags} substitution for the test that contains it. This
-            allows adding special compilation flags without having to use a
-            .sh.cpp test, which would be more powerful but perhaps overkill.
-
 
     Additional provided substitutions and features
     ==============================================
