@@ -20933,7 +20933,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
 
   verifyNoCrash("Foo f[] = {\n"
                 "    [0] = { 1, },\n"
-                "    [1] { 1, },\n"
+                "    [i] { 1, },\n"
                 "};",
                 Style);
   verifyNoCrash("Foo foo[] = {\n"
@@ -21186,7 +21186,7 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
 
   verifyNoCrash("Foo f[] = {\n"
                 "    [0] = { 1, },\n"
-                "    [1] { 1, },\n"
+                "    [i] { 1, },\n"
                 "};",
                 Style);
   verifyNoCrash("Foo foo[] = {\n"
