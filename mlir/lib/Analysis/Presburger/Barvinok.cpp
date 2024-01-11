@@ -165,7 +165,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// The base case is given in one dimension,
 /// where the vector [1] is not orthogonal to any
 /// of the input vectors (since they are all nonzero).
-Point mlir::presburger::detail::getNonOrthonalVector(
+Point mlir::presburger::detail::getNonOrthogonalVector(
     std::vector<Point> vectors) {
   unsigned dim = vectors[0].size();
 

@@ -88,7 +88,7 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 /// i.e., has nonzero dot product with those of the given vectors
 /// that are not null.
 /// If any of the vectors is null, it is ignored.
-Point getNonOrthonalVector(std::vector<Point> vectors);
+Point getNonOrthogonalVector(std::vector<Point> vectors);
 
 /// Find the coefficient of a given power of s in a rational function
 /// given by P(s)/Q(s), where the coefficients in P are QuasiPolynomials,

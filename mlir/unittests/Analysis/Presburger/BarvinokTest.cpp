@@ -83,4 +83,4 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
           {{{8, 47, -17}, {-7, -41, 15}, {1, 5, -2}}}));
 }
 
-TEST(BarvinokTest, non)
+TEST(BarvinokTest, getNonOrthonalVector)
