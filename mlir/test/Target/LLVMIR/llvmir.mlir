@@ -2330,6 +2330,29 @@ llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
 
 // -----
 
+// CHECK-LABEL: @new_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @new_za_func() attributes {arm_new_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_new" }
+
+// CHECK-LABEL: @shared_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @shared_za_func() attributes {arm_shared_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_shared" }
+
+// CHECK-LABEL: @preserves_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @preserves_za_func() attributes {arm_preserves_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_preserved" }
+
+// -----
+
 //
 // Zero-initialize operation.
 //

@@ -97,8 +97,8 @@ void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
                     toString(DeviceOrErr.takeError()).c_str());
 
     DeviceTy &Device = *DeviceOrErr;
-    for (OffloadEntryTy &Entry : DI.entries())
-      Device.addOffloadEntry(Entry);
+    for (__tgt_offload_entry &Entry : DI.entries())
+      Device.addOffloadEntry(OffloadEntryTy(DI, Entry));
   }
 }
 
