@@ -1241,75 +1241,48 @@ let Predicates = [HasBMI, In64BitMode], Defs = [EFLAGS] in {
   defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_EVEX">, EVEX;
 }
 
-let Predicates = [HasBMI, NoEGPR] in {
+multiclass Bls_patterns<string Suffix = ""> {
   // FIXME(1): patterns for the load versions are not implemented
   // FIXME(2): By only matching `add_su` and `ineg_su` we may emit
   // extra `mov` instructions if `src` has future uses. It may be better
   // to always match if `src` has more users.
   def : Pat<(and GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr GR32:$src)>;
+            (!cast<Instruction>(BLSR32rr#Suffix) GR32:$src)>;
   def : Pat<(and GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr GR64:$src)>;
+            (!cast<Instruction>(BLSR64rr#Suffix) GR64:$src)>;
 
   def : Pat<(xor GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr GR32:$src)>;
+            (!cast<Instruction>(BLSMSK32rr#Suffix) GR32:$src)>;
   def : Pat<(xor GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr GR64:$src)>;
+            (!cast<Instruction>(BLSMSK64rr#Suffix) GR64:$src)>;
 
   def : Pat<(and GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr GR32:$src)>;
+            (!cast<Instruction>(BLSI32rr#Suffix) GR32:$src)>;
   def : Pat<(and GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr GR64:$src)>;
+            (!cast<Instruction>(BLSI64rr#Suffix) GR64:$src)>;
 
   // Versions to match flag producing ops.
   def : Pat<(and_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr GR32:$src)>;
+            (!cast<Instruction>(BLSR32rr#Suffix) GR32:$src)>;
   def : Pat<(and_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr GR64:$src)>;
+            (!cast<Instruction>(BLSR64rr#Suffix) GR64:$src)>;
 
   def : Pat<(xor_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr GR32:$src)>;
+            (!cast<Instruction>(BLSMSK32rr#Suffix) GR32:$src)>;
   def : Pat<(xor_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr GR64:$src)>;
+            (!cast<Instruction>(BLSMSK64rr#Suffix) GR64:$src)>;
 
   def : Pat<(and_flag_nocf GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr GR32:$src)>;
+            (!cast<Instruction>(BLSI32rr#Suffix) GR32:$src)>;
   def : Pat<(and_flag_nocf GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr GR64:$src)>;
+            (!cast<Instruction>(BLSI64rr#Suffix) GR64:$src)>;
 }
 
-let Predicates = [HasBMI, HasEGPR] in {
-  def : Pat<(and GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr_EVEX GR32:$src)>;
-  def : Pat<(and GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr_EVEX GR64:$src)>;
+let Predicates = [HasBMI, NoEGPR] in
+  defm : Bls_patterns<>;
 
-  def : Pat<(xor GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr_EVEX GR32:$src)>;
-  def : Pat<(xor GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr_EVEX GR64:$src)>;
-
-  def : Pat<(and GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr_EVEX GR32:$src)>;
-  def : Pat<(and GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr_EVEX GR64:$src)>;
-
-  // Versions to match flag producing ops.
-  def : Pat<(and_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr_EVEX GR32:$src)>;
-  def : Pat<(and_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr_EVEX GR64:$src)>;
-
-  def : Pat<(xor_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr_EVEX GR32:$src)>;
-  def : Pat<(xor_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr_EVEX GR64:$src)>;
-
-  def : Pat<(and_flag_nocf GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr_EVEX GR32:$src)>;
-  def : Pat<(and_flag_nocf GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr_EVEX GR64:$src)>;
-}
+let Predicates = [HasBMI, HasEGPR] in
+  defm : Bls_patterns<"_EVEX">;
 
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {

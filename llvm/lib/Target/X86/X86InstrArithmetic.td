@@ -1338,26 +1338,23 @@ defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]
 defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
 }
 
-let Predicates = [HasBMI, NoEGPR], AddedComplexity = -6 in {
+multiclass Andn_patterns<string Suffix = ""> {
   def : Pat<(and (not GR32:$src1), GR32:$src2),
-            (ANDN32rr GR32:$src1, GR32:$src2)>;
+            (!cast<Instruction>(ANDN32rr#Suffix) GR32:$src1, GR32:$src2)>;
   def : Pat<(and (not GR64:$src1), GR64:$src2),
-            (ANDN64rr GR64:$src1, GR64:$src2)>;
+            (!cast<Instruction>(ANDN64rr#Suffix) GR64:$src1, GR64:$src2)>;
   def : Pat<(and (not GR32:$src1), (loadi32 addr:$src2)),
-            (ANDN32rm GR32:$src1, addr:$src2)>;
+            (!cast<Instruction>(ANDN32rm#Suffix) GR32:$src1, addr:$src2)>;
   def : Pat<(and (not GR64:$src1), (loadi64 addr:$src2)),
-            (ANDN64rm GR64:$src1, addr:$src2)>;
+            (!cast<Instruction>(ANDN64rm#Suffix) GR64:$src1, addr:$src2)>;
+}
+
+let Predicates = [HasBMI, NoEGPR], AddedComplexity = -6 in {
+  defm : Andn_patterns<>;
 }
 
 let Predicates = [HasBMI, HasEGPR], AddedComplexity = -6 in {
-  def : Pat<(and (not GR32:$src1), GR32:$src2),
-            (ANDN32rr_EVEX GR32:$src1, GR32:$src2)>;
-  def : Pat<(and (not GR64:$src1), GR64:$src2),
-            (ANDN64rr_EVEX GR64:$src1, GR64:$src2)>;
-  def : Pat<(and (not GR32:$src1), (loadi32 addr:$src2)),
-            (ANDN32rm_EVEX GR32:$src1, addr:$src2)>;
-  def : Pat<(and (not GR64:$src1), (loadi64 addr:$src2)),
-            (ANDN64rm_EVEX GR64:$src1, addr:$src2)>;
+  defm : Andn_patterns<"_EVEX">;
 }
 
 //===----------------------------------------------------------------------===//
