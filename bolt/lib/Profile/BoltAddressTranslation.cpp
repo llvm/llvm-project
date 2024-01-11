@@ -114,9 +114,12 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
                       << Twine::utohexstr(Address) << ".\n");
     encodeULEB128(Address, OS);
     encodeULEB128(NumEntries, OS);
+    uint64_t InOffset = 0, OutOffset = 0;
+    // Output and Input addresses and delta-encoded
     for (std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
-      encodeULEB128(KeyVal.first, OS);
-      encodeULEB128(KeyVal.second, OS);
+      encodeULEB128(KeyVal.first - OutOffset, OS);
+      encodeSLEB128(KeyVal.second - InOffset, OS);
+      std::tie(OutOffset, InOffset) = KeyVal;
     }
   }
   const uint32_t NumColdEntries = ColdPartSource.size();
@@ -164,12 +167,16 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
 
     LLVM_DEBUG(dbgs() << "Parsing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << "\n");
+    uint64_t InputOffset = 0, OutputOffset = 0;
     for (uint32_t J = 0; J < NumEntries; ++J) {
-      const uint32_t OutputAddr = DE.getULEB128(&Offset, &Err);
-      const uint32_t InputAddr = DE.getULEB128(&Offset, &Err);
-      Map.insert(std::pair<uint32_t, uint32_t>(OutputAddr, InputAddr));
-      LLVM_DEBUG(dbgs() << Twine::utohexstr(OutputAddr) << " -> "
-                        << Twine::utohexstr(InputAddr) << "\n");
+      const uint64_t OutputDelta = DE.getULEB128(&Offset, &Err);
+      const int64_t InputDelta = DE.getSLEB128(&Offset, &Err);
+      OutputOffset += OutputDelta;
+      InputOffset += InputDelta;
+      Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset, InputOffset));
+      LLVM_DEBUG(dbgs() << Twine::utohexstr(OutputOffset) << " -> "
+                        << Twine::utohexstr(InputOffset) << " (" << OutputDelta
+                        << ", " << InputDelta << ")\n");
     }
     Maps.insert(std::pair<uint64_t, MapTy>(Address, Map));
   }
