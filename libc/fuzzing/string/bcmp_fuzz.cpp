@@ -45,9 +45,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       printf("\\x%02x", (uint8_t)buffer[i]);
     printf("\"\n");
   };
+  printf("count : %zu\n", count);
   print("a     : ", a, count);
   print("b     : ", b, count);
-  printf("count : %zu\n", count);
   printf("result: %d\n", reference);
   __builtin_trap();
 }
