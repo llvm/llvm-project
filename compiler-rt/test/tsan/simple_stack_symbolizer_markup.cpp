@@ -3,7 +3,7 @@
 // RUN: mkdir -p %t/.build-id/12
 // RUN: %clangxx_tsan %s -Wl,--build-id=0x12345678 -O1 -o %t/main
 // RUN: cp %t/main %t/.build-id/12/345678.debug
-// RUN: %env_tsan_opts=enable_symbolizer_markup=1 %deflake %run %t.main >%t/sanitizer.out
+// RUN: %env_tsan_opts=enable_symbolizer_markup=1 %deflake %run %t/main >%t/sanitizer.out
 // RUN: llvm-symbolizer --filter-markup --debug-file-directory=%t < %t/sanitizer.out | FileCheck %s
 
 #include "test.h"
