@@ -1876,8 +1876,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             CurDef = LdInst->getPointerOperand();
             if (!isa<AllocaInst, LoadInst>(CurDef))
               break;
-            DIs = findDbgDeclares(Def);
-            DPVs = findDPVDeclares(Def);
+            DIs = findDbgDeclares(CurDef);
+            DPVs = findDPVDeclares(CurDef);
           }
         }
 

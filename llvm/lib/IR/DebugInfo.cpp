@@ -57,10 +57,9 @@ TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
     return {};
 
   TinyPtrVector<DbgDeclareInst *> Declares;
-  for (User *U : MDV->users()) {
+  for (User *U : MDV->users())
     if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
       Declares.push_back(DDI);
-  }
 
   return Declares;
 }
@@ -74,10 +73,9 @@ TinyPtrVector<DPValue *> llvm::findDPVDeclares(Value *V) {
     return {};
 
   TinyPtrVector<DPValue *> Declares;
-  for (DPValue *DPV : L->getAllDPValueUsers()) {
+  for (DPValue *DPV : L->getAllDPValueUsers())
     if (DPV->getType() == DPValue::LocationType::Declare)
       Declares.push_back(DPV);
-  }
 
   return Declares;
 }
