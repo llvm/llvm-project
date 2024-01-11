@@ -34,6 +34,13 @@ struct llcas_functions_t {
 
   void (*cas_dispose)(llcas_cas_t);
 
+  int64_t (*cas_get_ondisk_size)(llcas_cas_t, char **error);
+
+  bool (*cas_set_ondisk_size_limit)(llcas_cas_t, uint64_t size_limit,
+                                    char **error);
+
+  bool (*cas_prune_ondisk_data)(llcas_cas_t, char **error);
+
   unsigned (*digest_parse)(llcas_cas_t, const char *printed_digest,
                            uint8_t *bytes, size_t bytes_size, char **error);
 

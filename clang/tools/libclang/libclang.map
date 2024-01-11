@@ -486,6 +486,9 @@ LLVM_16 {
     clang_experimental_cas_CASObject_dispose;
     clang_experimental_cas_Databases_create;
     clang_experimental_cas_Databases_dispose;
+    clang_experimental_cas_Databases_get_storage_size;
+    clang_experimental_cas_Databases_prune_ondisk_data;
+    clang_experimental_cas_Databases_set_size_limit;
     clang_experimental_cas_getCachedCompilation;
     clang_experimental_cas_getCachedCompilation_async;
     clang_experimental_cas_loadObjectByString;

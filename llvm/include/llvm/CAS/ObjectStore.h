@@ -272,6 +272,28 @@ public:
     return Data.size();
   }
 
+  /// Set the size for limiting growth of on-disk storage. This has an effect
+  /// for when the instance is closed.
+  ///
+  /// Implementations may be not have this implemented.
+  virtual Error setSizeLimit(std::optional<uint64_t> SizeLimit) {
+    return Error::success();
+  }
+
+  /// \returns the storage size of the on-disk CAS data.
+  ///
+  /// Implementations that don't have an implementation for this should return
+  /// \p std::nullopt.
+  virtual Expected<std::optional<uint64_t>> getStorageSize() const {
+    return std::nullopt;
+  }
+
+  /// Prune local storage to reduce its size according to the desired size
+  /// limit. Pruning can happen concurrently with other operations.
+  ///
+  /// Implementations may be not have this implemented.
+  virtual Error pruneStorageData() { return Error::success(); }
+
   /// Validate the whole node tree.
   Error validateTree(ObjectRef Ref);
 

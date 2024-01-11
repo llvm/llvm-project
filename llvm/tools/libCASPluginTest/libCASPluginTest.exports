@@ -7,6 +7,7 @@ llcas_cas_create
 llcas_cas_dispose
 llcas_cas_get_hash_schema_name
 llcas_cas_get_objectid
+llcas_cas_get_ondisk_size
 llcas_cas_load_object
 llcas_cas_load_object_async
 llcas_cas_options_create
@@ -14,6 +15,8 @@ llcas_cas_options_dispose
 llcas_cas_options_set_client_version
 llcas_cas_options_set_ondisk_path
 llcas_cas_options_set_option
+llcas_cas_prune_ondisk_data
+llcas_cas_set_ondisk_size_limit
 llcas_cas_store_object
 llcas_digest_parse
 llcas_digest_print
