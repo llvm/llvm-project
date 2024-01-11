@@ -257,7 +257,7 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   StringRef Name = nameForExtractedVariable(E);
   Result.AssociatedSymbols.push_back(
       std::make_unique<RefactoringResultAssociatedSymbol>(
-          OldSymbolName(Name)));
+          SymbolName(Name, /*IsObjectiveCSelector=*/false)));
   RefactoringResultAssociatedSymbol *CreatedSymbol =
       Result.AssociatedSymbols.back().get();
 

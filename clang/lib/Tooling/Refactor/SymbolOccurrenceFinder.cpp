@@ -337,7 +337,8 @@ private:
                             ArrayRef<SourceLocation> Locations,
                             OldSymbolOccurrence::OccurrenceKind Kind =
                                 OldSymbolOccurrence::MatchingSymbol) {
-    if (Locations.size() != Operation.symbols()[SymbolIndex].Name.size())
+    if (Locations.size() !=
+        Operation.symbols()[SymbolIndex].Name.getNamePieces().size())
       return;
 
     SmallVector<SourceLocation, 4> StringLocations;
@@ -357,8 +358,8 @@ private:
             Kind, /*IsMacroExpansion=*/true, SymbolIndex, Loc));
         return;
       }
-      size_t Offset =
-          getOffsetForString(Loc, Operation.symbols()[SymbolIndex].Name[I]);
+      size_t Offset = getOffsetForString(
+          Loc, Operation.symbols()[SymbolIndex].Name.getNamePieces()[I]);
       if (Offset == StringRef::npos)
         return;
       StringLocations.push_back(Loc.getLocWithOffset(Offset));
@@ -371,7 +372,7 @@ private:
   /// Adds a location without checking if the name is actually there.
   void addLocation(unsigned SymbolIndex, SourceLocation Location,
                    OldSymbolOccurrence::OccurrenceKind Kind) {
-    if (1 != Operation.symbols()[SymbolIndex].Name.size())
+    if (1 != Operation.symbols()[SymbolIndex].Name.getNamePieces().size())
       return;
     bool IsMacroExpansion = Location.isMacroID();
     if (IsMacroExpansion) {

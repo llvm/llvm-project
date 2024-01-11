@@ -906,6 +906,10 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
   return std::move(Result);
 }
 
+llvm::json::Value toJSON(const PrepareRenameResult &R) {
+  return llvm::json::Object{{"range", R.range}, {"placeholder", R.placeholder}};
+}
+
 llvm::json::Value toJSON(const WorkspaceEdit &WE) {
   llvm::json::Object Result;
   if (WE.changes) {
