@@ -45,6 +45,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
