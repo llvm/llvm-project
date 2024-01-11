@@ -1029,6 +1029,14 @@ void __kmpc_atomic_cmplx4_rd(kmp_cmplx32 *out, ident_t *id_ref, int gtid,
 kmp_cmplx32 __kmpc_atomic_cmplx4_rd(ident_t *id_ref, int gtid,
                                     kmp_cmplx32 *loc);
 #endif
+
+#if KMP_COMPILER_MSVC
+#pragma warning(push)
+// warning C4190: '__kmpc_atomic_cmplx8_rd' has C-linkage specified, but returns
+// UDT '__kmp_cmplx64_t' which is incompatible with C
+#pragma warning(disable : 4190)
+#endif
+
 kmp_cmplx64 __kmpc_atomic_cmplx8_rd(ident_t *id_ref, int gtid,
                                     kmp_cmplx64 *loc);
 kmp_cmplx80 __kmpc_atomic_cmplx10_rd(ident_t *id_ref, int gtid,
@@ -1587,6 +1595,10 @@ kmp_cmplx128_a16_t __kmpc_atomic_cmplx16_a16_swp(ident_t *id_ref, int gtid,
                                                  kmp_cmplx128_a16_t *lhs,
                                                  kmp_cmplx128_a16_t rhs);
 #endif
+#endif
+
+#if KMP_COMPILER_MSVC
+#pragma warning(pop)
 #endif
 
 // Capture routines for mixed types (RHS=float16)

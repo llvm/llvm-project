@@ -306,6 +306,8 @@ template <> struct traits_t<unsigned long long> {
    !KMP_MIC)
 
 #if KMP_OS_WINDOWS
+// Don't include everything related to NT status code, we'll do that explicitely
+#define WIN32_NO_STATUS
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
