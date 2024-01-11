@@ -5623,11 +5623,12 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
     // optimization, such as lookup tables.
     if (SI->getNumCases() == AllNumCases - 1) {
       assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
-      uint64_t MissingCaseVal = 0;
+      IntegerType *CondType = cast<IntegerType>(Cond->getType());
+      APInt MissingCaseVal = APInt::getZero(CondType->getBitWidth());
       for (const auto &Case : SI->cases())
-        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
+        MissingCaseVal ^= Case.getCaseValue()->getValue();
       auto *MissingCase =
-          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
+          ConstantInt::get(SI->getModule()->getContext(), MissingCaseVal);
       SwitchInstProfUpdateWrapper SIW(*SI);
       SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
       createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
