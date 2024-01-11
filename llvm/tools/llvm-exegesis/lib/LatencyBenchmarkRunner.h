@@ -36,7 +36,6 @@ private:
 
   Benchmark::ResultAggregationModeE ResultAggMode;
   unsigned NumMeasurements;
-  SmallVector<ValidationEvent> ValidationCounters;
 };
 } // namespace exegesis
 } // namespace llvm

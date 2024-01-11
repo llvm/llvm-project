@@ -38,7 +38,8 @@ public:
 
   explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                            BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-                           ExecutionModeE ExecutionMode);
+                           ExecutionModeE ExecutionMode,
+                           ArrayRef<ValidationEvent> ValCounters);
 
   virtual ~BenchmarkRunner();
 
@@ -112,6 +113,11 @@ protected:
   const Benchmark::ModeE Mode;
   const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
   const ExecutionModeE ExecutionMode;
+
+  SmallVector<ValidationEvent> ValidationCounters;
+
+  Error
+  getValidationCountersToRun(SmallVector<const char *> &ValCountersToRun) const;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>

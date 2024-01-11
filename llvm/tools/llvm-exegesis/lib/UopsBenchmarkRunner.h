@@ -27,8 +27,7 @@ public:
                       ExecutionModeE ExecutionMode,
                       ArrayRef<ValidationEvent> ValCounters)
       : BenchmarkRunner(State, Benchmark::Uops, BenchmarkPhaseSelector,
-                        ExecutionMode),
-        ValidationCounters(ValCounters) {}
+                        ExecutionMode, ValCounters) {}
   ~UopsBenchmarkRunner() override;
 
   static constexpr const size_t kMinNumDifferentAddresses = 6;
@@ -36,8 +35,6 @@ public:
 private:
   Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const override;
-
-  SmallVector<ValidationEvent> ValidationCounters;
 };
 
 } // namespace exegesis

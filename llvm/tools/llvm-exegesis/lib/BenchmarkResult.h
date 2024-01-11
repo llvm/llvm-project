@@ -32,9 +32,7 @@ class Error;
 
 namespace exegesis {
 
-enum ValidationEvent {
-  InstructionRetired,
-};
+enum ValidationEvent { InstructionRetired };
 
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,

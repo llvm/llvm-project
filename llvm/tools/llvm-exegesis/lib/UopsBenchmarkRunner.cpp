@@ -21,14 +21,9 @@ UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
   const PfmCountersInfo &PCI = State.getPfmCounters();
 
   SmallVector<const char *> ValCountersToRun;
-  ValCountersToRun.reserve(ValidationCounters.size());
-  for (const ValidationEvent ValEvent : ValidationCounters) {
-    auto ValCounterIt = PCI.ValidationCounters.find(ValEvent);
-    if (ValCounterIt == PCI.ValidationCounters.end())
-      return make_error<Failure>("Cannot create validation counter");
-
-    ValCountersToRun.push_back(ValCounterIt->second);
-  }
+  Error ValCounterErr = getValidationCountersToRun(ValCountersToRun);
+  if (ValCounterErr)
+    return std::move(ValCounterErr);
 
   // Uops per port.
   for (const auto *IssueCounter = PCI.IssueCounters,

@@ -39,10 +39,6 @@ extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
-enum ValidationEvent {
-  InstructionRetired
-};
-
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
   // cycles.

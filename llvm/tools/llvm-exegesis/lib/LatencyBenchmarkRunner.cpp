@@ -23,8 +23,8 @@ LatencyBenchmarkRunner::LatencyBenchmarkRunner(
     BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     Benchmark::ResultAggregationModeE ResultAgg, ExecutionModeE ExecutionMode,
     ArrayRef<ValidationEvent> ValCounters, unsigned BenchmarkRepeatCount)
-    : BenchmarkRunner(State, Mode, BenchmarkPhaseSelector, ExecutionMode),
-      ValidationCounters(ValCounters) {
+    : BenchmarkRunner(State, Mode, BenchmarkPhaseSelector, ExecutionMode,
+                      ValCounters) {
   assert((Mode == Benchmark::Latency || Mode == Benchmark::InverseThroughput) &&
          "invalid mode");
   ResultAggMode = ResultAgg;
@@ -77,14 +77,9 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
   const char *CounterName = PCI.CycleCounter;
 
   SmallVector<const char *> ValCountersToRun;
-  ValCountersToRun.reserve(ValidationCounters.size());
-  for (const ValidationEvent ValEvent : ValidationCounters) {
-    auto ValCounterIt = PCI.ValidationCounters.find(ValEvent);
-    if (ValCounterIt == PCI.ValidationCounters.end())
-      return make_error<Failure>("Cannot create validation counter");
-
-    ValCountersToRun.push_back(ValCounterIt->second);
-  }
+  Error ValCounterErr = getValidationCountersToRun(ValCountersToRun);
+  if (ValCounterErr)
+    return std::move(ValCounterErr);
 
   SmallVector<int64_t> ValCounterValues(ValCountersToRun.size(), 0);
   // Values count for each run.
