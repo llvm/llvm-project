@@ -631,6 +631,17 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   return BaseImplRetVal;
 }
 
+const TargetRegisterClass *
+PPCRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
+  if (RC == &PPC::CARRYRCRegClass) {
+    if (TM.isPPC64())
+      return &PPC::G8RCRegClass;
+    else
+      return &PPC::GPRCRegClass;
+  }
+  return RC;
+}
+
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                               MachineFunction &MF) const {
   const PPCFrameLowering *TFI = getFrameLowering(MF);

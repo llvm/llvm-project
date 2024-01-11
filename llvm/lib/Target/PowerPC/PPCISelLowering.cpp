@@ -242,13 +242,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setIndexedStoreAction(ISD::PRE_INC, MVT::f64, Legal);
   }
 
-  // PowerPC uses ADDC/ADDE/SUBC/SUBE to propagate carry.
+  // PowerPC uses addo,addo_carry,subo,subo_carry to propagate carry.
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
   for (MVT VT : ScalarIntVTs) {
-    setOperationAction(ISD::ADDC, VT, Legal);
-    setOperationAction(ISD::ADDE, VT, Legal);
-    setOperationAction(ISD::SUBC, VT, Legal);
-    setOperationAction(ISD::SUBE, VT, Legal);
+    if ((VT == MVT::i64) != isPPC64)
+      continue;
+    setOperationAction(ISD::UADDO, VT, Custom);
+    setOperationAction(ISD::USUBO, VT, Custom);
+    setOperationAction(ISD::UADDO_CARRY, VT, Custom);
+    setOperationAction(ISD::USUBO_CARRY, VT, Custom);
   }
 
   if (Subtarget.useCRBits()) {
@@ -1841,6 +1843,14 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
   case PPCISD::STORE_COND:
     return "PPCISD::STORE_COND";
+  case PPCISD::ADDC:
+    return "PPCISD::ADDC";
+  case PPCISD::ADDE:
+    return "PPCISD::ADDE";
+  case PPCISD::SUBC:
+    return "PPCISD::SUBC";
+  case PPCISD::SUBE:
+    return "PPCISD::SUBE";
   }
   return nullptr;
 }
@@ -11722,6 +11732,63 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("ERROR:Should return for all cases within swtich.");
 }
 
+static SDValue ConvertCarryValueToCarryFlag(SDValue Value, SelectionDAG &DAG) {
+  SDLoc DL(Value);
+  Value = DAG.getZExtOrTrunc(Value, DL, MVT::i32);
+  SDValue Sum = DAG.getNode(PPCISD::ADDC, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                            Value, DAG.getAllOnesConstant(DL, MVT::i32));
+  return Sum.getValue(1);
+}
+
+static SDValue ConvertCarryFlagToCarryValue(SDValue Flag, EVT CarryType,
+                                            SelectionDAG &DAG) {
+  SDLoc DL(Flag);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  SDValue Carry = DAG.getNode(
+      PPCISD::ADDE, DL, DAG.getVTList(MVT::i32, MVT::i32), Zero, Zero, Flag);
+  return DAG.getZExtOrTrunc(Carry, DL, CarryType);
+}
+
+SDValue PPCTargetLowering::LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDNode *N = Op.getNode();
+  EVT VT = N->getValueType(0);
+  EVT CarryType = N->getValueType(1);
+  unsigned Opc = N->getOpcode();
+  bool IsAdd = Opc == ISD::UADDO;
+  Opc = IsAdd ? PPCISD::ADDC : PPCISD::SUBC;
+  SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
+                            N->getOperand(0), N->getOperand(1));
+  SDValue Carry = ConvertCarryFlagToCarryValue(Sum.getValue(1), CarryType, DAG);
+  if (!IsAdd)
+    Carry = DAG.getNode(ISD::XOR, DL, CarryType, Carry,
+                        DAG.getAllOnesConstant(DL, CarryType));
+  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, Carry);
+}
+
+SDValue PPCTargetLowering::LowerADDSUBO_CARRY(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDNode *N = Op.getNode();
+  unsigned Opc = N->getOpcode();
+  EVT VT = N->getValueType(0);
+  EVT CarryType = N->getValueType(1);
+  SDValue CarryOp = N->getOperand(2);
+  bool IsAdd = Opc == ISD::UADDO_CARRY;
+  Opc = IsAdd ? PPCISD::ADDE : PPCISD::SUBE;
+  if (!IsAdd)
+    CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
+                          DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
+  CarryOp = ConvertCarryValueToCarryFlag(CarryOp, DAG);
+  SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
+                            Op.getOperand(0), Op.getOperand(1), CarryOp);
+  CarryOp = ConvertCarryFlagToCarryValue(Sum.getValue(1), CarryType, DAG);
+  if (!IsAdd)
+    CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
+                          DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
+  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, CarryOp);
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -11815,6 +11882,12 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerATOMIC_LOAD_STORE(Op, DAG);
   case ISD::IS_FPCLASS:
     return LowerIS_FPCLASS(Op, DAG);
+  case ISD::UADDO:
+  case ISD::USUBO:
+    return LowerADDSUBO(Op, DAG);
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    return LowerADDSUBO_CARRY(Op, DAG);
   }
 }
 
@@ -15708,6 +15781,21 @@ static bool isStoreConditional(SDValue Intrin, unsigned &StoreWidth) {
   return true;
 }
 
+static SDValue DAGCombineAddc(SDNode *N,
+                              llvm::PPCTargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getOpcode() == PPCISD::ADDC && N->hasAnyUseOfValue(1)) {
+    // (ADDC (ADDE 0, 0, C), -1) -> C
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    if (LHS->getOpcode() == PPCISD::ADDE &&
+        isNullConstant(LHS->getOperand(0)) &&
+        isNullConstant(LHS->getOperand(1)) && isAllOnesConstant(RHS)) {
+      return DCI.CombineTo(N, SDValue(N, 0), LHS->getOperand(2));
+    }
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -16497,6 +16585,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::BUILD_VECTOR:
     return DAGCombineBuildVector(N, DCI);
+  case PPCISD::ADDC:
+    return DAGCombineAddc(N, DCI);
   }
 
   return SDValue();
@@ -16548,6 +16638,16 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // lhbrx is known to have the top bits cleared out.
     if (cast<VTSDNode>(Op.getOperand(2))->getVT() == MVT::i16)
       Known.Zero = 0xFFFF0000;
+    break;
+  }
+  case PPCISD::ADDE: {
+    if (Op.getResNo() == 0) {
+      // (0|1), _ = ADDE 0, 0, CARRY
+      SDValue LHS = Op.getOperand(0);
+      SDValue RHS = Op.getOperand(1);
+      if (isNullConstant(LHS) && isNullConstant(RHS))
+        Known.Zero = ~1U;
+    }
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -17811,7 +17911,8 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(N);
-  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Glue);
+  EVT CarryType = Subtarget.useCRBits() ? MVT::i1 : MVT::i32;
+  SDVTList VTs = DAG.getVTList(MVT::i64, CarryType);
   SDValue Cmp = RHS.getOperand(0);
   SDValue Z = Cmp.getOperand(0);
   auto *Constant = cast<ConstantSDNode>(Cmp.getOperand(1));
@@ -17829,11 +17930,13 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
                               DAG.getConstant(NegConstant, DL, MVT::i64));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
-    SDValue Addc = DAG.getNode(ISD::ADDC, DL, DAG.getVTList(MVT::i64, MVT::Glue),
-                               AddOrZ, DAG.getConstant(-1ULL, DL, MVT::i64));
-    return DAG.getNode(ISD::ADDE, DL, VTs, LHS, DAG.getConstant(0, DL, MVT::i64),
+    SDValue Addc =
+        DAG.getNode(ISD::UADDO, DL, DAG.getVTList(MVT::i64, CarryType), AddOrZ,
+                    DAG.getConstant(-1ULL, DL, MVT::i64));
+    return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
+                       DAG.getConstant(0, DL, MVT::i64),
                        SDValue(Addc.getNode(), 1));
-    }
+  }
   case ISD::SETEQ: {
     //                                 when C == 0
     //                             --> addze X, (subfic Z, 0).carry
@@ -17844,11 +17947,14 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
                               DAG.getConstant(NegConstant, DL, MVT::i64));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
-    SDValue Subc = DAG.getNode(ISD::SUBC, DL, DAG.getVTList(MVT::i64, MVT::Glue),
-                               DAG.getConstant(0, DL, MVT::i64), AddOrZ);
-    return DAG.getNode(ISD::ADDE, DL, VTs, LHS, DAG.getConstant(0, DL, MVT::i64),
-                       SDValue(Subc.getNode(), 1));
-    }
+    SDValue Subc =
+        DAG.getNode(ISD::USUBO, DL, DAG.getVTList(MVT::i64, CarryType),
+                    DAG.getConstant(0, DL, MVT::i64), AddOrZ);
+    SDValue Invert = DAG.getNode(ISD::XOR, DL, CarryType, Subc.getValue(1),
+                                 DAG.getAllOnesConstant(DL, CarryType));
+    return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
+                       DAG.getConstant(0, DL, MVT::i64), Invert);
+  }
   }
 
   return SDValue();

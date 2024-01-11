@@ -1210,14 +1210,14 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    addze 6, 7
 ; ASM32PWR4-NEXT:    addc 3, 3, 4
-; ASM32PWR4-NEXT:    lwz 0, 84(1)
+; ASM32PWR4-NEXT:    lwz 7, 84(1)
 ; ASM32PWR4-NEXT:    addze 4, 6
 ; ASM32PWR4-NEXT:    addc 3, 3, 12
-; ASM32PWR4-NEXT:    lwz 7, 80(1)
+; ASM32PWR4-NEXT:    lwz 0, 80(1)
 ; ASM32PWR4-NEXT:    adde 4, 4, 31
-; ASM32PWR4-NEXT:    addc 3, 3, 0
+; ASM32PWR4-NEXT:    addc 3, 3, 7
 ; ASM32PWR4-NEXT:    lwz 6, 88(1)
-; ASM32PWR4-NEXT:    adde 4, 4, 7
+; ASM32PWR4-NEXT:    adde 4, 4, 0
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    lwz 31, -4(1) # 4-byte Folded Reload
 ; ASM32PWR4-NEXT:    addze 6, 4
