@@ -593,13 +593,29 @@ class MAIFrag<SDPatternOperator Op, code pred> : PatFrag <
   pred
 >;
 
-let GISelPredicateCode = [{ return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class AgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs = [{
+  return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
 
-let GISelPredicateCode = [{ return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class VgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs_gisel = [{
+  return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs = [{
+  return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs_gisel = [{
+  return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+class AgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNeedAGPRs> {
+  let GISelPredicateCode = MayNeedAGPRs_gisel;
+}
+
+class VgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNotNeedAGPRs> {
+  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
+}
 
 let SubtargetPredicate = HasMAIInsts in {
 
