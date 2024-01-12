@@ -107,7 +107,7 @@ StringRef PerfEvent::getPfmEventString() const {
   return FullQualifiedEventString;
 }
 
-Counter::Counter(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
+CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
                  pid_t ProcessID)
     : Event(std::move(E)), ValidationEvents(std::move(ValEvents)),
       ValidationFDs(ValidationEvents.size(), -1) {
@@ -118,7 +118,7 @@ Counter::Counter(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
 }
 
 #ifdef HAVE_LIBPFM
-void Counter::initRealEvent(pid_t ProcessID) {
+void CounterGroup::initRealEvent(pid_t ProcessID) {
   const int Cpu = -1;     // measure any processor.
   const int GroupFd = -1; // no grouping of counters.
   const uint32_t Flags = 0;
@@ -147,23 +147,23 @@ void Counter::initRealEvent(pid_t ProcessID) {
   }
 }
 
-Counter::~Counter() {
+CounterGroup::~CounterGroup() {
   if (!IsDummyEvent)
     close(FileDescriptor);
 }
 
-void Counter::start() {
+void CounterGroup::start() {
   if (!IsDummyEvent)
     ioctl(FileDescriptor, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
 }
 
-void Counter::stop() {
+void CounterGroup::stop() {
   if (!IsDummyEvent)
     ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 }
 
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
-Counter::readOrError(StringRef /*unused*/) const {
+CounterGroup::readOrError(StringRef /*unused*/) const {
   int64_t Count = 0;
   if (!IsDummyEvent) {
     ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
@@ -180,7 +180,7 @@ Counter::readOrError(StringRef /*unused*/) const {
 }
 
 llvm::Expected<llvm::SmallVector<int64_t>>
-Counter::readValidationCountersOrError() const {
+CounterGroup::readValidationCountersOrError() const {
   llvm::SmallVector<int64_t, 4> Result;
   for (const int ValidationFD : ValidationFDs) {
     int64_t Count;
@@ -196,19 +196,19 @@ Counter::readValidationCountersOrError() const {
   return Result;
 }
 
-int Counter::numValues() const { return 1; }
+int CounterGroup::numValues() const { return 1; }
 #else
 
-void Counter::initRealEvent(const PerfEvent &, pid_t ProcessID) {}
+void CounterGroup::initRealEvent(const PerfEvent &, pid_t ProcessID) {}
 
-Counter::~Counter() = default;
+CounterGroup::~CounterGroup() = default;
 
-void Counter::start() {}
+void CounterGroup::start() {}
 
-void Counter::stop() {}
+void CounterGroup::stop() {}
 
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
-Counter::readOrError(StringRef /*unused*/) const {
+CounterGroup::readOrError(StringRef /*unused*/) const {
   if (IsDummyEvent) {
     llvm::SmallVector<int64_t, 4> Result;
     Result.push_back(42);
@@ -218,7 +218,7 @@ Counter::readOrError(StringRef /*unused*/) const {
                                              llvm::errc::io_error);
 }
 
-int Counter::numValues() const { return 1; }
+int CounterGroup::numValues() const { return 1; }
 
 #endif
 

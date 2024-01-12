@@ -682,7 +682,7 @@ public:
   ExegesisX86Target()
       : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
-  Expected<std::unique_ptr<pfm::Counter>>
+  Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
                 ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID) const override {

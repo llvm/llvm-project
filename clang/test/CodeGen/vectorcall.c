@@ -90,8 +90,8 @@ struct HVA4 __vectorcall hva6(struct HVA4 a, struct HVA4 b) { return b;}
 // X64: define dso_local x86_vectorcallcc %struct.HVA4 @"\01hva6@@128"(%struct.HVA4 inreg %a.coerce, ptr noundef %b)
 
 struct HVA5 __vectorcall hva7(void) {struct HVA5 a = {}; return a;}
-// X86: define dso_local x86_vectorcallcc void @"\01hva7@@0"(ptr inreg noalias sret(%struct.HVA5) align 16 %agg.result)
-// X64: define dso_local x86_vectorcallcc void @"\01hva7@@0"(ptr noalias sret(%struct.HVA5) align 16 %agg.result)
+// X86: define dso_local x86_vectorcallcc void @"\01hva7@@0"(ptr dead_on_unwind inreg noalias writable sret(%struct.HVA5) align 16 %agg.result)
+// X64: define dso_local x86_vectorcallcc void @"\01hva7@@0"(ptr dead_on_unwind noalias writable sret(%struct.HVA5) align 16 %agg.result)
 
 v4f32 __vectorcall hva8(v4f32 a, v4f32 b, v4f32 c, v4f32 d, int e, v4f32 f) {return f;}
 // X86: define dso_local x86_vectorcallcc <4 x float> @"\01hva8@@84"(<4 x float> inreg noundef %a, <4 x float> inreg noundef %b, <4 x float> inreg noundef %c, <4 x float> inreg noundef %d, i32 inreg noundef %e, <4 x float> inreg noundef %f)

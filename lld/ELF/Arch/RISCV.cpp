@@ -957,8 +957,8 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   } else {
     for (const auto &ext : info.getExtensions()) {
       if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        if (std::tie(it->second.MajorVersion, it->second.MinorVersion) >=
-            std::tie(ext.second.MajorVersion, ext.second.MinorVersion))
+        if (std::tie(it->second.Major, it->second.Minor) >=
+            std::tie(ext.second.Major, ext.second.Minor))
           continue;
       }
       mergedExts[ext.first] = ext.second;

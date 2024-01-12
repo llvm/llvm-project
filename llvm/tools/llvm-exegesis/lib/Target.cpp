@@ -35,7 +35,7 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
   return nullptr;
 }
 
-Expected<std::unique_ptr<pfm::Counter>>
+Expected<std::unique_ptr<pfm::CounterGroup>>
 ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
                               ArrayRef<const char *> ValidationCounters,
                               const pid_t ProcessID) const {
@@ -56,7 +56,7 @@ ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
               .concat("'"));
   }
 
-  return std::make_unique<pfm::Counter>(std::move(Event),
+  return std::make_unique<pfm::CounterGroup>(std::move(Event),
                                         std::move(ValidationEvents), ProcessID);
 }
 

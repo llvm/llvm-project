@@ -1579,13 +1579,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
 
 bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
                                           SDValue &SOffset) const {
-  if (Subtarget->hasRestrictedSOffset()) {
-    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(ByteOffsetNode)) {
-      if (SOffsetConst->isZero()) {
-        SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
-        return true;
-      }
-    }
+  if (Subtarget->hasRestrictedSOffset() && isNullConstant(ByteOffsetNode)) {
+    SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+    return true;
   }
 
   SOffset = ByteOffsetNode;
