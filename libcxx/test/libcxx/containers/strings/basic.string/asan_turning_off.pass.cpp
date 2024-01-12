@@ -22,12 +22,14 @@
 //
 // That issue appeared in the past and was addressed here: https://reviews.llvm.org/D145628
 //
-// There is also a question, if it's UB. And it's not clear.
+// There was also a discussion, if it's UB.
 //   Related discussion: https://reviews.llvm.org/D136765#4155262
 //   Related notes: https://eel.is/c++draft/basic.life#6
+// Probably it's no longer UB due a change in CWG2523.
+//   https://cplusplus.github.io/CWG/issues/2523.html
 //
-// Even if it is UB, we want to make sure that it works that way, because people rely on this behavior.
-// In similar situations. a user explicitly turns off annotations for a specific allocator.
+// Therefore we make sure that it works that way, also because people rely on this behavior.
+// Annotations are turned off only, if a user explicitly turns off annotations for a specific allocator.
 
 #include <assert.h>
 #include <stdlib.h>
