@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTestBase.h"
-#include "gmock/gmock.h"
 
 #define DEBUG_TYPE "format-test"
 
