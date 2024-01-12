@@ -969,7 +969,8 @@ buildRenameEdit(llvm::StringRef AbsFilePath, llvm::StringRef InitialCode,
           SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(R.first),
           OldName, tooling::ObjCSymbolSelectorKind::Unknown, PieceLocations);
       if (Error) {
-        // Ignore the error. We simply skip over all selectors that didn't match.
+        // Ignore the error. We simply skip over all selectors that didn't 
+        // match.
         consumeError(std::move(Error));
         continue;
       }
