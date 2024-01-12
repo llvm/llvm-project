@@ -569,11 +569,11 @@ def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
 
 def FeatureStdExtZvbb
     : SubtargetFeature<"zvbb", "HasStdExtZvbb", "true",
-                       "'Zvbb' (Vector basic bit-manipulation instructions.)",
+                       "'Zvbb' (Vector basic bit-manipulation instructions)",
                        [FeatureStdExtZvkb]>;
 def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvbb),
-                              "'Zvbb' (Vector basic bit-manipulation instructions.)">;
+                              "'Zvbb' (Vector basic bit-manipulation instructions)">;
 
 def FeatureStdExtZvbc
     : SubtargetFeature<"zvbc", "HasStdExtZvbc", "true",
