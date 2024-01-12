@@ -16,6 +16,7 @@
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
@@ -297,26 +298,6 @@ struct ReadySuspendResumeResult {
   bool IsInvalid;
 };
 
-// Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
-// attributes to `get_return_object`.
-static void handleGetReturnObject(Sema &S, MemberExpr *ME) {
-  if (!ME || !ME->getMemberDecl() || !ME->getMemberDecl()->getAsFunction())
-    return;
-  auto *MD = ME->getMemberDecl()->getAsFunction();
-  auto *RetType = MD->getReturnType()->getAsRecordDecl();
-  if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
-    return;
-  // `get_return_object` should be allowed to return coro_return_type.
-  if (!MD->hasAttr<CoroWrapperAttr>())
-    MD->addAttr(
-        CoroWrapperAttr::CreateImplicit(S.getASTContext(), MD->getLocation()));
-  // Object arg of `__promise.get_return_object()` is not lifetimebound.
-  if (RetType->hasAttr<CoroLifetimeBoundAttr>() &&
-      !MD->hasAttr<CoroDisableLifetimeBoundAttr>())
-    MD->addAttr(CoroDisableLifetimeBoundAttr::CreateImplicit(
-        S.getASTContext(), MD->getLocation()));
-}
-
 static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
                                   StringRef Name, MultiExprArg Args) {
   DeclarationNameInfo NameInfo(&S.PP.getIdentifierTable().get(Name), Loc);
@@ -339,8 +320,6 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  if (Name.equals("get_return_object"))
-    handleGetReturnObject(S, dyn_cast<MemberExpr>(Result.get()));
   auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
   return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
 }
@@ -1818,6 +1797,32 @@ bool CoroutineStmtBuilder::makeOnException() {
   return true;
 }
 
+// Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
+// attributes to the function `get_return_object`.
+static void handleGetReturnObject(Sema &S, Expr *E) {
+  if(auto* TE = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = TE->getSubExpr();
+  auto* CE = dyn_cast<CallExpr>(E);
+  assert(CE);
+  auto *MD = CE->getDirectCallee();
+  if (!MD)
+    return;
+  // This analysis is done only for types marked with
+  // [[clang::coro_return_type]].
+  auto *RetType = MD->getReturnType()->getAsRecordDecl();
+  if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
+    return;
+  // `get_return_object` should be allowed to return coro_return_type.
+  if (!MD->hasAttr<CoroWrapperAttr>())
+    MD->addAttr(
+        CoroWrapperAttr::CreateImplicit(S.getASTContext(), MD->getLocation()));
+  // Object arg of `__promise.get_return_object()` is not lifetimebound.
+  if (RetType->hasAttr<CoroLifetimeBoundAttr>() &&
+      !MD->hasAttr<CoroDisableLifetimeBoundAttr>())
+    MD->addAttr(CoroDisableLifetimeBoundAttr::CreateImplicit(
+        S.getASTContext(), MD->getLocation()));
+}
+
 bool CoroutineStmtBuilder::makeReturnObject() {
   // [dcl.fct.def.coroutine]p7
   // The expression promise.get_return_object() is used to initialize the
@@ -1827,6 +1832,7 @@ bool CoroutineStmtBuilder::makeReturnObject() {
   if (ReturnObject.isInvalid())
     return false;
 
+  handleGetReturnObject(S, ReturnObject.get());
   this->ReturnValue = ReturnObject.get();
   return true;
 }
