@@ -47,7 +47,8 @@ public:
   virtual void emitDirectiveOptionNoRVC();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
-  virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
+  virtual void
+  emitDirectiveOptionArch(const ArrayRef<RISCVOptionArchArg> &Args);
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
@@ -81,7 +82,8 @@ public:
   void emitDirectiveOptionNoRVC() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
-  void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;
+  void
+  emitDirectiveOptionArch(const ArrayRef<RISCVOptionArchArg> &Args) override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
 };
 

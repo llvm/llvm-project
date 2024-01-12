@@ -34,7 +34,7 @@ void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionArch(
-    ArrayRef<RISCVOptionArchArg> Args) {}
+    const ArrayRef<RISCVOptionArchArg> &Args) {}
 void RISCVTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void RISCVTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void RISCVTargetStreamer::finishAttributeSection() {}
@@ -104,7 +104,7 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionNoRelax() {
 }
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionArch(
-    ArrayRef<RISCVOptionArchArg> Args) {
+    const ArrayRef<RISCVOptionArchArg> &Args) {
   OS << "\t.option\tarch";
   for (const auto &Arg : Args) {
     OS << ", ";

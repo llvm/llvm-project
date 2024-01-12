@@ -47,11 +47,11 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
     static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 
   // Using RISCVISAInfo, construct ISAString from given features.
-  std::stringstream SS(STI.getFeatureString().str());
-  std::string Feature;
-  std::vector<std::string> FeatureVec;
-  while (std::getline(SS, Feature, ','))
-    FeatureVec.push_back(Feature);
+  SmallVector<StringRef, 8> FeatureSmallVec;
+  STI.getFeatureString().split(FeatureSmallVec, ',', /*MaxSplit*/ -1,
+                               /*KeepEmpty*/ false);
+  std::vector<std::string> FeatureVec(FeatureSmallVec.begin(),
+                                      FeatureSmallVec.end());
 
   auto ParseResult = RISCVISAInfo::parseFeatures(
       STI.getTargetTriple().isRISCV64() ? 64 : 32, FeatureVec);
@@ -91,7 +91,7 @@ void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
 }
 
 void RISCVTargetELFStreamer::emitDirectiveOptionArch(
-    ArrayRef<RISCVOptionArchArg> Args) {
+   const ArrayRef<RISCVOptionArchArg> &Args) {
   if (Args.size() == 1) {
     RISCVOptionArchArg Arg = Args[0];
     if (Arg.Type == RISCVOptionArchArgType::Full) {
@@ -114,7 +114,7 @@ void RISCVTargetELFStreamer::emitDirectiveOptionArch(
   }
   auto &ISAInfo = *ParseResult;
   std::vector<std::string> NewFeatures = ISAInfo->toFeatures();
-  for (RISCVOptionArchArg Arg : Args) {
+  for (const RISCVOptionArchArg &Arg : Args) {
     switch (Arg.Type) {
     case RISCVOptionArchArgType::Minus:
       NewFeatures.push_back("-" + Arg.Value);
@@ -126,7 +126,6 @@ void RISCVTargetELFStreamer::emitDirectiveOptionArch(
       // This is special cased at the beginning of this function.
       // It is illegal to have more than one argument for this option.
       llvm_unreachable("Improperly formed arch option");
-      break;
     }
   }
   auto NewParseResult = RISCVISAInfo::parseFeatures(
