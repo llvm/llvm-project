@@ -109,7 +109,7 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
     nameMaxLen = _POSIX_LOGIN_NAME_MAX + 1;
 #endif
   Terminator terminator{__FILE__, __LINE__};
-  char *str{(char *)AllocateMemoryOrCrash(terminator, nameMaxLen)};
+  char *str{static_cast<char *>(AllocateMemoryOrCrash(terminator, nameMaxLen))};
   str[nameMaxLen] = '\0';
 
   int error{getlogin_r(str, nameMaxLen)};
