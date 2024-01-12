@@ -4600,6 +4600,7 @@ cc_library(
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
+        ":TransformDebugExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
@@ -8991,6 +8992,7 @@ cc_library(
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
+        ":TransformDebugExtension",
         ":TransformDialect",
         ":TransformDialectTransforms",
         ":TransformLoopExtension",
@@ -11744,6 +11746,48 @@ cc_library(
         ":TransformDialect",
         ":TransformPDLExtensionOpsIncGen",
         "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformDebugExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformDebugExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.td",
+    deps = [":TransformDebugExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformDebugExtension",
+    srcs = glob(["lib/Dialect/Transform/DebugExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":Support",
+        ":TransformDebugExtensionOpsIncGen",
+        ":TransformDialect",
+        "//third_party/llvm/llvm-project/llvm:Support",
     ],
 )
 

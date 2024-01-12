@@ -7379,6 +7379,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             continue;
           if (Idx >= static_cast<int>(CommonVF))
             Idx = E1Mask[Idx - CommonVF] + VF;
+          else
+            Idx = E1Mask[Idx];
         }
         CommonVF = VF;
       }

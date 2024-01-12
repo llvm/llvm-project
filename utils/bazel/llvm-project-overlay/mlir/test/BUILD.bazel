@@ -360,6 +360,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
         "//mlir:TransformPDLExtension",

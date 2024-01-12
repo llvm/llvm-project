@@ -37,6 +37,29 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Fix a bug in reversed argument for templated operators.
+  This breaks code in C++20 which was previously accepted in C++17.
+  Clang did not properly diagnose such casese in C++20 before this change. Eg:
+
+  .. code-block:: cpp
+
+    struct P {};
+    template<class S> bool operator==(const P&, const S&);
+
+    struct A : public P {};
+    struct B : public P {};
+
+    // This equality is now ambiguous in C++20.
+    bool ambiguous(A a, B b) { return a == b; }
+
+    template<class S> bool operator!=(const P&, const S&);
+    // Ok. Found a matching operator!=.
+    bool fine(A a, B b) { return a == b; }
+
+  To reduce such widespread breakages, as an extension, Clang accepts this code
+  with an existing warning ``-Wambiguous-reversed-operator`` warning.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+
 - The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
   ``--gcc-toolchain=``) is deprecated and will be removed. Specify
   ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
@@ -723,6 +746,10 @@ Bug Fixes in This Version
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
   and `if consteval` branches.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
+- Fix assertion failure when declaring a template friend function with
+  a constrained parameter in a template class that declares a class method
+  or lambda at different depth.
+  Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
 - Fix an issue where clang cannot find conversion function with template
   parameter when instantiation of template class.
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
