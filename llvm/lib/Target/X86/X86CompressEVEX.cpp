@@ -286,9 +286,22 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(I->NewOpc);
   MI.setDesc(NewDesc);
-  uint64_t Encoding = NewDesc.TSFlags & X86II::EncodingMask;
-  auto AsmComment =
-      (Encoding == X86II::VEX) ? X86::AC_EVEX_2_VEX : X86::AC_EVEX_2_LEGACY;
+  unsigned AsmComment;
+  switch (NewDesc.TSFlags & X86II::EncodingMask) {
+  case X86II::LEGACY:
+    AsmComment = X86::AC_EVEX_2_LEGACY;
+    break;
+  case X86II::VEX:
+    AsmComment = X86::AC_EVEX_2_VEX;
+    break;
+  case X86II::EVEX:
+    AsmComment = X86::AC_EVEX_2_EVEX;
+    assert(IsND && (NewDesc.TSFlags & X86II::EVEX_NF) &&
+           "Unknown EVEX2EVEX compression");
+    break;
+  default:
+    llvm_unreachable("Unknown EVEX compression");
+  }
   MI.setAsmPrinterFlag(AsmComment);
   if (IsND)
     MI.tieOperands(0, 1);

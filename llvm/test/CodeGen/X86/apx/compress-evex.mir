@@ -51,3 +51,13 @@ body:             |
     renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $r16, implicit-def dead $eflags
     RET64 $rax
 ...
+---
+name:            ndd_2_non_ndd_egpr_nf
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK: {nf} xorq %r16, %rax                   # EVEX TO EVEX Compression encoding: [0x62,0xe4,0xfc,0x0c,0x31,0xc0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
+    renamable $rax = XOR64rr_NF_ND killed renamable $rax, killed renamable $r16
+    RET64 $rax
+...

@@ -5623,6 +5623,11 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
     // optimization, such as lookup tables.
     if (SI->getNumCases() == AllNumCases - 1) {
       assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
+      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
+      if (CondTy->getIntegerBitWidth() > 64 ||
+          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+        return false;
+
       uint64_t MissingCaseVal = 0;
       for (const auto &Case : SI->cases())
         MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();

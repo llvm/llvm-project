@@ -52,9 +52,8 @@ class MatcherTableEmitter {
 
   SmallVector<unsigned, Matcher::HighestKind+1> OpcodeCounts;
 
-  DenseMap<TreePattern *, unsigned> NodePredicateMap;
-  std::vector<TreePredicateFn> NodePredicates;
-  std::vector<TreePredicateFn> NodePredicatesWithOperands;
+  std::vector<TreePattern *> NodePredicates;
+  std::vector<TreePattern *> NodePredicatesWithOperands;
 
   // We de-duplicate the predicates by code string, and use this map to track
   // all the patterns with "identical" predicates.
@@ -87,7 +86,9 @@ public:
     // Record the usage of ComplexPattern.
     MapVector<const ComplexPattern *, unsigned> ComplexPatternUsage;
     // Record the usage of PatternPredicate.
-    std::map<StringRef, unsigned> PatternPredicateUsage;
+    MapVector<StringRef, unsigned> PatternPredicateUsage;
+    // Record the usage of Predicate.
+    MapVector<TreePattern *, unsigned> PredicateUsage;
 
     // Iterate the whole MatcherTable once and do some statistics.
     std::function<void(const Matcher *)> Statistic = [&](const Matcher *N) {
@@ -105,6 +106,8 @@ public:
           ++ComplexPatternUsage[&CPM->getPattern()];
         else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
           ++PatternPredicateUsage[CPPM->getPredicate()];
+        else if (auto *PM = dyn_cast<CheckPredicateMatcher>(N))
+          ++PredicateUsage[PM->getPredicate().getOrigPatFragRecord()];
         N = N->getNext();
       }
     };
@@ -127,6 +130,40 @@ public:
     });
     for (const auto &PatternPredicate : PatternPredicateList)
       PatternPredicates.push_back(PatternPredicate.first);
+
+    // Sort Predicates by usage.
+    // Merge predicates with same code.
+    for (const auto &Usage : PredicateUsage) {
+      TreePattern *TP = Usage.first;
+      TreePredicateFn Pred(TP);
+      NodePredicatesByCodeToRun[Pred.getCodeToRunOnSDNode()].push_back(TP);
+    }
+
+    std::vector<std::pair<TreePattern *, unsigned>> PredicateList;
+    // Sum the usage.
+    for (auto &Predicate : NodePredicatesByCodeToRun) {
+      TinyPtrVector<TreePattern *> &TPs = Predicate.second;
+      stable_sort(TPs, [](const auto *A, const auto *B) {
+        return A->getRecord()->getName() < B->getRecord()->getName();
+      });
+      unsigned Uses = 0;
+      for (TreePattern *TP : TPs)
+        Uses += PredicateUsage[TP];
+
+      // We only add the first predicate here since they are with the same code.
+      PredicateList.push_back({TPs[0], Uses});
+    }
+
+    stable_sort(PredicateList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
+    for (const auto &Predicate : PredicateList) {
+      TreePattern *TP = Predicate.first;
+      if (TreePredicateFn(TP).usesOperands())
+        NodePredicatesWithOperands.push_back(TP);
+      else
+        NodePredicates.push_back(TP);
+    }
   }
 
   unsigned EmitMatcherList(const Matcher *N, const unsigned Indent,
@@ -141,7 +178,7 @@ public:
   void EmitPatternMatchTable(raw_ostream &OS);
 
 private:
-  void EmitNodePredicatesFunction(const std::vector<TreePredicateFn> &Preds,
+  void EmitNodePredicatesFunction(const std::vector<TreePattern *> &Preds,
                                   StringRef Decl, raw_ostream &OS);
 
   unsigned SizeMatcher(Matcher *N, raw_ostream &OS);
@@ -150,33 +187,13 @@ private:
                        raw_ostream &OS);
 
   unsigned getNodePredicate(TreePredicateFn Pred) {
-    TreePattern *TP = Pred.getOrigPatFragRecord();
-    unsigned &Entry = NodePredicateMap[TP];
-    if (Entry == 0) {
-      TinyPtrVector<TreePattern *> &SameCodePreds =
-          NodePredicatesByCodeToRun[Pred.getCodeToRunOnSDNode()];
-      if (SameCodePreds.empty()) {
-        // We've never seen a predicate with the same code: allocate an entry.
-        if (Pred.usesOperands()) {
-          NodePredicatesWithOperands.push_back(Pred);
-          Entry = NodePredicatesWithOperands.size();
-        } else {
-          NodePredicates.push_back(Pred);
-          Entry = NodePredicates.size();
-        }
-      } else {
-        // We did see an identical predicate: re-use it.
-        Entry = NodePredicateMap[SameCodePreds.front()];
-        assert(Entry != 0);
-        assert(TreePredicateFn(SameCodePreds.front()).usesOperands() ==
-               Pred.usesOperands() &&
-               "PatFrags with some code must have same usesOperands setting");
-      }
-      // In both cases, we've never seen this particular predicate before, so
-      // mark it in the list of predicates sharing the same code.
-      SameCodePreds.push_back(TP);
-    }
-    return Entry-1;
+    // We use the first predicate.
+    TreePattern *PredPat =
+        NodePredicatesByCodeToRun[Pred.getCodeToRunOnSDNode()][0];
+    return Pred.usesOperands()
+               ? llvm::find(NodePredicatesWithOperands, PredPat) -
+                     NodePredicatesWithOperands.begin()
+               : llvm::find(NodePredicates, PredPat) - NodePredicates.begin();
   }
 
   unsigned getPatternPredicate(StringRef PredName) {
@@ -531,6 +548,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
   case Matcher::CheckPredicate: {
     TreePredicateFn Pred = cast<CheckPredicateMatcher>(N)->getPredicate();
     unsigned OperandBytes = 0;
+    unsigned PredNo = getNodePredicate(Pred);
 
     if (Pred.usesOperands()) {
       unsigned NumOps = cast<CheckPredicateMatcher>(N)->getNumOperands();
@@ -539,10 +557,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
         OS << cast<CheckPredicateMatcher>(N)->getOperandNo(i) << ", ";
       OperandBytes = 1 + NumOps;
     } else {
-      OS << "OPC_CheckPredicate, ";
+      if (PredNo < 8) {
+        OperandBytes = -1;
+        OS << "OPC_CheckPredicate" << PredNo << ", ";
+      } else
+        OS << "OPC_CheckPredicate, ";
     }
 
-    OS << getNodePredicate(Pred) << ',';
+    if (PredNo >= 8 || Pred.usesOperands())
+      OS << PredNo << ',';
     if (!OmitComments)
       OS << " // " << Pred.getFnName();
     OS << '\n';
@@ -1031,8 +1054,7 @@ EmitMatcherList(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 }
 
 void MatcherTableEmitter::EmitNodePredicatesFunction(
-    const std::vector<TreePredicateFn> &Preds, StringRef Decl,
-    raw_ostream &OS) {
+    const std::vector<TreePattern *> &Preds, StringRef Decl, raw_ostream &OS) {
   if (Preds.empty())
     return;
 
@@ -1042,7 +1064,7 @@ void MatcherTableEmitter::EmitNodePredicatesFunction(
   OS << "  default: llvm_unreachable(\"Invalid predicate in table?\");\n";
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
     // Emit the predicate code corresponding to this pattern.
-    const TreePredicateFn PredFn = Preds[i];
+    TreePredicateFn PredFn(Preds[i]);
     assert(!PredFn.isAlwaysTrue() && "No code in this predicate");
     std::string PredFnCodeStr = PredFn.getCodeToRunOnSDNode();
 
