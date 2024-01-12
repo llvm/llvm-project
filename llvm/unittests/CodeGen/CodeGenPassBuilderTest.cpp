@@ -62,7 +62,7 @@ public:
   }
 
   void SetUp() override {
-    std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+    std::string TripleName = Triple::normalize("x86_64-pc-linux-gnu");
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
     if (!TheTarget)
