@@ -18330,8 +18330,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     //             D = A * B + C
     // We need to specify one type for matrices AB and one for matrices CD.
     SmallVector<unsigned, 2> ArgsForMatchingMatrixTypes;
-    // Some intrinsics expect "false" as an extra bool argument.
-    bool AppendExtraBoolArg = false;
+    // On GFX12, the intrinsics with 16-bit accumulator use a packed layout.
+    // There is no need for the variable opsel argument, so always set it to
+    // "false".
+    bool AppendFalseForOpselArg = false;
     unsigned BuiltinWMMAOp;
 
     switch (BuiltinID) {
@@ -18351,7 +18353,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12:
-      AppendExtraBoolArg = true;
+      AppendFalseForOpselArg = true;
       LLVM_FALLTHROUGH;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
@@ -18360,7 +18362,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12:
-      AppendExtraBoolArg = true;
+      AppendFalseForOpselArg = true;
       LLVM_FALLTHROUGH;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
@@ -18476,7 +18478,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 6> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
-    if (AppendExtraBoolArg)
+    if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
 
     SmallVector<llvm::Type *, 6> ArgTypes;
