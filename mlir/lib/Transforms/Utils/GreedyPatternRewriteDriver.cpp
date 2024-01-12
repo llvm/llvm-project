@@ -136,6 +136,21 @@ protected:
 };
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifndef NDEBUG
+static Operation *getDumpRootOp(Operation *op) {
+  // Dump the parent op so that materialized constants are visible. If the op
+  // is a top-level op, dump it directly.
+  if (Operation *parentOp = op->getParentOp())
+    return parentOp;
+  return op;
+}
+static void logSuccessfulFolding(Operation *op) {
+  llvm::dbgs() << "// *** IR Dump After Successful Folding ***\n";
+  op->dump();
+  llvm::dbgs() << "\n\n";
+}
+#endif // NDEBUG
+
 //===----------------------------------------------------------------------===//
 // Worklist
 //===----------------------------------------------------------------------===//
@@ -434,10 +449,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
       SmallVector<OpFoldResult> foldResults;
       if (succeeded(op->fold(foldResults))) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
+#ifndef NDEBUG
+        Operation *dumpRootOp = getDumpRootOp(op);
+#endif // NDEBUG
         if (foldResults.empty()) {
           // Op was modified in-place.
           notifyOperationModified(op);
           changed = true;
+          LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
           if (config.scope && failed(verify(config.scope->getParentOp())))
             llvm::report_fatal_error("IR failed to verify after folding");
@@ -492,6 +511,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         if (materializationSucceeded) {
           replaceOp(op, replacements);
           changed = true;
+          LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
           if (config.scope && failed(verify(config.scope->getParentOp())))
             llvm::report_fatal_error("IR failed to verify after folding");

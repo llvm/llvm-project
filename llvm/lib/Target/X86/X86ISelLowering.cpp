@@ -56967,13 +56967,12 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   }
   case 'W': {
     assert(Constraint[1] == 's');
-    if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
+    if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op))
       Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
                                                GA->getValueType(0)));
-    } else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
+    else if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op))
       Ops.push_back(DAG.getTargetBlockAddress(BA->getBlockAddress(),
                                               BA->getValueType(0)));
-    }
     return;
   }
   case 'Z': {

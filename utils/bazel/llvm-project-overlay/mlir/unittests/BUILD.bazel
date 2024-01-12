@@ -242,6 +242,7 @@ cc_test(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
         "//mlir/test:TestTransformDialect",

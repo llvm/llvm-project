@@ -29,6 +29,6 @@ entry:
   br label %label
 
 label:
-  tail call void asm sideeffect "// ${0:p}", "Ws,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test_label, %label))
+  tail call void asm sideeffect "// ${0:p}", "^Ws,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@test_label, %label))
   ret void
 }

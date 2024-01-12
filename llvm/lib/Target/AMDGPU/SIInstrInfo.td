@@ -892,8 +892,11 @@ def extract_swz : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(Swizzle, SDLoc(N), MVT::i8);
 }]>;
 
-def set_glc : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
+def extract_cpol_set_glc : SDNodeXForm<timm, [{
+  const uint32_t cpol = N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
+                               ? AMDGPU::CPol::ALL
+                               : AMDGPU::CPol::ALL_pregfx12);
+  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1360,7 +1363,7 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
-def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
+def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
