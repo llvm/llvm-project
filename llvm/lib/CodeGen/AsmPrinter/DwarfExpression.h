@@ -435,21 +435,8 @@ public:
   }
 };
 
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Add) { return dwarf::DW_OP_plus; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Div) { return dwarf::DW_OP_div; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Mul) { return dwarf::DW_OP_mul; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Shl) { return dwarf::DW_OP_shl; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Shr) { return dwarf::DW_OP_shr; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::Sub) { return dwarf::DW_OP_minus; }
-constexpr uint8_t getEquivalentDwarfOp(DIOp::BitOffset) {
-  return dwarf::DW_OP_LLVM_bit_offset;
-}
-constexpr uint8_t getEquivalentDwarfOp(DIOp::ByteOffset) {
-  return dwarf::DW_OP_LLVM_offset;
-}
-
 class DwarfExprAST {
-protected:
+public:
   class Node {
   private:
     DIOp::Variant Element;
@@ -524,57 +511,77 @@ protected:
   bool IsImplemented = true;
 
   void buildDIExprAST();
-  void traverseAndLower(DwarfExprAST::Node *OpNode);
-  void lower(DwarfExprAST::Node *OpNode);
-  /// Attempt to perform the optimization of inlining the expression of a global
-  /// value DIFragment, referenced through a DIOpArg.
-  ///
-  /// \returns true if the optimization was performed successfully, false if it
-  /// is not applicable.
-  bool tryInlineArgObject(DIObject *ArgObject);
+
+  /// Describes a kind of value on the DWARF expression stack. ValueKind::Value
+  /// is a DWARF5-style value, and ValueKind::LocationDesc is a location
+  /// description.
+  enum class ValueKind {
+    Value,
+    LocationDesc,
+  };
+
+  /// The result of evaluating a DIExpr operation. Describes the value that the
+  /// operation will push onto the DWARF expression stack.
+  struct OpResult {
+    Type *Ty;
+    ValueKind VK;
+  };
+
+  /// Optionally emit DWARF operations to convert the value at the top of the
+  /// stack to RequiredVK. Nop if Res.VK is RequiredVK.
+  OpResult convertValueKind(const OpResult &Res, ValueKind RequiredVK);
+
+  void readToValue(Type *Ty);
+  void readToValue(Node *OpNode);
+
   using ChildrenT = ArrayRef<std::unique_ptr<DwarfExprAST::Node>>;
-  // Each `lower` overload below will handle one or more concrete DIOp
-  // operations, and will be dispatched to by `lower(DwarfExprAST::Node*)`.
-  // These overloads return `nullptr` when they are not yet implemented, or
-  // return their result Type otherwise.
-  Type *lower(DIOp::Arg Arg, ChildrenT Children);
-  Type *lower(DIOp::Constant Constant, ChildrenT Children);
-  Type *lower(DIOp::PushLane PushLane, ChildrenT Children);
-  Type *lower(DIOp::Referrer Referrer, ChildrenT Children);
-  Type *lower(DIOp::TypeObject TypeObject, ChildrenT Children);
-  Type *lower(DIOp::AddrOf AddrOf, ChildrenT Children);
-  Type *lower(DIOp::Convert Convert, ChildrenT Children);
-  Type *lower(DIOp::Deref Deref, ChildrenT Children);
-  Type *lower(DIOp::Extend Extend, ChildrenT Children);
-  Type *lower(DIOp::Read Read, ChildrenT Children);
-  Type *lower(DIOp::Reinterpret Reinterpret, ChildrenT Children);
-  Type *lower(DIOp::Select Select, ChildrenT Children);
-  Type *lower(DIOp::Composite Composite, ChildrenT Children);
-  template <typename T>
-  std::enable_if_t<is_one_of<T, DIOp::Add, DIOp::Div, DIOp::Mul, DIOp::Shl,
-                             DIOp::Shr, DIOp::Sub>::value,
-                   Type *>
-  lower(T MathOp, ChildrenT Children) {
-    assert(Children.size() == 2 && "Expected 2 children");
-    for (auto &ChildOpNode : Children) {
-      readToValue(ChildOpNode.get());
-      emitDwarfOp(dwarf::DW_OP_swap);
-    }
-    emitDwarfOp(getEquivalentDwarfOp(MathOp));
-    emitDwarfOp(dwarf::DW_OP_stack_value);
-    return Children[0]->getResultType();
+
+  /// Dispatch to a specific traverse() function, and convert the result to
+  /// ReqVK if non-nullopt.
+  std::optional<OpResult> traverse(Node *OpNode,
+                                   std::optional<ValueKind> ReqVK);
+
+  std::optional<OpResult> traverse(DIOp::Arg Arg, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Constant Constant, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::PushLane PushLane, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Referrer Referrer, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::TypeObject TypeObject,
+                                   ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::AddrOf AddrOf, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Convert Convert, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Deref Deref, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Extend Extend, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Read Read, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Reinterpret Reinterpret,
+                                   ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Select Select, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Composite Composite,
+                                   ChildrenT Children);
+
+  std::optional<OpResult> traverseMathOp(uint8_t DwarfOp, ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::Add Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_plus, Children);
   }
-  template <typename T>
-  std::enable_if_t<is_one_of<T, DIOp::BitOffset, DIOp::ByteOffset>::value,
-                   Type *>
-  lower(T OffsetOp, ChildrenT Children) {
-    assert(Children.size() == 2 && "Expected 2 children");
-    readToValue(Children[1].get());
-    emitDwarfOp(getEquivalentDwarfOp(OffsetOp));
-    return OffsetOp.getResultType();
+  std::optional<OpResult> traverse(DIOp::Div Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_div, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Mul Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_mul, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Shl Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_shl, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Shr Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_shr, Children);
+  }
+  std::optional<OpResult> traverse(DIOp::Sub Op, ChildrenT Children) {
+    return traverseMathOp(dwarf::DW_OP_minus, Children);
   }
 
-  void readToValue(DwarfExprAST::Node *OpNode);
+  std::optional<OpResult> traverse(DIOp::BitOffset BitOffset,
+                                   ChildrenT Children);
+  std::optional<OpResult> traverse(DIOp::ByteOffset ByteOffset,
+                                   ChildrenT Children);
 
   void emitReg(int32_t DwarfReg, const char *Comment = nullptr);
   void emitSigned(int64_t SignedValue);
@@ -636,7 +643,7 @@ public:
   ~DebugLocDwarfExprAST() {}
 
   bool finalize() {
-    traverseAndLower(Root.get());
+    traverse(Root.get(), ValueKind::LocationDesc);
     return IsImplemented;
   }
 };
@@ -676,7 +683,7 @@ public:
   ~DIEDwarfExprAST() {}
 
   DIELoc *finalize() {
-    traverseAndLower(Root.get());
+    traverse(Root.get(), ValueKind::LocationDesc);
     return IsImplemented ? &OutDIE : nullptr;
   }
 };
