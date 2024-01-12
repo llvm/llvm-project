@@ -415,8 +415,8 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
-  def : GCNPat < (intrinsic_node (DotIUVOP3PMods i32:$src0_mods), i32:$src0,
-                                 (DotIUVOP3PMods i32:$src1_mods), i32:$src1,
+  def : GCNPat < (intrinsic_node (VOP3PModsNeg i32:$src0_mods), i32:$src0,
+                                 (VOP3PModsNeg i32:$src1_mods), i32:$src1,
                                  i32:$src2, (i1 timm:$clamp)),
                  (!cast<Instruction>(NAME) $src0_mods, i32:$src0,
                                            $src1_mods, i32:$src1,
@@ -593,13 +593,29 @@ class MAIFrag<SDPatternOperator Op, code pred> : PatFrag <
   pred
 >;
 
-let GISelPredicateCode = [{ return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class AgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs = [{
+  return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
 
-let GISelPredicateCode = [{ return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class VgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs_gisel = [{
+  return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs = [{
+  return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs_gisel = [{
+  return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+class AgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNeedAGPRs> {
+  let GISelPredicateCode = MayNeedAGPRs_gisel;
+}
+
+class VgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNotNeedAGPRs> {
+  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
+}
 
 let SubtargetPredicate = HasMAIInsts in {
 
@@ -623,12 +639,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(NoDstOverlap, null_frag, AgprMAIFrag<node>)>,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node>)>,
                  MFMATable<0, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(NoDstOverlap, null_frag, VgprMAIFrag<node>)>,
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node>)>,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
@@ -636,12 +652,13 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P), AgprMAIFrag<node>>,
+        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node>)>,
                          MFMATable<1, NAME # "_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      VgprMAIFrag<node>>,
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node>)>,
                               MFMATable<1, NAME # "_vgprcd_e64">;
       }
     }
@@ -811,8 +828,8 @@ class WMMAOpSelPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
 
 class WMMAUIClampPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
   GCNPat < (P.DstVT (node
-                                (DotIUVOP3PMods i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
-                                (DotIUVOP3PMods i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
+                                (VOP3PModsNeg i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
+                                (VOP3PModsNeg i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
                                 (P.Src2VT P.Src2VT:$src2), (i1 timm:$clamp)
                    )),
                    (P.DstVT (Inst i32:$src0_modifiers, P.Src0VT:$src0, i32:$src1_modifiers, P.Src1VT:$src1, (i32 8), P.Src2VT:$src2, i1:$clamp))

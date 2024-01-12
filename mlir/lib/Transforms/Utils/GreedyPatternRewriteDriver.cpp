@@ -136,6 +136,21 @@ protected:
 };
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
+#ifndef NDEBUG
+static Operation *getDumpRootOp(Operation *op) {
+  // Dump the parent op so that materialized constants are visible. If the op
+  // is a top-level op, dump it directly.
+  if (Operation *parentOp = op->getParentOp())
+    return parentOp;
+  return op;
+}
+static void logSuccessfulFolding(Operation *op) {
+  llvm::dbgs() << "// *** IR Dump After Successful Folding ***\n";
+  op->dump();
+  llvm::dbgs() << "\n\n";
+}
+#endif // NDEBUG
+
 //===----------------------------------------------------------------------===//
 // Worklist
 //===----------------------------------------------------------------------===//
@@ -434,10 +449,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
       SmallVector<OpFoldResult> foldResults;
       if (succeeded(op->fold(foldResults))) {
         LLVM_DEBUG(logResultWithLine("success", "operation was folded"));
-        changed = true;
+#ifndef NDEBUG
+        Operation *dumpRootOp = getDumpRootOp(op);
+#endif // NDEBUG
         if (foldResults.empty()) {
           // Op was modified in-place.
           notifyOperationModified(op);
+          changed = true;
+          LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
           if (config.scope && failed(verify(config.scope->getParentOp())))
             llvm::report_fatal_error("IR failed to verify after folding");
@@ -451,6 +470,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         OpBuilder::InsertionGuard g(*this);
         setInsertionPoint(op);
         SmallVector<Value> replacements;
+        bool materializationSucceeded = true;
         for (auto [ofr, resultType] :
              llvm::zip_equal(foldResults, op->getResultTypes())) {
           if (auto value = ofr.dyn_cast<Value>()) {
@@ -462,18 +482,42 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           // Materialize Attributes as SSA values.
           Operation *constOp = op->getDialect()->materializeConstant(
               *this, ofr.get<Attribute>(), resultType, op->getLoc());
+
+          if (!constOp) {
+            // If materialization fails, cleanup any operations generated for
+            // the previous results.
+            llvm::SmallDenseSet<Operation *> replacementOps;
+            for (Value replacement : replacements) {
+              assert(replacement.use_empty() &&
+                     "folder reused existing op for one result but constant "
+                     "materialization failed for another result");
+              replacementOps.insert(replacement.getDefiningOp());
+            }
+            for (Operation *op : replacementOps) {
+              eraseOp(op);
+            }
+
+            materializationSucceeded = false;
+            break;
+          }
+
           assert(constOp->hasTrait<OpTrait::ConstantLike>() &&
                  "materializeConstant produced op that is not a ConstantLike");
           assert(constOp->getResultTypes()[0] == resultType &&
                  "materializeConstant produced incorrect result type");
           replacements.push_back(constOp->getResult(0));
         }
-        replaceOp(op, replacements);
+
+        if (materializationSucceeded) {
+          replaceOp(op, replacements);
+          changed = true;
+          LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-        if (config.scope && failed(verify(config.scope->getParentOp())))
-          llvm::report_fatal_error("IR failed to verify after folding");
+          if (config.scope && failed(verify(config.scope->getParentOp())))
+            llvm::report_fatal_error("IR failed to verify after folding");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-        continue;
+          continue;
+        }
       }
     }
 

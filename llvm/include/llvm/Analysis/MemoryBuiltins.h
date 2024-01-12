@@ -190,7 +190,7 @@ Value *lowerObjectSizeCall(
 /// SizeOffsetType - A base template class for the object size visitors. Used
 /// here as a self-documenting way to handle the values rather than using a
 /// \p std::pair.
-template <typename T, class C> class SizeOffsetType {
+template <typename T, class C> struct SizeOffsetType {
 public:
   T Size;
   T Offset;
@@ -213,13 +213,11 @@ public:
 
 /// SizeOffsetAPInt - Used by \p ObjectSizeOffsetVisitor, which works with
 /// \p APInts.
-class SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
-  friend class SizeOffsetType;
-  static bool known(APInt V) { return V.getBitWidth() > 1; }
-
-public:
+struct SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
   SizeOffsetAPInt() = default;
   SizeOffsetAPInt(APInt Size, APInt Offset) : SizeOffsetType(Size, Offset) {}
+
+  static bool known(APInt V) { return V.getBitWidth() > 1; }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*
@@ -274,30 +272,26 @@ private:
 
 /// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with
 /// \p Values.
-class SizeOffsetWeakTrackingVH;
-class SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
-  friend class SizeOffsetType;
-  static bool known(Value *V) { return V != nullptr; }
-
-public:
+struct SizeOffsetWeakTrackingVH;
+struct SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
   SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
   SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
+
+  static bool known(Value *V) { return V != nullptr; }
 };
 
 /// SizeOffsetWeakTrackingVH - Used by \p ObjectSizeOffsetEvaluator in a
 /// \p DenseMap.
-class SizeOffsetWeakTrackingVH
+struct SizeOffsetWeakTrackingVH
     : public SizeOffsetType<WeakTrackingVH, SizeOffsetWeakTrackingVH> {
-  friend class SizeOffsetType;
-  static bool known(WeakTrackingVH V) { return V.pointsToAliveValue(); }
-
-public:
   SizeOffsetWeakTrackingVH() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetWeakTrackingVH(Value *Size, Value *Offset)
       : SizeOffsetType(Size, Offset) {}
   SizeOffsetWeakTrackingVH(const SizeOffsetValue &SOV)
       : SizeOffsetType(SOV.Size, SOV.Offset) {}
+
+  static bool known(WeakTrackingVH V) { return V.pointsToAliveValue(); }
 };
 
 /// Evaluate the size and offset of an object pointed to by a Value*.

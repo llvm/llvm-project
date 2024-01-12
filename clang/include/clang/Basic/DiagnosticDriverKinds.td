@@ -472,7 +472,7 @@ def warn_unsupported_branch_protection: Warning <
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
-  "'%0' only applies to medium code model">,
+  "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
@@ -786,4 +786,7 @@ def warn_android_unversioned_fallback : Warning<
   " directories will not be used in Clang 19. Provide a versioned directory"
   " for the target version or lower instead.">,
   InGroup<DiagGroup<"android-unversioned-fallback">>;
+
+def err_drv_triple_version_invalid : Error<
+  "version '%0' in target triple '%1' is invalid">;
 }

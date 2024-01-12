@@ -541,6 +541,15 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
+//
+// Check that musleabihf is treated as a hardfloat config, with respect to
+// multiarch directories.
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=arm-unknown-linux-musleabihf -rtlib=platform --unwindlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/arm-linux-gnueabihf{{/|\\\\}}crt1.o"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/arm-linux-gnueabihf{{/|\\\\}}crti.o"

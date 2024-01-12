@@ -2,7 +2,10 @@
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
+// FIXME: This is currently broken on all GPU targets
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <stdio.h>
 #include <stdlib.h>

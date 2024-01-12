@@ -49,7 +49,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
       # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
       set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
     endif()
-    if (NOT MINGW)
+    if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
       # Optimize function calls for default visibility definitions to avoid PLT and
       # reduce dynamic relocations.
       # Note: for -fno-pic default, the address of a function may be different from
