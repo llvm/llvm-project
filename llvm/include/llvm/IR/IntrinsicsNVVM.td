@@ -615,6 +615,13 @@ let TargetPrefix = "nvvm" in {
 // Multiplication
 //
 
+  def int_nvvm_mulhi_s : ClangBuiltin<"__nvvm_mulhi_s">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
+  def int_nvvm_mulhi_us : ClangBuiltin<"__nvvm_mulhi_us">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
+
   def int_nvvm_mulhi_i : ClangBuiltin<"__nvvm_mulhi_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable, Commutative]>;
@@ -730,12 +737,27 @@ let TargetPrefix = "nvvm" in {
 // Sad
 //
 
+  def int_nvvm_sad_s : ClangBuiltin<"__nvvm_sad_s">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+  def int_nvvm_sad_us : ClangBuiltin<"__nvvm_sad_us">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
   def int_nvvm_sad_i : ClangBuiltin<"__nvvm_sad_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, Commutative]>;
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
   def int_nvvm_sad_ui : ClangBuiltin<"__nvvm_sad_ui">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, Commutative]>;
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
+  def int_nvvm_sad_ll : ClangBuiltin<"__nvvm_sad_ll">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+  def int_nvvm_sad_ull : ClangBuiltin<"__nvvm_sad_ull">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
 
 //
 // Floor  Ceil
