@@ -2160,6 +2160,64 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_new")) {
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_preserved"),
+          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_preserved' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_in"),
+          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_in' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
+          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_inout' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
+          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_out' "
+          "are incompatible!",
+          V);
+  }
+
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_preserved")) {
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_in"),
+          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_in' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
+          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_inout' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
+          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_out' "
+          "are incompatible!",
+          V);
+  }
+
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_in")) {
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
+          "Attributes 'aarch64_sme_zt0_in' and 'aarch64_sme_zt0_inout' "
+          "are incompatible!",
+          V);
+
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
+          "Attributes 'aarch64_sme_zt0_in' and 'aarch64_sme_zt0_out' "
+          "are incompatible!",
+          V);
+  }
+
+  if (Attrs.hasFnAttr("aarch64_sme_zt0_inout")) {
+    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
+          "Attributes 'aarch64_sme_zt0_inout' and 'aarch64_sme_zt0_out' "
+          "are incompatible!",
+          V);
+  }
+
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Check(GV->hasGlobalUnnamedAddr(),

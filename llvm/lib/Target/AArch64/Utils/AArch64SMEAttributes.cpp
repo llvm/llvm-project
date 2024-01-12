@@ -33,8 +33,8 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "ZA_Shared and ZA_NoLazySave are mutually exclusive");
 
   // ZT0 Attrs
-  assert((!sharesZT0() || (hasNewZT0Body() ^ isZT0In() ^ isZT0InOut() ^
-                           isZT0Out() ^ preservesZT0())) &&
+  assert((!sharesZT0() || (hasNewZT0Body() ^ isInZT0() ^ isInOutZT0() ^
+                           isOutZT0() ^ preservesZT0())) &&
          "ZT0_New, ZT0_In, ZT0_Out, ZT0_InOut and ZT0_Preserved are all "
          "mutually exclusive");
 }
@@ -70,15 +70,15 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
   if (Attrs.hasFnAttr("aarch64_pstate_za_preserved"))
     Bitmask |= ZA_Preserved;
   if (Attrs.hasFnAttr("aarch64_sme_zt0_in"))
-    Bitmask |= ZT0_In;
+    setZT0State(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_sme_zt0_out"))
-    Bitmask |= ZT0_Out;
+    setZT0State(StateValue::Out);
   if (Attrs.hasFnAttr("aarch64_sme_zt0_inout"))
-    Bitmask |= ZT0_InOut;
+    setZT0State(StateValue::InOut);
   if (Attrs.hasFnAttr("aarch64_sme_zt0_preserved"))
-    Bitmask |= ZT0_Preserved;
+    setZT0State(StateValue::Preserved);
   if (Attrs.hasFnAttr("aarch64_sme_zt0_new"))
-    Bitmask |= ZT0_New;
+    setZT0State(StateValue::New);
 }
 
 std::optional<bool>
