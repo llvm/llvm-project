@@ -91,7 +91,9 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
              Tok.getIdentifierInfo()->getName())
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
+      .Case("create", OpenACCClauseKind::Create)
       .Case("copy", OpenACCClauseKind::Copy)
+      .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
       .Case("default", OpenACCClauseKind::Default)
       .Case("delete", OpenACCClauseKind::Delete)
@@ -398,7 +400,9 @@ ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
 
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
+  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::NoCreate:
@@ -559,6 +563,13 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
         return true;
       break;
     }
+    case OpenACCClauseKind::CopyIn:
+      tryParseAndConsumeSpecialTokenKind(
+          *this, OpenACCSpecialTokenKind::ReadOnly, Kind);
+      if (ParseOpenACCClauseVarList(Kind))
+        return true;
+      break;
+    case OpenACCClauseKind::Create:
     case OpenACCClauseKind::CopyOut:
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Zero,
                                          Kind);
