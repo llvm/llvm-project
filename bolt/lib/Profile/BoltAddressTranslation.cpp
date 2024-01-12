@@ -106,13 +106,15 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   const uint32_t NumFuncs = Maps.size();
   encodeULEB128(NumFuncs, OS);
   LLVM_DEBUG(dbgs() << "Writing " << NumFuncs << " functions for BAT.\n");
+  uint64_t PrevAddress = 0;
   for (auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
     MapTy &Map = MapEntry.second;
     const uint32_t NumEntries = Map.size();
     LLVM_DEBUG(dbgs() << "Writing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << ".\n");
-    encodeULEB128(Address, OS);
+    encodeULEB128(Address - PrevAddress, OS);
+    PrevAddress = Address;
     encodeULEB128(NumEntries, OS);
     uint64_t InOffset = 0, OutOffset = 0;
     // Output and Input addresses and delta-encoded
@@ -160,8 +162,10 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
   Error Err(Error::success());
   const uint32_t NumFunctions = DE.getULEB128(&Offset, &Err);
   LLVM_DEBUG(dbgs() << "Parsing " << NumFunctions << " functions\n");
+  uint64_t PrevAddress = 0;
   for (uint32_t I = 0; I < NumFunctions; ++I) {
-    const uint64_t Address = DE.getULEB128(&Offset, &Err);
+    const uint64_t Address = PrevAddress + DE.getULEB128(&Offset, &Err);
+    PrevAddress = Address;
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     MapTy Map;
 
