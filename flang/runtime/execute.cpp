@@ -189,6 +189,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         CheckAndCopyCharsToDescriptor(cmdmsg, "Fork failed");
       }
     } else if (pid == 0) {
+      // Create a new session, let init process take care of zombie child
       if (setsid() == -1) {
         if (!cmdstat) {
           terminator.Crash("setsid() failed with errno: %d, asynchronous "
