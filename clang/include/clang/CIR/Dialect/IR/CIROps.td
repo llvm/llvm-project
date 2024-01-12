@@ -1909,7 +1909,7 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
 class CIR_CallOp<string mnemonic> :
@@ -1968,6 +1968,56 @@ def CallOp : CIR_CallOp<"call"> {
      ...
     // Indirect call
     %20 = cir.call %18(%17)
+    ```
+  }];
+
+  let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+                       Variadic<CIR_AnyType>:$operands,
+                       OptionalAttr<ASTCallExprInterface>:$ast);
+  let results = (outs Variadic<CIR_AnyType>);
+
+  let builders = [
+    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      if (!callee.getFunctionType().isVoid())
+        $_state.addTypes(callee.getFunctionType().getReturnType());
+    }]>,
+    OpBuilder<(ins "Value":$ind_target,
+               "FuncType":$fn_type,
+               CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(ValueRange{ind_target});
+      $_state.addOperands(operands);
+      if (!fn_type.isVoid())
+        $_state.addTypes(fn_type.getReturnType());
+    }]>,
+    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
+              CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(resType);
+    }]>];
+}
+
+def TryCallOp : CIR_CallOp<"try_call"> {
+  let summary = "try call operation";
+  let description = [{
+    Works very similar to `cir.call` but passes down an exception object
+    in case anything is thrown by the callee. Upon the callee throwing,
+    `cir.try_call` goes to current `cir.scope`'s `abort` label, otherwise
+    execution follows to the `continue` label.
+
+    To walk the operands for this operation, use `getNumArgOperands()`,
+    `getArgOperand()`, `getArgOperands()`, `arg_operand_begin()` and
+    `arg_operand_begin()`. Avoid using `getNumOperands()`, `getOperand()`,
+    `operand_begin()`, etc, direclty - might be misleading given the
+    exception object address is also part of the raw operation's operands.
+    ``
+
+    Example:
+
+    ```mlir
+    %r = cir.try_call @division(%1, %2), ^continue_A, ^abort, %0
     ```
   }];
 
