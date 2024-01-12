@@ -781,7 +781,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
                                         RegisterClass vdataClass,
                                         ValueType vdataType,
-                                        bit isFP = isFloatType<vdataType>.ret> {
+                                        bit isFP = vdataType.isFP> {
   let FPAtomic = isFP in {
     def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
                   MUBUFAddr64Table <0, NAME>;
@@ -805,7 +805,7 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      RegisterClass vdataClass,
                                      ValueType vdataType,
                                      SDPatternOperator atomic,
-                                     bit isFP = isFloatType<vdataType>.ret> {
+                                     bit isFP = vdataType.isFP> {
   let FPAtomic = isFP in {
     def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
       [(set vdataType:$vdata,
