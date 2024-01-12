@@ -4219,8 +4219,10 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DPValue *, 2> DPValues;
   findDbgUsers(DbgUsers, I, &DPValues);
-  tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
-  tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
+  if (!DbgUsers.empty())
+    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  if (!DPValues.empty())
+    tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
 
   // PS: there are numerous flaws with this behaviour, not least that right now
   // assignments can be re-ordered past other assignments to the same variable
