@@ -1903,8 +1903,8 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
                              APInt Offset, Type *PointerTy,
                              const Twine &NamePrefix) {
   if (Offset != 0)
-    Ptr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(Offset),
-                                NamePrefix + "sroa_idx");
+    Ptr = IRB.CreateInBoundsPtrAdd(Ptr, IRB.getInt(Offset),
+                                   NamePrefix + "sroa_idx");
   return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
                                                  NamePrefix + "sroa_cast");
 }

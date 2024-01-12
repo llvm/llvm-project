@@ -315,6 +315,190 @@ void SyncClause() {
   for(;;){}
 }
 
+struct Members {
+  int value;
+  char array[5];
+};
+struct HasMembersArray {
+  struct Members MemArr[4];
+};
+
+void VarListClauses() {
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy
+
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy, seq
+
+  // expected-error@+3{{expected '('}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy)
+
+  // expected-error@+3{{expected '('}}
+  // expected-error@+2{{expected identifier}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy), seq
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(, seq
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy()
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(), seq
+
+  struct Members s;
+  struct HasMembersArray HasMem;
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(s.array[s.value]), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(s.array[s.value], s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[3].array[1]), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[3].array[1:4]), seq
+
+  // expected-error@+2{{OpenMP array section is not allowed here}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[1:3].array[1]), seq
+
+  // expected-error@+2{{OpenMP array section is not allowed here}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[:]), seq
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[::]), seq
+
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ']'}}
+  // expected-note@+2{{to match this '['}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[: :]), seq
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copy(HasMem.MemArr[3:]), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value : 5]), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial no_create(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial no_create(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial present(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial present(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial deviceptr(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial deviceptr(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial attach(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial attach(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial detach(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial detach(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial private(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial private(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial firstprivate(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial firstprivate(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial delete(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial delete(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial use_device(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial device_resident(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial device_resident(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial link(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial link(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial host(s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial device(s.array[s.value : 5], s.value), seq
+
+}
+
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();

@@ -604,6 +604,36 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     return {};
   }
 
+  mlir::Type pickLLVMArgType(mlir::Location loc, mlir::MLIRContext *context,
+                             ArgClass argClass,
+                             std::uint64_t partByteSize) const {
+    if (argClass == ArgClass::SSE) {
+      if (partByteSize > 16)
+        TODO(loc, "passing struct as a real > 128 bits in register");
+      // Clang uses vector type when several fp fields are marshalled
+      // into a single SSE register (like  <n x smallest fp field> ).
+      // It should make no difference from an ABI point of view to just
+      // select an fp type of the right size, and it makes things simpler
+      // here.
+      if (partByteSize > 8)
+        return mlir::FloatType::getF128(context);
+      if (partByteSize > 4)
+        return mlir::FloatType::getF64(context);
+      if (partByteSize > 2)
+        return mlir::FloatType::getF32(context);
+      return mlir::FloatType::getF16(context);
+    }
+    assert(partByteSize <= 8 &&
+           "expect integer part of aggregate argument to fit into eight bytes");
+    if (partByteSize > 4)
+      return mlir::IntegerType::get(context, 64);
+    if (partByteSize > 2)
+      return mlir::IntegerType::get(context, 32);
+    if (partByteSize > 1)
+      return mlir::IntegerType::get(context, 16);
+    return mlir::IntegerType::get(context, 8);
+  }
+
   /// Marshal a derived type passed by value like a C struct.
   CodeGenSpecifics::Marshalling
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
@@ -638,9 +668,29 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       marshal.emplace_back(fieldType, AT{});
       return marshal;
     }
-    // TODO, marshal the struct with several components, or with a single
-    // complex, array, or derived type component into registers.
-    TODO(loc, "passing BIND(C), VALUE derived type in registers on X86-64");
+    if (Hi == ArgClass::NoClass || Hi == ArgClass::SSEUp) {
+      // Pass a single integer or floating point argument.
+      mlir::Type lowType =
+          pickLLVMArgType(loc, recTy.getContext(), Lo, byteOffset);
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(lowType, AT{});
+      return marshal;
+    }
+    // Split into two integer or floating point arguments.
+    // Note that for the first argument, this will always pick i64 or f64 which
+    // may be bigger than needed if some struct padding ends the first eight
+    // byte (e.g. for `{i32, f64}`). It is valid from an X86-64 ABI and
+    // semantic point of view, but it may not match the LLVM IR interface clang
+    // would produce for the equivalent C code (the assembly will still be
+    // compatible).  This allows keeping the logic simpler here since it
+    // avoids computing the "data" size of the Lo part.
+    mlir::Type lowType = pickLLVMArgType(loc, recTy.getContext(), Lo, 8u);
+    mlir::Type hiType =
+        pickLLVMArgType(loc, recTy.getContext(), Hi, byteOffset - 8u);
+    CodeGenSpecifics::Marshalling marshal;
+    marshal.emplace_back(lowType, AT{});
+    marshal.emplace_back(hiType, AT{});
+    return marshal;
   }
 
   /// Marshal an argument that must be passed on the stack.

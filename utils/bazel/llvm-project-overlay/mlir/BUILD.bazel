@@ -3279,6 +3279,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/Mesh/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithDialect",
         ":ControlFlowDialect",
         ":DialectUtils",
@@ -4599,6 +4600,7 @@ cc_library(
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
+        ":TransformDebugExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
@@ -8990,6 +8992,7 @@ cc_library(
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
+        ":TransformDebugExtension",
         ":TransformDialect",
         ":TransformDialectTransforms",
         ":TransformLoopExtension",
@@ -11747,6 +11750,48 @@ cc_library(
 )
 
 td_library(
+    name = "TransformDebugExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformDebugExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.td",
+    deps = [":TransformDebugExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformDebugExtension",
+    srcs = glob(["lib/Dialect/Transform/DebugExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":Support",
+        ":TransformDebugExtensionOpsIncGen",
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "TransformLoopExtensionTdFiles",
     srcs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.td"]),
     deps = [
@@ -12846,10 +12891,13 @@ td_library(
     includes = ["include"],
     deps = [
         ":AllocationOpInterfaceTdFiles",
+        ":BufferizableOpInterfaceTdFiles",
         ":CopyOpInterfaceTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":SubsetOpInterfaceTdFiles",
     ],
 )
 
@@ -12976,10 +13024,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Bufferization/IR/BufferizationOps.td",
     deps = [
-        ":BufferizableOpInterfaceTdFiles",
         ":BufferizationOpsTdFiles",
-        ":DestinationStyleOpInterfaceTdFiles",
-        ":SubsetOpInterfaceTdFiles",
     ],
 )
 
