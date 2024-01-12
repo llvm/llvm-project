@@ -723,6 +723,10 @@ Bug Fixes in This Version
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
   and `if consteval` branches.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
+- Fix assertion failure when declaring a template friend function with
+  a constrained parameter in a template class that declares a class method
+  or lambda at different depth.
+  Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
 - Fix an issue where clang cannot find conversion function with template
   parameter when instantiation of template class.
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
