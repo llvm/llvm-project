@@ -15428,34 +15428,38 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
     // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> t1, <zero>
     if (Mask[0] < NumElts)
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
-        if (ShuffV[i] < 0 || ShuffV[i - 1] < 0)
+        if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i - 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i - 1] >= 0 ? ShuffV[i - 1] : 0) + NumElts;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
     else
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
-        if (ShuffV[i] < 0 || ShuffV[i + 1] < 0)
+        if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i + 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i + 1] >= 0 ? ShuffV[i + 1] : 0) + NumElts;
       }
   } else {
     // Example (even elements from first vector):
     // vector_shuffle<0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23> <zero>, t1
     if (Mask[0] < NumElts)
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
-        if (ShuffV[i] < 0 || ShuffV[i + 1] < 0)
+        if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i + 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i + 1] >= 0 ? ShuffV[i + 1] - NumElts : 0;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> <zero>, t1
     else
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
-        if (ShuffV[i] < 0 || ShuffV[i - 1] < 0)
+        if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i - 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i - 1] >= 0 ? ShuffV[i - 1] - NumElts : 0;
       }
   }
 
