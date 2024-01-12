@@ -87,6 +87,10 @@ ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 // CUDA data attributes; mutually exclusive
 ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture)
 
+// OpenACC device types
+ENUM_CLASS(
+    OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
+
 // OpenMP atomic_default_mem_order clause allowed values
 ENUM_CLASS(OmpAtomicDefaultMemOrderType, SeqCst, AcqRel, Relaxed)
 
