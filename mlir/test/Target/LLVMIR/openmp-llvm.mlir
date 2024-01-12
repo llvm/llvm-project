@@ -310,7 +310,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
-    }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+    }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
     omp.terminator
   }
   llvm.return
@@ -330,7 +330,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %3, %4 : f32, !llvm.ptr
     omp.yield
-  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -348,7 +348,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     llvm.store %3, %4 : f32, !llvm.ptr
     omp.yield
-  }) {inclusive, operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
+  }) {inclusive, operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
 }
 

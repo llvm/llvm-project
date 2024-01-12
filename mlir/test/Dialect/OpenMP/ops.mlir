@@ -141,7 +141,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0,0>, ordered_val = 1} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0,0,0>, ordered_val = 1} :
     (index, index, index) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static)
@@ -149,7 +149,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,1,0,0>, schedule_val = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,1,1,0,0,0>, schedule_val = #omp<schedulekind static>} :
     (index, index, index, memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static)
@@ -157,7 +157,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %data_var, %linear_var, %linear_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,2,2,0,0>, schedule_val = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,2,2,0,0,0>, schedule_val = #omp<schedulekind static>} :
     (index, index, index, memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}) ordered(2)
@@ -165,7 +165,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step, %data_var, %linear_var, %chunk_var) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,1,0,1>, schedule_val = #omp<schedulekind dynamic>, ordered_val = 2} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,1,1,0,0,1>, schedule_val = #omp<schedulekind dynamic>, ordered_val = 2} :
     (index, index, index, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop schedule(auto) nowait
@@ -173,7 +173,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
   "omp.wsloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0,0>, nowait, schedule_val = #omp<schedulekind auto>} :
+  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0,0,0>, nowait, schedule_val = #omp<schedulekind auto>} :
     (index, index, index) -> ()
 
   return

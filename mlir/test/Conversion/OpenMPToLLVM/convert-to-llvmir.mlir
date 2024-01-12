@@ -79,7 +79,7 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
       // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()
       "test.payload"(%arg6, %arg7) : (index, index) -> ()
       omp.yield
-    }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+    }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
     omp.terminator
   }
   return
