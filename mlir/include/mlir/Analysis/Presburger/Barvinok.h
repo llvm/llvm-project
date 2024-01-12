@@ -91,11 +91,12 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 Point getNonOrthogonalVector(std::vector<Point> vectors);
 
 /// Find the coefficient of a given power of s in a rational function
-/// given by P(s)/Q(s), where the coefficients in P are QuasiPolynomials,
+/// given by P(s)/Q(s), where the coefficients in P are QuasiPolynomials
+/// over d parameters (distinct from s).
 /// and those in Q are Fractions.
 QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
-                                                 std::vector<QuasiPolynomial>,
-                                                 std::vector<Fraction>);
+                                                 ArrayRef<QuasiPolynomial> num,
+                                                 ArrayRef<Fraction> den);
 
 } // namespace detail
 } // namespace presburger

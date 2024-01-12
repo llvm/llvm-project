@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/Barvinok.h"
 #include "llvm/ADT/Sequence.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace presburger;
@@ -149,17 +150,17 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// to a given set. Let the inputs be {x_1, ..., x_k}, all vectors of length n.
 ///
 /// In the following,
-/// vs[:i] means the elements of vs up to and including the i'th one,
-/// <vs, us> means the dot product of v and u,
+/// vs[:i] means the elements of vs up to (not including) the i'th one,
+/// <vs, us> means the dot product of vs and us,
 /// vs ++ [v] means the vector vs with the new element v appended to it.
 ///
 /// Suppose we have a vector vs which is not orthogonal to
 /// any of {x_1[:n-1], ..., x_k[:n-1]}.
 /// Then we need v s.t. <x_i, vs++[v]> != 0 for all i.
-/// => <x_i[:n-1], vs> + x_i[-1]*v != 0
-/// => v != - <x_i[:n-1], vs> / x_i[-1]
+/// => <x_i[:n-1], vs> + x_i[n-1]*v != 0
+/// => v != - <x_i[:n-1], vs> / x_i[n-1]
 /// We compute this value for all i, and then
-/// set v to be the maximum element of this set + 1. Thus
+/// set v to be the maximum element of this set plus one. Thus
 /// v is outside the set as desired, and we append it to vs.
 ///
 /// The base case is given in one dimension,
@@ -212,30 +213,31 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 ///   P[0]/Q[0]
 /// else
 ///   (P[r] - {Σ_{i=1}^r (P/Q)[r-i] * Q[i])}/(Q[0])
-/// We therefore recursively call `getCoefficientInRationalFuncion` on
+/// We therefore recursively call `getCoefficientInRationalFunction` on
 /// all i \in [0, power).
 ///
 /// https://math.ucdavis.edu/~deloera/researchsummary/
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
-    unsigned power, std::vector<QuasiPolynomial> num,
-    std::vector<Fraction> den) {
+    unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
 
   unsigned numParam = num[0].getNumInputs();
-  unsigned limit;
+  for (const QuasiPolynomial &qp : num)
+    assert(numParam == qp.getNumInputs() &&
+           "the quasipolynomials should all belong to the same space!");
 
   std::vector<QuasiPolynomial> coefficients(power + 1,
                                             QuasiPolynomial(numParam, 0));
 
   coefficients[0] = num[0] / den[0];
 
-  for (unsigned i = 1; i <= power; i++) {
+  for (unsigned i = 1; i <= power; ++i) {
     if (i < num.size())
       coefficients[i] = num[i];
 
-    limit = i + 1 < den.size() ? i + 1 : den.size();
+    unsigned limit = fmin(i, den.size() - 1);
 
-    for (unsigned j = 1; j < limit; j++)
+    for (unsigned j = 1; j <= limit; ++j)
       coefficients[i] = coefficients[i] -
                         coefficients[i - j] * QuasiPolynomial(numParam, den[j]);
 
