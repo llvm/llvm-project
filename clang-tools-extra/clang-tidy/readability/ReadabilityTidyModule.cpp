@@ -55,6 +55,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
 namespace readability {
@@ -62,6 +63,8 @@ namespace readability {
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<UseStdMinMaxCheck>(
+        "readability-use-std-min-max");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(
