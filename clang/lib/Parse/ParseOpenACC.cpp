@@ -92,6 +92,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("copy", OpenACCClauseKind::Copy)
+      .Case("copyout", OpenACCClauseKind::CopyOut)
       .Case("default", OpenACCClauseKind::Default)
       .Case("delete", OpenACCClauseKind::Delete)
       .Case("detach", OpenACCClauseKind::Detach)
@@ -146,6 +147,7 @@ enum class OpenACCSpecialTokenKind {
   ReadOnly,
   DevNum,
   Queues,
+  Zero,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
@@ -159,6 +161,8 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("devnum");
   case OpenACCSpecialTokenKind::Queues:
     return Tok.getIdentifierInfo()->isStr("queues");
+  case OpenACCSpecialTokenKind::Zero:
+    return Tok.getIdentifierInfo()->isStr("zero");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -395,6 +399,7 @@ ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
   case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::NoCreate:
   case OpenACCClauseKind::Present:
@@ -554,6 +559,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
         return true;
       break;
     }
+    case OpenACCClauseKind::CopyOut:
+      tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Zero,
+                                         Kind);
+      if (ParseOpenACCClauseVarList(Kind))
+        return true;
+      break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::Delete:
@@ -696,7 +707,8 @@ ExprResult Parser::ParseOpenACCIDExpression() {
 /// - a common block name between slashes (fortran only)
 bool Parser::ParseOpenACCVar() {
   OpenACCArraySectionRAII ArraySections(*this);
-  ExprResult Res = ParseAssignmentExpression();
+  ExprResult Res =
+      getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
   return Res.isInvalid();
 }
 
