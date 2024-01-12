@@ -1773,9 +1773,9 @@ ArrayAttr TransposeOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank),
-       AffineMap::getPermutationMap(
-           llvm::to_vector_of<unsigned>(getPermutation()), getContext())});
+      {inversePermutation(AffineMap::getPermutationMap(
+           llvm::to_vector_of<unsigned>(getPermutation()), getContext())),
+       builder.getMultiDimIdentityMap(rank)});
 }
 
 void TransposeOp::getEffects(

@@ -2968,24 +2968,151 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       standaloneConstruct.u);
 }
 
+static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
+                              llvm::SmallVectorImpl<mlir::Value> &step,
+                              std::size_t loopVarTypeSize) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // The types of lower bound, upper bound, and step are converted into the
+  // type of the loop variable if necessary.
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
+    lowerBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
+    upperBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
+    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
+  }
+}
+
+static void
+createSimdLoop(Fortran::lower::AbstractConverter &converter,
+               Fortran::lower::pft::Evaluation &eval,
+               llvm::omp::Directive ompDirective,
+               const Fortran::parser::OmpClauseList &loopOpClauseList,
+               mlir::Location loc) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  DataSharingProcessor dsp(converter, loopOpClauseList, eval);
+  dsp.processStep1();
+
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
+  llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
+  llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
+  llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+  mlir::omp::ClauseOrderKindAttr orderClauseOperand;
+  mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
+  std::size_t loopVarTypeSize;
+
+  ClauseProcessor cp(converter, loopOpClauseList);
+  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
+                     loopVarTypeSize);
+  cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
+  cp.processReduction(loc, reductionVars, reductionDeclSymbols);
+  cp.processTODO<Fortran::parser::OmpClause::Linear,
+                 Fortran::parser::OmpClause::Order>(loc, ompDirective);
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+               ifClauseOperand);
+  cp.processSimdlen(simdlenClauseOperand);
+  cp.processSafelen(safelenClauseOperand);
+  cp.processTODO<Fortran::parser::OmpClause::Aligned,
+                 Fortran::parser::OmpClause::Allocate,
+                 Fortran::parser::OmpClause::Nontemporal>(loc, ompDirective);
+
+  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
+                    loopVarTypeSize);
+
+  mlir::TypeRange resultType;
+  auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
+      loc, resultType, lowerBound, upperBound, step, alignedVars,
+      /*alignment_values=*/nullptr, ifClauseOperand, nontemporalVars,
+      orderClauseOperand, simdlenClauseOperand, safelenClauseOperand,
+      /*inclusive=*/firOpBuilder.getUnitAttr());
+  createBodyOfOp<mlir::omp::SimdLoopOp>(simdLoopOp, converter, loc, eval,
+                                        &loopOpClauseList, iv,
+                                        /*outer=*/false, &dsp);
+}
+
+static void createWsLoop(Fortran::lower::AbstractConverter &converter,
+                         Fortran::lower::pft::Evaluation &eval,
+                         llvm::omp::Directive ompDirective,
+                         const Fortran::parser::OmpClauseList &beginClauseList,
+                         const Fortran::parser::OmpClauseList *endClauseList,
+                         mlir::Location loc) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  DataSharingProcessor dsp(converter, beginClauseList, eval);
+  dsp.processStep1();
+
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value scheduleChunkClauseOperand;
+  llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
+  llvm::SmallVector<mlir::Value> linearVars, linearStepVars;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
+  llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+  mlir::omp::ClauseOrderKindAttr orderClauseOperand;
+  mlir::omp::ClauseScheduleKindAttr scheduleValClauseOperand;
+  mlir::UnitAttr nowaitClauseOperand, scheduleSimdClauseOperand;
+  mlir::IntegerAttr orderedClauseOperand;
+  mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
+  std::size_t loopVarTypeSize;
+
+  ClauseProcessor cp(converter, beginClauseList);
+  cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
+                     loopVarTypeSize);
+  cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
+  cp.processReduction(loc, reductionVars, reductionDeclSymbols);
+  cp.processTODO<Fortran::parser::OmpClause::Linear,
+                 Fortran::parser::OmpClause::Order>(loc, ompDirective);
+
+  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
+                    loopVarTypeSize);
+
+  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
+      loc, lowerBound, upperBound, step, linearVars, linearStepVars,
+      reductionVars,
+      reductionDeclSymbols.empty()
+          ? nullptr
+          : mlir::ArrayAttr::get(firOpBuilder.getContext(),
+                                 reductionDeclSymbols),
+      scheduleValClauseOperand, scheduleChunkClauseOperand,
+      /*schedule_modifiers=*/nullptr,
+      /*simd_modifier=*/nullptr, nowaitClauseOperand, orderedClauseOperand,
+      orderClauseOperand,
+      /*inclusive=*/firOpBuilder.getUnitAttr());
+
+  // Handle attribute based clauses.
+  if (cp.processOrdered(orderedClauseOperand))
+    wsLoopOp.setOrderedValAttr(orderedClauseOperand);
+
+  if (cp.processSchedule(scheduleValClauseOperand, scheduleModClauseOperand,
+                         scheduleSimdClauseOperand)) {
+    wsLoopOp.setScheduleValAttr(scheduleValClauseOperand);
+    wsLoopOp.setScheduleModifierAttr(scheduleModClauseOperand);
+    wsLoopOp.setSimdModifierAttr(scheduleSimdClauseOperand);
+  }
+  // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
+  // i.e
+  // !$omp do
+  // <...>
+  // !$omp end do nowait
+  if (endClauseList) {
+    if (ClauseProcessor(converter, *endClauseList)
+            .processNowait(nowaitClauseOperand))
+      wsLoopOp.setNowaitAttr(nowaitClauseOperand);
+  }
+
+  createBodyOfOp<mlir::omp::WsLoopOp>(wsLoopOp, converter, loc, eval,
+                                      &beginClauseList, iv,
+                                      /*outer=*/false, &dsp);
+}
+
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    Fortran::semantics::SemanticsContext &semanticsContext,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
-      linearStepVars, reductionVars;
-  mlir::Value scheduleChunkClauseOperand;
-  mlir::IntegerAttr orderedClauseOperand;
-  mlir::omp::ClauseOrderKindAttr orderClauseOperand;
-  mlir::omp::ClauseScheduleKindAttr scheduleValClauseOperand;
-  mlir::omp::ScheduleModifierAttr scheduleModClauseOperand;
-  mlir::UnitAttr nowaitClauseOperand, scheduleSimdClauseOperand;
-  llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
-  Fortran::lower::StatementContext stmtCtx;
-  std::size_t loopVarTypeSize;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
-
   const auto &beginLoopDirective =
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
   const auto &loopOpClauseList =
@@ -2994,6 +3121,17 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       converter.genLocation(beginLoopDirective.source);
   const auto ompDirective =
       std::get<Fortran::parser::OmpLoopDirective>(beginLoopDirective.t).v;
+
+  const auto *endClauseList = [&]() {
+    using RetTy = const Fortran::parser::OmpClauseList *;
+    if (auto &endLoopDirective =
+            std::get<std::optional<Fortran::parser::OmpEndLoopDirective>>(
+                loopConstruct.t)) {
+      return RetTy(
+          &std::get<Fortran::parser::OmpClauseList>((*endLoopDirective).t));
+    }
+    return RetTy();
+  }();
 
   bool validDirective = false;
   if (llvm::omp::topTaskloopSet.test(ompDirective)) {
@@ -3033,97 +3171,14 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                               ")");
   }
 
-  DataSharingProcessor dsp(converter, loopOpClauseList, eval);
-  dsp.processStep1();
-
-  ClauseProcessor cp(converter, loopOpClauseList);
-  cp.processCollapse(currentLocation, eval, lowerBound, upperBound, step, iv,
-                     loopVarTypeSize);
-  cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
-  cp.processTODO<Fortran::parser::OmpClause::Linear,
-                 Fortran::parser::OmpClause::Order>(currentLocation,
-                                                    ompDirective);
-
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
-    lowerBound[it] = firOpBuilder.createConvert(currentLocation, loopVarType,
-                                                lowerBound[it]);
-    upperBound[it] = firOpBuilder.createConvert(currentLocation, loopVarType,
-                                                upperBound[it]);
-    step[it] =
-        firOpBuilder.createConvert(currentLocation, loopVarType, step[it]);
-  }
-
   // 2.9.3.1 SIMD construct
   if (llvm::omp::allSimdSet.test(ompDirective)) {
-    llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
-    mlir::Value ifClauseOperand;
-    mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
-    cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
-                 ifClauseOperand);
-    cp.processSimdlen(simdlenClauseOperand);
-    cp.processSafelen(safelenClauseOperand);
-    cp.processTODO<Fortran::parser::OmpClause::Aligned,
-                   Fortran::parser::OmpClause::Allocate,
-                   Fortran::parser::OmpClause::Nontemporal>(currentLocation,
-                                                            ompDirective);
-
-    mlir::TypeRange resultType;
-    auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
-        currentLocation, resultType, lowerBound, upperBound, step, alignedVars,
-        /*alignment_values=*/nullptr, ifClauseOperand, nontemporalVars,
-        orderClauseOperand, simdlenClauseOperand, safelenClauseOperand,
-        /*inclusive=*/firOpBuilder.getUnitAttr());
-    createBodyOfOp<mlir::omp::SimdLoopOp>(
-        simdLoopOp, converter, currentLocation, eval, &loopOpClauseList, iv,
-        /*outer=*/false, &dsp);
-    return;
+    createSimdLoop(converter, eval, ompDirective, loopOpClauseList,
+                   currentLocation);
+  } else {
+    createWsLoop(converter, eval, ompDirective, loopOpClauseList, endClauseList,
+                 currentLocation);
   }
-
-  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
-      currentLocation, lowerBound, upperBound, step, linearVars, linearStepVars,
-      reductionVars,
-      reductionDeclSymbols.empty()
-          ? nullptr
-          : mlir::ArrayAttr::get(firOpBuilder.getContext(),
-                                 reductionDeclSymbols),
-      scheduleValClauseOperand, scheduleChunkClauseOperand,
-      /*schedule_modifiers=*/nullptr,
-      /*simd_modifier=*/nullptr, nowaitClauseOperand, orderedClauseOperand,
-      orderClauseOperand,
-      /*inclusive=*/firOpBuilder.getUnitAttr());
-
-  // Handle attribute based clauses.
-  if (cp.processOrdered(orderedClauseOperand))
-    wsLoopOp.setOrderedValAttr(orderedClauseOperand);
-
-  if (cp.processSchedule(scheduleValClauseOperand, scheduleModClauseOperand,
-                         scheduleSimdClauseOperand)) {
-    wsLoopOp.setScheduleValAttr(scheduleValClauseOperand);
-    wsLoopOp.setScheduleModifierAttr(scheduleModClauseOperand);
-    wsLoopOp.setSimdModifierAttr(scheduleSimdClauseOperand);
-  }
-  // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
-  // i.e
-  // !$omp do
-  // <...>
-  // !$omp end do nowait
-  if (const auto &endClauseList =
-          std::get<std::optional<Fortran::parser::OmpEndLoopDirective>>(
-              loopConstruct.t)) {
-    const auto &clauseList =
-        std::get<Fortran::parser::OmpClauseList>((*endClauseList).t);
-    if (ClauseProcessor(converter, clauseList)
-            .processNowait(nowaitClauseOperand))
-      wsLoopOp.setNowaitAttr(nowaitClauseOperand);
-  }
-
-  createBodyOfOp<mlir::omp::WsLoopOp>(wsLoopOp, converter, currentLocation,
-                                      eval, &loopOpClauseList, iv,
-                                      /*outer=*/false, &dsp);
 }
 
 static void
