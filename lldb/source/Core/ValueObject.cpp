@@ -814,7 +814,7 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 std::pair<size_t, bool>
 ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
                                Status &error, uint32_t max_length,
-                               bool honor_array, Format item_format) {
+                               bool honor_array) {
   bool was_capped = false;
   StreamString s;
   ExecutionContext exe_ctx(GetExecutionContextRef());

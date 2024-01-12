@@ -1,4 +1,5 @@
 ; REQUIRES: asserts
+; REQUIRES: x86-registered-target
 
 ;; Tests that we use correct accelerator table when processing nested TUs.
 ;; Assert is not triggered.

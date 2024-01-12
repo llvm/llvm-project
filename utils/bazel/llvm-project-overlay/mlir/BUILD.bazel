@@ -11787,7 +11787,7 @@ cc_library(
         ":Support",
         ":TransformDebugExtensionOpsIncGen",
         ":TransformDialect",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
