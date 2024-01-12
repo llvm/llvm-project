@@ -82,6 +82,40 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 }
 #endif
 
+// Consider the following case, interchange is not valid as the store type(int)
+// is wider than the array element type(char).
+//
+// char p[7];
+// for (int j = 0; j < 2; ++j)
+//   for (int i = 0; i < 2; ++i)
+//     *((int*)&p[2*i+j]) = 2*i+j+1;
+//
+// Return true if the load/store type is wider than the element type.
+static bool isWiderLoadStore(Instruction *I) {
+  Value *Ptr = getLoadStorePointerOperand(I);
+  Type *ITy = getLoadStoreType(I);
+
+  if (!ITy->isSingleValueType())
+    return false;
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+    Type *ElementTy = GEP->getSourceElementType();
+
+    while (isa<ArrayType>(ElementTy)) {
+      ElementTy = ElementTy->getArrayElementType();
+      if (ElementTy->isSingleValueType())
+        if (ITy->getScalarSizeInBits() > ElementTy->getScalarSizeInBits()) {
+          LLVM_DEBUG(dbgs() << "Loads or Stores Type " << *ITy
+                            << " is wider than the element type " << *ElementTy
+                            << "\n");
+          return true;
+        }
+    }
+  }
+
+  return false;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE) {
@@ -98,9 +132,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
+        if (isWiderLoadStore(&I))
+          return false;
         MemInstr.push_back(&I);
       } else if (auto *St = dyn_cast<StoreInst>(&I)) {
         if (!St->isSimple())
+          return false;
+        if (isWiderLoadStore(&I))
           return false;
         MemInstr.push_back(&I);
       }
