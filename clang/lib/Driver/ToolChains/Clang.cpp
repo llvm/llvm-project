@@ -5771,11 +5771,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (IsLargeCM) {
       CmdArgs.push_back("-mlarge-data-threshold=0");
     }
-  } else {
-    if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getOption().getName() << TripleStr;
-    }
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
