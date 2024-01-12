@@ -8951,10 +8951,9 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
-static bool checkArmNewAttrMutualExclusion(Sema &S, const ParsedAttr &AL,
-                                           const FunctionProtoType *FPT,
-                                           FunctionType::ArmStateValue CurrentState,
-                                           StringRef StateName) {
+static bool checkArmNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
   auto CheckForIncompatibleAttr =
       [&](FunctionType::ArmStateValue IncompatibleState,
           StringRef IncompatibleStateName) {
