@@ -335,16 +335,16 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       << FixItHint::CreateReplacement(Range, "auto");
 }
 
-namespace {
-
-void ignoreTypeLocClasses(
-    TypeLoc &Loc, llvm::SmallVector<TypeLoc::TypeLocClass> const &LocClasses) {
+static void ignoreTypeLocClasses(
+    TypeLoc &Loc,
+    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
   while (llvm::is_contained(LocClasses, Loc.getTypeLocClass()))
     Loc = Loc.getNextTypeLoc();
 }
 
-bool isMutliLevelPointerToTypeLocClasses(
-    TypeLoc Loc, llvm::SmallVector<TypeLoc::TypeLocClass> const &LocClasses) {
+static bool isMutliLevelPointerToTypeLocClasses(
+    TypeLoc Loc,
+    std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
   ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
   if (Loc.getTypeLocClass() != TypeLoc::Pointer)
     return false;
@@ -352,8 +352,6 @@ bool isMutliLevelPointerToTypeLocClasses(
                        {TypeLoc::Paren, TypeLoc::Qualified, TypeLoc::Pointer});
   return llvm::is_contained(LocClasses, Loc.getTypeLocClass());
 }
-
-} // namespace
 
 void UseAutoCheck::replaceExpr(
     const DeclStmt *D, ASTContext *Context,
@@ -364,6 +362,10 @@ void UseAutoCheck::replaceExpr(
     return;
 
   const QualType FirstDeclType = FirstDecl->getType().getCanonicalType();
+  TypeSourceInfo *TSI = FirstDecl->getTypeSourceInfo();
+
+  if (TSI == nullptr)
+    return;
 
   std::vector<FixItHint> StarRemovals;
   for (const auto *Dec : D->decls()) {
@@ -405,7 +407,7 @@ void UseAutoCheck::replaceExpr(
   // is the same as the initializer, just more CV-qualified. However, TypeLoc
   // information is not reliable where CV qualifiers are concerned so we can't
   // do anything about this case for now.
-  TypeLoc Loc = FirstDecl->getTypeSourceInfo()->getTypeLoc();
+  TypeLoc Loc = TSI->getTypeLoc();
   if (!RemoveStars)
     ignoreTypeLocClasses(Loc, {TypeLoc::Pointer, TypeLoc::Qualified});
   ignoreTypeLocClasses(Loc, {TypeLoc::LValueReference, TypeLoc::RValueReference,
@@ -422,8 +424,7 @@ void UseAutoCheck::replaceExpr(
   auto Diag = diag(Range.getBegin(), Message);
 
   bool ShouldReplenishVariableName = isMutliLevelPointerToTypeLocClasses(
-      FirstDecl->getTypeSourceInfo()->getTypeLoc(),
-      {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
+      TSI->getTypeLoc(), {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is
   // next to the identifier. This avoids changing 'int *p' into 'autop'.
