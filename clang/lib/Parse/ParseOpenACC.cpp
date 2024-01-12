@@ -99,6 +99,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("nohost", OpenACCClauseKind::NoHost)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
+      .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
@@ -336,7 +337,8 @@ bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
 
 bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
   return Kind == OpenACCClauseKind::Default || Kind == OpenACCClauseKind::If ||
-         Kind == OpenACCClauseKind::Copy;
+         Kind == OpenACCClauseKind::Copy ||
+         Kind == OpenACCClauseKind::UseDevice;
 }
 
 ExprResult ParseOpenACCConditionalExpr(Parser &P) {
@@ -461,6 +463,7 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
         return true;
       break;
     }
+    case OpenACCClauseKind::UseDevice:
     case OpenACCClauseKind::Copy:
       if (ParseOpenACCClauseVarList(Kind))
         return true;
