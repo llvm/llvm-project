@@ -17,13 +17,12 @@ void f() {
 }
 }
 
+// CHECK-LABEL:      define dso_local void @dr1807::f()
 // CHECK:              invoke void @dr1807::S::S(){{.+}}
 // CHECK-NEXT:         {{.+}} unwind label %lpad
-
 // CHECK-LABEL:      lpad:
 // CHECK:              br {{.+}}, label {{.+}}, label %arraydestroy.body
-
-// CHECK-LABEL:      arraydestroy.body:
-// CHECK:              %arraydestroy.element = getelementptr {{.+}}, i64 -1
-// CXX98-NEXT:         invoke void @dr1807::S::~S(){{.*}}%arraydestroy.element
-// SINCE-CXX11-NEXT:   call void @dr1807::S::~S(){{.*}}%arraydestroy.element
+// CHECK-LABEL:      arraydestroy.body:         
+// CHECK:              [[ARRAYDESTROY_ELEMENT:%.*]] = getelementptr {{.+}}, i64 -1
+// CXX98-NEXT:         invoke void @dr1807::S::~S(){{.*}}[[ARRAYDESTROY_ELEMENT]]
+// SINCE-CXX11-NEXT:   call void @dr1807::S::~S(){{.*}}[[ARRAYDESTROY_ELEMENT]]
