@@ -2868,8 +2868,9 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
-def PreserveNone : DeclOrTypeAttr {
+def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
   let Spellings = [Clang<"preserve_none">];
+  let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [PreserveNoneDocs];
 }
 

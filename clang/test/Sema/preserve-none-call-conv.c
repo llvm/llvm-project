@@ -16,4 +16,4 @@ void (*pboo3)(void *) = boo; // expected-error {{incompatible function pointer t
 typedef_fun_t typedef_fun_boo; // expected-note {{previous declaration is here}}
 void __attribute__((preserve_none)) typedef_fun_boo(int x) { } // expected-error {{function declared 'preserve_none' here was previously declared without calling convention}}
 
-struct type_test_boo {} __attribute__((preserve_none));  // expected-warning {{'preserve_none' attribute only applies to functions and methods}}
+struct type_test_boo {} __attribute__((preserve_none));  // expected-warning {{'preserve_none' attribute only applies to functions and function pointers}}
