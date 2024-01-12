@@ -10,7 +10,7 @@ The project is just starting and the design is still not ironed out. More
 content will show up here and on our webpage soon. In the meantime people are
 encouraged to participate in our meetings (see below) and check our
 [development board](https://github.com/orgs/llvm/projects/24/) as well as the
-discussions on [discord](https://discourse.llvm.org/tag/offload).
+discussions on [Discourse](https://discourse.llvm.org/tag/offload).
 
 # Meetings
 
