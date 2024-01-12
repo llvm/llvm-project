@@ -51,9 +51,9 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
-def gi_dotiuvop3pmods :
-    GIComplexOperandMatcher<s32, "selectDotIUVOP3PMods">,
-    GIComplexPatternEquiv<DotIUVOP3PMods>;
+def gi_vop3pmodsneg :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
+    GIComplexPatternEquiv<VOP3PModsNeg>;
 
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
