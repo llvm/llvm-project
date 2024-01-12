@@ -3131,6 +3131,56 @@ inline raw_ostream &operator<<(raw_ostream &OS, ValueBits::ValueBit &VB) {
   VB.print(OS);
   return OS;
 }
+class PredicatedValueBits : public ValueBits {
+  // This would be representitive of select or phi instructions where the bits
+  // would depend on an icmp.
+private:
+  ICmpInst *_Predicate;
+  ValueBits *_IfTrue;
+  ValueBits *_IfFalse;
+
+  void _Shl(uint64_t N) override {
+    _IfTrue = ValueBits::Shl(_IfTrue, N);
+    _IfFalse = ValueBits::Shl(_IfFalse, N);
+  }
+  void _LShr(uint64_t N) override {
+    _IfTrue = ValueBits::LShr(_IfTrue, N);
+    _IfFalse = ValueBits::LShr(_IfFalse, N);
+  }
+  void _ZExt(uint64_t N) override {
+    _IfTrue = ValueBits::ZExt(_IfTrue, N);
+    _IfFalse = ValueBits::ZExt(_IfFalse, N);
+  }
+  void _And(uint64_t N) override {
+    _IfTrue = ValueBits::And(_IfTrue, N);
+    _IfFalse = ValueBits::And(_IfFalse, N);
+  }
+  void _Xor(ValueBits *RHS) override {
+    _IfTrue = ValueBits::Xor(_IfTrue, RHS);
+    _IfFalse = ValueBits::Xor(_IfFalse, RHS);
+  }
+  void _Trunc(uint64_t N) override {
+    _IfTrue = ValueBits::Trunc(_IfTrue, N);
+    _IfFalse = ValueBits::Trunc(_IfFalse, N);
+  }
+
+public:
+  PredicatedValueBits(ICmpInst *Predicate, ValueBits *IfTrue,
+                      ValueBits *IfFalse)
+      : _Predicate(Predicate), _IfTrue(IfTrue), _IfFalse(IfFalse) {}
+
+  ValueBits *copyBits() override { return new PredicatedValueBits(*this); }
+  bool isPredicated() override { return true; }
+  ValueBits *getIfTrue() { return _IfTrue; }
+  ValueBits *getIfFalse() { return _IfFalse; }
+  ICmpInst *getPredicate() { return _Predicate; }
+
+  virtual void print(raw_ostream &OS) override {
+    OS << "Predicate: " << *_Predicate << "\nIf True:\n"
+       << *_IfTrue << "If False:\n"
+       << *_IfFalse;
+  }
+};
 
 bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // Step one: Check if the loop looks like crc, and extract some useful
