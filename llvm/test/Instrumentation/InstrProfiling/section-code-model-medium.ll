@@ -25,7 +25,8 @@ attributes #0 = { nounwind }
 !0 = !{i32 1, !"Code Model", i32 3}
 
 ; CHECK: @__profc_foo =
-; CHECK-NOT: code_model "large"
+; X8664-SAME: code_model "small"
+; PPC-NOT: code_model
 ; CHECK: @__profvp_foo =
 ; X8664-SAME: code_model "large"
 ; PPC-NOT: code_model "large"

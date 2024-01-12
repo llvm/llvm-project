@@ -49,10 +49,25 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 // Returns nullptr on failure.
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
-// Place global in a large section for x86-64 ELF binaries to mitigate
-// relocation overflow pressure. This can be be used for metadata globals that
-// aren't directly accessed by code, which has no performance impact.
-void setGlobalVariableLargeSection(const Triple &TargetTriple,
+// Place global in a large section for x86-64 ELF binaries in code models with
+// split small/large data sections to mitigate relocation overflow pressure.
+// This can be be used for metadata globals that aren't directly accessed by
+// code, which has no performance impact.
+void setGlobalVariableLargeCodeModel(const Triple &TargetTriple,
+                                     GlobalVariable &GV);
+
+// Place global in a small or large section for x86-64 ELF binaries in code
+// models with split small/large data sections. This can be be used for metadata
+// globals that vary in size that are put into an explicit section, which can
+// cause inconsistent small/large section flags on the explicit section. This
+// should only be used for globals that are frequently accessed, otherwise
+// setGlobalVariableLargeCodeModel() should be used to mitigate relocation
+// pressure.
+//
+// Currently this places the variables in a small section for the medium code
+// model, where performance is still a concern, but in a large section for the
+// large code model, where we try to avoid all relocation pressure.
+void setHotGlobalVariableCodeModel(const Triple &TargetTriple,
                                    GlobalVariable &GV);
 
 // Insert GCOV profiling instrumentation

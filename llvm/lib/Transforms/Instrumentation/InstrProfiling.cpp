@@ -1285,6 +1285,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
   // Put the counters and bitmaps in their own sections so linkers can
   // remove unneeded sections.
   Ptr->setSection(getInstrProfSectionName(IPSK, TT.getObjectFormat()));
+  setHotGlobalVariableCodeModel(TT, *Ptr);
   Ptr->setLinkage(Linkage);
   maybeSetComdat(Ptr, Fn, VarName);
   return Ptr;
@@ -1450,7 +1451,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
         getVarName(Inc, getInstrProfValuesVarPrefix(), Renamed));
     ValuesVar->setVisibility(Visibility);
-    setGlobalVariableLargeSection(TT, *ValuesVar);
+    setGlobalVariableLargeCodeModel(TT, *ValuesVar);
     ValuesVar->setSection(
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
@@ -1588,7 +1589,7 @@ void InstrLowerer::emitVNodes() {
   auto *VNodesVar = new GlobalVariable(
       M, VNodesTy, false, GlobalValue::PrivateLinkage,
       Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
-  setGlobalVariableLargeSection(TT, *VNodesVar);
+  setGlobalVariableLargeCodeModel(TT, *VNodesVar);
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));
   VNodesVar->setAlignment(M.getDataLayout().getABITypeAlign(VNodesTy));
@@ -1616,7 +1617,7 @@ void InstrLowerer::emitNameData() {
                                 GlobalValue::PrivateLinkage, NamesVal,
                                 getInstrProfNamesVarName());
   NamesSize = CompressedNameStr.size();
-  setGlobalVariableLargeSection(TT, *NamesVar);
+  setGlobalVariableLargeCodeModel(TT, *NamesVar);
   NamesVar->setSection(
       ProfileCorrelate == InstrProfCorrelator::BINARY
           ? getInstrProfSectionName(IPSK_covname, TT.getObjectFormat())
