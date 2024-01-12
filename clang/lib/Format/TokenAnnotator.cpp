@@ -2375,7 +2375,7 @@ private:
       }
     }
 
-    if (Tok.Next->is(tok::question))
+    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
       return false;
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.

@@ -64,19 +64,23 @@ Header:
 | `NumFuncs` | ULEB128 | Number of functions in the functions table |
 
 The header is followed by Functions table with `NumFuncs` entries.
+Output binary addresses are delta encoded, meaning that only the difference with
+the previous output address is stored. Addresses implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `Address` | ULEB128 | Function address in the output binary |
+| `Address` | Delta, ULEB128 | Function address in the output binary |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 
 Function header is followed by `NumEntries` pairs of offsets for current
 function.
 
 ### Address translation table
+Delta encoding means that only the difference with the previous corresponding
+entry is encoded. Offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputAddr` | ULEB128 | Function offset in output binary |
-| `InputAddr` | ULEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
+| `OutputOffset` | Delta, ULEB128 | Function offset in output binary |
+| `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
