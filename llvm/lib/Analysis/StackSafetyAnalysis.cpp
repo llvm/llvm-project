@@ -331,7 +331,7 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   const SCEV *Expr =
       SE.getTruncateOrZeroExtend(SE.getSCEV(MI->getLength()), CalculationTy);
   ConstantRange Sizes = SE.getSignedRange(Expr);
-  if (Sizes.getUpper().isNegative() || isUnsafe(Sizes))
+  if (!Sizes.getUpper().isStrictlyPositive() || isUnsafe(Sizes))
     return UnknownRange;
   Sizes = Sizes.sextOrTrunc(PointerSize);
   ConstantRange SizeRange(APInt::getZero(PointerSize), Sizes.getUpper() - 1);
