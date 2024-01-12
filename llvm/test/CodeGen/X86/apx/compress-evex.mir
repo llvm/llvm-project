@@ -10,7 +10,6 @@ body:             |
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
     RET64 $rax
-
 ...
 ---
 name:            ndd_2_non_ndd_sub
@@ -21,7 +20,6 @@ body:             |
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = SUB64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
     RET64 $rax
-
 ...
 ---
 name:            ndd_2_non_ndd_commutable
@@ -32,7 +30,6 @@ body:             |
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
     renamable $rax = XOR64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
     RET64 $rax
-
 ...
 ---
 name:            ndd_2_non_ndd_incommutable
@@ -53,5 +50,4 @@ body:             |
     renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
     renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $r16, implicit-def dead $eflags
     RET64 $rax
-
 ...
