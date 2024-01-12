@@ -4710,4 +4710,14 @@ def int_nvvm_is_explicit_cluster
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.is_explicit_cluster">;
 
+// Setmaxnreg inc/dec intrinsics
+def int_nvvm_setmaxnreg_inc_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.inc.sync.aligned.u32">;
+def int_nvvm_setmaxnreg_dec_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
+
 } // let TargetPrefix = "nvvm"

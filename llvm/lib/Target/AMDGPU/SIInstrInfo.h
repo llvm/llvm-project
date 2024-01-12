@@ -138,6 +138,12 @@ private:
                                 unsigned Opcode,
                                 MachineDominatorTree *MDT = nullptr) const;
 
+  void splitScalarSMulU64(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                          MachineDominatorTree *MDT) const;
+
+  void splitScalarSMulPseudo(SIInstrWorklist &Worklist, MachineInstr &Inst,
+                             MachineDominatorTree *MDT) const;
+
   void splitScalar64BitXnor(SIInstrWorklist &Worklist, MachineInstr &Inst,
                             MachineDominatorTree *MDT = nullptr) const;
 
@@ -899,29 +905,14 @@ public:
   }
 
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
-    if (isWaitcnt(Opcode))
+    switch (Opcode) {
+    case AMDGPU::S_WAITCNT_soft:
       return AMDGPU::S_WAITCNT;
-
-    if (isWaitcntVsCnt(Opcode))
+    case AMDGPU::S_WAITCNT_VSCNT_soft:
       return AMDGPU::S_WAITCNT_VSCNT;
-
-    llvm_unreachable("Expected opcode S_WAITCNT/S_WAITCNT_VSCNT");
-  }
-
-  static bool isWaitcnt(unsigned Opcode) {
-    return Opcode == AMDGPU::S_WAITCNT || Opcode == AMDGPU::S_WAITCNT_soft;
-  }
-
-  static bool isWaitcntVsCnt(unsigned Opcode) {
-    return Opcode == AMDGPU::S_WAITCNT_VSCNT ||
-           Opcode == AMDGPU::S_WAITCNT_VSCNT_soft;
-  }
-
-  // "Soft" waitcnt instructions can be relaxed/optimized out by
-  // SIInsertWaitcnts.
-  static bool isSoftWaitcnt(unsigned Opcode) {
-    return Opcode == AMDGPU::S_WAITCNT_soft ||
-           Opcode == AMDGPU::S_WAITCNT_VSCNT_soft;
+    default:
+      return Opcode;
+    }
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {

@@ -123,8 +123,9 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   auto ubInt = getConstantIntValue(forOp.getUpperBound());
   auto stepInt = getConstantIntValue(forOp.getStep());
 
-  // No specialization necessary if step size is 1.
-  if (getConstantIntValue(forOp.getStep()) == static_cast<int64_t>(1))
+  // No specialization necessary if step size is 1. Also bail out in case of an
+  // invalid zero or negative step which might have happened during folding.
+  if (stepInt && *stepInt <= 1)
     return failure();
 
   // No specialization necessary if step already divides upper bound evenly.
