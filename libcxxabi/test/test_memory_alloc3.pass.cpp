@@ -14,9 +14,9 @@
 
 struct construction_key {};
 struct my_bad_alloc : std::bad_alloc {
-  my_bad_alloc(const my_bad_alloc &) : self(this) { std::abort(); }
+  my_bad_alloc(const my_bad_alloc&) : self(this) { std::abort(); }
   my_bad_alloc(construction_key) : self(this) {}
-  const my_bad_alloc *const self;
+  const my_bad_alloc* const self;
 };
 
 int new_handler_called = 0;
