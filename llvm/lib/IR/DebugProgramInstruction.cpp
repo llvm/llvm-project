@@ -225,6 +225,10 @@ void DPValue::handleChangedLocation(Metadata *NewLocation) {
   resetDebugValue(NewLocation);
 }
 
+const Instruction *DPValue::getInstruction() const {
+  return Marker->MarkedInstr;
+}
+
 const BasicBlock *DPValue::getParent() const {
   return Marker->MarkedInstr->getParent();
 }
