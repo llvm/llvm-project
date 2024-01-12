@@ -144,6 +144,8 @@ Improvements to Clang's diagnostics
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
+- Clang now diagnoses member template declarations with multiple declarators.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
