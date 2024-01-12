@@ -405,6 +405,10 @@ Changes in existing checks
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
 
+- Improved :doc:`modernize-use-auto
+  <clang-tidy/checks/modernize/use-auto>` to avoid create incorrect fix hints
+  for pointer to array type and pointer to function type.
+
 - Improved :doc:`modernize-use-emplace
   <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
   ``emplace`` cannot construct with aggregate initialization.

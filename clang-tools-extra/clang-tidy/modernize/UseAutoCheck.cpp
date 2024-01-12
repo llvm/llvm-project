@@ -8,10 +8,12 @@
 
 #include "UseAutoCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Tooling/FixIt.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -333,6 +335,26 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       << FixItHint::CreateReplacement(Range, "auto");
 }
 
+namespace {
+
+void ignoreTypeLocClasses(
+    TypeLoc &Loc, llvm::SmallVector<TypeLoc::TypeLocClass> const &LocClasses) {
+  while (llvm::is_contained(LocClasses, Loc.getTypeLocClass()))
+    Loc = Loc.getNextTypeLoc();
+}
+
+bool isMutliLevelPointerToTypeLocClasses(
+    TypeLoc Loc, llvm::SmallVector<TypeLoc::TypeLocClass> const &LocClasses) {
+  ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
+  if (Loc.getTypeLocClass() != TypeLoc::Pointer)
+    return false;
+  ignoreTypeLocClasses(Loc,
+                       {TypeLoc::Paren, TypeLoc::Qualified, TypeLoc::Pointer});
+  return llvm::is_contained(LocClasses, Loc.getTypeLocClass());
+}
+
+} // namespace
+
 void UseAutoCheck::replaceExpr(
     const DeclStmt *D, ASTContext *Context,
     llvm::function_ref<QualType(const Expr *)> GetType, StringRef Message) {
@@ -384,16 +406,10 @@ void UseAutoCheck::replaceExpr(
   // information is not reliable where CV qualifiers are concerned so we can't
   // do anything about this case for now.
   TypeLoc Loc = FirstDecl->getTypeSourceInfo()->getTypeLoc();
-  if (!RemoveStars) {
-    while (Loc.getTypeLocClass() == TypeLoc::Pointer ||
-           Loc.getTypeLocClass() == TypeLoc::Qualified)
-      Loc = Loc.getNextTypeLoc();
-  }
-  while (Loc.getTypeLocClass() == TypeLoc::LValueReference ||
-         Loc.getTypeLocClass() == TypeLoc::RValueReference ||
-         Loc.getTypeLocClass() == TypeLoc::Qualified) {
-    Loc = Loc.getNextTypeLoc();
-  }
+  if (!RemoveStars)
+    ignoreTypeLocClasses(Loc, {TypeLoc::Pointer, TypeLoc::Qualified});
+  ignoreTypeLocClasses(Loc, {TypeLoc::LValueReference, TypeLoc::RValueReference,
+                             TypeLoc::Qualified});
   SourceRange Range(Loc.getSourceRange());
 
   if (MinTypeNameLength != 0 &&
@@ -405,12 +421,20 @@ void UseAutoCheck::replaceExpr(
 
   auto Diag = diag(Range.getBegin(), Message);
 
+  bool ShouldReplenishVariableName = isMutliLevelPointerToTypeLocClasses(
+      FirstDecl->getTypeSourceInfo()->getTypeLoc(),
+      {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
+
   // Space after 'auto' to handle cases where the '*' in the pointer type is
   // next to the identifier. This avoids changing 'int *p' into 'autop'.
-  // FIXME: This doesn't work for function pointers because the variable name
-  // is inside the type.
-  Diag << FixItHint::CreateReplacement(Range, RemoveStars ? "auto " : "auto")
-       << StarRemovals;
+  llvm::StringRef Auto = ShouldReplenishVariableName
+                             ? (RemoveStars ? "auto " : "auto *")
+                             : (RemoveStars ? "auto " : "auto");
+  std::string ReplenishedVariableName =
+      ShouldReplenishVariableName ? FirstDecl->getQualifiedNameAsString() : "";
+  std::string Replacement =
+      (Auto + llvm::StringRef{ReplenishedVariableName}).str();
+  Diag << FixItHint::CreateReplacement(Range, Replacement) << StarRemovals;
 }
 
 void UseAutoCheck::check(const MatchFinder::MatchResult &Result) {
