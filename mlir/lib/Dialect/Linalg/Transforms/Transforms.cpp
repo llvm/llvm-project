@@ -1344,7 +1344,7 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();
@@ -1468,7 +1468,7 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp,
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();
@@ -1536,7 +1536,7 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
 FailureOr<Conv1DOp>
 DownscaleConv2DOp::returningMatchAndRewrite(Conv2DOp convOp,
                                             PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();

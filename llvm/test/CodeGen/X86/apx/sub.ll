@@ -173,7 +173,7 @@ define i16 @sub16mr(ptr %a, i16 noundef %b) {
 ; CHECK-LABEL: sub16mr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    subl %esi, %eax, %eax
+; CHECK-NEXT:    subl %esi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
@@ -208,7 +208,7 @@ define i16 @sub16mi8(ptr %a) {
 ; CHECK-LABEL: sub16mi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    addl $-123, %eax, %eax
+; CHECK-NEXT:    addl $-123, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
@@ -254,7 +254,7 @@ define i16 @sub16mi(ptr %a) {
 ; CHECK-LABEL: sub16mi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    addl $-1234, %eax, %eax # imm = 0xFB2E
+; CHECK-NEXT:    addl $-1234, %eax # imm = 0xFB2E
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
