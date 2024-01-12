@@ -784,6 +784,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
+  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||

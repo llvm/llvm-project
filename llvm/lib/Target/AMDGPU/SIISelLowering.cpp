@@ -1525,6 +1525,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // will use a MUBUF load.
     // FIXME?: We also need to do this if unaligned, but we don't know the
     // alignment here.
+    // TODO: Update this for GFX12 which does have scalar sub-dword loads.
     if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
       return isLegalGlobalAddressingMode(AM);
 
