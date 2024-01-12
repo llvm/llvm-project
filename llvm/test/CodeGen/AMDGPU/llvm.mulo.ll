@@ -107,18 +107,18 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v2, 0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[6:7], null, v4, v3, 0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[8:9], null, v5, v2, 0
-; GFX12-NEXT:    v_mad_co_u64_u32 v[10:11], null, v5, v3, 0
+; GFX12-NEXT:    v_mad_co_u64_u32 v[2:3], null, v5, v3, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX12-NEXT:    v_add3_u32 v1, v1, v6, v8
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v6
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v7, vcc_lo
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v8
+; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, v4, v6
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v7, vcc_lo
+; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, v4, v8
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v3, v9, vcc_lo
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v11, vcc_lo
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v10
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, v5, v9, vcc_lo
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX12-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[2:3]

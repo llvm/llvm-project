@@ -519,13 +519,12 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12W64-NEXT:  .LBB1_2:
 ; GFX12W64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX12W64-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX12W64-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12W64-NEXT:    v_mul_lo_u32 v0, s6, v0
 ; GFX12W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX12W64-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX12W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12W64-NEXT:    v_mad_co_u64_u32 v[0:1], null, s6, v0, s[2:3]
 ; GFX12W64-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12W64-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12W64-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX12W64-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12W64-NEXT:    s_nop 0
 ; GFX12W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -552,12 +551,12 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12W32-NEXT:  .LBB1_2:
 ; GFX12W32-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GFX12W32-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX12W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12W32-NEXT:    v_mul_lo_u32 v0, s2, v0
 ; GFX12W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX12W32-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX12W32-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX12W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12W32-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, s2, v0
+; GFX12W32-NEXT:    v_mad_co_u64_u32 v[0:1], null, s2, v0, s[4:5]
+; GFX12W32-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12W32-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12W32-NEXT:    s_nop 0
 ; GFX12W32-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
