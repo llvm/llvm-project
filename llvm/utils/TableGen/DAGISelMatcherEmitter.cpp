@@ -85,7 +85,7 @@ public:
   MatcherTableEmitter(const Matcher *TheMatcher, const CodeGenDAGPatterns &cgp)
       : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
     // Record the usage of ComplexPattern.
-    DenseMap<const ComplexPattern *, unsigned> ComplexPatternUsage;
+    MapVector<const ComplexPattern *, unsigned> ComplexPatternUsage;
     // Record the usage of PatternPredicate.
     std::map<StringRef, unsigned> PatternPredicateUsage;
 
