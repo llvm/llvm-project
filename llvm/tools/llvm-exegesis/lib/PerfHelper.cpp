@@ -107,23 +107,17 @@ StringRef PerfEvent::getPfmEventString() const {
   return FullQualifiedEventString;
 }
 
-CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
-                           pid_t ProcessID)
-    : Event(std::move(E)), ValidationEvents(std::move(ValEvents)),
-      ValidationFDs(ValidationEvents.size(), -1) {
+ConfiguredEvent::ConfiguredEvent(PerfEvent &&EventToConfigure)
+    : Event(std::move(EventToConfigure)) {
   assert(Event.valid());
-  IsDummyEvent = Event.name() == PerfEvent::DummyEventString;
-  if (!IsDummyEvent)
-    initRealEvent(ProcessID);
 }
 
 #ifdef HAVE_LIBPFM
-void CounterGroup::initRealEvent(pid_t ProcessID) {
-  const int Cpu = -1;     // measure any processor.
-  const int GroupFd = -1; // no grouping of counters.
+void ConfiguredEvent::initRealEvent(const pid_t ProcessID, const int GroupFD) {
+  const int CPU = -1;
   const uint32_t Flags = 0;
   perf_event_attr AttrCopy = *Event.attribute();
-  FileDescriptor = perf_event_open(&AttrCopy, ProcessID, Cpu, GroupFd, Flags);
+  FileDescriptor = perf_event_open(&AttrCopy, ProcessID, CPU, GroupFD, Flags);
   if (FileDescriptor == -1) {
     errs() << "Unable to open event. ERRNO: " << strerror(errno)
            << ". Make sure your kernel allows user "
@@ -134,64 +128,88 @@ void CounterGroup::initRealEvent(pid_t ProcessID) {
               "pass --use-dummy-perf-counters command line option.\n";
   }
   assert(FileDescriptor != -1 && "Unable to open event");
-
-  // Setup validation counters
-  assert(ValidationFDs.size() == ValidationEvents.size());
-  for (size_t I = 0; I < ValidationEvents.size(); ++I) {
-    perf_event_attr AttrCopy = *ValidationEvents[I].attribute();
-    ValidationFDs[I] =
-        perf_event_open(&AttrCopy, ProcessID, Cpu, FileDescriptor, Flags);
-    if (ValidationFDs[I] == -1)
-      errs() << "Unable to open validation event. ERRNO: " << strerror(errno)
-             << "\n";
-  }
 }
 
-CounterGroup::~CounterGroup() {
+Expected<SmallVector<int64_t>>
+ConfiguredEvent::readOrError(StringRef /*unused*/) const {
+  int64_t Count = 0;
+  ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
+
+  if (ReadSize != sizeof(Count))
+    return llvm::make_error<llvm::StringError>("Failed to read event counter",
+                                               llvm::errc::io_error);
+
+  SmallVector<int64_t, 1> Result;
+  Result.push_back(Count);
+  return Result;
+}
+
+ConfiguredEvent::~ConfiguredEvent() { close(FileDescriptor); }
+#else
+void ConfiguredEvent::initRealEvent(pid_t ProcessID) {}
+
+Expected<SmallVector<int64_t>>
+ConfiguredEvent::readOrError(StringRef /*unused*/) const {
+  return make_error<StringError>("Not implemented",
+                                 errc::function_not_supported);
+}
+
+ConfiguredEvent::~ConfiguredEvent() = default;
+#endif // HAVE_LIBPFM
+
+CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
+                           pid_t ProcessID)
+    : EventCounter(std::move(E)) {
+  IsDummyEvent = EventCounter.isDummyEvent();
+
+  for (auto &&ValEvent : ValEvents)
+    ValidationEventCounters.emplace_back(std::move(ValEvent));
+
   if (!IsDummyEvent)
-    close(FileDescriptor);
+    initRealEvent(ProcessID);
+}
+
+#ifdef HAVE_LIBPFM
+void CounterGroup::initRealEvent(pid_t ProcessID) {
+  EventCounter.initRealEvent(ProcessID);
+
+  for (auto &ValCounter : ValidationEventCounters)
+    ValCounter.initRealEvent(ProcessID, getFileDescriptor());
 }
 
 void CounterGroup::start() {
   if (!IsDummyEvent)
-    ioctl(FileDescriptor, PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+    ioctl(getFileDescriptor(), PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
 }
 
 void CounterGroup::stop() {
   if (!IsDummyEvent)
-    ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+    ioctl(getFileDescriptor(), PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
 }
 
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
-CounterGroup::readOrError(StringRef /*unused*/) const {
-  int64_t Count = 0;
-  if (!IsDummyEvent) {
-    ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
-    if (ReadSize != sizeof(Count))
-      return llvm::make_error<llvm::StringError>("Failed to read event counter",
-                                                 llvm::errc::io_error);
-  } else {
-    Count = 42;
-  }
-
-  llvm::SmallVector<int64_t, 4> Result;
-  Result.push_back(Count);
-  return Result;
+CounterGroup::readOrError(StringRef FunctionBytes) const {
+  if (!IsDummyEvent)
+    return EventCounter.readOrError(FunctionBytes);
+  else
+    return SmallVector<int64_t, 1>(1, 42);
 }
 
 llvm::Expected<llvm::SmallVector<int64_t>>
 CounterGroup::readValidationCountersOrError() const {
   llvm::SmallVector<int64_t, 4> Result;
-  for (const int ValidationFD : ValidationFDs) {
-    int64_t Count;
-    if (!IsDummyEvent) {
-      ssize_t ReadSize = ::read(ValidationFD, &Count, sizeof(Count));
-      if (ReadSize != sizeof(Count))
-        return llvm::make_error<llvm::StringError>(
-            "Failed to read validation ounter", llvm::errc::io_error);
-    } else
-      Count = -1;
-    Result.push_back(Count);
+  for (const auto &ValCounter : ValidationEventCounters) {
+    Expected<SmallVector<int64_t>> ValueOrError =
+        ValCounter.readOrError(StringRef());
+
+    if (!ValueOrError)
+      return ValueOrError.takeError();
+
+    // Reading a validation counter will only return a single value, so it is
+    // safe to only append the first value here. Also assert that this is true.
+    assert(ValueOrError->size() == 1 &&
+           "Validation counters should only return a single value");
+    Result.push_back((*ValueOrError)[0]);
   }
   return Result;
 }
@@ -199,9 +217,7 @@ CounterGroup::readValidationCountersOrError() const {
 int CounterGroup::numValues() const { return 1; }
 #else
 
-void CounterGroup::initRealEvent(const PerfEvent &, pid_t ProcessID) {}
-
-CounterGroup::~CounterGroup() = default;
+void CounterGroup::initRealEvent(pid_t ProcessID) {}
 
 void CounterGroup::start() {}
 
