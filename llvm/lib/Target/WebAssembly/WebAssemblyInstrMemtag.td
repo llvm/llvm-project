@@ -13,6 +13,7 @@
 
 multiclass MemoryTaggingOps<WebAssemblyRegClass rc, string B> {
 
+let hasSideEffects = 1 in
 defm MEMORY_RANDOMTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -37,6 +38,7 @@ defm MEMORY_SUBTAG_A#B: I<(outs rc:$diff), (ins i32imm:$tableidx, rc:$minuendptr
                     "memory.subtag\t$tableidx",
                     0xfc22>;
 
+let mayLoad = 1 in
 defm MEMORY_LOADTAG_A#B: I<(outs rc:$taggedptr), (ins i32imm:$tableidx, rc:$src),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$taggedptr,
@@ -45,6 +47,7 @@ defm MEMORY_LOADTAG_A#B: I<(outs rc:$taggedptr), (ins i32imm:$tableidx, rc:$src)
                     "memory.loadtag\t$tableidx",
                     0xfc23>;
 
+let mayLoad = 1, mayStore = 1 in
 defm MEMORY_STORETAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storetag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -52,6 +55,7 @@ defm MEMORY_STORETAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storetag\t$tableidx",
                     0xfc24>;
 
+let mayLoad = 1, mayStore = 1 in
 defm MEMORY_STOREZTAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storeztag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -59,6 +63,7 @@ defm MEMORY_STOREZTAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storeztag\t$tableidx",
                     0xfc25>;
 
+let mayLoad = 1, mayStore = 1 in
 defm MEMORY_STORE1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_store1tag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -66,6 +71,7 @@ defm MEMORY_STORE1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.store1tag\t$tableidx",
                     0xfc26>;
 
+let mayLoad = 1, mayStore = 1 in
 defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storez1tag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -73,6 +79,7 @@ defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storez1tag\t$tableidx",
                     0xfc27>;
 
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -81,6 +88,7 @@ defm MEMORY_RANDOMSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src
                     "memory.randomstoretag\t$tableidx",
                     0xfc28>;
 
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -89,6 +97,7 @@ defm MEMORY_RANDOMSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$sr
                     "memory.randomstoreztag\t$tableidx",
                     0xfc29>;
 
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -97,6 +106,7 @@ defm MEMORY_RANDOMSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$sr
                     "memory.randomstore1tag\t$tableidx",
                     0xfc2a>;
 
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
