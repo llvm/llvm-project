@@ -8179,15 +8179,17 @@ SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
   // Do the work of MachineFrameInfo::computeMaxCallFrameSize() early and
   // remove these nodes. Given that these nodes start out as a glued sequence
   // it seems best to remove them here after instruction selection and
-  // scheduling.  NB: MIR testing does not work (yet) for call frames with
-  // this.
+  // scheduling.
   MachineFrameInfo &MFI = BB->getParent()->getFrameInfo();
   uint32_t NumBytes = MI.getOperand(0).getImm();
   if (NumBytes > MFI.getMaxCallFrameSize())
     MFI.setMaxCallFrameSize(NumBytes);
   MFI.setAdjustsStack(true);
 
-  MI.eraseFromParent();
+  // TODO: MI should be erased. For now, keep it around as it seems to help
+  // scheduling around calls slightly in general (fix MachineScheduler).
+  MI.getOperand(0).setImm(0);
+
   return BB;
 }
 

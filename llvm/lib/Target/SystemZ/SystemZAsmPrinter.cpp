@@ -199,6 +199,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
+  case SystemZ::ADJCALLSTACKDOWN:
+  case SystemZ::ADJCALLSTACKUP:
+    return;
+
   case SystemZ::Return:
     LoweredMI = MCInstBuilder(SystemZ::BR)
       .addReg(SystemZ::R14D);
