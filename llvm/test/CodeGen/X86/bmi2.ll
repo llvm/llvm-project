@@ -310,8 +310,7 @@ define i32 @mulx32(i32 %x, i32 %y, ptr %p)   {
 ; X64-NEXT:    addl %edi, %edi
 ; X64-NEXT:    leal (%rsi,%rsi), %eax
 ; X64-NEXT:    imulq %rdi, %rax
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    rorxq $32, %rax, %rcx
 ; X64-NEXT:    movl %ecx, (%rdx)
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
@@ -344,8 +343,7 @@ define i32 @mulx32_load(i32 %x, ptr %y, ptr %p)   {
 ; X64-NEXT:    leal (%rdi,%rdi), %eax
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    imulq %rcx, %rax
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    rorxq $32, %rax, %rcx
 ; X64-NEXT:    movl %ecx, (%rdx)
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq

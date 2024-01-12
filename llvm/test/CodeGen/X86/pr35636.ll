@@ -10,7 +10,7 @@ define void @_Z15uint64_to_asciimPc(i64 %arg) {
 ; HSW-NEXT:    mulxq %rax, %rax, %rax
 ; HSW-NEXT:    shrq $42, %rax
 ; HSW-NEXT:    imulq $281474977, %rax, %rax # imm = 0x10C6F7A1
-; HSW-NEXT:    shrq $20, %rax
+; HSW-NEXT:    rorxq $20, %rax, %rax
 ; HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; HSW-NEXT:    addl $5, %eax
 ; HSW-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF
@@ -27,7 +27,7 @@ define void @_Z15uint64_to_asciimPc(i64 %arg) {
 ; ZN-NEXT:    mulxq %rax, %rax, %rax
 ; ZN-NEXT:    shrq $42, %rax
 ; ZN-NEXT:    imulq $281474977, %rax, %rax # imm = 0x10C6F7A1
-; ZN-NEXT:    shrq $20, %rax
+; ZN-NEXT:    rorxq $20, %rax, %rax
 ; ZN-NEXT:    leal 5(%rax,%rax,4), %eax
 ; ZN-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF
 ; ZN-NEXT:    leal (%rax,%rax,4), %eax

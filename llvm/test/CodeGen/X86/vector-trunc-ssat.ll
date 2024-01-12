@@ -4843,72 +4843,72 @@ define void @trunc_ssat_v16i32_v16i24(<16 x i32> %x, ptr %y) nounwind {
 ; SKX-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; SKX-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; SKX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; SKX-NEXT:    vpextrd $3, %xmm1, %r15d
-; SKX-NEXT:    movw %r15w, 45(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm1, %r14d
-; SKX-NEXT:    movw %r14w, 42(%rdi)
-; SKX-NEXT:    vpextrd $1, %xmm1, %ebp
-; SKX-NEXT:    movw %bp, 39(%rdi)
+; SKX-NEXT:    vpextrd $3, %xmm1, %r8d
+; SKX-NEXT:    movw %r8w, 45(%rdi)
+; SKX-NEXT:    vpextrd $2, %xmm1, %r9d
+; SKX-NEXT:    movw %r9w, 42(%rdi)
+; SKX-NEXT:    vpextrd $1, %xmm1, %r10d
+; SKX-NEXT:    movw %r10w, 39(%rdi)
 ; SKX-NEXT:    vmovd %xmm1, %r11d
 ; SKX-NEXT:    movw %r11w, 36(%rdi)
 ; SKX-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
 ; SKX-NEXT:    vpextrd $3, %xmm1, %ebx
 ; SKX-NEXT:    movw %bx, 33(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm1, %r10d
-; SKX-NEXT:    movw %r10w, 30(%rdi)
-; SKX-NEXT:    vpextrd $1, %xmm1, %r9d
-; SKX-NEXT:    movw %r9w, 27(%rdi)
-; SKX-NEXT:    vmovd %xmm1, %r8d
-; SKX-NEXT:    vpextrd $3, %xmm0, %edx
-; SKX-NEXT:    movw %r8w, 24(%rdi)
-; SKX-NEXT:    movw %dx, 9(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm0, %esi
-; SKX-NEXT:    vpextrd $1, %xmm0, %eax
-; SKX-NEXT:    movw %si, 6(%rdi)
-; SKX-NEXT:    movw %ax, 3(%rdi)
-; SKX-NEXT:    vmovd %xmm0, %ecx
-; SKX-NEXT:    movw %cx, (%rdi)
-; SKX-NEXT:    shrl $16, %r15d
-; SKX-NEXT:    movb %r15b, 47(%rdi)
-; SKX-NEXT:    shrl $16, %r14d
-; SKX-NEXT:    movb %r14b, 44(%rdi)
-; SKX-NEXT:    shrl $16, %ebp
-; SKX-NEXT:    movb %bpl, 41(%rdi)
-; SKX-NEXT:    shrl $16, %r11d
-; SKX-NEXT:    movb %r11b, 38(%rdi)
-; SKX-NEXT:    shrl $16, %ebx
-; SKX-NEXT:    movb %bl, 35(%rdi)
-; SKX-NEXT:    shrl $16, %r10d
-; SKX-NEXT:    movb %r10b, 32(%rdi)
-; SKX-NEXT:    shrl $16, %r9d
-; SKX-NEXT:    movb %r9b, 29(%rdi)
-; SKX-NEXT:    shrl $16, %r8d
+; SKX-NEXT:    vpextrd $2, %xmm1, %ebp
+; SKX-NEXT:    movw %bp, 30(%rdi)
+; SKX-NEXT:    vpextrd $1, %xmm1, %r14d
+; SKX-NEXT:    movw %r14w, 27(%rdi)
+; SKX-NEXT:    vmovd %xmm1, %r15d
+; SKX-NEXT:    vpextrd $3, %xmm0, %eax
+; SKX-NEXT:    movw %r15w, 24(%rdi)
+; SKX-NEXT:    movw %ax, 9(%rdi)
+; SKX-NEXT:    vpextrd $2, %xmm0, %ecx
+; SKX-NEXT:    vpextrd $1, %xmm0, %edx
+; SKX-NEXT:    movw %cx, 6(%rdi)
+; SKX-NEXT:    movw %dx, 3(%rdi)
+; SKX-NEXT:    vmovd %xmm0, %esi
+; SKX-NEXT:    movw %si, (%rdi)
+; SKX-NEXT:    rorxl $16, %r8d, %r8d
+; SKX-NEXT:    movb %r8b, 47(%rdi)
+; SKX-NEXT:    rorxl $16, %r9d, %r8d
+; SKX-NEXT:    movb %r8b, 44(%rdi)
+; SKX-NEXT:    rorxl $16, %r10d, %r8d
+; SKX-NEXT:    movb %r8b, 41(%rdi)
+; SKX-NEXT:    rorxl $16, %r11d, %r8d
+; SKX-NEXT:    movb %r8b, 38(%rdi)
+; SKX-NEXT:    rorxl $16, %ebx, %r8d
+; SKX-NEXT:    movb %r8b, 35(%rdi)
+; SKX-NEXT:    rorxl $16, %ebp, %r8d
+; SKX-NEXT:    movb %r8b, 32(%rdi)
+; SKX-NEXT:    rorxl $16, %r14d, %r8d
+; SKX-NEXT:    movb %r8b, 29(%rdi)
+; SKX-NEXT:    rorxl $16, %r15d, %r8d
 ; SKX-NEXT:    movb %r8b, 26(%rdi)
 ; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; SKX-NEXT:    vpextrd $3, %xmm0, %r11d
-; SKX-NEXT:    movw %r11w, 21(%rdi)
-; SKX-NEXT:    vpextrd $2, %xmm0, %r10d
-; SKX-NEXT:    movw %r10w, 18(%rdi)
-; SKX-NEXT:    vpextrd $1, %xmm0, %r9d
-; SKX-NEXT:    movw %r9w, 15(%rdi)
-; SKX-NEXT:    vmovd %xmm0, %r8d
-; SKX-NEXT:    movw %r8w, 12(%rdi)
-; SKX-NEXT:    shrl $16, %edx
-; SKX-NEXT:    movb %dl, 11(%rdi)
-; SKX-NEXT:    shrl $16, %esi
-; SKX-NEXT:    movb %sil, 8(%rdi)
-; SKX-NEXT:    shrl $16, %eax
+; SKX-NEXT:    vpextrd $3, %xmm0, %r8d
+; SKX-NEXT:    movw %r8w, 21(%rdi)
+; SKX-NEXT:    vpextrd $2, %xmm0, %r9d
+; SKX-NEXT:    movw %r9w, 18(%rdi)
+; SKX-NEXT:    vpextrd $1, %xmm0, %r10d
+; SKX-NEXT:    movw %r10w, 15(%rdi)
+; SKX-NEXT:    vmovd %xmm0, %r11d
+; SKX-NEXT:    movw %r11w, 12(%rdi)
+; SKX-NEXT:    rorxl $16, %eax, %eax
+; SKX-NEXT:    movb %al, 11(%rdi)
+; SKX-NEXT:    rorxl $16, %ecx, %eax
+; SKX-NEXT:    movb %al, 8(%rdi)
+; SKX-NEXT:    rorxl $16, %edx, %eax
 ; SKX-NEXT:    movb %al, 5(%rdi)
-; SKX-NEXT:    shrl $16, %ecx
-; SKX-NEXT:    movb %cl, 2(%rdi)
-; SKX-NEXT:    shrl $16, %r11d
-; SKX-NEXT:    movb %r11b, 23(%rdi)
-; SKX-NEXT:    shrl $16, %r10d
-; SKX-NEXT:    movb %r10b, 20(%rdi)
-; SKX-NEXT:    shrl $16, %r9d
-; SKX-NEXT:    movb %r9b, 17(%rdi)
-; SKX-NEXT:    shrl $16, %r8d
-; SKX-NEXT:    movb %r8b, 14(%rdi)
+; SKX-NEXT:    rorxl $16, %esi, %eax
+; SKX-NEXT:    movb %al, 2(%rdi)
+; SKX-NEXT:    rorxl $16, %r8d, %eax
+; SKX-NEXT:    movb %al, 23(%rdi)
+; SKX-NEXT:    rorxl $16, %r9d, %eax
+; SKX-NEXT:    movb %al, 20(%rdi)
+; SKX-NEXT:    rorxl $16, %r10d, %eax
+; SKX-NEXT:    movb %al, 17(%rdi)
+; SKX-NEXT:    rorxl $16, %r11d, %eax
+; SKX-NEXT:    movb %al, 14(%rdi)
 ; SKX-NEXT:    popq %rbx
 ; SKX-NEXT:    popq %r14
 ; SKX-NEXT:    popq %r15

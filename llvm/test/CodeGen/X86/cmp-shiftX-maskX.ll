@@ -157,7 +157,8 @@ define i1 @shr_to_shl_eq_i16_s1_fail(i16 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    andl $32766, %edi # imm = 0x7FFE
-; CHECK-NEXT:    shrl %eax
+; CHECK-NOBMI-NEXT:    shrl %eax
+; CHECK-BMI2-NEXT:    rorxl $1, %eax, %eax
 ; CHECK-NEXT:    cmpw %ax, %di
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
