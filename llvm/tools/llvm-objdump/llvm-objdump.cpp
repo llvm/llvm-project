@@ -1702,12 +1702,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (const auto &[FunctionBBAddrMap, FunctionPGOAnalysis] :
+      for (auto &&[FunctionBBAddrMap, FunctionPGOAnalysis] :
            zip_equal(*BBAddrMapsOrErr, PGOAnalyses)) {
-        AddrToBBAddrMap.emplace(FunctionBBAddrMap.Addr, FunctionBBAddrMap);
+        uint64_t Addr = FunctionBBAddrMap.Addr;
+        AddrToBBAddrMap.emplace(Addr, std::move(FunctionBBAddrMap));
         if (FunctionPGOAnalysis.FeatEnable.anyEnabled())
-          AddrToPGOAnalysisMap.emplace(FunctionBBAddrMap.Addr,
-                                       FunctionPGOAnalysis);
+          AddrToPGOAnalysisMap.emplace(Addr, std::move(FunctionPGOAnalysis));
       }
     }
   };
