@@ -23,13 +23,13 @@ int main() {
 // CHECK: ERROR: AddressSanitizer: heap-use-after-free on address
 // CHECK: {{0x.*}} at pc {{0x.*}} bp {{0x.*}} sp {{0x.*}}
 // CHECK: READ of size 1 at {{0x.*}} thread T0
-// CHECK:   #0 {{0x.*}} main{{.*}} {{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 5]]
+// CHECK:   #0 {{0x.*}} main{{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 5]]
 // CHECK: {{0x.*}} is located 5 bytes inside of 10-byte region {{.0x.*,0x.*}}
 // CHECK: freed by thread T0 here:
-// CHECK:   #1 {{0x.*}} main{{.*}} {{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 9]]
+// CHECK:   #1 {{0x.*}} main{{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 9]]
 // CHECK: previously allocated by thread T0 here:
-// CHECK:   #1 {{0x.*}} alloc{{.*}} {{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 16]]
-// CHECK:   #2 {{0x.*}} main{{.*}} {{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 13]]
+// CHECK:   #1 {{0x.*}} alloc{{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 16]]
+// CHECK:   #2 {{0x.*}} main {{.*}}use-after-free-symbolizer-markup.cpp:[[#@LINE - 13]]
 // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
 // CHECK: Global redzone:
 // CHECK: ASan internal:

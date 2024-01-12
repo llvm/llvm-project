@@ -48,11 +48,11 @@ int main() {
 }
 
 //      CHECK: WARNING: ThreadSanitizer: data race
-//      CHECK:   Write of size 4 at {{.*}} by thread T1:
-//  CHECK-DAG:     #0 {{0x.*}} foo1{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 39]]
-// CHECK-NEXT:     #1 {{0x.*}} bar1{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 34]]
-// CHECK-NEXT:     #2 {{0x.*}} Thread1{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 17]]
-//  CHECK-DAG:   Previous read of size 4 at {{.*}} by main thread:
-//  CHECK-DAG:     #0 {{0x.*}} foo2{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 33]]
-// CHECK-NEXT:     #1 {{0x.*}} bar2{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 25]]
-// CHECK-NEXT:     #2 {{0x.*}} main{{.*}} {{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 13]]
+//      CHECK:   Write of size 4 at {{0x.*}} by thread T1:
+//      CHECK:     #0 {{0x.*}} foo1{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 39]]
+// CHECK-NEXT:     #1 {{0x.*}} bar1{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 34]]
+// CHECK-NEXT:     #2 {{0x.*}} Thread1{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 17]]
+//      CHECK:   Previous read of size 4 at {{.*}} by main thread:
+// CHECK-NEXT:     #0 {{0x.*}} foo2{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 33]]
+// CHECK-NEXT:     #1 {{0x.*}} bar2{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 25]]
+// CHECK-NEXT:     #2 {{0x.*}} main{{.*}}simple_stack_symbolizer_markup.cpp:[[#@LINE - 13]]
