@@ -430,6 +430,17 @@ struct A : S<int> {};
 struct B : S<bool> {};
 bool x = A{} == B{}; // expected-warning {{ambiguous}}
 } // namespace class_and_member_template
+
+namespace ambiguous_case {
+template <class T>
+struct Foo {};
+template <class T, class U> bool operator==(Foo<U>, Foo<T*>); // expected-note{{candidate}}
+template <class T, class U> bool operator==(Foo<T*>, Foo<U>); // expected-note{{candidate}}
+
+void test() {
+    Foo<int*>() == Foo<int*>(); // expected-error{{ambiguous}}
+}
+} // namespace ambiguous_case
 } // namespace
 namespace ADL_GH68901{
 namespace test1 {
