@@ -1019,9 +1019,12 @@ foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABL
 endforeach()
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
+file(READ ${LIBCXX_ASSERTION_HANDLER_FILE} _LIBCPP_ASSERTION_HANDLER_OVERRIDE)
+configure_file("__assertion_handler.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler" @ONLY)
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
+                  "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
@@ -1055,6 +1058,12 @@ if (LIBCXX_INSTALL_HEADERS)
 
   # Install the generated __config_site file to the per-target include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated __assertion_handler file to the per-target include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

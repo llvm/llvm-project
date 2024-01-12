@@ -1,0 +1,14 @@
+// -*- C++ -*-
+#include <__config>
+#include <__verbose_abort>
+
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+
+#define _LIBCPP_ASSERTION_HANDLER(...) _LIBCPP_VERBOSE_ABORT(__VA_ARGS__)
+
+#else
+
+// TODO(hardening): in production, trap rather than abort.
+#define _LIBCPP_ASSERTION_HANDLER(...) _LIBCPP_VERBOSE_ABORT(__VA_ARGS__)
+
+#endif // #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG

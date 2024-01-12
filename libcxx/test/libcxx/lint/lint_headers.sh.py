@@ -14,6 +14,7 @@ def exclude_from_consideration(path):
         or path.endswith(".modulemap.in")
         or os.path.basename(path) == "__config"
         or os.path.basename(path) == "__config_site.in"
+        or os.path.basename(path) == "__assertion_handler.in"
         or os.path.basename(path) == "libcxx.imp"
         or os.path.basename(path).startswith("__pstl")
         or not os.path.isfile(path)  # TODO: Remove once PSTL integration is finished
