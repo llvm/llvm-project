@@ -135,6 +135,9 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> CRCRecognize("recognize-crc", cl::desc("CRC RECOGNIZE"),
+                                  cl::init(false), cl::Hidden);
+
 namespace {
 
 class LoopIdiomRecognize {
@@ -184,6 +187,15 @@ private:
     UnorderedAtomicMemcpy,
     DontUse // Dummy retval never to be used. Allows catching errors in retval
             // handling.
+  };
+
+  struct CRCInfo {
+    Value *CRCInput;
+    Value *CRCOutput;
+    Value *DataInput;
+    uint64_t Width;
+    uint64_t Polynomial;
+    bool BitReversed;
   };
 
   /// \name Countable Loop Idiom Handling
@@ -242,6 +254,8 @@ private:
 
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
+  std::optional<CRCInfo> looksLikeCRC(const SCEV *BECount);
+  bool recognizeCRC(const SCEV *BECount);
 
   /// @}
 };
@@ -298,13 +312,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   ApplyCodeSizeHeuristics =
       L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
 
-  HasMemset = TLI->has(LibFunc_memset);
-  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
-  HasMemcpy = TLI->has(LibFunc_memcpy);
-
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
-    if (SE->hasLoopInvariantBackedgeTakenCount(L))
-      return runOnCountableLoop();
+  if (SE->hasLoopInvariantBackedgeTakenCount(L))
+    return runOnCountableLoop();
 
   return runOnNoncountableLoop();
 }
@@ -329,14 +338,23 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
                     << "] Countable Loop %" << CurLoop->getHeader()->getName()
                     << "\n");
 
+  bool MadeChange = false;
+  if (CRCRecognize)
+    MadeChange |= recognizeCRC(BECount);
+
+  HasMemset = TLI->has(LibFunc_memset);
+  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
+  HasMemcpy = TLI->has(LibFunc_memcpy);
+
+  if (!(HasMemset || HasMemsetPattern || HasMemcpy))
+    return MadeChange;
+
   // The following transforms hoist stores/memsets into the loop pre-header.
   // Give up if the loop has instructions that may throw.
   SimpleLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
     return false;
-
-  bool MadeChange = false;
 
   // Scan all the blocks in the loop that are not in subloops.
   for (auto *BB : CurLoop->getBlocks()) {
@@ -2867,4 +2885,212 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   ++NumShiftUntilZero;
   return MadeChange;
+}
+
+static uint64_t reverseBits(uint64_t Num, unsigned NumBits) {
+  uint64_t Reversed = 0;
+  for (unsigned i = 1; i <= NumBits; i++) {
+    Reversed |= (Num & 1) << (NumBits - i);
+    Num >>= 1;
+  }
+  return Reversed;
+}
+
+bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
+  // Step one: Check if the loop looks like crc, and extract some useful
+  // information for us to check
+  std::optional<CRCInfo> MaybeCRC = looksLikeCRC(BECount);
+  if (!MaybeCRC)
+    return false;
+  CRCInfo CRC = *MaybeCRC;
+
+  uint64_t CRCSize = CRC.CRCInput->getType()->getScalarSizeInBits();
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Found potential CRCLoop "
+                    << *CurLoop << "\n"
+                    << "Input CRC: " << *CRC.CRCInput << "\n"
+                    << "Output CRC: " << *CRC.CRCOutput << "\n"
+                    << "GeneratorPolynomial: " << CRC.Polynomial << "\n"
+                    << "CRC Size: " << CRCSize << "\n"
+                    << "CRC Width: " << CRC.Width << "\n"
+                    << "Reversed: " << CRC.BitReversed << "\n");
+  if (CRC.DataInput) {
+    LLVM_DEBUG(dbgs() << "Data Input: " << *CRC.DataInput << "\n"
+                      << "Data Size: "
+                      << CRC.DataInput->getType()->getScalarSizeInBits()
+                      << "\n");
+  }
+
+  return false;
+}
+
+std::optional<LoopIdiomRecognize::CRCInfo>
+LoopIdiomRecognize::looksLikeCRC(const SCEV *BECount) {
+  // Initial checks to see if this loop looks like CRC:
+  // - Inner most loop
+  // - One block
+  // - One exit
+  // - Iteration count is 8
+
+  // Check if this is inner most loop
+  if (!CurLoop->isInnermost())
+    return std::nullopt;
+
+  // Since we are far enough in the optimization pipeline that small branches
+  // will have been folded into Select instructions, if we have branches we are
+  // unlikely to be CRC. To reduce complexity, only consider single-block loops
+  // for CRC recognition
+  if (CurLoop->getBlocks().size() > 1) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Loops with more than one"
+                      << "block are unsupported\n");
+    return std::nullopt;
+  }
+
+  // Ensure one exit block
+  const BasicBlock *ExitBlock = CurLoop->getExitBlock();
+  if (!ExitBlock)
+    return std::nullopt;
+
+  // Check iteration count is 8
+  const SCEV *TripCountSCEV =
+      SE->getTripCountFromExitCount(BECount, BECount->getType(), CurLoop);
+  const SCEVConstant *TripCountSCEVConst =
+      dyn_cast<SCEVConstant>(TripCountSCEV);
+  if (!TripCountSCEVConst)
+    return std::nullopt;
+  APInt TripCount = TripCountSCEVConst->getAPInt();
+  // Only support one byte CRC loops. Loops with tripcount 16 or 32 can also be
+  // CRC, but this is currently unsupported
+  if (TripCount != 8)
+    return std::nullopt;
+
+  // Ensure only one value that is live across the loop boundary, and track the
+  // operations on this value. This should include:
+  // 1) A phi with an initial value outside the loop
+  // 2) Shift operation
+  // 3) ICMP operation
+
+  // Ensure only one value is live across the loop boundary. LCSSA ensures any
+  // live values are captured in a PHI of the exit block.
+  Instruction *LoopOutput = nullptr;
+  for (const PHINode &ExitPhi : ExitBlock->phis()) {
+    for (const Use &IncomingUse : ExitPhi.incoming_values()) {
+      Instruction *IncomingUser = dyn_cast<Instruction>(&IncomingUse);
+      if (!IncomingUser)
+        continue;
+      if (CurLoop->contains(IncomingUser)) {
+        if (LoopOutput)
+          return std::nullopt;
+        LoopOutput = IncomingUser;
+      }
+    }
+  }
+
+  if (!LoopOutput)
+    return std::nullopt;
+
+  auto AddAllInstOps = [](Instruction *I,
+                          SmallVectorImpl<Instruction *> &Worklist) {
+    for (Use &Op : I->operands()) {
+      Instruction *OpInst = dyn_cast<Instruction>(Op.get());
+      if (OpInst)
+        Worklist.push_back(OpInst);
+    }
+  };
+
+  // Follow this value in the loop
+  SmallVector<Instruction *, 4> Worklist;
+  SmallPtrSet<Instruction *, 4> Visited;
+  bool FoundIcmp = false;
+  BinaryOperator *CRCShift = nullptr;
+  ConstantInt *GeneratorPolynomial = nullptr;
+  Value *CRCInput = nullptr;
+  Worklist.push_back(LoopOutput);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    if (Visited.contains(I))
+      continue;
+    Visited.insert(I);
+    if (SelectInst *Select = dyn_cast<SelectInst>(I)) {
+      FoundIcmp |= isa<ICmpInst>(Select->getCondition());
+      AddAllInstOps(Select, Worklist);
+    } else if (isa<ICmpInst>(I)) {
+      // Instead of tracking the condition and working out if it's based on
+      // MSB of crc/data, just greedily assume it will be and check later.
+      FoundIcmp = true;
+    } else if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(I)) {
+      switch (BinOp->getOpcode()) {
+      default:
+        break;
+      case Instruction::Shl:
+      case Instruction::LShr: {
+        // This shift could be the data or the crc. Either way, the RHS should
+        // be constant one.
+        Instruction *ShLHS = dyn_cast<Instruction>(BinOp->getOperand(0));
+        ConstantInt *ShRHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
+        if (!ShRHS || !ShLHS || ShRHS->getZExtValue() != 1)
+          return std::nullopt;
+        CRCShift = BinOp;
+        Worklist.push_back(ShLHS);
+        break;
+      }
+      case Instruction::Xor: {
+        Value *XorRHS = BinOp->getOperand(1);
+        if (ConstantInt *RHSConst = dyn_cast<ConstantInt>(XorRHS))
+          GeneratorPolynomial = RHSConst;
+        AddAllInstOps(BinOp, Worklist);
+        break;
+      }
+      }
+    } else if (PHINode *PHI = dyn_cast<PHINode>(I)) {
+      for (BasicBlock *IncomingBlock : PHI->blocks()) {
+        Value *IncomingValue = PHI->getIncomingValueForBlock(IncomingBlock);
+
+        if (CurLoop->contains(IncomingBlock)) {
+          if (Instruction *IncomingI = dyn_cast<Instruction>(IncomingValue)) {
+            Worklist.push_back(IncomingI);
+          }
+        } else {
+          CRCInput = IncomingValue;
+        }
+      }
+    }
+  }
+
+  if (!(CRCShift && GeneratorPolynomial && CRCInput)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Does not look like CRC");
+    return std::nullopt;
+  }
+
+  // The crc loop will have either one or two inputs depending on whether the
+  // data is xor'd inside or outside the loop. Assume any additional inputs that
+  // isn't our crc input is the data.
+  Value *DataInput = nullptr;
+  PHINode *InductionPhi = CurLoop->getInductionVariable(*SE);
+  for (const PHINode &EntryPhi : CurLoop->getHeader()->phis()) {
+    if (&EntryPhi == InductionPhi)
+      continue;
+    for (BasicBlock *BB : EntryPhi.blocks()) {
+      if (!CurLoop->contains(BB)) {
+        Value *IncomingVal = EntryPhi.getIncomingValueForBlock(BB);
+        if (IncomingVal != CRCInput) {
+          // Only allow exactly one additional input to the loop.
+          if (DataInput)
+            return std::nullopt;
+          DataInput = IncomingVal;
+        }
+      }
+    }
+  }
+
+  bool Reversed = CRCShift->getOpcode() == Instruction::LShr;
+
+  uint64_t Polynomial = GeneratorPolynomial->getZExtValue();
+  if (Reversed)
+    Polynomial =
+        reverseBits(Polynomial, CRCInput->getType()->getScalarSizeInBits());
+
+  CRCInfo CRC = {CRCInput,   LoopOutput, DataInput, TripCount.getZExtValue(),
+                 Polynomial, Reversed};
+
+  return std::optional<CRCInfo>{CRC};
 }
