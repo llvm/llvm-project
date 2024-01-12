@@ -44,6 +44,7 @@ class Module;
 class ModuleSlotTracker;
 class raw_ostream;
 class DPValue;
+class DbgRecord;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;

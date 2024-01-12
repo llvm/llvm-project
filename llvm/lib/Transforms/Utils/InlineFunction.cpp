@@ -1710,7 +1710,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   };
 
   // Helper-util for updating debug-info records attached to instructions.
-  auto UpdateDPV = [&](DPValue *DPV) {
+  auto UpdateDPV = [&](DbgRecord *DPV) {
     assert(DPV->getDebugLoc() && "Debug Value must have debug loc");
     if (NoInlineLineTables) {
       DPV->setDebugLoc(TheCallDL);
@@ -1728,7 +1728,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
          ++BI) {
       UpdateInst(*BI);
-      for (DPValue &DPV : BI->getDbgValueRange()) {
+      for (DbgRecord &DPV : BI->getDbgValueRange()) {
         UpdateDPV(&DPV);
       }
     }
