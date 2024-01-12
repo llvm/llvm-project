@@ -327,9 +327,9 @@ bool x = X() == X(); // expected-warning {{ambiguous}}
 namespace GH53954{
 namespace friend_template_1 {
 struct P {
-    template <class T>
-    friend bool operator==(const P&, const T&); // expected-note {{candidate}} \
-                                                // expected-note {{ambiguous candidate function with reversed arguments}}
+  template <class T>
+  friend bool operator==(const P&, const T&) { return true; } // expected-note {{candidate}} \
+                              // expected-note {{ambiguous candidate function with reversed arguments}}
 };
 struct A : public P {};
 struct B : public P {};
@@ -338,16 +338,42 @@ bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded 
 
 namespace friend_template_2 {
 struct P {
-    template <class T>
-    friend bool operator==(const T&, const P&); // expected-note {{candidate}} \
-                                                // expected-note {{ambiguous candidate function with reversed arguments}}
+  template <class T>
+  friend bool operator==(const T&, const P&) { return true; } // expected-note {{candidate}} \
+                                              // expected-note {{ambiguous candidate function with reversed arguments}}
 };
 struct A : public P {};
 struct B : public P {};
 bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
 }
 
-namespace member_template {
+namespace friend_template_class_template {
+template<class S>
+struct P {
+  template <class T>
+  friend bool operator==(const T&, const P&) { // expected-note 2 {{candidate}}
+    return true;
+  }
+};
+struct A : public P<int> {};
+struct B : public P<bool> {};
+bool check(A a, B b) { return a == b; } // expected-warning {{ambiguous}}
+}
+
+namespace friend_template_fixme {
+// FIXME(GH70210): This should not rewrite operator== and definitely not a hard error.
+struct P {
+  template <class T>
+  friend bool operator==(const T &, const P &) { return true; } // expected-note 2 {{candidate}}
+  template <class T>
+  friend bool operator!=(const T &, const P &) { return true; } // expected-note {{candidate}}
+};
+struct A : public P {};
+struct B : public P {};
+bool check(A a, B b) { return a != b; } // expected-error{{ambiguous}}
+}
+
+namespace member_template_1 {
 struct P {
   template<class S>
   bool operator==(const S &) const; // expected-note {{candidate}} \
@@ -356,7 +382,17 @@ struct P {
 struct A : public P {};
 struct B : public P {};
 bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
-}
+} // namespace member_template
+
+namespace member_template_2{
+template <typename T>
+class Foo {
+ public:
+  template <typename U = T>
+  bool operator==(const Foo& other) const;
+};
+bool x = Foo<int>{} == Foo<int>{};
+} // namespace template_member_opeqeq
 
 namespace non_member_template_1 {
 struct P {};
@@ -368,11 +404,9 @@ struct A : public P {};
 struct B : public P {};
 bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
 
-template<class S>
-bool operator!=(const P&, const S &);
+template<class S> bool operator!=(const P&, const S &);
 bool fine(A a, B b) { return a == b; } // Ok. Found a matching operator!=.
-}
-}
+} // namespace non_member_template_1
 
 namespace non_member_template_2 {
 struct P {};
@@ -383,8 +417,20 @@ bool operator==(const S&, const P&); // expected-note {{candidate}} \
 struct A : public P {};
 struct B : public P {};
 bool check(A a, B b) { return a == b; } // expected-warning {{use of overloaded operator '==' (with operand types 'A' and 'B') to be ambiguous}}
-}
+} // namespace non_member_template_2
 
+namespace class_and_member_template {
+template <class T>
+struct S {
+    template <typename OtherT>
+    bool operator==(const OtherT &rhs); // expected-note {{candidate}} \
+                                        // expected-note {{reversed arguments}}
+};
+struct A : S<int> {};
+struct B : S<bool> {};
+bool x = A{} == B{}; // expected-warning {{ambiguous}}
+} // namespace class_and_member_template
+} // namespace
 namespace ADL_GH68901{
 namespace test1 {
 namespace A {

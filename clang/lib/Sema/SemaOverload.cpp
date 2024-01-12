@@ -7723,9 +7723,19 @@ bool Sema::CheckNonDependentConversions(
        ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
-      unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? Args.size() - 1 - (ThisConversions + I)
-                             : (ThisConversions + I);
+      unsigned ConvIdx;
+      if (PO == OverloadCandidateParamOrder::Reversed) {
+        ConvIdx = Args.size() - 1 - I;
+        assert(Args.size() + ThisConversions == 2 &&
+               "number of args (including 'this') must be exactly 2 for "
+               "reversed order");
+        // For members, there would be only one arg 'Args[0]' whose ConvIdx
+        // would also be 0. 'this' got ConvIdx = 1 previously.
+        assert(!HasThisConversion || (ConvIdx == 0 && I == 0));
+      } else {
+        // For members, 'this' got ConvIdx = 0 previously.
+        ConvIdx = ThisConversions + I;
+      }
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
@@ -10127,9 +10137,13 @@ static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
                            const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-  if (F1->isTemplateInstantiation() && F2->isTemplateInstantiation() &&
-      declaresSameEntity(F1->getPrimaryTemplate(), F2->getPrimaryTemplate())) {
-    return true;
+  auto PT1 = F1->getPrimaryTemplate();
+  auto PT2 = F2->getPrimaryTemplate();
+  if (PT1 && PT2) {
+    if (declaresSameEntity(PT1, PT2) ||
+        declaresSameEntity(PT1->getInstantiatedFromMemberTemplate(),
+                           PT2->getInstantiatedFromMemberTemplate()))
+      return true;
   }
   // TODO: It is not clear whether comparing parameters is necessary (i.e.
   // different functions with same params). Consider removing this (as no test
