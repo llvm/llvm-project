@@ -25,7 +25,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include <sstream>
 
 using namespace llvm;
 
@@ -91,7 +90,7 @@ void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
 }
 
 void RISCVTargetELFStreamer::emitDirectiveOptionArch(
-   const ArrayRef<RISCVOptionArchArg> &Args) {
+    const ArrayRef<RISCVOptionArchArg> &Args) {
   if (Args.size() == 1) {
     RISCVOptionArchArg Arg = Args[0];
     if (Arg.Type == RISCVOptionArchArgType::Full) {
