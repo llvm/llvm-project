@@ -65,3 +65,32 @@ func.func @proc_pointer_global() {
 // CHECK: %[[VAL_0:.*]] = fir.address_of(@ProcedurePointer) : !fir.ref<(!fir.ref<i32>) -> f32>
 // CHECK: %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<(!fir.ref<i32>) -> f32>
 }
+
+func.func @block_arg_rewrite(%arg0: !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>,  %cdt : i1) {
+  cf.cond_br %cdt, ^bb1, ^bb2
+^bb1:  // pred: ^bb0
+  cf.br ^bb3(%arg0 : !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+^bb2:  // pred: ^bb0
+  %8 = fir.absent !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>
+  cf.br ^bb3(%8 : !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+^bb3(%9: !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>):  // 2 preds: ^bb1, ^bb2
+  cf.br ^bb4
+^bb4:  // pred: ^bb3
+  fir.call @dosomething(%9) : (!fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>) -> ()
+  return
+}
+// CHECK-LABEL:   func.func @block_arg_rewrite(
+// CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>,
+// CHECK-SAME:                                 %[[VAL_1:.*]]: i1) {
+// CHECK:           cf.cond_br %[[VAL_1]], ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb3(%[[VAL_0]] : !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>)                           
+// CHECK:         ^bb2:
+// CHECK:           %[[VAL_2:.*]] = fir.absent !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>                         
+// CHECK:           cf.br ^bb3(%[[VAL_2]] : !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>)                           
+// CHECK:         ^bb3(%[[VAL_3:.*]]: !fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>):
+// CHECK:           cf.br ^bb4
+// CHECK:         ^bb4:
+// CHECK:           fir.call @dosomething(%[[VAL_3]]) : (!fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>) -> ()
+
+func.func private @dosomething(!fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
