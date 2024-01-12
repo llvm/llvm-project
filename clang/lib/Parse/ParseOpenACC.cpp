@@ -164,9 +164,9 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
   llvm_unreachable("Unknown 'Kind' Passed");
 }
 
-// Used for cases where we have a token we want to check against an
-// 'identifier-like' token, but don't want to give awkward error messages in
-// cases where it is accidentially a keyword.
+/// Used for cases where we have a token we want to check against an
+/// 'identifier-like' token, but don't want to give awkward error messages in
+/// cases where it is accidentially a keyword.
 bool isTokenIdentifierOrKeyword(Parser &P, Token Tok) {
   if (Tok.is(tok::identifier))
     return true;
