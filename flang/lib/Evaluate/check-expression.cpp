@@ -188,15 +188,14 @@ struct IsActuallyConstantHelper {
     return common::visit([this](const auto &y) { return (*this)(y); }, x.u);
   }
   bool operator()(const StructureConstructor &x) {
-    // If the comp-spec of a derived-type-spec is a structure constructor that
-    // is not a constant, the derived-type-spec is not a constant
-    if (!UnwrapExpr<Constant<SomeDerived>>(x)) {
-      return false;
-    }
-
     for (const auto &pair : x) {
       const Expr<SomeType> &y{pair.second.value()};
-      if (!(*this)(y) && !IsNullPointer(y)) {
+      const auto sym{pair.first};
+      const bool compIsConstant{(*this)(y)};
+      // If an allocatable component is initialized by a constant,
+      // the structure constructor is not a constant.
+      if ((!compIsConstant && !IsNullPointer(y)) ||
+          (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
     }
