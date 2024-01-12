@@ -505,12 +505,13 @@ static Error materializeDebugInfoOpt(MCCASReader &Reader,
                           StringRef FormData, bool) {
     if (Form == dwarf::Form::DW_FORM_ref4_cas ||
         Form == dwarf::Form::DW_FORM_strp_cas) {
-      auto Reader = BinaryStreamReader(FormData, endianness::little);
-      uint64_t Data64;
-      if (auto Err = Reader.readULEB128(Data64))
-        handleAllErrors(std::move(Err));
+      DataExtractor Extractor(FormData, true, 8);
+      DataExtractor::Cursor Cursor(0);
+      uint64_t Data64 = Extractor.getULEB128(Cursor);
+      if (!Cursor)
+        handleAllErrors(Cursor.takeError());
       uint32_t Data32 = Data64;
-      assert(Data32 == Data64 && Reader.empty());
+      assert(Data32 == Data64 && Extractor.eof(Cursor));
       SectionStream->write(reinterpret_cast<char *>(&Data32), sizeof(Data32));
     } else
       *SectionStream << FormData;
@@ -1710,13 +1711,14 @@ Error MCCASBuilder::createStringSection(
 /// Reads and returns the length field of a dwarf header contained in Reader,
 /// assuming Reader is positioned at the beginning of the header. The Reader's
 /// state is advanced to the first byte after the header.
-static Expected<size_t> getSizeFromDwarfHeader(BinaryStreamReader &Reader) {
+static Expected<size_t> getSizeFromDwarfHeader(DataExtractor &Extractor,
+                                               DataExtractor::Cursor &Cursor) {
   // From DWARF 5 section 7.4:
   // In the 32-bit DWARF format, an initial length field [...] is an unsigned
   // 4-byte integer (which must be less than 0xfffffff0);
-  uint32_t Word1;
-  if (auto E = Reader.readInteger(Word1))
-    return std::move(E);
+  uint32_t Word1 = Extractor.getU32(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
 
   // TODO: handle 64-bit DWARF format.
   if (Word1 >= 0xfffffff0)
@@ -1724,17 +1726,6 @@ static Expected<size_t> getSizeFromDwarfHeader(BinaryStreamReader &Reader) {
                              "DWARF input is not in the 32-bit format");
 
   return Word1;
-}
-
-// TODO: Remove
-Expected<size_t>
-mccasformats::v1::getSizeFromDwarfHeaderAndSkip(BinaryStreamReader &Reader) {
-  Expected<size_t> Size = getSizeFromDwarfHeader(Reader);
-  if (!Size)
-    return Size.takeError();
-  if (auto E = Reader.skip(*Size))
-    return std::move(E);
-  return Size;
 }
 
 /// Returns the Abbreviation Offset field of a Dwarf Compilation Unit (CU)
@@ -1745,32 +1736,33 @@ static Expected<CUInfo>
 getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
                                   endianness Endian,
                                   std::optional<uint32_t> NewOffset) {
-  BinaryStreamReader Reader(toStringRef(CUData), Endian);
-  Expected<size_t> Size = getSizeFromDwarfHeader(Reader);
+  DataExtractor Extractor(toStringRef(CUData), Endian == endianness::little, 8);
+  DataExtractor::Cursor Cursor(0);
+  Expected<size_t> Size = getSizeFromDwarfHeader(Extractor, Cursor);
   if (!Size)
     return Size.takeError();
 
-  size_t AfterSizeOffset = Reader.getOffset();
+  size_t AfterSizeOffset = Cursor.tell();
 
   // 2-byte Dwarf version identifier.
-  uint16_t DwarfVersion;
-  if (auto E = Reader.readInteger(DwarfVersion))
-    return std::move(E);
+  uint16_t DwarfVersion = Extractor.getU16(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
 
   if (DwarfVersion >= 5) {
     // From Dwarf 5 Section 7.5.1.1:
     // Compile Unit Header Format is now changed with unit_type and address_size
     // after the version. Parse both values from the header.
-    uint8_t UnitType;
-    if (auto E = Reader.readInteger(UnitType))
-      return std::move(E);
+    uint8_t UnitType = Extractor.getU8(Cursor);
+    if (!Cursor)
+      return Cursor.takeError();
     if (UnitType != dwarf::DW_UT_compile)
       return createStringError(
           inconvertibleErrorCode(),
           "Unit type is not DW_UT_compile, and is incompatible with MCCAS!");
-    uint8_t AddressSize;
-    if (auto E = Reader.readInteger(AddressSize))
-      return std::move(E);
+    uint8_t AddressSize = Extractor.getU8(Cursor);
+    if (!Cursor)
+      return Cursor.takeError();
     if (AddressSize != 8)
       return createStringError(
           inconvertibleErrorCode(),
@@ -1778,10 +1770,10 @@ getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
   }
 
   // TODO: Handle Dwarf 64 format, which uses 8 bytes.
-  size_t AbbrevPosition = Reader.getOffset();
-  uint32_t AbbrevOffset;
-  if (auto E = Reader.readInteger(AbbrevOffset))
-    return std::move(E);
+  size_t AbbrevPosition = Cursor.tell();
+  uint32_t AbbrevOffset = Extractor.getU32(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
 
   if (NewOffset.has_value()) {
     // FIXME: safe but ugly cast. Similar to: llvm::arrayRefFromStringRef.
@@ -1793,11 +1785,8 @@ getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
       return std::move(E);
   }
 
-  Reader.setOffset(AfterSizeOffset);
-  if (auto E = Reader.skip(*Size))
-    return std::move(E);
-
-  return CUInfo{Reader.getOffset(), AbbrevOffset, DwarfVersion};
+  Cursor.seek(AfterSizeOffset + *Size);
+  return CUInfo{Cursor.tell(), AbbrevOffset, DwarfVersion};
 }
 
 /// Given a list of MCFragments, return a vector with the concatenation of their
@@ -3125,14 +3114,15 @@ struct DIEVisitor {
 
   Error visitDIERef(DIEDedupeTopLevelRef Ref);
   Error visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack);
-  Error visitDIEAttrs(BinaryStreamReader &DataReader, StringRef DIEData,
-                      ArrayRef<AbbrevContent> DIEContents);
+  Error visitDIEAttrs(DataExtractor &Extractor, DataExtractor::Cursor &Cursor,
+                      StringRef DIEData, ArrayRef<AbbrevContent> DIEContents);
   Error materializeAbbrevDIE(unsigned AbbrevIdx);
 
   uint16_t DwarfVersion;
   SmallVector<AbbrevEntry> AbbrevEntryCache;
   ArrayRef<StringRef> AbbrevEntries;
-  BinaryStreamReader DistinctReader;
+  DataExtractor DistinctExtractor;
+  DataExtractor::Cursor DistinctCursor;
   StringRef DistinctData;
 
   std::function<void(StringRef)> HeaderCallback;
@@ -3143,7 +3133,8 @@ struct DIEVisitor {
   std::function<void(StringRef)> NewBlockCallback;
 };
 
-Error DIEVisitor::visitDIEAttrs(BinaryStreamReader &DataReader,
+Error DIEVisitor::visitDIEAttrs(DataExtractor &Extractor,
+                                DataExtractor::Cursor &Cursor,
                                 StringRef DIEData,
                                 ArrayRef<AbbrevContent> DIEContents) {
   constexpr auto IsLittleEndian = true;
@@ -3153,29 +3144,32 @@ Error DIEVisitor::visitDIEAttrs(BinaryStreamReader &DataReader,
 
   for (auto Contents : DIEContents) {
     bool DataInDistinct = Contents.FormInDistinctData;
-    auto &ReaderForData = DataInDistinct ? DistinctReader : DataReader;
+    auto &ExtractorForData = DataInDistinct ? DistinctExtractor : Extractor;
+    auto &CursorForData = DataInDistinct ? DistinctCursor : Cursor;
     StringRef DataToUse = DataInDistinct ? DistinctData : DIEData;
     Expected<uint64_t> FormSize =
         Contents.FormSize
             ? *Contents.FormSize
             : getFormSize(Contents.Form, FormParams, DataToUse,
-                          ReaderForData.getOffset(), IsLittleEndian, AddrSize);
+                          CursorForData.tell(), IsLittleEndian, AddrSize);
     if (!FormSize)
       return FormSize.takeError();
 
-    ArrayRef<char> RawBytes;
-    if (auto E = ReaderForData.readArray(RawBytes, *FormSize))
-      return E;
-    AttrCallback(Contents.Attr, Contents.Form, toStringRef(RawBytes),
-                 DataInDistinct);
+    StringRef RawBytes;
+    if (*FormSize)
+      RawBytes = ExtractorForData.getBytes(CursorForData, *FormSize);
+    if (!CursorForData)
+      return CursorForData.takeError();
+    AttrCallback(Contents.Attr, Contents.Form, RawBytes, DataInDistinct);
   }
   return Error::success();
 }
 
-static Expected<uint64_t> readAbbrevIdx(BinaryStreamReader &Reader) {
-  uint64_t Idx;
-  if (auto E = Reader.readULEB128(Idx))
-    return std::move(E);
+static Expected<uint64_t> readAbbrevIdx(DataExtractor &Extractor,
+                                        DataExtractor::Cursor &Cursor) {
+  uint64_t Idx = Extractor.getULEB128(Cursor);
+  if (!Cursor)
+    return Cursor.takeError();
   return Idx;
 }
 
@@ -3296,12 +3290,13 @@ Error DIEVisitor::materializeAbbrevDIE(unsigned AbbrevIdx) {
 /// implementation of a Depth First Search, and this function is used to
 /// simulate a return from a recursive callback, by restoring the locals to a
 /// previous stack frame.
-static void popStack(BinaryStreamReader &Reader, StringRef &Data,
+static void popStack(DataExtractor &Extractor, DataExtractor::Cursor &Cursor,
+                     StringRef &Data,
                      std::stack<std::pair<StringRef, unsigned>> &StackOfNodes) {
   auto DataAndOffset = StackOfNodes.top();
-  Reader = BinaryStreamReader(DataAndOffset.first, llvm::endianness::little);
+  Extractor = DataExtractor(DataAndOffset.first, true, 8);
   Data = DataAndOffset.first;
-  Reader.setOffset(DataAndOffset.second);
+  Cursor.seek(DataAndOffset.second);
   StackOfNodes.pop();
 }
 
@@ -3315,11 +3310,13 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
   std::stack<std::pair<StringRef, unsigned>> StackOfNodes;
   auto Data = DIEChildrenStack.empty() ? StringRef()
                                        : DIEChildrenStack.front().getData();
-  BinaryStreamReader Reader(Data, llvm::endianness::little);
+  DataExtractor Extractor(Data, true, 8);
+  DataExtractor::Cursor Cursor(0);
 
-  while (!DistinctReader.empty()) {
+  while (!DistinctExtractor.eof(DistinctCursor)) {
 
-    Expected<uint64_t> MaybeAbbrevIdx = readAbbrevIdx(DistinctReader);
+    Expected<uint64_t> MaybeAbbrevIdx =
+        readAbbrevIdx(DistinctExtractor, DistinctCursor);
     if (!MaybeAbbrevIdx)
       return MaybeAbbrevIdx.takeError();
     auto AbbrevIdx = *MaybeAbbrevIdx;
@@ -3329,8 +3326,8 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     // continue materialization of the parent's siblings that may exist.
     if (AbbrevIdx == getEndOfDIESiblingsMarker()) {
       EndTagCallback(true /*HadChildren*/);
-      if (!StackOfNodes.empty() && Reader.empty())
-        popStack(Reader, Data, StackOfNodes);
+      if (!StackOfNodes.empty() && Extractor.eof(Cursor))
+        popStack(Extractor, Cursor, Data, StackOfNodes);
       continue;
     }
 
@@ -3338,11 +3335,12 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
     // another CAS Block, we have to push the current CAS Object on the stack,
     // and materialize the next DIE from the DIEChildrenStack.
     if (AbbrevIdx == getDIEInAnotherBlockMarker()) {
-      StackOfNodes.push(std::make_pair(Data, Reader.getOffset()));
+      StackOfNodes.push(std::make_pair(Data, Cursor.tell()));
       DIEChildrenStack = DIEChildrenStack.drop_front();
       Data = DIEChildrenStack.front().getData();
       NewBlockCallback(DIEChildrenStack.front().getID().toString());
-      Reader = BinaryStreamReader(Data, llvm::endianness::little);
+      Extractor = DataExtractor(Data, true, 8);
+      Cursor.seek(0);
       continue;
     }
 
@@ -3351,16 +3349,16 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
         AbbrevEntryCache[decodeAbbrevIndexAsAbbrevSetIdx(AbbrevIdx)];
     StartTagCallback(AbbrevEntryCacheVal.Tag, AbbrevIdx);
 
-    if (auto E =
-            visitDIEAttrs(Reader, Data, AbbrevEntryCacheVal.AbbrevContents))
+    if (auto E = visitDIEAttrs(Extractor, Cursor, Data,
+                               AbbrevEntryCacheVal.AbbrevContents))
       return E;
 
     // If the current DIE doesn't have any children, the current CAS Object will
     // not contain any more data, pop the stack to continue materializing its
     // parent's siblings that may exist.
     if (!AbbrevEntryCacheVal.HasChildren) {
-      if (!StackOfNodes.empty() && Reader.empty())
-        popStack(Reader, Data, StackOfNodes);
+      if (!StackOfNodes.empty() && Extractor.eof(Cursor))
+        popStack(Extractor, Cursor, Data, StackOfNodes);
       EndTagCallback(false /*HadChildren*/);
     }
   }
@@ -3369,8 +3367,9 @@ Error DIEVisitor::visitDIERef(ArrayRef<DIEDataRef> &DIEChildrenStack) {
 
 Error DIEVisitor::visitDIERef(DIEDedupeTopLevelRef StartDIERef) {
 
-  auto Offset = DistinctReader.getOffset();
-  Expected<uint64_t> MaybeAbbrevIdx = readAbbrevIdx(DistinctReader);
+  auto Offset = DistinctCursor.tell();
+  Expected<uint64_t> MaybeAbbrevIdx =
+      readAbbrevIdx(DistinctExtractor, DistinctCursor);
   if (!MaybeAbbrevIdx)
     return MaybeAbbrevIdx.takeError();
   auto AbbrevIdx = *MaybeAbbrevIdx;
@@ -3379,7 +3378,7 @@ Error DIEVisitor::visitDIERef(DIEDedupeTopLevelRef StartDIERef) {
   assert(AbbrevIdx != getEndOfDIESiblingsMarker() &&
          AbbrevIdx != getDIEInAnotherBlockMarker());
 
-  DistinctReader.setOffset(Offset);
+  DistinctCursor.seek(Offset);
 
   NewBlockCallback(StartDIERef.getID().toString());
 
@@ -3417,34 +3416,36 @@ Error mccasformats::v1::visitDebugInfo(
           compression::zlib::decompress(BuffRef, OutBuff, UncompressedSize))
     return E;
   DistinctData = toStringRef(OutBuff);
-  BinaryStreamReader DistinctReader(DistinctData, endianness::little);
-#else
-  BinaryStreamReader DistinctReader(DistinctData, endianness::little);
 #endif
-  ArrayRef<char> HeaderData;
+  DataExtractor DistinctExtractor(DistinctData, true, 8);
+  DataExtractor::Cursor DistinctCursor(0);
 
-  auto BeginOffset = DistinctReader.getOffset();
-  auto Size = getSizeFromDwarfHeader(DistinctReader);
+  auto Size = getSizeFromDwarfHeader(DistinctExtractor, DistinctCursor);
   if (!Size)
     return Size.takeError();
 
   // 2-byte Dwarf version identifier.
-  uint16_t DwarfVersion;
-  if (auto E = DistinctReader.readInteger(DwarfVersion))
-    return E;
+  uint16_t DwarfVersion = DistinctExtractor.getU16(DistinctCursor);
+  DistinctCursor.seek(0);
 
-  DistinctReader.setOffset(BeginOffset);
-
-  if (auto E = DistinctReader.readArray(
-          HeaderData,
-          DwarfVersion >= 5 ? Dwarf5HeaderSize32Bit : Dwarf4HeaderSize32Bit))
-    return E;
-  HeaderCallback(toStringRef(HeaderData));
+  StringRef HeaderData = DistinctExtractor.getBytes(
+      DistinctCursor,
+      DwarfVersion >= 5 ? Dwarf5HeaderSize32Bit : Dwarf4HeaderSize32Bit);
+  if (!DistinctCursor)
+    return DistinctCursor.takeError();
+  HeaderCallback(HeaderData);
 
   append_range(TotAbbrevEntries, LoadedTopRef->AbbrevEntries);
-  DIEVisitor Visitor{DwarfVersion,     {},           TotAbbrevEntries,
-                     DistinctReader,   DistinctData, HeaderCallback,
-                     StartTagCallback, AttrCallback, EndTagCallback,
+  DIEVisitor Visitor{DwarfVersion,
+                     {},
+                     TotAbbrevEntries,
+                     DistinctExtractor,
+                     DataExtractor::Cursor(DistinctCursor.tell()),
+                     DistinctData,
+                     HeaderCallback,
+                     StartTagCallback,
+                     AttrCallback,
+                     EndTagCallback,
                      NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
 }
