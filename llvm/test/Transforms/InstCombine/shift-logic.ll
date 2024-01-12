@@ -349,9 +349,9 @@ define i8 @shl_add(i8 %x, i8 %y) {
 define i8 @shl_add_multiuse(i8 %x) {
 ; CHECK-LABEL: @shl_add_multiuse(
 ; CHECK-NEXT:    [[SH0:%.*]] = shl i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[SH0]], -42
 ; CHECK-NEXT:    call void @use(i8 [[SH0]])
-; CHECK-NEXT:    [[SH1:%.*]] = shl i8 [[R]], 2
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[X]], 5
+; CHECK-NEXT:    [[SH1:%.*]] = add i8 [[R]], 88
 ; CHECK-NEXT:    ret i8 [[SH1]]
 ;
   %sh0 = shl i8 %x, 3
