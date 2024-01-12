@@ -79,20 +79,9 @@ public:
 
   BoltAddressTranslation() {}
 
-  /// Write the serialized address translation table for a function.
-  template <bool Cold>
-  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
-                 raw_ostream &OS);
-
   /// Write the serialized address translation tables for each reordered
   /// function
   void write(const BinaryContext &BC, raw_ostream &OS);
-
-  /// Read the serialized address translation table for a function.
-  /// Return a parse error if failed.
-  template <bool Cold>
-  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
-                 DataExtractor &DE, uint64_t &Offset, Error &Err);
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
@@ -144,6 +133,17 @@ private:
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
                          uint64_t FuncAddress, uint64_t FuncInputAddress);
 
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
+
   /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
   /// entries in function address translation map.
   APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
@@ -153,7 +153,6 @@ private:
   size_t getNumEqualOffsets(const MapTy &Map) const;
 
   std::map<uint64_t, MapTy> Maps;
-  std::map<uint64_t, MapTy> ColdMaps;
 
   using BBHashMap = std::unordered_map<uint32_t, size_t>;
   std::unordered_map<uint64_t, std::pair<size_t, BBHashMap>> FuncHashes;
