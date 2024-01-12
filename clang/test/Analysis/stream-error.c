@@ -191,6 +191,23 @@ void error_fputs(void) {
   fputs("ABC", F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fprintf(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fprintf(F, "aaa");
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+    fprintf(F, "bbb");                         // no-warning
+  } else {
+    clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
+    fprintf(F, "bbb");              // expected-warning {{might be 'indeterminate'}}
+  }
+  fclose(F);
+  fprintf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+}
+
 void error_ungetc() {
   FILE *F = tmpfile();
   if (!F)

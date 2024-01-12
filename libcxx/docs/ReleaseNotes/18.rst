@@ -117,6 +117,12 @@ Deprecations and Removals
   and ``<experimental/vector>`` have been removed in LLVM 18, as all their contents will have been
   implemented in namespace ``std`` for at least two releases.
 
+- The macro ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` has been deprecated and will be removed
+  in LLVM 19. This macro used to re-enable redundant members of ``std::allocator<T>`` like ``pointer``,
+  ``reference``, ``rebind``, ``address``, ``max_size``, ``construct``, ``destroy``, and the two-argument
+  overload of ``allocate``. However, this led to the library being non-conforming due to incorrect
+  constexpr-ness.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -139,6 +145,9 @@ LLVM 19
 
 - The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
   in ``std::variant`` will be removed in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been deprecated in LLVM 18 and will be removed
+  entirely in LLVM 19.
 
 LLVM 20
 ~~~~~~~
