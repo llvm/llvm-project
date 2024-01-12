@@ -1800,9 +1800,9 @@ bool CoroutineStmtBuilder::makeOnException() {
 // Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
 // attributes to the function `get_return_object`.
 static void handleGetReturnObject(Sema &S, Expr *E) {
-  if(auto* TE = dyn_cast<CXXBindTemporaryExpr>(E))
+  if (auto *TE = dyn_cast<CXXBindTemporaryExpr>(E))
     E = TE->getSubExpr();
-  auto* CE = dyn_cast<CallExpr>(E);
+  auto *CE = dyn_cast<CallExpr>(E);
   assert(CE);
   auto *MD = CE->getDirectCallee();
   if (!MD)
