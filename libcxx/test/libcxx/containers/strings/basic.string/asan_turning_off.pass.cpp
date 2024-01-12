@@ -9,7 +9,6 @@
 // REQUIRES: asan
 // UNSUPPORTED: c++03
 
-
 // Test based on: https://bugs.chromium.org/p/chromium/issues/detail?id=1419798#c5
 // Some allocators during deallocation may not call destructors and just reuse memory.
 // In those situations, one may want to deactivate annotations for a specific allocator.

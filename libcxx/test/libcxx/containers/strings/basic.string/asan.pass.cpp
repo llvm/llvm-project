@@ -50,5 +50,7 @@ int main(int, char**) {
     T foo = c[c.size() + 1]; // should trigger ASAN and call do_exit().
     assert(false);           // if we got here, ASAN didn't trigger
     ((void)foo);
+
+    return 0;
   }
 }
