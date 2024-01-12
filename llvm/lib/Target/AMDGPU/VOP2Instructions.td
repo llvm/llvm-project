@@ -1536,7 +1536,7 @@ multiclass VOP2e_Real_gfx12<bits<6> op, string opName, string asmName> :
   VOP2e_Real<GFX12Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_FULL_with_name_gfx12<bits<6> op, string opName,
-                                         string asmName> :
+                                          string asmName> :
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_FULL_t16_with_name_gfx12<bits<6> op, string opName,
