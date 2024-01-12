@@ -191,13 +191,13 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     } else if (pid == 0) {
       if (setsid() == -1) {
         if (!cmdstat) {
-          terminator.Crash(
-              "setsid() failed with errno: %d, asynchronous process initiation failed.",
+          terminator.Crash("setsid() failed with errno: %d, asynchronous "
+                           "process initiation failed.",
               errno);
         } else {
           StoreIntToDescriptor(cmdstat, ASYNC_NO_SUPPORT_ERR, terminator);
-          CheckAndCopyCharsToDescriptor(
-              cmdmsg, "setsid() failed, asynchronous process initiation failed.");
+          CheckAndCopyCharsToDescriptor(cmdmsg,
+              "setsid() failed, asynchronous process initiation failed.");
         }
         exit(EXIT_FAILURE);
       }
