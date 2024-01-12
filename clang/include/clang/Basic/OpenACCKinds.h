@@ -208,6 +208,12 @@ enum class OpenACCClauseKind {
   /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'exit data', and 'declare'.
   CopyOut,
+  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'enter data', and 'declare'.
+  CopyIn,
+  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'enter data', and 'declare'.
+  Create,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -293,6 +299,12 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::CopyOut:
     return Out << "copyout";
+
+  case OpenACCClauseKind::CopyIn:
+    return Out << "copyin";
+
+  case OpenACCClauseKind::Create:
+    return Out << "create";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
