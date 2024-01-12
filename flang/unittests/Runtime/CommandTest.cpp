@@ -9,12 +9,12 @@
 #include "flang/Runtime/command.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "../../runtime/terminator.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/memory.h"
-#include "../../runtime/terminator.h"
 #include <cstddef>
 #include <cstdlib>
 

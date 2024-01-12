@@ -48,8 +48,7 @@ extern "C" {
 
 namespace Fortran::runtime {
 
-void GetUsernameEnvVar(
-    const char *envName, char *arg, std::int64_t length) {
+void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
       1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
@@ -121,7 +120,7 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
     // error occur: get username from environment variable
     GetUsernameEnvVar("LOGNAME", arg, length);
   }
-  FreeMemory((void*)str);
+  FreeMemory((void *)str);
 #elif _WIN32
   // Get username from environment to avoid link to Advapi32.lib
   GetUsernameEnvVar("USERNAME", arg, length);
