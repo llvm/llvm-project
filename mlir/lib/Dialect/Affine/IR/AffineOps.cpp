@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -220,6 +221,9 @@ void AffineDialect::initialize() {
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
   addInterfaces<AffineInlinerInterface>();
+  declarePromisedInterface<AffineApplyOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<AffineMaxOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<AffineMinOp, ValueBoundsOpInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
