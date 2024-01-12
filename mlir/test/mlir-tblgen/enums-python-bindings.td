@@ -18,7 +18,9 @@ def One : I32EnumAttrCase<"CaseOne", 1, "one">;
 def Two : I32EnumAttrCase<"CaseTwo", 2, "two">;
 def NegOne : I32EnumAttrCase<"CaseNegOne", -1, "negone">;
 
-def MyEnum : I32EnumAttr<"MyEnum", "An example 32-bit enum", [One, Two, NegOne]>;
+def MyEnum : I32EnumAttr<"MyEnum", "An example 32-bit enum", [One, Two, NegOne]> {
+  let cppNamespace = "test";
+}
 // CHECK-LABEL: class MyEnum(IntEnum):
 // CHECK:     """An example 32-bit enum"""
 
@@ -35,16 +37,20 @@ def MyEnum : I32EnumAttr<"MyEnum", "An example 32-bit enum", [One, Two, NegOne]>
 // CHECK:             return "negone"
 // CHECK:         raise ValueError("Unknown MyEnum enum entry.")
 
-// CHECK: @register_attribute_builder("MyEnum")
+// CHECK: @register_attribute_builder("test_MyEnum")
 // CHECK: def _myenum(x, context):
 // CHECK:     return _ods_ir.IntegerAttr.get(_ods_ir.IntegerType.get_signless(32, context=context), int(x))
 
-def TestMyEnum_Attr : EnumAttr<Test_Dialect, MyEnum, "enum">;
+def TestMyEnum_Attr : EnumAttr<Test_Dialect, MyEnum, "enum"> {
+  let cppNamespace = "test";
+}
 
 def One64 : I64EnumAttrCase<"CaseOne64", 1, "one">;
 def Two64 : I64EnumAttrCase<"CaseTwo64", 2, "two">;
 
-def MyEnum64 : I64EnumAttr<"MyEnum64", "An example 64-bit enum", [One64, Two64]>;
+def MyEnum64 : I64EnumAttr<"MyEnum64", "An example 64-bit enum", [One64, Two64]> {
+  let cppNamespace = "test";
+}
 // CHECK-LABEL: class MyEnum64(IntEnum):
 // CHECK:     """An example 64-bit enum"""
 
@@ -58,7 +64,7 @@ def MyEnum64 : I64EnumAttr<"MyEnum64", "An example 64-bit enum", [One64, Two64]>
 // CHECK:             return "two"
 // CHECK:         raise ValueError("Unknown MyEnum64 enum entry.")
 
-// CHECK: @register_attribute_builder("MyEnum64")
+// CHECK: @register_attribute_builder("test_MyEnum64")
 // CHECK: def _myenum64(x, context):
 // CHECK:     return _ods_ir.IntegerAttr.get(_ods_ir.IntegerType.get_signless(64, context=context), int(x))
 
@@ -70,6 +76,7 @@ def TestBitEnum
       ]> {
   let genSpecializedAttr = 0;
   let separator = " | ";
+  let cppNamespace = "test";
 }
 
 def TestBitEnum_Attr : EnumAttr<Test_Dialect, TestBitEnum, "testbitenum">;
@@ -96,14 +103,14 @@ def TestBitEnum_Attr : EnumAttr<Test_Dialect, TestBitEnum, "testbitenum">;
 // CHECK:             return "other"
 // CHECK:         raise ValueError("Unknown TestBitEnum enum entry.")
 
-// CHECK: @register_attribute_builder("TestBitEnum")
+// CHECK: @register_attribute_builder("test_TestBitEnum")
 // CHECK: def _testbitenum(x, context):
 // CHECK:     return _ods_ir.IntegerAttr.get(_ods_ir.IntegerType.get_signless(32, context=context), int(x))
 
-// CHECK: @register_attribute_builder("TestBitEnum_Attr")
+// CHECK: @register_attribute_builder("test_TestBitEnum_Attr")
 // CHECK: def _testbitenum_attr(x, context):
 // CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect<testbitenum {str(x)}>', context=context)
 
-// CHECK: @register_attribute_builder("TestMyEnum_Attr")
+// CHECK: @register_attribute_builder("test_TestMyEnum_Attr")
 // CHECK: def _testmyenum_attr(x, context):
 // CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect<enum {str(x)}>', context=context)

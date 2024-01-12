@@ -5,6 +5,13 @@ import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
+from mlir.dialects import llvm
+from mlir.dialects._llvm_enum_gen import (
+    _llvm_integeroverflowflagsattr as llvm_integeroverflowflagsattr,
+)
+from mlir.dialects._python_test_enums_gen import (
+    _llvm_integeroverflowflagsattr as python_test_integeroverflowflagsattr,
+)
 
 test.register_python_test_dialect(get_dialect_registry())
 
@@ -543,3 +550,13 @@ def testInferTypeOpInterface():
             two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
             # CHECK: f32
             print(two_operands.result.type)
+
+
+# CHECK-LABEL: TEST: testEnumNamespacing
+@run
+def testEnumNamespacing():
+    with Context() as ctx, Location.unknown(ctx):
+        # CHECK: #llvm.overflow<none>
+        print(llvm_integeroverflowflagsattr(llvm.IntegerOverflowFlags.none, ctx))
+        # CHECK: #python_test.overflow<none>
+        print(python_test_integeroverflowflagsattr(test.IntegerOverflowFlags.none, ctx))

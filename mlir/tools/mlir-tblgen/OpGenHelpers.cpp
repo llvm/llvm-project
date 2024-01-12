@@ -17,6 +17,8 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/TableGen/Error.h"
 
+#include <iostream>
+
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -81,9 +83,10 @@ bool mlir::tblgen::isPythonReserved(StringRef str) {
   return reserved.contains(str);
 }
 
-std::string
-mlir::tblgen::getAttributeNameSpace(llvm::SmallVector<StringRef> namespaces) {
+std::string mlir::tblgen::getEnumAttributeNameSpace(const EnumAttr &enumAttr) {
   std::string namespace_;
+  llvm::SmallVector<StringRef> namespaces;
+  enumAttr.getCppNamespace().ltrim("::").split(namespaces, "::");
   if (namespaces[0] == "mlir")
     namespace_ = llvm::join(llvm::drop_begin(namespaces), "_");
   else

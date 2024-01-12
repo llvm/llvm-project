@@ -19,6 +19,7 @@
 #define GET_OP_CLASSES
 #include "PythonTestOps.h.inc"
 
+#include "PythonTestEnums.h.inc"
 #define GET_ATTRDEF_CLASSES
 #include "PythonTestAttributes.h.inc"
 

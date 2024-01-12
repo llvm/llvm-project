@@ -97,7 +97,8 @@ static bool extractUIntBitwidth(StringRef uintType, int64_t &bitwidth) {
 /// Emits an attribute builder for the given enum attribute to support automatic
 /// conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
-static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
+static bool emitAttributeBuilderRegistration(const EnumAttr &enumAttr,
+                                             raw_ostream &os) {
   int64_t bitwidth;
   if (extractUIntBitwidth(enumAttr.getUnderlyingType(), bitwidth)) {
     llvm::errs() << "failed to identify bitwidth of "
@@ -105,10 +106,7 @@ static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
     return true;
   }
 
-  llvm::SmallVector<StringRef> namespaces;
-  enumAttr.getStorageType().ltrim("::").split(namespaces, "::");
-  namespaces = llvm::SmallVector<StringRef>{llvm::drop_end(namespaces)};
-  std::string namespace_ = getAttributeNameSpace(namespaces);
+  std::string namespace_ = getEnumAttributeNameSpace(enumAttr);
   if (!namespace_.empty())
     namespace_ += "_";
 
@@ -127,8 +125,9 @@ static bool emitAttributeBuilder(const EnumAttr &enumAttr, raw_ostream &os) {
 /// Emits an attribute builder for the given dialect enum attribute to support
 /// automatic conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
-static bool emitDialectEnumAttributeBuilder(const AttrOrTypeDef &attr,
-                                            raw_ostream &os) {
+static bool emitDialectEnumAttributeBuilderRegistration(const llvm::Record &def,
+                                                        raw_ostream &os) {
+  const AttrOrTypeDef attr(&def);
   StringRef mnemonic = attr.getMnemonic().value();
   std::optional<StringRef> assemblyFormat = attr.getAssemblyFormat();
   StringRef dialect = attr.getDialect().getName();
@@ -145,15 +144,15 @@ static bool emitDialectEnumAttributeBuilder(const AttrOrTypeDef &attr,
     return true;
   }
 
-  llvm::SmallVector<StringRef> namespaces;
-  attr.getStorageNamespace().ltrim("::").split(namespaces, "::");
-  std::string namespace_ = getAttributeNameSpace(namespaces);
+  EnumAttr enumAttr(def);
+  std::string namespace_ = getEnumAttributeNameSpace(enumAttr);
   if (!namespace_.empty())
     namespace_ += "_";
 
   os << llvm::formatv("@register_attribute_builder(\"{0}{1}\")\n", namespace_,
-                      attr.getName());
-  os << llvm::formatv("def _{0}(x, context):\n", attr.getName().lower());
+                      enumAttr.getAttrDefName());
+  os << llvm::formatv("def _{0}(x, context):\n",
+                      enumAttr.getAttrDefName().lower());
   os << llvm::formatv("    return "
                       "_ods_ir.Attribute.parse(f'{0}', context=context)\n\n",
                       formatString);
@@ -169,12 +168,13 @@ static bool emitPythonEnums(const llvm::RecordKeeper &recordKeeper,
        recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
     EnumAttr enumAttr(*it);
     emitEnumClass(enumAttr, os);
-    emitAttributeBuilder(enumAttr, os);
+    if (emitAttributeBuilderRegistration(enumAttr, os))
+      return true;
   }
   for (const auto &it :
        recordKeeper.getAllDerivedDefinitionsIfDefined("EnumAttr")) {
-    const AttrOrTypeDef attr(&*it);
-    return emitDialectEnumAttributeBuilder(attr, os);
+    if (emitDialectEnumAttributeBuilderRegistration(*it, os))
+      return true;
   }
 
   return false;

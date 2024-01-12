@@ -13,6 +13,7 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
 #define MLIR_TOOLS_MLIRTBLGEN_OPGENHELPERS_H_
 
+#include "mlir/TableGen/Attribute.h"
 #include "llvm/TableGen/Record.h"
 #include <vector>
 
@@ -28,8 +29,7 @@ getRequestedOpDefinitions(const llvm::RecordKeeper &recordKeeper);
 /// Regenerate using python -c"print(set(sorted(__import__('keyword').kwlist)))"
 bool isPythonReserved(llvm::StringRef str);
 
-std::string
-getAttributeNameSpace(llvm::SmallVector<llvm::StringRef> namespaces);
+std::string getEnumAttributeNameSpace(const EnumAttr &enumAttr);
 
 } // namespace tblgen
 } // namespace mlir

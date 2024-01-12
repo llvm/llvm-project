@@ -530,7 +530,7 @@ constexpr const char *multiResultAppendTemplate = "results.extend({0})";
 ///   {0} is the builder argument name;
 ///   {1} is the attribute builder from raw;
 ///   {2} is the attribute builder from raw;
-///   {3} is the attribute's dialect.
+///   {3} is the attribute's fully qualified namespace.
 /// Use the value the user passed in if either it is already an Attribute or
 /// there is no method registered to make it an Attribute.
 constexpr const char *initAttributeWithBuilderTemplate =
@@ -538,14 +538,14 @@ constexpr const char *initAttributeWithBuilderTemplate =
     issubclass(type({0}), _ods_ir.Attribute) or
     not (_ods_ir.AttrBuilder.contains('{3}') or _ods_ir.AttrBuilder.contains('{2}{3}'))) else
       (_ods_ir.AttrBuilder.get('{3}')({0}, context=_ods_context) if _ods_ir.AttrBuilder.contains('{3}')
-       else _ods_ir.AttrBuilder.contains('{2}{3}')({0}, context=_ods_context))))Py";
+       else _ods_ir.AttrBuilder.get('{2}{3}')({0}, context=_ods_context))))Py";
 
 /// Template for attribute builder from raw input for optional attribute in the
 /// operation builder.
 ///   {0} is the builder argument name;
 ///   {1} is the attribute builder from raw;
 ///   {2} is the attribute builder from raw;
-///   {3} is the attribute's dialect.
+///   {3} is the attribute's fully qualified namespace.
 /// Use the value the user passed in if either it is already an Attribute or
 /// there is no method registered to make it an Attribute.
 constexpr const char *initOptionalAttributeWithBuilderTemplate =
@@ -553,7 +553,7 @@ constexpr const char *initOptionalAttributeWithBuilderTemplate =
         issubclass(type({0}), _ods_ir.Attribute) or
         not (_ods_ir.AttrBuilder.contains('{3}') or _ods_ir.AttrBuilder.contains('{2}{3}'))) else
           (_ods_ir.AttrBuilder.get('{3}')({0}, context=_ods_context) if _ods_ir.AttrBuilder.contains('{3}')
-           else _ods_ir.AttrBuilder.contains('{2}{3}')({0}, context=_ods_context))))Py";
+           else _ods_ir.AttrBuilder.get('{2}{3}')({0}, context=_ods_context))))Py";
 
 constexpr const char *initUnitAttributeTemplate =
     R"Py(if bool({1}): attributes["{0}"] = _ods_ir.UnitAttr.get(
@@ -681,10 +681,14 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
     }
 
-    llvm::SmallVector<StringRef> namespaces;
-    attribute->attr.getStorageType().ltrim("::").split(namespaces, "::");
-    namespaces = llvm::SmallVector<StringRef>{llvm::drop_end(namespaces)};
-    std::string namespace_ = getAttributeNameSpace(namespaces);
+    std::string namespace_;
+    if (attribute->attr.isEnumAttr()) {
+      EnumAttr enumAttr(attribute->attr.getDef());
+      namespace_ = getEnumAttributeNameSpace(enumAttr);
+    } else if (attribute->attr.getBaseAttr().isEnumAttr()) {
+      EnumAttr enumAttr(attribute->attr.getBaseAttr().getDef());
+      namespace_ = getEnumAttributeNameSpace(enumAttr);
+    }
     if (!namespace_.empty())
       namespace_ += "_";
 
