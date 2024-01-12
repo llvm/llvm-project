@@ -23,7 +23,7 @@ After:
 
 .. code-block:: c++
 
-  void foo(){
+  int main(){
     a = std::max(a, b);
 
   }
