@@ -1116,30 +1116,8 @@ Error GenericDeviceTy::registerGlobalOffloadEntry(
   // can either be link or to. This means that once unified
   // memory is activated via the requires directive, the variable
   // can be used directly from the host in both cases.
-
-  // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory is
-  // not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we can
-  // also use globals directly from the host.
-  bool EnableHostGlobals = false;
-  bool IsZeroCopyOnAPU = Plugin::get().AreAllocationsForMapsOnApusDisabled();
-  BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
-
-  if (IsZeroCopyOnAPU && HSAXnack.get())
-    EnableHostGlobals = true;
-
-  // Check if we are on a system that has an APU or on a non-APU system
-  // where unified shared memory can be enabled:
-  bool IsUsmSystem =
-      Plugin::get().hasAPUDevice() || Plugin::get().hasDGpuWithUsmSupport();
-
-  // Fail if there is a mismatch between the user request and the system
-  // architecture:
-  if (EnableHostGlobals && !IsUsmSystem)
-    return Plugin::error("OMPX_APU_MAPS and HSA_XNACK enabled on system that"
-                         " does not support unified shared memory");
-
   if (Plugin.getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
-      (IsUsmSystem && EnableHostGlobals)) {
+      Plugin.canUseHostGlobals()) {
     // If unified memory is present any target link or to variables
     // can access host addresses directly. There is no longer a
     // need for device copies.
@@ -1826,6 +1804,10 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
 void __tgt_rtl_check_invalid_image(__tgt_device_image *InvalidImage) {
   // Check if the image was rejected because of conflicting XNACK modes.
   Plugin::get().checkInvalidImage(InvalidImage);
+}
+
+bool __tgt_rtl_can_use_host_globals() {
+  return Plugin::get().canUseHostGlobals();
 }
 
 int32_t __tgt_rtl_supports_empty_images() {

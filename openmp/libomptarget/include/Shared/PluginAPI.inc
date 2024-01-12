@@ -48,6 +48,7 @@ PLUGIN_API_HANDLE(data_notify_unmapped, false);
 PLUGIN_API_HANDLE(set_device_offset, false);
 PLUGIN_API_HANDLE(initialize_record_replay, false);
 PLUGIN_API_HANDLE(check_invalid_image, true);
+PLUGIN_API_HANDLE(can_use_host_globals, true);
 PLUGIN_API_HANDLE(has_apu_device, true);
 PLUGIN_API_HANDLE(has_USM_capable_dGPU, true);
 PLUGIN_API_HANDLE(are_allocations_for_maps_on_apus_disabled, true);

@@ -246,6 +246,8 @@ bool __tgt_rtl_requested_prepopulate_gpu_page_table();
 // Check if image is incompatible due to XNACK mismatch.
 void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
 
+bool __tgt_rtl_can_use_host_globals();
+
 bool __tgt_rtl_is_system_supporting_managed_memory();
 
 int32_t __tgt_rtl_launch_kernel_sync(int32_t, void *, void **, ptrdiff_t *,

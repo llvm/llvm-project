@@ -1182,6 +1182,10 @@ struct GenericPluginTy {
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }
 
+  /// Return true if host globals can be enabled on a system that supprots
+  /// unified shared memory.
+  virtual bool canUseHostGlobals() const {}
+
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {

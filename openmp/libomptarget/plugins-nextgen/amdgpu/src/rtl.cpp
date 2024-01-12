@@ -4179,6 +4179,31 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return;
   }
 
+  bool canUseHostGlobals() {
+    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory is
+    // not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we can
+    // also use globals directly from the host.
+    bool EnableHostGlobals = false;
+    bool IsZeroCopyOnAPU = Plugin::get().AreAllocationsForMapsOnApusDisabled();
+    BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
+
+    if (IsZeroCopyOnAPU && HSAXnack.get())
+      EnableHostGlobals = true;
+
+    // Check if we are on a system that has an APU or on a non-APU system
+    // where unified shared memory can be enabled:
+    bool IsUsmSystem =
+        Plugin::get().hasAPUDevice() || Plugin::get().hasDGpuWithUsmSupport();
+
+    // Warn user if there is a mismatch between the request and the system
+    // architecture:
+    if (EnableHostGlobals && !IsUsmSystem)
+      fprintf(stderr, "OMPX_APU_MAPS and HSA_XNACK enabled on system that"
+                      " does not support unified shared memory");
+
+    return IsUsmSystem && EnableHostGlobals;
+  }
+
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
     return true;
   }
