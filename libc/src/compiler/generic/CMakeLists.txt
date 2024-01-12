@@ -5,7 +5,6 @@ add_entrypoint_object(
   HDRS
     ../__stack_chk_fail.h
   DEPENDS
-    libc.include.assert
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.abort
 )

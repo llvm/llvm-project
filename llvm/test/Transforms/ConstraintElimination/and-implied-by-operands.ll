@@ -31,7 +31,7 @@ define i1 @test_first_and_condition_implied_by_second_ops(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -105,7 +105,7 @@ define i1 @test_same_cond_for_and(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -128,7 +128,7 @@ define i1 @test_same_cond_for_and_select_form(i8 %x) {
 ; CHECK-LABEL: @test_same_cond_for_and_select_form(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 true, i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_1]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -152,7 +152,7 @@ define i1 @test_second_and_condition_not_implied_by_first(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
@@ -181,9 +181,8 @@ define i1 @test_remove_variables(i1 %c, ptr %A, i64 %B, ptr %C) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[TMP0]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[ELSE_2:%.*]]
 ; CHECK:       then.2:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sgt i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 true, [[C_3]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ; CHECK:       else.2:
 ; CHECK-NEXT:    ret i1 false
@@ -398,7 +397,7 @@ define i1 @test_or_used_in_false_branch(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], false
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
@@ -424,7 +423,7 @@ define i1 @test_or_used_in_false_branch2(i8 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X:%.*]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i8 [[X]], 5
-; CHECK-NEXT:    [[AND:%.*]] = or i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    [[AND:%.*]] = or i1 false, [[T_1]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 [[T_1]]
@@ -478,3 +477,24 @@ entry:
   %and = select i1 %c.1, i1 %c.2, i1 false
   ret i1 %and
 }
+
+define i1 @and_select_second_implies_first_guaranteed_not_poison(ptr noundef %A, ptr noundef %B) {
+; CHECK-LABEL: @and_select_second_implies_first_guaranteed_not_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[B]], i64 -1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt ptr [[GEP]], [[A]]
+; CHECK-NEXT:    call void @no_noundef(i1 [[C_2]])
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+entry:
+  %c.1 = icmp ne ptr %A, %B
+  %gep = getelementptr inbounds ptr, ptr %B, i64 -1
+  %c.2 = icmp ugt ptr %gep, %A
+  call void @no_noundef(i1 %c.2)
+  %and = select i1 %c.1, i1 %c.2, i1 false
+  ret i1 %and
+}
+
+declare void @no_noundef(i1 noundef)

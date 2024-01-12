@@ -183,7 +183,7 @@ private:
         dedupedOutpts;
     // If the op doesn't have tensor semantics or outputs should not be removed,
     // keep all the outputs as preserved.
-    if (!genericOp.hasTensorSemantics() || !removeOutputs) {
+    if (!genericOp.hasPureTensorSemantics() || !removeOutputs) {
       for (const auto &en : llvm::enumerate(genericOp.getDpsInitsMutable())) {
         origToNewPos[en.index()] = newOutputOperands.size();
         newOutputOperands.push_back(en.value().get());
@@ -317,7 +317,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
                                 PatternRewriter &rewriter) const override {
 
     // If the op doesnt have tensor semantics, preserve the outputs as is.
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     bool hasRemovedCycles = false;

@@ -13,6 +13,12 @@
 // - Generate ThinLTO summary file with LLVM bitcodes, and run `function-import` pass.
 // - Run `pgo-icall-prom` pass for the IR module which needs to import callees.
 
+// REQUIRES: windows || linux || darwin
+
+// The test failed on ppc when building the instrumented binary.
+// ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
+// UNSUPPORTED: ppc
+
 // This test and IR test llvm/test/Transforms/PGOProfile/thinlto_indirect_call_promotion.ll
 // are complementary to each other; a compiler-rt test has better test coverage
 // on different platforms, and the IR test is less restrictive in terms of
@@ -21,20 +27,6 @@
 // Use lld as linker for more robust test. We need to REQUIRE LLVMgold.so for
 // LTO if default linker is GNU ld or gold anyway.
 // REQUIRES: lld-available
-
-// Test should fail where linkage-name and mangled-name diverges, see issue https://github.com/llvm/llvm-project/issues/74565).
-// Currently, this name divergence happens on Mach-O object file format, or on
-// many (but not all) 32-bit Windows systems.
-//
-// XFAIL: system-darwin
-//
-// Mark 32-bit Windows as UNSUPPORTED for now as opposed to XFAIL. This test
-// should fail on many (but not all) 32-bit Windows systems and succeed on the
-// rest. The flexibility in triple string parsing makes it tricky to capture
-// both sets accurately. i[3-9]86 specifies arch as Triple::ArchType::x86, (win32|windows)
-// specifies OS as Triple::OS::Win32
-//
-// UNSUPPORTED: target={{i.86.*windows.*}}
 
 // RUN: rm -rf %t && split-file %s %t && cd %t
 

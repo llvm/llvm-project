@@ -65,6 +65,7 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
     DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
     DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism,
+    DefaultValuedParameter<"bool", "false">:$no_gpu_lib,
     DefaultValuedParameter<"uint32_t", "50">:$openmp_device_version
   );
 

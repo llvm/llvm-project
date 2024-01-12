@@ -50,16 +50,9 @@ static std::vector<std::string> runComp(clang::Interpreter &MainInterp,
   return Comps;
 }
 
-#ifdef _AIX
-TEST(CodeCompletionTest, DISABLED_Sanity) {
-#else
 TEST(CodeCompletionTest, Sanity) {
-#endif
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("int foo = 12;")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int foo = 12;"));
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, "f", Err);
   EXPECT_EQ((size_t)2, comps.size()); // float and foo
@@ -68,36 +61,19 @@ TEST(CodeCompletionTest, Sanity) {
   EXPECT_EQ((bool)Err, false);
 }
 
-#ifdef _AIX
-TEST(CodeCompletionTest, DISABLED_SanityNoneValid) {
-#else
 TEST(CodeCompletionTest, SanityNoneValid) {
-#endif
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("int foo = 12;")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int foo = 12;"));
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, "babanana", Err);
   EXPECT_EQ((size_t)0, comps.size()); // foo and float
   EXPECT_EQ((bool)Err, false);
 }
 
-#ifdef _AIX
-TEST(CodeCompletionTest, DISABLED_TwoDecls) {
-#else
 TEST(CodeCompletionTest, TwoDecls) {
-#endif
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("int application = 12;")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("int apple = 12;")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int application = 12;"));
+  cantFail(Interp->Parse("int apple = 12;"));
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, "app", Err);
   EXPECT_EQ((size_t)2, comps.size());
@@ -113,18 +89,9 @@ TEST(CodeCompletionTest, CompFunDeclsNoError) {
 
 TEST(CodeCompletionTest, TypedDirected) {
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("int application = 12;")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("char apple = '2';")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("void add(int &SomeInt){}")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int application = 12;"));
+  cantFail(Interp->Parse("char apple = '2';"));
+  cantFail(Interp->Parse("void add(int &SomeInt){}"));
   {
     auto Err = llvm::Error::success();
     auto comps = runComp(*Interp, std::string("add("), Err);
@@ -132,10 +99,7 @@ TEST(CodeCompletionTest, TypedDirected) {
     EXPECT_EQ((bool)Err, false);
   }
 
-  if (auto R = Interp->ParseAndExecute("int banana = 42;")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int banana = 42;"));
 
   {
     auto Err = llvm::Error::success();
@@ -157,22 +121,10 @@ TEST(CodeCompletionTest, TypedDirected) {
 
 TEST(CodeCompletionTest, SanityClasses) {
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("struct Apple{};")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("void takeApple(Apple &a1){}")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("Apple a1;")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("void takeAppleCopy(Apple a1){}")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("struct Apple{};"));
+  cantFail(Interp->Parse("void takeApple(Apple &a1){}"));
+  cantFail(Interp->Parse("Apple a1;"));
+  cantFail(Interp->Parse("void takeAppleCopy(Apple a1){}"));
 
   {
     auto Err = llvm::Error::success();
@@ -192,26 +144,11 @@ TEST(CodeCompletionTest, SanityClasses) {
 
 TEST(CodeCompletionTest, SubClassing) {
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("struct Fruit {};")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("struct Apple : Fruit{};")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("void takeFruit(Fruit &f){}")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("Apple a1;")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("Fruit f1;")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("struct Fruit {};"));
+  cantFail(Interp->Parse("struct Apple : Fruit{};"));
+  cantFail(Interp->Parse("void takeFruit(Fruit &f){}"));
+  cantFail(Interp->Parse("Apple a1;"));
+  cantFail(Interp->Parse("Fruit f1;"));
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, std::string("takeFruit("), Err);
   EXPECT_EQ((size_t)2, comps.size());
@@ -222,18 +159,9 @@ TEST(CodeCompletionTest, SubClassing) {
 
 TEST(CodeCompletionTest, MultipleArguments) {
   auto Interp = createInterpreter();
-  if (auto R = Interp->ParseAndExecute("int foo = 42;")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("char fowl = 'A';")) {
-    consumeError(std::move(R));
-    return;
-  }
-  if (auto R = Interp->ParseAndExecute("void takeTwo(int &a, char b){}")) {
-    consumeError(std::move(R));
-    return;
-  }
+  cantFail(Interp->Parse("int foo = 42;"));
+  cantFail(Interp->Parse("char fowl = 'A';"));
+  cantFail(Interp->Parse("void takeTwo(int &a, char b){}"));
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, std::string("takeTwo(foo,  "), Err);
   EXPECT_EQ((size_t)1, comps.size());
@@ -243,9 +171,9 @@ TEST(CodeCompletionTest, MultipleArguments) {
 
 TEST(CodeCompletionTest, Methods) {
   auto Interp = createInterpreter();
-  cantFail(Interp->ParseAndExecute(
+  cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
-  cantFail(Interp->ParseAndExecute("Foo f1;"));
+  cantFail(Interp->Parse("Foo f1;"));
 
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, std::string("f1."), Err);
@@ -257,10 +185,10 @@ TEST(CodeCompletionTest, Methods) {
 
 TEST(CodeCompletionTest, MethodsInvocations) {
   auto Interp = createInterpreter();
-  cantFail(Interp->ParseAndExecute(
+  cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
-  cantFail(Interp->ParseAndExecute("Foo f1;"));
-  cantFail(Interp->ParseAndExecute("int a = 84;"));
+  cantFail(Interp->Parse("Foo f1;"));
+  cantFail(Interp->Parse("int a = 84;"));
 
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, std::string("f1.add("), Err);
@@ -271,11 +199,11 @@ TEST(CodeCompletionTest, MethodsInvocations) {
 
 TEST(CodeCompletionTest, NestedInvocations) {
   auto Interp = createInterpreter();
-  cantFail(Interp->ParseAndExecute(
+  cantFail(Interp->Parse(
       "struct Foo{int add(int a){return 42;} int par(int b){return 42;}};"));
-  cantFail(Interp->ParseAndExecute("Foo f1;"));
-  cantFail(Interp->ParseAndExecute("int a = 84;"));
-  cantFail(Interp->ParseAndExecute("int plus(int a, int b) { return a + b; }"));
+  cantFail(Interp->Parse("Foo f1;"));
+  cantFail(Interp->Parse("int a = 84;"));
+  cantFail(Interp->Parse("int plus(int a, int b) { return a + b; }"));
 
   auto Err = llvm::Error::success();
   auto comps = runComp(*Interp, std::string("plus(42, f1.add("), Err);
@@ -287,8 +215,8 @@ TEST(CodeCompletionTest, NestedInvocations) {
 TEST(CodeCompletionTest, TemplateFunctions) {
   auto Interp = createInterpreter();
   cantFail(
-      Interp->ParseAndExecute("template <typename T> T id(T a) { return a;} "));
-  cantFail(Interp->ParseAndExecute("int apple = 84;"));
+      Interp->Parse("template <typename T> T id(T a) { return a;} "));
+  cantFail(Interp->Parse("int apple = 84;"));
   {
     auto Err = llvm::Error::success();
     auto comps = runComp(*Interp, std::string("id<int>("), Err);
@@ -297,9 +225,9 @@ TEST(CodeCompletionTest, TemplateFunctions) {
     EXPECT_EQ((bool)Err, false);
   }
 
-  cantFail(Interp->ParseAndExecute(
+  cantFail(Interp->Parse(
       "template <typename T> T pickFirst(T a, T b) { return a;} "));
-  cantFail(Interp->ParseAndExecute("char pear = '4';"));
+  cantFail(Interp->Parse("char pear = '4';"));
   {
     auto Err = llvm::Error::success();
     auto comps = runComp(*Interp, std::string("pickFirst(apple, "), Err);

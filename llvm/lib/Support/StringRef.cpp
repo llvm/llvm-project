@@ -388,20 +388,14 @@ static unsigned GetAutoSenseRadix(StringRef &Str) {
   if (Str.empty())
     return 10;
 
-  if (Str.starts_with("0x") || Str.starts_with("0X")) {
-    Str = Str.substr(2);
+  if (Str.consume_front_insensitive("0x"))
     return 16;
-  }
 
-  if (Str.starts_with("0b") || Str.starts_with("0B")) {
-    Str = Str.substr(2);
+  if (Str.consume_front_insensitive("0b"))
     return 2;
-  }
 
-  if (Str.starts_with("0o")) {
-    Str = Str.substr(2);
+  if (Str.consume_front("0o"))
     return 8;
-  }
 
   if (Str[0] == '0' && Str.size() > 1 && isDigit(Str[1])) {
     Str = Str.substr(1);
