@@ -15,9 +15,9 @@ Before:
 .. code-block:: c++
 
   void foo() {
-  int a, b;
-  if (a < b)
-    a = b;
+    int a, b;
+    if (a < b)
+      a = b;
   }
 
 
@@ -26,6 +26,6 @@ After:
 .. code-block:: c++
 
   void foo() {
-  int a, b;
-  a = std::max(a, b);
+    int a, b;
+    a = std::max(a, b);
   }
