@@ -951,7 +951,7 @@ static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
 static bool hasClangPchSignature(const Driver &D, StringRef Path) {
   if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MemBuf =
           D.getVFS().getBufferForFile(Path))
-    return (*MemBuf)->getBuffer().starts_with("CPCH");
+    return (*MemBuf)->getBuffer().contains("CPCH");
   return false;
 }
 
