@@ -79,7 +79,7 @@ struct std::__asan_annotate_container_with_allocator<user_allocator<T>> {
   static bool const value = false;
 };
 
-int main() {
+int main(int, char**) {
   using S = std::basic_string<char, std::char_traits<char>, user_allocator<char>>;
 
   {
