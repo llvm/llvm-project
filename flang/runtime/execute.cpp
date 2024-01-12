@@ -116,7 +116,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-  const char *newCmd{EnsureNullTerminated(
+  char *newCmd{EnsureNullTerminated(
       command.OffsetElement(), command.ElementBytes(), terminator)};
 
   if (exitstat) {
@@ -199,7 +199,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   }
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
-    FreeMemory(const_cast<void *>(static_cast<const void *>(newCmd)));
+    FreeMemory((void *)newCmd);
   }
 }
 
