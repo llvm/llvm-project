@@ -72,7 +72,10 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
@@ -88,6 +91,7 @@
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -296,108 +300,12 @@ cl::opt<bool> PrintPipelinePasses(
              "(best-effort only)."));
 } // namespace llvm
 
-namespace {
-
-// The following passes/analyses have custom names, otherwise their name will
-// include `(anonymous namespace)`. These are special since they are only for
-// testing purposes and don't live in a header file.
-
-/// No-op module pass which does nothing.
-struct NoOpModulePass : PassInfoMixin<NoOpModulePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
-    return PreservedAnalyses::all();
-  }
-
-  static StringRef name() { return "NoOpModulePass"; }
-};
-
-/// No-op module analysis.
-class NoOpModuleAnalysis : public AnalysisInfoMixin<NoOpModuleAnalysis> {
-  friend AnalysisInfoMixin<NoOpModuleAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  struct Result {};
-  Result run(Module &, ModuleAnalysisManager &) { return Result(); }
-  static StringRef name() { return "NoOpModuleAnalysis"; }
-};
-
-/// No-op CGSCC pass which does nothing.
-struct NoOpCGSCCPass : PassInfoMixin<NoOpCGSCCPass> {
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &,
-                        LazyCallGraph &, CGSCCUpdateResult &UR) {
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "NoOpCGSCCPass"; }
-};
-
-/// No-op CGSCC analysis.
-class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
-  friend AnalysisInfoMixin<NoOpCGSCCAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  struct Result {};
-  Result run(LazyCallGraph::SCC &, CGSCCAnalysisManager &, LazyCallGraph &G) {
-    return Result();
-  }
-  static StringRef name() { return "NoOpCGSCCAnalysis"; }
-};
-
-/// No-op function pass which does nothing.
-struct NoOpFunctionPass : PassInfoMixin<NoOpFunctionPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "NoOpFunctionPass"; }
-};
-
-/// No-op function analysis.
-class NoOpFunctionAnalysis : public AnalysisInfoMixin<NoOpFunctionAnalysis> {
-  friend AnalysisInfoMixin<NoOpFunctionAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  struct Result {};
-  Result run(Function &, FunctionAnalysisManager &) { return Result(); }
-  static StringRef name() { return "NoOpFunctionAnalysis"; }
-};
-
-/// No-op loop nest pass which does nothing.
-struct NoOpLoopNestPass : PassInfoMixin<NoOpLoopNestPass> {
-  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &,
-                        LoopStandardAnalysisResults &, LPMUpdater &) {
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "NoOpLoopNestPass"; }
-};
-
-/// No-op loop pass which does nothing.
-struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
-                        LoopStandardAnalysisResults &, LPMUpdater &) {
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "NoOpLoopPass"; }
-};
-
-/// No-op loop analysis.
-class NoOpLoopAnalysis : public AnalysisInfoMixin<NoOpLoopAnalysis> {
-  friend AnalysisInfoMixin<NoOpLoopAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  struct Result {};
-  Result run(Loop &, LoopAnalysisManager &, LoopStandardAnalysisResults &) {
-    return Result();
-  }
-  static StringRef name() { return "NoOpLoopAnalysis"; }
-};
-
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;
 AnalysisKey NoOpLoopAnalysis::Key;
+
+namespace {
 
 /// Whether or not we should populate a PassInstrumentationCallbacks's class to
 /// pass name map.

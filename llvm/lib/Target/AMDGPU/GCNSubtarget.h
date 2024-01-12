@@ -683,6 +683,8 @@ public:
 
   bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
 
+  bool hasScalarSMulU64() const { return getGeneration() >= GFX12; }
+
   bool hasUnpackedD16VMem() const {
     return HasUnpackedD16VMem;
   }
@@ -1125,6 +1127,8 @@ public:
   bool hasVOP3DPP() const { return getGeneration() >= GFX11; }
 
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
+
+  bool hasLdsWaitVMSRC() const { return getGeneration() >= GFX12; }
 
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() >= GFX11;

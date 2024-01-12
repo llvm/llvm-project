@@ -728,30 +728,34 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
   }
 
   // 1. First tile the consumer.
-  SmallVector<scf::ForOp> forLoops;
   SetVector<Operation *> fusedProducers, tiledAndFusedOps;
-  DenseMap<Value, Value> replacements;
-  llvm::SmallDenseMap<Value, int64_t> yieldedValueToResultNumber;
-  {
-    FailureOr<scf::SCFTilingResult> tilingResult =
-        tileUsingSCFForOp(rewriter, consumer, options.tilingOptions);
-    if (failed(tilingResult))
-      return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
-    for (auto *tiledOp : tilingResult->tiledOps)
-      tiledAndFusedOps.insert(tiledOp);
-    forLoops = castToTypedOperations<scf::ForOp>(tilingResult->loops);
-    for (auto [index, origValue, replacement] :
-         llvm::enumerate(consumer->getResults(), tilingResult->replacements)) {
-      replacements[origValue] = replacement;
-      yieldedValueToResultNumber[tilingResult->tiledOps.back()->getResult(
-          index)] = index;
-    }
-  }
+  llvm::SmallDenseMap<Value, size_t> origProducerToLoopResultNum;
+  FailureOr<scf::SCFTilingResult> tilingResult =
+      tileUsingSCFForOp(rewriter, consumer, options.tilingOptions);
+  if (failed(tilingResult))
+    return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
+  for (auto *tiledOp : tilingResult->tiledOps)
+    tiledAndFusedOps.insert(tiledOp);
+  SmallVector<scf::ForOp> forLoops =
+      castToTypedOperations<scf::ForOp>(tilingResult->loops);
 
   // If there are no loops generated, fusion is immaterial.
   if (forLoops.empty()) {
+    DenseMap<Value, Value> replacements;
+    for (auto [origVal, replacement] :
+         llvm::zip_equal(consumer->getResults(), tilingResult->replacements)) {
+      replacements[origVal] = replacement;
+    }
     return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps,
                                      getAsOperations(forLoops), replacements};
+  }
+
+  // To keep track of replacements for now just record the map from the original
+  // untiled value to the result number of the for loop. Since the loop gets
+  // potentially replaced during fusion, keeping the value directly wont work.
+  DenseMap<Value, size_t> origValToResultNumber;
+  for (auto [index, result] : llvm::enumerate(consumer->getResults())) {
+    origValToResultNumber[result] = index;
   }
 
   // 2. Typically, the operands of the tiled operation are slices of the
@@ -776,6 +780,18 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     tensor::ExtractSliceOp candidateSliceOp = candidates.front();
     candidates.pop_front();
 
+    // Find the original producer of the slice.
+    auto [fusableProducer, destinationInitArg] =
+        getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable(),
+                                          forLoops);
+    if (!fusableProducer)
+      continue;
+
+    auto [fuseSlice, yieldReplacement] = options.fusionControlFn(
+        candidateSliceOp, fusableProducer, destinationInitArg.has_value());
+    if (!fuseSlice)
+      continue;
+
     // The operands of the fused producer might themselved be slices of
     // values produced by operations that implement the `TilingInterface`.
     // Add these operations to the worklist.
@@ -784,6 +800,13 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     if (!fusedResult)
       continue;
 
+    if (yieldReplacement) {
+      yieldReplacementForFusedProducer(rewriter, candidateSliceOp,
+                                       fusedResult.value(), forLoops);
+      origValToResultNumber[fusableProducer] =
+          forLoops.front().getNumResults() - 1;
+    }
+
     if (Operation *tiledAndFusedOp =
             fusedResult->tiledAndFusedProducer.getDefiningOp()) {
       fusedProducers.insert(fusedResult->origProducer.getDefiningOp());
@@ -791,6 +814,12 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
       addCandidateSlices(tiledAndFusedOp, candidates);
     }
   }
+
+  DenseMap<Value, Value> replacements;
+  for (auto [origVal, resultNumber] : origValToResultNumber) {
+    replacements[origVal] = forLoops.front()->getResult(resultNumber);
+  }
+
   return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps,
                                    getAsOperations(forLoops), replacements};
 }

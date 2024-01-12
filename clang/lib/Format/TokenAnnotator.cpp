@@ -2234,6 +2234,12 @@ private:
     if (PreviousNotConst->ClosesRequiresClause)
       return false;
 
+    if (Style.isTableGen()) {
+      // keywords such as let and def* defines names.
+      if (Keywords.isTableGenDefinition(*PreviousNotConst))
+        return true;
+    }
+
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
                        PreviousNotConst->Previous &&
                        PreviousNotConst->Previous->is(tok::hash);
@@ -2369,7 +2375,7 @@ private:
       }
     }
 
-    if (Tok.Next->is(tok::question))
+    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
       return false;
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
@@ -2769,13 +2775,6 @@ public:
       // Consume operators with higher precedence.
       parse(Precedence + 1);
 
-      // Do not assign fake parenthesis to tokens that are part of an
-      // unexpanded macro call. The line within the macro call contains
-      // the parenthesis and commas, and we will not find operators within
-      // that structure.
-      if (Current && Current->MacroParent)
-        break;
-
       int CurrentPrecedence = getCurrentPrecedence();
 
       if (Precedence == CurrentPrecedence && Current &&
@@ -2919,6 +2918,13 @@ private:
 
   void addFakeParenthesis(FormatToken *Start, prec::Level Precedence,
                           FormatToken *End = nullptr) {
+    // Do not assign fake parenthesis to tokens that are part of an
+    // unexpanded macro call. The line within the macro call contains
+    // the parenthesis and commas, and we will not find operators within
+    // that structure.
+    if (Start->MacroParent)
+      return;
+
     Start->FakeLParens.push_back(Precedence);
     if (Precedence > prec::Unknown)
       Start->StartsBinaryExpression = true;
@@ -5151,6 +5157,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
+  // FIXME: Breaking after newlines seems useful in general. Turn this into an
+  // option and recognize more cases like endl etc, and break independent of
+  // what comes after operator lessless.
+  if (Right.is(tok::lessless) && Right.Next &&
+      Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
+      Left.TokenText.ends_with("\\n\"")) {
+    return true;
+  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

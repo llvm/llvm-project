@@ -1259,6 +1259,43 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if ((OldTemplate == nullptr) != (NewTemplate == nullptr))
     return true;
 
+  if (NewTemplate) {
+    // C++ [temp.over.link]p4:
+    //   The signature of a function template consists of its function
+    //   signature, its return type and its template parameter list. The names
+    //   of the template parameters are significant only for establishing the
+    //   relationship between the template parameters and the rest of the
+    //   signature.
+    //
+    // We check the return type and template parameter lists for function
+    // templates first; the remaining checks follow.
+    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
+        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
+        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
+    bool SameReturnType = SemaRef.Context.hasSameType(
+        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
+    // FIXME(GH58571): Match template parameter list even for non-constrained
+    // template heads. This currently ensures that the code prior to C++20 is
+    // not newly broken.
+    bool ConstraintsInTemplateHead =
+        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
+        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
+    // C++ [namespace.udecl]p11:
+    //   The set of declarations named by a using-declarator that inhabits a
+    //   class C does not include member functions and member function
+    //   templates of a base class that "correspond" to (and thus would
+    //   conflict with) a declaration of a function or function template in
+    //   C.
+    // Comparing return types is not required for the "correspond" check to
+    // decide whether a member introduced by a shadow declaration is hidden.
+    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
+        !SameTemplateParameterList)
+      return true;
+    if (!UseMemberUsingDeclRules &&
+        (!SameTemplateParameterList || !SameReturnType))
+      return true;
+  }
+
   // Is the function New an overload of the function Old?
   QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
   QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
@@ -1408,43 +1445,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                                 !OldMethod->isExplicitObjectMemberFunction()))
         return true;
     }
-  }
-
-  if (NewTemplate) {
-    // C++ [temp.over.link]p4:
-    //   The signature of a function template consists of its function
-    //   signature, its return type and its template parameter list. The names
-    //   of the template parameters are significant only for establishing the
-    //   relationship between the template parameters and the rest of the
-    //   signature.
-    //
-    // We check the return type and template parameter lists for function
-    // templates first; the remaining checks follow.
-    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
-        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
-        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
-    bool SameReturnType = SemaRef.Context.hasSameType(
-        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
-    // FIXME(GH58571): Match template parameter list even for non-constrained
-    // template heads. This currently ensures that the code prior to C++20 is
-    // not newly broken.
-    bool ConstraintsInTemplateHead =
-        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
-        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
-    // C++ [namespace.udecl]p11:
-    //   The set of declarations named by a using-declarator that inhabits a
-    //   class C does not include member functions and member function
-    //   templates of a base class that "correspond" to (and thus would
-    //   conflict with) a declaration of a function or function template in
-    //   C.
-    // Comparing return types is not required for the "correspond" check to
-    // decide whether a member introduced by a shadow declaration is hidden.
-    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
-        !SameTemplateParameterList)
-      return true;
-    if (!UseMemberUsingDeclRules &&
-        (!SameTemplateParameterList || !SameReturnType))
-      return true;
   }
 
   if (!UseOverrideRules) {
@@ -6055,6 +6055,16 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return S.Diag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_indirect)
            << From->getType() << From->getSourceRange() << T;
+  }
+  // 'TryCopyInitialization' returns incorrect info for attempts to bind
+  // a reference to a bit-field due to C++ [over.ics.ref]p4. Namely,
+  // 'SCS->DirectBinding' occurs to be set to 'true' despite it is not
+  // the direct binding according to C++ [dcl.init.ref]p5. Hence, check this
+  // case explicitly.
+  if (From->refersToBitField() && T.getTypePtr()->isReferenceType()) {
+    return S.Diag(From->getBeginLoc(),
+                  diag::err_reference_bind_to_bitfield_in_cce)
+           << From->getSourceRange();
   }
 
   // Usually we can simply apply the ImplicitConversionSequence we formed
@@ -13994,21 +14004,19 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
-  FunctionDecl *FDecl = Best->Function;
 
   // Model the case with a call to a templated function whose definition
   // encloses the call and whose return type contains a placeholder type as if
   // the UnresolvedLookupExpr was type-dependent.
-  if (OverloadResult == OR_Success && FDecl &&
-      FDecl->isTemplateInstantiation() &&
-      FDecl->getReturnType()->isUndeducedType()) {
-    if (auto TP = FDecl->getTemplateInstantiationPattern(false)) {
-      if (TP->willHaveBody()) {
-        CallExpr *CE =
-            CallExpr::Create(Context, Fn, Args, Context.DependentTy, VK_PRValue,
-                             RParenLoc, CurFPFeatureOverrides());
-        result = CE;
-        return result;
+  if (OverloadResult == OR_Success) {
+    const FunctionDecl *FDecl = Best->Function;
+    if (FDecl && FDecl->isTemplateInstantiation() &&
+        FDecl->getReturnType()->isUndeducedType()) {
+      if (const auto *TP =
+              FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+          TP && TP->willHaveBody()) {
+        return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }
     }
   }
