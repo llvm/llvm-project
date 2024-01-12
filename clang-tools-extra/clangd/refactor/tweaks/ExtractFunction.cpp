@@ -798,7 +798,11 @@ QualType getReturnTypeForHoisted(const FunctionDecl &EnclosingFunc,
   if (ToHoist.size() == 1) {
     if (const auto *const VDecl = llvm::dyn_cast<VarDecl>(*ToHoist.begin());
         VDecl != nullptr) {
-      return VDecl->getType();
+      const auto Type = VDecl->getType();
+      if (const auto *const RDecl = Type->getAsCXXRecordDecl();
+          RDecl != nullptr && RDecl->isLambda())
+        return EnclosingFunc.getParentASTContext().getAutoDeductType();
+      return Type;
     }
   }
 

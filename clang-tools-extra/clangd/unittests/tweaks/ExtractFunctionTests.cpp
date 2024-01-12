@@ -492,6 +492,60 @@ float foo(float* p, int n) {
     )cpp";
 
   EXPECT_EQ(apply(ControlStmtInput2), ControlStmtOutput2);
+
+  std::string LambdaReturnInput1 = R"cpp(
+    void foo() {
+      for (;;) {
+        [[auto l = [](){};
+        l();]]
+        l();
+      }
+    }
+  )cpp";
+
+  std::string LambdaReturnOutput1 = R"cpp(
+    auto extracted() {
+auto l = [](){};
+        l();
+return l;
+}
+void foo() {
+      for (;;) {
+        auto l = extracted();
+        l();
+      }
+    }
+  )cpp";
+
+  EXPECT_EQ(apply(LambdaReturnInput1), LambdaReturnOutput1);
+
+  std::string LambdaReturnInput2 = R"cpp(
+    void foo() {
+      for (;;) {
+        [[auto l = [](int v){};
+        int v = 42;
+        l(v);]]
+        l(v);
+      }
+    }
+  )cpp";
+
+  std::string LambdaReturnOutput2 = R"cpp(
+    auto extracted() {
+auto l = [](int v){};
+        int v = 42;
+        l(v);
+return std::pair{l, v};
+}
+void foo() {
+      for (;;) {
+        auto [l, v] = extracted();
+        l(v);
+      }
+    }
+  )cpp";
+
+  EXPECT_EQ(apply(LambdaReturnInput2), LambdaReturnOutput2);
 }
 
 TEST_F(ExtractFunctionTest, HoistingCXX11) {
