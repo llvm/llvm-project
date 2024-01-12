@@ -85,7 +85,7 @@ class CounterGroup {
 public:
   // event: the PerfEvent to measure.
   explicit CounterGroup(PerfEvent &&event, std::vector<PerfEvent> &&ValEvents,
-                   pid_t ProcessID = 0);
+                        pid_t ProcessID = 0);
 
   CounterGroup(const CounterGroup &) = delete;
   CounterGroup(CounterGroup &&other) = default;

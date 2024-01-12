@@ -108,7 +108,7 @@ StringRef PerfEvent::getPfmEventString() const {
 }
 
 CounterGroup::CounterGroup(PerfEvent &&E, std::vector<PerfEvent> &&ValEvents,
-                 pid_t ProcessID)
+                           pid_t ProcessID)
     : Event(std::move(E)), ValidationEvents(std::move(ValEvents)),
       ValidationFDs(ValidationEvents.size(), -1) {
   assert(Event.valid());

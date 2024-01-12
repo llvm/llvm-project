@@ -56,8 +56,8 @@ ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
               .concat("'"));
   }
 
-  return std::make_unique<pfm::CounterGroup>(std::move(Event),
-                                        std::move(ValidationEvents), ProcessID);
+  return std::make_unique<pfm::CounterGroup>(
+      std::move(Event), std::move(ValidationEvents), ProcessID);
 }
 
 void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
