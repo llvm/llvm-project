@@ -178,7 +178,6 @@ bool isTokenIdentifierOrKeyword(Parser &P, Token Tok) {
   return false;
 }
 
-
 /// Parses and consumes an identifer followed immediately by a single colon, and
 /// diagnoses if it is not the 'special token' kind that we require. Used when
 /// the tag is the only valid value.

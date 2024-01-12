@@ -130,7 +130,6 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCDirectiveKind::Invalid:
     return Out << "<invalid>";
-
   }
   llvm_unreachable("Uncovered directive kind");
 }
