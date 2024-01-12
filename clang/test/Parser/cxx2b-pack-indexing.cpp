@@ -1,19 +1,19 @@
-// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -Wno-c++26-extensions %s
 
 template<typename... T>
 struct S {
     T...1; // expected-error{{expected member name or ';' after declaration specifiers}}
     T...[; // expected-error{{expected expression}} \
            // expected-error{{expected ']'}} \
-           // expected-note {{to match this '['}}\
+           // expected-note {{to match this '['}} \
            // expected-warning{{declaration does not declare anything}}
 
     T...[1; // expected-error{{expected ']'}} \
-            // expected-note {{to match this '['}}\
-            // expected-warning{{declaration does not declare anything}}
+            // expected-note {{to match this '['}} \
+           // expected-warning{{declaration does not declare anything}}
 
     T...[]; // expected-error{{expected expression}} \
-            // expected-warning{{declaration does not declare anything}}
+           // expected-warning{{declaration does not declare anything}}
 
     void f(auto... v) {
         decltype(v...[1]) a = v...[1];

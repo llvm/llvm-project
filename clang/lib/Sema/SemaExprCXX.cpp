@@ -8117,7 +8117,7 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     break;
   }
   case DeclSpec::TST_typename_pack_indexing: {
-    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+    T = BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
                               DS.getBeginLoc(), DS.getEllipsisLoc());
     TLB.pushTrivial(getASTContext(),
                     cast<PackIndexingType>(T.getTypePtr())->getPattern(),

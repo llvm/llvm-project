@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -std=c++2c -verify -Wno-c++26-extensions %s
 
 struct NotAPack;
 template <typename T, auto V, template<typename> typename Tp>
@@ -6,9 +6,9 @@ void not_pack() {
     int i = 0;
     i...[0]; // expected-error {{i does not refer to the name of a parameter pack}}
     V...[0]; // expected-error {{V does not refer to the name of a parameter pack}}
-    NotAPack...[0]; // expected-error{{'NotAPack' does not refer to the name of a parameter pack}}
-    T...[0];   // expected-error{{'T' does not refer to the name of a parameter pack}}
-    Tp...[0]; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
+    NotAPack...[0] a; // expected-error{{'NotAPack' does not refer to the name of a parameter pack}}
+    T...[0] b;   // expected-error{{'T' does not refer to the name of a parameter pack}}
+    Tp...[0] c; // expected-error{{'Tp' does not refer to the name of a parameter pack}}
 }
 
 namespace invalid_indexes {

@@ -1671,7 +1671,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Expr *E = DS.getPackIndexingExpr();
     assert(E && "Didn't get an expression for pack indexing");
     QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
-    Result = S.ActOnPackIndexingType(Pattern, E, DS.getBeginLoc(),
+    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
                                      DS.getEllipsisLoc());
     if (Result.isNull()) {
       declarator.setInvalidType(true);
@@ -9821,13 +9821,17 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      SourceLocation Loc,
                                      SourceLocation EllipsisLoc) {
-  if (!Pattern->containsUnexpandedParameterPack()) {
-    Diag(EllipsisLoc, diag::err_expected_name_of_pack) << Pattern;
+  if (!IndexExpr)
     return QualType();
-  }
+
+  // Diagnose unexpanded packs but continue to improve recovery.
+  if (!Pattern->containsUnexpandedParameterPack())
+    Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
+
   QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
-  if(!Type.isNull())
-      Diag(Loc, getLangOpts().CPlusPlus26? diag::ext_pack_indexing : diag::warn_cxx23_pack_indexing);
+  if (!Type.isNull())
+    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::ext_pack_indexing
+                                        : diag::warn_cxx23_pack_indexing);
   return Type;
 }
 

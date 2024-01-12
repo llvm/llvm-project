@@ -57,7 +57,8 @@ template<typename T>
 void b(T[] ...);
 
 template<typename T>
-void c(T ... []); // expected-error{{type 'T[]' of function parameter pack does not contain any unexpanded parameter packs}}
+void c(T ... []); // expected-error {{expected expression}} \
+                  // expected-error {{'T' does not refer to the name of a parameter pack}}
 
 template<typename T>
 void d(T ... x[]); // expected-error{{type 'T[]' of function parameter pack does not contain any unexpanded parameter packs}}

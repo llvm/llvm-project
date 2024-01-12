@@ -233,21 +233,22 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     HasScopeSpecifier = true;
   }
 
-  else if (!HasScopeSpecifier &&
-           Tok.is(tok::identifier) && GetLookAheadToken(1).is(tok::ellipsis) &&
+  else if (!HasScopeSpecifier && Tok.is(tok::identifier) &&
+           GetLookAheadToken(1).is(tok::ellipsis) &&
            GetLookAheadToken(2).is(tok::l_square)) {
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
     SourceLocation EndLoc = ParseIndexedTypeNamePack(DS);
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
-      return true;
+      return false;
 
     QualType Type = Actions.ActOnPackIndexingType(
         DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
         DS.getEllipsisLoc());
+
     if (Type.isNull())
-      return true;
+      return false;
 
     if (!TryConsumeToken(tok::coloncolon, CCLoc)) {
       AnnotateExistingIndexedTypeNamePack(ParsedType::make(Type), Start,

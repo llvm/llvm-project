@@ -3827,9 +3827,12 @@ PackIndexingType::PackIndexingType(const ASTContext &Context,
 }
 
 std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
-  if(isDependentType())
+  if (isInstantiationDependentType())
     return std::nullopt;
-  ConstantExpr* CE = cast<ConstantExpr>(getIndexExpr());
+  // Should only be not a constant for error recovery.
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(getIndexExpr());
+  if (!CE)
+    return std::nullopt;
   auto Index = CE->getResultAsAPSInt();
   assert(Index.isNonNegative() && "Invalid index");
   return static_cast<unsigned>(Index.getExtValue());

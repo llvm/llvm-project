@@ -4496,7 +4496,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     return true;
   } else if (DS.getTypeSpecType() == TST_typename_pack_indexing) {
     BaseType =
-        ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+        BuildPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
                               DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
