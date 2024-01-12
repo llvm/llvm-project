@@ -100,7 +100,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
                                               /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts());
+                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
                            Compiler.getTarget().getTriple());
 }

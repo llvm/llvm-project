@@ -12,6 +12,17 @@
 #include "InstrProfilingPort.h"
 #include <stdio.h>
 
+// Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
+// including instr_prof_interface.h so the interface functions are
+// declared correctly for the runtime.
+// __LLVM_INSTR_PROFILE_GENERATE is always `#undef`ed after the header,
+// because compiler-rt does not support profiling the profiling runtime itself.
+#ifndef __LLVM_INSTR_PROFILE_GENERATE
+#define __LLVM_INSTR_PROFILE_GENERATE
+#endif
+#include "profile/instr_prof_interface.h"
+#undef __LLVM_INSTR_PROFILE_GENERATE
+
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "profile/InstrProfData.inc"
 
@@ -101,12 +112,6 @@ ValueProfNode *__llvm_profile_end_vnodes();
 uint32_t *__llvm_profile_begin_orderfile();
 
 /*!
- * \brief Clear profile counters to zero.
- *
- */
-void __llvm_profile_reset_counters(void);
-
-/*!
  * \brief Merge profile data from buffer.
  *
  * Read profile data from buffer \p Profile and merge with in-process profile
@@ -156,50 +161,6 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
 int __llvm_profile_write_file(void);
 
 int __llvm_orderfile_write_file(void);
-/*!
- * \brief this is a wrapper interface to \c __llvm_profile_write_file.
- * After this interface is invoked, an already dumped flag will be set
- * so that profile won't be dumped again during program exit.
- * Invocation of interface __llvm_profile_reset_counters will clear
- * the flag. This interface is designed to be used to collect profile
- * data from user selected hot regions. The use model is
- *      __llvm_profile_reset_counters();
- *      ... hot region 1
- *      __llvm_profile_dump();
- *      .. some other code
- *      __llvm_profile_reset_counters();
- *       ... hot region 2
- *      __llvm_profile_dump();
- *
- *  It is expected that on-line profile merging is on with \c %m specifier
- *  used in profile filename . If merging is  not turned on, user is expected
- *  to invoke __llvm_profile_set_filename  to specify different profile names
- *  for different regions before dumping to avoid profile write clobbering.
- */
-int __llvm_profile_dump(void);
-
-int __llvm_orderfile_dump(void);
-
-/*!
- * \brief Set the filename for writing instrumentation data.
- *
- * Sets the filename to be used for subsequent calls to
- * \a __llvm_profile_write_file().
- *
- * \c Name is not copied, so it must remain valid.  Passing NULL resets the
- * filename logic to the default behaviour.
- *
- * Note: There may be multiple copies of the profile runtime (one for each
- * instrumented image/DSO). This API only modifies the filename within the
- * copy of the runtime available to the calling image.
- *
- * Warning: This is a no-op if continuous mode (\ref
- * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
- * that in continuous mode, profile counters are mmap()'d to the profile at
- * program initialization time. Support for transferring the mmap'd profile
- * counts to a new file has not been implemented.
- */
-void __llvm_profile_set_filename(const char *Name);
 
 /*!
  * \brief Set the FILE object for writing instrumentation data. Return 0 if set
