@@ -2116,6 +2116,7 @@ cc_library(
         ":FuncDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":Pass",
         ":Transforms",
         ":VectorDialect",

@@ -585,6 +585,11 @@ TEST(CommandLineTest, AddToAllSubCommands) {
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
+  EXPECT_TRUE(cl::SubCommand::getTopLevel().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(cl::SubCommand::getAll().OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC1.OptionsMap.contains("everywhere"));
+  EXPECT_TRUE(SC2.OptionsMap.contains("everywhere"));
+
   const char *args[] = {"prog", "-everywhere"};
   const char *args2[] = {"prog", "sc1", "-everywhere"};
   const char *args3[] = {"prog", "sc2", "-everywhere"};
