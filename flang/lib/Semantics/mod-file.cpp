@@ -491,31 +491,51 @@ void ModFileWriter::PutDECStructure(
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
 
+static void PutOpenACCDeviceTypeRoutineInfo(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &info) {
+  if (info.isSeq()) {
+    os << " seq";
+  }
+  if (info.isGang()) {
+    os << " gang";
+    if (info.gangDim() > 0) {
+      os << "(dim: " << info.gangDim() << ")";
+    }
+  }
+  if (info.isVector()) {
+    os << " vector";
+  }
+  if (info.isWorker()) {
+    os << " worker";
+  }
+  if (info.bindName()) {
+    os << " bind(" << *info.bindName() << ")";
+  }
+}
+
 static void PutOpenACCRoutineInfo(
     llvm::raw_ostream &os, const SubprogramDetails &details) {
   for (auto info : details.openACCRoutineInfos()) {
     os << "!$acc routine";
-    if (info.isSeq()) {
-      os << " seq";
-    }
-    if (info.isGang()) {
-      os << " gang";
-      if (info.gangDim() > 0) {
-        os << "(dim: " << info.gangDim() << ")";
-      }
-    }
-    if (info.isVector()) {
-      os << " vector";
-    }
-    if (info.isWorker()) {
-      os << " worker";
-    }
+
+    PutOpenACCDeviceTypeRoutineInfo(os, info);
+
     if (info.isNohost()) {
       os << " nohost";
     }
-    if (info.bindName()) {
-      os << " bind(" << *info.bindName() << ")";
+
+    for (auto dtype : info.deviceTypeInfos()) {
+      os << " device_type(";
+      if (dtype.dType() == common::OpenACCDeviceType::Star) {
+        os << "*";
+      } else {
+        os << parser::ToLowerCaseLetters(common::EnumToString(dtype.dType()));
+      }
+      os << ")";
+
+      PutOpenACCDeviceTypeRoutineInfo(os, dtype);
     }
+
     os << "\n";
   }
 }
