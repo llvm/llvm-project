@@ -38,7 +38,8 @@ Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
 - Fix a bug in reversed argument for templated operators.
-  This breaks code in C++20 which was previously accepted in C++17. Eg:
+  This breaks code in C++20 which was previously accepted in C++17.
+  Clang did not properly diagnose such casese in C++20 before this change. Eg:
 
   .. code-block:: cpp
 
@@ -58,6 +59,7 @@ code bases.
   To reduce such widespread breakages, as an extension, Clang accepts this code
   with an existing warning ``-Wambiguous-reversed-operator`` warning.
   Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+
 - The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
   ``--gcc-toolchain=``) is deprecated and will be removed. Specify
   ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
