@@ -115,6 +115,18 @@ void func() {
   }
 
   for (int i = 0; i < 10; ++i) {
+    // expected-error@+2{{invalid tag 'devnum' on 'cache' directive}}
+    // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+    #pragma acc cache(devnum:ArrayPtr)
+  }
+
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+2{{invalid tag 'invalid' on 'cache' directive}}
+    // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+    #pragma acc cache(invalid:ArrayPtr)
+  }
+
+  for (int i = 0; i < 10; ++i) {
     // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
     #pragma acc cache(readonly:ArrayPtr)
   }
