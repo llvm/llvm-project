@@ -36,12 +36,7 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     cluster. This name serves as a symbolic reference to the cluster throughout
     the MLIR module, allowing for consistent referencing and easier debugging.
 
-    2. `rank`: This attribute specifies the number of axes of the cluster. The
-    rank indicates the dimensionality of the mesh cluster and can be used to
-    determine the layout and the addressing space of the computation distributed
-    across the mesh.
-
-    3. `shape`: This attribute represents the shape of the device cluster.
+    2. `shape`: This attribute represents the shape of the device cluster.
     It uses the same notation as a tensor shape. Also allowing for dynamic
     dimensions.
     This flexibility allows for dynamic device assignment or configurations
