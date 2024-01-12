@@ -17,18 +17,17 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
-   Finder->addMatcher(
-      ifStmt(has(binaryOperator(
-                 anyOf(hasOperatorName("<"), hasOperatorName(">"),hasOperatorName("<="), hasOperatorName(">=")),
-                 hasLHS(expr().bind("lhsVar1")),
-                 hasRHS(expr().bind("rhsVar1")))),
-             hasThen(stmt(binaryOperator(
-                 hasOperatorName("="),
-                 hasLHS(expr().bind("lhsVar2")),
-                 hasRHS(expr().bind("rhsVar2"))))))
+  Finder->addMatcher(
+      ifStmt(
+          has(binaryOperator(
+              anyOf(hasOperatorName("<"), hasOperatorName(">"),
+                    hasOperatorName("<="), hasOperatorName(">=")),
+              hasLHS(expr().bind("lhsVar1")), hasRHS(expr().bind("rhsVar1")))),
+          hasThen(stmt(binaryOperator(hasOperatorName("="),
+                                      hasLHS(expr().bind("lhsVar2")),
+                                      hasRHS(expr().bind("rhsVar2"))))))
           .bind("ifStmt"),
       this);
-
 }
 
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
@@ -48,56 +47,51 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation ifLocation = ifStmt->getIfLoc();
   SourceLocation thenLocation = ifStmt->getEndLoc();
-  auto lhsVar1Str = Lexer::getSourceText(CharSourceRange::getTokenRange(lhsVar1->getSourceRange()),
-                                       Context.getSourceManager(), Context.getLangOpts());
+  auto lhsVar1Str = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(lhsVar1->getSourceRange()),
+      Context.getSourceManager(), Context.getLangOpts());
 
-  auto lhsVar2Str = Lexer::getSourceText(CharSourceRange::getTokenRange(lhsVar2->getSourceRange()),
-                                       Context.getSourceManager(), Context.getLangOpts());
+  auto lhsVar2Str = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(lhsVar2->getSourceRange()),
+      Context.getSourceManager(), Context.getLangOpts());
 
-  auto rhsVar1Str = Lexer::getSourceText(CharSourceRange::getTokenRange(rhsVar1->getSourceRange()),
-                                       Context.getSourceManager(), Context.getLangOpts());
+  auto rhsVar1Str = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(rhsVar1->getSourceRange()),
+      Context.getSourceManager(), Context.getLangOpts());
 
-  auto rhsVar2Str = Lexer::getSourceText(CharSourceRange::getTokenRange(rhsVar2->getSourceRange()),
-                                       Context.getSourceManager(), Context.getLangOpts());
+  auto rhsVar2Str = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(rhsVar2->getSourceRange()),
+      Context.getSourceManager(), Context.getLangOpts());
 
   if (binaryOp->getOpcode() == BO_LT) {
-    if (lhsVar1Str == lhsVar2Str &&
-        rhsVar1Str == rhsVar2Str) {
+    if (lhsVar1Str == lhsVar2Str && rhsVar1Str == rhsVar2Str) {
       diag(ifStmt->getIfLoc(), "use `std::max` instead of `<`")
-          << FixItHint::CreateReplacement(
-                 SourceRange(ifLocation, thenLocation),
-                 lhsVar2Str.str() + " = std::max(" +
-                     lhsVar1Str.str() + ", " +
-                     rhsVar1Str.str() + ")");
-    } else if (lhsVar1Str == rhsVar2Str &&
-               rhsVar1Str == lhsVar2Str) {
+          << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
+                                          lhsVar2Str.str() + " = std::max(" +
+                                              lhsVar1Str.str() + ", " +
+                                              rhsVar1Str.str() + ")");
+    } else if (lhsVar1Str == rhsVar2Str && rhsVar1Str == lhsVar2Str) {
       diag(ifStmt->getIfLoc(), "use `std::min` instead of `<`")
-          << FixItHint::CreateReplacement(
-                 SourceRange(ifLocation, thenLocation),
-                 lhsVar2Str.str() + " = std::min(" +
-                     lhsVar1Str.str() + ", " +
-                     rhsVar1Str.str() + ")");
+          << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
+                                          lhsVar2Str.str() + " = std::min(" +
+                                              lhsVar1Str.str() + ", " +
+                                              rhsVar1Str.str() + ")");
     }
   } else if (binaryOp->getOpcode() == BO_GT) {
-    if (lhsVar1Str == lhsVar2Str &&
-        rhsVar1Str == rhsVar2Str) {
+    if (lhsVar1Str == lhsVar2Str && rhsVar1Str == rhsVar2Str) {
       diag(ifStmt->getIfLoc(), "use `std::min` instead of `>`")
-          << FixItHint::CreateReplacement(
-                 SourceRange(ifLocation, thenLocation),
-                 lhsVar2Str.str() + " = std::min(" +
-                     lhsVar1Str.str() + ", " +
-                     rhsVar1Str.str() + ")");
-    } else if (lhsVar1Str == rhsVar2Str &&
-               rhsVar1Str == lhsVar2Str) {
+          << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
+                                          lhsVar2Str.str() + " = std::min(" +
+                                              lhsVar1Str.str() + ", " +
+                                              rhsVar1Str.str() + ")");
+    } else if (lhsVar1Str == rhsVar2Str && rhsVar1Str == lhsVar2Str) {
       diag(ifStmt->getIfLoc(), "use `std::max` instead of `>`")
-          << FixItHint::CreateReplacement(
-                 SourceRange(ifLocation, thenLocation),
-                 lhsVar2Str.str() + " = std::max(" +
-                     lhsVar1Str.str() + ", " +
-                     rhsVar1Str.str() + ")");
+          << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
+                                          lhsVar2Str.str() + " = std::max(" +
+                                              lhsVar1Str.str() + ", " +
+                                              rhsVar1Str.str() + ")");
     }
   }
-  
 }
 
 } // namespace clang::tidy::readability
