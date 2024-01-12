@@ -77,7 +77,7 @@ class TerminatorVisitor
 public:
   TerminatorVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
                     int BlockSuccIdx)
-      : Env(Env), BlockSuccIdx(BlockSuccIdx) {}
+      : StmtToEnv(StmtToEnv), Env(Env), BlockSuccIdx(BlockSuccIdx) {}
 
   TerminatorVisitorRetTy VisitIfStmt(const IfStmt *S) {
     auto *Cond = S->getCond();
@@ -152,6 +152,7 @@ private:
     return {&Cond, ConditionValue};
   }
 
+  const StmtToEnvMap &StmtToEnv;
   Environment &Env;
   int BlockSuccIdx;
 };
