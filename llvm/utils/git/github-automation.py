@@ -444,7 +444,7 @@ class ReleaseWorkflow:
 
     def issue_notify_pull_request(self, pull: github.PullRequest.PullRequest) -> None:
         self.issue.create_comment(
-            "/pull-request {}#{}".format(self.branch_repo_name, pull.number)
+            "/pull-request {}#{}".format(self.repo_name, pull.number)
         )
 
     def make_ignore_comment(self, comment: str) -> str:
@@ -496,29 +496,39 @@ class ReleaseWorkflow:
         if self.CHERRY_PICK_FAILED_LABEL in [l.name for l in self.issue.labels]:
             self.issue.remove_from_labels(self.CHERRY_PICK_FAILED_LABEL)
 
+    def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
+        commit = self.repo.get_commit(cherry_pick_sha)
+        message = commit.commit.message
+        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        if not m:
+            return None
+        return self.repo.get_commit(m.group(1))
+
     def pr_request_review(self, pr: github.PullRequest.PullRequest):
         """
         This function will try to find the best reviewers for `commits` and
-        then add a comment requesting review of the backport and assign the
-        pull request to the selected reviewers.
+        then add a comment requesting review of the backport and add them as
+        reviewers.
 
-        The reviewers selected are those users who approved the patch in
-        Phabricator.
+        The reviewers selected are those users who approved the pull request
+        for the main branch.
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, commit)
-            for a in approvers:
-                login = phab_login_to_github_login(self.phab_token, self.repo, a)
-                if not login:
-                    continue
-                reviewers.append(login)
+            main_commit = self.get_main_commit(commit.sha)
+            if not main_commit:
+                continue
+            for pull in main_commit.get_pulls():
+                for review in pull.get_reviews():
+                    if review.state != "APPROVED":
+                        continue
+                reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])
             )
             pr.create_issue_comment(message)
-            pr.add_to_assignees(*reviewers)
+            pr.create_review_request(reviewers)
 
     def create_branch(self, commits: List[str]) -> bool:
         """
@@ -559,7 +569,7 @@ class ReleaseWorkflow:
 
     def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
         """
-        reate a pull request in `self.branch_repo_name`.  The base branch of the
+        Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
@@ -567,7 +577,7 @@ class ReleaseWorkflow:
         https://docs.github.com/en/get-started/quickstart/github-glossary#base-branch
         https://docs.github.com/en/get-started/quickstart/github-glossary#compare-branch
         """
-        repo = github.Github(self.token).get_repo(self.branch_repo_name)
+        repo = github.Github(self.token).get_repo(self.repo_name)
         issue_ref = "{}#{}".format(self.repo_name, self.issue_number)
         pull = None
         release_branch_for_issue = self.release_branch_for_issue
@@ -612,9 +622,10 @@ class ReleaseWorkflow:
                 maintainer_can_modify=False,
             )
 
+            pull.as_issue().edit(milestone=self.issue.milestone)
+
             try:
-                if self.phab_token:
-                    self.pr_request_review(pull)
+                self.pr_request_review(pull)
             except Exception as e:
                 print("error: Failed while searching for reviewers", e)
 
@@ -710,7 +721,7 @@ release_workflow_parser.add_argument(
 release_workflow_parser.add_argument(
     "--branch-repo",
     type=str,
-    default="llvm/llvm-project-release-prs",
+    default="llvmbot/llvm-project",
     help="The name of the repo where new branches will be pushed (e.g. llvm/llvm-project)",
 )
 release_workflow_parser.add_argument(
