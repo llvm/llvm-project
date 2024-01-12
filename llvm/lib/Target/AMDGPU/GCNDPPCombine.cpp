@@ -42,6 +42,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOperand.h"
 
 using namespace llvm;
 
@@ -274,18 +275,41 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       break;
     }
 
-    if (auto *Mod0 = TII->getNamedOperand(OrigMI,
-                                          AMDGPU::OpName::src0_modifiers)) {
-      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
-                                          AMDGPU::OpName::src0_modifiers));
+    MachineOperand *MovMod = nullptr;
+    if (AMDGPU::hasNamedOperand(MovMI.getOpcode(),
+                                AMDGPU::OpName::src0_modifiers)) {
+      MovMod = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0_modifiers);
+      if (MovMod)
+        assert(0LL == (MovMod->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
+    }
+    if (auto *Mod0 =
+            TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers)) {
+      assert(NumOperands ==
+             AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src0_modifiers));
       assert(HasVOP3DPP ||
              (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
-      DPPInst.addImm(Mod0->getImm());
+      // MovMod   MIMod
+      // abs      abs   -> abs
+      // abs      neg   -> abs|neg
+      // neg      abs   -> abs
+      // neg      neg   -> 0
+      if (MovMod && MovMod->getImm() == SISrcMods::ABS &&
+          Mod0->getImm() == SISrcMods::NEG)
+        DPPInst.addImm(SISrcMods::ABS | SISrcMods::NEG);
+      else if (MovMod && MovMod->getImm() == SISrcMods::NEG &&
+               Mod0->getImm() == SISrcMods::NEG)
+        DPPInst.addImm(0);
+      else
+        DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
     } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src0_modifiers)) {
-      DPPInst.addImm(0);
+      if (MovMod)
+        DPPInst.addImm(MovMod->getImm());
+      else
+        DPPInst.addImm(0);
       ++NumOperands;
     }
+
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
     int Src0Idx = NumOperands;

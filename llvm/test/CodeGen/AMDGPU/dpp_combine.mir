@@ -300,8 +300,12 @@ body:             |
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
 # GCN: %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $mode, implicit $exec
 # GCN: %6:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
-# GCN: %8:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
-# GCN: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $mode, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_F32_dpp %2, 3, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %12:vgpr_32 = V_ADD_F32_dpp %2, 2, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %14:vgpr_32 = V_ADD_F32_dpp %2, 2, %1, 0, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %16:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $mode, implicit $exec
+# GCN: %18:vgpr_32 = V_ADD_F32_e64 4, %17, 8, %0, 0, 0, implicit $mode, implicit $exec
 
 name: add_f32_e64
 tracksRegLiveness: true
@@ -321,13 +325,29 @@ body:             |
     %5:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
     %6:vgpr_32 = V_ADD_F32_e64 0, %5, 0, %0, 0, 0, implicit $mode, implicit $exec
 
+    ; this should combine MOV and ADD modifiers when they are both neg
+    %7:vgpr_32 = V_MOV_B32_dpp undef %2, 1, %1, 1, 15, 15, 1, implicit $exec
+    %8:vgpr_32 = V_ADD_F32_e64 1, %7, 0, %0, 0, 0, implicit $mode, implicit $exec
+
+    ; this should combine MOV and ADD modifiers when they are abs(MOV) and neg(ADD)
+    %9:vgpr_32 = V_MOV_B32_dpp undef %2, 2, %1, 1, 15, 15, 1, implicit $exec
+    %10:vgpr_32 = V_ADD_F32_e64 1, %9, 0, %0, 0, 0, implicit $mode, implicit $exec
+
+    ; this should combine MOV and ADD modifiers when they are neg(MOV) and abs(ADD)
+    %11:vgpr_32 = V_MOV_B32_dpp undef %2, 1, %1, 1, 15, 15, 1, implicit $exec
+    %12:vgpr_32 = V_ADD_F32_e64 2, %11, 0, %0, 0, 0, implicit $mode, implicit $exec
+
+    ; this should combine MOV and ADD modifiers when they are both abs
+    %13:vgpr_32 = V_MOV_B32_dpp undef %2, 2, %1, 1, 15, 15, 1, implicit $exec
+    %14:vgpr_32 = V_ADD_F32_e64 2, %13, 0, %0, 0, 0, implicit $mode, implicit $exec
+
     ; this should be combined as modifiers other than abs|neg are default
-    %7:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
-    %8:vgpr_32 = V_ADD_F32_e64 1, %7, 2, %0, 0, 0, implicit $mode, implicit $exec
+    %15:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
+    %16:vgpr_32 = V_ADD_F32_e64 1, %15, 2, %0, 0, 0, implicit $mode, implicit $exec
 
     ; this shouldn't be combined as modifiers aren't abs|neg
-    %9:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
-    %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $mode, implicit $exec
+    %17:vgpr_32 = V_MOV_B32_dpp undef %2, 0, %1, 1, 15, 15, 1, implicit $exec
+    %18:vgpr_32 = V_ADD_F32_e64 4, %17, 8, %0, 0, 0, implicit $mode, implicit $exec
 ...
 
 # check for e64 modifiers

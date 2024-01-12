@@ -3298,7 +3298,6 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
 bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
-  case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_MOV_B64_e64:
@@ -3311,6 +3310,14 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
     return true;
+  case AMDGPU::V_MOV_B32_e64:
+    if (MI
+            .getOperand(AMDGPU::getNamedOperandIdx(
+                AMDGPU::V_MOV_B32_e64, AMDGPU::OpName::src0_modifiers))
+            .getImm() == 0)
+      return true;
+    else
+      return false;
   default:
     return false;
   }
