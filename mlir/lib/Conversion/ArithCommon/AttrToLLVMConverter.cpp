@@ -35,7 +35,7 @@ mlir::arith::convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr) {
       fmfAttr.getContext(), convertArithFastMathFlagsToLLVM(arithFMF));
 }
 
-LLVM::IntegerOverflowFlags mlir::arith::convertArithOverflowFlagsToLLVM(
+LLVM::IntegerOverflowFlags mlir::arith::convertArithOveflowFlagsToLLVM(
     arith::IntegerOverflowFlags arithFlags) {
   LLVM::IntegerOverflowFlags llvmFlags{};
   const std::pair<arith::IntegerOverflowFlags, LLVM::IntegerOverflowFlags>
@@ -49,9 +49,9 @@ LLVM::IntegerOverflowFlags mlir::arith::convertArithOverflowFlagsToLLVM(
   return llvmFlags;
 }
 
-LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOverflowAttrToLLVM(
+LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOveflowAttrToLLVM(
     arith::IntegerOverflowFlagsAttr flagsAttr) {
   arith::IntegerOverflowFlags arithFlags = flagsAttr.getValue();
   return LLVM::IntegerOverflowFlagsAttr::get(
-      flagsAttr.getContext(), convertArithOverflowFlagsToLLVM(arithFlags));
+      flagsAttr.getContext(), convertArithOveflowFlagsToLLVM(arithFlags));
 }
