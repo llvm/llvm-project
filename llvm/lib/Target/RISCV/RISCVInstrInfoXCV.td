@@ -198,7 +198,7 @@ let DecoderNamespace = "XCValu" in {
 
 } // DecoderNamespace = "XCValu"
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   // General ALU Operations
   def CV_ABS    : CVInstAluR<0b0101000, 0b011, "cv.abs">,
@@ -249,10 +249,10 @@ let Predicates = [HasVendorXCValu],
                   Sched<[]>;
   def CV_SUBURN : CVInstAluRRI<0b11, 0b011, "cv.suburn">,
                   Sched<[]>;
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   Constraints = "$rd = $rd_wb" in {
   def CV_ADDNR   : CVInstAluRRNR<0b1000000, 0b011, "cv.addnr">,
@@ -272,7 +272,7 @@ let Predicates = [HasVendorXCValu],
   def CV_SUBURNR : CVInstAluRRNR<0b1000111, 0b011, "cv.suburnr">,
                    Sched<[]>;
 
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   //   Constraints = "$rd = $rd_wb"
 
@@ -662,6 +662,8 @@ let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0,
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 def cv_tuimm5 : TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
+def cv_uimm_pow2: Operand<XLenVT>,
+               ImmLeaf<XLenVT, [{return isPowerOf2_32(Imm + 1);}]>;
 
 def CV_LO5: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0x1f, SDLoc(N),
@@ -671,6 +673,49 @@ def CV_LO5: SDNodeXForm<imm, [{
 def CV_HI5: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() >> 5, SDLoc(N),
                                    N->getValueType(0));
+}]>;
+
+def between : PatFrags<(ops node:$lowerBound, node:$upperBound, node:$value),
+                       [(smin (smax node:$value, node:$lowerBound), node:$upperBound),
+                        (smax (smin node:$value, node:$upperBound), node:$lowerBound)]>;
+
+def betweenu : PatFrags<(ops node:$upperBound, node:$value),
+                        [(smin (smax node:$value, 0), node:$upperBound),
+                         (smax (smin node:$value, node:$upperBound), 0)]>;
+def powerOf2 : ImmLeaf<XLenVT, [{ return isPowerOf2_32(Imm); }]>;
+def powerOf2Minus1 : ImmLeaf<XLenVT, [{ return isPowerOf2_32(Imm+1); }]>;
+def negativePowerOf2 : ImmLeaf<XLenVT, [{ return isPowerOf2_32(-Imm); }]>;
+def roundBit : PatFrag<(ops node:$shiftAmount),
+                       (srl (shl 1, node:$shiftAmount), (XLenVT 1))>;
+def trailing1sPlus1 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(
+                          llvm::countr_one(N->getZExtValue()) + 1,
+                          SDLoc(N), N->getValueType(0));
+}]>;
+
+def shiftRound : PatFrag<(ops node:$value, node:$shiftAmount),
+                         (sra (add node:$value, powerOf2), node:$shiftAmount), [{
+  if (auto powerOf2 = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1)))
+    return (powerOf2->getZExtValue() << 1) == (1U << N->getConstantOperandVal(1));
+  return false;
+}]>;
+
+def ushiftRound : PatFrag<(ops node:$value, node:$shiftAmount),
+                          (srl (add node:$value, powerOf2), node:$shiftAmount), [{
+  if (auto powerOf2 = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1)))
+    return (powerOf2->getZExtValue() << 1) == (1U << N->getConstantOperandVal(1));
+  return false;
+}]>;
+
+def clip : PatFrag<(ops node:$upperBound, node:$value),
+                   (between negativePowerOf2, node:$upperBound, node:$value), [{
+  // Checking lower & upper bound for the clip instruction
+  if (auto bound1 = dyn_cast<ConstantSDNode>(N->getOperand(0)->getOperand(1))) {
+    if (auto bound2 = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+      return (bound1->getSExtValue() == ~bound2->getSExtValue());
+    }
+  }
+  return false;
 }]>;
 
 multiclass PatCoreVBitManip<Intrinsic intr> {
@@ -705,8 +750,114 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
   def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
 }
 
+class PatCoreVAluGpr <string intr, string asm> :
+  PatGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+            !cast<RVInst>("CV_" # asm)>;
+class PatCoreVAluGprGpr <string intr, string asm> :
+  PatGprGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+               !cast<RVInst>("CV_" # asm)>;
+
+multiclass PatCoreVAluGprImm <Intrinsic intr> {
+  def : PatGprGpr<intr, !cast<RVInst>("CV_" # NAME # "R")>;
+  def : Pat<(intr (XLenVT GPR:$rs1), powerOf2Minus1:$upperBound),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1,
+            (trailing1sPlus1 imm:$upperBound))>;
+}
+
+multiclass PatCoreVAluGprGprImm <Intrinsic intr> {
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, GPR:$rs3),
+            (!cast<RVInst>("CV_" # NAME # "R") GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, uimm5:$imm),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1, GPR:$rs2, uimm5:$imm)>;
+}
+
+let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
+  def : PatGpr<abs, CV_ABS>;
+  def : PatGprGpr<setle, CV_SLET>;
+  def : PatGprGpr<setule, CV_SLETU>;
+  def : PatGprGpr<smin, CV_MIN>;
+  def : PatGprGpr<umin, CV_MINU>;
+  def : PatGprGpr<smax, CV_MAX>;
+  def : PatGprGpr<umax, CV_MAXU>;
+
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
+
+  def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xff),   (CV_EXTBZ GPR:$rs1)>;
+
+  def : Pat<(clip powerOf2Minus1:$upperBound, (XLenVT GPR:$rs1)),
+            (CV_CLIP GPR:$rs1, (trailing1sPlus1 imm:$upperBound))>;
+  def : Pat<(between (not GPR:$rs2), GPR:$rs2, (XLenVT GPR:$rs1)),
+            (CV_CLIPR GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(betweenu powerOf2Minus1:$upperBound, (XLenVT GPR:$rs1)),
+            (CV_CLIPU GPR:$rs1, (trailing1sPlus1 imm:$upperBound))>;
+  def : Pat<(betweenu GPR:$rs2, (XLenVT GPR:$rs1)),
+            (CV_CLIPUR GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(sra (add (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)), uimm5:$imm5),
+            (CV_ADDN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(srl (add (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)), uimm5:$imm5),
+            (CV_ADDUN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(shiftRound (add (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)),
+             uimm5:$imm5),
+            (CV_ADDRN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(ushiftRound (add (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)),
+             uimm5:$imm5),
+            (CV_ADDURN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+
+  def : Pat<(sra (sub (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)), uimm5:$imm5),
+            (CV_SUBN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(srl (sub (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)), uimm5:$imm5),
+            (CV_SUBUN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(shiftRound (sub (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)),
+             uimm5:$imm5),
+            (CV_SUBRN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+  def : Pat<(ushiftRound (sub (XLenVT GPR:$rs1), (XLenVT GPR:$rs2)),
+             uimm5:$imm5),
+            (CV_SUBURN GPR:$rs1, GPR:$rs2, uimm5:$imm5)>;
+
+  def : Pat<(sra (add (XLenVT GPR:$rd), (XLenVT GPR:$rs1)), (XLenVT GPR:$rs2)),
+            (CV_ADDNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(srl (add (XLenVT GPR:$rd), (XLenVT GPR:$rs1)), (XLenVT GPR:$rs2)),
+            (CV_ADDUNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(sra (add (add (XLenVT GPR:$rd), (XLenVT GPR:$rs1)),
+            (roundBit (XLenVT GPR:$rs2))), (XLenVT GPR:$rs2)),
+            (CV_ADDRNR  GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(srl (add (add (XLenVT GPR:$rd), (XLenVT GPR:$rs1)),
+            (roundBit (XLenVT GPR:$rs2))), (XLenVT GPR:$rs2)),
+            (CV_ADDURNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(sra (sub (XLenVT GPR:$rd), (XLenVT GPR:$rs1)), (XLenVT GPR:$rs2)),
+            (CV_SUBNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(srl (sub (XLenVT GPR:$rd), (XLenVT GPR:$rs1)), (XLenVT GPR:$rs2)),
+            (CV_SUBUNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(sra (add (sub (XLenVT GPR:$rd), (XLenVT GPR:$rs1)),
+            (roundBit (XLenVT GPR:$rs2))), (XLenVT GPR:$rs2)),
+            (CV_SUBRNR  GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(srl (add (sub (XLenVT GPR:$rd), (XLenVT GPR:$rs1)),
+            (roundBit (XLenVT GPR:$rs2))), (XLenVT GPR:$rs2)),
+            (CV_SUBURNR GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
+  def : PatCoreVAluGpr<"exths", "EXTHS">;
+  def : PatCoreVAluGpr<"exthz", "EXTHZ">;
+  def : PatCoreVAluGpr<"extbs", "EXTBS">;
+  def : PatCoreVAluGpr<"extbz", "EXTBZ">;
+
+  defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
+  defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
+  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addn>;
+  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addun>;
+  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addrn>;
+  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_addurn>;
+  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subn>;
+  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subun>;
+  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subrn>;
+  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_suburn>;
+} // Predicates = [HasVendorXCValu, IsRV32]
+
 //===----------------------------------------------------------------------===//
-// Patterns for immediate branching operations 
+// Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
