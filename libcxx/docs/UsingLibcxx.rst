@@ -158,57 +158,37 @@ provided by the static or shared library, so it is only available when deploying
 the compiled library is sufficiently recent. On older platforms, the program will terminate in an
 unspecified unsuccessful manner, but the quality of diagnostics won't be great.
 
-However, users can also override that mechanism at two different levels. First, the mechanism can be
-overridden at compile time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
-When that macro is defined, it will be called with a format string as the first argument, followed by
-a series of arguments to format using printf-style formatting. Compile-time customization may be
-useful to get precise control over code generation, however it is also inconvenient to use in
-some cases. Indeed, compile-time customization of the verbose termination function requires that all
-translation units be compiled with a consistent definition for ``_LIBCPP_VERBOSE_ABORT`` to avoid ODR
-violations, which can add complexity in the build system of users.
+However, vendors can also override that mechanism at CMake configuration time. When a hardening
+assertion fails, the library invokes the ``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide
+a header that contains a custom definition of this macro and specify the path to the header via the
+``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, the contents of this header will be
+injected into library configuration headers, replacing the default implementation. The header must not
+include any standard library headers (directly or transitively) because doing so will almost always
+create a circular dependency.
 
-Otherwise, if compile-time customization is not necessary, link-time customization of the handler is also
-possible, similarly to how replacing ``operator new`` works. This mechanism trades off fine-grained control
-over the call site where the termination is initiated in exchange for better ergonomics. Link-time
-customization is done by simply defining the following function in exactly one translation unit of your
-program:
+``_LIBCPP_ASSERTION_HANDLER(error_message, format, args...)`` is a variadic macro that takes the
+following parameters:
 
-.. code-block:: cpp
+* ``error_message`` -- the original error message that explains the hardening failure. In general, it
+  does not contain information about the source location that triggered the failure.
+* ``format`` -- a printf-style format string that contains a general description of the failure with
+  placeholders for the error message as well as details about the source location.
+* ``args...`` -- arguments to substitute in the ``format`` string. The exact order and meaning of the
+  arguments is unspecified and subject to change (but is always in sync with the format string). Note
+  that for convenience, ``args`` contain the error message as well.
 
-  void __libcpp_verbose_abort(char const* format, ...)
+Programs that wish to terminate as fast as possible may use the ``error_message`` parameter that
+doesn't require any formatting. Programs that prefer having more information about the failure (such as
+the filename and the line number of the code that triggered the assertion) should use the printf-style
+formatting with ``format`` and ``args...``.
 
-This mechanism is similar to how one can replace the default definition of ``operator new``
-and ``operator delete``. For example:
-
-.. code-block:: cpp
-
-  // In HelloWorldHandler.cpp
-  #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
-
-  void std::__libcpp_verbose_abort(char const* format, ...) {
-    std::va_list list;
-    va_start(list, format);
-    std::vfprintf(stderr, format, list);
-    va_end(list);
-
-    std::abort();
-  }
-
-  // In HelloWorld.cpp
-  #include <vector>
-
-  int main() {
-    std::vector<int> v;
-    int& x = v[0]; // Your termination function will be called here if hardening is enabled.
-  }
-
-Also note that the verbose termination function should never return. Since assertions in libc++
-catch undefined behavior, your code will proceed with undefined behavior if your function is called
-and does return.
-
-Furthermore, exceptions should not be thrown from the function. Indeed, many functions in the
-library are ``noexcept``, and any exception thrown from the termination function will result
-in ``std::terminate`` being called.
+When a hardening assertion fails, it means that the program is about to invoke undefined behavior. For
+this reason, the custom assertion handler is generally expected to terminate the program. If a custom
+assertion handler decides to avoid doing so (e.g. it chooses to log and continue instead), it does so
+at its own risk -- this approach should only be used in non-production builds and with an understanding
+of potential consequences. Furthermore, the custom assertion handler should not throw any exceptions as
+it may be invoked from standard library functions that are marked ``noexcept`` (so throwing will result
+in ``std::terminate`` being called).
 
 Libc++ Configuration Macros
 ===========================
