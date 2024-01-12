@@ -3350,6 +3350,157 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   }
   PredicatedValueBits *CRCOutBitsPred = (PredicatedValueBits *)CRCOutBits;
 
+  // Need to check if the predicate is checking the MSB/LSB depending on
+  // whether this is bit reversed CRC
+  ICmpInst *ICmp = CRCOutBitsPred->getPredicate();
+  CmpInst::Predicate Pred = ICmp->getPredicate();
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize checking to see if " << *ICmp
+                    << " is checking the "
+                    << (CRC.BitReversed ? "LSB\n" : "MSB\n"));
+
+  // Firstly check the LHS is in our map, and RHS is a constant
+  ConstantInt *RHS = dyn_cast<ConstantInt>(ICmp->getOperand(1));
+  Result = ValueMap.find(ICmp->getOperand(0));
+  if (!RHS || (Result == ValueMap.end())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRegonize: Cannot determine ICmp operands\n");
+    return false;
+  }
+  ValueBits *ICmpOp0Bits = Result->second;
+
+  // Now match the following cases
+  // (LSB): icmp [ne/eq] %mcrc, [1/0], where mcrc has LSB masked out
+  // (MSB): icmp [ne/eq] %mcrc, [1 << BitSize], where mcrc has MSB masked out
+  // (MSB): icmp [sgt/sge] %crc, [1/0]
+  // (MSB): icmp [slt/sle] %crc, [0/-1]
+  // And decide whether the check is checking for existence of 1 or 0
+  bool checkZero = false;
+  ValueBits::ValueBit *CheckBit = nullptr;
+  switch (Pred) {
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_EQ: {
+    // Check RHS is checking only one bit.
+    uint64_t RHSNum = RHS->getZExtValue();
+    uint64_t MSBNum = 1 << (ICmpOp0Bits->getSize() - 1);
+    // LSB if BitReversed, MSB otherwise.
+    if (!(CRC.BitReversed && RHSNum == 1) &&
+        !(!CRC.BitReversed && RHSNum == MSBNum) && RHSNum != 0) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                        << " CRCRegonize: ICmp RHS is not checking [M/L]SB\n");
+      return false;
+    }
+    // Now to check if we already know all the other bits of the RHS are zero.
+    ValueBits AllZeroValueBits((uint64_t)0, ICmpOp0Bits->getSize());
+    ValueBits *CRCOutBitsMasked = nullptr;
+    if (CRC.BitReversed) {
+      // Masking out the LSB is equivalent to shifting right one if we're just
+      // comparing all the other bits are zero.
+      CRCOutBitsMasked = ValueBits::LShr(ICmpOp0Bits, 1);
+      CheckBit = ICmpOp0Bits->getBit(0);
+    } else {
+      // The CRC type might be larger than the data, so we can't shift left
+      // one. Mask instead.
+      uint64_t MSBMask = ~(1 << (CRC.Width - 1));
+      CRCOutBitsMasked = ValueBits::And(ICmpOp0Bits, MSBMask);
+      CheckBit = ICmpOp0Bits->getBit(CRC.Width - 1);
+    }
+    if (!CRCOutBitsMasked->equals(&AllZeroValueBits)) {
+      LLVM_DEBUG(
+          dbgs() << DEBUG_TYPE
+                 << " CRCRegonize: Cannot determine ICmp checks [M/L]SB\n");
+      return false;
+    }
+    checkZero = RHSNum == 0;
+    break;
+  }
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGE:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_ULE:
+    checkZero = true;
+    [[fallthrough]];
+  case CmpInst::ICMP_SLT:
+  case CmpInst::ICMP_SLE: {
+    int64_t RHSNum = RHS->getSExtValue();
+    if (((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
+         RHSNum != 0) ||
+        ((Pred == CmpInst::ICMP_SLE) && RHSNum != -1) ||
+        ((Pred == CmpInst::ICMP_SGT) && RHSNum != 1) ||
+        ((Pred == CmpInst::ICMP_ULT) && RHSNum != (1 << (CRC.Width - 1))) ||
+        ((Pred == CmpInst::ICMP_ULE) && RHSNum != (1 << (CRC.Width - 1)) - 1)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                        << " CRCRegonize: ICmp RHS is not checking MSB\n");
+      return false;
+    }
+    CheckBit = ICmpOp0Bits->getBit(CRCSize - 1);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // If there exists a Data input, ensure the check bit is crc^data.
+  ValueBits::ValueBit *RefCheckBit = nullptr;
+  uint64_t CRCCheckIdx = CRC.BitReversed ? 0 : CRCSize - 1;
+  ValueBits::ValueBit *CRCInputRefBit =
+      ValueBits::ValueBit::CreateRefBit(CRC.CRCInput, CRCCheckIdx);
+  if (CRC.DataInput) {
+    uint64_t DataSize = CRC.DataInput->getType()->getScalarSizeInBits();
+    uint64_t DataCheckIdx = CRC.BitReversed ? 0 : DataSize - 1;
+    ValueBits::ValueBit *DataInputRefBit =
+        ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
+    RefCheckBit =
+        ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
+  } else {
+    RefCheckBit = CRCInputRefBit;
+  }
+
+  if (!RefCheckBit->equals(CheckBit)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRegonize: Cannot verify check bit!\n"
+                      << *RefCheckBit << "\n"
+                      << *CheckBit << "\n");
+    return false;
+  }
+
+  ValueBits *CRCOutBitsIfOne = CRCOutBitsPred->getIfTrue();
+  ValueBits *CRCOutBitsIfZero = CRCOutBitsPred->getIfFalse();
+  if (checkZero)
+    std::swap(CRCOutBitsIfZero, CRCOutBitsIfOne);
+
+  // Now construct ValueBits that would be the result of crc for one iteration.
+  // That is, a shift and then xor if [M/L]SB is 1.
+  ValueBits *CRCValueBits = nullptr;
+  Result = ValueMap.find(CRC.CRCInput);
+  if (Result == ValueMap.end()) {
+    CRCValueBits = new ValueBits(CRC.CRCInput, CRCSize);
+  } else {
+    CRCValueBits = Result->second;
+  }
+  uint64_t GeneratorPolynomial =
+      CRC.BitReversed ? reverseBits(CRC.Polynomial, CRCSize) : CRC.Polynomial;
+  ValueBits Polynomial(GeneratorPolynomial, CRCSize);
+
+  // Case where the MSB/LSB of the data is 0
+  ValueBits *IfZero = CRC.BitReversed ? ValueBits::LShr(CRCValueBits, 1)
+                                      : ValueBits::Shl(CRCValueBits, 1);
+
+  // Case where the MSB/LSB of the data is 1
+  ValueBits *IfOne = ValueBits::Xor(IfZero, &Polynomial);
+
+  if (!IfZero->equals(CRCOutBitsIfZero)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: Not Equal!\n"
+                      << *IfZero << *CRCOutBitsPred->getIfFalse());
+    return false;
+  }
+  if (!IfOne->equals(CRCOutBitsIfOne)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: Not Equal!\n"
+                      << *IfOne << *CRCOutBitsPred->getIfTrue());
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: This looks like crc!\n");
+
   return false;
 }
 
