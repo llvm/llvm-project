@@ -5920,6 +5920,12 @@ bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
   return is_data_const_got || is_auth_const_ptr;
 }
 
+bool ObjectFileMachO::CanBeTargetModule(Status *status) {
+  if (m_header.filetype == MH_DSYM)
+    return true;
+  return ObjectFile::CanBeTargetModule(status);
+}
+
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
