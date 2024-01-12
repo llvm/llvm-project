@@ -472,7 +472,7 @@ def warn_unsupported_branch_protection: Warning <
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
-  "'%0' only applies to medium code model">,
+  "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
