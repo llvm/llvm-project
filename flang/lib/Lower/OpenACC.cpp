@@ -1483,20 +1483,22 @@ genAsyncClause(Fortran::lower::AbstractConverter &converter,
 }
 
 static mlir::acc::DeviceType
-getDeviceType(Fortran::parser::AccDeviceTypeExpr::Device device) {
+getDeviceType(Fortran::common::OpenACCDeviceType device) {
   switch (device) {
-  case Fortran::parser::AccDeviceTypeExpr::Device::Star:
+  case Fortran::common::OpenACCDeviceType::Star:
     return mlir::acc::DeviceType::Star;
-  case Fortran::parser::AccDeviceTypeExpr::Device::Default:
+  case Fortran::common::OpenACCDeviceType::Default:
     return mlir::acc::DeviceType::Default;
-  case Fortran::parser::AccDeviceTypeExpr::Device::Nvidia:
+  case Fortran::common::OpenACCDeviceType::Nvidia:
     return mlir::acc::DeviceType::Nvidia;
-  case Fortran::parser::AccDeviceTypeExpr::Device::Radeon:
+  case Fortran::common::OpenACCDeviceType::Radeon:
     return mlir::acc::DeviceType::Radeon;
-  case Fortran::parser::AccDeviceTypeExpr::Device::Host:
+  case Fortran::common::OpenACCDeviceType::Host:
     return mlir::acc::DeviceType::Host;
-  case Fortran::parser::AccDeviceTypeExpr::Device::Multicore:
+  case Fortran::common::OpenACCDeviceType::Multicore:
     return mlir::acc::DeviceType::Multicore;
+  case Fortran::common::OpenACCDeviceType::None:
+    return mlir::acc::DeviceType::None;
   }
   return mlir::acc::DeviceType::None;
 }
