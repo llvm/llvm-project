@@ -29,7 +29,8 @@ LLDB_PLUGIN_DEFINE(ProcessWasm)
 ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
     : ProcessGDBRemote(target_sp, listener_sp) {
   /* always use linux signals for wasm process */
-  m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-unknown-unknown-wasm"});
+  m_unix_signals_sp =
+      UnixSignals::Create(ArchSpec{"wasm32-unknown-unknown-wasm"});
 }
 
 void ProcessWasm::Initialize() {
@@ -73,7 +74,7 @@ lldb::ProcessSP ProcessWasm::CreateInstance(lldb::TargetSP target_sp,
 }
 
 bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
-                                bool plugin_specified_by_name) {
+                           bool plugin_specified_by_name) {
   if (plugin_specified_by_name)
     return true;
 
@@ -143,7 +144,7 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
 }
 
 size_t ProcessWasm::WasmReadMemory(uint32_t wasm_module_id, lldb::addr_t addr,
-                                 void *buf, size_t buffer_size) {
+                                   void *buf, size_t buffer_size) {
   char packet[64];
   int packet_len =
       ::snprintf(packet, sizeof(packet), "qWasmMem:%d;%" PRIx64 ";%" PRIx64,
@@ -152,7 +153,8 @@ size_t ProcessWasm::WasmReadMemory(uint32_t wasm_module_id, lldb::addr_t addr,
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, GetInterruptTimeout()) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response,
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsNormalResponse()) {
       return response.GetHexBytes(llvm::MutableArrayRef<uint8_t>(
@@ -164,7 +166,7 @@ size_t ProcessWasm::WasmReadMemory(uint32_t wasm_module_id, lldb::addr_t addr,
 }
 
 size_t ProcessWasm::WasmReadData(uint32_t wasm_module_id, lldb::addr_t addr,
-                               void *buf, size_t buffer_size) {
+                                 void *buf, size_t buffer_size) {
   char packet[64];
   int packet_len =
       ::snprintf(packet, sizeof(packet), "qWasmData:%d;%" PRIx64 ";%" PRIx64,
@@ -173,7 +175,8 @@ size_t ProcessWasm::WasmReadData(uint32_t wasm_module_id, lldb::addr_t addr,
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response, GetInterruptTimeout()) ==
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response,
+                                              GetInterruptTimeout()) ==
       GDBRemoteCommunication::PacketResult::Success) {
     if (response.IsNormalResponse()) {
       return response.GetHexBytes(llvm::MutableArrayRef<uint8_t>(

@@ -350,8 +350,7 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
     uint8_t wasm_op = data.GetU8(&offset);
     if (wasm_op == 3) {
       data.GetU32(&offset);
-    }
-    else {
+    } else {
       data.GetULEB128(&offset);
     }
     return offset - data_offset;
@@ -2612,13 +2611,13 @@ bool DWARFExpression::Evaluate(
 
       /* LLDB doesn't have an address space to represents WebAssembly Locals,
        * GLobals and operand stacks.
-       * We encode these elements into virtual registers: 
+       * We encode these elements into virtual registers:
        *   | tag: 2 bits | index: 30 bits |
        *   where tag is:
        *    0: Not a WebAssembly location
        *    1: Local
        *    2: Global
-       *    3: Operand stack value 
+       *    3: Operand stack value
        */
       if (wasm_op == 3) {
         index = opcodes.GetU32(&offset);

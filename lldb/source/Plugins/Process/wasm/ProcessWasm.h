@@ -26,11 +26,7 @@ namespace wasm {
 //
 // Struct wasm_addr_t provides this encoding using bitfields
 //
-enum WasmAddressType {
-  Memory = 0x00,
-  Object = 0x01,
-  Invalid = 0x03
-};
+enum WasmAddressType { Memory = 0x00, Object = 0x01, Invalid = 0x03 };
 struct wasm_addr_t {
   uint64_t offset : 32;
   uint64_t module_id : 30;
@@ -96,11 +92,11 @@ public:
 
   /// Read from the WebAssembly Memory space.
   size_t WasmReadMemory(uint32_t wasm_module_id, lldb::addr_t addr, void *buf,
-                      size_t buffer_size);
+                        size_t buffer_size);
 
   /// Read from the WebAssembly Data space.
   size_t WasmReadData(uint32_t wasm_module_id, lldb::addr_t addr, void *buf,
-                    size_t buffer_size);
+                      size_t buffer_size);
 
   /// Retrieve the current call stack from the WebAssembly remote process.
   bool GetWasmCallStack(lldb::tid_t tid,

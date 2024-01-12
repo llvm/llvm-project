@@ -49,7 +49,8 @@ ThreadWasm::CreateRegisterContextForFrame(StackFrame *frame) {
     concrete_frame_idx = frame->GetConcreteFrameIndex();
 
   if (concrete_frame_idx == 0) {
-    reg_ctx_sp = std::make_shared<WasmRegisterContext>(*this, concrete_frame_idx, wasm_process->GetRegisterInfo());
+    reg_ctx_sp = std::make_shared<WasmRegisterContext>(
+        *this, concrete_frame_idx, wasm_process->GetRegisterInfo());
   } else {
     reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }

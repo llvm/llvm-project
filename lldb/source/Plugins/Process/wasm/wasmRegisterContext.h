@@ -22,7 +22,7 @@ class WasmRegisterContext;
 typedef std::shared_ptr<WasmRegisterContext> WasmRegisterContextSP;
 
 enum WasmVirtualRegisterKinds {
-  eLocal = 0, ///< wasm local
+  eLocal = 0,    ///< wasm local
   eGlobal,       ///< wasm global
   eOperandStack, ///< wasm operand stack
   kNumWasmVirtualRegisterKinds
@@ -46,7 +46,7 @@ public:
   ~WasmRegisterContext() override;
 
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
-                                                uint32_t num) override;
+                                               uint32_t num) override;
 
   void InvalidateAllRegisters() override;
 
