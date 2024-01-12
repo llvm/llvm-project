@@ -39,7 +39,7 @@
 ; DWARF-DWO-NEXT: DW_AT_external [DW_FORM_flag_present]
 ; DWARF-DWO-NEXT: DW_AT_decl_file [DW_FORM_data1]
 ; DWARF-DWO-NEXT: DW_AT_decl_line [DW_FORM_data1]
-; DWARF-DWO-NEXT: DW_AT_location [DW_FORM_exprloc] (DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x3, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)
+; DWARF-DWO-NEXT: DW_AT_location [DW_FORM_exprloc] (<empty>)
 
 ; DWARF-DWO: DW_TAG_variable
 ; DWARF-DWO-NEXT: DW_AT_name [{{DW_FORM_GNU_str_index|DW_FORM_strx1}}]       ("FileVarDeviceConstant")

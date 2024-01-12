@@ -1267,6 +1267,14 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AMDGPUResourceUsageAnalysis>();
   AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+
+  // The Dummy pass is necessary because AMDGPUResourceUsageAnalysis will pop
+  // the CGSCC pass manager off of the active pass managers stack. Adding the
+  // Dummy pass will re-insert the CGSCC pass manager into said stack again
+  // through CallGraphSCCPass::assignPassManager.
+  AU.addRequired<DummyCGSCCPass>();
+  AU.addPreserved<DummyCGSCCPass>();
+
   AsmPrinter::getAnalysisUsage(AU);
 }
 

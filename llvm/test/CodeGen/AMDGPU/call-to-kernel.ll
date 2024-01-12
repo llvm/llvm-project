@@ -2,6 +2,8 @@
 
 ; GCN: callee_kernel:
 ; GCN: s_endpgm
+; GCN: __amdgpu_callee_kernel_kernel_body
+; GCN: s_setpc_b64
 define amdgpu_kernel void @callee_kernel(i32 addrspace(1)* %out) #0 {
 entry:
   store volatile i32 0, i32 addrspace(1)* %out
@@ -14,8 +16,6 @@ entry:
 ; GCN: s_addc_u32 s[[HI2:[0-9]+]], s[[HI1]], __amdgpu_callee_kernel_kernel_body@rel32@hi+12
 ; GCN: s_swappc_b64 s[{{[0-9:]+}}], s{{\[}}[[LO2]]:[[HI2]]]
 ; GCN: s_endpgm
-; GCN: __amdgpu_callee_kernel_kernel_body
-; GCN: s_setpc_b64
 define amdgpu_kernel void @caller_kernel(i32 addrspace(1)* %out) #0 {
 entry:
   call amdgpu_kernel void @callee_kernel(i32 addrspace(1)* %out)
