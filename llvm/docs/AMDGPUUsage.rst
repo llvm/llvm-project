@@ -5803,7 +5803,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
 
                                                             - Must happen before
                                                               any following volatile
-                                                              global/generic
+                                                              global/generic/private/constant
                                                               load/store.
                                                             - Ensures that
                                                               volatile
@@ -5824,6 +5824,19 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                          - volatile
 
                                                            1. s_load/s_buffer_load glc=1
+                                                           2. s_waitcnt lgkmcnt(0)
+
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic/private/constant
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
 
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
