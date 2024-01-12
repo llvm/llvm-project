@@ -59,7 +59,7 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(-1, -1),
+    : SystemZGenInstrInfo(SystemZ::ADJCALLSTACKDOWN, SystemZ::ADJCALLSTACKUP),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister()),
       STI(sti) {}
 
@@ -1511,11 +1511,6 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   case TargetOpcode::LOAD_STACK_GUARD:
     expandLoadStackGuard(&MI);
-    return true;
-
-  case SystemZ::ADJCALLSTACKDOWN:
-  case SystemZ::ADJCALLSTACKUP:
-    MI.eraseFromParent();
     return true;
 
   default:
