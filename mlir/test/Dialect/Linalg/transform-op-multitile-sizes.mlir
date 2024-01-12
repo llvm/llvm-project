@@ -35,11 +35,11 @@ module attributes {transform.with_named_sequence} {
         transform.structured.multitile_sizes %0 { target_size = 3, dimension = 0 }
         : (!transform.any_op) -> !transform.param<i64>
       // expected-remark @below {{2 : i64}}
-      transform.test_print_param %low_tile : !transform.param<i64>
+      transform.debug.emit_param_as_remark %low_tile : !transform.param<i64>
       // expected-remark @below {{3 : i64}}
-      transform.test_print_param %high_tile : !transform.param<i64>
+      transform.debug.emit_param_as_remark %high_tile : !transform.param<i64>
       // expected-remark @below {{4 : i64}}
-      transform.test_print_param %split_point : !transform.param<i64>
+      transform.debug.emit_param_as_remark %split_point : !transform.param<i64>
       transform.yield
   }
 }
