@@ -114,7 +114,7 @@ define i16 @adc16ri8(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw %si, %dx, %ax
 ; CHECK-NEXT:    adcw $0, %di, %ax
-; CHECK-NEXT:    addl $123, %eax, %eax
+; CHECK-NEXT:    addl $123, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %s = add i16 %a, 123
@@ -168,7 +168,7 @@ define i16 @adc16ri(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw %si, %dx, %ax
 ; CHECK-NEXT:    adcw $0, %di, %ax
-; CHECK-NEXT:    addl $1234, %eax, %eax # imm = 0x4D2
+; CHECK-NEXT:    addl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %s = add i16 %a, 1234
@@ -265,7 +265,7 @@ define i16 @adc16mi8(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw %si, %dx, %ax
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax
-; CHECK-NEXT:    addl $123, %eax, %eax
+; CHECK-NEXT:    addl $123, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %a = load i16, ptr %ptr
@@ -323,7 +323,7 @@ define i16 @adc16mi(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw %si, %dx, %ax
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax
-; CHECK-NEXT:    addl $1234, %eax, %eax # imm = 0x4D2
+; CHECK-NEXT:    addl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %a = load i16, ptr %ptr
@@ -442,7 +442,7 @@ define void @adc16mi_legacy(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subw %si, %dx, %ax
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax
-; CHECK-NEXT:    addl $1234, %eax, %eax # imm = 0x4D2
+; CHECK-NEXT:    addl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    movw %ax, (%rdi)
 ; CHECK-NEXT:    retq
   %a = load i16, ptr %ptr

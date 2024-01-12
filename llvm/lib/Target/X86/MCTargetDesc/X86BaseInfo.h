@@ -818,6 +818,8 @@ enum : uint64_t {
   /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
+  /// LEGACY - encoding using REX/REX2 or w/o opcode prefix.
+  LEGACY = 0 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
   /// XOP - Opcode prefix used by XOP instructions.
