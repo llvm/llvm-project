@@ -174,6 +174,12 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
+  if (Avail.isUnconditionallyUnavailable()) {
+    Object UnconditionallyUnavailable;
+    UnconditionallyUnavailable["domain"] = "*";
+    UnconditionallyUnavailable["isUnconditionallyUnavailable"] = true;
+    AvailabilityArray.emplace_back(std::move(UnconditionallyUnavailable));
+  }
   AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }

@@ -45,7 +45,7 @@ RecordTy *addTopLevelRecord(DenseMap<StringRef, APIRecord *> &USRLookupTable,
 
 NamespaceRecord *
 APISet::addNamespace(APIRecord *Parent, StringRef Name, StringRef USR,
-                     PresumedLoc Loc, const AvailabilityInfo &Availability,
+                     PresumedLoc Loc, AvailabilityInfo Availability,
                      LinkageInfo Linkage, const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, bool IsFromSystemHeader) {
@@ -61,17 +61,17 @@ APISet::addNamespace(APIRecord *Parent, StringRef Name, StringRef USR,
 
 GlobalVariableRecord *
 APISet::addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
-                     const AvailabilityInfo &Availability, LinkageInfo Linkage,
+                     AvailabilityInfo Availability, LinkageInfo Linkage,
                      const DocComment &Comment, DeclarationFragments Fragments,
                      DeclarationFragments SubHeading, bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, GlobalVariables, USR, Name, Loc,
-                           Availability, Linkage, Comment, Fragments,
+                           std::move(Availability), Linkage, Comment, Fragments,
                            SubHeading, IsFromSystemHeader);
 }
 
 GlobalVariableTemplateRecord *APISet::addGlobalVariableTemplate(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, Template Template,
     bool IsFromSystemHeader) {
@@ -83,18 +83,18 @@ GlobalVariableTemplateRecord *APISet::addGlobalVariableTemplate(
 
 GlobalFunctionRecord *APISet::addGlobalFunction(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Fragments,
     DeclarationFragments SubHeading, FunctionSignature Signature,
     bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, GlobalFunctions, USR, Name, Loc,
-                           Availability, Linkage, Comment, Fragments,
+                           std::move(Availability), Linkage, Comment, Fragments,
                            SubHeading, Signature, IsFromSystemHeader);
 }
 
 GlobalFunctionTemplateRecord *APISet::addGlobalFunctionTemplate(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, FunctionSignature Signature,
     Template Template, bool IsFromSystemHeader) {
@@ -107,7 +107,7 @@ GlobalFunctionTemplateRecord *APISet::addGlobalFunctionTemplate(
 GlobalFunctionTemplateSpecializationRecord *
 APISet::addGlobalFunctionTemplateSpecialization(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, FunctionSignature Signature,
     bool IsFromSystemHeader) {
@@ -119,11 +119,11 @@ APISet::addGlobalFunctionTemplateSpecialization(
 
 EnumConstantRecord *APISet::addEnumConstant(
     EnumRecord *Enum, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     bool IsFromSystemHeader) {
   auto Record = std::make_unique<EnumConstantRecord>(
-      USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+      USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
       IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       Enum->USR, Enum->Name, Enum->getKind(), Enum);
@@ -132,25 +132,25 @@ EnumConstantRecord *APISet::addEnumConstant(
 }
 
 EnumRecord *APISet::addEnum(StringRef Name, StringRef USR, PresumedLoc Loc,
-                            const AvailabilityInfo &Availability,
+                            AvailabilityInfo Availability,
                             const DocComment &Comment,
                             DeclarationFragments Declaration,
                             DeclarationFragments SubHeading,
                             bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, Enums, USR, Name, Loc,
-                           Availability, Comment, Declaration, SubHeading,
+                           std::move(Availability), Comment, Declaration, SubHeading,
                            IsFromSystemHeader);
 }
 
 StructFieldRecord *APISet::addStructField(StructRecord *Struct, StringRef Name,
                                           StringRef USR, PresumedLoc Loc,
-                                          const AvailabilityInfo &Availability,
+                                          AvailabilityInfo Availability,
                                           const DocComment &Comment,
                                           DeclarationFragments Declaration,
                                           DeclarationFragments SubHeading,
                                           bool IsFromSystemHeader) {
   auto Record = std::make_unique<StructFieldRecord>(
-      USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+      USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
       IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       Struct->USR, Struct->Name, Struct->getKind(), Struct);
@@ -159,36 +159,36 @@ StructFieldRecord *APISet::addStructField(StructRecord *Struct, StringRef Name,
 }
 
 StructRecord *APISet::addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
-                                const AvailabilityInfo &Availability,
+                                AvailabilityInfo Availability,
                                 const DocComment &Comment,
                                 DeclarationFragments Declaration,
                                 DeclarationFragments SubHeading,
                                 bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, Structs, USR, Name, Loc,
-                           Availability, Comment, Declaration, SubHeading,
+                           std::move(Availability), Comment, Declaration, SubHeading,
                            IsFromSystemHeader);
 }
 
 StaticFieldRecord *
 APISet::addStaticField(StringRef Name, StringRef USR, PresumedLoc Loc,
-                       const AvailabilityInfo &Availability,
+                       AvailabilityInfo Availability,
                        LinkageInfo Linkage, const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading, SymbolReference Context,
                        AccessControl Access, bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, StaticFields, USR, Name, Loc,
-                           Availability, Linkage, Comment, Declaration,
+                           std::move(Availability), Linkage, Comment, Declaration,
                            SubHeading, Context, Access, IsFromSystemHeader);
 }
 
 CXXFieldRecord *
 APISet::addCXXField(APIRecord *CXXClass, StringRef Name, StringRef USR,
-                    PresumedLoc Loc, const AvailabilityInfo &Availability,
+                    PresumedLoc Loc, AvailabilityInfo Availability,
                     const DocComment &Comment, DeclarationFragments Declaration,
                     DeclarationFragments SubHeading, AccessControl Access,
                     bool IsFromSystemHeader) {
   auto *Record = addTopLevelRecord(USRBasedLookupTable, CXXFields, USR, Name,
-                                   Loc, Availability, Comment, Declaration,
+                                   Loc, std::move(Availability), Comment, Declaration,
                                    SubHeading, Access, IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       CXXClass->USR, CXXClass->Name, CXXClass->getKind(), CXXClass);
@@ -197,7 +197,7 @@ APISet::addCXXField(APIRecord *CXXClass, StringRef Name, StringRef USR,
 
 CXXFieldTemplateRecord *APISet::addCXXFieldTemplate(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     AccessControl Access, Template Template, bool IsFromSystemHeader) {
   auto *Record =
@@ -212,12 +212,12 @@ CXXFieldTemplateRecord *APISet::addCXXFieldTemplate(
 
 CXXClassRecord *
 APISet::addCXXClass(APIRecord *Parent, StringRef Name, StringRef USR,
-                    PresumedLoc Loc, const AvailabilityInfo &Availability,
+                    PresumedLoc Loc, AvailabilityInfo Availability,
                     const DocComment &Comment, DeclarationFragments Declaration,
                     DeclarationFragments SubHeading, APIRecord::RecordKind Kind,
                     AccessControl Access, bool IsFromSystemHeader) {
   auto *Record = addTopLevelRecord(
-      USRBasedLookupTable, CXXClasses, USR, Name, Loc, Availability, Comment,
+      USRBasedLookupTable, CXXClasses, USR, Name, Loc, std::move(Availability), Comment,
       Declaration, SubHeading, Kind, Access, IsFromSystemHeader);
   if (Parent)
     Record->ParentInformation = APIRecord::HierarchyInformation(
@@ -227,7 +227,7 @@ APISet::addCXXClass(APIRecord *Parent, StringRef Name, StringRef USR,
 
 ClassTemplateRecord *APISet::addClassTemplate(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     Template Template, AccessControl Access, bool IsFromSystemHeader) {
   auto *Record =
@@ -242,7 +242,7 @@ ClassTemplateRecord *APISet::addClassTemplate(
 
 ClassTemplateSpecializationRecord *APISet::addClassTemplateSpecialization(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     AccessControl Access, bool IsFromSystemHeader) {
   auto *Record =
@@ -258,7 +258,7 @@ ClassTemplateSpecializationRecord *APISet::addClassTemplateSpecialization(
 ClassTemplatePartialSpecializationRecord *
 APISet::addClassTemplatePartialSpecialization(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     Template Template, AccessControl Access, bool IsFromSystemHeader) {
   auto *Record = addTopLevelRecord(
@@ -274,7 +274,7 @@ APISet::addClassTemplatePartialSpecialization(
 GlobalVariableTemplateSpecializationRecord *
 APISet::addGlobalVariableTemplateSpecialization(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable,
@@ -286,7 +286,7 @@ APISet::addGlobalVariableTemplateSpecialization(
 GlobalVariableTemplatePartialSpecializationRecord *
 APISet::addGlobalVariableTemplatePartialSpecialization(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+    AvailabilityInfo Availability, LinkageInfo Linkage,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, Template Template,
     bool IsFromSystemHeader) {
@@ -298,7 +298,7 @@ APISet::addGlobalVariableTemplatePartialSpecialization(
 
 ConceptRecord *APISet::addConcept(StringRef Name, StringRef USR,
                                   PresumedLoc Loc,
-                                  const AvailabilityInfo &Availability,
+                                  AvailabilityInfo Availability,
                                   const DocComment &Comment,
                                   DeclarationFragments Declaration,
                                   DeclarationFragments SubHeading,
@@ -310,7 +310,7 @@ ConceptRecord *APISet::addConcept(StringRef Name, StringRef USR,
 
 CXXMethodRecord *APISet::addCXXInstanceMethod(
     APIRecord *CXXClassRecord, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     FunctionSignature Signature, AccessControl Access,
     bool IsFromSystemHeader) {
@@ -327,7 +327,7 @@ CXXMethodRecord *APISet::addCXXInstanceMethod(
 
 CXXMethodRecord *APISet::addCXXStaticMethod(
     APIRecord *CXXClassRecord, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     FunctionSignature Signature, AccessControl Access,
     bool IsFromSystemHeader) {
@@ -344,7 +344,7 @@ CXXMethodRecord *APISet::addCXXStaticMethod(
 
 CXXMethodTemplateRecord *APISet::addCXXMethodTemplate(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     FunctionSignature Signature, AccessControl Access, Template Template,
     bool IsFromSystemHeader) {
@@ -360,7 +360,7 @@ CXXMethodTemplateRecord *APISet::addCXXMethodTemplate(
 
 CXXMethodTemplateSpecializationRecord *APISet::addCXXMethodTemplateSpec(
     APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     FunctionSignature Signature, AccessControl Access,
     bool IsFromSystemHeader) {
@@ -377,13 +377,13 @@ CXXMethodTemplateSpecializationRecord *APISet::addCXXMethodTemplateSpec(
 
 ObjCCategoryRecord *APISet::addObjCCategory(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     SymbolReference Interface, bool IsFromSystemHeader,
     bool IsFromExternalModule) {
   // Create the category record.
   auto *Record = addTopLevelRecord(
-      USRBasedLookupTable, ObjCCategories, USR, Name, Loc, Availability,
+      USRBasedLookupTable, ObjCCategories, USR, Name, Loc, std::move(Availability),
       Comment, Declaration, SubHeading, Interface, IsFromSystemHeader);
 
   Record->IsFromExternalModule = IsFromExternalModule;
@@ -397,30 +397,30 @@ ObjCCategoryRecord *APISet::addObjCCategory(
 
 ObjCInterfaceRecord *
 APISet::addObjCInterface(StringRef Name, StringRef USR, PresumedLoc Loc,
-                         const AvailabilityInfo &Availability,
+                         AvailabilityInfo Availability,
                          LinkageInfo Linkage, const DocComment &Comment,
                          DeclarationFragments Declaration,
                          DeclarationFragments SubHeading,
                          SymbolReference SuperClass, bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, ObjCInterfaces, USR, Name, Loc,
-                           Availability, Linkage, Comment, Declaration,
+                           std::move(Availability), Linkage, Comment, Declaration,
                            SubHeading, SuperClass, IsFromSystemHeader);
 }
 
 ObjCMethodRecord *APISet::addObjCMethod(
     ObjCContainerRecord *Container, StringRef Name, StringRef USR,
-    PresumedLoc Loc, const AvailabilityInfo &Availability,
+    PresumedLoc Loc, AvailabilityInfo Availability,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading, FunctionSignature Signature,
     bool IsInstanceMethod, bool IsFromSystemHeader) {
   std::unique_ptr<ObjCMethodRecord> Record;
   if (IsInstanceMethod)
     Record = std::make_unique<ObjCInstanceMethodRecord>(
-        USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+        USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
         Signature, IsFromSystemHeader);
   else
     Record = std::make_unique<ObjCClassMethodRecord>(
-        USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+        USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
         Signature, IsFromSystemHeader);
 
   Record->ParentInformation = APIRecord::HierarchyInformation(
@@ -431,7 +431,7 @@ ObjCMethodRecord *APISet::addObjCMethod(
 
 ObjCPropertyRecord *APISet::addObjCProperty(
     ObjCContainerRecord *Container, StringRef Name, StringRef USR,
-    PresumedLoc Loc, const AvailabilityInfo &Availability,
+    PresumedLoc Loc, AvailabilityInfo Availability,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading,
     ObjCPropertyRecord::AttributeKind Attributes, StringRef GetterName,
@@ -440,11 +440,11 @@ ObjCPropertyRecord *APISet::addObjCProperty(
   std::unique_ptr<ObjCPropertyRecord> Record;
   if (IsInstanceProperty)
     Record = std::make_unique<ObjCInstancePropertyRecord>(
-        USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+        USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
         Attributes, GetterName, SetterName, IsOptional, IsFromSystemHeader);
   else
     Record = std::make_unique<ObjCClassPropertyRecord>(
-        USR, Name, Loc, Availability, Comment, Declaration, SubHeading,
+        USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
         Attributes, GetterName, SetterName, IsOptional, IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       Container->USR, Container->Name, Container->getKind(), Container);
@@ -454,12 +454,12 @@ ObjCPropertyRecord *APISet::addObjCProperty(
 
 ObjCInstanceVariableRecord *APISet::addObjCInstanceVariable(
     ObjCContainerRecord *Container, StringRef Name, StringRef USR,
-    PresumedLoc Loc, const AvailabilityInfo &Availability,
+    PresumedLoc Loc, AvailabilityInfo Availability,
     const DocComment &Comment, DeclarationFragments Declaration,
     DeclarationFragments SubHeading,
     ObjCInstanceVariableRecord::AccessControl Access, bool IsFromSystemHeader) {
   auto Record = std::make_unique<ObjCInstanceVariableRecord>(
-      USR, Name, Loc, Availability, Comment, Declaration, SubHeading, Access,
+      USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading, Access,
       IsFromSystemHeader);
   Record->ParentInformation = APIRecord::HierarchyInformation(
       Container->USR, Container->Name, Container->getKind(), Container);
@@ -469,11 +469,11 @@ ObjCInstanceVariableRecord *APISet::addObjCInstanceVariable(
 
 ObjCProtocolRecord *APISet::addObjCProtocol(
     StringRef Name, StringRef USR, PresumedLoc Loc,
-    const AvailabilityInfo &Availability, const DocComment &Comment,
+    AvailabilityInfo Availability, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
     bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, ObjCProtocols, USR, Name, Loc,
-                           Availability, Comment, Declaration, SubHeading,
+                           std::move(Availability), Comment, Declaration, SubHeading,
                            IsFromSystemHeader);
 }
 
@@ -488,12 +488,12 @@ APISet::addMacroDefinition(StringRef Name, StringRef USR, PresumedLoc Loc,
 
 TypedefRecord *
 APISet::addTypedef(StringRef Name, StringRef USR, PresumedLoc Loc,
-                   const AvailabilityInfo &Availability,
+                   AvailabilityInfo Availability,
                    const DocComment &Comment, DeclarationFragments Declaration,
                    DeclarationFragments SubHeading,
                    SymbolReference UnderlyingType, bool IsFromSystemHeader) {
   return addTopLevelRecord(USRBasedLookupTable, Typedefs, USR, Name, Loc,
-                           Availability, Comment, Declaration, SubHeading,
+                           std::move(Availability), Comment, Declaration, SubHeading,
                            UnderlyingType, IsFromSystemHeader);
 }
 
