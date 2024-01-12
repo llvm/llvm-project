@@ -2859,13 +2859,19 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         "fseeko",
         Signature(ArgTypes{FilePtrTy, Off_tTy, IntTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsZeroOrMinusOne, ErrnoIrrelevant)
-            .ArgConstraint(NotNull(ArgNo(0))));
+            .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(ArgumentCondition(2, WithinRange, {{0, 2}})));
 
     // off_t ftello(FILE *stream);
     addToFunctionSummaryMap(
         "ftello", Signature(ArgTypes{FilePtrTy}, RetType{Off_tTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(WithinRange, Range(0, LongMax))},
+                  ErrnoUnchanged, GenericSuccessMsg)
+            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
