@@ -81,13 +81,13 @@ constexpr bool test_unsigned() {
 }
 
 constexpr bool test() {
-  // signed
+  // Signed
   test_signed<signed char>();
   test_signed<short int>();
   test_signed<int>();
   test_signed<long int>();
   test_signed<long long int>();
-  // unsigned
+  // Unsigned
   test_unsigned<unsigned char>();
   test_unsigned<unsigned short int>();
   test_unsigned<unsigned int>();
@@ -97,23 +97,9 @@ constexpr bool test() {
   return true;
 }
 
-constexpr void cppreference_test() {
-  {
-    static_assert(
-        "" && (std::mul_sat<int>(2, 3) == 6)                     // not saturated
-        && (std::mul_sat<int>(INT_MAX / 2, 3) == INT_MAX)        // saturated
-        && (std::mul_sat<int>(-2, 3) == -6)                      // not saturated
-        && (std::mul_sat<int>(INT_MIN / -2, -3) == INT_MIN)      // saturated
-        && (std::mul_sat<unsigned>(2, 3) == 6)                   // not saturated
-        && (std::mul_sat<unsigned>(UINT_MAX / 2, 3) == UINT_MAX) // saturated
-    );
-  }
-}
-
 int main(int, char**) {
   test();
   static_assert(test());
-  cppreference_test();
 
   return 0;
 }

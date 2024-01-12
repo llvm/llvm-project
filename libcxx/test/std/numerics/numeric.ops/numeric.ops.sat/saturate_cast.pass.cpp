@@ -18,8 +18,6 @@
 #include <limits>
 #include <numeric>
 
-#include <print>
-
 template <typename IntegerResultT, typename IntegerT>
 constexpr bool test_signed_notsaturated() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
@@ -77,7 +75,7 @@ constexpr bool test_unsigned_saturated() {
 }
 
 constexpr bool test() {
-  // signed
+  // Signed
   test_signed_notsaturated<long long int, signed char>();
   test_signed_notsaturated<long long int, short int>();
   test_signed_notsaturated<long long int, int>();
@@ -88,7 +86,7 @@ constexpr bool test() {
   test_signed_saturated<int, long long int>();
   test_signed_saturated<long int, long long int>();
   test_signed_saturated<long long int, long long int>();
-  // unsigned
+  // Unsigned
   test_unsigned_notsaturated<unsigned long long int, unsigned char>();
   test_unsigned_notsaturated<unsigned long long int, unsigned short int>();
   test_unsigned_notsaturated<unsigned long long int, unsigned int>();
@@ -103,30 +101,9 @@ constexpr bool test() {
   return true;
 }
 
-constexpr void cppreference_test() {
-  {
-    constexpr std::int16_t x1{696};
-
-    constexpr std::int8_t x2 = std::saturate_cast<std::int8_t>(x1);
-    static_assert(x2 == std::numeric_limits<std::int8_t>::max());
-
-    constexpr std::uint8_t x3 = std::saturate_cast<std::uint8_t>(x1);
-    static_assert(x3 == std::numeric_limits<std::uint8_t>::max());
-
-    constexpr std::int16_t y1{-696};
-
-    constexpr std::int8_t y2 = std::saturate_cast<std::int8_t>(y1);
-    static_assert(y2 == std::numeric_limits<std::int8_t>::min());
-
-    constexpr std::uint8_t y3 = std::saturate_cast<std::uint8_t>(y1);
-    static_assert(y3 == 0);
-  }
-}
-
 int main(int, char**) {
   test();
-  // static_assert(test());
-  cppreference_test();
+  static_assert(test());
 
   return 0;
 }
