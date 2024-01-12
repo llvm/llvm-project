@@ -290,6 +290,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_PLT32:
     return R_PLT_PC;
   case R_RISCV_GOT_HI20:
+  case R_RISCV_GOT32_PCREL:
     return R_GOT_PC;
   case R_RISCV_PCREL_LO12_I:
   case R_RISCV_PCREL_LO12_S:
@@ -499,6 +500,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_RISCV_SET32:
   case R_RISCV_32_PCREL:
   case R_RISCV_PLT32:
+  case R_RISCV_GOT32_PCREL:
+    checkInt(loc, val, 32, rel);
     write32le(loc, val);
     return;
 
@@ -954,8 +957,8 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   } else {
     for (const auto &ext : info.getExtensions()) {
       if (auto it = mergedExts.find(ext.first); it != mergedExts.end()) {
-        if (std::tie(it->second.MajorVersion, it->second.MinorVersion) >=
-            std::tie(ext.second.MajorVersion, ext.second.MinorVersion))
+        if (std::tie(it->second.Major, it->second.Minor) >=
+            std::tie(ext.second.Major, ext.second.Minor))
           continue;
       }
       mergedExts[ext.first] = ext.second;

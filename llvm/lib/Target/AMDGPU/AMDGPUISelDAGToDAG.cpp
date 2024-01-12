@@ -1579,13 +1579,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
 
 bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
                                           SDValue &SOffset) const {
-  if (Subtarget->hasRestrictedSOffset()) {
-    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(ByteOffsetNode)) {
-      if (SOffsetConst->isZero()) {
-        SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
-        return true;
-      }
-    }
+  if (Subtarget->hasRestrictedSOffset() && isNullConstant(ByteOffsetNode)) {
+    SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+    return true;
   }
 
   SOffset = ByteOffsetNode;
@@ -3013,7 +3009,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
-bool AMDGPUDAGToDAGISel::SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const {
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
   // 1 promotes packed values to signed, 0 treats them as unsigned.

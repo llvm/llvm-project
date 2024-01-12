@@ -98,6 +98,7 @@
 ! HELP-NEXT: -g                      Generate source-level debug information
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
+! HELP-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
@@ -108,6 +109,8 @@
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! HELP-NEXT: -mrvv-vector-bits=<value>
+! HELP-NEXT:                         Specify the size in bits of an RVV vector register
 ! HELP-NEXT: -msve-vector-bits=<value>
 ! HELP-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! HELP-NEXT: --no-offload-arch=<value>

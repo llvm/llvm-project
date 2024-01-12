@@ -7,7 +7,7 @@
 module {
   transform.sequence failures(propagate) {
   ^bb0(%arg0: !transform.any_op):
-    transform.test_print_remark_at_operand %arg0, "remark" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "remark" : !transform.any_op
   }
 }
 

@@ -628,9 +628,10 @@ llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
 // -----
 
 func.func @set_max_register() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.inc.sync.aligned.u32 $0;", "n"
+  // CHECK: nvvm.setmaxregister increase 232
   nvvm.setmaxregister increase 232
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.dec.sync.aligned.u32 $0;", "n"
+
+  // CHECK: nvvm.setmaxregister decrease 40
   nvvm.setmaxregister decrease 40
   func.return
 }
@@ -643,6 +644,23 @@ func.func @cp_bulk_commit() {
   func.return
 }
 
+// -----
+
+func.func @cp_bulk_wait_group() {
+  // CHECK: %[[S0:.+]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.wait_group $0;", "n" %[[S0]] : (i32) -> ()
+  // CHECK: %[[S1:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.wait_group $0;", "n" %[[S1]] : (i32) -> ()
+  // CHECK: %[[S2:.+]] = llvm.mlir.constant(5 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.wait_group.read $0;", "n" %[[S2]] : (i32) -> ()
+  // CHECK: %[[S3:.+]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.wait_group.read $0;", "n" %[[S3]] : (i32) -> ()
+  nvvm.cp.async.bulk.wait_group 1
+  nvvm.cp.async.bulk.wait_group 0
+  nvvm.cp.async.bulk.wait_group 5 {read}
+  nvvm.cp.async.bulk.wait_group 0 {read}
+  func.return
+}
 
 // -----
 

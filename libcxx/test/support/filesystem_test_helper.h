@@ -330,7 +330,7 @@ struct scoped_test_env
 // Android platform warns about tmpnam, since the problem does not appear
 // on Android, let's not apply it for Android.
 #  if !defined(__ANDROID__)
-    if (file.size() <= sizeof(address.sun_path)) {
+    if (file.size() > sizeof(address.sun_path)) {
       file = std::tmpnam(nullptr);
     }
 #  endif
