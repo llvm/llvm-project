@@ -29,8 +29,8 @@ SimpleRemoteEPC::loadDylib(const char *DylibPath) {
   return DylibMgr->open(DylibPath, 0);
 }
 
-Expected<std::vector<tpctypes::LookupResult>>
-SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
+void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                                         SymbolLookupCompleteFn Complete) {
   std::vector<tpctypes::LookupResult> Result;
 
   for (auto &Element : Request) {
@@ -40,9 +40,9 @@ SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
       for (auto Addr : *R)
         Result.back().push_back(Addr);
     } else
-      return R.takeError();
+      return Complete(R.takeError());
   }
-  return std::move(Result);
+  Complete(std::move(Result));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
