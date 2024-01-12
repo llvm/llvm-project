@@ -113,16 +113,18 @@ public:
     // Sort ComplexPatterns by usage.
     std::vector<std::pair<const ComplexPattern *, unsigned>> ComplexPatternList(
         ComplexPatternUsage.begin(), ComplexPatternUsage.end());
-    sort(ComplexPatternList,
-         [](const auto &A, const auto &B) { return A.second > B.second; });
+    stable_sort(ComplexPatternList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
     for (const auto &ComplexPattern : ComplexPatternList)
       ComplexPatterns.push_back(ComplexPattern.first);
 
     // Sort PatternPredicates by usage.
     std::vector<std::pair<std::string, unsigned>> PatternPredicateList(
         PatternPredicateUsage.begin(), PatternPredicateUsage.end());
-    sort(PatternPredicateList,
-         [](const auto &A, const auto &B) { return A.second > B.second; });
+    stable_sort(PatternPredicateList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
     for (const auto &PatternPredicate : PatternPredicateList)
       PatternPredicates.push_back(PatternPredicate.first);
   }
