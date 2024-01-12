@@ -98,7 +98,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       for (const BinaryBasicBlock *const BB : FF)
         writeEntriesForBB(Map, *BB, FF.getAddress());
 
-      ColdMaps.emplace(FF.getAddress(), std::move(Map));
+      Maps.emplace(FF.getAddress(), std::move(Map));
       ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
     }
   }
@@ -106,10 +106,9 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
   // Output addresses are delta-encoded
   uint64_t PrevAddress = 0;
   writeMaps</*Cold=*/false>(Maps, PrevAddress, OS);
-  writeMaps</*Cold=*/true>(ColdMaps, PrevAddress, OS);
+  writeMaps</*Cold=*/true>(Maps, PrevAddress, OS);
 
-  outs() << "BOLT-INFO: Wrote " << Maps.size() + ColdMaps.size()
-         << " BAT maps\n";
+  outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
 }
 
 APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
@@ -143,13 +142,19 @@ size_t BoltAddressTranslation::getNumEqualOffsets(const MapTy &Map) const {
 template <bool Cold>
 void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
                                        uint64_t &PrevAddress, raw_ostream &OS) {
-  const uint32_t NumFuncs = Maps.size();
+  const uint32_t NumFuncs =
+      llvm::count_if(llvm::make_first_range(Maps), [&](const uint64_t Address) {
+        return Cold == ColdPartSource.count(Address);
+      });
   encodeULEB128(NumFuncs, OS);
   LLVM_DEBUG(dbgs() << "Writing " << NumFuncs << (Cold ? " cold" : "")
                     << " functions for BAT.\n");
   size_t PrevIndex = 0;
   for (auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
+    // Only process cold fragments in cold mode, and vice versa.
+    if (Cold != ColdPartSource.count(Address))
+      continue;
     MapTy &Map = MapEntry.second;
     const uint32_t NumEntries = Map.size();
     LLVM_DEBUG(dbgs() << "Writing " << NumEntries << " entries for 0x"
