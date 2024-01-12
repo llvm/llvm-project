@@ -128,3 +128,13 @@ void invalid_parentheses3() __arm_inout((); // expected-error {{expected string 
 void invalid_parentheses4() __arm_inout); // expected-error {{expected '(' after ''__arm_inout''}} \
                                           // expected-error {{expected function body after function declarator}}
 void invalid_parentheses5() __arm_inout(());  // expected-error {{expected string literal as argument of '__arm_inout' attribute}}
+void invalid_parentheses6() __arm_inout("za"; // expected-error {{expected ')'}}
+void invalid_parentheses7() __arm_streaming(; // expected-error {{expected parameter declarator}} \
+                                              // expected-error {{expected ')'}} \
+                                              // expected-note {{to match this '('}} \
+                                              // expected-error {{function cannot return function type 'void ()'}} \
+                                              // expected-error {{'__arm_streaming' only applies to function types; type here is 'int ()'}} \
+                                              // expected-warning {{'__arm_streaming' only applies to non-K&R-style functions}}
+void invalid_parentheses8() __arm_streaming();  // expected-error {{function cannot return function type 'void ()'}} \
+                                                // expected-error {{'__arm_streaming' only applies to function types; type here is 'int ()'}} \
+                                                // expected-warning {{'__arm_streaming' only applies to non-K&R-style functions}}
