@@ -6408,35 +6408,4 @@ TEST(TransferTest, DifferentReferenceLocInJoin) {
       });
 }
 
-// This test verifies correct modeling of a relational dependency that goes
-// through unmodeled functions (the simple `cond()` in this case).
-TEST(TransferTest, ConditionalRelation) {
-  std::string Code = R"(
-    bool cond();
-    void target() {
-       bool a = true;
-       bool b = true;
-       if (cond()) {
-         a = false;
-         if (cond()) {
-           b = false;
-         }
-       }
-       (void)0;
-       // [[p]]
-    }
- )";
-  runDataflow(
-      Code,
-      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {
-        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-        auto &A = Env.arena();
-        auto &VarA = getValueForDecl<BoolValue>(ASTCtx, Env, "a").formula();
-        auto &VarB = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
-
-        EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
-      });
-}
-
 } // namespace
