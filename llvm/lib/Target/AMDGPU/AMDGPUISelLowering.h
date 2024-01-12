@@ -84,8 +84,7 @@ protected:
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
-  void replaceCTLZResults(SDValue Op, SelectionDAG &DAG,
-                          SmallVectorImpl<SDValue> &Results) const;
+  SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
