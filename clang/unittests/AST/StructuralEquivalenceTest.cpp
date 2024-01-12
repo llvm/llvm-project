@@ -2390,7 +2390,7 @@ TEST_F(StructuralEquivalenceStmtTest,
       R"(
       struct Bar;
 
-      Bar& operator+(Bar&, Bar&);
+      Bar& operator-(Bar&, Bar&);
 
       template <typename T, T x>
       class A;
