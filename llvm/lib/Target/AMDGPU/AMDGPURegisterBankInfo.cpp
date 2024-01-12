@@ -3765,16 +3765,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // properly.
   //
   // TODO: There are additional exec masking dependencies to analyze.
-  if (MI.getOpcode() == TargetOpcode::G_PHI) {
+  if (auto *PHI = dyn_cast<GPhi>(&MI)) {
     unsigned ResultBank = AMDGPU::InvalidRegBankID;
-    Register DstReg = MI.getOperand(0).getReg();
+    Register DstReg = PHI->getReg(0);
 
     // Sometimes the result may have already been assigned a bank.
     if (const RegisterBank *DstBank = getRegBank(DstReg, MRI, *TRI))
       ResultBank = DstBank->getID();
 
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
-      Register Reg = MI.getOperand(I).getReg();
+    for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+      Register Reg = PHI->getIncomingValue(I);
       const RegisterBank *Bank = getRegBank(Reg, MRI, *TRI);
 
       // FIXME: Assuming VGPR for any undetermined inputs.
