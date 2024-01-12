@@ -221,7 +221,9 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
 }
 
 static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
-  // add rbx, rbx, rax / add rbx, rax, rbx -> add rbx, rax
+  // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
+  //   ->
+  // $rbx = ADD64rr $rbx, $rax
   const MCInstrDesc &Desc = MI.getDesc();
   Register Reg0 = MI.getOperand(0).getReg();
   const MachineOperand &Op1 = MI.getOperand(1);
