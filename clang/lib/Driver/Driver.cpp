@@ -6153,14 +6153,14 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
 
     // Note when there are multiple flavours of libc++ the module json needs to
     // look at the command-line arguments for the proper json.
+	// These flavours do not exist at the moment, but there are plans to
+	// provide a variant that is built with sanitizer instrumentation enabled.
 
     // For example
-    /*
-        const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-        if (Sanitize.needsAsanRt())
-          return path.replace(path.size() - lib.size(), lib.size(),
-                              "modules-asan.json");
-    */
+    //  const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+    //  if (Sanitize.needsAsanRt())
+    //    return path.replace(path.size() - lib.size(), lib.size(),
+    //                        "modules-asan.json");
 
     path = path.replace(path.size() - lib.size(), lib.size(), "modules.json");
     if (TC.getVFS().exists(path))
