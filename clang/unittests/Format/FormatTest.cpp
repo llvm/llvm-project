@@ -21325,6 +21325,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "00000000000000000000000000000000000000000000000000000000\" },\n"
       "};",
       Style);
+
+  Style.SpacesInParens = FormatStyle::SIPO_Custom;
+  Style.SpacesInParensOptions.Other = true;
+  verifyFormat("Foo foo[] = {\n"
+               "    {1, 1},\n"
+               "    {1, 1},\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPragmas) {
