@@ -146,9 +146,9 @@ IWYU, you should run the tool like so:
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
-.. _termination-handler:
+.. _assertion-handler:
 
-Overriding the default termination handler
+Overriding the default assertion handler
 ==========================================
 
 When the library wants to terminate due to an unforeseen condition (such as a hardening assertion
