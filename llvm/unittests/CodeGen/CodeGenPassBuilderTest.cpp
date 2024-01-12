@@ -46,7 +46,7 @@ public:
 
 class CodeGenPassBuilderTest : public testing::Test {
 public:
-  LLVMTargetMachine *TM;
+  std::unique_ptr<LLVMTargetMachine> TM;
 
   static void SetUpTestCase() {
     InitializeAllTargets();
@@ -69,8 +69,8 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = static_cast<LLVMTargetMachine *>(
-        TheTarget->createTargetMachine("", "", "", Options, std::nullopt));
+    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+        TheTarget->createTargetMachine("", "", "", Options, std::nullopt)));
     if (!TM)
       GTEST_SKIP();
   }
@@ -85,7 +85,7 @@ TEST_F(CodeGenPassBuilderTest, basic) {
   PassInstrumentationCallbacks PIC;
   DummyCodeGenPassBuilder CGPB(*TM, getCGPassBuilderOption(), &PIC);
   PipelineTuningOptions PTO;
-  PassBuilder PB(TM, PTO, std::nullopt, &PIC);
+  PassBuilder PB(TM.get(), PTO, std::nullopt, &PIC);
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
