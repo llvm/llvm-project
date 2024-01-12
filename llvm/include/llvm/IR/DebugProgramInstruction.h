@@ -51,6 +51,8 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/SymbolTableListTraits.h"
 
 namespace llvm {
 
@@ -122,14 +124,15 @@ public:
           const DILocation *DI, LocationType Type = LocationType::Value);
 
   static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI,
-                                Instruction *InsertBefore = nullptr);
+                                DIExpression *Expr, const DILocation *DI);
   static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI,
-                                DPValue *InsertBefore);
-  static DPValue *createDPDeclare(Value *Address, DILocalVariable *DV,
-                                  DIExpression *Expr, const DILocation *DI,
-                                  Instruction *InsertBefore = nullptr);
+                                DPValue &InsertBefore);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the

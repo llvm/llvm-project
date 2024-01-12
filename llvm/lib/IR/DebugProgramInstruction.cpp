@@ -42,33 +42,31 @@ DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
 void DPValue::deleteInstr() { delete this; }
 
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
-                                DIExpression *Expr, const DILocation *DI,
-                                Instruction *InsertBefore) {
-  auto *NewDPValue = new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
-                                 LocationType::Value);
-  if (InsertBefore)
-    InsertBefore->getParent()->insertDPValueBefore(NewDPValue,
-                                                   InsertBefore->getIterator());
-  return NewDPValue;
+                                DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
+                     LocationType::Value);
 }
+
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI,
-                                DPValue *InsertBefore) {
-  auto *NewDPValue = new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
-                                 LocationType::Value);
-  if (InsertBefore)
-    NewDPValue->insertBefore(InsertBefore);
+                                DPValue &InsertBefore) {
+  auto *NewDPValue = createDPValue(Location, DV, Expr, DI);
+  NewDPValue->insertBefore(&InsertBefore);
   return NewDPValue;
 }
-DPValue *DPValue::createDPDeclare(Value *Address, DILocalVariable *DV,
-                                  DIExpression *Expr, const DILocation *DI,
-                                  Instruction *InsertBefore) {
-  auto *NewDPDeclare = new DPValue(ValueAsMetadata::get(Address), DV, Expr, DI,
-                                   LocationType::Declare);
-  if (InsertBefore)
-    InsertBefore->getParent()->insertDPValueBefore(NewDPDeclare,
-                                                   InsertBefore->getIterator());
-  return NewDPDeclare;
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Address), DV, Expr, DI,
+                     LocationType::Declare);
+}
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore) {
+  auto *NewDPVDeclare = createDPVDeclare(Address, DV, Expr, DI);
+  NewDPVDeclare->insertBefore(&InsertBefore);
+  return NewDPVDeclare;
 }
 
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
