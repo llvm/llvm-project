@@ -91,6 +91,7 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -257,6 +258,7 @@ private:
   bool recognizeShiftUntilZero();
   std::optional<CRCInfo> looksLikeCRC(const SCEV *BECount);
   bool recognizeCRC(const SCEV *BECount);
+  void writeTableBasedCRCOneByte(CRCInfo &CRC);
 
   /// @}
 };
@@ -3296,6 +3298,96 @@ static bool symbolicallyExecute(BasicBlock *BB,
   return true;
 }
 
+void LoopIdiomRecognize::writeTableBasedCRCOneByte(CRCInfo &CRC) {
+  BasicBlock *ExitBB = CurLoop->getExitBlock();
+  IRBuilder<> Builder(ExitBB);
+  Builder.SetInsertPoint(ExitBB->getFirstNonPHI());
+  Type *CRCType = CRC.CRCInput->getType();
+  uint64_t CRCSize = CRCType->getScalarSizeInBits();
+
+  // Construct the CRC table
+  uint64_t CRCTable[256];
+  uint64_t Polynomial = CRC.Polynomial;
+  uint64_t SB = CRC.BitReversed ? 0x1 : (0x1 << (CRCSize - 1));
+  if (CRC.BitReversed)
+    Polynomial = reverseBits(Polynomial, CRCSize);
+  for (uint64_t Dividend = 0; Dividend < 256; Dividend++) {
+    uint64_t CurByte = Dividend;
+    if (!CRC.BitReversed)
+      CurByte <<= CRCSize - 8;
+    for (uint8_t Bit = 0; Bit < 8; Bit++) {
+      if ((CurByte & SB) != 0) {
+        CurByte = CRC.BitReversed ? CurByte >> 1 : CurByte << 1;
+        CurByte = CurByte ^ Polynomial;
+      } else {
+        CurByte = CRC.BitReversed ? CurByte >> 1 : CurByte << 1;
+      }
+    }
+    CRCTable[Dividend] = CurByte;
+  }
+  // To construct a global data array, we need the raw data in bytes.
+  // The calculated table array is an array of 64bit values because we can't
+  // dynamically type it, so we need to truncate the values to the crc size
+  // to avoid padded zeros. Do this by allocating a byte array (of slightly more
+  // than we need to account for overflow) and copying the 64bit values across
+  // aligned correctly
+  uint64_t CRCNumBytes = CRCSize / 8;
+  char *CRCTableData = (char *)malloc(CRCNumBytes * 260);
+  for (int I = 0; I < 256; I++) {
+    *((uint64_t *)(CRCTableData + I * CRCNumBytes)) = CRCTable[I];
+  }
+
+  // Construct and add the table as a global variable
+  ArrayType *TableType = ArrayType::get(CRCType, 256);
+  Constant *ConstantArr = ConstantDataArray::getRaw(
+      StringRef(CRCTableData, CRCNumBytes * 256), 256, CRCType);
+  std::stringstream TableNameSS;
+  TableNameSS << "crctable.i" << CRCSize << "." << CRC.Polynomial;
+  if (CRC.BitReversed)
+    TableNameSS << ".reversed";
+  GlobalVariable *CRCTableGlobal = new GlobalVariable(
+      TableType, true, GlobalVariable::LinkageTypes::PrivateLinkage,
+      ConstantArr, TableNameSS.str());
+  ExitBB->getModule()->insertGlobalVariable(CRCTableGlobal);
+  free(CRCTableData);
+
+  // Construct the IR to load from this table
+  Value *CRCOffset = CRC.CRCInput;
+  if (CRCSize > 8) {
+    // Get the next byte into position and truncate
+    if (!CRC.BitReversed)
+      CRCOffset = Builder.CreateLShr(CRCOffset, CRCSize - 8);
+    CRCOffset = Builder.CreateTrunc(CRCOffset, Builder.getInt8Ty());
+  }
+  if (CRC.DataInput) {
+    // Data size can be more than 8 due to extending
+    Value *Data = CRC.DataInput;
+    if (CRC.DataInput->getType()->getScalarSizeInBits() > 8) {
+      Data = Builder.CreateTrunc(Data, Builder.getInt8Ty());
+    }
+    // Xor the data, offset into the table and load
+    CRCOffset = Builder.CreateXor(CRCOffset, Data);
+  }
+
+  CRCOffset = Builder.CreateZExt(CRCOffset, Builder.getInt32Ty());
+  Value *Gep = Builder.CreateInBoundsGEP(CRCType, CRCTableGlobal, {CRCOffset});
+  Value *CRCRes = Builder.CreateLoad(CRCType, Gep);
+  if (CRCSize > 8) {
+    // Shift out SB used for division and Xor the rest of the crc back in
+    Value *RestOfCRC = CRC.CRCInput;
+    if (CRC.BitReversed)
+      RestOfCRC = Builder.CreateLShr(CRC.CRCInput, 8);
+    else
+      RestOfCRC = Builder.CreateShl(CRC.CRCInput, 8);
+    CRCRes = Builder.CreateXor(RestOfCRC, CRCRes);
+  }
+  for (PHINode &ExitPhi : CurLoop->getExitBlock()->phis()) {
+    if (ExitPhi.getNumIncomingValues() == 1 &&
+        ExitPhi.getIncomingValue(0) == CRC.CRCOutput)
+      ExitPhi.replaceAllUsesWith(CRCRes);
+  }
+}
+
 bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // Step one: Check if the loop looks like crc, and extract some useful
   // information for us to check
@@ -3501,7 +3593,9 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRegonize: This looks like crc!\n");
 
-  return false;
+  writeTableBasedCRCOneByte(CRC);
+
+  return true;
 }
 
 std::optional<LoopIdiomRecognize::CRCInfo>
