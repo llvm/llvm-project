@@ -157,6 +157,7 @@ For example, If you wanted to use the
 profile data you would use the following command:
 
 .. code-block:: console
+
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/home/fedora/llvm-test-suite/ \
        -DBOOTSTRAP_CLANG_PERF_TRAINING_DEPS=runtimes
