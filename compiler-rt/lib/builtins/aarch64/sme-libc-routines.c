@@ -4,9 +4,8 @@
 // use the compiler flag "-mllvm -disable-loop-idiom-all" to prevent clang
 // from recognising a loop idiom and planting calls to memcpy!
 
-static void *
-__arm_sc_memcpy_fwd(void *dest, const void *src,
-                    size_t n) __arm_streaming_compatible __arm_preserves_za {
+static void *__arm_sc_memcpy_fwd(void *dest, const void *src,
+                                 size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
 
@@ -21,12 +20,11 @@ __arm_sc_memcpy_fwd(void *dest, const void *src,
 // restrict keywords here. This also matches the definition of the libc memcpy
 // according to the man page.
 void *__arm_sc_memcpy(void *__restrict__ dest, const void *__restrict__ src,
-                      size_t n) __arm_streaming_compatible __arm_preserves_za {
+                      size_t n) __arm_streaming_compatible {
   return __arm_sc_memcpy_fwd(dest, src, n);
 }
 
-void *__arm_sc_memset(void *dest, int c,
-                      size_t n) __arm_streaming_compatible __arm_preserves_za {
+void *__arm_sc_memset(void *dest, int c, size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   unsigned char c8 = (unsigned char)c;
 
@@ -37,9 +35,8 @@ void *__arm_sc_memset(void *dest, int c,
   return dest;
 }
 
-static void *
-__arm_sc_memcpy_rev(void *dest, const void *src,
-                    size_t n) __arm_streaming_compatible __arm_preserves_za {
+static void *__arm_sc_memcpy_rev(void *dest, const void *src,
+                                 size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
 
@@ -57,7 +54,7 @@ __arm_sc_memcpy_rev(void *dest, const void *src,
 //      overlap with src or dest.
 //   2. Copy the contents of the temporary array into dest.
 void *__arm_sc_memmove(void *dest, const void *src,
-                       size_t n) __arm_streaming_compatible __arm_preserves_za {
+                       size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
 
@@ -87,9 +84,8 @@ void *__arm_sc_memmove(void *dest, const void *src,
   return __arm_sc_memcpy_rev(dest, src, n);
 }
 
-const void *
-__arm_sc_memchr(const void *src, int c,
-                size_t n) __arm_streaming_compatible __arm_preserves_za {
+const void *__arm_sc_memchr(const void *src, int c,
+                            size_t n) __arm_streaming_compatible {
   const unsigned char *srcp = (const unsigned char *)src;
   unsigned char c8 = (unsigned char)c;
 
