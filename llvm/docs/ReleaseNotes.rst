@@ -117,6 +117,7 @@ Changes to the ARM Backend
 --------------------------
 
 * Added support for Cortex-M52 CPUs.
+* Added execute-only support for Armv6-M.
 
 Changes to the AVR Backend
 --------------------------
