@@ -27,6 +27,10 @@ constexpr int kWarpSize = 32;
 constexpr int kWgmmaSizeM = 64;
 /// Maximum tensor dimension that TMA supports
 constexpr int kMaxTMATensorDimension = 5;
+/// Maximum any dimension for TMA
+constexpr unsigned kMaxTMADimension = 256;
+/// Last dimension of 2D+ TMA must be 128 bytes
+constexpr unsigned kMaxTMALastdimByte = 128;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
