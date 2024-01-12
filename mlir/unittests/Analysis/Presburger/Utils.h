@@ -128,20 +128,6 @@ inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a,
   }
 }
 
-// Check the constant term of the quasipolynomial against a constant.
-inline void EXPECT_CONSTANT_TERM_QUASIPOLYNOMIAL(QuasiPolynomial qp,
-                                                 Fraction f) {
-  SmallVector<Fraction> coeffs = qp.getCoefficients();
-  std::vector<std::vector<SmallVector<Fraction>>> aff = qp.getAffine();
-
-  Fraction t = 0;
-  for (unsigned i = 0, e = coeffs.size(); i < e; ++i) {
-    if (aff[i].size() == 0)
-      t += coeffs[i];
-  }
-  EXPECT_EQ(t, f);
-}
-
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
 inline bool infinityOrUInt64LE(std::optional<MPInt> lhs,

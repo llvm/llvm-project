@@ -126,7 +126,7 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   QuasiPolynomial coeff =
       getCoefficientInRationalFunction(1, numerator, denominator);
 
-  EXPECT_CONSTANT_TERM_QUASIPOLYNOMIAL(coeff, 3);
+  EXPECT_EQ(coeff.getConstantTerm(), 3);
 
   numerator = {QuasiPolynomial(0, -1), QuasiPolynomial(0, 4),
                QuasiPolynomial(0, -2), QuasiPolynomial(0, 5),
@@ -136,5 +136,5 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
 
   coeff = getCoefficientInRationalFunction(3, numerator, denominator);
 
-  EXPECT_CONSTANT_TERM_QUASIPOLYNOMIAL(coeff, Fraction(55, 64));
+  EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }

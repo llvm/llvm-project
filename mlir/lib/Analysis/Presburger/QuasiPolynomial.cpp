@@ -119,3 +119,13 @@ QuasiPolynomial QuasiPolynomial::simplify() {
   }
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
 }
+
+// Check the constant term of the quasipolynomial against a constant.
+Fraction QuasiPolynomial::getConstantTerm() {
+  Fraction t = 0;
+  for (unsigned i = 0, e = coefficients.size(); i < e; ++i) {
+    if (affine[i].size() == 0)
+      t += coefficients[i];
+  }
+  return t;
+}

@@ -62,6 +62,9 @@ public:
   // Removes terms which evaluate to zero from the expression.
   QuasiPolynomial simplify();
 
+  // Find the constant term of the expression.
+  Fraction getConstantTerm();
+
 private:
   SmallVector<Fraction> coefficients;
   std::vector<std::vector<SmallVector<Fraction>>> affine;
