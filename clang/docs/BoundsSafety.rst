@@ -56,10 +56,8 @@ adopt, offering these properties that make it widely adoptable in practice:
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
 subject to be actively updated with a more detailed specification. The
-implementation plan can be found in Implementation plans for -fbounds-safety.
+implementation plan can be found in :doc:`BoundsSafetyImplPlans`.
 
-.. Cross reference doesn't currently work
-   `Implementation plans for -fbounds-safety <BoundsSafetyImplPlans.rst>`_.
 
 Programming Model
 =================
