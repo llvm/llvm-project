@@ -19,8 +19,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
-
-using llvm::VersionTuple;
+#include <vector>
 
 namespace clang {
 namespace extractapi {
@@ -58,7 +57,8 @@ struct AvailabilityInfo {
   friend bool operator==(const AvailabilityInfo &Lhs,
                          const AvailabilityInfo &Rhs);
 
-  AvailabilityInfo(const Decl *Decl);
+public:
+  static AvailabilityInfo createFromDecl(const Decl *Decl);
 };
 
 inline bool operator==(const AvailabilityInfo &Lhs,
