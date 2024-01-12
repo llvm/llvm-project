@@ -199,7 +199,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   }
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
-    FreeMemory((void *)newCmd);
+    FreeMemory(const_cast<void *>(static_cast<const void *>(newCmd)));
   }
 }
 
