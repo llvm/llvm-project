@@ -162,7 +162,7 @@ profile data you would use the following command:
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=/home/fedora/llvm-test-suite/ \
        -DBOOTSTRAP_CLANG_PERF_TRAINING_DEPS=runtimes
 
-The BOOTSTRAP_ prefixes tells CMake to pass the variables on to the instrumented
+The BOOTSTRAP\_ prefixes tells CMake to pass the variables on to the instrumented
 stage two build.  And the CLANG_PERF_TRAINING_DEPS option let's you specify
 additional build targets to build before building the external project.  The
 LLVM Test Suite requires compiler-rt to build, so we need to add the
