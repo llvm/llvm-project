@@ -3014,6 +3014,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   ABIArgInfo AI = classifyArgumentType(Ty, 0, neededInt, neededSSE,
                                        /*isNamedArg*/false);
 
+  // Empty records are ignored for parameter passing purposes.
+  if (AI.isIgnore())
+    return CGF.CreateMemTemp(Ty);
+
   // AMD64-ABI 3.5.7p5: Step 1. Determine whether type may be passed
   // in the registers. If not go to step 7.
   if (!neededInt && !neededSSE)
