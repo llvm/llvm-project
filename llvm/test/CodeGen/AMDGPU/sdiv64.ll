@@ -156,15 +156,9 @@ define amdgpu_kernel void @s_test_sdiv(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GCN-IR-NEXT:    s_subb_u32 s7, s7, s2
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[12:13], 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[6:7], 0
+; GCN-IR-NEXT:    s_flbit_i32_b64 s14, s[6:7]
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[8:9]
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s6
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s7
-; GCN-IR-NEXT:    s_min_u32 s14, s8, s9
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s12
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s13
-; GCN-IR-NEXT:    s_min_u32 s20, s8, s9
+; GCN-IR-NEXT:    s_flbit_i32_b64 s20, s[12:13]
 ; GCN-IR-NEXT:    s_sub_u32 s16, s14, s20
 ; GCN-IR-NEXT:    s_subb_u32 s17, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[18:19], s[16:17], 63
@@ -993,15 +987,9 @@ define amdgpu_kernel void @s_test_sdiv24_48(ptr addrspace(1) %out, i48 %x, i48 %
 ; GCN-IR-NEXT:    s_subb_u32 s7, s7, s4
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[6:7], 0
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[12:13], 0
+; GCN-IR-NEXT:    s_flbit_i32_b64 s14, s[6:7]
 ; GCN-IR-NEXT:    s_or_b64 s[10:11], s[8:9], s[10:11]
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s6
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s7
-; GCN-IR-NEXT:    s_min_u32 s14, s8, s9
-; GCN-IR-NEXT:    s_flbit_i32_b32 s8, s12
-; GCN-IR-NEXT:    s_add_i32 s8, s8, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s9, s13
-; GCN-IR-NEXT:    s_min_u32 s20, s8, s9
+; GCN-IR-NEXT:    s_flbit_i32_b64 s20, s[12:13]
 ; GCN-IR-NEXT:    s_sub_u32 s16, s14, s20
 ; GCN-IR-NEXT:    s_subb_u32 s17, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[18:19], s[16:17], 63
@@ -1203,10 +1191,7 @@ define amdgpu_kernel void @s_test_sdiv_k_num_i64(ptr addrspace(1) %out, i64 %x) 
 ; GCN-IR-NEXT:    s_xor_b64 s[2:3], s[4:5], s[2:3]
 ; GCN-IR-NEXT:    s_sub_u32 s2, s2, s4
 ; GCN-IR-NEXT:    s_subb_u32 s3, s3, s4
-; GCN-IR-NEXT:    s_flbit_i32_b32 s10, s2
-; GCN-IR-NEXT:    s_add_i32 s10, s10, 32
-; GCN-IR-NEXT:    s_flbit_i32_b32 s11, s3
-; GCN-IR-NEXT:    s_min_u32 s14, s10, s11
+; GCN-IR-NEXT:    s_flbit_i32_b64 s14, s[2:3]
 ; GCN-IR-NEXT:    s_add_u32 s10, s14, 0xffffffc5
 ; GCN-IR-NEXT:    s_addc_u32 s11, 0, -1
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[8:9], s[2:3], 0

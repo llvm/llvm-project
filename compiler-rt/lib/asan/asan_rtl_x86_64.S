@@ -89,7 +89,12 @@ ENDF
 #define ASAN_MEMORY_ACCESS_CHECK_ADD(reg, op, s, c) \
         mov    %##reg,%r10 ;\
         shr    $0x3,%r10 ;\
+        .if ASAN_SHADOW_OFFSET_CONST < 0x80000000  ;\
         ##c    $0x0,ASAN_SHADOW_OFFSET_CONST(%r10) ;\
+        .else                                      ;\
+        movabsq $ASAN_SHADOW_OFFSET_CONST,%r11     ;\
+        ##c    $0x0,(%r10,%r11)                    ;\
+        .endif                                     ;\
         jne    FLABEL(reg, op, s, add) ;\
         retq  ;\
 

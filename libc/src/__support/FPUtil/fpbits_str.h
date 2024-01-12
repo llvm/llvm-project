@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
 
@@ -46,7 +45,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
   cpp::string s;
 
-  const details::ZeroPaddedHexFmt<StorageType> bits(x.bits);
+  const details::ZeroPaddedHexFmt<StorageType> bits(x.uintval());
   s += bits.view();
 
   s += " = (S: ";

@@ -96,7 +96,7 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-  transform.test_print_remark_at_operand %f, "fused" : !transform.any_op
+  transform.debug.emit_remark_at %f, "fused" : !transform.any_op
 
   transform.yield
 }

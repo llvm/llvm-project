@@ -2764,7 +2764,9 @@ static bool isConstant(const MachineInstr &MI) {
 void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
     const MachineRegisterInfo &MRI, SmallVectorImpl<GEPInfo> &AddrInfo) const {
 
-  const MachineInstr *PtrMI = MRI.getUniqueVRegDef(Load.getOperand(1).getReg());
+  unsigned OpNo = Load.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
+  const MachineInstr *PtrMI =
+      MRI.getUniqueVRegDef(Load.getOperand(OpNo).getReg());
 
   assert(PtrMI);
 
@@ -2816,6 +2818,10 @@ bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return true;
+
+  if (MI.getOpcode() == AMDGPU::G_PREFETCH)
+    return RBI.getRegBank(MI.getOperand(0).getReg(), *MRI, TRI)->getID() ==
+           AMDGPU::SGPRRegBankID;
 
   const Instruction *I = dyn_cast<Instruction>(Ptr);
   return I && I->getMetadata("amdgpu.uniform");
@@ -3921,7 +3927,7 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectDotIUVOP3PMods(MachineOperand &Root) const {
+AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
   // Value is in Imm operand as i1 sign extended to int64_t.
   // 1(-1) promotes packed values to signed, 0 treats them as unsigned.

@@ -70,6 +70,118 @@ func.func @mesh_axis_negtive_in_partial(
 
 // -----
 
+func.func @sharding_attribute_invalid_nested_symbol(%arg0 : tensor<4x8xf32>) {
+  // expected-error@+2 {{custom op 'mesh.shard' invalid kind of attribute specified}}
+  // expected-error@+1 {{custom op 'mesh.shard' failed to parse MeshSharding parameter 'cluster' which is to be a `::mlir::FlatSymbolRefAttr`}}
+  %0 = mesh.shard %arg0 to <@a::@b, [[0]]> : tensor<4x8xf32>
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+
+func.func @cluster_shape_mesh_axis_out_of_bounds() -> (index, index) {
+  // expected-error@+1 {{0-based mesh axis index 2 is out of bounds. The referenced mesh "mesh0" is of rank 2.}}
+  %0:2 = mesh.cluster_shape @mesh0 axes = [0, 2] : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 3, dim_sizes = 1x2x3)
+
+func.func @cluster_shape_duplicate_mesh_axis() -> (index, index, index) {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0:3 = mesh.cluster_shape @mesh0 axes = [0, 2, 0] : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+
+func.func @cluster_shape_wrong_number_of_results() -> (index, index) {
+  // expected-error@+1 {{Unexpected number of results 2. Expected 1.}}
+  %0:2 = mesh.cluster_shape @mesh0 axes = [0] : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 3, dim_sizes = 1x2x3)
+
+func.func @cluster_shape_wrong_number_of_results_empty_mesh_axes() -> (index, index) {
+  // expected-error@+1 {{Unexpected number of results 2. Expected 3.}}
+  %0:2 = mesh.cluster_shape @mesh0 : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+func.func @cluster_shape_invalid_mesh_name() -> (index) {
+  // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
+  %0 = mesh.cluster_shape @this_mesh_symbol_does_not_exist : index
+  return %0#0 : index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+
+func.func @process_multi_index_mesh_axis_out_of_bounds() -> (index, index) {
+  // expected-error@+1 {{0-based mesh axis index 2 is out of bounds. The referenced mesh "mesh0" is of rank 2.}}
+  %0:2 = mesh.process_multi_index on @mesh0 axes = [0, 2] : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 3, dim_sizes = 1x2x3)
+
+func.func @process_multi_index_duplicate_mesh_axis() -> (index, index, index) {
+  // expected-error@+1 {{Mesh axes contains duplicate elements.}}
+  %0:3 = mesh.process_multi_index on @mesh0 axes = [0, 2, 0] : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+
+func.func @process_multi_index_wrong_number_of_results() -> (index, index) {
+  // expected-error@+1 {{Unexpected number of results 2. Expected 1.}}
+  %0:2 = mesh.process_multi_index on @mesh0 axes = [0] : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+mesh.cluster @mesh0(rank = 3, dim_sizes = 1x2x3)
+
+func.func @process_multi_index_wrong_number_of_results_empty_mesh_axes() -> (index, index) {
+  // expected-error@+1 {{Unexpected number of results 2. Expected 3.}}
+  %0:2 = mesh.process_multi_index on @mesh0 : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// -----
+
+func.func @process_multi_index_invalid_mesh_name() -> (index) {
+  // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
+  %0 = mesh.process_multi_index on @this_mesh_symbol_does_not_exist : index
+  return %0 : index
+}
+
+// -----
+
+func.func @process_linear_index_invalid_mesh_name() -> (index) {
+  // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}
+  %0 = mesh.process_linear_index on @this_mesh_symbol_does_not_exist : index
+  return %0 : index
+}
+
+// -----
+
 func.func @all_reduce_invalid_mesh_symbol(
     %arg0 : tensor<4xf32>) -> tensor<4xf64> {
   // expected-error@+1 {{Undefined required mesh symbol "this_mesh_symbol_does_not_exist".}}

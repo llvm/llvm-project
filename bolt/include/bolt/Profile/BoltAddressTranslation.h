@@ -125,7 +125,7 @@ private:
 
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry
-  const static uint32_t BRANCHENTRY = 0x80000000;
+  const static uint32_t BRANCHENTRY = 0x1;
 };
 } // namespace bolt
 

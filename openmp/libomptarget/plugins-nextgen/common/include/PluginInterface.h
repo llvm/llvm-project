@@ -218,12 +218,19 @@ class DeviceImageTy {
   const __tgt_device_image *TgtImage;
   const __tgt_device_image *TgtImageBitcode;
 
+  /// If this image has any global destructors that much be called.
+  /// FIXME: This is only required because we currently have no invariants
+  ///        towards the lifetime of the underlying image. We should either copy
+  ///        the image into memory locally or erase the pointers after init.
+  bool PendingGlobalDtors;
+
   /// Table of offload entries.
   OffloadEntryTableTy OffloadEntryTable;
 
 public:
   DeviceImageTy(int32_t Id, const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr) {
+      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr),
+        PendingGlobalDtors(false) {
     assert(TgtImage && "Invalid target image");
   }
 
@@ -254,6 +261,10 @@ public:
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
+
+  /// Accessors to the boolean value
+  bool setPendingGlobalDtors() { return PendingGlobalDtors = true; }
+  bool hasPendingGlobalDtors() const { return PendingGlobalDtors; }
 
   /// Get a reference to the offload entry table for the image.
   OffloadEntryTableTy &getOffloadEntryTable() { return OffloadEntryTable; }
@@ -1067,7 +1078,7 @@ struct GenericPluginTy {
 
   /// Top level interface to verify if a given ELF image can be executed on a
   /// given target. Returns true if the \p Image is compatible with the plugin.
-  Expected<bool> checkELFImage(__tgt_device_image &Image) const;
+  Expected<bool> checkELFImage(StringRef Image) const;
 
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
