@@ -147,21 +147,28 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 }
 
 /// We use a recursive procedure to find a vector not orthogonal
-/// to a given set. Let the inputs be {x_1, ..., x_k}, all vectors of length n.
+/// to a given set, ignoring the null vectors.
+/// Let the inputs be {x_1, ..., x_k}, all vectors of length n.
 ///
 /// In the following,
 /// vs[:i] means the elements of vs up to (not including) the i'th one,
 /// <vs, us> means the dot product of vs and us,
 /// vs ++ [v] means the vector vs with the new element v appended to it.
 ///
-/// Suppose we have a vector vs which is not orthogonal to
-/// any of {x_1[:n-1], ..., x_k[:n-1]}.
-/// Then we need v s.t. <x_i, vs++[v]> != 0 for all i.
-/// => <x_i[:n-1], vs> + x_i[n-1]*v != 0
-/// => v != - <x_i[:n-1], vs> / x_i[n-1]
-/// We compute this value for all i, and then
+/// We proceed iteratively; for steps i = 2, ... n, we construct a vector
+/// which is not orthogonal to any of {x_1[:i], ..., x_n[:i]}, ignoring
+/// the null vectors.
+/// At step i = 2, we let vs = [1]. Clearly this is not orthogonal to
+/// any vector in the set {x_1[0], ..., x_n[0]}, except the null ones,
+/// which we ignore.
+/// At step i = k + 1, we need a number v
+/// s.t. <x_i[:k+1], vs++[v]> != 0 for all i.
+/// => <x_i[:k], vs> + x_i[k]*v != 0
+/// => v != - <x_i[:k], vs> / x_i[k]
+/// We compute this value for all x_i, and then
 /// set v to be the maximum element of this set plus one. Thus
-/// v is outside the set as desired, and we append it to vs.
+/// v is outside the set as desired, and we append it to vs
+/// to obtain the result of the k+1'th step.
 ///
 /// The base case is given in one dimension,
 /// where the vector [1] is not orthogonal to any
