@@ -92,7 +92,7 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 
 COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 
-#elif defined QUAD_PRECISION
+#elif defined QUAD_PRECISION && defined(CRT_HAS_F128)
 #if defined(CRT_HAS_TF_MODE)
 typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
@@ -188,6 +188,8 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #undef Word_HiMask
 #undef Word_LoMask
 #undef Word_FullMask
+#else
+typedef long double fp_t;
 #endif // defined(CRT_HAS_TF_MODE)
 #else
 #error SINGLE_PRECISION, DOUBLE_PRECISION or QUAD_PRECISION must be defined.
@@ -405,6 +407,8 @@ static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
 #define __compiler_rt_logbl crt_logbl
 #define __compiler_rt_scalbnl crt_scalbnl
 #define __compiler_rt_fmaxl crt_fmaxl
+#define crt_fabstf crt_fabsl
+#define crt_copysigntf crt_copysignl
 #else
 #error Unsupported TF mode type
 #endif
