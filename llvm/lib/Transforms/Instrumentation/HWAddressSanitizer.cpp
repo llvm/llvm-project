@@ -862,7 +862,7 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   if (Mapping.Offset == 0)
     return IRB.CreateIntToPtr(Shadow, PtrTy);
   // (Mem >> Scale) + Offset
-  return IRB.CreateGEP(Int8Ty, ShadowBase, Shadow);
+  return IRB.CreatePtrAdd(ShadowBase, Shadow);
 }
 
 int64_t HWAddressSanitizer::getAccessInfo(bool IsWrite,
