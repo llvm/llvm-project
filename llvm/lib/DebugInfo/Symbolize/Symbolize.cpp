@@ -449,14 +449,14 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Make the path absolute so that lookups will go to
@@ -478,7 +478,7 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   return false;

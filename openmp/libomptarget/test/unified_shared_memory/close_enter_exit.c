@@ -3,8 +3,11 @@
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
-// Fails on amdgcn with error: GPU Memory Error
+// Fails on amdgpu with error: GPU Memory Error
+// Fails on nvptx with error: an illegal memory access was encountered
 // XFAIL: amdgcn-amd-amdhsa
+// XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

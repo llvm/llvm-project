@@ -6894,12 +6894,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   FeatureBitset Features = STI.getFeatureBits();
   setAvailableFeatures(ComputeAvailableFeatures(Features));
   for (auto Name : RequestedExtensions) {
-    bool EnableFeature = true;
-
-    if (Name.starts_with_insensitive("no")) {
-      EnableFeature = false;
-      Name = Name.substr(2);
-    }
+    bool EnableFeature = !Name.consume_front_insensitive("no");
 
     for (const auto &Extension : ExtensionMap) {
       if (Extension.Name != Name)
@@ -6990,12 +6985,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
     // Advance source location past '+'.
     CurLoc = incrementLoc(CurLoc, 1);
 
-    bool EnableFeature = true;
-
-    if (Name.starts_with_insensitive("no")) {
-      EnableFeature = false;
-      Name = Name.substr(2);
-    }
+    bool EnableFeature = !Name.consume_front_insensitive("no");
 
     bool FoundExtension = false;
     for (const auto &Extension : ExtensionMap) {
