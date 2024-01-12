@@ -1083,6 +1083,22 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     return LLDB_INVALID_ADDRESS;
   };
 
+  // On modern apple platforms, there is a small data structure that looks
+  // approximately like this:
+  // struct TLS_Thunk {
+  //  void *(*get_addr)(struct TLS_Thunk *);
+  //  size_t key;
+  //  size_t offset;
+  // }
+  //
+  // The strategy is to take get_addr, call it with the address of the
+  // containing TLS_Thunk structure, and add the offset to the resulting
+  // pointer to get the data block.
+  //
+  // On older apple platforms, the key is treated as a pthread_key_t and passed
+  // to pthread_getspecific. The pointer returned from that call is added to
+  // offset to get the relevant data block.
+
   const uint32_t addr_size = m_process->GetAddressByteSize();
   uint8_t buf[sizeof(lldb::addr_t) * 3];
   Status error;
@@ -1093,11 +1109,23 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     return LLDB_INVALID_ADDRESS;
 
   DataExtractor data(buf, sizeof(buf), m_process->GetByteOrder(), addr_size);
-  lldb::offset_t offset = addr_size; // Skip the first pointer
-  const lldb::addr_t pthread_key = data.GetAddress(&offset);
+  lldb::offset_t offset = 0;
+  const lldb::addr_t tls_thunk = data.GetAddress(&offset);
+  const lldb::addr_t key = data.GetAddress(&offset);
   const lldb::addr_t tls_offset = data.GetAddress(&offset);
 
-  if (pthread_key != 0) {
+  if (tls_thunk != 0) {
+    Address thunk_load_addr;
+    if (target.ResolveLoadAddress(tls_thunk, thunk_load_addr)) {
+      const lldb::addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
+      const lldb::addr_t tls_data = evaluate_tls_address(
+          thunk_load_addr, llvm::ArrayRef<lldb::addr_t>(tls_load_addr));
+      if (tls_data != LLDB_INVALID_ADDRESS)
+        return tls_data + tls_offset;
+    }
+  }
+
+  if (key != 0) {
     // First check to see if we have already figured out the location of
     // TLS data for the pthread_key on a specific thread yet. If we have we
     // can re-use it since its location will not change unless the process
@@ -1105,7 +1133,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     const tid_t tid = thread_sp->GetID();
     auto tid_pos = m_tid_to_tls_map.find(tid);
     if (tid_pos != m_tid_to_tls_map.end()) {
-      auto tls_pos = tid_pos->second.find(pthread_key);
+      auto tls_pos = tid_pos->second.find(key);
       if (tls_pos != tid_pos->second.end()) {
         return tls_pos->second + tls_offset;
       }
@@ -1113,7 +1141,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
     if (pthread_getspecific_addr.IsValid()) {
       const lldb::addr_t tls_data = evaluate_tls_address(
-          pthread_getspecific_addr, llvm::ArrayRef<lldb::addr_t>(pthread_key));
+          pthread_getspecific_addr, llvm::ArrayRef<lldb::addr_t>(key));
       if (tls_data != LLDB_INVALID_ADDRESS)
         return tls_data + tls_offset;
     }
