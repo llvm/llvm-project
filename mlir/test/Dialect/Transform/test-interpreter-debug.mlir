@@ -50,13 +50,13 @@ module {
 module {
   transform.sequence failures(suppress) attributes {transform.target_tag="transform"} {
   ^bb0(%arg0: !transform.any_op):
-    transform.test_print_remark_at_operand %arg0, "payload" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "payload" : !transform.any_op
   }
 
   // This will not be executed because it's not tagged.
   transform.sequence failures(suppress)  {
   ^bb0(%arg0: !transform.any_op):
-    transform.test_print_remark_at_operand %arg0, "some other text that is not printed" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "some other text that is not printed" : !transform.any_op
   }
 
   module {

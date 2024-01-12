@@ -15214,6 +15214,19 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
+    auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
+    if (VTy->getElementType() != VL.front()->getType()) {
+      VectorizedValue = Builder.CreateIntCast(
+          VectorizedValue,
+          FixedVectorType::get(VL.front()->getType(), VTy->getNumElements()),
+          any_of(VL, [&](Value *R) {
+            KnownBits Known = computeKnownBits(
+                R, cast<Instruction>(ReductionOps.front().front())
+                       ->getModule()
+                       ->getDataLayout());
+            return !Known.isNonNegative();
+          }));
+    }
     switch (RdxKind) {
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>
