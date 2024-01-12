@@ -2234,6 +2234,12 @@ private:
     if (PreviousNotConst->ClosesRequiresClause)
       return false;
 
+    if (Style.isTableGen()) {
+      // keywords such as let and def* defines names.
+      if (Keywords.isTableGenDefinition(*PreviousNotConst))
+        return true;
+    }
+
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
                        PreviousNotConst->Previous &&
                        PreviousNotConst->Previous->is(tok::hash);
