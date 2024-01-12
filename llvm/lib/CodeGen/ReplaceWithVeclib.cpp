@@ -111,8 +111,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   SmallVector<Type *, 8> ScalarArgTypes;
   std::string ScalarName;
   Function *FuncToReplace = nullptr;
-  auto *CI = dyn_cast<CallInst>(&I);
-  if (CI) {
+  if (auto *CI = dyn_cast<CallInst>(&I)) {
     FuncToReplace = CI->getCalledFunction();
     Intrinsic::ID IID = FuncToReplace->getIntrinsicID();
     assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
@@ -169,36 +168,12 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!OptInfo)
     return false;
 
-  // There is no guarantee that the vectorized instructions followed the VFABI
-  // specification when being created, this is why we need to add extra check to
-  // make sure that the operands of the vector function obtained via VFABI match
-  // the operands of the original vector instruction.
-  if (CI) {
-    for (auto VFParam : OptInfo->Shape.Parameters) {
-      if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
-        continue;
-
-      // tryDemangleForVFABI must return valid ParamPos, otherwise it could be
-      // a bug in the VFABI parser.
-      assert(VFParam.ParamPos < CI->arg_size() &&
-             "ParamPos has invalid range.");
-      Type *OrigTy = CI->getArgOperand(VFParam.ParamPos)->getType();
-      if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Will not replace: " << ScalarName
-                          << ". Wrong type at index " << VFParam.ParamPos
-                          << ": " << *OrigTy << "\n");
-        return false;
-      }
-    }
-  }
-
   FunctionType *VectorFTy = VFABI::createFunctionType(*OptInfo, ScalarFTy);
   if (!VectorFTy)
     return false;
 
   Function *TLIFunc = getTLIFunction(I.getModule(), VectorFTy,
                                      VD->getVectorFnName(), FuncToReplace);
-
   replaceWithTLIFunction(I, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName
                     << "` with call to `" << TLIFunc->getName() << "`.\n");
@@ -245,9 +220,6 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto Changed = runImpl(TLI, F);
   if (Changed) {
-    LLVM_DEBUG(dbgs() << "Instructions replaced with vector libraries: "
-                      << NumCallsReplaced << "\n");
-
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetLibraryAnalysis>();
