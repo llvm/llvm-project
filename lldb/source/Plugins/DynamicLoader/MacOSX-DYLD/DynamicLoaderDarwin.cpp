@@ -1052,11 +1052,41 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   if (!module_sp->ResolveFileAddress(tls_file_addr, tls_addr))
     return LLDB_INVALID_ADDRESS;
 
+  Target &target = m_process->GetTarget();
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(target);
+  if (!scratch_ts_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  CompilerType clang_void_ptr_type =
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  auto evaluate_tls_address = [this, &thread_sp, &clang_void_ptr_type](
+                                  Address func_ptr,
+                                  llvm::ArrayRef<addr_t> args) -> lldb::addr_t {
+    EvaluateExpressionOptions options;
+
+    lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
+        *thread_sp, func_ptr, clang_void_ptr_type, args, options));
+
+    DiagnosticManager execution_errors;
+    ExecutionContext exe_ctx(thread_sp);
+    lldb::ExpressionResults results = m_process->RunThreadPlan(
+        exe_ctx, thread_plan_sp, options, execution_errors);
+
+    if (results == lldb::eExpressionCompleted) {
+      if (lldb::ValueObjectSP result_valobj_sp =
+              thread_plan_sp->GetReturnValueObject()) {
+        return result_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      }
+    }
+    return LLDB_INVALID_ADDRESS;
+  };
+
   const uint32_t addr_size = m_process->GetAddressByteSize();
   uint8_t buf[sizeof(lldb::addr_t) * 3];
   Status error;
   const size_t tls_data_size = addr_size * 3;
-  Target &target = m_process->GetTarget();
   const size_t bytes_read = target.ReadMemory(
       tls_addr, buf, tls_data_size, error, /*force_live_memory = */ true);
   if (bytes_read != tls_data_size || error.Fail())
@@ -1066,6 +1096,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   lldb::offset_t offset = addr_size; // Skip the first pointer
   const lldb::addr_t pthread_key = data.GetAddress(&offset);
   const lldb::addr_t tls_offset = data.GetAddress(&offset);
+
   if (pthread_key != 0) {
     // First check to see if we have already figured out the location of
     // TLS data for the pthread_key on a specific thread yet. If we have we
@@ -1079,40 +1110,12 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
         return tls_pos->second + tls_offset;
       }
     }
-    TypeSystemClangSP scratch_ts_sp =
-        ScratchTypeSystemClang::GetForTarget(target);
-
-    if (!scratch_ts_sp)
-      return LLDB_INVALID_ADDRESS;
-
-    CompilerType clang_void_ptr_type =
-        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
     if (pthread_getspecific_addr.IsValid()) {
-      EvaluateExpressionOptions options;
-
-      lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
-          *thread_sp, pthread_getspecific_addr, clang_void_ptr_type,
-          llvm::ArrayRef<lldb::addr_t>(pthread_key), options));
-
-      DiagnosticManager execution_errors;
-      ExecutionContext exe_ctx(thread_sp);
-      lldb::ExpressionResults results = m_process->RunThreadPlan(
-          exe_ctx, thread_plan_sp, options, execution_errors);
-
-      if (results == lldb::eExpressionCompleted) {
-        lldb::ValueObjectSP result_valobj_sp =
-            thread_plan_sp->GetReturnValueObject();
-        if (result_valobj_sp) {
-          const lldb::addr_t pthread_key_data =
-              result_valobj_sp->GetValueAsUnsigned(0);
-          if (pthread_key_data) {
-            m_tid_to_tls_map[tid].insert(
-                std::make_pair(pthread_key, pthread_key_data));
-            return pthread_key_data + tls_offset;
-          }
-        }
-      }
+      const lldb::addr_t tls_data = evaluate_tls_address(
+          pthread_getspecific_addr, llvm::ArrayRef<lldb::addr_t>(pthread_key));
+      if (tls_data != LLDB_INVALID_ADDRESS)
+        return tls_data + tls_offset;
     }
   }
   return LLDB_INVALID_ADDRESS;
