@@ -79,19 +79,9 @@ public:
 
   BoltAddressTranslation() {}
 
-  /// Write the serialized address translation table for a function.
-  template <bool Cold>
-  void writeMaps(std::map<uint64_t, MapTy> &Maps, raw_ostream &OS);
-
   /// Write the serialized address translation tables for each reordered
   /// function
   void write(const BinaryContext &BC, raw_ostream &OS);
-
-  /// Read the serialized address translation table for a function.
-  /// Return a parse error if failed.
-  template <bool Cold>
-  void parseMaps(std::vector<uint64_t> &HotFuncs, DataExtractor &DE,
-                 uint64_t &Offset, Error &Err);
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
@@ -129,8 +119,17 @@ private:
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
                          uint64_t FuncAddress);
 
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, DataExtractor &DE,
+                 uint64_t &Offset, Error &Err);
+
   std::map<uint64_t, MapTy> Maps;
-  std::map<uint64_t, MapTy> ColdMaps;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
