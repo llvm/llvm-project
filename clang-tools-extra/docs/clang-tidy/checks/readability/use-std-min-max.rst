@@ -1,7 +1,7 @@
 .. title:: clang-tidy - readability-use-std-min-max
 
 readability-use-std-min-max
-========================
+===========================
 
 Replaces certain conditional statements with equivalent ``std::min`` or ``std::max`` expressions, 
 improving readability and promoting the use of standard library functions.
