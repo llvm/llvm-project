@@ -301,7 +301,7 @@ protected:
     InitializeAllTargetMCs();
   }
 
-  TargetMachine *TM;
+  std::unique_ptr<LLVMTargetMachine> TM;
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -354,13 +354,14 @@ protected:
     auto *T = TargetRegistry::lookupTarget(TripleName, Error);
     if (!T)
       GTEST_SKIP();
-    TM = T->createTargetMachine(TripleName, "", "", TargetOptions(),
-                                std::nullopt);
-    MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(TM));
+    TM = std::unique_ptr<LLVMTargetMachine>(
+        static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+            TripleName, "", "", TargetOptions(), std::nullopt)));
+    if (!TM)
+      GTEST_SKIP();
+    MachineModuleInfo MMI(TM.get());
     M = parseMIR(*TM, MIRString, MMI);
-    AM.registerPass([&] {
-      return MachineModuleAnalysis(static_cast<LLVMTargetMachine *>(TM));
-    });
+    AM.registerPass([&] { return MachineModuleAnalysis(TM.get()); });
   }
 
   MachineFunctionCallbacksTest()
