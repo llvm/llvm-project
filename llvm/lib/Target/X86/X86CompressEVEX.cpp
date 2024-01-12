@@ -15,10 +15,6 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //
-// Compression a, b and c always reduce code size (some exception)
-// fourth type of compression can help hardware decode although the instruction
-// length remains unchanged.
-//
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
 //
@@ -224,40 +220,79 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
-static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
+static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
+  // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
+  //   ->
+  // $rbx = ADD64rr $rbx, $rax
   const MCInstrDesc &Desc = MI.getDesc();
+  Register Reg0 = MI.getOperand(0).getReg();
+  const MachineOperand &Op1 = MI.getOperand(1);
+  if (!Op1.isReg())
+    return false;
+  Register Reg1 = Op1.getReg();
+  if (Reg1 == Reg0)
+    return true;
+
+  // Op1 and Op2 may be commutable for ND instructions.
+  if (!Desc.isCommutable() || Desc.getNumOperands() < 3 ||
+      !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
+    return false;
+  // Opcode may change after commute, e.g. SHRD -> SHLD
+  // TODO: Add test for this after ND SHRD/SHLD is supported
+  ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
+  return true;
+}
+
+static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Check for EVEX instructions only.
-  if ((Desc.TSFlags & X86II::EncodingMask) != X86II::EVEX)
+  if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
     return false;
 
-  // Check for EVEX instructions with mask or broadcast as in these cases
-  // the EVEX prefix is needed in order to carry this information
+  // Instructions with mask or 512-bit vector can't be converted to VEX.
+  if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
+    return false;
+
+  // EVEX_B has several meanings.
+  // AVX512:
+  //  register form: rounding control or SAE
+  //  memory form: broadcast
+  //
+  // APX:
+  //  MAP4: NDD
+  //
+  // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
-  if (Desc.TSFlags & (X86II::EVEX_K | X86II::EVEX_B))
-    return false;
-
-  // Check for EVEX instructions with L2 set. These instructions are 512-bits
-  // and can't be converted to VEX.
-  if (Desc.TSFlags & X86II::EVEX_L2)
-    return false;
+  bool IsND = X86II::hasNewDataDest(TSFlags);
+  if (TSFlags & X86II::EVEX_B)
+    if (!IsND || !isRedundantNewDataDest(MI, ST))
+      return false;
 
   ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
 
   unsigned Opc = MI.getOpcode();
   const auto *I = llvm::lower_bound(Table, Opc);
-  if (I == Table.end() || I->OldOpc != Opc)
+  if (I == Table.end() || I->OldOpc != Opc) {
+    assert(!IsND && "Missing entry for ND instruction");
     return false;
+  }
 
-  if (usesExtendedRegister(MI))
-    return false;
-  if (!checkVEXInstPredicate(Opc, ST))
-    return false;
-  if (!performCustomAdjustments(MI, I->NewOpc))
-    return false;
+  if (!IsND) {
+    if (usesExtendedRegister(MI) || !checkVEXInstPredicate(Opc, ST) ||
+        !performCustomAdjustments(MI, I->NewOpc))
+      return false;
+  }
 
-  MI.setDesc(ST.getInstrInfo()->get(I->NewOpc));
-  MI.setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(I->NewOpc);
+  MI.setDesc(NewDesc);
+  uint64_t Encoding = NewDesc.TSFlags & X86II::EncodingMask;
+  auto AsmComment =
+      (Encoding == X86II::VEX) ? X86::AC_EVEX_2_VEX : X86::AC_EVEX_2_LEGACY;
+  MI.setAsmPrinterFlag(AsmComment);
+  if (IsND)
+    MI.tieOperands(0, 1);
+
   return true;
 }
 
@@ -272,7 +307,7 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512() && !ST.hasEGPR())
+  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD())
     return false;
 
   bool Changed = false;
