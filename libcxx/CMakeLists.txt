@@ -274,7 +274,7 @@ option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
    libc++abi. Doing otherwise is an ODR violation." OFF)
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
-option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." ON)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit multilib libc++. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})

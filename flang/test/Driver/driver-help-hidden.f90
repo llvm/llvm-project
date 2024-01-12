@@ -112,6 +112,7 @@
 ! CHECK-NEXT: -g                      Generate source-level debug information
 ! CHECK-NEXT: --help-hidden           Display help for hidden options
 ! CHECK-NEXT: -help                   Display available options
+! CHECK-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
