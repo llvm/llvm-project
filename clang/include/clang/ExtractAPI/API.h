@@ -260,10 +260,10 @@ public:
             LinkageInfo Linkage, const DocComment &Comment,
             DeclarationFragments Declaration, DeclarationFragments SubHeading,
             bool IsFromSystemHeader)
-      : USR(USR), Name(Name), Location(Location), Availability(std::move(Availability)),
-        Linkage(Linkage), Comment(Comment), Declaration(Declaration),
-        SubHeading(SubHeading), IsFromSystemHeader(IsFromSystemHeader),
-        Kind(Kind) {}
+      : USR(USR), Name(Name), Location(Location),
+        Availability(std::move(Availability)), Linkage(Linkage),
+        Comment(Comment), Declaration(Declaration), SubHeading(SubHeading),
+        IsFromSystemHeader(IsFromSystemHeader), Kind(Kind) {}
 
   APIRecord(RecordKind Kind, StringRef USR, StringRef Name)
       : USR(USR), Name(Name), Kind(Kind) {}
@@ -277,8 +277,9 @@ struct NamespaceRecord : APIRecord {
                   AvailabilityInfo Availability, LinkageInfo Linkage,
                   const DocComment &Comment, DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_Namespace, USR, Name, Loc, std::move(Availability), Linkage, Comment,
-                  Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(RK_Namespace, USR, Name, Loc, std::move(Availability),
+                  Linkage, Comment, Declaration, SubHeading,
+                  IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_Namespace;
@@ -290,13 +291,14 @@ struct GlobalFunctionRecord : APIRecord {
   FunctionSignature Signature;
 
   GlobalFunctionRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                       AvailabilityInfo Availability,
-                       LinkageInfo Linkage, const DocComment &Comment,
+                       AvailabilityInfo Availability, LinkageInfo Linkage,
+                       const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading,
                        FunctionSignature Signature, bool IsFromSystemHeader)
-      : APIRecord(RK_GlobalFunction, USR, Name, Loc, std::move(Availability), Linkage,
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(RK_GlobalFunction, USR, Name, Loc, std::move(Availability),
+                  Linkage, Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Signature(Signature) {}
 
   GlobalFunctionRecord(RecordKind Kind, StringRef USR, StringRef Name,
@@ -305,8 +307,8 @@ struct GlobalFunctionRecord : APIRecord {
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading,
                        FunctionSignature Signature, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage, Comment,
-                  Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage,
+                  Comment, Declaration, SubHeading, IsFromSystemHeader),
         Signature(Signature) {}
 
   static bool classof(const APIRecord *Record) {
@@ -328,8 +330,9 @@ struct GlobalFunctionTemplateRecord : GlobalFunctionRecord {
                                FunctionSignature Signature, Template Template,
                                bool IsFromSystemHeader)
       : GlobalFunctionRecord(RK_GlobalFunctionTemplate, USR, Name, Loc,
-                             std::move(Availability), Linkage, Comment, Declaration,
-                             SubHeading, Signature, IsFromSystemHeader),
+                             std::move(Availability), Linkage, Comment,
+                             Declaration, SubHeading, Signature,
+                             IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -345,8 +348,9 @@ struct GlobalFunctionTemplateSpecializationRecord : GlobalFunctionRecord {
       DeclarationFragments SubHeading, FunctionSignature Signature,
       bool IsFromSystemHeader)
       : GlobalFunctionRecord(RK_GlobalFunctionTemplateSpecialization, USR, Name,
-                             Loc, std::move(Availability), Linkage, Comment, Declaration,
-                             SubHeading, Signature, IsFromSystemHeader) {}
+                             Loc, std::move(Availability), Linkage, Comment,
+                             Declaration, SubHeading, Signature,
+                             IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_GlobalFunctionTemplateSpecialization;
@@ -356,20 +360,21 @@ struct GlobalFunctionTemplateSpecializationRecord : GlobalFunctionRecord {
 /// This holds information associated with global functions.
 struct GlobalVariableRecord : APIRecord {
   GlobalVariableRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                       AvailabilityInfo Availability,
-                       LinkageInfo Linkage, const DocComment &Comment,
+                       AvailabilityInfo Availability, LinkageInfo Linkage,
+                       const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_GlobalVariable, USR, Name, Loc, std::move(Availability), Linkage,
-                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(RK_GlobalVariable, USR, Name, Loc, std::move(Availability),
+                  Linkage, Comment, Declaration, SubHeading,
+                  IsFromSystemHeader) {}
 
   GlobalVariableRecord(RecordKind Kind, StringRef USR, StringRef Name,
                        PresumedLoc Loc, AvailabilityInfo Availability,
                        LinkageInfo Linkage, const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage, Comment,
-                  Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage,
+                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_GlobalVariable;
@@ -389,8 +394,8 @@ struct GlobalVariableTemplateRecord : GlobalVariableRecord {
                                DeclarationFragments SubHeading,
                                class Template Template, bool IsFromSystemHeader)
       : GlobalVariableRecord(RK_GlobalVariableTemplate, USR, Name, Loc,
-                             std::move(Availability), Linkage, Comment, Declaration,
-                             SubHeading, IsFromSystemHeader),
+                             std::move(Availability), Linkage, Comment,
+                             Declaration, SubHeading, IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -405,8 +410,8 @@ struct GlobalVariableTemplateSpecializationRecord : GlobalVariableRecord {
       const DocComment &Comment, DeclarationFragments Declaration,
       DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : GlobalVariableRecord(RK_GlobalVariableTemplateSpecialization, USR, Name,
-                             Loc, std::move(Availability), Linkage, Comment, Declaration,
-                             SubHeading, IsFromSystemHeader) {}
+                             Loc, std::move(Availability), Linkage, Comment,
+                             Declaration, SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_GlobalVariableTemplateSpecialization;
@@ -424,8 +429,9 @@ struct GlobalVariableTemplatePartialSpecializationRecord
       DeclarationFragments SubHeading, class Template Template,
       bool IsFromSystemHeader)
       : GlobalVariableRecord(RK_GlobalVariableTemplatePartialSpecialization,
-                             USR, Name, Loc, std::move(Availability), Linkage, Comment,
-                             Declaration, SubHeading, IsFromSystemHeader),
+                             USR, Name, Loc, std::move(Availability), Linkage,
+                             Comment, Declaration, SubHeading,
+                             IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -436,8 +442,7 @@ struct GlobalVariableTemplatePartialSpecializationRecord
 /// This holds information associated with enum constants.
 struct EnumConstantRecord : APIRecord {
   EnumConstantRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                     AvailabilityInfo Availability,
-                     const DocComment &Comment,
+                     AvailabilityInfo Availability, const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : APIRecord(RK_EnumConstant, USR, Name, Loc, std::move(Availability),
@@ -460,8 +465,9 @@ struct EnumRecord : APIRecord {
              AvailabilityInfo Availability, const DocComment &Comment,
              DeclarationFragments Declaration, DeclarationFragments SubHeading,
              bool IsFromSystemHeader)
-      : APIRecord(RK_Enum, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(RK_Enum, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_Enum;
@@ -474,8 +480,8 @@ private:
 /// This holds information associated with struct fields.
 struct StructFieldRecord : APIRecord {
   StructFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                    AvailabilityInfo Availability,
-                    const DocComment &Comment, DeclarationFragments Declaration,
+                    AvailabilityInfo Availability, const DocComment &Comment,
+                    DeclarationFragments Declaration,
                     DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : APIRecord(RK_StructField, USR, Name, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
@@ -497,8 +503,9 @@ struct StructRecord : APIRecord {
                AvailabilityInfo Availability, const DocComment &Comment,
                DeclarationFragments Declaration,
                DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_Struct, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(RK_Struct, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_Struct;
@@ -512,8 +519,8 @@ struct CXXFieldRecord : APIRecord {
   AccessControl Access;
 
   CXXFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                 AvailabilityInfo Availability,
-                 const DocComment &Comment, DeclarationFragments Declaration,
+                 AvailabilityInfo Availability, const DocComment &Comment,
+                 DeclarationFragments Declaration,
                  DeclarationFragments SubHeading, AccessControl Access,
                  bool IsFromSystemHeader)
       : APIRecord(RK_CXXField, USR, Name, Loc, std::move(Availability),
@@ -526,8 +533,9 @@ struct CXXFieldRecord : APIRecord {
                  const DocComment &Comment, DeclarationFragments Declaration,
                  DeclarationFragments SubHeading, AccessControl Access,
                  bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Access(Access) {}
 
   static bool classof(const APIRecord *Record) {
@@ -547,9 +555,9 @@ struct CXXFieldTemplateRecord : CXXFieldRecord {
                          DeclarationFragments Declaration,
                          DeclarationFragments SubHeading, AccessControl Access,
                          Template Template, bool IsFromSystemHeader)
-      : CXXFieldRecord(RK_CXXFieldTemplate, USR, Name, Loc, std::move(Availability),
-                       Comment, Declaration, SubHeading, Access,
-                       IsFromSystemHeader),
+      : CXXFieldRecord(RK_CXXFieldTemplate, USR, Name, Loc,
+                       std::move(Availability), Comment, Declaration,
+                       SubHeading, Access, IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -568,8 +576,9 @@ struct CXXMethodRecord : APIRecord {
                   const DocComment &Comment, DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, FunctionSignature Signature,
                   AccessControl Access, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Signature(Signature), Access(Access) {}
 
   virtual ~CXXMethodRecord() = 0;
@@ -577,15 +586,14 @@ struct CXXMethodRecord : APIRecord {
 
 struct CXXConstructorRecord : CXXMethodRecord {
   CXXConstructorRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                       AvailabilityInfo Availability,
-                       const DocComment &Comment,
+                       AvailabilityInfo Availability, const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading,
                        FunctionSignature Signature, AccessControl Access,
                        bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXConstructorMethod, USR, Name, Loc, std::move(Availability),
-                        Comment, Declaration, SubHeading, Signature, Access,
-                        IsFromSystemHeader) {}
+      : CXXMethodRecord(RK_CXXConstructorMethod, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader) {}
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_CXXConstructorMethod;
   }
@@ -596,15 +604,14 @@ private:
 
 struct CXXDestructorRecord : CXXMethodRecord {
   CXXDestructorRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                      AvailabilityInfo Availability,
-                      const DocComment &Comment,
+                      AvailabilityInfo Availability, const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading,
                       FunctionSignature Signature, AccessControl Access,
                       bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXDestructorMethod, USR, Name, Loc, std::move(Availability),
-                        Comment, Declaration, SubHeading, Signature, Access,
-                        IsFromSystemHeader) {}
+      : CXXMethodRecord(RK_CXXDestructorMethod, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader) {}
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_CXXDestructorMethod;
   }
@@ -621,9 +628,9 @@ struct CXXStaticMethodRecord : CXXMethodRecord {
                         DeclarationFragments SubHeading,
                         FunctionSignature Signature, AccessControl Access,
                         bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXStaticMethod, USR, Name, Loc, std::move(Availability),
-                        Comment, Declaration, SubHeading, Signature, Access,
-                        IsFromSystemHeader) {}
+      : CXXMethodRecord(RK_CXXStaticMethod, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader) {}
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_CXXStaticMethod;
   }
@@ -640,9 +647,9 @@ struct CXXInstanceMethodRecord : CXXMethodRecord {
                           DeclarationFragments SubHeading,
                           FunctionSignature Signature, AccessControl Access,
                           bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXInstanceMethod, USR, Name, Loc, std::move(Availability),
-                        Comment, Declaration, SubHeading, Signature, Access,
-                        IsFromSystemHeader) {}
+      : CXXMethodRecord(RK_CXXInstanceMethod, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_CXXInstanceMethod;
@@ -662,9 +669,9 @@ struct CXXMethodTemplateRecord : CXXMethodRecord {
                           DeclarationFragments SubHeading,
                           FunctionSignature Signature, AccessControl Access,
                           Template Template, bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXMethodTemplate, USR, Name, Loc, std::move(Availability),
-                        Comment, Declaration, SubHeading, Signature, Access,
-                        IsFromSystemHeader),
+      : CXXMethodRecord(RK_CXXMethodTemplate, USR, Name, Loc,
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -680,8 +687,8 @@ struct CXXMethodTemplateSpecializationRecord : CXXMethodRecord {
       FunctionSignature Signature, AccessControl Access,
       bool IsFromSystemHeader)
       : CXXMethodRecord(RK_CXXMethodTemplateSpecialization, USR, Name, Loc,
-                        std::move(Availability), Comment, Declaration, SubHeading,
-                        Signature, Access, IsFromSystemHeader) {}
+                        std::move(Availability), Comment, Declaration,
+                        SubHeading, Signature, Access, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_CXXMethodTemplateSpecialization;
@@ -709,8 +716,9 @@ struct ObjCPropertyRecord : APIRecord {
                      DeclarationFragments SubHeading, AttributeKind Attributes,
                      StringRef GetterName, StringRef SetterName,
                      bool IsOptional, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Attributes(Attributes), GetterName(GetterName), SetterName(SetterName),
         IsOptional(IsOptional) {}
 
@@ -730,9 +738,9 @@ struct ObjCInstancePropertyRecord : ObjCPropertyRecord {
                              StringRef SetterName, bool IsOptional,
                              bool IsFromSystemHeader)
       : ObjCPropertyRecord(RK_ObjCInstanceProperty, USR, Name, Loc,
-                           std::move(Availability), Comment, Declaration, SubHeading,
-                           Attributes, GetterName, SetterName, IsOptional,
-                           IsFromSystemHeader) {}
+                           std::move(Availability), Comment, Declaration,
+                           SubHeading, Attributes, GetterName, SetterName,
+                           IsOptional, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ObjCInstanceProperty;
@@ -751,10 +759,10 @@ struct ObjCClassPropertyRecord : ObjCPropertyRecord {
                           AttributeKind Attributes, StringRef GetterName,
                           StringRef SetterName, bool IsOptional,
                           bool IsFromSystemHeader)
-      : ObjCPropertyRecord(RK_ObjCClassProperty, USR, Name, Loc, std::move(Availability),
-                           Comment, Declaration, SubHeading, Attributes,
-                           GetterName, SetterName, IsOptional,
-                           IsFromSystemHeader) {}
+      : ObjCPropertyRecord(RK_ObjCClassProperty, USR, Name, Loc,
+                           std::move(Availability), Comment, Declaration,
+                           SubHeading, Attributes, GetterName, SetterName,
+                           IsOptional, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ObjCClassProperty;
@@ -799,8 +807,9 @@ struct ObjCMethodRecord : APIRecord {
                    const DocComment &Comment, DeclarationFragments Declaration,
                    DeclarationFragments SubHeading, FunctionSignature Signature,
                    bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Signature(Signature) {}
 
   virtual ~ObjCMethodRecord() = 0;
@@ -813,9 +822,9 @@ struct ObjCInstanceMethodRecord : ObjCMethodRecord {
                            DeclarationFragments Declaration,
                            DeclarationFragments SubHeading,
                            FunctionSignature Signature, bool IsFromSystemHeader)
-      : ObjCMethodRecord(RK_ObjCInstanceMethod, USR, Name, Loc, std::move(Availability),
-                         Comment, Declaration, SubHeading, Signature,
-                         IsFromSystemHeader) {}
+      : ObjCMethodRecord(RK_ObjCInstanceMethod, USR, Name, Loc,
+                         std::move(Availability), Comment, Declaration,
+                         SubHeading, Signature, IsFromSystemHeader) {}
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ObjCInstanceMethod;
   }
@@ -831,9 +840,9 @@ struct ObjCClassMethodRecord : ObjCMethodRecord {
                         DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         FunctionSignature Signature, bool IsFromSystemHeader)
-      : ObjCMethodRecord(RK_ObjCClassMethod, USR, Name, Loc, std::move(Availability),
-                         Comment, Declaration, SubHeading, Signature,
-                         IsFromSystemHeader) {}
+      : ObjCMethodRecord(RK_ObjCClassMethod, USR, Name, Loc,
+                         std::move(Availability), Comment, Declaration,
+                         SubHeading, Signature, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ObjCClassMethod;
@@ -874,8 +883,9 @@ struct StaticFieldRecord : CXXFieldRecord {
                     const DocComment &Comment, DeclarationFragments Declaration,
                     DeclarationFragments SubHeading, SymbolReference Context,
                     AccessControl Access, bool IsFromSystemHeader)
-      : CXXFieldRecord(RK_StaticField, USR, Name, Loc, std::move(Availability), Comment,
-                       Declaration, SubHeading, Access, IsFromSystemHeader),
+      : CXXFieldRecord(RK_StaticField, USR, Name, Loc, std::move(Availability),
+                       Comment, Declaration, SubHeading, Access,
+                       IsFromSystemHeader),
         Context(Context) {}
 
   static bool classof(const APIRecord *Record) {
@@ -898,8 +908,8 @@ struct ObjCContainerRecord : APIRecord {
                       LinkageInfo Linkage, const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage, Comment,
-                  Declaration, SubHeading, IsFromSystemHeader) {}
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), Linkage,
+                  Comment, Declaration, SubHeading, IsFromSystemHeader) {}
 
   virtual ~ObjCContainerRecord() = 0;
 };
@@ -911,12 +921,13 @@ struct CXXClassRecord : APIRecord {
   AccessControl Access;
 
   CXXClassRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                 AvailabilityInfo Availability,
-                 const DocComment &Comment, DeclarationFragments Declaration,
+                 AvailabilityInfo Availability, const DocComment &Comment,
+                 DeclarationFragments Declaration,
                  DeclarationFragments SubHeading, RecordKind Kind,
                  AccessControl Access, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(Kind, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Access(Access) {}
 
   static bool classof(const APIRecord *Record) {
@@ -931,13 +942,12 @@ struct ClassTemplateRecord : CXXClassRecord {
   Template Templ;
 
   ClassTemplateRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                      AvailabilityInfo Availability,
-                      const DocComment &Comment,
+                      AvailabilityInfo Availability, const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading, Template Template,
                       AccessControl Access, bool IsFromSystemHeader)
-      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment, Declaration,
-                       SubHeading, RK_ClassTemplate, Access,
+      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment,
+                       Declaration, SubHeading, RK_ClassTemplate, Access,
                        IsFromSystemHeader),
         Templ(Template) {}
 
@@ -952,9 +962,9 @@ struct ClassTemplateSpecializationRecord : CXXClassRecord {
       AvailabilityInfo Availability, const DocComment &Comment,
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
       AccessControl Access, bool IsFromSystemHeader)
-      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment, Declaration,
-                       SubHeading, RK_ClassTemplateSpecialization, Access,
-                       IsFromSystemHeader) {}
+      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment,
+                       Declaration, SubHeading, RK_ClassTemplateSpecialization,
+                       Access, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ClassTemplateSpecialization;
@@ -968,9 +978,9 @@ struct ClassTemplatePartialSpecializationRecord : CXXClassRecord {
       AvailabilityInfo Availability, const DocComment &Comment,
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
       Template Template, AccessControl Access, bool IsFromSystemHeader)
-      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment, Declaration,
-                       SubHeading, RK_ClassTemplateSpecialization, Access,
-                       IsFromSystemHeader),
+      : CXXClassRecord(USR, Name, Loc, std::move(Availability), Comment,
+                       Declaration, SubHeading, RK_ClassTemplateSpecialization,
+                       Access, IsFromSystemHeader),
         Templ(Template) {}
 
   static bool classof(const APIRecord *Record) {
@@ -986,8 +996,9 @@ struct ConceptRecord : APIRecord {
                 DeclarationFragments Declaration,
                 DeclarationFragments SubHeading, Template Template,
                 bool IsFromSystemHeader)
-      : APIRecord(RK_Concept, USR, Name, Loc, std::move(Availability), LinkageInfo::none(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(RK_Concept, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo::none(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         Templ(Template) {}
 };
 
@@ -998,14 +1009,14 @@ struct ObjCCategoryRecord : ObjCContainerRecord {
   bool IsFromExternalModule = false;
 
   ObjCCategoryRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                     AvailabilityInfo Availability,
-                     const DocComment &Comment,
+                     AvailabilityInfo Availability, const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, SymbolReference Interface,
                      bool IsFromSystemHeader)
-      : ObjCContainerRecord(RK_ObjCCategory, USR, Name, Loc, std::move(Availability),
-                            LinkageInfo::none(), Comment, Declaration,
-                            SubHeading, IsFromSystemHeader),
+      : ObjCContainerRecord(RK_ObjCCategory, USR, Name, Loc,
+                            std::move(Availability), LinkageInfo::none(),
+                            Comment, Declaration, SubHeading,
+                            IsFromSystemHeader),
         Interface(Interface) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1028,9 +1039,9 @@ struct ObjCInterfaceRecord : ObjCContainerRecord {
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading,
                       SymbolReference SuperClass, bool IsFromSystemHeader)
-      : ObjCContainerRecord(RK_ObjCInterface, USR, Name, Loc, std::move(Availability),
-                            Linkage, Comment, Declaration, SubHeading,
-                            IsFromSystemHeader),
+      : ObjCContainerRecord(RK_ObjCInterface, USR, Name, Loc,
+                            std::move(Availability), Linkage, Comment,
+                            Declaration, SubHeading, IsFromSystemHeader),
         SuperClass(SuperClass) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1044,13 +1055,13 @@ private:
 /// This holds information associated with Objective-C protocols.
 struct ObjCProtocolRecord : ObjCContainerRecord {
   ObjCProtocolRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                     AvailabilityInfo Availability,
-                     const DocComment &Comment,
+                     AvailabilityInfo Availability, const DocComment &Comment,
                      DeclarationFragments Declaration,
                      DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : ObjCContainerRecord(RK_ObjCProtocol, USR, Name, Loc, std::move(Availability),
-                            LinkageInfo::none(), Comment, Declaration,
-                            SubHeading, IsFromSystemHeader) {}
+      : ObjCContainerRecord(RK_ObjCProtocol, USR, Name, Loc,
+                            std::move(Availability), LinkageInfo::none(),
+                            Comment, Declaration, SubHeading,
+                            IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_ObjCProtocol;
@@ -1091,8 +1102,9 @@ struct TypedefRecord : APIRecord {
                 DeclarationFragments Declaration,
                 DeclarationFragments SubHeading, SymbolReference UnderlyingType,
                 bool IsFromSystemHeader)
-      : APIRecord(RK_Typedef, USR, Name, Loc, std::move(Availability), LinkageInfo(),
-                  Comment, Declaration, SubHeading, IsFromSystemHeader),
+      : APIRecord(RK_Typedef, USR, Name, Loc, std::move(Availability),
+                  LinkageInfo(), Comment, Declaration, SubHeading,
+                  IsFromSystemHeader),
         UnderlyingType(UnderlyingType) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1197,8 +1209,8 @@ public:
 
   GlobalVariableTemplateRecord *
   addGlobalVariableTemplate(StringRef Name, StringRef USR, PresumedLoc Loc,
-                            AvailabilityInfo Availability,
-                            LinkageInfo Linkage, const DocComment &Comment,
+                            AvailabilityInfo Availability, LinkageInfo Linkage,
+                            const DocComment &Comment,
                             DeclarationFragments Declaration,
                             DeclarationFragments SubHeading, Template Template,
                             bool IsFromSystemHeader);
@@ -1250,8 +1262,7 @@ public:
   /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
   /// to generate the USR for \c D and keep it alive in APISet.
   EnumRecord *addEnum(StringRef Name, StringRef USR, PresumedLoc Loc,
-                      AvailabilityInfo Availability,
-                      const DocComment &Comment,
+                      AvailabilityInfo Availability, const DocComment &Comment,
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading, bool IsFromSystemHeader);
 
@@ -1301,12 +1312,13 @@ public:
       DeclarationFragments Declaration, DeclarationFragments SubHeading,
       AccessControl Access, Template Template, bool IsFromSystemHeader);
 
-  CXXClassRecord *
-  addCXXClass(APIRecord *Parent, StringRef Name, StringRef USR, PresumedLoc Loc,
-              AvailabilityInfo Availability, const DocComment &Comment,
-              DeclarationFragments Declaration, DeclarationFragments SubHeading,
-              APIRecord::RecordKind Kind, AccessControl Access,
-              bool IsFromSystemHeader);
+  CXXClassRecord *addCXXClass(APIRecord *Parent, StringRef Name, StringRef USR,
+                              PresumedLoc Loc, AvailabilityInfo Availability,
+                              const DocComment &Comment,
+                              DeclarationFragments Declaration,
+                              DeclarationFragments SubHeading,
+                              APIRecord::RecordKind Kind, AccessControl Access,
+                              bool IsFromSystemHeader);
 
   ClassTemplateRecord *
   addClassTemplate(APIRecord *Parent, StringRef Name, StringRef USR,
@@ -1393,8 +1405,8 @@ public:
   /// to generate the USR for \c D and keep it alive in APISet.
   ObjCCategoryRecord *
   addObjCCategory(StringRef Name, StringRef USR, PresumedLoc Loc,
-                  AvailabilityInfo Availability,
-                  const DocComment &Comment, DeclarationFragments Declaration,
+                  AvailabilityInfo Availability, const DocComment &Comment,
+                  DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, SymbolReference Interface,
                   bool IsFromSystemHeader, bool IsFromExternalModule);
 
@@ -1447,9 +1459,8 @@ public:
   /// to generate the USR for \c D and keep it alive in APISet.
   ObjCInstanceVariableRecord *addObjCInstanceVariable(
       ObjCContainerRecord *Container, StringRef Name, StringRef USR,
-      PresumedLoc Loc, AvailabilityInfo Availability,
-      const DocComment &Comment, DeclarationFragments Declaration,
-      DeclarationFragments SubHeading,
+      PresumedLoc Loc, AvailabilityInfo Availability, const DocComment &Comment,
+      DeclarationFragments Declaration, DeclarationFragments SubHeading,
       ObjCInstanceVariableRecord::AccessControl Access,
       bool IsFromSystemHeader);
 
@@ -1461,8 +1472,8 @@ public:
   /// to generate the USR for \c D and keep it alive in APISet.
   ObjCProtocolRecord *
   addObjCProtocol(StringRef Name, StringRef USR, PresumedLoc Loc,
-                  AvailabilityInfo Availability,
-                  const DocComment &Comment, DeclarationFragments Declaration,
+                  AvailabilityInfo Availability, const DocComment &Comment,
+                  DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, bool IsFromSystemHeader);
 
   /// Create a macro definition record into the API set.
