@@ -160,6 +160,9 @@ public:
 
   lldb_private::Section *GetMachHeaderSection();
 
+  virtual bool
+  CanBeTargetModule(lldb_private::Status *status = nullptr) override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
