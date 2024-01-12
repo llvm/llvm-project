@@ -321,7 +321,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // Check whether the flag appears in the command as a prefix.
   auto HasPrefix = [&](llvm::StringRef Flag) {
     return llvm::any_of(
-        Cmd, [&](llvm::StringRef Arg) { return Arg.startswith(Flag); });
+        Cmd, [&](llvm::StringRef Arg) { return Arg.starts_with(Flag); });
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
