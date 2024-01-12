@@ -1513,6 +1513,11 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandLoadStackGuard(&MI);
     return true;
 
+  case SystemZ::ADJCALLSTACKDOWN:
+  case SystemZ::ADJCALLSTACKUP:
+    MI.eraseFromParent();
+    return true;
+
   default:
     return false;
   }
