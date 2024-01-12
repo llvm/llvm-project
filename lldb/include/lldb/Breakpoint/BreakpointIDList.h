@@ -12,11 +12,12 @@
 #include <utility>
 #include <vector>
 
-
-#include "lldb/lldb-enumerations.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointName.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
