@@ -13832,13 +13832,12 @@ public:
     FormatArgumentPassingKind ArgPassingKind;
   };
 
-enum ArmStreamingType {
-  ArmNonStreaming,
-  ArmStreaming,
-  ArmStreamingCompatible,
-  ArmStreamingOrSVE2p1
-};
-
+  enum ArmStreamingType {
+    ArmNonStreaming,
+    ArmStreaming,
+    ArmStreamingCompatible,
+    ArmStreamingOrSVE2p1
+  };
 
   static bool getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
                                   bool IsVariadic, FormatStringInfo *FSI);

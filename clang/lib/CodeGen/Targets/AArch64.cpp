@@ -824,14 +824,18 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee, const CallArgList &Args) const {
-    if (!Callee->hasAttr<AlwaysInlineAttr>())
-      return;
+  if (!Callee->hasAttr<AlwaysInlineAttr>())
+    return;
 
-    auto CalleeIsStreaming = Sema::getArmStreamingFnType(Callee) == Sema::ArmStreaming;
-    auto CallerIsStreaming = Sema::getArmStreamingFnType(Caller) == Sema::ArmStreaming;
+  auto CalleeIsStreaming =
+      Sema::getArmStreamingFnType(Callee) == Sema::ArmStreaming;
+  auto CallerIsStreaming =
+      Sema::getArmStreamingFnType(Caller) == Sema::ArmStreaming;
 
-    if (CalleeIsStreaming && !CallerIsStreaming)
-        CGM.getDiags().Report(CallLoc, diag::err_function_alwaysinline_attribute_mismatch) << Caller->getDeclName() << Callee->getDeclName() << "streaming";
+  if (CalleeIsStreaming && !CallerIsStreaming)
+    CGM.getDiags().Report(CallLoc,
+                          diag::err_function_alwaysinline_attribute_mismatch)
+        << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 }
 
 std::unique_ptr<TargetCodeGenInfo>
