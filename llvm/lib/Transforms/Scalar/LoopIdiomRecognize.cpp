@@ -90,6 +90,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -3182,6 +3183,119 @@ public:
   }
 };
 
+// Execute the instructions in a basic block whilst mapping out Values to
+// ValueBits
+static bool symbolicallyExecute(BasicBlock *BB,
+                                std::map<Value *, ValueBits *> &ValueMap) {
+
+  auto getConstantOperand = [](Instruction *I, uint8_t Operand) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(Operand));
+    if (!CI) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Do not know how to"
+                        << " handle this operation with non-constant operand "
+                        << Operand << ":\n"
+                        << *I << "\n");
+    }
+    return CI;
+  };
+
+  auto getOrCreateValueBits = [&ValueMap](Value *Val) {
+    auto Result = ValueMap.find(Val);
+    ValueBits *LHSBits = nullptr;
+    if (Result == ValueMap.end()) {
+      ConstantInt *CI = dyn_cast<ConstantInt>(Val);
+      if (CI) {
+        LHSBits = new ValueBits(CI->getSExtValue(),
+                                Val->getType()->getScalarSizeInBits());
+      } else {
+        LHSBits = new ValueBits(Val, Val->getType()->getScalarSizeInBits());
+      }
+    } else
+      LHSBits = Result->second;
+    return LHSBits;
+  };
+
+  for (Instruction &I : *BB) {
+    uint64_t BitSize = I.getType()->getScalarSizeInBits();
+    switch (I.getOpcode()) {
+    case Instruction::PHI: {
+      PHINode *PHI = dyn_cast<PHINode>(&I);
+      const BasicBlock *IncomingBlock = nullptr;
+      for (const BasicBlock *Incoming : PHI->blocks()) {
+        if (Incoming != BB) {
+          if (IncomingBlock) {
+            LLVM_DEBUG(dbgs()
+                       << DEBUG_TYPE " CRCRegonize: Do not know how to"
+                       << " handle loop with multiple entries" << I << "\n");
+            return false;
+          }
+          IncomingBlock = Incoming;
+        }
+      }
+      assert(IncomingBlock);
+      ValueMap[&I] =
+          getOrCreateValueBits(PHI->getIncomingValueForBlock(IncomingBlock));
+    } break;
+    case Instruction::Shl: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      Value *LHSVal = I.getOperand(0);
+      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
+      ValueMap[&I] = ValueBits::Shl(LHSBits, CI->getSExtValue());
+    } break;
+    case Instruction::LShr: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      Value *LHSVal = I.getOperand(0);
+      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
+      ValueMap[&I] = ValueBits::LShr(LHSBits, CI->getSExtValue());
+    } break;
+    case Instruction::And: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      Value *LHSVal = I.getOperand(0);
+      ValueBits *LHSBits = getOrCreateValueBits(LHSVal);
+      ValueMap[&I] = ValueBits::And(LHSBits, CI->getSExtValue());
+    } break;
+    case Instruction::Xor: {
+      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueBits *RHSBits = getOrCreateValueBits(I.getOperand(1));
+      ValueMap[&I] = ValueBits::Xor(LHSBits, RHSBits);
+    } break;
+    case Instruction::ZExt: {
+      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap[&I] = ValueBits::ZExt(LHSBits, BitSize);
+    } break;
+    case Instruction::Trunc: {
+      ValueBits *LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap[&I] = ValueBits::Trunc(LHSBits, BitSize);
+    } break;
+    case Instruction::Select: {
+      SelectInst *Select = cast<SelectInst>(&I);
+      ICmpInst *Cond = dyn_cast<ICmpInst>(Select->getCondition());
+      if (!Cond) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Do not know how to"
+                          << " handle SelectInst with non-icmp condition: " << I
+                          << "\n");
+        return false;
+      }
+      ValueBits *IfTrue = getOrCreateValueBits(Select->getTrueValue());
+      ValueBits *IfFalse = getOrCreateValueBits(Select->getFalseValue());
+      ValueMap[&I] = new PredicatedValueBits(Cond, IfTrue, IfFalse);
+    } break;
+    default:
+      // If this instruction is not recognized, then just continue. This is
+      // okay because users of this will just reference it by value, which is
+      // conservative.
+      break;
+    }
+  }
+  return true;
+}
+
 bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // Step one: Check if the loop looks like crc, and extract some useful
   // information for us to check
@@ -3205,6 +3319,36 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
                       << CRC.DataInput->getType()->getScalarSizeInBits()
                       << "\n");
   }
+
+  // Symbolically execute one iteration of the loop to populate a map of
+  // Value's to their ValueBits, aka a representation of their bits in terms of
+  // 1's, 0's and references to other values' bits. If these match pre-computed
+  // crc values, then we can say it's doing crc.
+  std::map<Value *, ValueBits *> ValueMap;
+
+  if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
+    return false;
+
+  auto Result = ValueMap.find(CRC.CRCOutput);
+  if (Result == ValueMap.end()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRegonize: Did not find CRC output"
+                      << " after symbolic execution\n");
+    return false;
+  }
+
+  ValueBits *CRCOutBits = Result->second;
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                    << " CRCRegonize: ValueBits for output crc value:\n"
+                    << *CRCOutBits);
+
+  // Check this value is predicated
+  if (!CRCOutBits->isPredicated()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRegonize: Output CRC ValueBits is not"
+                      << " predicated.\n");
+    return false;
+  }
+  PredicatedValueBits *CRCOutBitsPred = (PredicatedValueBits *)CRCOutBits;
 
   return false;
 }
