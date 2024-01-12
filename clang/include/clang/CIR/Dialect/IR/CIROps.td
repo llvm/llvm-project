@@ -1912,9 +1912,40 @@ def FuncOp : CIR_Op<"func", [
 // CallOp
 //===----------------------------------------------------------------------===//
 
-def CallOp : CIR_Op<"call",
-    [DeclareOpInterfaceMethods<CIRCallOpInterface>,
-     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+class CIR_CallOp<string mnemonic> :
+    Op<CIR_Dialect, mnemonic,
+       [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+        DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let extraClassDeclaration = [{
+    /// Get the argument operands to the called function.
+    OperandRange getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    MutableOperandRange getArgOperandsMutable() {
+      llvm_unreachable("NYI");
+    }
+
+    /// Return the callee of this operation
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      if (auto calling =
+              (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+      setOperand(0, callee.get<mlir::Value>());
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+  let hasVerifier = 0;
+}
+
+def CallOp : CIR_CallOp<"call"> {
   let summary = "call operation";
   let description = [{
     The `call` operation represents a direct call to a function that is within
@@ -1966,34 +1997,6 @@ def CallOp : CIR_Op<"call",
       $_state.addAttribute("callee", callee);
       $_state.addTypes(resType);
     }]>];
-
-  let extraClassDeclaration = [{
-    /// Get the argument operands to the called function.
-    OperandRange getArgOperands() {
-      return {arg_operand_begin(), arg_operand_end()};
-    }
-
-    MutableOperandRange getArgOperandsMutable() {
-      llvm_unreachable("NYI");
-    }
-
-    /// Return the callee of this operation
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-    }
-
-    /// Set the callee for this operation.
-    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-              (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-      setOperand(0, callee.get<mlir::Value>());
-    }
-  }];
-
-  let hasCustomAssemblyFormat = 1;
-  let skipDefaultBuilders = 1;
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
