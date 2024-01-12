@@ -18,6 +18,7 @@ add_clang_library(clangTidyBugproneModule
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
+  EvalOrderCheck.cpp
   ExceptionEscapeCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp

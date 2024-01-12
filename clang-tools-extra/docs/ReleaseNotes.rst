@@ -149,6 +149,11 @@ New checks
   Detects equality comparison between pointer to member virtual function and
   anything other than null-pointer-constant.
 
+- New :doc:`bugprone-eval-order <clang-tidy/checks/bugprone/eval-order>` check.
+
+  Detects suspect code, which is assumed to rely on unspecified order of
+  evaluation of function and constructor parameters.
+
 - New :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check.
 
