@@ -169,8 +169,8 @@ public:
                   unsigned SectionA, uint64_t SectionAOffset, unsigned SectionB,
                   uint64_t SectionBOffset, bool IsPCRel, unsigned Size)
       : Offset(offset), Addend(SectionAOffset - SectionBOffset + addend),
-        SectionID(id), RelType(type), Size(Size),
-        IsPCRel(IsPCRel), IsTargetThumbFunc(false) {
+        SectionID(id), RelType(type), Size(Size), IsPCRel(IsPCRel),
+        IsTargetThumbFunc(false) {
     Sections.SectionA = SectionA;
     Sections.SectionB = SectionB;
   }
@@ -180,8 +180,8 @@ public:
                   uint64_t SectionBOffset, bool IsPCRel, unsigned Size,
                   bool IsTargetThumbFunc)
       : Offset(offset), Addend(SectionAOffset - SectionBOffset + addend),
-        SectionID(id), RelType(type), Size(Size),
-        IsPCRel(IsPCRel), IsTargetThumbFunc(IsTargetThumbFunc) {
+        SectionID(id), RelType(type), Size(Size), IsPCRel(IsPCRel),
+        IsTargetThumbFunc(IsTargetThumbFunc) {
     Sections.SectionA = SectionA;
     Sections.SectionB = SectionB;
   }
