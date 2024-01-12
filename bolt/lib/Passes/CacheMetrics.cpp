@@ -21,10 +21,11 @@ using namespace bolt;
 
 namespace {
 
-/// The size of an i-tlb cache page.
+/// The following constants are used to estimate the number of i-TLB cache
+/// misses for a given code layout. Empirically the values result in high
+/// correlations between the estimations and the perf measurements.
+/// The constants do not affect the code layout algorithms.
 constexpr unsigned ITLBPageSize = 4096;
-
-/// The number of entries in the i-tlb cache.
 constexpr unsigned ITLBEntries = 16;
 
 /// Initialize and return a position map for binary basic blocks
