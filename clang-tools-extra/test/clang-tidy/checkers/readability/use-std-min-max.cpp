@@ -31,5 +31,4 @@ void foo() {
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   if(value1+value2<value3)
     value3 = value1+value2; // CHECK-FIXES: value3 = std::min(value1+value2, value3);
-  
 }

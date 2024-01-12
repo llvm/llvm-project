@@ -41,7 +41,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   if (!lhsVar1 || !rhsVar1 || !lhsVar2 || !rhsVar2 || !ifStmt)
     return;
 
-  const BinaryOperator *binaryOp = dyn_cast<BinaryOperator>(ifStmt->getCond());
+  const auto *binaryOp = dyn_cast<BinaryOperator>(ifStmt->getCond());
   if (!binaryOp)
     return;
 
