@@ -227,7 +227,9 @@ New checks
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
-  FIXME: add release notes.
+  Replaces certain conditional statements with equivalent ``std::min`` or
+  ``std::max`` expressions, improving readability and promoting the use of
+  standard library functions.
 
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
