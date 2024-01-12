@@ -296,21 +296,21 @@ class AdvDataFormatterTestCase(TestBase):
         )
 
         self.runCmd("settings set target.max-string-summary-length 5")
-        some_string = self.frame().FindVariable('some_string')
+        some_string = self.frame().FindVariable("some_string")
         some_string_summary = some_string.GetSummary()
         self.assertEqual(some_string_summary, '"01234"...')
 
-        some_carr = self.frame().FindVariable('some_carr')
+        some_carr = self.frame().FindVariable("some_carr")
         some_carr_summary = some_carr.GetSummary()
         self.assertEqual(some_carr_summary, '"01234"...')
 
         # FIXME: c-strings should honor the target.max-string-summary-length
         # setting. Currently a C-string will be truncated at 64 (an internal
         # implementation detail) instead of the value specified in the setting.
-        some_cstring = self.frame().FindVariable('some_cstring')
+        some_cstring = self.frame().FindVariable("some_cstring")
         some_cstring_summary = some_cstring.GetSummary()
-        self.assertEqual(len(some_cstring_summary), 66) # 64 + 2 (for quotation marks)
-        self.assertFalse(some_cstring_summary.endswith('...'))
+        self.assertEqual(len(some_cstring_summary), 66)  # 64 + 2 (for quotation marks)
+        self.assertFalse(some_cstring_summary.endswith("..."))
 
         # override the cap
         self.expect(
