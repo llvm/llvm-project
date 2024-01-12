@@ -146,11 +146,11 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
     if (Thunk) {
       *Thunk = assignFunc;
-      return 1;
+      return 2;
     }
 
     assignFunc();
-    return 1;
+    return 2;
   }
 
 private:
@@ -266,7 +266,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
-    return 1;
+    return 2;
   }
 
   /// How the physical register gets marked varies between formal
