@@ -28,7 +28,6 @@ template <typename _Tp>
 concept __libcpp_standard_integer = __libcpp_unsigned_integer<decay_t<_Tp>> || __libcpp_signed_integer<decay_t<_Tp>>;
 
 template <__libcpp_standard_integer _Tp>
-//   requires __libcpp_standard_integer<_Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
   if (_Tp __sum; !__builtin_add_overflow(__x, __y, &__sum))
     return __sum;
