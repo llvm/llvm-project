@@ -1395,6 +1395,9 @@ public:
              N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0);
     };
 
+    // Iterate over LHS and operations feeding LHS and check if it is profitable
+    // to flatten the visited ops.  For each op, we compute the difference
+    // between the flattened and matrix versions.
     SmallPtrSet<Value *, 4> Seen;
     SmallVector<Value *> WorkList;
     SmallVector<Value *> ToFlatten;
