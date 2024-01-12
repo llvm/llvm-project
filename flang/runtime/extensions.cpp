@@ -15,6 +15,7 @@
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/memory.h"
 #include <ctime>
 
 #ifdef _WIN32
@@ -48,7 +49,7 @@ extern "C" {
 namespace Fortran::runtime {
 
 void GetUsernameEnvVar(
-    const char *envName, std::byte *arg, std::int64_t length) {
+    const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
       1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
@@ -98,7 +99,7 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 // CALL GETLOG(USRNAME)
-void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
+void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   int nameMaxLen;
 #ifdef LOGIN_NAME_MAX
@@ -108,17 +109,19 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::byte *arg, std::int64_t length) {
   if (nameMaxLen == -1)
     nameMaxLen = _POSIX_LOGIN_NAME_MAX + 1;
 #endif
-  std::vector<char> str(nameMaxLen);
+  Terminator terminator{__FILE__, __LINE__};
+  char *str{(char *)AllocateMemoryOrCrash(terminator, nameMaxLen)};
+  str[nameMaxLen] = '\0';
 
-  int error{getlogin_r(str.data(), nameMaxLen)};
+  int error{getlogin_r(str, nameMaxLen)};
   if (error == 0) {
     // no error: find first \0 in string then pad from there
-    CopyAndPad(reinterpret_cast<char *>(arg), str.data(), length,
-        std::strlen(str.data()));
+    CopyAndPad(arg, str, length, std::strlen(str));
   } else {
     // error occur: get username from environment variable
     GetUsernameEnvVar("LOGNAME", arg, length);
   }
+  FreeMemory((void*)str);
 #elif _WIN32
   // Get username from environment to avoid link to Advapi32.lib
   GetUsernameEnvVar("USERNAME", arg, length);
