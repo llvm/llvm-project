@@ -492,9 +492,6 @@ public:
                                MachineInstr &OldWaitcntInstr,
                                AMDGPU::Waitcnt &Wait,
                                MachineBasicBlock::instr_iterator It) const;
-
-  // Transform a soft waitcnt into a normal one.
-  bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
 };
 
 } // end anonymous namespace
@@ -873,15 +870,6 @@ static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
   return true;
 }
 
-bool SIInsertWaitcnts::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
-  unsigned Opcode = Waitcnt->getOpcode();
-  if (!SIInstrInfo::isSoftWaitcnt(Opcode))
-    return false;
-
-  Waitcnt->setDesc(TII->get(SIInstrInfo::getNonSoftWaitcntOpcode(Opcode)));
-  return true;
-}
-
 /// Combine consecutive waitcnt instructions that precede \p It and follow
 /// \p OldWaitcntInstr and apply any extra wait from waitcnt that were added
 /// by previous passes. Currently this pass conservatively assumes that these
@@ -939,7 +927,6 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(
   if (WaitcntInstr) {
     Modified |= updateOperandIfDifferent(*WaitcntInstr, AMDGPU::OpName::simm16,
                                          AMDGPU::encodeWaitcnt(IV, Wait));
-    Modified |= promoteSoftWaitCnt(WaitcntInstr);
 
     ScoreBrackets.applyWaitcnt(Wait);
     Wait.VmCnt = ~0u;
@@ -958,7 +945,6 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(
   if (WaitcntVsCntInstr) {
     Modified |= updateOperandIfDifferent(*WaitcntVsCntInstr,
                                          AMDGPU::OpName::simm16, Wait.VsCnt);
-    Modified |= promoteSoftWaitCnt(WaitcntVsCntInstr);
     ScoreBrackets.applyWaitcnt(Wait);
     Wait.VsCnt = ~0u;
 
@@ -1318,7 +1304,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   if (Wait.hasWaitExceptVsCnt()) {
     unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
     [[maybe_unused]] auto SWaitInst =
-        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
+        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_soft)).addImm(Enc);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1329,9 +1315,10 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   if (Wait.hasWaitVsCnt()) {
     assert(ST->hasVscnt());
 
-    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
-                         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-                         .addImm(Wait.VsCnt);
+    [[maybe_unused]] auto SWaitInst =
+        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
+            .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+            .addImm(Wait.VsCnt);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1943,6 +1930,17 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   } while (Repeat);
+
+  // Promote all soft waitcnts.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (SIInstrInfo::isSoftWaitcnt(MI.getOpcode())) {
+        MI.setDesc(
+            TII->get(SIInstrInfo::getNonSoftWaitcntOpcode(MI.getOpcode())));
+        Modified = true;
+      }
+    }
+  }
 
   if (ST->hasScalarStores()) {
     SmallVector<MachineBasicBlock *, 4> EndPgmBlocks;
