@@ -847,7 +847,7 @@ used in constant expressions have currently no folding support at all.
 
 #### Usage and Info
 
-- **Standard:** Fortran 2008 and later, specified in Section 16.9.73
+- **Standard:** Fortran 2008 and later, specified in subclause 16.9.73
 - **Class:** Subroutine
 - **Syntax:** `CALL EXECUTE_COMMAND_LINE(COMMAND [, WAIT, EXITSTAT, CMDSTAT, CMDMSG ])`
 - **Arguments:**
