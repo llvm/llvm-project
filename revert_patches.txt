@@ -1,8 +1,3 @@
-Reverts: breaks ompt tests
-
-64f0681e97c6 [Libomptarget] Rework image checking further (#76120) 
-
-
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
 
