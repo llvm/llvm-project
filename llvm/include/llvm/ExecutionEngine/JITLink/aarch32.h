@@ -123,15 +123,15 @@ const char *getEdgeKindName(Edge::Kind K);
 ///
 /// Stubs are often called "veneers" in the official docs and online.
 ///
-enum StubsFlavor {
+enum class StubsFlavor {
   Unsupported = 0,
-  Thumbv7,
+  v7,
 };
 
 /// JITLink sub-arch configuration for Arm CPU models
 struct ArmConfig {
   bool J1J2BranchEncoding = false;
-  StubsFlavor Stubs = Unsupported;
+  StubsFlavor Stubs = StubsFlavor::Unsupported;
 };
 
 /// Obtain the sub-arch configuration for a given Arm CPU model.
@@ -141,7 +141,7 @@ inline ArmConfig getArmConfigForCPUArch(ARMBuildAttrs::CPUArch CPUArch) {
   case ARMBuildAttrs::v7:
   case ARMBuildAttrs::v8_A:
     ArmCfg.J1J2BranchEncoding = true;
-    ArmCfg.Stubs = Thumbv7;
+    ArmCfg.Stubs = StubsFlavor::v7;
     break;
   default:
     DEBUG_WITH_TYPE("jitlink", {
@@ -380,9 +380,9 @@ private:
 
 /// Create a branch range extension stub with Thumb encoding for v7 CPUs.
 template <>
-Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
+Symbol &StubsManager<StubsFlavor::v7>::createEntry(LinkGraph &G, Symbol &Target);
 
-template <> inline StringRef StubsManager<Thumbv7>::getSectionName() {
+template <> inline StringRef StubsManager<StubsFlavor::v7>::getSectionName() {
   return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
 }
 
