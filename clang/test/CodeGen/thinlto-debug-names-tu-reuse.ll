@@ -1,4 +1,5 @@
 ; REQUIRES: asserts
+; REQUIRES: x86-registered-target
 
 ;; Tests that accelerator table switches correctly from TU to CU when a top level TU is re-used.
 ;; Assert is not triggered.
