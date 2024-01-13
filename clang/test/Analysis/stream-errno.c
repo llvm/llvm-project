@@ -217,15 +217,14 @@ void check_ftello(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
-  errno = 0;
   off_t Ret = ftello(F);
   if (Ret >= 0) {
-    clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
   } else {
     clang_analyzer_eval(Ret == -1);  // expected-warning{{TRUE}}
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
   }
-  if (errno) {}                      // no-warning
   fclose(F);
 }
 
