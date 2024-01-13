@@ -523,7 +523,7 @@ Value linalg::bufferizeToAllocation(
   // bufferize out-of-place.
   SmallVector<OpOperand *> outOfPlaceOperands, resultUses;
   auto addOutOfPlaceOperand = [&](OpOperand *operand) {
-    if (llvm::find(outOfPlaceOperands, operand) == outOfPlaceOperands.end())
+    if (!llvm::is_contained(outOfPlaceOperands, operand))
       outOfPlaceOperands.push_back(operand);
   };
   for (OpResult result : tensorResults) {

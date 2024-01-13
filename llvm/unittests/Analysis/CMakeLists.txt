@@ -40,7 +40,6 @@ set(ANALYSIS_TEST_SOURCES
   PluginInlineAdvisorAnalysisTest.cpp
   PluginInlineOrderAnalysisTest.cpp
   ProfileSummaryInfoTest.cpp
-  ReplaceWithVecLibTest.cpp
   ScalarEvolutionTest.cpp
   VectorFunctionABITest.cpp
   SparsePropagation.cpp
