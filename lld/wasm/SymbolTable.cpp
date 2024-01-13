@@ -676,7 +676,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
   WasmLimits limits{0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();
-  type->ElemType = uint8_t(ValType::FUNCREF);
+  type->ElemType = ValType::FUNCREF;
   type->Limits = limits;
   StringRef module(defaultModule);
   uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
@@ -690,7 +690,7 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
 TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
   const uint32_t invalidIndex = -1;
   WasmLimits limits{0, 0, 0}; // Set by the writer.
-  WasmTableType type{uint8_t(ValType::FUNCREF), limits};
+  WasmTableType type{ValType::FUNCREF, limits};
   WasmTable desc{invalidIndex, type, name};
   InputTable *table = make<InputTable>(desc, nullptr);
   uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
