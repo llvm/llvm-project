@@ -22,6 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26
+
 template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
   if (_Tp __sum; !__builtin_add_overflow(__x, __y, &__sum))
@@ -98,13 +99,17 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
 
 template <__libcpp_integer _Rp, __libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
-  // Handle overflow
-  if (std::cmp_less_equal(__x, std::numeric_limits<_Rp>::min()))
-    return std::numeric_limits<_Rp>::min();
-  if (std::cmp_greater_equal(__x, std::numeric_limits<_Rp>::max()))
-    return std::numeric_limits<_Rp>::max();
-  // No overflow
-  return static_cast<_Rp>(__x);
+  // Saturation is impossible.
+  if constexpr (std::cmp_less_equal(std::numeric_limits<_Rp>::min(), std::numeric_limits<_Tp>::min()) &&
+                std::cmp_greater_equal(std::numeric_limits<_Rp>::max(), std::numeric_limits<_Tp>::max()))
+    return static_cast<_Rp>(__x);
+  else {
+    // Handle overflow
+    if (std::cmp_less_equal(__x, std::numeric_limits<_Rp>::min()))
+      return std::numeric_limits<_Rp>::min();
+    // x >= std::numeric_limits<_Rp>::max()
+    return std::numeric_limits<_Rp>::max(); 
+  }
 }
 
 #endif // _LIBCPP_STD_VER >= 26
