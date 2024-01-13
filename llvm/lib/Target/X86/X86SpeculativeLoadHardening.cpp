@@ -1358,7 +1358,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
         // could prune out subsequent loads.
         if (EnablePostLoadHardening && X86InstrInfo::isDataInvariantLoad(MI) &&
             !isEFLAGSDefLive(MI) && MI.getDesc().getNumDefs() == 1 &&
-            MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isVirtual() &&
+            MI.getOperand(0).isReg() &&
             canHardenRegister(MI.getOperand(0).getReg()) &&
             !HardenedAddrRegs.count(BaseReg) &&
             !HardenedAddrRegs.count(IndexReg)) {

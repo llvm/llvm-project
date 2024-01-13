@@ -341,7 +341,8 @@ bool X86OptimizeLEAPass::chooseBestLEA(
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
   const MachineFunction *MF = MI.getParent()->getParent();
   const MCInstrDesc &Desc = MI.getDesc();
-  const int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+  int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
+                X86II::getOperandBias(Desc);
 
   BestLEA = nullptr;
 
@@ -442,12 +443,15 @@ bool X86OptimizeLEAPass::isReplaceable(const MachineInstr &First,
     MachineInstr &MI = *MO.getParent();
 
     // Get the number of the first memory operand.
-    const int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+    const MCInstrDesc &Desc = MI.getDesc();
+    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
 
     // If the use instruction has no memory operand - the LEA is not
     // replaceable.
     if (MemOpNo < 0)
       return false;
+
+    MemOpNo += X86II::getOperandBias(Desc);
 
     // If the address base of the use instruction is not the LEA def register -
     // the LEA is not replaceable.
@@ -503,11 +507,14 @@ bool X86OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
       continue;
 
     // Get the number of the first memory operand.
-    const int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+    const MCInstrDesc &Desc = MI.getDesc();
+    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
 
     // If instruction has no memory operand - skip it.
     if (MemOpNo < 0)
       continue;
+
+    MemOpNo += X86II::getOperandBias(Desc);
 
     // Do not call chooseBestLEA if there was no matching LEA
     auto Insns = LEAs.find(getMemOpKey(MI, MemOpNo));
@@ -661,7 +668,10 @@ bool X86OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
           }
 
           // Get the number of the first memory operand.
-          const int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+          const MCInstrDesc &Desc = MI.getDesc();
+          int MemOpNo =
+              X86II::getMemoryOperandNo(Desc.TSFlags) +
+              X86II::getOperandBias(Desc);
 
           // Update address base.
           MO.setReg(FirstVReg);
