@@ -1759,7 +1759,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     if (options.copyBackOp != LinalgPaddingOptions::CopyBackOp::None) {
       for (Value v : replacements) {
         Operation *copyBackOp = v.getDefiningOp();
-        if (llvm::find(copyBackOps, copyBackOp) == copyBackOps.end())
+        if (!llvm::is_contained(copyBackOps, copyBackOp))
           copyBackOps.push_back(copyBackOp);
       }
     }
