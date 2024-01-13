@@ -21,20 +21,24 @@
 // RUN:  > %t/dir2.txt
 
 // Extract individual commands.
+// RUN: %deps-to-rsp %t/dir1.txt --module-name=_Builtin_stdarg > %t/dir1/stdarg.cc1.rsp
 // RUN: %deps-to-rsp %t/dir1.txt --module-name=B > %t/dir1/B.cc1.rsp
 // RUN: %deps-to-rsp %t/dir1.txt --module-name=A > %t/dir1/A.cc1.rsp
 // RUN: %deps-to-rsp %t/dir1.txt --tu-index 0 > %t/dir1/tu.cc1.rsp
 
+// RUN: %deps-to-rsp %t/dir2.txt --module-name=_Builtin_stdarg > %t/dir2/stdarg.cc1.rsp
 // RUN: %deps-to-rsp %t/dir2.txt --module-name=B > %t/dir2/B.cc1.rsp
 // RUN: %deps-to-rsp %t/dir2.txt --module-name=A > %t/dir2/A.cc1.rsp
 // RUN: %deps-to-rsp %t/dir2.txt --tu-index 0 > %t/dir2/tu.cc1.rsp
 
+// RUN: (cd %t/dir1; %clang @stdarg.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 // RUN: (cd %t/dir1; %clang @B.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 // RUN: (cd %t/dir1; %clang @A.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 // RUN: (cd %t/dir1; %clang @tu.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
 
 // CACHE-MISS: compile job cache miss
 
+// RUN: (cd %t/dir2; %clang @stdarg.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // RUN: (cd %t/dir2; %clang @B.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // RUN: (cd %t/dir2; %clang @A.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
 // RUN: (cd %t/dir2; %clang @tu.cc1.rsp) 2>&1 | FileCheck %s -check-prefix=CACHE-HIT

@@ -16,6 +16,7 @@
 // RUN: FileCheck %s -input-file %t/full_result.txt -DPREFIX=%t -DSDK_PREFIX=%S/Inputs/SDK
 
 // Extract individual commands.
+// RUN: %deps-to-rsp %t/full_result.txt --module-name=_Builtin_stdarg > %t/stdarg.cc1.rsp
 // RUN: %deps-to-rsp %t/full_result.txt --module-name=B > %t/B.cc1.rsp
 // RUN: %deps-to-rsp %t/full_result.txt --module-name=A > %t/A.cc1.rsp
 // RUN: %deps-to-rsp %t/full_result.txt --tu-index 0 > %t/tu.cc1.rsp
@@ -41,6 +42,7 @@
 // FS: file llvmcas://{{.*}} /^tc/lib/clang/{{.*}}/include/stdarg.h
 
 // Check that it builds.
+// RUN: %clang @%t/stdarg.cc1.rsp
 // RUN: %clang @%t/B.cc1.rsp
 // RUN: %clang @%t/A.cc1.rsp
 // RUN: %clang @%t/tu.cc1.rsp
@@ -89,7 +91,11 @@
 // CHECK:          }
 // CHECK:          {
 // CHECK:            "casfs-root-id": "[[B_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
-// CHECK:            "clang-module-deps": [],
+// CHECK:            "clang-module-deps": [
+// CHECK:              {
+// CHECK:                "module-name": "_Builtin_stdarg"
+// CHECK:              }
+// CHECK:            ],
 // CHECK:            "clang-modulemap-file": "[[PREFIX]]/module.modulemap"
 // CHECK:            "command-line": [
 // CHECK:              "-fcas-path"

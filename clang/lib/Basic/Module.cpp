@@ -308,8 +308,7 @@ bool Module::directlyUses(const Module *Requested) {
   // Anyone is allowed to use our builtin stdarg.h and stddef.h and their
   // accompanying modules.
   if (Requested->getTopLevelModuleName() == "_Builtin_stdarg" ||
-      Requested->getTopLevelModuleName() == "_Builtin_stddef" ||
-      (!Requested->Parent && Requested->Name == "_Builtin_stddef_max_align_t"))
+      Requested->getTopLevelModuleName() == "_Builtin_stddef")
     return true;
 
   if (NoUndeclaredIncludes)
