@@ -77,7 +77,7 @@ jobs:
         else
           upload="false"
         fi
-        bash .github/workflows/set-release-binary-outputs.sh "${{ inputs.release-version }}" "$upload"
+        bash .github/workflows/set-release-binary-outputs.sh "$tag" "$upload"
 
   # Try to get around the 6 hour timeout by first running a job to fill
   # the build cache.
