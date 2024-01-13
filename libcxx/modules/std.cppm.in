@@ -65,6 +65,7 @@ module;
 #if !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #  include <cwctype>
 #endif
+#include <debugging>
 #include <deque>
 #include <exception>
 #include <execution>

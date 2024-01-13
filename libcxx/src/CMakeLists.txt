@@ -10,6 +10,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   error_category.cpp
   exception.cpp
+  debugging.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
