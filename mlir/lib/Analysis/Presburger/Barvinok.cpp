@@ -178,33 +178,28 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
   std::vector<Fraction> lowerDimDotProducts;
   Fraction dotProduct;
-  Fraction maxDisallowedValue = Fraction(-1, 0),
+  Fraction maxDisallowedValue = -Fraction(1, 0),
            disallowedValue = Fraction(0, 1);
   Fraction newValue;
 
   for (unsigned d = 1; d < dim; ++d) {
-    lowerDimDotProducts.clear();
 
-    // Compute the set of dot products <x_i[:d-1], vs> for each i.
+    // Compute the disallowed values  - <x_i[:d-1], vs> / x_i[d] for each i.
+    maxDisallowedValue = -Fraction(1, 0);
     for (const Point &vector : vectors) {
-      dotProduct = Fraction(0, 1);
-      for (unsigned i = 0; i < d; i++)
-        dotProduct = dotProduct + vector[i] * newPoint[i];
-      lowerDimDotProducts.push_back(dotProduct);
-    }
-
-    // Compute - <x_i[:d-1], vs> / x_i[d] for each i,
-    // and find the biggest such value.
-    for (unsigned i = 0, e = vectors.size(); i < e; ++i) {
-      if (vectors[i][d] == 0)
+      if (vector[d] == 0)
         continue;
-      disallowedValue = -lowerDimDotProducts[i] / vectors[i][d];
-      if (maxDisallowedValue < disallowedValue)
-        maxDisallowedValue = disallowedValue;
+      dotProduct = Fraction(0, 1);
+      for (unsigned i = 0; i < d; ++i)
+        dotProduct = dotProduct + vector[i] * newPoint[i];
+      disallowedValue = -dotProduct / vector[d];
+
+      // Find the biggest such value
+      maxDisallowedValue = std::max(maxDisallowedValue, disallowedValue);
     }
 
     newValue = Fraction(ceil(maxDisallowedValue + Fraction(1, 1)), 1);
-    newPoint.append(1, newValue);
+    newPoint.push_back(newValue);
   }
   return newPoint;
 }
