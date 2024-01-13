@@ -156,7 +156,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// vs ++ [v] means the vector vs with the new element v appended to it.
 ///
 /// We proceed iteratively; for steps d = 0, ... n-1, we construct a vector
-/// which is not orthogonal to any of {x_1[:i], ..., x_n[:i]}, ignoring
+/// which is not orthogonal to any of {x_1[:d], ..., x_n[:d]}, ignoring
 /// the null vectors.
 /// At step d = 0, we let vs = [1]. Clearly this is not orthogonal to
 /// any vector in the set {x_1[0], ..., x_n[0]}, except the null ones,
@@ -223,7 +223,8 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 && "division by empty denominator in rational function!");
+  assert(den.size() != 0 &&
+         "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   for (const QuasiPolynomial &qp : num)
