@@ -21,7 +21,7 @@
 template <typename ResultIntegerT, typename IntegerT>
 constexpr void test_constraint() {
   // expected-error-re@*:* 0-2 {{constant expression evaluates to {{.*}} which cannot be narrowed to type {{.*}}}}
-  // expected-error@*:* 0-6 {{no matching function for call to 'saturate_cast'}}
+  // expected-error@*:* 0-25 {{no matching function for call to 'saturate_cast'}}
   // expected-error@*:* 0-4 {{expected unqualified-id}}
   [[maybe_unused]] auto sum = std::saturate_cast<ResultIntegerT>(IntegerT{4});
 }
@@ -35,10 +35,18 @@ constexpr bool test() {
   test_constraint<wchar_t, int>();
   test_constraint<int, wchar_t>();
 #endif
-  test_constraint<std::char16_t, int>();
-  test_constraint<std::char32_t, int>();
-  test_constraint<int, std::char16_t>();
-  test_constraint<int, std::char32_t>();
+  test_constraint<char8_t, int>();
+  test_constraint<char16_t, int>();
+  test_constraint<char32_t, int>();
+  test_constraint<float, int>();
+  test_constraint<double, int>();
+  test_constraint<long double, int>();
+  test_constraint<int, char8_t>();
+  test_constraint<int, char16_t>();
+  test_constraint<int, char32_t>();
+  test_constraint<int, float>();
+  test_constraint<int, double>();
+  test_constraint<int, long double>();
 
   return true;
 }

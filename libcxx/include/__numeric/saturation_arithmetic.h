@@ -12,7 +12,6 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
-#include <__type_traits/decay.h>
 #include <__utility/cmp.h>
 #include <limits>
 
@@ -23,11 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26
-
-template <typename _Tp>
-concept __libcpp_standard_integer = __libcpp_unsigned_integer<decay_t<_Tp>> || __libcpp_signed_integer<decay_t<_Tp>>;
-
-template <__libcpp_standard_integer _Tp>
+template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
   if (_Tp __sum; !__builtin_add_overflow(__x, __y, &__sum))
     return __sum;
@@ -45,7 +40,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
   }
 }
 
-template <__libcpp_standard_integer _Tp>
+template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
   if (_Tp __sub; !__builtin_sub_overflow(__x, __y, &__sub))
     return __sub;
@@ -64,7 +59,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
   }
 }
 
-template <__libcpp_standard_integer _Tp>
+template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
   if (_Tp __mul; !__builtin_mul_overflow(__x, __y, &__mul))
     return __mul;
@@ -88,7 +83,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
   }
 }
 
-template <__libcpp_standard_integer _Tp>
+template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
   _LIBCPP_ASSERT_UNCATEGORIZED(__y != 0, "Division by 0 is undefined");
   if constexpr (__libcpp_unsigned_integer<_Tp>) {
@@ -101,7 +96,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
   }
 }
 
-template <__libcpp_standard_integer _Rp, __libcpp_standard_integer _Tp>
+template <__libcpp_integer _Rp, __libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
   // Handle overflow
   if (std::cmp_less_equal(__x, std::numeric_limits<_Rp>::min()))
