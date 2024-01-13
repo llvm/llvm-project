@@ -223,6 +223,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
+  assert(den.size() != 0 && "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   for (const QuasiPolynomial &qp : num)
@@ -238,7 +239,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     if (i < num.size())
       coefficients[i] = num[i];
 
-    unsigned limit = fmin(i, den.size() - 1);
+    unsigned limit = std::min<unsigned long>(i, den.size() - 1);
 
     for (unsigned j = 1; j <= limit; ++j)
       coefficients[i] = coefficients[i] -
@@ -246,5 +247,5 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 
     coefficients[i] = coefficients[i] / den[0];
   }
-  return (coefficients[power]).simplify();
+  return coefficients[power].simplify();
 }
