@@ -231,10 +231,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
                                             QuasiPolynomial(numParam, 0));
   coefficients[0] = num[0] / den[0];
   for (unsigned i = 1; i <= power; ++i) {
-    // If the i'th power is not in the numerator, coefficients[i]
-    // remains zero.
-    if (i < num.size())
-      coefficients[i] = num[i];
+    coefficients[i] = i < num.size() ? num[i] : QuasiPolynomial(numParam, 0);
 
     unsigned limit = std::min<unsigned long>(i, den.size() - 1);
     for (unsigned j = 1; j <= limit; ++j)
