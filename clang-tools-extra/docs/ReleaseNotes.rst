@@ -494,7 +494,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check by adding the
-  new option `IgnoreMacros` that ignores boolean expressions passed into macros.
+  new option `IgnoreMacros` that allows to ignore boolean expressions originating
+  from expanded macros.
 
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
