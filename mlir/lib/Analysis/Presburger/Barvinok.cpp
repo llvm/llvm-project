@@ -224,7 +224,9 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 
   unsigned numParam = num[0].getNumInputs();
   for (const QuasiPolynomial &qp : num)
-    assert(numParam == qp.getNumInputs() &&
+    // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
+    // inherits from.
+    assert(num[0].isEqual(qp) &&
            "the quasipolynomials should all belong to the same space!");
 
   std::vector<QuasiPolynomial> coefficients;
