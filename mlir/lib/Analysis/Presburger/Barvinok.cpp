@@ -170,8 +170,10 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// v is outside the set as desired, and we append it to vs
 /// to obtain the result of the d'th step.
 Point mlir::presburger::detail::getNonOrthogonalVector(
-    std::vector<Point> vectors) {
+    ArrayRef<Point> vectors) {
   unsigned dim = vectors[0].size();
+  for (const Point &vector : vectors)
+    assert(vector.size() == dim && "all vectors need to be the same size!");
 
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
   std::vector<Fraction> lowerDimDotProducts;
@@ -223,7 +225,8 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 && "division by empty denominator in rational function!");
+  assert(den.size() != 0 &&
+         "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   for (const QuasiPolynomial &qp : num)
