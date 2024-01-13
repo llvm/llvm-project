@@ -27,8 +27,7 @@
 
 using namespace llvm;
 
-#define PASS_KEY "x86-ibt"
-#define DEBUG_TYPE PASS_KEY
+#define DEBUG_TYPE "x86-indirect-branch-tracking"
 
 cl::opt<bool> IndirectBranchTracking(
     "x86-indirect-branch-tracking", cl::init(false), cl::Hidden,
@@ -47,9 +46,9 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+private:
   static char ID;
 
-private:
   /// Machine instruction info used throughout the class.
   const X86InstrInfo *TII = nullptr;
 
@@ -66,9 +65,6 @@ private:
 } // end anonymous namespace
 
 char X86IndirectBranchTrackingPass::ID = 0;
-
-INITIALIZE_PASS(X86IndirectBranchTrackingPass, PASS_KEY,
-                "X86 indirect branch tracking", false, false)
 
 FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
   return new X86IndirectBranchTrackingPass();
@@ -205,7 +201,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
     if (const MachineJumpTableInfo *JTI = MF.getJumpTableInfo())
       for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
         for (MachineBasicBlock *MBB : JTE.MBBs)
-          addENDBR(*MBB, MBB->begin());
+          Changed |= addENDBR(*MBB, MBB->begin());
 
   return Changed;
 }
