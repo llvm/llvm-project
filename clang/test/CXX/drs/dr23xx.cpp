@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-03 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++03 %s -verify=expected,cxx98-03 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
@@ -68,6 +69,44 @@ namespace cwg2346 { // cwg2346: 11
     const int i2 = 0;
     extern void h2b(int x = i2 + 0); // ok, not odr-use
   }
+}
+
+namespace cwg2351 { // cwg2351: 19
+#if __cplusplus >= 201103L
+  static_assert((void{}, true), "");
+  // since-cxx11-warning@-1 {{left operand of comma operator has no effect}}
+
+  void f() {
+    return void{};
+  }
+
+  template<typename T>
+  void g() {
+    return T{};
+  }
+  template void g<void>();
+  template void g<const void>();
+
+  void h() {
+    return {};
+    // since-cxx11-error@-1 {{void function 'h' must not return a value}}
+  }
+
+  template<typename T, int... I>
+  T i() {
+    return T{I...};
+  }
+  template void i<void>();
+  template const void i<const void>();
+
+  static_assert((void({}), true), "");
+  // since-cxx11-error@-1 {{cannot initialize non-class type 'void' with a parenthesized initializer list}}
+#else
+  int I = (void{}, 0);
+  // cxx98-03-error@-1 {{expected ')'}}
+  //   cxx98-03-note@-2 {{to match this '('}}
+  // cxx98-03-error@-3 {{expected expression}}
+#endif
 }
 
 namespace cwg2352 { // cwg2352: 10

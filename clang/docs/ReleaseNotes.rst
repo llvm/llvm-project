@@ -157,6 +157,9 @@ Resolutions to C++ Defect Reports
 - Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
   (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
 
+- Implemented `CWG2351 <https://wg21.link/CWG2351>`_ which allows ``void{}``
+  as a prvalue of type ``void``.
+
 C Language Changes
 ------------------
 
