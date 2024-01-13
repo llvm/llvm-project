@@ -304,7 +304,7 @@ static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
 static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmTableType TableType;
   auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
-  TableType.ElemType = (uint8_t)ElemType;
+  TableType.ElemType = ElemType;
   TableType.Limits = readLimits(Ctx);
   return TableType;
 }
@@ -1261,8 +1261,9 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       Im.Table = readTableType(Ctx);
       NumImportedTables++;
       auto ElemType = Im.Table.ElemType;
-      if (ElemType != wasm::WASM_TYPE_FUNCREF &&
-          ElemType != wasm::WASM_TYPE_EXTERNREF)
+      if (ElemType != wasm::ValType::FUNCREF &&
+          ElemType != wasm::ValType::EXTERNREF &&
+          ElemType != wasm::ValType::OTHERREF)
         return make_error<GenericBinaryError>("invalid table element type",
                                               object_error::parse_failed);
       break;
@@ -1318,8 +1319,9 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
     T.Index = NumImportedTables + Tables.size();
     Tables.push_back(T);
     auto ElemType = Tables.back().Type.ElemType;
-    if (ElemType != wasm::WASM_TYPE_FUNCREF &&
-        ElemType != wasm::WASM_TYPE_EXTERNREF) {
+    if (ElemType != wasm::ValType::FUNCREF &&
+        ElemType != wasm::ValType::EXTERNREF &&
+        ElemType != wasm::ValType::OTHERREF) {
       return make_error<GenericBinaryError>("invalid table element type",
                                             object_error::parse_failed);
     }
@@ -1655,25 +1657,26 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     }
 
     if (HasElemKind) {
-      Segment.ElemKind = readUint8(Ctx);
+      auto ElemKind = readVaruint32(Ctx);
       if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
-        if (Segment.ElemKind != uint8_t(wasm::ValType::FUNCREF) &&
-            Segment.ElemKind != uint8_t(wasm::ValType::EXTERNREF) &&
-            Segment.ElemKind != uint8_t(wasm::ValType::OTHERREF)) {
+        Segment.ElemKind = parseValType(Ctx, ElemKind);
+        if (Segment.ElemKind != wasm::ValType::FUNCREF &&
+            Segment.ElemKind != wasm::ValType::EXTERNREF &&
+            Segment.ElemKind != wasm::ValType::OTHERREF) {
           return make_error<GenericBinaryError>("invalid elem type",
                                                 object_error::parse_failed);
         }
       } else {
-        if (Segment.ElemKind != 0)
+        if (ElemKind != 0)
           return make_error<GenericBinaryError>("invalid elem type",
                                                 object_error::parse_failed);
-        Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+        Segment.ElemKind = wasm::ValType::FUNCREF;
       }
     } else if (HasInitExprs) {
       auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
-      Segment.ElemKind = uint8_t(ElemType);
+      Segment.ElemKind = ElemType;
     } else {
-      Segment.ElemKind = (uint8_t)wasm::ValType::FUNCREF;
+      Segment.ElemKind = wasm::ValType::FUNCREF;
     }
 
     uint32_t NumElems = readVaruint32(Ctx);

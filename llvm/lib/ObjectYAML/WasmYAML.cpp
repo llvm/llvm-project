@@ -12,6 +12,7 @@
 
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -593,7 +594,8 @@ void ScalarEnumerationTraits<WasmYAML::SymbolKind>::enumeration(
 
 void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
     IO &IO, WasmYAML::ValueType &Type) {
-#define ECase(X) IO.enumCase(Type, #X, wasm::WASM_TYPE_##X);
+#define CONCAT(X) (uint32_t)wasm::ValType::X
+#define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(I32);
   ECase(I64);
   ECase(F32);
@@ -601,7 +603,8 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
-  ECase(FUNC);
+  ECase(OTHERREF);
+  //ECase(FUNC);
 #undef ECase
 }
 
