@@ -23,6 +23,7 @@ namespace mlir {
 class SymbolTable;
 namespace LLVM {
 class ModuleTranslation;
+enum class LinkingFlags : uint32_t;
 }
 namespace gpu {
 enum class CompilationTarget : uint32_t;
@@ -52,6 +53,7 @@ public:
       StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
       StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
+      LLVM::LinkingFlags llvmLinkingFlags = getDefaultLinkingFlags(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Returns the typeID.
@@ -73,6 +75,9 @@ public:
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
+  /// Returns the LLVM linking flags.
+  LLVM::LinkingFlags getLinkingFlags() const;
+
   /// Returns the result of the `getSymbolTableCallback` callback or a nullptr
   /// if no callback was provided.
   /// Note: The callback itself can return nullptr. It is up to the target how
@@ -83,6 +88,9 @@ public:
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
 
+  /// Returns the default LLVM linking flags: `LLVM::LinkingFlags::onlyNeeded`.
+  static LLVM::LinkingFlags getDefaultLinkingFlags();
+
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
@@ -90,6 +98,7 @@ protected:
       TypeID typeID, StringRef toolkitPath = {},
       ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
+      LLVM::LinkingFlags llvmLinkingFlags = getDefaultLinkingFlags(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Path to the target toolkit.
@@ -104,6 +113,9 @@ protected:
 
   /// Compilation process target format.
   CompilationTarget compilationTarget;
+
+  /// LLVM bitcode linker flags.
+  LLVM::LinkingFlags llvmLinkingFlags;
 
   /// Callback for obtaining the parent symbol table of all the GPU modules
   /// being serialized.

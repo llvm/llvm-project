@@ -35,9 +35,10 @@ using namespace mlir;
 using namespace mlir::LLVM;
 
 ModuleToObject::ModuleToObject(Operation &module, StringRef triple,
-                               StringRef chip, StringRef features, int optLevel)
+                               StringRef chip, StringRef features, int optLevel,
+                               LinkingFlags linkingFlags)
     : module(module), triple(triple), chip(chip), features(features),
-      optLevel(optLevel) {}
+      optLevel(optLevel), linkingFlags(linkingFlags) {}
 
 ModuleToObject::~ModuleToObject() = default;
 
@@ -107,6 +108,15 @@ ModuleToObject::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   return translateModuleToLLVMIR(&getOperation(), llvmContext);
 }
 
+static unsigned convertFlags(LinkingFlags flags) {
+  unsigned res = llvm::Linker::Flags::None;
+  if ((flags & LinkingFlags::onlyNeeded) == LinkingFlags::onlyNeeded)
+    res |= llvm::Linker::Flags::LinkOnlyNeeded;
+  if ((flags & LinkingFlags::overrideFromSrc) == LinkingFlags::overrideFromSrc)
+    res |= llvm::Linker::Flags::OverrideFromSrc;
+  return res;
+}
+
 LogicalResult
 ModuleToObject::linkFiles(llvm::Module &module,
                           SmallVector<std::unique_ptr<llvm::Module>> &&libs) {
@@ -116,12 +126,9 @@ ModuleToObject::linkFiles(llvm::Module &module,
   for (std::unique_ptr<llvm::Module> &libModule : libs) {
     // This bitcode linking imports the library functions into the module,
     // allowing LLVM optimization passes (which must run after linking) to
-    // optimize across the libraries and the module's code. We also only import
-    // symbols if they are referenced by the module or a previous library since
-    // there will be no other source of references to those symbols in this
-    // compilation and since we don't want to bloat the resulting code object.
+    // optimize across the libraries and the module's code.
     bool err = linker.linkInModule(
-        std::move(libModule), llvm::Linker::Flags::LinkOnlyNeeded,
+        std::move(libModule), convertFlags(linkingFlags),
         [](llvm::Module &m, const StringSet<> &gvs) {
           llvm::internalizeModule(m, [&gvs](const llvm::GlobalValue &gv) {
             return !gv.hasName() || (gvs.count(gv.getName()) == 0);
