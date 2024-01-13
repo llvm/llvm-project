@@ -2,7 +2,7 @@
 
 // Ignore expressions in macros.
 // RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t
-// RUN:     -- -config="{CheckOptions: [{key: readability-simplify-boolean-expr.IgnoreMacros, value: true}]}"
+// RUN:     -- -config="{CheckOptions: {readability-simplify-boolean-expr.IgnoreMacros: true}}"
 // RUN:     --
 
 #define NEGATE(expr) !(expr)
