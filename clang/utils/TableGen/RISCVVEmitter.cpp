@@ -656,7 +656,7 @@ void RVVEmitter::createRVVIntrinsics(
       RVVRequire RequireExt =
           StringSwitch<RVVRequire>(RequiredFeature)
               .Case("RV64", RVV_REQ_RV64)
-              .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
+              .Case("Zvfhmin", RVV_REQ_Zvfhmin)
               .Case("Xsfvcp", RVV_REQ_Xsfvcp)
               .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
               .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
