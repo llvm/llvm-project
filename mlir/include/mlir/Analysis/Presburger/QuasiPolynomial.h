@@ -39,6 +39,8 @@ public:
   QuasiPolynomial(unsigned numVars, SmallVector<Fraction> coeffs = {},
                   std::vector<std::vector<SmallVector<Fraction>>> aff = {});
 
+  QuasiPolynomial(unsigned numVars, Fraction constant);
+
   // Find the number of inputs (numDomain) to the polynomial.
   // numSymbols is set to zero.
   unsigned getNumInputs() const {
@@ -59,6 +61,8 @@ public:
 
   // Removes terms which evaluate to zero from the expression.
   QuasiPolynomial simplify();
+
+  Fraction getConstantTerm();
 
 private:
   SmallVector<Fraction> coefficients;
