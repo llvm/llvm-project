@@ -111,7 +111,9 @@ static void gatherFuncAndVarSyms(
 }
 
 static Fortran::lower::pft::Evaluation *
-getEvalPastCollapse(Fortran::lower::pft::Evaluation &eval, int collapseValue) {
+getCollapsedEval(Fortran::lower::pft::Evaluation &eval, int collapseValue) {
+  // Return the Evaluation of the innermost collapsed loop, or the current
+  // evaluation, if there is nothing to collapse.
   if (collapseValue == 0)
     return &eval;
 
@@ -130,7 +132,7 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
                                  Fortran::lower::pft::Evaluation &eval,
                                  int collapseValue = 0) {
   Fortran::lower::pft::Evaluation *curEval =
-      getEvalPastCollapse(eval, collapseValue);
+      getCollapsedEval(eval, collapseValue);
 
   for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
     converter.genEval(e);
