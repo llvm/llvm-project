@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OffloadWrapper.h"
+#include "llvm/Frontend/Offloading/OffloadWrapper.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Frontend/Offloading/Utility.h"
@@ -21,8 +21,11 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
+using namespace llvm::offloading;
 
 namespace {
+using EntryArrayTy = OffloadWrapper::EntryArrayTy;
+
 /// Magic number that begins the section containing the CUDA fatbinary.
 constexpr unsigned CudaFatMagic = 0x466243b1;
 constexpr unsigned HIPFatMagic = 0x48495046;
@@ -110,10 +113,10 @@ PointerType *getBinDescPtrTy(Module &M) {
 /// };
 ///
 /// Global variable that represents BinDesc is returned.
-GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
+GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
+                              EntryArrayTy EntryArray, StringRef Suffix) {
   LLVMContext &C = M.getContext();
-  auto [EntriesB, EntriesE] =
-      offloading::getOffloadEntryArray(M, "omp_offloading_entries");
+  auto [EntriesB, EntriesE] = EntryArray;
 
   auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
   Constant *ZeroZero[] = {Zero, Zero};
@@ -126,7 +129,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
     auto *Data = ConstantDataArray::get(C, Buf);
     auto *Image = new GlobalVariable(M, Data->getType(), /*isConstant=*/true,
                                      GlobalVariable::InternalLinkage, Data,
-                                     ".omp_offloading.device_image");
+                                     ".omp_offloading.device_image" + Suffix);
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     Image->setSection(".llvm.offloading");
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
@@ -166,7 +169,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
   auto *Images =
       new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
                          GlobalValue::InternalLinkage, ImagesData,
-                         ".omp_offloading.device_images");
+                         ".omp_offloading.device_images" + Suffix);
   Images->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   auto *ImagesB =
@@ -180,14 +183,15 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
 
   return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,
                             GlobalValue::InternalLinkage, DescInit,
-                            ".omp_offloading.descriptor");
+                            ".omp_offloading.descriptor" + Suffix);
 }
 
-void createRegisterFunction(Module &M, GlobalVariable *BinDesc) {
+void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
+                            StringRef Suffix) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_reg", &M);
+                                ".omp_offloading.descriptor_reg" + Suffix, &M);
   Func->setSection(".text.startup");
 
   // Get __tgt_register_lib function declaration.
@@ -210,11 +214,13 @@ void createRegisterFunction(Module &M, GlobalVariable *BinDesc) {
   appendToGlobalCtors(M, Func, /*Priority*/ 1);
 }
 
-void createUnregisterFunction(Module &M, GlobalVariable *BinDesc) {
+void createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
+                              StringRef Suffix) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_unreg", &M);
+  auto *Func =
+      Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                       ".omp_offloading.descriptor_unreg" + Suffix, &M);
   Func->setSection(".text.startup");
 
   // Get __tgt_unregister_lib function declaration.
@@ -251,7 +257,8 @@ StructType *getFatbinWrapperTy(Module &M) {
 
 /// Embed the image \p Image into the module \p M so it can be found by the
 /// runtime.
-GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
+GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
+                                 StringRef Suffix) {
   LLVMContext &C = M.getContext();
   llvm::Type *Int8PtrTy = PointerType::getUnqual(C);
   llvm::Triple Triple = llvm::Triple(M.getTargetTriple());
@@ -263,7 +270,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
   auto *Data = ConstantDataArray::get(C, Image);
   auto *Fatbin = new GlobalVariable(M, Data->getType(), /*isConstant*/ true,
                                     GlobalVariable::InternalLinkage, Data,
-                                    ".fatbin_image");
+                                    ".fatbin_image" + Suffix);
   Fatbin->setSection(FatbinConstantSection);
 
   // Create the fatbinary wrapper
@@ -282,7 +289,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
   auto *FatbinDesc =
       new GlobalVariable(M, getFatbinWrapperTy(M),
                          /*isConstant*/ true, GlobalValue::InternalLinkage,
-                         FatbinInitializer, ".fatbin_wrapper");
+                         FatbinInitializer, ".fatbin_wrapper" + Suffix);
   FatbinDesc->setSection(FatbinWrapperSection);
   FatbinDesc->setAlignment(Align(8));
 
@@ -312,10 +319,12 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP) {
 ///                         0, entry->size, 0, 0);
 ///   }
 /// }
-Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
+Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
+                                        EntryArrayTy EntryArray,
+                                        StringRef Suffix,
+                                        bool EmitSurfacesAndTextures) {
   LLVMContext &C = M.getContext();
-  auto [EntriesB, EntriesE] = offloading::getOffloadEntryArray(
-      M, IsHIP ? "hip_offloading_entries" : "cuda_offloading_entries");
+  auto [EntriesB, EntriesE] = EntryArray;
 
   // Get the __cudaRegisterFunction function declaration.
   PointerType *Int8PtrTy = PointerType::get(C, 0);
@@ -339,7 +348,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
       IsHIP ? "__hipRegisterVar" : "__cudaRegisterVar", RegVarTy);
 
   // Get the __cudaRegisterSurface function declaration.
-  auto *RegSurfaceTy =
+  FunctionType *RegSurfaceTy =
       FunctionType::get(Type::getVoidTy(C),
                         {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
                          Type::getInt32Ty(C), Type::getInt32Ty(C)},
@@ -348,7 +357,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
       IsHIP ? "__hipRegisterSurface" : "__cudaRegisterSurface", RegSurfaceTy);
 
   // Get the __cudaRegisterTexture function declaration.
-  auto *RegTextureTy = FunctionType::get(
+  FunctionType *RegTextureTy = FunctionType::get(
       Type::getVoidTy(C),
       {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy, Type::getInt32Ty(C),
        Type::getInt32Ty(C), Type::getInt32Ty(C)},
@@ -454,19 +463,20 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalManagedEntry),
                   SwManagedBB);
-
   // Create surface variable registration code.
   Builder.SetInsertPoint(SwSurfaceBB);
-  Builder.CreateCall(
-      RegSurface, {RegGlobalsFn->arg_begin(), Addr, Name, Name, Data, Extern});
+  if (EmitSurfacesAndTextures)
+    Builder.CreateCall(RegSurface, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+                                    Data, Extern});
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalSurfaceEntry),
                   SwSurfaceBB);
 
   // Create texture variable registration code.
   Builder.SetInsertPoint(SwTextureBB);
-  Builder.CreateCall(RegTexture, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
-                                  Data, Normalized, Extern});
+  if (EmitSurfacesAndTextures)
+    Builder.CreateCall(RegTexture, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+                                    Data, Normalized, Extern});
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalTextureEntry),
                   SwTextureBB);
@@ -497,18 +507,21 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
 // Create the constructor and destructor to register the fatbinary with the CUDA
 // runtime.
 void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
-                                  bool IsHIP) {
+                                  bool IsHIP,
+                                  std::optional<EntryArrayTy> EntryArrayOpt,
+                                  StringRef Suffix,
+                                  bool EmitSurfacesAndTextures) {
   LLVMContext &C = M.getContext();
   auto *CtorFuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *CtorFunc =
-      Function::Create(CtorFuncTy, GlobalValue::InternalLinkage,
-                       IsHIP ? ".hip.fatbin_reg" : ".cuda.fatbin_reg", &M);
+  auto *CtorFunc = Function::Create(
+      CtorFuncTy, GlobalValue::InternalLinkage,
+      (IsHIP ? ".hip.fatbin_reg" : ".cuda.fatbin_reg") + Suffix, &M);
   CtorFunc->setSection(".text.startup");
 
   auto *DtorFuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *DtorFunc =
-      Function::Create(DtorFuncTy, GlobalValue::InternalLinkage,
-                       IsHIP ? ".hip.fatbin_unreg" : ".cuda.fatbin_unreg", &M);
+  auto *DtorFunc = Function::Create(
+      DtorFuncTy, GlobalValue::InternalLinkage,
+      (IsHIP ? ".hip.fatbin_unreg" : ".cuda.fatbin_unreg") + Suffix, &M);
   DtorFunc->setSection(".text.startup");
 
   auto *PtrTy = PointerType::getUnqual(C);
@@ -536,7 +549,7 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   auto *BinaryHandleGlobal = new llvm::GlobalVariable(
       M, PtrTy, false, llvm::GlobalValue::InternalLinkage,
       llvm::ConstantPointerNull::get(PtrTy),
-      IsHIP ? ".hip.binary_handle" : ".cuda.binary_handle");
+      (IsHIP ? ".hip.binary_handle" : ".cuda.binary_handle") + Suffix);
 
   // Create the constructor to register this image with the runtime.
   IRBuilder<> CtorBuilder(BasicBlock::Create(C, "entry", CtorFunc));
@@ -546,7 +559,16 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   CtorBuilder.CreateAlignedStore(
       Handle, BinaryHandleGlobal,
       Align(M.getDataLayout().getPointerTypeSize(PtrTy)));
-  CtorBuilder.CreateCall(createRegisterGlobalsFunction(M, IsHIP), Handle);
+  EntryArrayTy EntryArray =
+      (EntryArrayOpt ? *EntryArrayOpt
+                     : (IsHIP ? offloading::getOffloadEntryArray(
+                                    M, "hip_offloading_entries")
+                              : offloading::getOffloadEntryArray(
+                                    M, "cuda_offloading_entries")));
+  CtorBuilder.CreateCall(createRegisterGlobalsFunction(M, IsHIP, EntryArray,
+                                                       Suffix,
+                                                       EmitSurfacesAndTextures),
+                         Handle);
   if (!IsHIP)
     CtorBuilder.CreateCall(RegFatbinEnd, Handle);
   CtorBuilder.CreateCall(AtExit, DtorFunc);
@@ -568,32 +590,45 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 
 } // namespace
 
-Error wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images) {
-  GlobalVariable *Desc = createBinDesc(M, Images);
+Error OffloadWrapper::wrapOpenMPBinaries(
+    Module &M, ArrayRef<ArrayRef<char>> Images,
+    std::optional<EntryArrayTy> EntryArray) const {
+  GlobalVariable *Desc = createBinDesc(
+      M, Images,
+      EntryArray
+          ? *EntryArray
+          : offloading::getOffloadEntryArray(M, "omp_offloading_entries"),
+      Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
-  createRegisterFunction(M, Desc);
-  createUnregisterFunction(M, Desc);
+  createRegisterFunction(M, Desc, Suffix);
+  createUnregisterFunction(M, Desc, Suffix);
   return Error::success();
 }
 
-Error wrapCudaBinary(Module &M, ArrayRef<char> Image) {
-  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ false);
+Error OffloadWrapper::wrapCudaBinary(
+    Module &M, ArrayRef<char> Image,
+    std::optional<EntryArrayTy> EntryArray) const {
+  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ false, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No fatinbary section created.");
 
-  createRegisterFatbinFunction(M, Desc, /* IsHIP */ false);
+  createRegisterFatbinFunction(M, Desc, /* IsHIP */ false, EntryArray, Suffix,
+                               EmitSurfacesAndTextures);
   return Error::success();
 }
 
-Error wrapHIPBinary(Module &M, ArrayRef<char> Image) {
-  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ true);
+Error OffloadWrapper::wrapHIPBinary(
+    Module &M, ArrayRef<char> Image,
+    std::optional<EntryArrayTy> EntryArray) const {
+  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ true, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No fatinbary section created.");
 
-  createRegisterFatbinFunction(M, Desc, /* IsHIP */ true);
+  createRegisterFatbinFunction(M, Desc, /* IsHIP */ true, EntryArray, Suffix,
+                               EmitSurfacesAndTextures);
   return Error::success();
 }
