@@ -379,6 +379,48 @@ namespace dr1347 { // dr1347: 3.1
 #endif
 }
 
+namespace dr1350 { // dr1350: 3.5
+#if __cplusplus >= 201103L
+struct NoexceptCtor {
+  NoexceptCtor(int) noexcept {}
+};
+
+struct ThrowingNSDMI : NoexceptCtor {
+  int a = []() noexcept(false) { return 0; }();
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(ThrowingNSDMI, int), "");
+
+struct ThrowingCtor {
+  ThrowingCtor() noexcept(false) {}
+};
+
+struct ThrowingNSDM : NoexceptCtor {
+  ThrowingCtor c;
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(ThrowingNSDM, int), "");
+
+struct D : NoexceptCtor, ThrowingCtor {
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(D, int), "");
+
+struct ThrowingDefaultArg {
+  ThrowingDefaultArg(ThrowingCtor = {}) {}
+};
+
+struct D2 : NoexceptCtor, ThrowingDefaultArg {
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(D2, int), "");
+#endif
+} // namespace dr1350
+
 namespace dr1358 { // dr1358: 3.1
 #if __cplusplus >= 201103L
   struct Lit { constexpr operator int() const { return 0; } };
