@@ -1891,8 +1891,7 @@ private:
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     const void* __begin = data();
     const void* __end   = data() + capacity() + 1;
-    if (!__libcpp_is_constant_evaluated() && __begin != nullptr &&
-        is_same<allocator_type, __default_allocator_type>::value)
+    if (__asan_annotate_container_with_allocator<allocator_type>::value && !__libcpp_is_constant_evaluated())
       __sanitizer_annotate_contiguous_container(__begin, __end, __old_mid, __new_mid);
 #endif
   }
