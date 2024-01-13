@@ -19,11 +19,11 @@
 #include <float.h> // LDBL_MANT_DIG
 
 // 'long double' properties.
-#if (LDBL_MANT_DIG == 53)
+#if (LDBL_MANT_DIG == 53) || (__LDBL_MANT_DIG__ == 53)
 #define LIBC_LONG_DOUBLE_IS_FLOAT64
-#elif (LDBL_MANT_DIG == 64)
+#elif (LDBL_MANT_DIG == 64) || (__LDBL_MANT_DIG__ == 64)
 #define LIBC_LONG_DOUBLE_IS_X86_FLOAT80
-#elif (LDBL_MANT_DIG == 113)
+#elif (LDBL_MANT_DIG == 113) || (__LDBL_MANT_DIG__ == 113)
 #define LIBC_LONG_DOUBLE_IS_FLOAT128
 #endif
 
@@ -53,6 +53,9 @@ using float16 = _Float16;
 #endif
 
 // float128 support.
+// If the definition of float128 here is updated, also update
+//   include/llvm-libc-types/float128.h
+// so that the type definition in generated header `math.h` matched.
 #if (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301)) &&     \
     (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
      defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) ||                                 \
