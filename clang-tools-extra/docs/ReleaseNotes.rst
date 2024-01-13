@@ -492,6 +492,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
 
+- Added option `IgnoreMacros` to :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check.
+  It makes the check ignore boolean expressions passed into macros.
+
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
   the default value of the `Types` option to include ``std::span``.
@@ -499,10 +503,6 @@ Changes in existing checks
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
-
-- Added option `IgnoreMacros` to :doc:`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` check.
-  It makes the check ignore boolean expressions passed into macros.
 
 Removed checks
 ^^^^^^^^^^^^^^
