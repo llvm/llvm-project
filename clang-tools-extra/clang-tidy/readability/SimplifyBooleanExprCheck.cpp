@@ -277,10 +277,13 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
+    if (!S) {
+      return true;
+    }
     if (Check->IgnoreMacros && S->getBeginLoc().isMacroID()) {
       return false;
     }
-    if (S && !shouldIgnore(S))
+    if (!shouldIgnore(S))
       StmtStack.push_back(S);
     return true;
   }
