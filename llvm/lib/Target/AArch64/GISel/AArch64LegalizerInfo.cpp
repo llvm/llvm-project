@@ -449,10 +449,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   auto IndexedLoadBasicPred = [=](const LegalityQuery &Query) {
     LLT LdTy = Query.Types[0];
     LLT PtrTy = Query.Types[1];
-    if (llvm::find(PackedVectorAllTypesVec, LdTy) ==
-            PackedVectorAllTypesVec.end() &&
-        llvm::find(ScalarAndPtrTypesVec, LdTy) == ScalarAndPtrTypesVec.end() &&
-        LdTy != s128)
+    if (!llvm::is_contained(PackedVectorAllTypesVec, LdTy) &&
+        !llvm::is_contained(ScalarAndPtrTypesVec, LdTy) && LdTy != s128)
       return false;
     if (PtrTy != p0)
       return false;
