@@ -435,6 +435,14 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
+def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
+  let arguments = (ins LLVM_AnyPointer:$handle,
+                       I32:$align,
+                       I1:$from);
+  let results = (outs LLVM_AnyPointer:$res);
+  let assemblyFormat = "$handle `,` $align `,` $from attr-dict `:` functional-type(operands, results)";
+}
+
 //
 // Debug function intrinsics.
 //

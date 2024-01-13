@@ -1669,9 +1669,18 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  StringRef Name = GO->getSection();
+  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covfun, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covdata, Triple::COFF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covname, Triple::COFF,
+                                      /*AddSegmentInfo=*/false))
+    Kind = SectionKind::getMetadata();
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
-  StringRef Name = GO->getSection();
   StringRef COMDATSymName = "";
   if (GO->hasComdat()) {
     Selection = getSelectionForCOFF(GO);
@@ -2679,6 +2688,13 @@ TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
+}
+
+MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
+    const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
+  std::string Name = ".gcc_exception_table." + F.getName().str();
+  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr,
+                                     nullptr);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(

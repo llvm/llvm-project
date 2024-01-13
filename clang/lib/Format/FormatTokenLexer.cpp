@@ -1182,6 +1182,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
     }
   } else if (FormatTok->is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);

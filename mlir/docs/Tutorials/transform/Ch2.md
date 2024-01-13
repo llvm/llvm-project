@@ -10,7 +10,7 @@ The Transform dialect uses the dialect extension mechanism to allow additional o
 // In MyExtension.cpp.
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 
-// Define a new transform dialect extension. This uses the CRTP idiom to identify
+// Define a new Transform dialect extension. This uses the CRTP idiom to identify
 // extensions.
 class MyExtension : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
@@ -200,7 +200,7 @@ must be modified with the provided rewriter.
 ```c++
 // In MyExtension.cpp
 
-// Implementation of our transform dialect operation.
+// Implementation of our Transform dialect operation.
 // This operation returns a tri-state result that can be one of:
 // - success when the transformation succeeded;
 // - definite failure when the transformation failed in such a way that
@@ -277,7 +277,7 @@ void registerMyExtension(::mlir::DialectRegistry &registry) {
 }
 ```
 
-After registering the extension, it becomes possible to use our new operation in the transform dialect interpreter. The upstream testing pass can be used as is.
+After registering the extension, it becomes possible to use our new operation in the Transform dialect interpreter. The upstream testing pass can be used as is.
 
 ```mlir
 transform.sequence failures(propagate) {

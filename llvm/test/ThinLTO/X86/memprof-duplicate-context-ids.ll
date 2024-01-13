@@ -260,8 +260,8 @@ attributes #0 = { noinline optnone}
 ; STATS-BE: 1 memprof-context-disambiguation - Number of original (not cloned) allocations with memprof profiles during ThinLTO backend
 
 
-; DISTRIB: ^[[C:[0-9]+]] = gv: (guid: 1643923691937891493, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)
-; DISTRIB: ^[[D]] = gv: (guid: 4881081444663423788, {{.*}} allocs: ((versions: (notcold, cold)
-; DISTRIB: ^[[B:[0-9]+]] = gv: (guid: 14590037969532473829, {{.*}} callsites: ((callee: ^[[D]], clones: (1)
-; DISTRIB: ^[[F:[0-9]+]] = gv: (guid: 17035303613541779335, {{.*}} callsites: ((callee: ^[[D]], clones: (0)
-; DISTRIB: ^[[E:[0-9]+]] = gv: (guid: 17820708772846654376, {{.*}} callsites: ((callee: ^[[D]], clones: (1)
+; DISTRIB: ^[[E:[0-9]+]] = gv: (guid: 331966645857188136, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)
+; DISTRIB: ^[[D]] = gv: (guid: 11079124245221721799, {{.*}} allocs: ((versions: (notcold, cold)
+; DISTRIB: ^[[F:[0-9]+]] = gv: (guid: 11254287701717398916, {{.*}} callsites: ((callee: ^[[D]], clones: (0)
+; DISTRIB: ^[[B:[0-9]+]] = gv: (guid: 13579056193435805313, {{.*}} callsites: ((callee: ^[[D]], clones: (1)
+; DISTRIB: ^[[C:[0-9]+]] = gv: (guid: 15101436305866936160, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)

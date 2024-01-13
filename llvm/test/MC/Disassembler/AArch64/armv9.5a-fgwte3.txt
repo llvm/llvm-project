@@ -1,0 +1,7 @@
+# RUN: llvm-mc -triple aarch64 -disassemble < %s | FileCheck %s
+
+[0xa0,0x11,0x3e,0xd5]
+# CHECK: mrs x0, FGWTE3_EL3
+
+[0xa0,0x11,0x1e,0xd5]
+# CHECK: msr FGWTE3_EL3, x0

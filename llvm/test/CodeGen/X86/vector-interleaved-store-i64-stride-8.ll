@@ -248,14 +248,14 @@ define void @store_i64_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vmovaps (%rsi), %xmm7
 ; AVX1-ONLY-NEXT:    vmovaps (%rdi), %xmm8
 ; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} xmm10 = xmm8[1],xmm7[1]
+; AVX1-ONLY-NEXT:    vmovaps (%rcx), %xmm11
+; AVX1-ONLY-NEXT:    vmovaps (%rdx), %xmm12
+; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} xmm13 = xmm12[1],xmm11[1]
 ; AVX1-ONLY-NEXT:    vmovlhps {{.*#+}} xmm7 = xmm8[0],xmm7[0]
-; AVX1-ONLY-NEXT:    vmovaps (%rcx), %xmm8
-; AVX1-ONLY-NEXT:    vmovaps (%rdx), %xmm11
-; AVX1-ONLY-NEXT:    vunpckhpd {{.*#+}} xmm12 = xmm11[1],xmm8[1]
-; AVX1-ONLY-NEXT:    vmovlhps {{.*#+}} xmm8 = xmm11[0],xmm8[0]
+; AVX1-ONLY-NEXT:    vmovlhps {{.*#+}} xmm8 = xmm12[0],xmm11[0]
 ; AVX1-ONLY-NEXT:    vmovaps %xmm8, 16(%rax)
-; AVX1-ONLY-NEXT:    vmovaps %xmm12, 80(%rax)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm7, (%rax)
+; AVX1-ONLY-NEXT:    vmovaps %xmm13, 80(%rax)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm10, 64(%rax)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm5, 48(%rax)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm3, 32(%rax)

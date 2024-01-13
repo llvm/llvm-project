@@ -30,7 +30,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT]{};
+  cpp::array<uint64_t, WORDCOUNT> val{};
 
   LIBC_INLINE_VAR static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
@@ -953,6 +953,48 @@ struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in Int should be a multiple of 64.");
 };
+
+namespace internal {
+template <typename T> struct is_custom_uint : cpp::false_type {};
+template <size_t Bits> struct is_custom_uint<UInt<Bits>> : cpp::true_type {};
+} // namespace internal
+
+// bit_cast to UInt
+// Note: The standard scheme for SFINAE selection is to have exactly one
+// function instanciation valid at a time. This is usually done by having a
+// predicate in one function and the negated predicate in the other one.
+// e.g.
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == true> ...
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == false> ...
+//
+// Unfortunately this would make the default 'cpp::bit_cast' aware of
+// 'is_custom_uint' (or any other customization). To prevent exposing all
+// customizations in the original function, we create a different function with
+// four 'typename's instead of three - otherwise it would be considered as a
+// redeclaration of the same function leading to "error: template parameter
+// redefines default argument".
+template <typename To, typename From,
+          typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                      cpp::is_trivially_copyable<To>::value &&
+                                      cpp::is_trivially_copyable<From>::value>,
+          typename = cpp::enable_if_t<internal::is_custom_uint<To>::value>>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
+  To out;
+  using Storage = decltype(out.val);
+  out.val = cpp::bit_cast<Storage>(from);
+  return out;
+}
+
+// bit_cast from UInt
+template <
+    typename To, size_t Bits,
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<UInt<Bits>>::value>>
+LIBC_INLINE constexpr To bit_cast(const UInt<Bits> &from) {
+  return cpp::bit_cast<To>(from.val);
+}
 
 } // namespace LIBC_NAMESPACE::cpp
 

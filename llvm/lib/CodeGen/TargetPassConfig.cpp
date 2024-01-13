@@ -947,6 +947,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
@@ -977,7 +978,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableCGP)
-    addPass(createCodeGenPreparePass());
+    addPass(createCodeGenPrepareLegacyPass());
 }
 
 /// Add common passes that perform LLVM IR to IR transforms in preparation for
@@ -1270,7 +1271,7 @@ void TargetPassConfig::addMachinePasses() {
   // together. Update this check once we have addressed any issues.
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
-      addPass(llvm::createBasicBlockSectionsProfileReaderPass(
+      addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
       addPass(llvm::createBasicBlockPathCloningPass());
     }

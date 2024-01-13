@@ -9,4 +9,14 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRFuncDialect
   MLIRPass
   MLIRTransforms
+  MLIRLinalgTransforms
+  MLIRAffineToStandard
+  MLIRGPUToNVVMTransforms
+  MLIRIndexToLLVM
+  MLIRMathToLLVM
+  MLIRNVGPUToNVVM
+  MLIRNVVMToLLVM
+  MLIRReconcileUnrealizedCasts
+  MLIRSCFToControlFlow
+  MLIRVectorToSCF
 )

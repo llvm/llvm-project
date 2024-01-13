@@ -114,6 +114,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingCast: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
@@ -121,6 +123,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToFloating: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     if (!FromT)
       return false;
@@ -135,6 +139,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_FloatingToBoolean:
   case CK_FloatingToIntegral: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     std::optional<PrimType> ToT = classify(CE->getType());
 
     if (!ToT)
@@ -2330,7 +2337,7 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
     if (VarT) {
-      if (!this->emitGetGlobal(*VarT, *GlobalIndex, VD))
+      if (!this->emitGetGlobalUnchecked(*VarT, *GlobalIndex, VD))
         return false;
     } else {
       if (!this->emitGetPtrGlobal(*GlobalIndex, VD))

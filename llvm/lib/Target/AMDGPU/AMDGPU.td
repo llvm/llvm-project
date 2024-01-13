@@ -719,6 +719,18 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
+def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
+  "HasDefaultComponentZero",
+  "true",
+  "BUFFER/IMAGE store instructions set unspecified components to zero"
+>;
+
+def FeatureDefaultComponentBroadcast : SubtargetFeature<"default-component-broadcast",
+  "HasDefaultComponentBroadcast",
+  "true",
+  "BUFFER/IMAGE store instructions set unspecified components to x component"
+>;
+
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   "SupportsSRAMECC",
   "true",
@@ -759,6 +771,12 @@ def FeatureShaderCyclesRegister : SubtargetFeature<"shader-cycles-register",
   "HasShaderCyclesRegister",
   "true",
   "Has SHADER_CYCLES hardware register"
+>;
+
+def FeatureShaderCyclesHiLoRegisters : SubtargetFeature<"shader-cycles-hi-lo-registers",
+  "HasShaderCyclesHiLoRegisters",
+  "true",
+  "Has SHADER_CYCLES_HI/LO hardware registers"
 >;
 
 def FeatureMadMacF32Insts : SubtargetFeature<"mad-mac-f32-insts",
@@ -997,7 +1015,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
-  FeatureGDS, FeatureGWS
+  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1008,7 +1026,7 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
-  FeatureImageInsts, FeatureGDS, FeatureGWS
+  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1023,7 +1041,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
-   FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS
+   FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
+   FeatureDefaultComponentZero
   ]
 >;
 
@@ -1041,7 +1060,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureNegativeScratchOffsetBug, FeatureGWS
+   FeatureNegativeScratchOffsetBug, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1061,7 +1080,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS
+   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1081,7 +1100,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS
+   FeatureGWS, FeatureDefaultComponentZero
   ]
 >;
 
@@ -1100,8 +1119,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureTrue16BitInsts
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
   ]
 >;
 
@@ -1469,7 +1488,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister,
+   FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1970,6 +1989,8 @@ def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
 def HasShaderCyclesRegister : Predicate<"Subtarget->hasShaderCyclesRegister()">,
   AssemblerPredicate<(all_of FeatureShaderCyclesRegister)>;
 
+def HasShaderCyclesHiLoRegisters : Predicate<"Subtarget->hasShaderCyclesHiLoRegisters()">;
+
 def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
   AssemblerPredicate<(all_of FeatureFP8Insts)>;
 
@@ -2004,6 +2025,13 @@ def HasAtomicGlobalPkAddBF16Inst
 def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
+
+def HasDefaultComponentZero
+  : Predicate<"Subtarget->hasDefaultComponentZero()">,
+  AssemblerPredicate<(all_of FeatureDefaultComponentZero)>;
+def HasDefaultComponentBroadcast
+  : Predicate<"Subtarget->hasDefaultComponentBroadcast()">,
+  AssemblerPredicate<(all_of FeatureDefaultComponentBroadcast)>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;

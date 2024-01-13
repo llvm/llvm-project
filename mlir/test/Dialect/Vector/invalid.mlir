@@ -1734,3 +1734,27 @@ func.func @integer_vector_contract(%arg0: vector<16x32xsi8>, %arg1: vector<32x16
   } %arg0, %arg1, %arg2 : vector<16x32xsi8>, vector<32x16xsi8> into vector<16x16xsi32>
   return %0: vector<16x16xsi32>
 }
+
+// -----
+
+func.func @invalid_outerproduct(%src : memref<?xf32>) {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
+  %1 = vector.load %src[%idx] : memref<?xf32>, vector<4xf32>
+
+  // expected-error @+1 {{expected either both or only #2 operand dim to be scalable}}
+  %op = vector.outerproduct %0, %1 : vector<[4]xf32>, vector<4xf32>
+
+  return
+}
+
+// -----
+
+func.func @invalid_outerproduct1(%src : memref<?xf32>) {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]x[4]xf32>
+  %1 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
+
+  // expected-error @+1 {{'vector.outerproduct' op expected 1-d vector for operand #1}}
+  %op = vector.outerproduct %0, %1 : vector<[4]x[4]xf32>, vector<[4]xf32>
+}

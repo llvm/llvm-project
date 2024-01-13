@@ -16,8 +16,8 @@
 func.func @reduce_2x_f32(%arg0: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32) {
   %0 = vector.reduction <add>, %arg0 : vector<2xf32> into f32
   %1 = vector.reduction <mul>, %arg0 : vector<2xf32> into f32
-  %2 = vector.reduction <minf>, %arg0 : vector<2xf32> into f32
-  %3 = vector.reduction <maxf>, %arg0 : vector<2xf32> into f32
+  %2 = vector.reduction <minnumf>, %arg0 : vector<2xf32> into f32
+  %3 = vector.reduction <maxnumf>, %arg0 : vector<2xf32> into f32
   %4 = vector.reduction <minimumf>, %arg0 : vector<2xf32> into f32
   %5 = vector.reduction <maximumf>, %arg0 : vector<2xf32> into f32
   return %0, %1, %2, %3, %4, %5 : f32, f32, f32, f32, f32, f32

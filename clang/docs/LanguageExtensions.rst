@@ -829,6 +829,7 @@ to ``float``; see below for more information on this emulation.
   see below.
 
 * ``_Float16`` is supported on the following targets:
+
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
@@ -837,6 +838,7 @@ to ``float``; see below for more information on this emulation.
   * RISC-V (natively if Zfh or Zhinx is available)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
+
   * 32-bit ARM
   * 64-bit ARM (AArch64)
   * RISC-V
@@ -2019,7 +2021,7 @@ would be +1.  ``ns_returns_autoreleased`` specifies that the returned object is
 autorelease pool.
 
 **Usage**: The ``ns_consumed`` and ``cf_consumed`` attributes can be placed on
-an parameter declaration; they specify that the argument is expected to have a
+a parameter declaration; they specify that the argument is expected to have a
 +1 retain count, which will be balanced in some way by the function or method.
 The ``ns_consumes_self`` attribute can only be placed on an Objective-C
 method; it specifies that the method expects its ``self`` parameter to have a
@@ -3601,7 +3603,7 @@ scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
 The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
 is a scalar, or an integer vector with the same element count as the first
 argument. The element type in this vector has the same bit length as the
-element of the the first argument type.
+element of the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
@@ -4959,7 +4961,7 @@ Clang supports the following match rules:
 - ``record(unless(is_union))``: Can be used to apply attributes only to
   ``struct`` and ``class`` declarations.
 
-- ``enum``: Can be be used to apply attributes to enumeration declarations.
+- ``enum``: Can be used to apply attributes to enumeration declarations.
 
 - ``enum_constant``: Can be used to apply attributes to enumerators.
 

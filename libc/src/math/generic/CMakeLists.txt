@@ -197,6 +197,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fabsf128
+  SRCS
+    fabsf128.cpp
+  HDRS
+    ../fabsf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   trunc
   SRCS
     trunc.cpp
@@ -1433,6 +1445,45 @@ add_entrypoint_object(
     ../hypot.h
   DEPENDS
     libc.src.__support.FPUtil.hypot
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nan
+  SRCS
+    nan.cpp
+  HDRS
+    ../nan.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nanf
+  SRCS
+    nanf.cpp
+  HDRS
+    ../nanf.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nanl
+  SRCS
+    nanl.cpp
+  HDRS
+    ../nanl.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
   COMPILE_OPTIONS
     -O3
 )

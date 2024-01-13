@@ -181,6 +181,9 @@ public:
   /// `elems` must be equal to the number of columns.
   unsigned appendExtraRow(ArrayRef<T> elems);
 
+  // Transpose the matrix without modifying it.
+  Matrix<T> transpose() const;
+
   /// Print the matrix.
   void print(raw_ostream &os) const;
   void dump() const;
@@ -270,6 +273,12 @@ public:
   // of the rows of matrix (cubic time).
   // The rows of the matrix must be linearly independent.
   FracMatrix gramSchmidt() const;
+
+  // Run LLL basis reduction on the matrix, modifying it in-place.
+  // The parameter is what [the original
+  // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
+  // calls `y`, usually 3/4.
+  void LLL(Fraction delta);
 };
 
 } // namespace presburger
