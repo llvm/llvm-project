@@ -197,7 +197,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
       maxDisallowedValue = std::max(maxDisallowedValue, disallowedValue);
     }
 
-    newValue = Fraction(ceil(maxDisallowedValue + Fraction(1, 1)), 1);
+    newValue = maxDisallowedValue + 1;
     newPoint.push_back(newValue);
   }
   return newPoint;

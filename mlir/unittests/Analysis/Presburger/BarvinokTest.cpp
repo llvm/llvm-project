@@ -84,7 +84,7 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
 }
 
 // The following vectors are randomly generated.
-// We then check that the output of the function has nonzero
+// We then check that the output of the function has non-zero
 // dot product with all non-null vectors.
 TEST(BarvinokTest, getNonOrthogonalVector) {
   std::vector<Point> vectors = {Point({1, 2, 3, 4}), Point({-1, 0, 1, 1}),
@@ -92,14 +92,14 @@ TEST(BarvinokTest, getNonOrthogonalVector) {
   Point nonOrth = getNonOrthogonalVector(vectors);
 
   for (unsigned i = 0; i < 3; i++)
-    EXPECT_FALSE(dotProduct(nonOrth, vectors[i]) == 0);
+    EXPECT_NE(dotProduct(nonOrth, vectors[i]), 0);
 
   vectors = {Point({0, 1, 3}), Point({-2, -1, 1}), Point({6, 3, 0}),
              Point({0, 0, -3}), Point({5, 0, -1})};
   nonOrth = getNonOrthogonalVector(vectors);
 
   for (const Point &vector : vectors)
-    EXPECT_FALSE(dotProduct(nonOrth, vector) == 0);
+    EXPECT_NE(dotProduct(nonOrth, vector), 0);
 }
 
 // The following polynomials are randomly generated and the
