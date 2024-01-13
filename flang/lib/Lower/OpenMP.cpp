@@ -2996,6 +2996,25 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       standaloneConstruct.u);
 }
 
+static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+                              llvm::SmallVectorImpl<mlir::Value> &upperBound,
+                              llvm::SmallVectorImpl<mlir::Value> &step,
+                              std::size_t loopVarTypeSize) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // The types of lower bound, upper bound, and step are converted into the
+  // type of the loop variable if necessary.
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
+    lowerBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
+    upperBound[it] =
+        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
+    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
+  }
+}
+
 static void
 createSimdLoop(Fortran::lower::AbstractConverter &converter,
                Fortran::lower::pft::Evaluation &eval,
@@ -3007,11 +3026,13 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
-  mlir::Value scheduleChunkClauseOperand;
+  mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
+  llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
+  mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
   std::size_t loopVarTypeSize;
 
   ClauseProcessor cp(converter, loopOpClauseList);
@@ -3021,21 +3042,6 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   cp.processReduction(loc, reductionVars, reductionDeclSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Linear,
                  Fortran::parser::OmpClause::Order>(loc, ompDirective);
-
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
-    lowerBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
-    upperBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
-    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
-  }
-
-  llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
-  mlir::Value ifClauseOperand;
-  mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
                ifClauseOperand);
   cp.processSimdlen(simdlenClauseOperand);
@@ -3043,6 +3049,9 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   cp.processTODO<Fortran::parser::OmpClause::Aligned,
                  Fortran::parser::OmpClause::Allocate,
                  Fortran::parser::OmpClause::Nontemporal>(loc, ompDirective);
+
+  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
+                    loopVarTypeSize);
 
   mlir::TypeRange resultType;
   auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
@@ -3070,8 +3079,8 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
 
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value scheduleChunkClauseOperand;
-  llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars,
-      linearVars, linearStepVars;
+  llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, reductionVars;
+  llvm::SmallVector<mlir::Value> linearVars, linearStepVars;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
@@ -3089,16 +3098,8 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   cp.processTODO<Fortran::parser::OmpClause::Linear,
                  Fortran::parser::OmpClause::Order>(loc, ompDirective);
 
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)lowerBound.size(); it++) {
-    lowerBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, lowerBound[it]);
-    upperBound[it] =
-        firOpBuilder.createConvert(loc, loopVarType, upperBound[it]);
-    step[it] = firOpBuilder.createConvert(loc, loopVarType, step[it]);
-  }
+  convertLoopBounds(converter, loc, lowerBound, upperBound, step,
+                    loopVarTypeSize);
 
   auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
       loc, lowerBound, upperBound, step, linearVars, linearStepVars,
@@ -3213,6 +3214,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     createWsLoop(converter, eval, ompDirective, loopOpClauseList, endClauseList,
                  currentLocation);
   }
+
   genOpenMPReduction(converter, loopOpClauseList);
 }
 

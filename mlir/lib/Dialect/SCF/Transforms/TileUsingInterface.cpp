@@ -283,10 +283,7 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
   size_t numLoops = iterationDomain.size();
-  if (numLoops == 0) {
-    return rewriter.notifyMatchFailure(
-        op, "unable to tile op with no iteration domain");
-  }
+
   // 2. Materialize the tile sizes. Enforce the convention that "tiling by zero"
   // skips tiling a particular dimension. This convention is significantly
   // simpler to handle instead of adjusting affine maps to account for missing

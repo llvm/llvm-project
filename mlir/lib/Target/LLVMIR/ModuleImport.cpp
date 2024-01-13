@@ -1641,6 +1641,8 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_za_new"),
+    StringLiteral("aarch64_pstate_za_preserved"),
+    StringLiteral("aarch64_pstate_za_shared"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
     StringLiteral("target-features"),
@@ -1717,6 +1719,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("aarch64_pstate_za_new"))
     funcOp.setArmNewZa(true);
+  else if (func->hasFnAttribute("aarch64_pstate_za_shared"))
+    funcOp.setArmSharedZa(true);
+  // PreservedZA can be used with either NewZA or SharedZA.
+  if (func->hasFnAttribute("aarch64_pstate_za_preserved"))
+    funcOp.setArmPreservesZa(true);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
   if (attr.isValid()) {

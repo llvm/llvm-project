@@ -7379,6 +7379,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             continue;
           if (Idx >= static_cast<int>(CommonVF))
             Idx = E1Mask[Idx - CommonVF] + VF;
+          else
+            Idx = E1Mask[Idx];
         }
         CommonVF = VF;
       }
@@ -12017,8 +12019,12 @@ Value *BoUpSLP::vectorizeTree(
               IRBuilder<>::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<Instruction>(Vec))
                 Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
-              Vec = Builder.CreateIntCast(Vec, VU->getType(),
-                                          BWIt->second.second);
+              Vec = Builder.CreateIntCast(
+                  Vec,
+                  FixedVectorType::get(
+                      cast<VectorType>(VU->getType())->getElementType(),
+                      cast<FixedVectorType>(Vec->getType())->getNumElements()),
+                  BWIt->second.second);
               VectorCasts.try_emplace(Scalar, Vec);
             } else {
               Vec = VecIt->second;
@@ -13096,10 +13102,14 @@ bool BoUpSLP::collectValuesToDemote(
   if (isa<Constant>(V))
     return true;
 
-  // If the value is not a vectorized instruction in the expression with only
-  // one use, it cannot be demoted.
+  // If the value is not a vectorized instruction in the expression and not used
+  // by the insertelement instruction and not used in multiple vector nodes, it
+  // cannot be demoted.
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !I->hasOneUse() || !getTreeEntry(I) || !Visited.insert(I).second)
+  if (!I || !getTreeEntry(I) || MultiNodeScalars.contains(I) ||
+      !Visited.insert(I).second || all_of(I->users(), [&](User *U) {
+        return isa<InsertElementInst>(U) && !getTreeEntry(U);
+      }))
     return false;
 
   unsigned Start = 0;
@@ -13170,11 +13180,6 @@ bool BoUpSLP::collectValuesToDemote(
 }
 
 void BoUpSLP::computeMinimumValueSizes() {
-  // If there are no external uses, the expression tree must be rooted by a
-  // store. We can't demote in-memory values, so there is nothing to do here.
-  if (ExternalUses.empty())
-    return;
-
   // We only attempt to truncate integer expressions.
   auto &TreeRoot = VectorizableTree[0]->Scalars;
   auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
@@ -15211,6 +15216,19 @@ private:
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
+    auto *VTy = cast<FixedVectorType>(VectorizedValue->getType());
+    if (VTy->getElementType() != VL.front()->getType()) {
+      VectorizedValue = Builder.CreateIntCast(
+          VectorizedValue,
+          FixedVectorType::get(VL.front()->getType(), VTy->getNumElements()),
+          any_of(VL, [&](Value *R) {
+            KnownBits Known = computeKnownBits(
+                R, cast<Instruction>(ReductionOps.front().front())
+                       ->getModule()
+                       ->getDataLayout());
+            return !Known.isNonNegative();
+          }));
+    }
     switch (RdxKind) {
     case RecurKind::Add: {
       // root = mul prev_root, <1, 1, n, 1>

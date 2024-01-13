@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_FILESPECLIST_H
 #define LLDB_CORE_FILESPECLIST_H
 
+#include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
 
 #include <cstddef>
@@ -24,17 +25,22 @@ class Stream;
 class SupportFile {
 protected:
   FileSpec m_file_spec;
+  Checksum m_checksum;
 
 public:
-  SupportFile(const FileSpec &spec) : m_file_spec(spec) {}
+  SupportFile(const FileSpec &spec) : m_file_spec(spec), m_checksum() {}
+  SupportFile(const FileSpec &spec, const Checksum &checksum)
+      : m_file_spec(spec), m_checksum(checksum) {}
   SupportFile(const SupportFile &other) = delete;
   SupportFile(SupportFile &&other) = default;
   virtual ~SupportFile() = default;
   bool operator==(const SupportFile &other) {
-    return m_file_spec == other.m_file_spec;
+    return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
   }
   /// Return the file name only. Useful for resolving breakpoints by file name.
   const FileSpec &GetSpecOnly() const { return m_file_spec; };
+  /// Return the checksum or all zeros if there is none.
+  const Checksum &GetChecksum() const { return m_checksum; };
   /// Materialize the file to disk and return the path to that temporary file.
   virtual const FileSpec &Materialize() { return m_file_spec; }
 };
@@ -90,7 +96,7 @@ public:
 
   template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.push_back(
-        std::make_unique<SupportFile>(FileSpec(std::forward<Args>(args)...)));
+        std::make_unique<SupportFile>(std::forward<Args>(args)...));
   }
 
 protected:

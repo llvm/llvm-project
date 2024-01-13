@@ -1109,6 +1109,8 @@ void CodeGenModule::Release() {
     if (LangOpts.BranchProtectionPAuthLR)
       getModule().addModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr",
                                 1);
+    if (LangOpts.GuardedControlStack)
+      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 1);
     if (LangOpts.hasSignReturnAddress())
       getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);
     if (LangOpts.isSignReturnAddressScopeAll())
@@ -1199,7 +1201,7 @@ void CodeGenModule::Release() {
       llvm::CodeModel::Model codeModel = static_cast<llvm::CodeModel::Model>(CM);
       getModule().setCodeModel(codeModel);
 
-      if (CM == llvm::CodeModel::Medium &&
+      if ((CM == llvm::CodeModel::Medium || CM == llvm::CodeModel::Large) &&
           Context.getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86_64) {
         getModule().setLargeDataThreshold(getCodeGenOpts().LargeDataThreshold);
