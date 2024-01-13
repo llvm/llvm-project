@@ -24,24 +24,46 @@
 
 #include "check_assertion.h"
 
+#define ASSERT_CONSTEXPR(Expr) static_assert(__builtin_constant_p(Expr))
+#define ASSERT_NOT_CONSTEXPR(Expr) static_assert(!__builtin_constant_p(Expr));
+
 template <typename IntegerT>
-constexpr void test() {
+void test_assertion() {
   TEST_LIBCPP_ASSERT_FAILURE((void)std::div_sat(IntegerT{3}, IntegerT{0}), "Division by 0 is undefined");
 }
 
-constexpr bool test() {
-  // signed
-  test<signed char>();
-  test<short int>();
-  test<int>();
-  test<long int>();
-  test<long long int>();
-  // unsigned
-  test<unsigned char>();
-  test<unsigned short int>();
-  test<unsigned int>();
-  test<unsigned long int>();
-  test<unsigned long long int>();
+template <typename IntegerT>
+void test_constexpr() {
+  ASSERT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{84}));
+  ASSERT_NOT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{0}));
+}
+
+bool test() {
+  // Signed
+  test_assertion<signed char>();
+  test_assertion<short int>();
+  test_assertion<int>();
+  test_assertion<long int>();
+  test_assertion<long long int>();
+  // Unsigned
+  test_assertion<unsigned char>();
+  test_assertion<unsigned short int>();
+  test_assertion<unsigned int>();
+  test_assertion<unsigned long int>();
+  test_assertion<unsigned long long int>();
+
+  // Signed
+  test_constexpr<signed char>();
+  test_constexpr<short int>();
+  test_constexpr<int>();
+  test_constexpr<long int>();
+  test_constexpr<long long int>();
+  // Unsigned
+  test_constexpr<unsigned char>();
+  test_constexpr<unsigned short int>();
+  test_constexpr<unsigned int>();
+  test_constexpr<unsigned long int>();
+  test_constexpr<unsigned long long int>();
 
   return true;
 }
