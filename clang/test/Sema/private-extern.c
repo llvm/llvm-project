@@ -5,10 +5,10 @@ static int g0; // expected-note{{previous definition}}
 int g0; // expected-error{{non-static declaration of 'g0' follows static declaration}}
 
 static int g1;
-extern int g1;
+extern int g1; // expected-error{{the same identifier 'g1' appears with both internal and external linkage}}
 
-static int g2; 
-__private_extern__ int g2;
+static int g2;
+__private_extern__ int g2; // expected-error{{the same identifier 'g2' appears with both internal and external linkage}}
 
 int g3; // expected-note{{previous definition}}
 static int g3; // expected-error{{static declaration of 'g3' follows non-static declaration}}
@@ -83,3 +83,15 @@ __private_extern__ int g19;
 int g19 = 0;
 
 __private_extern__ int g20 = 0;
+
+static int g21;
+extern int g21; // expected-error{{the same identifier 'g21' appears with both internal and external linkage}}
+
+static int g22;
+
+void f10(void) {
+  int g22;
+  {
+    extern int g22; // expected-error{{the same identifier 'g22' appears with both internal and external linkage}}
+  }
+}
