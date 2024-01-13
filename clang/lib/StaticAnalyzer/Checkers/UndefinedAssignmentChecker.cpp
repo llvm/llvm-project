@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace ento;
@@ -101,13 +102,18 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
   if (OS.str().empty())
     OS << BT.getDescription();
-
   auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
     bugreporter::trackExpressionValue(N, ex, *R);
   }
   C.emitReport(std::move(R));
+  // llvm::errs() << "Undef checker reports to loc: \n";
+  // location.dump();
+  // llvm::errs() << "\nand Val:\n";
+  // val.dump();
+  // //C.getState()->dump();
+  // llvm::errs() << "\n";
 }
 
 void ento::registerUndefinedAssignmentChecker(CheckerManager &mgr) {

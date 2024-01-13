@@ -1354,6 +1354,7 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
   constexpr add_pointer_t<T> get_if(variant<Types...>*) noexcept;
   template <class T, class... Types>
   constexpr add_pointer_t<const T> get_if(const variant<Types...>*) noexcept;
+  
 
   template <class... Types>
   class variant {
@@ -1371,6 +1372,8 @@ template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
     template<typename T,
             typename = std::enable_if_t<!is_same_v<std::variant<Types...>, decay_t<T>>>>
     variant& operator=(T&&);
+    template<class T, class... Args>
+      constexpr T& emplace(Args&&...);
   };
   #endif
 

@@ -9,15 +9,11 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/FoldingSet.h"
-#include <numeric>
+#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include <vector>
 
 namespace clang::ento::tagged_union_modeling {
 
@@ -30,6 +26,7 @@ bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
 bool isStdType(const Type *Type, const std::string &TypeName);
 bool isStdVariant(const Type *Type);
+void printSVals(std::vector<SVal> v);
 
 // When invalidating regions, we also have to follow that by invalidating the
 // corresponding custom data in the program state.
@@ -51,27 +48,29 @@ removeInformationStoredForDeadInstances(const CallEvent &Call,
 }
 
 template <class TypeMap>
-void handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
+bool handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
                                     SVal ThisSVal) {
   ProgramStateRef State = Call.getState();
 
   if (!State)
-    return;
+    return false;
 
   auto ArgSVal = Call.getArgSVal(0);
   const auto *ThisRegion = ThisSVal.getAsRegion();
   const auto *ArgMemRegion = ArgSVal.getAsRegion();
+  if (!ArgMemRegion)
+    return false;
 
   // Make changes to the state according to type of constructor/assignment
   bool IsCopy = isCopyConstructorCall(Call) || isCopyAssignmentCall(Call);
   bool IsMove = isMoveConstructorCall(Call) || isMoveAssignmentCall(Call);
   // First we handle copy and move operations
   if (IsCopy || IsMove) {
-    const QualType *OtherQType = State->get<TypeMap>(ArgMemRegion);
-
+    // const QualType *OtherQType = State->get<TypeMap>(ArgMemRegion);
+    const SVal *OtherSVal = State->get<TypeMap>(ArgMemRegion);
     // If the argument of a copy constructor or assignment is unknown then
     // we will not know the argument of the copied to object.
-    if (!OtherQType) {
+    if (!OtherSVal) {
       State = State->remove<TypeMap>(ThisRegion);
     } else {
       // When move semantics is used we can only know that the moved from
@@ -80,18 +79,65 @@ void handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
       if (IsMove)
         State = State->remove<TypeMap>(ArgMemRegion);
 
-      State = State->set<TypeMap>(ThisRegion, *OtherQType);
+      State = State->set<TypeMap>(ThisRegion, *OtherSVal);
     }
   } else {
-    // Value constructor
-    auto ArgQType = ArgSVal.getType(C.getASTContext());
-    const Type *ArgTypePtr = ArgQType.getTypePtr();
+    // Value constructor.
+    // Here we create a MemRegion and an SVal for the value held by
+    // std::variant, since std::variant owns the held value.
+    //
+    // If we don't do this here later on UndefinedAssignmentChecker will warn
+    // for garbage value assignment.
+    const auto *Mreg = ArgSVal.getAsRegion();
+    SVal PointedToSVal = C.getState()->getSVal(Mreg);
 
-    QualType WoPointer = ArgTypePtr->getPointeeType();
-    State = State->set<TypeMap>(ThisRegion, WoPointer);
+    auto SymForStdVariantHeldValue = C.getSValBuilder().conjureSymbolVal(
+        "std::variant held value", Call.getArgExpr(0), C.getLocationContext(),
+        C.blockCount());
+    auto *SymRegForStdVariantHeldValue =
+        C.getSValBuilder().getRegionManager().getSymbolicRegion(
+            SymForStdVariantHeldValue.getAsSymbol());
+    auto LocForVariantHeldValue =
+        C.getSValBuilder().makeLoc(SymRegForStdVariantHeldValue);
+    State = State->bindLoc(LocForVariantHeldValue, PointedToSVal,
+                           C.getLocationContext());
+    State = State->set<TypeMap>(ThisRegion, LocForVariantHeldValue);
   }
 
   C.addTransition(State);
+  return true;
+}
+
+template <class HeldValueMap>
+bool handleStdSwapCall(const CallEvent &Call, CheckerContext &C) {
+  assert(Call.getNumArgs() == 2 &&
+         "This function only handles std::swap with two arguments.");
+
+  for (unsigned i = 0; i < Call.getNumArgs(); i++) {
+    if (!isStdVariant(Call.getArgExpr(i)->getType().getTypePtr()))
+      return false;
+  }
+
+  ProgramStateRef State = C.getState();
+
+  const MemRegion *LeftRegion = Call.getArgSVal(0).getAsRegion();
+  const MemRegion *RightRegion = Call.getArgSVal(1).getAsRegion();
+  if (!LeftRegion || !RightRegion)
+    return false;
+
+  const SVal *LeftSVal = State->get<HeldValueMap>(LeftRegion);
+  const SVal *RightSVal = State->get<HeldValueMap>(RightRegion);
+  if (!LeftSVal || !RightSVal) {
+    State = State->remove<HeldValueMap>(LeftRegion);
+    State = State->remove<HeldValueMap>(RightRegion);
+    C.addTransition(State);
+    return false;
+  }
+
+  State = State->set<HeldValueMap>(LeftRegion, *RightSVal);
+  State = State->set<HeldValueMap>(RightRegion, *LeftSVal);
+  C.addTransition(State);
+  return true;
 }
 
 } // namespace clang::ento::tagged_union_modeling
