@@ -3,6 +3,7 @@ struct a { int b; };
 
 struct a test __attribute__((interrupt)); // expected-warning {{'interrupt' attribute only applies to functions and methods}}
 
+__attribute((interrupt(42))) void foo0(void) {} // expected-error {{expected string literal as argument of 'interrupt' attribute}} 
 __attribute__((interrupt("EIC"))) void foo1(void) {} // expected-warning {{'interrupt' attribute argument not supported: 'EIC'}}
 
 __attribute__((interrupt("eic", 1))) void foo2(void) {} // expected-error {{'interrupt' attribute takes no more than 1 argument}}
