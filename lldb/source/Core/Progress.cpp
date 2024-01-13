@@ -61,7 +61,7 @@ void Progress::Increment(uint64_t amount,
 void Progress::ReportProgress() {
   if (!m_complete) {
     // Make sure we only send one notification that indicates the progress is
-    // complete, and only modify m_complete is m_total isn't null.
+    // complete
     m_complete = m_completed == m_total;
     Debugger::ReportProgress(m_id, m_title, m_details, m_completed, m_total,
                              m_debugger_id);
