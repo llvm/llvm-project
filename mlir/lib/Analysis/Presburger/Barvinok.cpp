@@ -227,11 +227,13 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     assert(numParam == qp.getNumInputs() &&
            "the quasipolynomials should all belong to the same space!");
 
-  std::vector<QuasiPolynomial> coefficients(power + 1,
-                                            QuasiPolynomial(numParam, 0));
-  coefficients[0] = num[0] / den[0];
+  std::vector<QuasiPolynomial> coefficients;
+  coefficients.reserve(power + 1);
+
+  coefficients.push_back(num[0] / den[0]);
   for (unsigned i = 1; i <= power; ++i) {
-    coefficients[i] = i < num.size() ? num[i] : QuasiPolynomial(numParam, 0);
+    coefficients.push_back(i < num.size() ? num[i]
+                                          : QuasiPolynomial(numParam, 0));
 
     unsigned limit = std::min<unsigned long>(i, den.size() - 1);
     for (unsigned j = 1; j <= limit; ++j)
