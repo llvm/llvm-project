@@ -15,4 +15,4 @@ types and definitions with good return type but wrong ``return`` statements.
   * The operator must always return ``*this``.
 
 This check implements `AUTOSAR C++14 Rule A13-2-1
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-constref>`_.
+<https://www.autosar.org/fileadmin/standards/R22-11/AP/AUTOSAR_RS_CPP14Guidelines.pdf>`_.
