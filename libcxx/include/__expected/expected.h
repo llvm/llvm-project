@@ -298,7 +298,10 @@ class __expected_base {
         return __union_t(unexpect, std::forward<_OtherUnion>(__other).__unex_);
     }
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__put_flag_in_tail, __union_t> __union_;
+    // XXX: refactor before merge -- the condition is set to `true` in order
+    // to check if everything works if the `__union_` is unconditionally
+    // `[[no_unique_address]]`.
+    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<true, __union_t> __union_;
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
