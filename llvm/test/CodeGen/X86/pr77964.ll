@@ -88,3 +88,39 @@ define zeroext i16 @checksum(ptr %0) {
   %51 = xor i16 %50, -1
   ret i16 %51
 }
+
+; This is expected to just load the byte and not use rorx
+define i8 @extract_aligned_byte(ptr %0) {
+; NOBMI-LABEL: extract_aligned_byte:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movzbl 6(%rdi), %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: extract_aligned_byte:
+; BMI:       # %bb.0:
+; BMI-NEXT:    movzbl 6(%rdi), %eax
+; BMI-NEXT:    retq
+  %2 = load i64, ptr %0
+  %3 = lshr i64 %2, 48
+  %4 = trunc i64 %3 to i8
+  ret i8 %4
+}
+
+define i8 @extract_unaligned_byte(ptr %0) {
+; NOBMI-LABEL: extract_unaligned_byte:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    movq (%rdi), %rax
+; NOBMI-NEXT:    shrq $52, %rax
+; NOBMI-NEXT:    # kill: def $al killed $al killed $rax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: extract_unaligned_byte:
+; BMI:       # %bb.0:
+; BMI-NEXT:    rorxq $52, (%rdi), %rax
+; BMI-NEXT:    # kill: def $al killed $al killed $rax
+; BMI-NEXT:    retq
+  %2 = load i64, ptr %0
+  %3 = lshr i64 %2, 52
+  %4 = trunc i64 %3 to i8
+  ret i8 %4
+}
