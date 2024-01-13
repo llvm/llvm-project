@@ -116,7 +116,7 @@ define void @test2() {
 ; CHECK-NEXT:    [[INDEX86:%.*]] = phi i16 [ 0, [[FOR_COND37_PREHEADER_SPLIT]] ], [ [[TMP3:%.*]], [[VECTOR_BODY85_SPLIT:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND33_PREHEADER_PREHEADER]]
 ; CHECK:       vector.body85.split1:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i16 [[INDEX86]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i16 [[INDEX86]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [512 x [4 x i32]], ptr @b, i16 0, i16 [[TMP0]], i16 [[J_165]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT87:%.*]] = add nuw i16 [[INDEX86]], 4
@@ -148,7 +148,7 @@ for.cond37.preheader:                             ; preds = %middle.block80, %fo
 
 vector.body85:                                    ; preds = %vector.body85, %for.cond37.preheader
   %index86 = phi i16 [ 0, %for.cond37.preheader ], [ %index.next87, %vector.body85 ]
-  %0 = or i16 %index86, 2
+  %0 = or disjoint i16 %index86, 2
   %1 = getelementptr inbounds [512 x [4 x i32]], ptr @b, i16 0, i16 %0, i16 %j.165
   %2 = load i32, ptr %1, align 1
   %index.next87 = add nuw i16 %index86, 4

@@ -1,0 +1,132 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+Test handlign of hybrid .pdata section on ARM64EC target.
+
+RUN: llvm-mc -filetype=obj -triple=arm64-windows arm64-func-sym.s -o arm64-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func-sym.s -o arm64ec-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %p/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+Only arm64ec code:
+
+RUN: lld-link -out:test1.dll -machine:arm64ec arm64ec-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --coff-load-config test1.dll | FileCheck -check-prefix=LOADCFG %s
+LOADCFG:      ExtraRFETable: 0x4000
+LOADCFG-NEXT: ExtraRFETableSize: 0x8
+
+RUN: llvm-readobj --headers test1.dll | FileCheck -check-prefix=NODIR %s
+NODIR: ExceptionTableSize: 0x0
+
+RUN: llvm-objdump -s --section=.pdata test1.dll | FileCheck -check-prefix=DATA %s
+DATA: 180004000 00100000 11000001
+
+Only x86_64 code:
+
+RUN: lld-link -out:test2.dll -machine:arm64ec x86_64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --coff-load-config test2.dll | FileCheck -check-prefix=NOLOADCFG %s
+NOLOADCFG: ExtraRFETableSize: 0x0
+
+RUN: llvm-readobj --headers test2.dll | FileCheck -check-prefix=DIR %s
+DIR:      ExceptionTableRVA: 0x4000
+DIR-NEXT: ExceptionTableSize: 0xC
+
+RUN: llvm-objdump -s --section=.pdata test2.dll | FileCheck -check-prefix=DATA2 %s
+DATA2: 180004000 00100000 0e100000
+
+Mixed arm64ec and x86_64 code:
+
+RUN: lld-link -out:test3.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --coff-load-config test3.dll | FileCheck -check-prefix=LOADCFG2 %s
+LOADCFG2:      ExtraRFETable: 0x5000
+LOADCFG2-NEXT: ExtraRFETableSize: 0x8
+
+RUN: llvm-readobj --headers test3.dll | FileCheck -check-prefix=DIR2 %s
+DIR2:      ExceptionTableRVA: 0x5008
+DIR2-NEXT: ExceptionTableSize: 0xC
+
+RUN: llvm-objdump -s --section=.pdata test3.dll | FileCheck -check-prefix=DATA3 %s
+DATA3: 180005000 00100000 11000001 00200000 0e200000
+
+Mixed arm64x code:
+
+RUN: lld-link -out:test4.dll -machine:arm64x arm64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          x86_64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+
+RUN: llvm-readobj --headers test4.dll | FileCheck -check-prefix=DIR3 %s
+DIR3:      ExceptionTableRVA: 0x6000
+DIR3-NEXT: ExceptionTableSize: 0x10
+
+RUN: llvm-objdump -s --section=.pdata test4.dll | FileCheck -check-prefix=DATA4 %s
+DATA4: 180006000 00100000 11000001 00200000 11000001  ......... ......
+DATA4: 180006010 00300000 0e300000
+
+Order of inputs doesn't matter, the data is sorted by type and RVA:
+
+RUN: lld-link -out:test5.dll -machine:arm64ec x86_64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-readobj --coff-load-config test5.dll | FileCheck -check-prefix=LOADCFG2 %s
+RUN: llvm-readobj --headers test5.dll | FileCheck -check-prefix=DIR2 %s
+RUN: llvm-objdump -s --section=.pdata test5.dll | FileCheck -check-prefix=DATA3 %s
+
+RUN: lld-link -out:test6.dll -machine:arm64x arm64ec-func-sym.obj x86_64-func-sym.obj \
+RUN:          arm64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-readobj --headers test6.dll | FileCheck -check-prefix=DIR3 %s
+RUN: llvm-objdump -s --section=.pdata test6.dll | FileCheck -check-prefix=DATA4 %s
+
+RUN: lld-link -out:test7.dll -machine:arm64x x86_64-func-sym.obj arm64ec-func-sym.obj \
+RUN:          arm64-func-sym.obj loadconfig-arm64ec.obj -dll -noentry
+RUN: llvm-readobj --headers test7.dll | FileCheck -check-prefix=DIR3 %s
+RUN: llvm-objdump -s --section=.pdata test7.dll | FileCheck -check-prefix=DATA4 %s
+
+#--- arm64-func-sym.s
+    .text
+    .globl arm64_func_sym
+    .p2align 2, 0x0
+arm64_func_sym:
+    .seh_proc arm64_func_sym
+    sub sp, sp, #32
+    .seh_stackalloc 32
+    .seh_endprologue
+    mov w0, #2
+    .seh_startepilogue
+    add sp, sp, #32
+    .seh_stackalloc 32
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+#--- arm64ec-func-sym.s
+    .text
+    .globl arm64ec_func_sym
+    .p2align 2, 0x0
+arm64ec_func_sym:
+    .seh_proc arm64ec_func_sym
+    sub sp, sp, #32
+    .seh_stackalloc 32
+    .seh_endprologue
+    mov w0, #3
+    .seh_startepilogue
+    add sp, sp, #32
+    .seh_stackalloc 32
+    .seh_endepilogue
+    ret
+    .seh_endproc
+
+#--- x86_64-func-sym.s
+    .text
+    .globl x86_64_func_sym
+    .p2align 2, 0x0
+x86_64_func_sym:
+    .seh_proc x86_64_func_sym
+    subq    $40, %rsp
+    .seh_stackalloc 40
+    .seh_endprologue
+    movl $4, %eax
+    addq $40, %rsp
+    retq
+    .seh_endproc

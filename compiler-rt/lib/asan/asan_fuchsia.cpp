@@ -240,6 +240,8 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 // So this doesn't install any atexit hook like on other platforms.
 void InstallAtExitCheckLeaks() {}
 
+void InstallAtForkHandler() {}
+
 }  // namespace __asan
 
 namespace __lsan {

@@ -16,6 +16,54 @@ func.func @tensor.cast_mismatching_constants(%arg0: tensor<1xf32>) {
 
 // -----
 
+func.func @concat_empty() {
+  // expected-error@+1 {{requires at least one input}}
+  %0 = tensor.concat dim(0) : () -> tensor<1x2x3xf32>
+  return
+}
+
+// -----
+
+func.func @concat_rank_mismatch(%arg0: tensor<1xf32>, %arg1: tensor<1xf32>) {
+  // expected-error@+1 {{rank of concatenated inputs must match result rank}}
+  %0 = tensor.concat dim(0) %arg0, %arg1 : (tensor<1xf32>, tensor<1xf32>) -> tensor<2x1xf32>
+  return
+}
+
+// -----
+
+func.func @concat_dim_out_of_range(%arg0: tensor<3xf32>) {
+  // expected-error@+1 {{concatenation dim must be less than the tensor rank}}
+  %0 = tensor.concat dim(1) %arg0 : (tensor<3xf32>) -> tensor<3xf32>
+  return
+}
+
+// -----
+
+func.func @concat_element_type_mismatch(%arg0: tensor<3xf32>, %arg1: tensor<3xi32>) {
+  // expected-error@+1 {{inputs and result element type must match}}
+  %0 = tensor.concat dim(0) %arg0, %arg1 : (tensor<3xf32>, tensor<3xi32>) -> tensor<3xf32>
+  return
+}
+
+// -----
+
+func.func @concat_incompatible_input_types(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) {
+  // expected-error@+1 {{static concatenation size mismatch along non-concatenated dimension 1}}
+  %0 = tensor.concat dim(0) %arg0, %arg1 : (tensor<3x4xf32>, tensor<4x5xf32>) -> tensor<7x5xf32>
+  return
+}
+
+// -----
+
+func.func @concat_static_shape_mismatch(%arg0: tensor<3xf32>) {
+  // expected-error@+1 {{result type 'tensor<7xf32>'does not match inferred shape 'tensor<6xf32>' static sizes}}
+  %0 = tensor.concat dim(0) %arg0, %arg0 : (tensor<3xf32>, tensor<3xf32>) -> tensor<7xf32>
+  return
+}
+
+// -----
+
 func.func @extract_too_many_indices(%arg0: tensor<?xf32>) {
   // expected-error@+1 {{incorrect number of indices for extract_element}}
   %0 = tensor.extract %arg0[] : tensor<?xf32>
@@ -111,19 +159,6 @@ func.func @tensor.generate(%m : index, %n : index)
       tensor.yield %elem : i32
   } : tensor<?x3x?xf32>
   return %tnsr : tensor<?x3x?xf32>
-}
-
-// -----
-
-func.func @generate_negative_size() -> tensor<?x8xi32> {
-  %cst = arith.constant 0 : i32
-  %size = index.constant -128
-  // expected-error@+1 {{tensor dimensions must be non-negative}}
-  %tensor = tensor.generate %size {
-  ^bb0(%arg0: index, %arg1: index):
-    tensor.yield %cst : i32
-  } : tensor<?x8xi32>
-  return %tensor : tensor<?x8xi32>
 }
 
 // -----
@@ -403,6 +438,14 @@ func.func @invalid_splat(%v : f32) {
 func.func @invalid_splat(%v : vector<8xf32>) {
   // expected-error@+1 {{must be integer/index/float type}}
   %w = tensor.splat %v : tensor<8xvector<8xf32>>
+  return
+}
+
+// -----
+
+func.func @invalid_splat(%v: f32, %m: index) {
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  %w = tensor.splat %v[%m] : tensor<?x8x?xf32>
   return
 }
 

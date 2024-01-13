@@ -32,7 +32,7 @@ static ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  if (MangledName.startswith(VFABI::_LLVM_)) {
+  if (MangledName.starts_with(VFABI::_LLVM_)) {
     MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
     ISA = VFISAKind::LLVM;
   } else {
@@ -126,7 +126,7 @@ static ParseRet tryParseLinearTokenWithRuntimeStep(StringRef &ParseString,
   return ParseRet::None;
 }
 
-/// The function looks for the following stringt at the beginning of
+/// The function looks for the following string at the beginning of
 /// the input string `ParseString`:
 ///
 ///  <token> <number>
@@ -326,10 +326,6 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
     // Only vector parameters are used when determining the VF; uniform or
     // linear are left as scalars, so do not affect VF.
     if (Param.ParamKind == VFParamKind::Vector) {
-      // If the scalar function doesn't actually have a corresponding argument,
-      // reject the mapping.
-      if (Param.ParamPos >= Signature->getNumParams())
-        return std::nullopt;
       Type *PTy = Signature->getParamType(Param.ParamPos);
 
       std::optional<ElementCount> EC = getElementCountForTy(ISA, PTy);
@@ -369,14 +365,14 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
-                                                 const CallInst &CI) {
+                                                 const FunctionType *FTy) {
   const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
   // _ZGV<isa><mask><vlen><parameters>_<scalarname>.
   StringRef VectorName = MangledName;
 
-  // Parse the fixed size part of the manled name
+  // Parse the fixed size part of the mangled name
   if (!MangledName.consume_front("_ZGV"))
     return std::nullopt;
 
@@ -427,6 +423,11 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   if (Parameters.empty())
     return std::nullopt;
 
+  // If the number of arguments of the scalar function does not match the
+  // vector variant we have just demangled then reject the mapping.
+  if (Parameters.size() != FTy->getNumParams())
+    return std::nullopt;
+
   // Figure out the number of lanes in vectors for this function variant. This
   // is easy for fixed length, as the vlen encoding just gives us the value
   // directly. However, if the vlen mangling indicated that this function
@@ -434,7 +435,7 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // demangled parameter types and the scalar function signature.
   std::optional<ElementCount> EC;
   if (ParsedVF.second) {
-    EC = getScalableECFromSignature(CI.getFunctionType(), ISA, Parameters);
+    EC = getScalableECFromSignature(FTy, ISA, Parameters);
     if (!EC)
       return std::nullopt;
   } else

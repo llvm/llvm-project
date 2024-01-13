@@ -78,8 +78,8 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
 
   const StringRef Key =
       F.getFnAttribute("sign-return-address-key").getValueAsString();
-  assert(Key.equals_insensitive("a_key") || Key.equals_insensitive("b_key"));
-  return Key.equals_insensitive("b_key");
+  assert(Key == "a_key" || Key == "b_key");
+  return Key == "b_key";
 }
 
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
@@ -93,18 +93,56 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
-  if (!F.hasFnAttribute("branch-target-enforcement")) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("branch-target-enforcement")))
-      BranchTargetEnforcement = BTE->getZExtValue();
-    return;
-  }
+  // BTI/PAuthLR may be set either on the function or the module. Set Bool from
+  // either the function attribute or module attribute, depending on what is
+  // set.
+  // Note: the module attributed is numeric (0 or 1) but the function attribute
+  // is stringy ("true" or "false").
+  auto TryFnThenModule = [&](StringRef AttrName, bool &Bool) {
+    if (F.hasFnAttribute(AttrName)) {
+      const StringRef V = F.getFnAttribute(AttrName).getValueAsString();
+      assert(V.equals_insensitive("true") || V.equals_insensitive("false"));
+      Bool = V.equals_insensitive("true");
+    } else if (const auto *ModVal = mdconst::extract_or_null<ConstantInt>(
+                   F.getParent()->getModuleFlag(AttrName))) {
+      Bool = ModVal->getZExtValue();
+    }
+  };
 
-  const StringRef BTIEnable =
-      F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_insensitive("true") ||
-         BTIEnable.equals_insensitive("false"));
-  BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
+  TryFnThenModule("branch-target-enforcement", BranchTargetEnforcement);
+  TryFnThenModule("branch-protection-pauth-lr", BranchProtectionPAuthLR);
+
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute. This is a safe default because it is the
+  // smallest possible guard page size.
+  uint64_t ProbeSize = 4096;
+  if (F.hasFnAttribute("stack-probe-size"))
+    ProbeSize = F.getFnAttributeAsParsedInteger("stack-probe-size");
+  else if (const auto *PS = mdconst::extract_or_null<ConstantInt>(
+               F.getParent()->getModuleFlag("stack-probe-size")))
+    ProbeSize = PS->getZExtValue();
+  assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
+
+  if (STI->isTargetWindows()) {
+    if (!F.hasFnAttribute("no-stack-arg-probe"))
+      StackProbeSize = ProbeSize;
+  } else {
+    // Round down to the stack alignment.
+    uint64_t StackAlign =
+        STI->getFrameLowering()->getTransientStackAlign().value();
+    ProbeSize = std::max(StackAlign, ProbeSize & ~(StackAlign - 1U));
+    StringRef ProbeKind;
+    if (F.hasFnAttribute("probe-stack"))
+      ProbeKind = F.getFnAttribute("probe-stack").getValueAsString();
+    else if (const auto *PS = dyn_cast_or_null<MDString>(
+                 F.getParent()->getModuleFlag("probe-stack")))
+      ProbeKind = PS->getString();
+    if (ProbeKind.size()) {
+      if (ProbeKind != "inline-asm")
+        report_fatal_error("Unsupported stack probing method");
+      StackProbeSize = ProbeSize;
+    }
+  }
 }
 
 MachineFunctionInfo *AArch64FunctionInfo::clone(

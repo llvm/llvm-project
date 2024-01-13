@@ -1,4 +1,5 @@
-; RUN: opt -jmc-instrument -mtriple=x86_64-unknown-linux-gnu  -S < %s | FileCheck %s
+; RUN: opt -jmc-instrumenter -mtriple=x86_64-unknown-linux-gnu  -S < %s | FileCheck %s
+; RUN: opt -passes=jmc-instrumenter -mtriple=x86_64-unknown-linux-gnu  -S < %s | FileCheck %s
 
 ; CHECK: @"__7DF23CF5_x@c" = internal unnamed_addr global i8 1, section ".data.just.my.code", align 1, !dbg !0
 ; CHECK: @"__A8764FDD_x@c" = internal unnamed_addr global i8 1, section ".data.just.my.code", align 1, !dbg !5

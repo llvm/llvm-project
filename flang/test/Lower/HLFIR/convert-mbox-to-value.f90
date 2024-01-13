@@ -8,7 +8,7 @@ end subroutine test_int_allocatable
 ! CHECK-LABEL:   func.func @_QPtest_int_allocatable(
 ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "a"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_int_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:           %[[VAL_2:.*]] = arith.constant -1 : i32
+! CHECK:           %[[VAL_2:.*]] = arith.constant 6 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant {{[0-9]*}} : i32
@@ -28,7 +28,7 @@ end subroutine test_int_pointer
 ! CHECK-LABEL:   func.func @_QPtest_int_pointer(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "p"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_int_pointerEp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-! CHECK:           %[[VAL_2:.*]] = arith.constant -1 : i32
+! CHECK:           %[[VAL_2:.*]] = arith.constant 6 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_5:.*]] = arith.constant {{[0-9]*}} : i32

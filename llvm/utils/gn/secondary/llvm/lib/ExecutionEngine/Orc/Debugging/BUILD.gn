@@ -1,9 +1,9 @@
 static_library("Debugging") {
   output_name = "LLVMOrcDebugging"
   deps = [
+    "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/ExecutionEngine/Orc",
     "//llvm/lib/ExecutionEngine/Orc/Shared",
-    "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -11,6 +11,7 @@ static_library("Debugging") {
     "DebugInfoSupport.cpp",
     "DebuggerSupport.cpp",
     "DebuggerSupportPlugin.cpp",
+    "LLJITUtilsCBindings.cpp",
     "PerfSupportPlugin.cpp",
   ]
   if (current_os == "linux") {

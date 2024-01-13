@@ -1259,6 +1259,43 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if ((OldTemplate == nullptr) != (NewTemplate == nullptr))
     return true;
 
+  if (NewTemplate) {
+    // C++ [temp.over.link]p4:
+    //   The signature of a function template consists of its function
+    //   signature, its return type and its template parameter list. The names
+    //   of the template parameters are significant only for establishing the
+    //   relationship between the template parameters and the rest of the
+    //   signature.
+    //
+    // We check the return type and template parameter lists for function
+    // templates first; the remaining checks follow.
+    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
+        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
+        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
+    bool SameReturnType = SemaRef.Context.hasSameType(
+        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
+    // FIXME(GH58571): Match template parameter list even for non-constrained
+    // template heads. This currently ensures that the code prior to C++20 is
+    // not newly broken.
+    bool ConstraintsInTemplateHead =
+        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
+        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
+    // C++ [namespace.udecl]p11:
+    //   The set of declarations named by a using-declarator that inhabits a
+    //   class C does not include member functions and member function
+    //   templates of a base class that "correspond" to (and thus would
+    //   conflict with) a declaration of a function or function template in
+    //   C.
+    // Comparing return types is not required for the "correspond" check to
+    // decide whether a member introduced by a shadow declaration is hidden.
+    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
+        !SameTemplateParameterList)
+      return true;
+    if (!UseMemberUsingDeclRules &&
+        (!SameTemplateParameterList || !SameReturnType))
+      return true;
+  }
+
   // Is the function New an overload of the function Old?
   QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
   QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
@@ -1408,43 +1445,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                                 !OldMethod->isExplicitObjectMemberFunction()))
         return true;
     }
-  }
-
-  if (NewTemplate) {
-    // C++ [temp.over.link]p4:
-    //   The signature of a function template consists of its function
-    //   signature, its return type and its template parameter list. The names
-    //   of the template parameters are significant only for establishing the
-    //   relationship between the template parameters and the rest of the
-    //   signature.
-    //
-    // We check the return type and template parameter lists for function
-    // templates first; the remaining checks follow.
-    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
-        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
-        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
-    bool SameReturnType = SemaRef.Context.hasSameType(
-        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
-    // FIXME(GH58571): Match template parameter list even for non-constrained
-    // template heads. This currently ensures that the code prior to C++20 is
-    // not newly broken.
-    bool ConstraintsInTemplateHead =
-        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
-        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
-    // C++ [namespace.udecl]p11:
-    //   The set of declarations named by a using-declarator that inhabits a
-    //   class C does not include member functions and member function
-    //   templates of a base class that "correspond" to (and thus would
-    //   conflict with) a declaration of a function or function template in
-    //   C.
-    // Comparing return types is not required for the "correspond" check to
-    // decide whether a member introduced by a shadow declaration is hidden.
-    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
-        !SameTemplateParameterList)
-      return true;
-    if (!UseMemberUsingDeclRules &&
-        (!SameTemplateParameterList || !SameReturnType))
-      return true;
   }
 
   if (!UseOverrideRules) {
@@ -6056,6 +6056,16 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                   diag::err_typecheck_converted_constant_expression_indirect)
            << From->getType() << From->getSourceRange() << T;
   }
+  // 'TryCopyInitialization' returns incorrect info for attempts to bind
+  // a reference to a bit-field due to C++ [over.ics.ref]p4. Namely,
+  // 'SCS->DirectBinding' occurs to be set to 'true' despite it is not
+  // the direct binding according to C++ [dcl.init.ref]p5. Hence, check this
+  // case explicitly.
+  if (From->refersToBitField() && T.getTypePtr()->isReferenceType()) {
+    return S.Diag(From->getBeginLoc(),
+                  diag::err_reference_bind_to_bitfield_in_cce)
+           << From->getSourceRange();
+  }
 
   // Usually we can simply apply the ImplicitConversionSequence we formed
   // earlier, but that's not guaranteed to work when initializing an object of
@@ -6123,61 +6133,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   return Result;
 }
 
-/// EvaluateConvertedConstantExpression - Evaluate an Expression
-/// That is a converted constant expression
-/// (which was built with BuildConvertedConstantExpression)
-static ExprResult EvaluateConvertedConstantExpression(
-    Sema &S, Expr *E, QualType T, APValue &Value, Sema::CCEKind CCE,
-    bool RequireInt, const APValue &PreNarrowingValue) {
-  ExprResult Result = E;
-  // Check the expression is a constant expression.
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  Expr::EvalResult Eval;
-  Eval.Diag = &Notes;
-
-  ConstantExprKind Kind;
-  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
-    Kind = ConstantExprKind::ClassTemplateArgument;
-  else if (CCE == Sema::CCEK_TemplateArg)
-    Kind = ConstantExprKind::NonClassTemplateArgument;
-  else
-    Kind = ConstantExprKind::Normal;
-
-  if (!E->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
-      (RequireInt && !Eval.Val.isInt())) {
-    // The expression can't be folded, so we can't keep it at this position in
-    // the AST.
-    Result = ExprError();
-  } else {
-    Value = Eval.Val;
-
-    if (Notes.empty()) {
-      // It's a constant expression.
-      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
-      if (!PreNarrowingValue.isAbsent())
-        Value = std::move(PreNarrowingValue);
-      return E;
-    }
-  }
-
-  // It's not a constant expression. Produce an appropriate diagnostic.
-  if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
-    S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
-                                   diag::note_constexpr_invalid_template_arg) {
-    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  } else {
-    S.Diag(E->getBeginLoc(), diag::err_expr_not_cce)
-        << CCE << E->getSourceRange();
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  }
-  return ExprError();
-}
-
 /// CheckConvertedConstantExpression - Check that the expression From is a
 /// converted constant expression of type T, perform the conversion and produce
 /// the converted expression, per C++11 [expr.const]p3.
@@ -6194,8 +6149,8 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     Value = APValue();
     return Result;
   }
-  return EvaluateConvertedConstantExpression(S, Result.get(), T, Value, CCE,
-                                             RequireInt, PreNarrowingValue);
+  return S.EvaluateConvertedConstantExpression(Result.get(), T, Value, CCE,
+                                               RequireInt, PreNarrowingValue);
 }
 
 ExprResult Sema::BuildConvertedConstantExpression(Expr *From, QualType T,
@@ -6226,6 +6181,62 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
   return R;
 }
 
+/// EvaluateConvertedConstantExpression - Evaluate an Expression
+/// That is a converted constant expression
+/// (which was built with BuildConvertedConstantExpression)
+ExprResult
+Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
+                                          Sema::CCEKind CCE, bool RequireInt,
+                                          const APValue &PreNarrowingValue) {
+
+  ExprResult Result = E;
+  // Check the expression is a constant expression.
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  Expr::EvalResult Eval;
+  Eval.Diag = &Notes;
+
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+      (RequireInt && !Eval.Val.isInt())) {
+    // The expression can't be folded, so we can't keep it at this position in
+    // the AST.
+    Result = ExprError();
+  } else {
+    Value = Eval.Val;
+
+    if (Notes.empty()) {
+      // It's a constant expression.
+      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      if (!PreNarrowingValue.isAbsent())
+        Value = std::move(PreNarrowingValue);
+      return E;
+    }
+  }
+
+  // It's not a constant expression. Produce an appropriate diagnostic.
+  if (Notes.size() == 1 &&
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
+    Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  } else {
+    Diag(E->getBeginLoc(), diag::err_expr_not_cce)
+        << CCE << E->getSourceRange();
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  }
+  return ExprError();
+}
 
 /// dropPointerConversions - If the given standard conversion sequence
 /// involves any pointer conversions, remove them.  This may change
@@ -7712,9 +7723,19 @@ bool Sema::CheckNonDependentConversions(
        ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
-      unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
-                             : (ThisConversions + I);
+      unsigned ConvIdx;
+      if (PO == OverloadCandidateParamOrder::Reversed) {
+        ConvIdx = Args.size() - 1 - I;
+        assert(Args.size() + ThisConversions == 2 &&
+               "number of args (including 'this') must be exactly 2 for "
+               "reversed order");
+        // For members, there would be only one arg 'Args[0]' whose ConvIdx
+        // would also be 0. 'this' got ConvIdx = 1 previously.
+        assert(!HasThisConversion || (ConvIdx == 0 && I == 0));
+      } else {
+        // For members, 'this' got ConvIdx = 0 previously.
+        ConvIdx = ThisConversions + I;
+      }
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
@@ -10110,11 +10131,23 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2) {
+// As a Clang extension, allow ambiguity among F1 and F2 if they represent
+// represent the same entity.
+static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
+                           const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-
+  auto PT1 = F1->getPrimaryTemplate();
+  auto PT2 = F2->getPrimaryTemplate();
+  if (PT1 && PT2) {
+    if (declaresSameEntity(PT1, PT2) ||
+        declaresSameEntity(PT1->getInstantiatedFromMemberTemplate(),
+                           PT2->getInstantiatedFromMemberTemplate()))
+      return true;
+  }
+  // TODO: It is not clear whether comparing parameters is necessary (i.e.
+  // different functions with same params). Consider removing this (as no test
+  // fail w/o it).
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10318,14 +10351,14 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
+          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function with the same
-        // parameter types, if we have a better conversion for one argument and
-        // a worse conversion for the other, the implicit conversion sequences
-        // are treated as being equally good.
+        // When comparing a function against a reversed function, if we have a
+        // better conversion for one argument and a worse conversion for the
+        // other, the implicit conversion sequences are treated as being equally
+        // good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.
@@ -13994,6 +14027,22 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
+  // Model the case with a call to a templated function whose definition
+  // encloses the call and whose return type contains a placeholder type as if
+  // the UnresolvedLookupExpr was type-dependent.
+  if (OverloadResult == OR_Success) {
+    const FunctionDecl *FDecl = Best->Function;
+    if (FDecl && FDecl->isTemplateInstantiation() &&
+        FDecl->getReturnType()->isUndeducedType()) {
+      if (const auto *TP =
+              FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+          TP && TP->willHaveBody()) {
+        return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
+      }
+    }
+  }
+
   return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args, RParenLoc,
                                   ExecConfig, &CandidateSet, &Best,
                                   OverloadResult, AllowTypoCorrection);
@@ -14499,7 +14548,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
+                allowAmbiguity(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],

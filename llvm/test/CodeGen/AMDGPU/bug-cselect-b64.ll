@@ -4,19 +4,20 @@
 define amdgpu_cs <2 x i32> @f() {
 ; CHECK-LABEL: f:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s2, s0
-; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    s_mov_b32 s4, s0
-; CHECK-NEXT:    buffer_load_dwordx2 v[0:1], off, s[0:3], 0
-; CHECK-NEXT:    s_mov_b32 s5, s0
-; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    s_mov_b32 s6, s4
+; CHECK-NEXT:    s_mov_b32 s7, s4
+; CHECK-NEXT:    s_mov_b32 s0, s4
+; CHECK-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; CHECK-NEXT:    s_mov_b32 s1, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
-; CHECK-NEXT:    buffer_store_dwordx2 v[1:2], off, s[0:3], 0
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[0:1], v[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; CHECK-NEXT:    ; return to shader part epilog
 bb:
   %i = call <2 x i32> @llvm.amdgcn.raw.buffer.load.v2i32(<4 x i32> zeroinitializer, i32 0, i32 0, i32 0)

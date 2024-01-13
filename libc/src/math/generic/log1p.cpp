@@ -872,17 +872,17 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
 
 LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   using FPBits_t = typename fputil::FPBits<double>;
-  constexpr int EXPONENT_BIAS = FPBits_t::EXPONENT_BIAS;
-  constexpr int MANTISSA_WIDTH = FPBits_t::FloatProp::MANTISSA_WIDTH;
-  constexpr uint64_t MANTISSA_MASK = FPBits_t::FloatProp::MANTISSA_MASK;
+  constexpr int EXP_BIAS = FPBits_t::EXP_BIAS;
+  constexpr int FRACTION_LEN = FPBits_t::FRACTION_LEN;
+  constexpr uint64_t FRACTION_MASK = FPBits_t::FRACTION_MASK;
   FPBits_t xbits(x);
   uint64_t x_u = xbits.uintval();
 
   fputil::DoubleDouble x_dd{0.0, 0.0};
 
-  uint16_t x_exp = xbits.get_unbiased_exponent();
+  uint16_t x_exp = xbits.get_biased_exponent();
 
-  if (x_exp >= EXPONENT_BIAS) {
+  if (x_exp >= EXP_BIAS) {
     // |x| >= 1
     if (LIBC_UNLIKELY(x_u >= 0x4650'0000'0000'0000ULL)) {
       // x >= 2^102 or x is negative, inf, or NaN
@@ -909,8 +909,8 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
     }
   } else {
     // |x| < 1
-    if (LIBC_UNLIKELY(xbits.get_unbiased_exponent() <
-                      EXPONENT_BIAS - MANTISSA_WIDTH - 1)) {
+    if (LIBC_UNLIKELY(xbits.get_biased_exponent() <
+                      EXP_BIAS - FRACTION_LEN - 1)) {
       // Quick return when |x| < 2^-53.
       // Since log(1 + x) = x - x^2/2 + x^3/3 - ...,
       // for |x| < 2^-53,
@@ -949,8 +949,9 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   x_u = xhi_bits.uintval();
   // Range reduction:
   // Find k such that |x_hi - k * 2^-7| <= 2^-8.
-  int idx = ((x_u & MANTISSA_MASK) + (1ULL << (MANTISSA_WIDTH - 8))) >>
-            (MANTISSA_WIDTH - 7);
+  int idx =
+      static_cast<int>(((x_u & FRACTION_MASK) + (1ULL << (FRACTION_LEN - 8))) >>
+                       (FRACTION_LEN - 7));
   int x_e = xhi_bits.get_exponent() + (idx >> 7);
   double e_x = static_cast<double>(x_e);
 
@@ -966,9 +967,8 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   double err_hi = ERR_HI[hi == 0.0];
 
   // Scaling factior = 2^(-xh_bits.get_exponent())
-  uint64_t s_u =
-      (static_cast<uint64_t>(EXPONENT_BIAS) << (MANTISSA_WIDTH + 1)) -
-      (x_u & FPBits_t::FloatProp::EXPONENT_MASK);
+  uint64_t s_u = (static_cast<uint64_t>(EXP_BIAS) << (FRACTION_LEN + 1)) -
+                 (x_u & FPBits_t::EXP_MASK);
   // When the exponent of x is 2^1023, its inverse, 2^(-1023), is subnormal.
   const double EXPONENT_CORRECTION[2] = {0.0, 0x1.0p-1023};
   double scaling = FPBits_t(s_u).get_val() + EXPONENT_CORRECTION[s_u == 0];
@@ -998,7 +998,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   v_hi = fputil::multiply_add(r, m_dd.hi, -1.0); // Exact.
 #else
   // c = 1 + idx * 2^-7.
-  double c = FPBits_t((static_cast<uint64_t>(idx) << (MANTISSA_WIDTH - 7)) +
+  double c = FPBits_t((static_cast<uint64_t>(idx) << (FRACTION_LEN - 7)) +
                       uint64_t(0x3FF0'0000'0000'0000ULL))
                  .get_val();
   v_hi = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]); // Exact

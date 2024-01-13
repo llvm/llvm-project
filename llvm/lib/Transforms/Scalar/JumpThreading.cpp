@@ -1981,7 +1981,7 @@ void JumpThreadingPass::updateSSA(
     });
 
     // If there are no uses outside the block, we're done with this instruction.
-    if (UsesToRename.empty() && DbgValues.empty())
+    if (UsesToRename.empty() && DbgValues.empty() && DPValues.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
 

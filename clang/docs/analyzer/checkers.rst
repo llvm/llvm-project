@@ -535,6 +535,52 @@ optin
 
 Checkers for portability, performance or coding style specific rules.
 
+.. _optin-core-EnumCastOutOfRange:
+
+optin.core.EnumCastOutOfRange (C, C++)
+""""""""""""""""""""""""""""""""""""""
+Check for integer to enumeration casts that would produce a value with no
+corresponding enumerator. This is not necessarily undefined behavior, but can
+lead to nasty surprises, so projects may decide to use a coding standard that
+disallows these "unusual" conversions.
+
+Note that no warnings are produced when the enum type (e.g. `std::byte`) has no
+enumerators at all.
+
+.. code-block:: cpp
+
+ enum WidgetKind { A=1, B, C, X=99 };
+
+ void foo() {
+   WidgetKind c = static_cast<WidgetKind>(3);  // OK
+   WidgetKind x = static_cast<WidgetKind>(99); // OK
+   WidgetKind d = static_cast<WidgetKind>(4);  // warn
+ }
+
+**Limitations**
+
+This checker does not accept the coding pattern where an enum type is used to
+store combinations of flag values:
+
+.. code-block:: cpp
+
+ enum AnimalFlags
+ {
+     HasClaws   = 1,
+     CanFly     = 2,
+     EatsFish   = 4,
+     Endangered = 8
+ };
+
+ AnimalFlags operator|(AnimalFlags a, AnimalFlags b)
+ {
+     return static_cast<AnimalFlags>(static_cast<int>(a) | static_cast<int>(b));
+ }
+
+ auto flags = HasClaws | CanFly;
+
+Projects that use this pattern should not enable this optin checker.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
@@ -979,7 +1025,7 @@ security.insecureAPI.vfork (C)
 
 security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
- Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
+ Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, fprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
 
 .. code-block:: c
 
@@ -2049,6 +2095,21 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
                  //       returned block
  }
 
+.. _alpha-core-StdVariant:
+
+alpha.core.StdVariant (C++)
+"""""""""""""""""""""""""""
+Check if a value of active type is retrieved from an ``std::variant`` instance with ``std::get``.
+In case of bad variant type access (the accessed type differs from the active type)
+a warning is emitted. Currently, this checker does not take exception handling into account.
+
+.. code-block:: cpp
+
+ void test() {
+   std::variant<int, char> v = 25;
+   char c = stg::get<char>(v); // warn: "int" is the active alternative
+ }
+
 .. _alpha-core-TestAfterDivZero:
 
 alpha.core.TestAfterDivZero (C)
@@ -2112,23 +2173,6 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
    delete x; // warn: destruction of a polymorphic object with no virtual
              //       destructor
  }
-
-.. _alpha-cplusplus-EnumCastOutOfRange:
-
-alpha.cplusplus.EnumCastOutOfRange (C++)
-""""""""""""""""""""""""""""""""""""""""
-Check for integer to enumeration casts that could result in undefined values.
-
-.. code-block:: cpp
-
- enum TestEnum {
-   A = 0
- };
-
- void foo() {
-   TestEnum t = static_cast(-1);
-       // warn: the value provided to the cast expression is not in
-       //       the valid range of values for the enum
 
 .. _alpha-cplusplus-InvalidatedIterator:
 

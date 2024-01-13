@@ -418,7 +418,7 @@ constexpr bool test() {
       assert(std::ranges::equal(out, expected));
       assert(base(result.in) == in.end());
       assert(base(result.out) == out.end());
-      assert(numberOfComp == in.size() - 1);
+      assert(numberOfComp == static_cast<int>(in.size() - 1));
       assert(numberOfProj <= static_cast<int>(2 * (in.size() - 1)));
     }
     // range overload
@@ -434,7 +434,7 @@ constexpr bool test() {
       assert(std::ranges::equal(out, expected));
       assert(base(result.in) == in.end());
       assert(base(result.out) == out.end());
-      assert(numberOfComp == in.size() - 1);
+      assert(numberOfComp == static_cast<int>(in.size() - 1));
       assert(numberOfProj <= static_cast<int>(2 * (in.size() - 1)));
     }
   }

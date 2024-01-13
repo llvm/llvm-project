@@ -13,6 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -1015,6 +1016,7 @@ private:
   MLIRContext &ctx;
 };
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 //===----------------------------------------------------------------------===//
 // PDL Configuration
 //===----------------------------------------------------------------------===//
@@ -1043,6 +1045,19 @@ private:
 
 /// Register the dialect conversion PDL functions with the given pattern set.
 void registerConversionPDLFunctions(RewritePatternSet &patterns);
+
+#else
+
+// Stubs for when PDL in rewriting is not enabled.
+
+inline void registerConversionPDLFunctions(RewritePatternSet &patterns) {}
+
+class PDLConversionConfig final {
+public:
+  PDLConversionConfig(const TypeConverter * /*converter*/) {}
+};
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

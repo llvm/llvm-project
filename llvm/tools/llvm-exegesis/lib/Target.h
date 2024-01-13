@@ -39,6 +39,10 @@ extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
+enum ValidationEvent {
+  InstructionRetired
+};
+
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
   // cycles.
@@ -58,6 +62,9 @@ struct PfmCountersInfo {
   // An optional list of IssueCounters.
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
+
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationEvents;
 
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
@@ -262,6 +269,7 @@ public:
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       BenchmarkRunner::ExecutionModeE ExecutionMode,
+      unsigned BenchmarkRepeatCount,
       Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
@@ -305,7 +313,8 @@ private:
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      unsigned BenchmarkRepeatCount) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,

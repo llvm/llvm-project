@@ -12,7 +12,6 @@
 
 #include "PPCMCAsmInfo.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cassert>
 
 using namespace llvm;
 

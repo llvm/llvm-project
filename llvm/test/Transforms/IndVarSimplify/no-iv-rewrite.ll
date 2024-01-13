@@ -299,7 +299,7 @@ define i64 @cloneOr(i32 %limit, ptr %base) nounwind {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ADR:%.*]] = getelementptr i64, ptr [[BASE:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[ADR]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
@@ -319,7 +319,7 @@ loop:
   %t1 = sext i32 %iv to i64
   %adr = getelementptr i64, ptr %base, i64 %t1
   %val = load i64, ptr %adr
-  %t2 = or i32 %iv, 1
+  %t2 = or disjoint i32 %iv, 1
   %t3 = sext i32 %t2 to i64
   %iv.next = add i32 %iv, 2
   %cmp = icmp slt i32 %iv.next, %halfLim

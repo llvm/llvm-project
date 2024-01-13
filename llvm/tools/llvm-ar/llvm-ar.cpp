@@ -25,7 +25,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1287,8 +1286,7 @@ static const char *matchFlagWithArg(StringRef Expected,
                                     ArrayRef<const char *> Args) {
   StringRef Arg = *ArgIt;
 
-  if (Arg.startswith("--"))
-    Arg = Arg.substr(2);
+  Arg.consume_front("--");
 
   size_t len = Expected.size();
   if (Arg == Expected) {
@@ -1297,7 +1295,7 @@ static const char *matchFlagWithArg(StringRef Expected,
 
     return *ArgIt;
   }
-  if (Arg.startswith(Expected) && Arg.size() > len && Arg[len] == '=')
+  if (Arg.starts_with(Expected) && Arg.size() > len && Arg[len] == '=')
     return Arg.data() + len + 1;
 
   return nullptr;
@@ -1501,7 +1499,6 @@ static int ranlib_main(int argc, char **argv) {
 }
 
 int llvm_ar_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   ToolName = argv[0];
 
   llvm::InitializeAllTargetInfos();

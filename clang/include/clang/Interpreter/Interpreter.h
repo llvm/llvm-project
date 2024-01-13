@@ -101,6 +101,7 @@ public:
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
+  CompilerInstance *getCompilerInstance();
   llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);

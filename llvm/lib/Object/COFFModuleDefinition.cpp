@@ -74,7 +74,7 @@ static bool isDecorated(StringRef Sym, bool MingwDef) {
   // We can't check for a leading underscore here, since function names
   // themselves can start with an underscore, while a second one still needs
   // to be added.
-  return Sym.startswith("@") || Sym.contains("@@") || Sym.startswith("?") ||
+  return Sym.starts_with("@") || Sym.contains("@@") || Sym.starts_with("?") ||
          (!MingwDef && Sym.contains('@'));
 }
 
@@ -97,7 +97,7 @@ public:
     }
     case '=':
       Buf = Buf.drop_front();
-      if (Buf.startswith("=")) {
+      if (Buf.starts_with("=")) {
         Buf = Buf.drop_front();
         return Token(EqualEqual, "==");
       }

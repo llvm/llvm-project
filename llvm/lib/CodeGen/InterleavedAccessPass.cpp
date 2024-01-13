@@ -48,6 +48,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -82,22 +83,14 @@ static cl::opt<bool> LowerInterleavedAccesses(
 
 namespace {
 
-class InterleavedAccess : public FunctionPass {
+class InterleavedAccessImpl {
+  friend class InterleavedAccess;
+
 public:
-  static char ID;
-
-  InterleavedAccess() : FunctionPass(ID) {
-    initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "Interleaved Access Pass"; }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.setPreservesCFG();
-  }
+  InterleavedAccessImpl() = default;
+  InterleavedAccessImpl(DominatorTree *DT, const TargetLowering *TLI)
+      : DT(DT), TLI(TLI), MaxFactor(TLI->getMaxSupportedInterleaveFactor()) {}
+  bool runOnFunction(Function &F);
 
 private:
   DominatorTree *DT = nullptr;
@@ -141,9 +134,59 @@ private:
                             LoadInst *LI);
 };
 
+class InterleavedAccess : public FunctionPass {
+  InterleavedAccessImpl Impl;
+
+public:
+  static char ID;
+
+  InterleavedAccess() : FunctionPass(ID) {
+    initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override { return "Interleaved Access Pass"; }
+
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.setPreservesCFG();
+  }
+};
+
 } // end anonymous namespace.
 
+PreservedAnalyses InterleavedAccessPass::run(Function &F,
+                                             FunctionAnalysisManager &FAM) {
+  auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+  InterleavedAccessImpl Impl(DT, TLI);
+  bool Changed = Impl.runOnFunction(F);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 char InterleavedAccess::ID = 0;
+
+bool InterleavedAccess::runOnFunction(Function &F) {
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC || !LowerInterleavedAccesses)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
+
+  Impl.DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &TM = TPC->getTM<TargetMachine>();
+  Impl.TLI = TM.getSubtargetImpl(F)->getTargetLowering();
+  Impl.MaxFactor = Impl.TLI->getMaxSupportedInterleaveFactor();
+
+  return Impl.runOnFunction(F);
+}
 
 INITIALIZE_PASS_BEGIN(InterleavedAccess, DEBUG_TYPE,
     "Lower interleaved memory accesses to target specific intrinsics", false,
@@ -228,7 +271,7 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
-bool InterleavedAccess::lowerInterleavedLoad(
+bool InterleavedAccessImpl::lowerInterleavedLoad(
     LoadInst *LI, SmallVector<Instruction *, 32> &DeadInsts) {
   if (!LI->isSimple() || isa<ScalableVectorType>(LI->getType()))
     return false;
@@ -334,7 +377,7 @@ bool InterleavedAccess::lowerInterleavedLoad(
   return true;
 }
 
-bool InterleavedAccess::replaceBinOpShuffles(
+bool InterleavedAccessImpl::replaceBinOpShuffles(
     ArrayRef<ShuffleVectorInst *> BinOpShuffles,
     SmallVectorImpl<ShuffleVectorInst *> &Shuffles, LoadInst *LI) {
   for (auto *SVI : BinOpShuffles) {
@@ -367,7 +410,7 @@ bool InterleavedAccess::replaceBinOpShuffles(
   return !BinOpShuffles.empty();
 }
 
-bool InterleavedAccess::tryReplaceExtracts(
+bool InterleavedAccessImpl::tryReplaceExtracts(
     ArrayRef<ExtractElementInst *> Extracts,
     ArrayRef<ShuffleVectorInst *> Shuffles) {
   // If there aren't any extractelement instructions to modify, there's nothing
@@ -431,7 +474,7 @@ bool InterleavedAccess::tryReplaceExtracts(
   return true;
 }
 
-bool InterleavedAccess::lowerInterleavedStore(
+bool InterleavedAccessImpl::lowerInterleavedStore(
     StoreInst *SI, SmallVector<Instruction *, 32> &DeadInsts) {
   if (!SI->isSimple())
     return false;
@@ -457,7 +500,7 @@ bool InterleavedAccess::lowerInterleavedStore(
   return true;
 }
 
-bool InterleavedAccess::lowerDeinterleaveIntrinsic(
+bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     IntrinsicInst *DI, SmallVector<Instruction *, 32> &DeadInsts) {
   LoadInst *LI = dyn_cast<LoadInst>(DI->getOperand(0));
 
@@ -476,7 +519,7 @@ bool InterleavedAccess::lowerDeinterleaveIntrinsic(
   return true;
 }
 
-bool InterleavedAccess::lowerInterleaveIntrinsic(
+bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     IntrinsicInst *II, SmallVector<Instruction *, 32> &DeadInsts) {
   if (!II->hasOneUse())
     return false;
@@ -498,18 +541,7 @@ bool InterleavedAccess::lowerInterleaveIntrinsic(
   return true;
 }
 
-bool InterleavedAccess::runOnFunction(Function &F) {
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC || !LowerInterleavedAccesses)
-    return false;
-
-  LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << F.getName() << "\n");
-
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &TM = TPC->getTM<TargetMachine>();
-  TLI = TM.getSubtargetImpl(F)->getTargetLowering();
-  MaxFactor = TLI->getMaxSupportedInterleaveFactor();
-
+bool InterleavedAccessImpl::runOnFunction(Function &F) {
   // Holds dead instructions that will be erased later.
   SmallVector<Instruction *, 32> DeadInsts;
   bool Changed = false;

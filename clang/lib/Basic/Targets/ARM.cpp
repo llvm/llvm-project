@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -419,6 +420,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
   BPI.SignKey = LangOptions::SignReturnAddressKeyKind::AKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   return true;
 }
 
@@ -836,6 +838,69 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.RWPI)
     Builder.defineMacro("__ARM_RWPI", "1");
 
+  // Macros for enabling co-proc intrinsics
+  uint64_t FeatureCoprocBF = 0;
+  switch (ArchKind) {
+  default:
+    break;
+  case llvm::ARM::ArchKind::ARMV4:
+  case llvm::ARM::ArchKind::ARMV4T:
+    // Filter __arm_ldcl and __arm_stcl in acle.h
+    FeatureCoprocBF = isThumb() ? 0 : FEATURE_COPROC_B1;
+    break;
+  case llvm::ARM::ArchKind::ARMV5T:
+    FeatureCoprocBF = isThumb() ? 0 : FEATURE_COPROC_B1 | FEATURE_COPROC_B2;
+    break;
+  case llvm::ARM::ArchKind::ARMV5TE:
+  case llvm::ARM::ArchKind::ARMV5TEJ:
+    if (!isThumb())
+      FeatureCoprocBF =
+          FEATURE_COPROC_B1 | FEATURE_COPROC_B2 | FEATURE_COPROC_B3;
+    break;
+  case llvm::ARM::ArchKind::ARMV6:
+  case llvm::ARM::ArchKind::ARMV6K:
+  case llvm::ARM::ArchKind::ARMV6KZ:
+  case llvm::ARM::ArchKind::ARMV6T2:
+    if (!isThumb() || ArchKind == llvm::ARM::ArchKind::ARMV6T2)
+      FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B2 |
+                        FEATURE_COPROC_B3 | FEATURE_COPROC_B4;
+    break;
+  case llvm::ARM::ArchKind::ARMV7A:
+  case llvm::ARM::ArchKind::ARMV7R:
+  case llvm::ARM::ArchKind::ARMV7M:
+  case llvm::ARM::ArchKind::ARMV7S:
+  case llvm::ARM::ArchKind::ARMV7EM:
+    FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B2 |
+                      FEATURE_COPROC_B3 | FEATURE_COPROC_B4;
+    break;
+  case llvm::ARM::ArchKind::ARMV8A:
+  case llvm::ARM::ArchKind::ARMV8R:
+  case llvm::ARM::ArchKind::ARMV8_1A:
+  case llvm::ARM::ArchKind::ARMV8_2A:
+  case llvm::ARM::ArchKind::ARMV8_3A:
+  case llvm::ARM::ArchKind::ARMV8_4A:
+  case llvm::ARM::ArchKind::ARMV8_5A:
+  case llvm::ARM::ArchKind::ARMV8_6A:
+  case llvm::ARM::ArchKind::ARMV8_7A:
+  case llvm::ARM::ArchKind::ARMV8_8A:
+  case llvm::ARM::ArchKind::ARMV8_9A:
+  case llvm::ARM::ArchKind::ARMV9A:
+  case llvm::ARM::ArchKind::ARMV9_1A:
+  case llvm::ARM::ArchKind::ARMV9_2A:
+  case llvm::ARM::ArchKind::ARMV9_3A:
+  case llvm::ARM::ArchKind::ARMV9_4A:
+    // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
+    FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
+    break;
+  case llvm::ARM::ArchKind::ARMV8MMainline:
+  case llvm::ARM::ArchKind::ARMV8_1MMainline:
+    FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B2 |
+                      FEATURE_COPROC_B3 | FEATURE_COPROC_B4;
+    break;
+  }
+  Builder.defineMacro("__ARM_FEATURE_COPROC",
+                      "0x" + Twine::utohexstr(FeatureCoprocBF));
+
   if (ArchKind == llvm::ARM::ArchKind::XSCALE)
     Builder.defineMacro("__XSCALE__");
 
@@ -1229,8 +1294,7 @@ bool ARMTargetInfo::validateConstraintModifier(
   bool isInOut = (Constraint[0] == '+');
 
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:

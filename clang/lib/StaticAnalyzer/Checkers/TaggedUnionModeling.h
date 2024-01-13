@@ -52,7 +52,7 @@ removeInformationStoredForDeadInstances(const CallEvent &Call,
 
 template <class TypeMap>
 void handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
-                                    const SVal &ThisSVal) {
+                                    SVal ThisSVal) {
   ProgramStateRef State = Call.getState();
 
   if (!State)

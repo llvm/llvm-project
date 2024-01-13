@@ -181,6 +181,9 @@ public:
   /// `elems` must be equal to the number of columns.
   unsigned appendExtraRow(ArrayRef<T> elems);
 
+  // Transpose the matrix without modifying it.
+  Matrix<T> transpose() const;
+
   /// Print the matrix.
   void print(raw_ostream &os) const;
   void dump() const;
@@ -188,6 +191,24 @@ public:
   /// Return whether the Matrix is in a consistent state with all its
   /// invariants satisfied.
   bool hasConsistentState() const;
+
+  /// Move the columns in the source range [srcPos, srcPos + num) to the
+  /// specified destination [dstPos, dstPos + num), while moving the columns
+  /// adjacent to the source range to the left/right of the shifted columns.
+  ///
+  /// When moving the source columns right (i.e. dstPos > srcPos), columns that
+  /// were at positions [0, srcPos) and [dstPos + num, nCols) will stay where
+  /// they are; columns that were at positions [srcPos, srcPos + num) will be
+  /// moved to [dstPos, dstPos + num); and columns that were at positions
+  /// [srcPos + num, dstPos + num) will be moved to [srcPos, dstPos).
+  /// Equivalently, the columns [srcPos + num, dstPos + num) are interchanged
+  /// with [srcPos, srcPos + num).
+  /// For example, if m = |0 1 2 3 4 5| then:
+  /// m.moveColumns(1, 3, 2) will result in m = |0 4 1 2 3 5|; or
+  /// m.moveColumns(1, 2, 4) will result in m = |0 3 4 5 1 2|.
+  ///
+  /// The left shift operation (i.e. dstPos < srcPos) works in a similar way.
+  void moveColumns(unsigned srcPos, unsigned num, unsigned dstPos);
 
 protected:
   /// The current number of rows, columns, and reserved columns. The underlying
@@ -265,6 +286,17 @@ public:
   // does not exist, which happens iff det = 0.
   // Assert-fails if the matrix is not square.
   Fraction determinant(FracMatrix *inverse = nullptr) const;
+
+  // Computes the Gram-Schmidt orthogonalisation
+  // of the rows of matrix (cubic time).
+  // The rows of the matrix must be linearly independent.
+  FracMatrix gramSchmidt() const;
+
+  // Run LLL basis reduction on the matrix, modifying it in-place.
+  // The parameter is what [the original
+  // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
+  // calls `y`, usually 3/4.
+  void LLL(Fraction delta);
 };
 
 } // namespace presburger

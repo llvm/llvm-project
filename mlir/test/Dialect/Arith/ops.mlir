@@ -1118,6 +1118,8 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %7 = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
 // CHECK: {{.*}} = arith.mulf %arg0, %arg1 fastmath<fast> : f32
   %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
+// CHECK: {{.*}} = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
+  %9 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }

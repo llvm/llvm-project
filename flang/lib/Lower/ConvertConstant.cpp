@@ -366,6 +366,8 @@ static mlir::Value genStructureComponentInit(
     TODO(loc, "allocatable component in structure constructor");
 
   if (Fortran::semantics::IsPointer(sym)) {
+    if (Fortran::semantics::IsProcedure(sym))
+      TODO(loc, "procedure pointer component initial value");
     mlir::Value initialTarget =
         Fortran::lower::genInitialDataTarget(converter, loc, componentTy, expr);
     res = builder.create<fir::InsertValueOp>(

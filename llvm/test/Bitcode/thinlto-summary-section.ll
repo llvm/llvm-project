@@ -6,8 +6,8 @@
 
 ; Flags should be 0x57 (87) for local linkage (0x3), dso_local (0x40) and not being importable
 ; (0x10) due to local linkage plus having a section.
-; CHECK: <PERMODULE {{.*}} op1=87
-; COMBINED-DAG: <COMBINED {{.*}} op2=87
+; CHECK: <PERMODULE_PROFILE {{.*}} op1=87
+; COMBINED-DAG: <COMBINED_PROFILE {{.*}} op2=87
 define internal void @functionWithSection() section "some_section" {
     ret void
 }

@@ -457,6 +457,11 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     }
 
     Value source = cloneOp.getInput();
+    if (source.getType() != cloneOp.getType() &&
+        !memref::CastOp::areCastCompatible({source.getType()},
+                                           {cloneOp.getType()}))
+      return failure();
+
     // Aims to find the dealloc op for the canonical source
     // which otherwise could prevent removal of unnecessary allocs.
     Value canonicalSource = source;
@@ -507,8 +512,10 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
         return failure();
     }
 
-    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
-                                                source);
+    if (source.getType() != cloneOp.getType())
+      source = rewriter.create<memref::CastOp>(cloneOp.getLoc(),
+                                               cloneOp.getType(), source);
+    rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
   }

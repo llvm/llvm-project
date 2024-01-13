@@ -10,10 +10,10 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds half, ptr [[ARG:%.*]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x half> [[TMP2]], <half 0xH5380, half 0xH5380>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x half> [[TMP3]], <half 0xH57F0, half 0xH57F0>
-; CHECK-NEXT:    store <2 x half> [[TMP4]], ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x half> [[TMP1]], <half 0xH5380, half 0xH5380>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x half> [[TMP2]], <half 0xH57F0, half 0xH57F0>
+; CHECK-NEXT:    store <2 x half> [[TMP3]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    ret void
 ;
 ; NOVECTOR-LABEL: @fusion(
@@ -21,7 +21,7 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; NOVECTOR-NEXT:    [[TMP4:%.*]] = or i32 [[TMP]], [[ARG3:%.*]]
 ; NOVECTOR-NEXT:    [[TMP5:%.*]] = shl nuw nsw i32 [[TMP4]], 2
 ; NOVECTOR-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; NOVECTOR-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], 1
+; NOVECTOR-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[TMP6]], 1
 ; NOVECTOR-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP6]]
 ; NOVECTOR-NEXT:    [[TMP12:%.*]] = load half, ptr [[TMP11]], align 8
 ; NOVECTOR-NEXT:    [[TMP13:%.*]] = fmul fast half [[TMP12]], 0xH5380
@@ -40,7 +40,7 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
   %tmp4 = or i32 %tmp, %arg3
   %tmp5 = shl nuw nsw i32 %tmp4, 2
   %tmp6 = zext i32 %tmp5 to i64
-  %tmp7 = or i64 %tmp6, 1
+  %tmp7 = or disjoint i64 %tmp6, 1
   %tmp11 = getelementptr inbounds half, ptr %arg1, i64 %tmp6
   %tmp12 = load half, ptr %tmp11, align 8
   %tmp13 = fmul fast half %tmp12, 0xH5380

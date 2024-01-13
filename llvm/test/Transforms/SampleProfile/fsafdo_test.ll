@@ -13,7 +13,7 @@ define dso_local void @foo() #0 !dbg !29 {
 
 entry:
   br label %for.cond1.preheader, !dbg !30
-; CHECK: edge entry -> for.cond1.preheader probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %entry -> %for.cond1.preheader probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 for.cond1.preheader:
   %j.012 = phi i32 [ 0, %entry ], [ %inc11, %if.end9.3 ]
@@ -22,29 +22,29 @@ for.cond1.preheader:
   %0 = and i32 %call, 1, !dbg !33
   %tobool.not = icmp eq i32 %0, 0, !dbg !33
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !35
-; CHECK: edge for.cond1.preheader -> if.end probability is 0x3f6262b8 / 0x80000000 = 49.52%
-; CHECK: edge for.cond1.preheader -> if.then probability is 0x409d9d48 / 0x80000000 = 50.48%
+; CHECK: edge %for.cond1.preheader -> %if.end probability is 0x3f6262b8 / 0x80000000 = 49.52%
+; CHECK: edge %for.cond1.preheader -> %if.then probability is 0x409d9d48 / 0x80000000 = 50.48%
 
 
 if.then:
   %mul4 = shl nsw i32 %call, 1, !dbg !36
   tail call void @work(i32 %mul4), !dbg !37
   br label %if.end, !dbg !38
-; CHECK: edge if.then -> if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then -> %if.end probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end:
   %1 = and i32 %call, 3, !dbg !39
   %tobool6.not = icmp eq i32 %1, 0, !dbg !39
   br i1 %tobool6.not, label %if.end9, label %if.then7, !dbg !40
-; CHECK: edge if.end -> if.end9 probability is 0x22c6bac3 / 0x80000000 = 27.17%
-; CHECK: edge if.end -> if.then7 probability is 0x5d39453d / 0x80000000 = 72.83%
+; CHECK: edge %if.end -> %if.end9 probability is 0x22c6bac3 / 0x80000000 = 27.17%
+; CHECK: edge %if.end -> %if.then7 probability is 0x5d39453d / 0x80000000 = 72.83%
 
 
 if.then7:
   %mul8 = mul nsw i32 %call, 3, !dbg !41
   tail call void @work(i32 %mul8), !dbg !42
   br label %if.end9, !dbg !43
-; CHECK: edge if.then7 -> if.end9 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then7 -> %if.end9 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end9:
   %add.1 = or i32 %mul, 1, !dbg !44
@@ -52,8 +52,8 @@ if.end9:
   %2 = and i32 %call.1, 1, !dbg !33
   %tobool.not.1 = icmp eq i32 %2, 0, !dbg !33
   br i1 %tobool.not.1, label %if.end.1, label %if.then.1, !dbg !35
-; CHECK: edge if.end9 -> if.end.1 probability is 0x3f6262b8 / 0x80000000 = 49.52%
-; CHECK: edge if.end9 -> if.then.1 probability is 0x409d9d48 / 0x80000000 = 50.48%
+; CHECK: edge %if.end9 -> %if.end.1 probability is 0x3f6262b8 / 0x80000000 = 49.52%
+; CHECK: edge %if.end9 -> %if.then.1 probability is 0x409d9d48 / 0x80000000 = 50.48%
 
 for.end12:
   ret void, !dbg !45
@@ -62,20 +62,20 @@ if.then.1:
   %mul4.1 = shl nsw i32 %call.1, 1, !dbg !36
   tail call void @work(i32 %mul4.1), !dbg !37
   br label %if.end.1, !dbg !38
-; CHECK: edge if.then.1 -> if.end.1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then.1 -> %if.end.1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end.1:
   %3 = and i32 %call.1, 3, !dbg !39
   %tobool6.not.1 = icmp eq i32 %3, 0, !dbg !39
   br i1 %tobool6.not.1, label %if.end9.1, label %if.then7.1, !dbg !40
-; CHECK: edge if.end.1 -> if.end9.1 probability is 0x22c6bac3 / 0x80000000 = 27.17%
-; CHECK: edge if.end.1 -> if.then7.1 probability is 0x5d39453d / 0x80000000 = 72.83%
+; CHECK: edge %if.end.1 -> %if.end9.1 probability is 0x22c6bac3 / 0x80000000 = 27.17%
+; CHECK: edge %if.end.1 -> %if.then7.1 probability is 0x5d39453d / 0x80000000 = 72.83%
 
 if.then7.1:
   %mul8.1 = mul nsw i32 %call.1, 3, !dbg !41
   tail call void @work(i32 %mul8.1), !dbg !42
   br label %if.end9.1, !dbg !43
-; CHECK: edge if.then7.1 -> if.end9.1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then7.1 -> %if.end9.1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end9.1:
   %add.2 = or i32 %mul, 2, !dbg !44
@@ -83,27 +83,27 @@ if.end9.1:
   %4 = and i32 %call.2, 1, !dbg !33
   %tobool.not.2 = icmp eq i32 %4, 0, !dbg !33
   br i1 %tobool.not.2, label %if.end.2, label %if.then.2, !dbg !35
-; CHECK: edge if.end9.1 -> if.end.2 probability is 0x3f6262b8 / 0x80000000 = 49.52%
-; CHECK: edge if.end9.1 -> if.then.2 probability is 0x409d9d48 / 0x80000000 = 50.48%
+; CHECK: edge %if.end9.1 -> %if.end.2 probability is 0x3f6262b8 / 0x80000000 = 49.52%
+; CHECK: edge %if.end9.1 -> %if.then.2 probability is 0x409d9d48 / 0x80000000 = 50.48%
 
 if.then.2:
   %mul4.2 = shl nsw i32 %call.2, 1, !dbg !36
   tail call void @work(i32 %mul4.2), !dbg !37
   br label %if.end.2, !dbg !38
-; CHECK: edge if.then.2 -> if.end.2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then.2 -> %if.end.2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end.2:
   %5 = and i32 %call.2, 3, !dbg !39
   %tobool6.not.2 = icmp eq i32 %5, 0, !dbg !39
   br i1 %tobool6.not.2, label %if.end9.2, label %if.then7.2, !dbg !40
-; CHECK: edge if.end.2 -> if.end9.2 probability is 0x22c6bac3 / 0x80000000 = 27.17%
-; CHECK: edge if.end.2 -> if.then7.2 probability is 0x5d39453d / 0x80000000 = 72.83%
+; CHECK: edge %if.end.2 -> %if.end9.2 probability is 0x22c6bac3 / 0x80000000 = 27.17%
+; CHECK: edge %if.end.2 -> %if.then7.2 probability is 0x5d39453d / 0x80000000 = 72.83%
 
 if.then7.2:
   %mul8.2 = mul nsw i32 %call.2, 3, !dbg !41
   tail call void @work(i32 %mul8.2), !dbg !42
   br label %if.end9.2, !dbg !43
-; CHECK: edge if.then7.2 -> if.end9.2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then7.2 -> %if.end9.2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end9.2:
   %add.3 = or i32 %mul, 3, !dbg !44
@@ -111,34 +111,34 @@ if.end9.2:
   %6 = and i32 %call.3, 1, !dbg !33
   %tobool.not.3 = icmp eq i32 %6, 0, !dbg !33
   br i1 %tobool.not.3, label %if.end.3, label %if.then.3, !dbg !35
-; CHECK: edge if.end9.2 -> if.end.3 probability is 0x3f6262b8 / 0x80000000 = 49.52%
-; CHECK: edge if.end9.2 -> if.then.3 probability is 0x409d9d48 / 0x80000000 = 50.48%
+; CHECK: edge %if.end9.2 -> %if.end.3 probability is 0x3f6262b8 / 0x80000000 = 49.52%
+; CHECK: edge %if.end9.2 -> %if.then.3 probability is 0x409d9d48 / 0x80000000 = 50.48%
 
 if.then.3:
   %mul4.3 = shl nsw i32 %call.3, 1, !dbg !36
   tail call void @work(i32 %mul4.3), !dbg !37
   br label %if.end.3, !dbg !38
-; CHECK: edge if.then.3 -> if.end.3 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then.3 -> %if.end.3 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end.3:
   %7 = and i32 %call.3, 3, !dbg !39
   %tobool6.not.3 = icmp eq i32 %7, 0, !dbg !39
   br i1 %tobool6.not.3, label %if.end9.3, label %if.then7.3, !dbg !40
-; CHECK: edge if.end.3 -> if.end9.3 probability is 0x22c6bac3 / 0x80000000 = 27.17%
-; CHECK: edge if.end.3 -> if.then7.3 probability is 0x5d39453d / 0x80000000 = 72.83%
+; CHECK: edge %if.end.3 -> %if.end9.3 probability is 0x22c6bac3 / 0x80000000 = 27.17%
+; CHECK: edge %if.end.3 -> %if.then7.3 probability is 0x5d39453d / 0x80000000 = 72.83%
 
 if.then7.3:
   %mul8.3 = mul nsw i32 %call.3, 3, !dbg !41
   tail call void @work(i32 %mul8.3), !dbg !42
   br label %if.end9.3, !dbg !43
-; CHECK: edge if.then7.3 -> if.end9.3 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %if.then7.3 -> %if.end9.3 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 if.end9.3:
   %inc11 = add nuw nsw i32 %j.012, 1, !dbg !46
   %exitcond.not = icmp eq i32 %inc11, 48, !dbg !48
   br i1 %exitcond.not, label %for.end12, label %for.cond1.preheader, !dbg !30, !llvm.loop !49
-; CHECK: edge if.end9.3 -> for.end12 probability is 0x00834dd9 / 0x80000000 = 0.40%
-; CHECK: edge if.end9.3 -> for.cond1.preheader probability is 0x7f7cb227 / 0x80000000 = 99.60% [HOT edge]
+; CHECK: edge %if.end9.3 -> %for.end12 probability is 0x00834dd9 / 0x80000000 = 0.40%
+; CHECK: edge %if.end9.3 -> %for.cond1.preheader probability is 0x7f7cb227 / 0x80000000 = 99.60% [HOT edge]
 }
 
 define dso_local i32 @main() #3 !dbg !52 {
