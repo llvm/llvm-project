@@ -161,14 +161,14 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 /// At step d = 0, we let vs = [1]. Clearly this is not orthogonal to
 /// any vector in the set {x_1[0], ..., x_n[0]}, except the null ones,
 /// which we ignore.
-/// At step d = t + 1, we need a number v
-/// s.t. <x_i[:t+1], vs++[v]> != 0 for all i.
-/// => <x_i[:t], vs> + x_i[t+1]*v != 0
-/// => v != - <x_i[:t], vs> / x_i[t+1]
+/// At step d > 0 , we need a number v
+/// s.t. <x_i[:d], vs++[v]> != 0 for all i.
+/// => <x_i[:d-1], vs> + x_i[d]*v != 0
+/// => v != - <x_i[:d-1], vs> / x_i[d]
 /// We compute this value for all x_i, and then
 /// set v to be the maximum element of this set plus one. Thus
 /// v is outside the set as desired, and we append it to vs
-/// to obtain the result of the t+1'th step.
+/// to obtain the result of the d'th step.
 Point mlir::presburger::detail::getNonOrthogonalVector(
     std::vector<Point> vectors) {
   unsigned dim = vectors[0].size();
@@ -223,8 +223,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 &&
-         "division by empty denominator in rational function!");
+  assert(den.size() != 0 && "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   for (const QuasiPolynomial &qp : num)
