@@ -119,22 +119,16 @@ Fraction getC(QuasiPolynomial q) {
 TEST(BarvinokTest, getCoefficientInRationalFunction) {
   std::vector<QuasiPolynomial> numerator = {
       QuasiPolynomial(0, 2), QuasiPolynomial(0, 3), QuasiPolynomial(0, 5)};
-
   std::vector<Fraction> denominator = {Fraction(1), Fraction(0), Fraction(4),
                                        Fraction(3)};
-
   QuasiPolynomial coeff =
       getCoefficientInRationalFunction(1, numerator, denominator);
-
   EXPECT_EQ(coeff.getConstantTerm(), 3);
 
   numerator = {QuasiPolynomial(0, -1), QuasiPolynomial(0, 4),
                QuasiPolynomial(0, -2), QuasiPolynomial(0, 5),
                QuasiPolynomial(0, 6)};
-
   denominator = {Fraction(8), Fraction(4), Fraction(0), Fraction(-2)};
-
   coeff = getCoefficientInRationalFunction(3, numerator, denominator);
-
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
