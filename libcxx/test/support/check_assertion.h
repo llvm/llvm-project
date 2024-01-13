@@ -248,7 +248,7 @@ void std::__libcpp_verbose_abort(char const* message, ...) {
   assert(match_result.size() == 5);
 
   std::string file = match_result[1];
-  int line = std::stoi(match_result[2]);
+  int line         = std::stoi(match_result[2]);
   // Omitting `expression` in `match_result[3]`
   std::string failure_reason = match_result[4];
 
