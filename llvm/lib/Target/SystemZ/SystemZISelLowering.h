@@ -785,8 +785,7 @@ private:
                                           unsigned Opcode, bool NoFloat) const;
   MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
-                                         unsigned Opcode,
-                                         unsigned CmpOpcode) const;
+                                         unsigned Opcode) const;
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
 

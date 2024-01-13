@@ -55,20 +55,18 @@ let isCodeGenOnly = 1 in
 // not be used for comparison if the result will be used afterwards.
 let Uses = [FPC], mayRaiseFPException = 1,
     Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  defm LTEBR : LoadAndTestRRE<"ltebr", 0xB302, FP32>;
-  defm LTDBR : LoadAndTestRRE<"ltdbr", 0xB312, FP64>;
-  defm LTXBR : LoadAndTestRRE<"ltxbr", 0xB342, FP128>;
+  def LTEBR : UnaryRRE<"ltebr", 0xB302, null_frag, FP32, FP32>;
+  def LTDBR : UnaryRRE<"ltdbr", 0xB312, null_frag, FP64, FP64>;
+  def LTXBR : UnaryRRE<"ltxbr", 0xB342, null_frag, FP128, FP128>;
 }
 
-// Use a normal load-and-test for compare against zero in case of vector
-// support (via a pseudo to simplify instruction selection). For a non-vector
-// subtarget these could be expanded to the "Compare" version which does not
-// clobber an extra phys-reg, but only if the result is not live. XXX Compare worthwhile?
+// Use a load-and-test for compare against zero (via a pseudo to simplify
+// instruction selection).
 let Uses = [FPC], mayRaiseFPException = 1,
     Defs = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  def LTEBRCompare_Pseudo : Pseudo<(outs), (ins FP32:$R1, FP32:$R2), []>;
-  def LTDBRCompare_Pseudo : Pseudo<(outs), (ins FP64:$R1, FP64:$R2), []>;
-  def LTXBRCompare_Pseudo : Pseudo<(outs), (ins FP128:$R1, FP128:$R2), []>;
+  def LTEBRCompare_Pseudo : Pseudo<(outs), (ins FP32:$R1), []>;
+  def LTDBRCompare_Pseudo : Pseudo<(outs), (ins FP64:$R1), []>;
+  def LTXBRCompare_Pseudo : Pseudo<(outs), (ins FP128:$R1), []>;
 }
 defm : CompareZeroFP<LTEBRCompare_Pseudo, FP32>;
 defm : CompareZeroFP<LTDBRCompare_Pseudo, FP64>;

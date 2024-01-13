@@ -492,18 +492,10 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
 
 // Return true if Compare is a comparison against zero.
 static bool isCompareZero(MachineInstr &Compare) {
-  switch (Compare.getOpcode()) {
-  case SystemZ::LTEBRCompare:
-  case SystemZ::LTDBRCompare:
-  case SystemZ::LTXBRCompare:
+  if (isLoadAndTestAsCmp(Compare))
     return true;
-
-  default:
-    if (isLoadAndTestAsCmp(Compare))
-      return true;
-    return Compare.getNumExplicitOperands() == 2 &&
-           Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
-  }
+  return Compare.getNumExplicitOperands() == 2 &&
+    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
 }
 
 // Try to optimize cases where comparison instruction Compare is testing
