@@ -16,6 +16,7 @@
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -183,9 +184,11 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
     if (ShMask.isSubsetOf(AndMask)) {
       ShAmtReg = AndSrcReg;
     } else {
-      // TODO:
       // SimplifyDemandedBits may have optimized the mask so try restoring any
       // bits that are known zero.
+      KnownBits Known = KB->getKnownBits(ShAmtReg);
+      if (ShMask.isSubsetOf(AndMask | Known.Zero))
+        ShAmtReg = AndSrcReg;
     }
   }
 
@@ -200,7 +203,7 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
     if (Imm != 0 && Imm.urem(ShiftWidth) == 0) {
       // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
       // to generate a NEG instead of a SUB of a constant.
-      ShAmtReg = MRI.createGenericVirtualRegister(ShiftLLT);
+      ShAmtReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       unsigned NegOpc = Subtarget->is64Bit() ? RISCV::SUBW : RISCV::SUB;
       return {{[=](MachineInstrBuilder &MIB) {
         MachineIRBuilder(*MIB.getInstr())
@@ -208,10 +211,10 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
         MIB.addReg(ShAmtReg);
       }}};
     }
-    if ((Imm.urem(ShiftWidth) & (ShiftWidth - 1)) == ShiftWidth - 1) {
+    if (Imm.urem(ShiftWidth) == ShiftWidth - 1) {
       // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
       // to generate a NOT instead of a SUB of a constant.
-      ShAmtReg = MRI.createGenericVirtualRegister(ShiftLLT);
+      ShAmtReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       return {{[=](MachineInstrBuilder &MIB) {
         MachineIRBuilder(*MIB.getInstr())
             .buildInstr(RISCV::XORI, {ShAmtReg}, {Reg})

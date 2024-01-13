@@ -78,6 +78,35 @@ body:             |
 ...
 
 ---
+name:            shl_and_with_simplified_mask
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: shl_and_with_simplified_mask
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY1]], 62
+    ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[ANDI]]
+    ; CHECK-NEXT: $x10 = COPY [[SLL]]
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:gprb(s64) = COPY $x10
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_CONSTANT i64 62
+    %3:gprb(s64) = G_AND %1, %2
+    %4:gprb(s64) = G_CONSTANT i64 62
+    %5:gprb(s64) = G_AND %3, %4
+    %6:gprb(s64) = G_SHL %0, %5(s64)
+    $x10 = COPY %6(s64)
+    PseudoRET implicit $x10
+...
+
+---
 name:            shl_add
 legalized:       true
 regBankSelected: true
@@ -197,18 +226,18 @@ body:             |
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: %addr:gpr = COPY $x11
-    ; CHECK-NEXT: [[LBU:%[0-9]+]]:gpr = LBU %addr, 0 :: (load (s8))
-    ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[LBU]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[SLL:%[0-9]+]]:gpr = SLL [[COPY]], [[LW]]
     ; CHECK-NEXT: $x10 = COPY [[SLL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
-    %addr:gprb(p0) = COPY $x11
-    %1:gprb(s32) = G_LOAD %addr(p0) :: (load (s8))
-    %2:gprb(s32) = G_CONSTANT i32 63
-    %3:gprb(s32) = G_AND %1, %2
-    %4:gprb(s64) = G_ZEXT %3
-    %5:gprb(s64) = G_SHL %0, %4(s64)
-    $x10 = COPY %5(s64)
+    %1:gprb(p0) = COPY $x11
+    %2:gprb(s32) = G_LOAD %1(p0) :: (load (s32))
+    %3:gprb(s32) = G_CONSTANT i32 63
+    %4:gprb(s32) = G_AND %2, %3
+    %5:gprb(s64) = G_ZEXT %4
+    %6:gprb(s64) = G_SHL %0, %5(s64)
+    $x10 = COPY %6(s64)
     PseudoRET implicit $x10
 ...
