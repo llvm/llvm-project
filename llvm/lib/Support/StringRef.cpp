@@ -517,8 +517,7 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
 
   // Skip leading zeroes.  This can be a significant improvement if
   // it means we don't need > 64 bits.
-  while (!Str.empty() && Str.front() == '0')
-    Str = Str.substr(1);
+  Str = Str.ltrim('0');
 
   // If it was nothing but zeroes....
   if (Str.empty()) {

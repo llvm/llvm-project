@@ -181,6 +181,13 @@ static opt<bool> FindAllApple(
 static opt<bool> IgnoreCase("ignore-case",
                             desc("Ignore case distinctions when using --name."),
                             value_desc("i"), cat(DwarfDumpCategory));
+static opt<bool> DumpNonSkeleton(
+    "dwo",
+    desc("Dump the non skeleton DIE in the .dwo or .dwp file after dumping the "
+         "skeleton DIE from the main executable. This allows dumping the .dwo "
+         "files with resolved addresses."),
+    value_desc("d"), cat(DwarfDumpCategory));
+
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
@@ -315,6 +322,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
+  DumpOpts.DumpNonSkeleton = DumpNonSkeleton;
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
@@ -394,18 +402,34 @@ static bool filterByName(const StringSet<> &Names, DWARFDie Die,
 }
 
 /// Print only DIEs that have a certain name.
-static void filterByName(const StringSet<> &Names,
-                         DWARFContext::unit_iterator_range CUs, raw_ostream &OS,
-                         TargetCallbacks &Callbacks) {
-  for (const auto &CU : CUs)
-    for (const auto &Entry : CU->dies()) {
-      DWARFDie Die = {CU.get(), &Entry};
+static void filterByName(
+    const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
+    raw_ostream &OS,
+#if FIXME // removed by Juan in Mar 2023
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg,
+#endif
+    TargetCallbacks &Callbacks) {
+  auto filterDieNames = [&](DWARFUnit *Unit) {
+    for (const auto &Entry : Unit->dies()) {
+      DWARFDie Die = {Unit, &Entry};
       if (const char *Name = Die.getName(DINameKind::ShortName))
         if (filterByName(Names, Die, Name, OS, Callbacks))
           continue;
       if (const char *Name = Die.getName(DINameKind::LinkageName))
         filterByName(Names, Die, Name, OS, Callbacks);
     }
+  };
+  for (const auto &CU : CUs) {
+    filterDieNames(CU.get());
+    if (DumpNonSkeleton) {
+      // If we have split DWARF, then recurse down into the .dwo files as well.
+      DWARFDie CUDie = CU->getUnitDIE(false);
+      DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
+      // If we have a DWO file, we need to search it as well
+      if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
+        filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+    }
+  }
 }
 
 static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
@@ -506,7 +530,7 @@ static void findAllApple(
 /// information or probably display all matched entries, or something else...
 static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
                    raw_ostream &OS) {
-  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup);
+  auto DIEsForAddr = DICtx.getDIEsForAddress(Lookup, DumpNonSkeleton);
 
   if (!DIEsForAddr)
     return false;

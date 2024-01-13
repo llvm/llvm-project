@@ -31,8 +31,8 @@ static int64_t getInteger(opt::InputArgList &args, unsigned key,
 
   int64_t v;
   StringRef s = a->getValue();
-  if (base == 16 && (s.starts_with("0x") || s.starts_with("0X")))
-    s = s.drop_front(2);
+  if (base == 16)
+    s.consume_front_insensitive("0x");
   if (to_integer(s, v, base))
     return v;
 

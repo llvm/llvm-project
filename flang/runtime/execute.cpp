@@ -117,7 +117,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-  const char *newCmd{EnsureNullTerminated(
+  char *newCmd{EnsureNullTerminated(
       command.OffsetElement(), command.ElementBytes(), terminator)};
 
   if (exitstat) {

@@ -1317,7 +1317,7 @@ void request_evaluate(const llvm::json::Object &request) {
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
       VariableDescription desc(value);
-      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
         auto variableReference = g_dap.variables.InsertExpandableVariable(
