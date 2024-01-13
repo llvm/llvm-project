@@ -102,14 +102,6 @@ TEST(BarvinokTest, getNonOrthogonalVector) {
     EXPECT_FALSE(dotProduct(nonOrth, vector) == 0);
 }
 
-Fraction getC(QuasiPolynomial q) {
-  Fraction t = 0;
-  for (const Fraction &c : q.getCoefficients())
-    t += c;
-
-  return t;
-}
-
 // The following polynomials are randomly generated and the
 // coefficients are computed by hand.
 // Although the function allows the coefficients of the numerator
