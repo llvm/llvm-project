@@ -240,6 +240,47 @@ void Matrix<T>::fillRow(unsigned row, const T &value) {
     at(row, col) = value;
 }
 
+// moveColumns is implemented by moving the columns adjacent to the source range
+// to their final position. When moving right (i.e. dstPos > srcPos), the range
+// of the adjacent columns is [srcPos + num, dstPos + num). When moving left
+// (i.e. dstPos < srcPos) the range of the adjacent columns is [dstPos, srcPos).
+// First, zeroed out columns are inserted in the final positions of the adjacent
+// columns. Then, the adjacent columns are moved to their final positions by
+// swapping them with the zeroed columns. Finally, the now zeroed adjacent
+// columns are deleted.
+template <typename T>
+void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
+  if (num == 0)
+    return;
+
+  int offset = dstPos - srcPos;
+  if (offset == 0)
+    return;
+
+  assert(srcPos + num <= getNumColumns() &&
+         "move source range exceeds matrix columns");
+  assert(dstPos + num <= getNumColumns() &&
+         "move destination range exceeds matrix columns");
+
+  unsigned insertCount = offset > 0 ? offset : -offset;
+  unsigned finalAdjStart = offset > 0 ? srcPos : srcPos + num;
+  unsigned curAdjStart = offset > 0 ? srcPos + num : dstPos;
+  // TODO: This can be done using std::rotate.
+  // Insert new zero columns in the positions where the adjacent columns are to
+  // be moved.
+  insertColumns(finalAdjStart, insertCount);
+  // Update curAdjStart if insertion of new columns invalidates it.
+  if (finalAdjStart < curAdjStart)
+    curAdjStart += insertCount;
+
+  // Swap the adjacent columns with inserted zero columns.
+  for (unsigned i = 0; i < insertCount; ++i)
+    swapColumns(finalAdjStart + i, curAdjStart + i);
+
+  // Delete the now redundant zero columns.
+  removeColumns(curAdjStart, insertCount);
+}
+
 template <typename T>
 void Matrix<T>::addToRow(unsigned sourceRow, unsigned targetRow,
                          const T &scale) {
