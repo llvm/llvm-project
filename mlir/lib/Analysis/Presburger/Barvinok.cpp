@@ -180,7 +180,6 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
            disallowedValue = Fraction(0, 1);
 
   for (unsigned d = 1; d < dim; ++d) {
-
     // Compute the disallowed values  - <x_i[:d-1], vs> / x_i[d] for each i.
     maxDisallowedValue = -Fraction(1, 0);
     for (const Point &vector : vectors) {
