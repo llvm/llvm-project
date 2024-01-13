@@ -20,7 +20,8 @@
 #if (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301)) &&     \
     (defined(__aarch64__) || defined(__riscv) || defined(__x86_64__))
 typedef _Float128 float128;
-#elif (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 600)) &&\
+#elif (defined(LIBC_COMPILER_CLANG_VER) &&                                     \
+       (LIBC_COMPILER_CLANG_VER >= 600)) &&                                    \
     (defined(__x86_64__) && !defined(__Fuchsia__))
 typedef __float128 float128;
 #elif (LDBL_MANT_DIG == 113) || (__LDBL_MANT_DIG__ == 113)
