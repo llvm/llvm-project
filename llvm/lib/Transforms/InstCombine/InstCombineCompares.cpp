@@ -5703,6 +5703,15 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
       return new ICmpInst(ICmp.getPredicate(), Op0Src, NewOp1);
   }
 
+  // Turn icmp pred (inttoptr x), (inttoptr y) into icmp pred x, y
+  if (CastOp0->getOpcode() == Instruction::IntToPtr &&
+      CompatibleSizes(DestTy, SrcTy)) {
+    Value *Op1Src;
+    if (match(ICmp.getOperand(1), m_IntToPtr(m_Value(Op1Src))) &&
+        Op1Src->getType() == SrcTy)
+      return new ICmpInst(ICmp.getPredicate(), Op0Src, Op1Src);
+  }
+
   if (Instruction *R = foldICmpWithTrunc(ICmp))
     return R;
 

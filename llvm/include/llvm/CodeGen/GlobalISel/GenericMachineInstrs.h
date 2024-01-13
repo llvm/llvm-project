@@ -564,11 +564,11 @@ public:
   /// Returns the number of incoming values.
   unsigned getNumIncomingValues() const { return (getNumOperands() - 1) / 2; }
   /// Returns the I'th incoming vreg.
-  Register getIncomingValue(unsigned I) {
+  Register getIncomingValue(unsigned I) const {
     return getOperand(I * 2 + 1).getReg();
   }
   /// Returns the I'th incoming basic block.
-  MachineBasicBlock *getIncomingBlock(unsigned I) {
+  MachineBasicBlock *getIncomingBlock(unsigned I) const {
     return getOperand(I * 2 + 2).getMBB();
   }
 

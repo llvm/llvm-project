@@ -36,7 +36,6 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -377,7 +376,6 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
-  llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");

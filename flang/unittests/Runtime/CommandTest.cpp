@@ -691,11 +691,18 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
   // guarantee 1 char longer than max, last char should be pad space
-  const int charLen{LOGIN_NAME_MAX + 2};
-  char input[charLen];
+  int charLen;
+#ifdef LOGIN_NAME_MAX
+  charLen = LOGIN_NAME_MAX + 2;
+#else
+  charLen = sysconf(_SC_LOGIN_NAME_MAX) + 2;
+  if (charLen == -1)
+    charLen = _POSIX_LOGIN_NAME_MAX + 2;
+#endif
+  std::vector<char> input(charLen);
 
   FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input.data()), charLen);
 
   EXPECT_EQ(input[charLen - 1], ' ');
 }

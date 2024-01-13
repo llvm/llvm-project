@@ -1976,12 +1976,18 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
-    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.init");
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (Handler.isSymbolInImage(*this, Image, "amdgcn.device.fini"))
+      Image.setPendingGlobalDtors();
+
+    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
   }
 
   virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) override {
-    return callGlobalCtorDtorCommon(Plugin, Image, "amdgcn.device.fini");
+    if (Image.hasPendingGlobalDtors())
+      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+    return Plugin::success();
   }
 
   const uint64_t getStreamBusyWaitMicroseconds() const {
@@ -2701,15 +2707,17 @@ private:
   /// Common method to invoke a single threaded constructor or destructor
   /// kernel by name.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
-                                 const char *Name) {
+                                 bool IsCtor) {
+    const char *KernelName =
+        IsCtor ? "amdgcn.device.init" : "amdgcn.device.fini";
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'amdgpu-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.isSymbolInImage(*this, Image, Name))
+    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
 
     // Allocate and construct the AMDGPU kernel.
-    AMDGPUKernelTy AMDGPUKernel(Name);
+    AMDGPUKernelTy AMDGPUKernel(KernelName);
     if (auto Err = AMDGPUKernel.init(*this, Image))
       return Err;
 
