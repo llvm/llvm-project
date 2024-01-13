@@ -260,6 +260,10 @@ Changes in existing checks
   casting during type conversions at variable initialization, now with improved
   compatibility for C++17 and later versions.
 
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  to correctly emit fixes.
+
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
