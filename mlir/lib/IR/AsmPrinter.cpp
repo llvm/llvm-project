@@ -183,6 +183,10 @@ struct AsmPrinterOptions {
       llvm::cl::desc("Print with local scope and inline information (eliding "
                      "aliases for attributes, types, and locations")};
 
+  llvm::cl::opt<bool> skipRegionsOpt{
+      "mlir-print-skip-regions", llvm::cl::init(false),
+      llvm::cl::desc("Skip regions when printing ops.")};
+
   llvm::cl::opt<bool> printValueUsers{
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
@@ -217,6 +221,7 @@ OpPrintingFlags::OpPrintingFlags()
   printGenericOpFormFlag = clOptions->printGenericOpFormOpt;
   assumeVerifiedFlag = clOptions->assumeVerifiedOpt;
   printLocalScope = clOptions->printLocalScopeOpt;
+  skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
 }
 

@@ -311,7 +311,7 @@ void test_svmls_single1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __a
 //
 void test_svmls_single2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_f16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_f16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single2_bf16(
@@ -330,7 +330,7 @@ void test_svmls_single2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t z
 //
 void test_svmls_single2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_bf16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_bf16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single2_u16(
@@ -349,7 +349,7 @@ void test_svmls_single2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_
 //
 void test_svmls_single2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_u16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_u16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single2_s16(
@@ -368,7 +368,7 @@ void test_svmls_single2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm)
 //
 void test_svmls_single2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_s16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_s16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single4_f16(
@@ -391,7 +391,7 @@ void test_svmls_single2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) _
 //
 void test_svmls_single4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_f16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_f16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single4_bf16(
@@ -414,7 +414,7 @@ void test_svmls_single4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t z
 //
 void test_svmls_single4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_bf16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_bf16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single4_u16(
@@ -437,7 +437,7 @@ void test_svmls_single4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_
 //
 void test_svmls_single4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_u16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_u16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmls_single4_s16(
@@ -460,7 +460,7 @@ void test_svmls_single4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm)
 //
 void test_svmls_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_single_za32,,_s16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmls,_single,_za32,_s16,_vg2x4)(slice_base, zn, zm);
 }
 
 //
@@ -479,7 +479,7 @@ void test_svmls_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) _
 //
 void test_svmls_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_f16,,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_f16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane1_bf16(
@@ -494,7 +494,7 @@ void test_svmls_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) _
 //
 void test_svmls_lane1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_bf16,,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_bf16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane1_u16(
@@ -509,7 +509,7 @@ void test_svmls_lane1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm
 //
 void test_svmls_lane1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_u16,,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_u16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane1_s16(
@@ -524,7 +524,7 @@ void test_svmls_lane1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __a
 //
 void test_svmls_lane1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_s16,,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_s16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane2_f16(
@@ -543,7 +543,7 @@ void test_svmls_lane1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm
 //
 void test_svmls_lane2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_f16,,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_f16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane2_bf16(
@@ -562,7 +562,7 @@ void test_svmls_lane2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm)
 //
 void test_svmls_lane2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_bf16,,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_bf16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane2_u16(
@@ -581,7 +581,7 @@ void test_svmls_lane2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t 
 //
 void test_svmls_lane2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_u16,,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_u16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane2_s16(
@@ -600,7 +600,7 @@ void test_svmls_lane2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) _
 //
 void test_svmls_lane2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_s16,,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_s16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane4_f16(
@@ -623,7 +623,7 @@ void test_svmls_lane2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __a
 //
 void test_svmls_lane4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_f16,,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_f16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane4_bf16(
@@ -646,7 +646,7 @@ void test_svmls_lane4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm)
 //
 void test_svmls_lane4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_bf16,,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_bf16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane4_u16(
@@ -669,7 +669,7 @@ void test_svmls_lane4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t 
 //
 void test_svmls_lane4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_u16,,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_u16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmls_lane4_s16(
@@ -692,5 +692,5 @@ void test_svmls_lane4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) _
 //
 void test_svmls_lane4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
 {
-   SVE_ACLE_FUNC(svmls_lane_za32,,_s16,,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmls_lane_za32,_s16,_vg2x4,,)(slice_base, zn, zm, 7);
 }

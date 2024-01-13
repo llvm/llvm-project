@@ -1133,11 +1133,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
 #  endif
 
-// Some systems do not provide gets() in their C library, for security reasons.
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || defined(__OpenBSD__)
-#    define _LIBCPP_C_HAS_NO_GETS
-#  endif
-
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \
       defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE

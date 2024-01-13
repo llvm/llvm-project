@@ -1651,7 +1651,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
 
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
-    unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
+    unsigned Idx = Swz[i]->getAsZExtVal();
     if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
@@ -1659,7 +1659,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
-    unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
+    unsigned Idx = Swz[i]->getAsZExtVal();
     if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
@@ -1780,7 +1780,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     // Check that we know which element is being inserted
     if (!isa<ConstantSDNode>(EltNo))
       return SDValue();
-    unsigned Elt = cast<ConstantSDNode>(EltNo)->getZExtValue();
+    unsigned Elt = EltNo->getAsZExtVal();
 
     // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
     // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
@@ -2021,7 +2021,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
   }
   case R600::MOV_IMM_GLOBAL_ADDR:
     // Check if the Imm slot is used. Taken from below.
-    if (cast<ConstantSDNode>(Imm)->getZExtValue())
+    if (Imm->getAsZExtVal())
       return false;
     Imm = Src.getOperand(0);
     Src = DAG.getRegister(R600::ALU_LITERAL_X, MVT::i32);

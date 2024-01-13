@@ -294,7 +294,7 @@ static void ParseSupportFilesFromPrologue(
     }
 
     // Unconditionally add an entry, so the indices match up.
-    support_files.EmplaceBack(remapped_file, style, checksum);
+    support_files.EmplaceBack(FileSpec(remapped_file, style), checksum);
   }
 }
 
@@ -2574,11 +2574,12 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
 
       Module::LookupInfo no_tp_lookup_info(lookup_info);
       no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
-      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
-        if (resolved_dies.insert(die.GetDIE()).second)
-          ResolveFunction(die, include_inlines, sc_list);
-        return true;
-      });
+      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
+                            [&](DWARFDIE die) {
+                              if (resolved_dies.insert(die.GetDIE()).second)
+                                ResolveFunction(die, include_inlines, sc_list);
+                              return true;
+                            });
     }
   }
 

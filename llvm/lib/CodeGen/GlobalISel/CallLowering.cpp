@@ -694,7 +694,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)
         return false;
-      j += NumArgRegs;
+      j += (NumArgRegs - 1);
       continue;
     }
 

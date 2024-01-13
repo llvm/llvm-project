@@ -283,7 +283,7 @@ namespace dr116 { // dr116: yes
 }
 
 // dr117: na
-// dr118 is in its own file.
+// dr118 is in dr118.cpp
 // dr119: na
 // dr120: na
 
@@ -789,7 +789,7 @@ namespace dr155 { // dr155: dup 632
   // expected-warning@-1 {{braces around scalar initializer}}
 }
 
-// dr158 is in its own file.
+// dr158 is in dr158.cpp
 
 namespace dr159 { // dr159: 3.5
   namespace X { void f(); }

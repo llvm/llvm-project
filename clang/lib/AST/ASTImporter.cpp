@@ -5929,15 +5929,22 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (ToD)
     return ToD;
 
-  bool IsFriendTemplate = D->getFriendObjectKind() != Decl::FOK_None;
-  bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
-                                            : DC->isDependentContext();
-  bool DependentFriend = IsFriendTemplate && IsDependentContext;
+  // Should check if a declaration is friend in a dependent context.
+  // Such templates are not linked together in a declaration chain.
+  // The ASTImporter strategy is to map existing forward declarations to
+  // imported ones only if strictly necessary, otherwise import these as new
+  // forward declarations. In case of the "dependent friend" declarations, new
+  // declarations are created, but not linked in a declaration chain.
+  auto IsDependentFriend = [](ClassTemplateDecl *TD) {
+    return TD->getFriendObjectKind() != Decl::FOK_None &&
+           TD->getLexicalDeclContext()->isDependentContext();
+  };
+  bool DependentFriend = IsDependentFriend(D);
 
   ClassTemplateDecl *FoundByLookup = nullptr;
 
   // We may already have a template of the same name; try to find and match it.
-  if (!DependentFriend && !DC->isFunctionOrMethod()) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
     for (auto *FoundDecl : FoundDecls) {
@@ -5953,10 +5960,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
         // FIXME: sufficient conditon for 'IgnoreTemplateParmDepth'?
         bool IgnoreTemplateParmDepth =
-            FoundTemplate->getFriendObjectKind() != Decl::FOK_None &&
-            !D->specializations().empty();
+            (FoundTemplate->getFriendObjectKind() != Decl::FOK_None) !=
+            (D->getFriendObjectKind() != Decl::FOK_None);
         if (IsStructuralMatch(D, FoundTemplate, /*Complain=*/true,
                               IgnoreTemplateParmDepth)) {
+          if (DependentFriend || IsDependentFriend(FoundTemplate))
+            continue;
+
           ClassTemplateDecl *TemplateWithDef =
               getTemplateDefinition(FoundTemplate);
           if (D->isThisDeclarationADefinition() && TemplateWithDef)
@@ -9030,6 +9040,10 @@ class AttrImporter {
 public:
   AttrImporter(ASTImporter &I) : Importer(I), NImporter(I) {}
 
+  // Useful for accessing the imported attribute.
+  template <typename T> T *castAttrAs() { return cast<T>(ToAttr); }
+  template <typename T> const T *castAttrAs() const { return cast<T>(ToAttr); }
+
   // Create an "importer" for an attribute parameter.
   // Result of the 'value()' of that object is to be passed to the function
   // 'importAttr', in the order that is expected by the attribute class.
@@ -9241,6 +9255,15 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     AI.importAttr(From,
                   AI.importArrayArg(From->args(), From->args_size()).value(),
                   From->args_size());
+    break;
+  }
+  case attr::CountedBy: {
+    AI.cloneAttr(FromAttr);
+    const auto *CBA = cast<CountedByAttr>(FromAttr);
+    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
+    if (!SR)
+      return SR.takeError();
+    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
     break;
   }
 

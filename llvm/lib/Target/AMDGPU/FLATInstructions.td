@@ -215,7 +215,6 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
   let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
-  let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -237,7 +236,6 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let has_saddr = HasSaddr;
   let enabled_saddr = EnableSaddr;
   let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
-  let maybeAtomic = 1;
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -263,7 +261,6 @@ class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let maybeAtomic = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
@@ -330,7 +327,6 @@ class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
   let has_vaddr = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let maybeAtomic = 1;
   let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 }
 
@@ -401,7 +397,6 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
   let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
-  let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
@@ -430,7 +425,6 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   let has_sve = EnableSVE;
   let sve = EnableVaddr;
   let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
-  let maybeAtomic = 1;
 }
 
 multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedOutput = 0> {
@@ -520,7 +514,6 @@ class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
     let has_vdst = 0;
     let has_sccb  = 1;
     let sccbValue = 0;
-    let maybeAtomic = 1;
     let IsAtomicNoRet = 1;
 }
 

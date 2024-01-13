@@ -163,9 +163,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     auto ExtName = Extension.first;
     auto ExtInfo = Extension.second;
 
-    Builder.defineMacro(
-        Twine("__riscv_", ExtName),
-        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
+    Builder.defineMacro(Twine("__riscv_", ExtName),
+                        Twine(getVersionValue(ExtInfo.Major, ExtInfo.Minor)));
   }
 
   if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
@@ -296,7 +295,7 @@ bool RISCVTargetInfo::initFeatureMap(
   }
 
   // RISCVISAInfo makes implications for ISA features
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
+  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatures();
 
   // parseFeatures normalizes the feature set by dropping any explicit
   // negatives, and non-extension features.  We need to preserve the later
@@ -413,7 +412,7 @@ static void handleFullArchString(StringRef FullArchStr,
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {
-    std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
+    std::vector<std::string> FeatStrings = (*RII)->toFeatures();
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }

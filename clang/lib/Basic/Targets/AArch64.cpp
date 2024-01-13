@@ -226,6 +226,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
+  BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
 }
 
@@ -532,6 +533,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
+  if (Opts.GuardedControlStack)
+    Builder.defineMacro("__ARM_FEATURE_GCS_DEFAULT", "1");
+
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
 
@@ -543,6 +547,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasD128)
     Builder.defineMacro("__ARM_FEATURE_SYSREG128", "1");
+
+  if (HasGCS)
+    Builder.defineMacro("__ARM_FEATURE_GCS", "1");
 
   if (*ArchInfo == llvm::AArch64::ARMV8_1A)
     getTargetDefinesARMV81A(Opts, Builder);
