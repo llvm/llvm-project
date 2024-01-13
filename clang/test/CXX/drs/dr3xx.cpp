@@ -26,7 +26,7 @@ namespace dr301 { // dr301: 3.5
     //   cxx20-23-note@-3 {{to match this '<'}} 
     bool c = (void(*)(S, S))operator+ < (void(*)(S, S))operator-;
     // expected-error@-1 {{expected '>'}}
-    // expected-note@-2 {{to match this '<'}}
+    //   expected-note@-2 {{to match this '<'}}
   }
 
   template<typename T> void f() {
@@ -71,8 +71,8 @@ namespace dr302 { // dr302: 3.0
 #if __cplusplus < 201103L
   struct B {
   // expected-error@-1 {{implicit default constructor for 'dr302::B' must explicitly initialize the const member 'n'}}
-  // expected-note@#dr302-b {{in implicit default constructor for 'dr302::B' first required here}}
-  // expected-note@#dr302-B-n {{declared here}}
+  //   expected-note@#dr302-b {{in implicit default constructor for 'dr302::B' first required here}}
+  //   expected-note@#dr302-B-n {{declared here}}
     const int n; // #dr302-B-n
     A a;
   } b = B(); // #dr302-b
@@ -86,13 +86,13 @@ namespace dr302 { // dr302: 3.0
     A a;
   } b = B();
   // expected-error@-1 {{call to implicitly-deleted default constructor of 'B'}}
-  // expected-note@#dr302-B-n {{default constructor of 'B' is implicitly deleted because field 'n' of const-qualified type 'const int' would not be initialized}}
+  //   expected-note@#dr302-B-n {{default constructor of 'B' is implicitly deleted because field 'n' of const-qualified type 'const int' would not be initialized}}
   // C::C() is called here, because even though it's trivial, it's deleted.
   struct C {
     const int n; // #dr302-C-n
   } c = C();
   // expected-error@-1 {{call to implicitly-deleted default constructor of 'C'}}
-  // expected-note@#dr302-C-n {{default constructor of 'C' is implicitly deleted because field 'n' of const-qualified type 'const int' would not be initialized}}
+  //   expected-note@#dr302-C-n {{default constructor of 'C' is implicitly deleted because field 'n' of const-qualified type 'const int' would not be initialized}}
   struct D {
     const int n = 0;
   } d = D();
@@ -132,7 +132,7 @@ namespace dr305 { // dr305: no
     struct B {}; // #dr305-h-B
     b->~B();
     // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'B' (aka 'dr305::A') of the object being destroyed}}
-    // expected-note@#dr305-h-B {{type 'B' found by destructor name lookup}}
+    //   expected-note@#dr305-h-B {{type 'B' found by destructor name lookup}}
   }
 
   template<typename T> struct X {};
@@ -186,8 +186,8 @@ namespace dr306 { // dr306: dup 39
   Z<X>::X zx;
   Z<const X>::X zcx;
   // expected-error@-1 {{member 'X' found in multiple base classes of different types}}
-  // expected-note@#dr306-X {{member type 'dr306::X' found}}
-  // expected-note@#dr306-typedef-X {{member type 'const dr306::X' found}}
+  //   expected-note@#dr306-X {{member type 'dr306::X' found}}
+  //   expected-note@#dr306-typedef-X {{member type 'const dr306::X' found}}
 }
 
 // dr307: na
@@ -214,7 +214,7 @@ namespace dr308 { // dr308: 3.7
       // unreachable
     } catch (const B&) {
       // expected-warning@-1 {{exception of type 'const B &' will be caught by earlier handler}}
-      // expected-note@#dr308-catch-A {{for type 'const A &'}}
+      //   expected-note@#dr308-catch-A {{for type 'const A &'}}
       // get here instead
     }
   }
@@ -269,7 +269,7 @@ namespace dr317 { // dr317: 3.5
   void f() {} // #dr317-f
   inline void f();
   // expected-error@-1 {{inline declaration of 'f' follows non-inline definition}}
-  // expected-note@#dr317-f {{previous definition is here}}
+  //   expected-note@#dr317-f {{previous definition is here}}
 
   int g();
   int n = g();
@@ -280,7 +280,7 @@ namespace dr317 { // dr317: 3.5
   int h() { return 0; } // #dr317-h
   inline int h();
   // expected-error@-1 {{inline declaration of 'h' follows non-inline definition}}
-  // expected-note@#dr317-h {{previous definition is here}}
+  //   expected-note@#dr317-h {{previous definition is here}}
 }
 
 namespace dr318 { // dr318: sup 1310
@@ -372,12 +372,12 @@ namespace dr324 { // dr324: 3.6
   struct S { int n : 1; } s; // #dr324-n
   int &a = s.n;
   // expected-error@-1 {{non-const reference cannot bind to bit-field 'n'}}
-  // expected-note@#dr324-n {{bit-field is declared here}}
+  //   expected-note@#dr324-n {{bit-field is declared here}}
   int *b = &s.n;
   // expected-error@-1 {{address of bit-field requested}}
   int &c = (s.n = 0);
   // expected-error@-1 {{non-const reference cannot bind to bit-field 'n'}}
-  // expected-note@#dr324-n {{bit-field is declared here}}
+  //   expected-note@#dr324-n {{bit-field is declared here}}
   int *d = &(s.n = 0);
   // expected-error@-1 {{address of bit-field requested}}
   // FIXME: why don't we emit a note here, as for the rest of this type of diagnostic in this test?
@@ -387,7 +387,7 @@ namespace dr324 { // dr324: 3.6
   // expected-error@-1 {{address of bit-field requested}}
   int &g = (void(), s.n);
   // expected-error@-1 {{non-const reference cannot bind to bit-field 'n'}}
-  // expected-note@#dr324-n {{bit-field is declared here}}
+  //   expected-note@#dr324-n {{bit-field is declared here}}
   int *h = &(void(), s.n);
   // expected-error@-1 {{address of bit-field requested}}
   int *i = &++s.n;
@@ -411,13 +411,13 @@ namespace dr328 { // dr328: yes
   struct A; // #dr328-A
   struct B { A a; };
   // expected-error@-1 {{field has incomplete type 'A'}}
-  // expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
+  //   expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
   template<typename> struct C { A a; };
   // expected-error@-1 {{field has incomplete type 'A'}}
-  // expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
+  //   expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
   A *p = new A[0];
   // expected-error@-1 {{allocation of incomplete type 'A'}}
-  // expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
+  //   expected-note@#dr328-A {{forward declaration of 'dr328::A'}}
 }
 
 namespace dr329 { // dr329: 3.5
@@ -426,11 +426,11 @@ namespace dr329 { // dr329: 3.5
     friend void f(A a) { g(a); }
     friend void h(A a) { g(a); }
     // expected-error@-1 {{use of undeclared identifier 'g'}}
-    // expected-note@#dr329-h-call {{in instantiation of member function 'dr329::h' requested here}}
+    //   expected-note@#dr329-h-call {{in instantiation of member function 'dr329::h' requested here}}
     friend void i(B b) {} // #dr329-i
     // expected-error@-1 {{redefinition of 'i'}}
-    // expected-note@#dr329-b {{in instantiation of template class 'dr329::A<char>' requested here}}
-    // expected-note@#dr329-i {{previous definition is here}}
+    //   expected-note@#dr329-b {{in instantiation of template class 'dr329::A<char>' requested here}}
+    //   expected-note@#dr329-i {{previous definition is here}}
   };
   A<int> a; 
   A<char> b; // #dr329-b
@@ -540,10 +540,10 @@ namespace dr331 { // dr331: 11
   };
   const A a;
   // expected-error@-1 {{no matching constructor for initialization of 'const A'}}
-  // expected-note@#dr331-A-ctor {{candidate constructor not viable: requires 1 argument, but 0 were provided}}
+  //   expected-note@#dr331-A-ctor {{candidate constructor not viable: requires 1 argument, but 0 were provided}}
   const A b(a);
   // expected-error@-1 {{no matching constructor for initialization of 'const A'}}
-  // expected-note@#dr331-A-ctor {{candidate constructor not viable: 1st argument ('const A') would lose const qualifier}}
+  //   expected-note@#dr331-A-ctor {{candidate constructor not viable: 1st argument ('const A') would lose const qualifier}}
 }
 
 namespace dr332 { // dr332: dup 577
@@ -638,7 +638,7 @@ namespace dr339 { // dr339: 2.8
     A<2> b = f(0.0f);
     A<3> c = f("foo");
     // expected-error@-1 {{no matching function}}
-    // expected-note@#dr339-f {{candidate}}
+    //   expected-note@#dr339-f {{candidate}}
   }
 
 
@@ -673,30 +673,30 @@ namespace dr341 { // dr341: sup 1708
   namespace B {
     extern "C" int &dr341_a = dr341_a;
     // expected-error@-1 {{redefinition of 'dr341_a'}}
-    // expected-note@#dr341_a {{previous definition is here}} 
+    //   expected-note@#dr341_a {{previous definition is here}} 
   }
   extern "C" void dr341_b(); // #dr341_b 
 }
 int dr341_a;
 // expected-error@-1 {{declaration of 'dr341_a' in global scope conflicts with declaration with C language linkage}}
-// expected-note@#dr341_a {{declared with C language linkage here}}
+//   expected-note@#dr341_a {{declared with C language linkage here}}
 int dr341_b;
 // expected-error@-1 {{declaration of 'dr341_b' in global scope conflicts with declaration with C language linkage}}
-// expected-note@#dr341_b {{declared with C language linkage here}}
+//   expected-note@#dr341_b {{declared with C language linkage here}}
 int dr341_c; // #dr341_c
 int dr341_d; // #dr341_d
 namespace dr341 {
   extern "C" int dr341_c;
   // expected-error@-1 {{declaration of 'dr341_c' with C language linkage conflicts with declaration in global scope}}
-  // expected-note@#dr341_c {{declared in global scope here}}
+  //   expected-note@#dr341_c {{declared in global scope here}}
   extern "C" void dr341_d();
   // expected-error@-1 {{declaration of 'dr341_d' with C language linkage conflicts with declaration in global scope}}
-  // expected-note@#dr341_d {{declared in global scope here}}
+  //   expected-note@#dr341_d {{declared in global scope here}}
 
   namespace A { extern "C" int dr341_e; } // #dr341_e 
   namespace B { extern "C" void dr341_e(); }
   // expected-error@-1 {{redefinition of 'dr341_e' as different kind of symbol}}
-  // expected-note@#dr341_e {{previous definition is here}}
+  //   expected-note@#dr341_e {{previous definition is here}}
 }
 
 // dr342: na
@@ -729,8 +729,8 @@ namespace dr345 { // dr345: yes
   };
   template <class T> void f(T t) { typename T::X x; }
   // expected-error@-1 {{typename specifier refers to non-type member 'X' in 'dr345::A'}}
-  // expected-note@#dr345-f-a {{in instantiation of function template specialization 'dr345::f<dr345::A>' requested here}}
-  // expected-note@#dr345-int-X {{referenced member 'X' is declared here}}
+  //   expected-note@#dr345-f-a {{in instantiation of function template specialization 'dr345::f<dr345::A>' requested here}}
+  //   expected-note@#dr345-int-X {{referenced member 'X' is declared here}}
   void f(A a, B b) {
     f(b);
     f(a); // #dr345-f-a
@@ -768,7 +768,7 @@ namespace dr349 { // dr349: no
       return p;
       // cxx98-20-error@-1 {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
       // since-cxx23-error@-2 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
-      // expected-note@#dr349-p1 {{in instantiation of function template specialization 'dr349::A::operator const int ***<const int>' requested here}}
+      //   expected-note@#dr349-p1 {{in instantiation of function template specialization 'dr349::A::operator const int ***<const int>' requested here}}
     }
   };
 
@@ -804,12 +804,12 @@ namespace dr352 { // dr352: 2.8
     void f(A::E e) {
       foo(e, &arg);
       // expected-error@-1 {{no matching function for call to 'foo'}}
-      // expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}}
+      //   expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}}
 
       using A::foo;
       foo<int, int>(e, &arg);
       // expected-error@-1 {{attempt to use a deleted function}}
-      // expected-note@#dr352-deleted {{'arg<int>' has been explicitly marked deleted here}}
+      //   expected-note@#dr352-deleted {{'arg<int>' has been explicitly marked deleted here}}
     }
 
     int arg(int);
@@ -817,7 +817,7 @@ namespace dr352 { // dr352: 2.8
     void g(A::E e) {
       foo(e, &arg);
       // expected-error@-1 {{no matching function for call to 'foo'}}
-      // expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}} 
+      //   expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}} 
 
       using A::foo;
       foo<int, int>(e, &arg); // ok, uses non-template
@@ -834,7 +834,7 @@ namespace dr352 { // dr352: 2.8
       f1(a);
       f2(a);
       // expected-error@-1 {{no matching function for call to 'f2'}}
-      // expected-note@#dr352-f2 {{candidate template ignored: couldn't infer template argument 'I'}}
+      //   expected-note@#dr352-f2 {{candidate template ignored: couldn't infer template argument 'I'}}
       f3(a, b);
     }
 
@@ -848,7 +848,7 @@ namespace dr352 { // dr352: 2.8
       g1(a);
       g2(a);
       // expected-error@-1 {{no matching function for call to 'g2'}}
-      // expected-note@#dr352-g2 {{candidate template ignored: couldn't infer template argument 'I'}}
+      //   expected-note@#dr352-g2 {{candidate template ignored: couldn't infer template argument 'I'}}
       g3(a, b);
     }
 
@@ -857,7 +857,7 @@ namespace dr352 { // dr352: 2.8
     void h() {
       h1();
       // expected-error@-1 {{no matching function for call to 'h1'}}
-      // expected-note@#dr352-h1 {{candidate template ignored: couldn't infer template argument 'T'}}
+      //   expected-note@#dr352-h1 {{candidate template ignored: couldn't infer template argument 'T'}}
       h1(0);
       h1<int>();
       h2(0);
@@ -874,20 +874,20 @@ namespace dr352 { // dr352: 2.8
       extern int ambig(float), ambig(int);
       i1(ambig);
       // expected-error@-1 {{no matching function for call to 'i1'}}
-      // expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
+      //   expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
       i2(0, 0, ambig);
 
       extern void no_match(float), no_match(int);
       i1(no_match);
       // expected-error@-1 {{no matching function for call to 'i1'}}
-      // expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
+      //   expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
       i2(0, 0, no_match);
       // expected-error@-1 {{no matching function for call to 'i2'}}
-      // expected-note@#dr352-i2 {{candidate function [with R = int, A = int] not viable: no overload of 'no_match' matching 'int (*)(int)' for 3rd argument}}
+      //   expected-note@#dr352-i2 {{candidate function [with R = int, A = int] not viable: no overload of 'no_match' matching 'int (*)(int)' for 3rd argument}}
 
       i1(tmpl);
       // expected-error@-1 {{no matching function for call to 'i1'}}
-      // expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
+      //   expected-note@#dr352-i1 {{candidate template ignored: couldn't infer template argument 'R'}}
       i2(0, 0, tmpl);
     }
   }
@@ -923,7 +923,7 @@ namespace dr352 { // dr352: 2.8
     void h(A<1> a1, A<2> a2) {
       g(a1);
       // expected-error@-1 {{no matching function for call to 'g'}}
-      // expected-note@#dr352-g {{candidate template ignored: couldn't infer template argument 'I'}}
+      //   expected-note@#dr352-g {{candidate template ignored: couldn't infer template argument 'I'}}
       g<0>(a1);
       f(a1, a2);
     }
@@ -964,8 +964,8 @@ namespace dr354 { // dr354: yes c++11
   int b0 = both<0>();
   int b1 = both<(int*)0>();
   // cxx98-error@-1 {{no matching function for call to 'both'}}
-  // cxx98-note@#dr354-both-int-ptr {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
-  // cxx98-note@#dr354-both-int {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   cxx98-note@#dr354-both-int-ptr {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   cxx98-note@#dr354-both-int {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 
   template<int S::*> struct ptr_mem {}; // #dr354-ptr_mem
   ptr_mem<0> m0; // #dr354-m0
@@ -1003,7 +1003,7 @@ namespace dr357 { // dr357: yes
   };
   template<typename T> void A<T>::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
-  // expected-note@#dr357-f {{member declaration does not match because it is const qualified}}
+  //   expected-note@#dr357-f {{member declaration does not match because it is const qualified}}
 
   struct B {
     template<typename T> void f();
@@ -1070,10 +1070,10 @@ public:
 int main() {
   int foo = B().foo();
   // expected-error@-1 {{'foo' is a private member of 'dr360::B'}}
-  // expected-note@#dr360-using-foo {{declared private here}}
+  //   expected-note@#dr360-using-foo {{declared private here}}
   int bar = B().bar();
   // expected-error@-1 {{'bar' is a protected member of 'dr360::B'}}
-  // expected-note@#dr360-using-bar {{declared protected here}}
+  //   expected-note@#dr360-using-bar {{declared protected here}}
   int baz = B().baz();
 }
 } // namespace dr360
@@ -1120,7 +1120,7 @@ namespace dr368 { // dr368: 3.6
   template<typename T, T> struct S {}; // #dr368-S
   template<typename T> int f(S<T, T()> *);
   // expected-error@-1 {{template argument for non-type template parameter is treated as function type 'T ()'}}
-  // expected-note@#dr368-S {{template parameter is declared here}}
+  //   expected-note@#dr368-S {{template parameter is declared here}}
   template<typename T> int g(S<T, (T())> *); // #dr368-g
   template<typename T> int g(S<T, true ? T() : T()> *); // #dr368-g-2
   struct X {};
@@ -1151,16 +1151,16 @@ namespace dr372 { // dr372: no
       T1<T>,
       T2<typename T1<T>::Type> {};
       // expected-error@-1 {{'Type' is a protected member of 'dr372::example1::X<int>'}}
-      // expected-note@#dr372-z1 {{in instantiation of template class 'dr372::example1::Z1<int, dr372::example1::X, dr372::example1::Y>' requested here}}
-      // expected-note@#dr372-ex1-Type {{declared protected here}}
+      //   expected-note@#dr372-z1 {{in instantiation of template class 'dr372::example1::Z1<int, dr372::example1::X, dr372::example1::Y>' requested here}}
+      //   expected-note@#dr372-ex1-Type {{declared protected here}}
 
     template<typename T,
              template<typename> class T1,
              template<typename> class T2> struct Z2 :
       T2<typename T1<T>::Type>,
       // expected-error@-1 {{'Type' is a protected member of 'dr372::example1::X<int>'}}
-      // expected-note@#dr372-z2 {{in instantiation of template class 'dr372::example1::Z2<int, dr372::example1::X, dr372::example1::Y>' requested here}}
-      // expected-note@#dr372-ex1-Type {{declared protected here}}
+      //   expected-note@#dr372-z2 {{in instantiation of template class 'dr372::example1::Z2<int, dr372::example1::X, dr372::example1::Y>' requested here}}
+      //   expected-note@#dr372-ex1-Type {{declared protected here}}
       T1<T> {};
 
     Z1<int, X, Y> z1; // #dr372-z1
@@ -1175,8 +1175,8 @@ namespace dr372 { // dr372: no
     template<typename T> struct A {
       typename T::Type t;
       // expected-error@-1 {{'Type' is a private member of 'dr372::example2::X'}}
-      // expected-note@#dr372-ax {{in instantiation of template class 'dr372::example2::A<dr372::example2::X>' requested here}}
-      // expected-note@#dr372-ex2-Type {{declared private here}}
+      //   expected-note@#dr372-ax {{in instantiation of template class 'dr372::example2::A<dr372::example2::X>' requested here}}
+      //   expected-note@#dr372-ex2-Type {{declared private here}}
     };
     A<X> ax; // #dr372-ax
   }
@@ -1190,12 +1190,12 @@ namespace dr372 { // dr372: no
     template<typename T> struct B {};
     template<typename U> struct C : U, B<typename U::N> {};
     // expected-error@-1 {{'N' is a protected member of 'dr372::example3::A'}}
-    // expected-note@#dr372-x {{in instantiation of template class 'dr372::example3::C<dr372::example3::A>' requested here}}
-    // expected-note@#dr372-N {{declared protected here}}
+    //   expected-note@#dr372-x {{in instantiation of template class 'dr372::example3::C<dr372::example3::A>' requested here}}
+    //   expected-note@#dr372-N {{declared protected here}}
     template<typename U> struct D : B<typename U::N>, U {};
     // expected-error@-1 {{'N' is a protected member of 'dr372::example3::A'}}
-    // expected-note@#dr372-y {{in instantiation of template class 'dr372::example3::D<dr372::example3::A>' requested here}}
-    // expected-note@#dr372-N {{declared protected here}}
+    //   expected-note@#dr372-y {{in instantiation of template class 'dr372::example3::D<dr372::example3::A>' requested here}}
+    //   expected-note@#dr372-N {{declared protected here}}
 
     C<A> x; // #dr372-x
     D<A> y; // #dr372-y
@@ -1223,7 +1223,7 @@ namespace dr372 { // dr372: no
     };
     struct D : A::B, A {};
     // expected-error@-1 {{'B' is a protected member of 'dr372::std_example::A'}}
-    // expected-note@#dr372-B-std {{declared protected here}}
+    //   expected-note@#dr372-B-std {{declared protected here}}
   }
 
   // FIXME: This is valid: deriving from A::B gives access to A::B!
@@ -1235,7 +1235,7 @@ namespace dr372 { // dr372: no
     struct A::B : A {};
     struct C : A::B {};
     // expected-error@-1 {{'B' is a protected member of 'dr372::badwolf::A'}}
-    // expected-note@#dr372-B {{declared protected here}}
+    //   expected-note@#dr372-B {{declared protected here}}
   }
 }
 
@@ -1246,7 +1246,7 @@ namespace dr373 { // dr373: 5
       using namespace dr373::X;
       int k = dr373;
       // expected-error@-1 {{'dr373' does not refer to a value}}
-      // expected-note@#dr373-struct {{declared here}}
+      //   expected-note@#dr373-struct {{declared here}}
       namespace Y = dr373::X;
       k = Y::dr373;
     }
@@ -1255,10 +1255,10 @@ namespace dr373 { // dr373: 5
   struct A { struct B {}; }; // #dr373-A 
   namespace X = A::B;
   // expected-error@-1 {{expected namespace name}}
-  // expected-note@#dr373-A {{'A' declared here}}
+  //   expected-note@#dr373-A {{'A' declared here}}
   using namespace A::B;
   // expected-error@-1 {{expected namespace name}}
-  // expected-note@#dr373-A {{'A' declared here}}
+  //   expected-note@#dr373-A {{'A' declared here}}
 }
 
 namespace dr374 { // dr374: 7
@@ -1361,8 +1361,8 @@ namespace dr385 { // dr385: 2.8
   struct F : E { friend int i(E); };
   int i(E e) { return e.n; }
   // expected-error@-1 {{'n' is a protected member of 'dr385::D'}}
-  // expected-note@#dr385-E {{constrained by protected inheritance here}}
-  // expected-note@#dr385-n {{member is declared here}}
+  //   expected-note@#dr385-E {{constrained by protected inheritance here}}
+  //   expected-note@#dr385-n {{member is declared here}}
 }
 
 namespace dr387 { // dr387: 2.8
@@ -1375,10 +1375,10 @@ namespace dr387 { // dr387: 2.8
     void g() {
       number<double> a(3);
       // expected-error@-1 {{calling a private constructor of class 'dr387::old::number<double>'}}
-      // expected-note@#dr387-number-ctor {{implicitly declared private here}}
+      //   expected-note@#dr387-number-ctor {{implicitly declared private here}}
       number<double> b(4);
       // expected-error@-1 {{calling a private constructor of class 'dr387::old::number<double>'}}
-      // expected-note@#dr387-number-ctor {{implicitly declared private here}}
+      //   expected-note@#dr387-number-ctor {{implicitly declared private here}}
       a = gcd(a, b);
       b = gcd(3, 4);
       // expected-error@-1 {{use of undeclared identifier 'gcd'}}
@@ -1451,19 +1451,19 @@ namespace dr389 { // dr389: no
 
   typedef T<WithoutLinkage1> BadArg1;
   // expected-error@-1 {{template argument uses unnamed type}}
-  // expected-note@#dr389-no-link-1 {{unnamed type used in template argument was declared here}}
+  //   expected-note@#dr389-no-link-1 {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage2> BadArg2;
   // expected-error@-1 {{template argument uses unnamed type}}
-  // expected-note@#dr389-no-link-2 {{unnamed type used in template argument was declared here}}
+  //   expected-note@#dr389-no-link-2 {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage3> BadArg3;
   // expected-error@-1 {{template argument uses unnamed type}}
-  // expected-note@#dr389-C {{unnamed type used in template argument was declared here}}
+  //   expected-note@#dr389-C {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage4> BadArg4;
   // expected-error@-1 {{template argument uses unnamed type}}
-  // expected-note@#dr389-D {{unnamed type used in template argument was declared here}}
+  //   expected-note@#dr389-D {{unnamed type used in template argument was declared here}}
   typedef T<WithoutLinkage5> BadArg5;
   // expected-error@-1 {{template argument uses unnamed type}}
-  // expected-note@#dr389-C {{unnamed type used in template argument was declared here}}
+  //   expected-note@#dr389-C {{unnamed type used in template argument was declared here}}
 #endif
 
   extern WithLinkage1 withLinkage1;
@@ -1530,14 +1530,14 @@ namespace dr390 { // dr390: 3.3
   struct A {
     A() { f(); }
     // expected-warning@-1 {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'dr390::A<int>'}}
-    // expected-note@#dr390-A-int {{in instantiation of member function 'dr390::A<int>::A' requested here}}
-    // expected-note@#dr390-f {{'f' declared here}}
+    //   expected-note@#dr390-A-int {{in instantiation of member function 'dr390::A<int>::A' requested here}}
+    //   expected-note@#dr390-f {{'f' declared here}}
     virtual void f() = 0; // #dr390-f
     virtual ~A() = 0;
   };
   template<typename T> A<T>::~A() { T::error; }
   // expected-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-  // expected-note@#dr390-A-int {{in instantiation of member function 'dr390::A<int>::~A' requested here}}
+  //   expected-note@#dr390-A-int {{in instantiation of member function 'dr390::A<int>::~A' requested here}}
   template<typename T> void A<T>::f() { T::error; } // ok, not odr-used
   struct B : A<int> { // #dr390-A-int
     void f() {}
@@ -1550,14 +1550,14 @@ namespace dr391 { // dr391: 2.8 c++11
   A fa();
   const A &a = fa();
   // cxx98-error@-1 {{C++98 requires an accessible copy constructor for class 'dr391::A' when binding a reference to a temporary; was private}}
-  // cxx98-note@#dr391-A {{implicitly declared private here}}
+  //   cxx98-note@#dr391-A {{implicitly declared private here}}
 
   struct B { B(const B&) = delete; }; // #dr391-B
   // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   B fb();
   const B &b = fb();
   // cxx98-error@-1 {{copying variable of type 'B' invokes deleted constructor}}
-  // cxx98-note@#dr391-B {{'B' has been explicitly marked deleted here}}
+  //   cxx98-note@#dr391-B {{'B' has been explicitly marked deleted here}}
 
   template<typename T>
   struct C {
@@ -1600,7 +1600,7 @@ namespace dr395 { // dr395: 3.0
   } null1;
   int (S::*p)() = null1;
   // expected-error@-1 {{no viable conversion from 'struct null1_t' to 'int (dr395::S::*)()'}}
-  // expected-note@#dr395-conv-func {{candidate template ignored: couldn't infer template argument 'T'}}
+  //   expected-note@#dr395-conv-func {{candidate template ignored: couldn't infer template argument 'T'}}
 
   template <typename T> using id = T;
   // cxx98-error@-1 {{alias declarations are a C++11 extension}}
@@ -1664,16 +1664,16 @@ namespace dr398 { // dr398: yes
     void test() {
       f<A>(0);
       // expected-error@-1 {{no matching function for call to 'f'}}
-      // expected-note@#dr398-f {{candidate template ignored: substitution failure [with T = A]: no type named 'Y' in 'dr398::example2::A'}}
+      //   expected-note@#dr398-f {{candidate template ignored: substitution failure [with T = A]: no type named 'Y' in 'dr398::example2::A'}}
       f<B>(0);
       // expected-error@-1 {{no matching function for call to 'f'}}
-      // expected-note@#dr398-f {{candidate template ignored: substitution failure [with T = B]: typename specifier refers to non-type member 'Y' in 'dr398::example2::B'}}
+      //   expected-note@#dr398-f {{candidate template ignored: substitution failure [with T = B]: typename specifier refers to non-type member 'Y' in 'dr398::example2::B'}}
       g<C>(0);
       // expected-error@-1 {{no matching function for call to 'g'}}
-      // expected-note@#dr398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N'}}
+      //   expected-note@#dr398-g {{candidate template ignored: substitution failure [with T = C]: missing 'typename' prior to dependent type name 'C::N'}}
       h<D>(0);
       // expected-error@-1 {{no matching function for call to 'h'}}
-      // expected-note@#dr398-h {{candidate template ignored: substitution failure [with T = D]: 'TT' following the 'template' keyword does not refer to a template}}
+      //   expected-note@#dr398-h {{candidate template ignored: substitution failure [with T = D]: 'TT' following the 'template' keyword does not refer to a template}}
     }
   }
 }
@@ -1690,7 +1690,7 @@ namespace dr399 { // dr399: 11
   void f() {
     D_object.~B();
     // expected-error@-1 {{destructor type 'dr399::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    // expected-note@#dr399-B {{type 'dr399::B' found by destructor name lookup}}
+    //   expected-note@#dr399-B {{type 'dr399::B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();
@@ -1743,7 +1743,7 @@ namespace dr399 { // dr399: 11
     // Rejecting this seems correct, but most compilers accept, so we do also.
     f.N::F::~G();
     // expected-error@-1 {{qualified destructor name only found in lexical scope; omit the qualifier to find this type name by unqualified lookup}}
-    // expected-note@#dr399-G {{type 'G' (aka 'E<int>') found by destructor name lookup}}
+    //   expected-note@#dr399-G {{type 'G' (aka 'E<int>') found by destructor name lookup}}
   }
 
   // Bizarrely, compilers perform lookup in the scope for qualified destructor
@@ -1757,7 +1757,7 @@ namespace dr399 { // dr399: 11
       typedef typename N::S<U>::Inner T;
       p->::dr399::QualifiedLookupInScope::N::S<U>::Inner::~T();
       // expected-error@-1 {{no type named 'T' in 'dr399::QualifiedLookupInScope::N::S<int>'}}
-      // expected-note@#dr399-f {{in instantiation of function template specialization 'dr399::QualifiedLookupInScope::f<int>' requested here}}
+      //   expected-note@#dr399-f {{in instantiation of function template specialization 'dr399::QualifiedLookupInScope::f<int>' requested here}}
     }
     template void f<int>(N::S<int>::Inner *); // #dr399-f
 
