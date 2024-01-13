@@ -121,9 +121,9 @@ QuasiPolynomial QuasiPolynomial::simplify() {
 }
 
 Fraction QuasiPolynomial::getConstantTerm() {
-  Fraction t = 0;
+  Fraction constTerm = 0;
   for (unsigned i = 0, e = coefficients.size(); i < e; ++i)
     if (affine[i].size() == 0)
-      t += coefficients[i];
-  return t;
+      constTerm += coefficients[i];
+  return constTerm;
 }
