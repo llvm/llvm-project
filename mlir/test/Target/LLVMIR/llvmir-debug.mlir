@@ -179,7 +179,7 @@ llvm.func @empty_types() {
 llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.mlir":2:1])
 
 // CHECK: ![[SUBPROGRAM]] = !DISubprogram(name: "func_decl_with_subprogram", scope: ![[FILE:.*]], file: ![[FILE]], spFlags: DISPFlagOptimized)
-// CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+// CHECK: ![[FILE]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // -----
 
