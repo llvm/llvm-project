@@ -3,10 +3,11 @@
 readability-use-std-min-max
 ===========================
 
-Replaces certain conditional statements with equivalent ``std::min`` or ``std::max`` expressions, 
-improving readability and promoting the use of standard library functions.
-Note: this transformation may impact performance in performance-critical code due to potential 
-additional stores compared to the original if statement.
+Replaces certain conditionals with ``std::min`` or ``std::max`` for readability,
+promoting use of standard library functions. Note: This may impact
+performance in critical code due to potential additional stores compared
+to the original if statement.
+
 
 Examples:
 

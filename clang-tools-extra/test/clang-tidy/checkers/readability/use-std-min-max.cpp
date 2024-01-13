@@ -11,6 +11,7 @@ constexpr int myConstexprMax(int a, int b) {
 int bar(int x, int y) {
   return x < y ? x : y;
 }
+
 void foo() {
   int value1,value2,value3;
   short value4;
