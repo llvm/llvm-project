@@ -3965,7 +3965,7 @@ implicitly included in later levels.
 
 `Intel AVX10 ISA <https://cdrdv2.intel.com/v1/dl/getContent/784267>`_ is
 a major new vector ISA incorporating the modern vectorization aspects of
-Intel AVX-512. This ISA will be supported on all future Intel processor.
+Intel AVX-512. This ISA will be supported on all future Intel processors.
 Users are supposed to use the new options ``-mavx10.N`` and ``-mavx10.N-512``
 on these processors and should not use traditional AVX512 options anymore.
 
@@ -3976,12 +3976,12 @@ enable all instructions within AVX10 version N at a maximum vector length of
 length of 512 bits, which is a superset of instructions ``-mavx10.N`` enabled.
 
 Current binaries built with AVX512 features can run on Intel AVX10/512 capable
-processor without re-compile, but cannot run on AVX10/256 capable processor.
+processors without re-compile, but cannot run on AVX10/256 capable processors.
 Users need to re-compile their code with ``-mavx10.N``, and maybe update some
 code that calling to 512-bit X86 specific intrinsics and passing or returning
 512-bit vector types in function call, if they want to run on AVX10/256 capable
-processor. Binaries built with ``-mavx10.N`` can run on both AVX10/256 and
-AVX10/512 capable processor.
+processors. Binaries built with ``-mavx10.N`` can run on both AVX10/256 and
+AVX10/512 capable processors.
 
 Users can add a ``-mno-evex512`` in the command line with AVX512 options if
 they want to run the binary on both legacy AVX512 and new AVX10/256 capable
