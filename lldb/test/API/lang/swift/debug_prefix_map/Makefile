@@ -9,6 +9,3 @@ SWIFT_SOURCES=srcroot/main.swift
 SWIFTFLAGS_EXTRAS = -debug-prefix-map $(BUILDDIR)=.
 
 include Makefile.rules
-
-clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ a.out *.o

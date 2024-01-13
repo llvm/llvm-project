@@ -3,7 +3,9 @@ SWIFT_SOURCES := main.swift
 MAKE_DSYM := NO
 LD_EXTRAS := -ldylib -L.
 SWIFTFLAGS_EXTRAS = -import-objc-header $(SRCDIR)/bridging-header.h \
-                    -Xcc -I$(SRCDIR)/foo.hmap -I. -I$(SRCDIR)
+                    -Xcc -I$(SRCDIR)/foo.hmap -I. -I$(SRCDIR) \
+		    -disable-bridging-pch
+DISABLE_SWIFT_INTERFACE := YES
 
 all: libdylib.dylib a.out
 

@@ -13,10 +13,11 @@ lib%.dylib: %.swift
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
-	        SWIFT_BRIDGING_HEADER=header.h \
-		SWIFT_PRECOMPILE_BRIDGING_HEADER=YES \
+	        DISABLE_SWIFT_INTERFACE=YES \
+		SWIFTFLAGS_EXTRAS="-import-objc-header header.h -enable-bridging-pch -pch-output-dir $(BUILDDIR)" \
                 VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 	rm -f $(OVERLAY)
+	rm header*.pch
 
 clean::
 	$(MAKE) MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
