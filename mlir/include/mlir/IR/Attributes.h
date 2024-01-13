@@ -78,6 +78,10 @@ public:
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
 
+  /// Print the attribute without dialect wrapping.
+  void printStripped(raw_ostream &os) const;
+  void printStripped(raw_ostream &os, AsmState &state) const;
+
   /// Get an opaque pointer to the attribute.
   const void *getAsOpaquePointer() const { return impl; }
   /// Construct an attribute from the opaque pointer representation.
