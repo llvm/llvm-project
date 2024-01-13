@@ -17,6 +17,7 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Dialect/LLVMIR/LLVMTypes.td"
@@ -3246,7 +3247,9 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 
-def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
+def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target", [
+    DeclareAttrInterfaceMethods<TargetInfoAttrInterface>
+  ]> {
   let description = [{
     GPU target attribute for controlling compilation of NVIDIA targets. All
     parameters decay into default values if not present.

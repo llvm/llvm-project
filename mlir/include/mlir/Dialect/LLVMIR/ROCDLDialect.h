@@ -26,6 +26,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 ///// Ops /////
