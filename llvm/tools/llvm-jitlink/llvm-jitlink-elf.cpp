@@ -91,7 +91,7 @@ static Error registerSymbol(LinkGraph &G, Symbol &Sym, Session::FileInfo &FI,
   case Stubs:
     return FI.registerStubEntry(G, Sym, getELFStubTarget);
   case AArch32Stubs:
-    return FI.registerStubEntry(G, Sym, getELFAArch32StubTarget);
+    return FI.registerMultiStubEntry(G, Sym, getELFAArch32StubTarget);
   case Other:
     return Error::success();
   }
