@@ -84,7 +84,8 @@ Options
 
 .. option:: IgnoreMacros
 
-   If `true`, ignore boolean expressions passed into macros. Default is `false`.
+   If `true`, ignore boolean expressions originating from expanded macros.
+   Default is `false`.
 
 .. option:: ChainedConditionalReturn
 
