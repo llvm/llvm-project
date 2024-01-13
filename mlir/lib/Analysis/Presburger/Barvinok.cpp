@@ -176,11 +176,8 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
     assert(vector.size() == dim && "all vectors need to be the same size!");
 
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
-  std::vector<Fraction> lowerDimDotProducts;
-  Fraction dotP;
   Fraction maxDisallowedValue = -Fraction(1, 0),
            disallowedValue = Fraction(0, 1);
-  Fraction newValue;
 
   for (unsigned d = 1; d < dim; ++d) {
 
@@ -189,16 +186,13 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
     for (const Point &vector : vectors) {
       if (vector[d] == 0)
         continue;
-      dotP = dotProduct(ArrayRef(vector).slice(0, d), newPoint);
       disallowedValue =
           -dotProduct(ArrayRef(vector).slice(0, d), newPoint) / vector[d];
 
       // Find the biggest such value
       maxDisallowedValue = std::max(maxDisallowedValue, disallowedValue);
     }
-
-    newValue = maxDisallowedValue + 1;
-    newPoint.push_back(newValue);
+    newPoint.push_back(maxDisallowedValue + 1);
   }
   return newPoint;
 }
