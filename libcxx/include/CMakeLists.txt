@@ -1019,13 +1019,12 @@ foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABL
 endforeach()
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-file(READ ${LIBCXX_ASSERTION_HANDLER_FILE} _LIBCPP_ASSERTION_HANDLER_OVERRIDE)
-configure_file("__assertion_handler.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler" @ONLY)
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" @ONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+                  "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")

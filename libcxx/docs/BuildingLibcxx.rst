@@ -409,6 +409,15 @@ libc++ Feature Options
   Use the specified GCC toolchain and standard library when building the native
   stdlib benchmark tests.
 
+.. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
+
+  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
+
+  Specify the path to a header that contains a custom implementation of the
+  assertion handler that gets invoked when a hardening assertion fails. If
+  provided, this header will be included by the library, replacing the
+  default assertion handler.
+
 
 libc++ ABI Feature Options
 --------------------------
@@ -491,13 +500,11 @@ However, vendors can also override that mechanism at CMake configuration time.
 When a hardening assertion fails, the library invokes the
 ``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide a header that contains
 a custom definition of this macro and specify the path to the header via the
-``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, the contents of
-this header will be injected into library configuration headers, replacing the
-default implementation. The header must not include any standard library headers
-(directly or transitively) because doing so will almost always create a circular
-dependency.
-
-The ``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single parameter that
+``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, this header will
+be included by the library and replace the default implementation. The header
+must not include any standard library headers (directly or transitively) because
+doing so will almost always create a circular dependency. The
+``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single parameter that
 contains an error message explaining the hardening failure and some details
 about the source location that triggered it.
 

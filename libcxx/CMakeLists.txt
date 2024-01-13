@@ -74,8 +74,8 @@ set(LIBCXX_ASSERTION_HANDLER_FILE
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
-   provided, the contents of this header will get injected into the library code
-   and override the default assertion handler.")
+   provided, this header will be included by the library, replacing the
+   default assertion handler.")
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
