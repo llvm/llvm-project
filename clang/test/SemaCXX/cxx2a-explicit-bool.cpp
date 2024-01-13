@@ -743,3 +743,21 @@ struct S {
   explicit(1L) S(char, char, char);
 };
 } // namespace P1401
+
+#if __cplusplus > 201703L
+namespace GH67058 {
+template <class T>
+concept Q = requires(T t) { [](int *) {}(t); };
+struct A {
+  template <class T> explicit(Q<T>) A(T);
+};
+A a = 1;
+
+struct B { // expected-note+ {{candidate constructor}}
+  template <class T>
+  explicit(requires(T t) { [](int *) {}(t); })
+      B(T); // expected-note {{explicit constructor is not a candidate}}
+};
+B b = new int; // expected-error {{no viable conversion}}
+} // namespace GH67058
+#endif
