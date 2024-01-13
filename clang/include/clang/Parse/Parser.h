@@ -3341,8 +3341,8 @@ private:
   /// Parses clauses for directive.
   ///
   /// \param DKind Kind of current directive.
-  /// \param clauses for current directive.
-  /// \param start location for clauses of current directive
+  /// \param Clauses for current directive.
+  /// \param Loc location for clauses of current directive
   void ParseOpenMPClauses(OpenMPDirectiveKind DKind,
                           SmallVectorImpl<clang::OMPClause *> &Clauses,
                           SourceLocation Loc);

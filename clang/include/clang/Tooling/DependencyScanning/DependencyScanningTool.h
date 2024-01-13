@@ -116,7 +116,7 @@ public:
   /// dependency information by `-MD -MF <dep_file>`.
   ///
   /// \param MakeformatOutputPath The output parameter for the path to
-  /// \param MakeformatOutput.
+  /// \p MakeformatOutput.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, P1689 dependency format rules otherwise.

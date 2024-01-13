@@ -721,7 +721,6 @@ private:
   /// Read options from the specified file.
   ///
   /// \param [in] FileName File to read.
-  /// \param [in] Search and expansion options.
   /// \returns true, if error occurred while reading.
   bool readConfigFile(StringRef FileName, llvm::cl::ExpansionContext &ExpCtx);
 
