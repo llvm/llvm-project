@@ -13,3 +13,6 @@ types and definitions with good return type but wrong ``return`` statements.
     type (e.g. ``int``).
   * Private and deleted operators are ignored.
   * The operator must always return ``*this``.
+
+This check implements `AUTOSAR C++14 Rule A13-2-1
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-constref>`_.
