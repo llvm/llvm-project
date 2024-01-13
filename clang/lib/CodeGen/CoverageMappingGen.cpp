@@ -730,8 +730,8 @@ public:
       return;
 
     // If binary expression is disqualified, don't do mapping.
-    if (NestLevel.empty() && MCDCBitmapMap.find(CodeGenFunction::stripCond(
-                                 E)) == MCDCBitmapMap.end())
+    if (NestLevel.empty() &&
+        !MCDCBitmapMap.contains(CodeGenFunction::stripCond(E)))
       NotMapped = true;
 
     // Push Stmt on 'NestLevel' stack to keep track of nest location.
@@ -744,7 +744,7 @@ public:
     // If the operator itself has an assigned ID, this means it represents a
     // larger subtree.  In this case, pop its ID out of the RHS stack and
     // assign that ID to its LHS node.  Its RHS will receive a new ID.
-    if (CondIDs.find(CodeGenFunction::stripCond(E)) != CondIDs.end()) {
+    if (CondIDs.contains(CodeGenFunction::stripCond(E))) {
       // If Stmt has an ID, assign its ID to LHS
       CondIDs[CodeGenFunction::stripCond(E->getLHS())] = CondIDs[E];
 
