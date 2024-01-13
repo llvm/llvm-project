@@ -129,7 +129,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      if (X86II::getMemoryOperandNo(MI.getDesc().TSFlags) < 0)
+      if (X86::getFirstAddrOperandIdx(MI) < 0)
         continue;
       if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
         continue;

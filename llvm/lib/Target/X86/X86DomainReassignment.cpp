@@ -524,12 +524,10 @@ static bool usedAsAddr(const MachineInstr &MI, Register Reg,
   if (!MI.mayLoadOrStore())
     return false;
 
-  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemOpStart = X86::getFirstAddrOperandIdx(MI);
   if (MemOpStart == -1)
     return false;
 
-  MemOpStart += X86II::getOperandBias(Desc);
   for (unsigned MemOpIdx = MemOpStart,
                 MemOpEnd = MemOpStart + X86::AddrNumOperands;
        MemOpIdx < MemOpEnd; ++MemOpIdx) {
@@ -559,10 +557,7 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
     // Do not add registers which are used in address calculation, they will be
     // added to a different closure.
     int OpEnd = DefMI->getNumOperands();
-    const MCInstrDesc &Desc = DefMI->getDesc();
-    int MemOp = X86II::getMemoryOperandNo(Desc.TSFlags);
-    if (MemOp != -1)
-      MemOp += X86II::getOperandBias(Desc);
+    const int MemOp = X86::getFirstAddrOperandIdx(*DefMI);
     for (int OpIdx = 0; OpIdx < OpEnd; ++OpIdx) {
       if (OpIdx == MemOp) {
         // skip address calculation.

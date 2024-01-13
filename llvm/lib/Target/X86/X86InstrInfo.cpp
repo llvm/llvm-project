@@ -3463,6 +3463,44 @@ bool X86::isX87Instruction(MachineInstr &MI) {
   return false;
 }
 
+int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
+  const auto isMemOp = [](const MCOperandInfo &OpInfo) -> bool {
+    return OpInfo.OperandType == MCOI::OPERAND_MEMORY;
+  };
+
+  const MCInstrDesc &Desc = MI.getDesc();
+
+  // An instruction cannot have a memory reference if it has fewer than
+  // AddrNumOperands (= 5) explicit operands.
+  if (Desc.getNumOperands() < X86::AddrNumOperands) {
+    assert(none_of(Desc.operands(), isMemOp) &&
+           "Expected no operands to have OPERAND_MEMORY type!");
+    return -1;
+  }
+
+  // The first operand with type OPERAND_MEMORY indicates the start of a memory
+  // reference. We expect the following AddrNumOperand-1 operands to also have
+  // OPERAND_MEMORY type.
+  for (unsigned i = 0; i <= Desc.getNumOperands() - X86::AddrNumOperands; ++i) {
+    if (Desc.operands()[i].OperandType == MCOI::OPERAND_MEMORY) {
+      assert(std::all_of(Desc.operands().begin() + i,
+                         Desc.operands().begin() + i + X86::AddrNumOperands,
+                         isMemOp) &&
+             "Expected all five operands in the memory reference to have "
+             "OPERAND_MEMORY type!");
+      return i;
+    }
+  }
+
+  // Fall back to the MC-layer routine, which only handles real (not pseudo)
+  // insturctions.
+  const int FallbackMemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
+  if (FallbackMemOpNo >= 0)
+    return FallbackMemOpNo + X86II::getOperandBias(Desc);
+
+  return -1;
+}
+
 bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case X86::TCRETURNdi:
@@ -3723,10 +3761,8 @@ bool X86InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 static int getJumpTableIndexFromAddr(const MachineInstr &MI) {
-  const MCInstrDesc &Desc = MI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemRefBegin = X86::getFirstAddrOperandIdx(MI);
   assert(MemRefBegin >= 0 && "instr should have memory operand");
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   const MachineOperand &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
   if (!MO.isJTI())
@@ -4321,12 +4357,9 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
 std::optional<ExtAddrMode>
 X86InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
                                       const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemRefBegin = X86::getFirstAddrOperandIdx(MemI);
   if (MemRefBegin < 0)
     return std::nullopt;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   auto &BaseOp = MemI.getOperand(MemRefBegin + X86::AddrBaseReg);
   if (!BaseOp.isReg()) // Can be an MO_FrameIndex
@@ -4448,12 +4481,9 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
     const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemOp.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  const int MemRefBegin = X86::getFirstAddrOperandIdx(MemOp);
   if (MemRefBegin < 0)
     return false;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   const MachineOperand *BaseOp =
       &MemOp.getOperand(MemRefBegin + X86::AddrBaseReg);

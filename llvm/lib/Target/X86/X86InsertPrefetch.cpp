@@ -200,11 +200,9 @@ bool X86InsertPrefetch::runOnMachineFunction(MachineFunction &MF) {
       auto Current = MI;
       ++MI;
 
-      int Offset = X86II::getMemoryOperandNo(Current->getDesc().TSFlags);
-      if (Offset < 0)
+      const int MemOpOffset = X86::getFirstAddrOperandIdx(*Current);
+      if (MemOpOffset < 0)
         continue;
-      unsigned Bias = X86II::getOperandBias(Current->getDesc());
-      int MemOpOffset = Offset + Bias;
       // FIXME(mtrofin): ORE message when the recommendation cannot be taken.
       if (!IsMemOpCompatibleWithPrefetch(*Current, MemOpOffset))
         continue;
