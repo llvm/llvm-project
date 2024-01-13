@@ -500,6 +500,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   identify calls to static member functions with out-of-class inline definitions.
 
+- Added option `IgnoreMacros` to :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check.
+  It makes the check ignore boolean expressions passed into macros.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
