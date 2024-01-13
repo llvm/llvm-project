@@ -40,6 +40,8 @@ void caller() {
 #endif // __cplusplus >= 201103L
 } // namespace dr1307
 
+// dr1308: sup 1330
+
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S;
   // expected-error@-1 {{qualified reference to 'S' is a constructor name rather than a type in this context}}
