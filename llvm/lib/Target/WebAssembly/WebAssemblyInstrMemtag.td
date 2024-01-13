@@ -47,7 +47,7 @@ defm MEMORY_LOADTAG_A#B: I<(outs rc:$taggedptr), (ins i32imm:$tableidx, rc:$src)
                     "memory.loadtag\t$tableidx",
                     0xfc23>;
 
-let mayLoad = 1, mayStore = 1 in
+let mayStore = 1 in
 defm MEMORY_STORETAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storetag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -55,7 +55,7 @@ defm MEMORY_STORETAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storetag\t$tableidx",
                     0xfc24>;
 
-let mayLoad = 1, mayStore = 1 in
+let mayStore = 1 in
 defm MEMORY_STOREZTAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storeztag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -63,7 +63,7 @@ defm MEMORY_STOREZTAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storeztag\t$tableidx",
                     0xfc25>;
 
-let mayLoad = 1, mayStore = 1 in
+let mayStore = 1 in
 defm MEMORY_STORE1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_store1tag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -71,7 +71,7 @@ defm MEMORY_STORE1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.store1tag\t$tableidx",
                     0xfc26>;
 
-let mayLoad = 1, mayStore = 1 in
+let mayStore = 1 in
 defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(int_wasm_memory_storez1tag (i32 imm:$tableidx), rc:$src, rc:$b16)],
@@ -79,7 +79,7 @@ defm MEMORY_STOREZ1TAG_A#B: I<(outs), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     "memory.storez1tag\t$tableidx",
                     0xfc27>;
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+let hasSideEffects = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -88,7 +88,7 @@ defm MEMORY_RANDOMSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src
                     "memory.randomstoretag\t$tableidx",
                     0xfc28>;
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+let hasSideEffects = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -97,7 +97,7 @@ defm MEMORY_RANDOMSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$sr
                     "memory.randomstoreztag\t$tableidx",
                     0xfc29>;
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+let hasSideEffects = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -106,7 +106,7 @@ defm MEMORY_RANDOMSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$sr
                     "memory.randomstore1tag\t$tableidx",
                     0xfc2a>;
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+let hasSideEffects = 1, mayStore = 1 in
 defm MEMORY_RANDOMSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16),
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$dst,
@@ -115,13 +115,50 @@ defm MEMORY_RANDOMSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$s
                     "memory.randomstorez1tag\t$tableidx",
                     0xfc2b>;
 
-defm MEMORY_ADDNEXTTAG_A#B: I<(outs rc:$nexttaggedptr), (ins i32imm:$tableidx, rc:$taggedptr, rc:$offset),
+let hasSideEffects = 1 in
+defm MEMORY_HINTTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$hintaddr, rc:$index),
                     (outs), (ins i32imm:$tableidx),
-                    [(set rc:$nexttaggedptr,
-                        (int_wasm_memory_addnexttag (i32 imm:$tableidx), rc:$taggedptr, rc:$offset))],
-                    "memory.addnexttag\t$nexttaggedptr, $tableidx, $taggedptr, $offset",
-                    "memory.addnexttag\t$tableidx",
+                    [(set rc:$dst,
+                        (int_wasm_memory_hinttag (i32 imm:$tableidx), rc:$src, rc:$hintaddr, rc:$index))],
+                    "memory.hinttag\t$dst, $tableidx, $src, $hintaddr, $index",
+                    "memory.hinttag\t$tableidx",
                     0xfc2c>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_HINTSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$hintaddr, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_hintstoretag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$hintaddr, rc:$index))],
+                    "memory.hintstoretag\t$dst, $tableidx, $src, $b16, $hintaddr, $index",
+                    "memory.hintstoretag\t$tableidx",
+                    0xfc2d>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_HINTSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$hintaddr, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_hintstoreztag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$hintaddr, rc:$index))],
+                    "memory.hintstoreztag\t$dst, $tableidx, $src, $b16, $hintaddr, $index",
+                    "memory.hintstoreztag\t$tableidx",
+                    0xfc2e>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_HINTSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$hintaddr, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_hintstore1tag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$hintaddr, rc:$index))],
+                    "memory.hintstore1tag\t$dst, $tableidx, $src, $b16, $hintaddr, $index",
+                    "memory.hintstore1tag\t$tableidx",
+                    0xfc2f>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_HINTSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$hintaddr, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_hintstorez1tag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$hintaddr, rc:$index))],
+                    "memory.hintstorez1tag\t$dst, $tableidx, $src, $b16, $hintaddr, $index",
+                    "memory.hintstorez1tag\t$tableidx",
+                    0xfc30>;
 
 }
 
