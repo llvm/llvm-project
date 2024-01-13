@@ -242,7 +242,8 @@ static bool SemaBuiltinAddressof(Sema &S, CallExpr *TheCall) {
     return true;
 
   ExprResult Arg(TheCall->getArg(0));
-  QualType ResultType = S.CheckAddressOfOperand(Arg, TheCall->getBeginLoc());
+  QualType ResultType = S.CheckAddressOfOperand(Arg, TheCall->getBeginLoc(),
+                                                /*IsBuiltinAddressof=*/true);
   if (ResultType.isNull())
     return true;
 
