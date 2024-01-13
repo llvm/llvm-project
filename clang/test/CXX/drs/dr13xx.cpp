@@ -403,21 +403,50 @@ struct ThrowingNSDM : NoexceptCtor {
 
 static_assert(!__is_nothrow_constructible(ThrowingNSDM, int), "");
 
-struct D : NoexceptCtor, ThrowingCtor {
+struct ThrowingCtorTemplate {
+  template <typename = int>
+  ThrowingCtorTemplate() noexcept(false) {}
+};
+
+struct ThrowingNSDM2 : NoexceptCtor {
+  ThrowingCtorTemplate c;
   using NoexceptCtor::NoexceptCtor;
 };
 
-static_assert(!__is_nothrow_constructible(D, int), "");
+static_assert(!__is_nothrow_constructible(ThrowingNSDM2, int), "");
+
+struct D1 : NoexceptCtor, ThrowingCtor {
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(D1, int), "");
+
+struct D2 : NoexceptCtor, ThrowingCtorTemplate {
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(D2, int), "");
 
 struct ThrowingDefaultArg {
   ThrowingDefaultArg(ThrowingCtor = {}) {}
 };
 
-struct D2 : NoexceptCtor, ThrowingDefaultArg {
+struct D3 : NoexceptCtor, ThrowingDefaultArg {
   using NoexceptCtor::NoexceptCtor;
 };
 
-static_assert(!__is_nothrow_constructible(D2, int), "");
+static_assert(!__is_nothrow_constructible(D3, int), "");
+
+struct ThrowingDefaultArgTemplate {
+  template <typename = int>
+  ThrowingDefaultArgTemplate(ThrowingCtor = {}) {}
+};
+
+struct D4 : NoexceptCtor, ThrowingDefaultArgTemplate {
+  using NoexceptCtor::NoexceptCtor;
+};
+
+static_assert(!__is_nothrow_constructible(D4, int), "");
 #endif
 } // namespace dr1350
 
