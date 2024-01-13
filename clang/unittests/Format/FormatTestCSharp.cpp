@@ -1304,8 +1304,8 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "}",
                Style);
 
-  // When the where line is not to be formatted, following lines should not take
-  // on its indentation.
+  // When the "where" line is not to be formatted, following lines should not
+  // take on its indentation.
   verifyFormat("class ItemFactory<T>\n"
                "    where T : new() {\n"
                "  int f() {}\n"
