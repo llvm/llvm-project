@@ -1292,10 +1292,20 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  // Last contingous sequnce of 0 bytes are unintialized to get default
+  // initialization in ptxas. This avoids ptxas memory consumption for large
+  // aggregates.
+  unsigned int count = size;
+  // TODO: symbols make this harder, but it would still be good to trim trailing
+  // 0s for aggs with symbols as well.
+  if (numSymbols() == 0)
+    while (count >= 1 && !buffer[count - 1])
+      count--;
+
+  symbolPosInBuffer.push_back(count);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-  for (unsigned int pos = 0; pos < size;) {
+  for (unsigned int pos = 0; pos < count;) {
     if (pos)
       os << ", ";
     if (pos != nextSymbolPos) {
