@@ -20,10 +20,8 @@
 
 template <typename IntegerT>
 constexpr void test_constraint() {
-  // expected-error-re@*:* 0-2 {{constant expression evaluates to {{.*}} which cannot be narrowed to type {{.*}}}}
-  // expected-error@*:* 0-9 {{no matching function for call to 'div_sat'}}
-  // expected-error@*:* 0-3 {{expected unqualified-id}}
-  [[maybe_unused]] auto sum = std::div_sat(IntegerT{3}, IntegerT{4});
+  // expected-error@*:* 8-9 {{no matching function for call to 'div_sat'}}
+  [[maybe_unused]] auto sum = std::div_sat(IntegerT{}, IntegerT{});
 }
 
 constexpr bool test() {
