@@ -1196,7 +1196,7 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
-SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
+SourceLocation Parser::ParsePackIndexingType(DeclSpec &DS) {
   assert(Tok.isOneOf(tok::annot_pack_indexing_type, tok::identifier) &&
          "Expected an identifier");
 
@@ -1382,7 +1382,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
   if (Tok.is(tok::annot_pack_indexing_type)) {
     DeclSpec DS(AttrFactory);
-    ParseIndexedTypeNamePack(DS);
+    ParsePackIndexingType(DS);
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                               DeclaratorContext::TypeName);
     return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
@@ -3934,7 +3934,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
   } else if (Tok.is(tok::annot_pack_indexing_type)) {
     // Uses of T...[N] will already have been converted to
     // annot_pack_indexing_type by ParseOptionalCXXScopeSpecifier at this point.
-    ParseIndexedTypeNamePack(DS);
+    ParsePackIndexingType(DS);
   } else {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)
                                            ? takeTemplateIdAnnotation(Tok)

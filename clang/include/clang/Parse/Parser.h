@@ -2461,7 +2461,7 @@ private:
       DeclSpecContext DSC, LateParsedAttrList *LateAttrs,
       ImplicitTypenameContext AllowImplicitTypename);
 
-  SourceLocation ParseIndexedTypeNamePack(DeclSpec &DS);
+  SourceLocation ParsePackIndexingType(DeclSpec &DS);
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc);

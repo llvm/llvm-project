@@ -4448,7 +4448,7 @@ void Parser::ParseDeclarationSpecifiers(
       continue;
 
     case tok::annot_pack_indexing_type:
-      ParseIndexedTypeNamePack(DS);
+      ParsePackIndexingType(DS);
       continue;
 
     case tok::annot_pragma_pack:

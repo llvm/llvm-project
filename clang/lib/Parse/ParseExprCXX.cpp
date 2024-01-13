@@ -239,7 +239,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     SourceLocation Start = Tok.getLocation();
     DeclSpec DS(AttrFactory);
     SourceLocation CCLoc;
-    SourceLocation EndLoc = ParseIndexedTypeNamePack(DS);
+    SourceLocation EndLoc = ParsePackIndexingType(DS);
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
@@ -1869,7 +1869,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   if (GetLookAheadToken(1).is(tok::ellipsis) &&
       GetLookAheadToken(2).is(tok::l_square)) {
     DeclSpec DS(AttrFactory);
-    ParseIndexedTypeNamePack(DS);
+    ParsePackIndexingType(DS);
     return Actions.ActOnPseudoDestructorExpr(getCurScope(), Base, OpLoc, OpKind,
                                              TildeLoc, DS);
   }
@@ -2428,7 +2428,7 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     return DS.Finish(Actions, Policy);
 
   case tok::annot_pack_indexing_type:
-    DS.SetRangeEnd(ParseIndexedTypeNamePack(DS));
+    DS.SetRangeEnd(ParsePackIndexingType(DS));
     return DS.Finish(Actions, Policy);
 
   // GNU typeof support.
