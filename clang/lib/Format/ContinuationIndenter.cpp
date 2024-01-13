@@ -1591,6 +1591,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     State.StartOfStringLiteral = State.Column + 1;
   if (Current.is(TT_CSharpStringLiteral) && State.StartOfStringLiteral == 0) {
     State.StartOfStringLiteral = State.Column + 1;
+  } else if (Current.is(TT_TableGenMultiLineString) &&
+             State.StartOfStringLiteral == 0) {
+    State.StartOfStringLiteral = State.Column + 1;
   } else if (Current.isStringLiteral() && State.StartOfStringLiteral == 0) {
     State.StartOfStringLiteral = State.Column;
   } else if (!Current.isOneOf(tok::comment, tok::identifier, tok::hash) &&

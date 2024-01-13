@@ -93,6 +93,8 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
+    if (Style.isTableGen())
+      handleTableGenMultilineString();
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -269,6 +271,14 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+  }
+  if (Style.isTableGen()) {
+    if (tryMergeTokens({tok::l_square, tok::l_brace},
+                       TT_TableGenMultiLineString)) {
+      // Multi line string starts with [{
+      Tokens.back()->Tok.setKind(tok::string_literal);
       return;
     }
   }
@@ -761,6 +771,53 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   assert(Offset < End);
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
+}
+
+void FormatTokenLexer::handleTableGenMultilineString() {
+  FormatToken *MultiLineString = Tokens.back();
+  if (MultiLineString->isNot(TT_TableGenMultiLineString))
+    return;
+
+  bool PrevIsRBrace = false;
+  const char *FirstBreak = nullptr;
+  const char *LastBreak = nullptr;
+  const char *Begin = MultiLineString->TokenText.begin();
+  // Skip until }], the closer of multi line string found.
+  for (const char *Current = Begin, *End = Lex->getBuffer().end();
+       Current != End; ++Current) {
+    if (PrevIsRBrace && *Current == ']') {
+      // }] is the end of multi line string.
+      if (!FirstBreak)
+        FirstBreak = Current;
+      MultiLineString->TokenText = StringRef(Begin, Current - Begin + 1);
+      // ColumnWidth is only the width of the first line.
+      MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+          StringRef(Begin, FirstBreak - Begin + 1),
+          MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+      if (LastBreak) {
+        // Set LastLineColumnWidth if multi line string has multiple lines.
+        MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+            StringRef(LastBreak + 1, Current - LastBreak),
+            MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+      }
+      resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Current + 1)));
+      return;
+    }
+    PrevIsRBrace = false;
+    if (*Current == '\n') {
+      MultiLineString->IsMultiline = true;
+      // Assure LastBreak is not equal to FirstBreak.
+      if (!FirstBreak)
+        FirstBreak = Current;
+      LastBreak = Current;
+      continue;
+    }
+    if (*Current == '}') {
+      // Memorize '}'. If next character is ']', they are the closer.
+      PrevIsRBrace = true;
+      continue;
+    }
+  }
 }
 
 void FormatTokenLexer::handleTemplateStrings() {

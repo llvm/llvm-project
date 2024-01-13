@@ -2193,6 +2193,11 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   ASSERT_TRUE(Keywords.isTableGenDefinition(*Tokens[0]));
   ASSERT_TRUE(Tokens[0]->is(Keywords.kw_def));
   ASSERT_TRUE(Tokens[1]->is(TT_StartOfName));
+
+  // Code, the multiline string token.
+  Tokens = Annotate("[{ code is multiline string }]");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
