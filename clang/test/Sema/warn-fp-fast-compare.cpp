@@ -71,149 +71,149 @@ public:
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
 #if FAST
-// expected-warning@+11 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   i = a == INFINITY;
 #if FAST
-// expected-warning@+11 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   j = INFINITY == a;
 #if FAST
-// expected-warning@+11 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   i = a == NAN;
 #if FAST
-// expected-warning@+11 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   j = NAN == a;
 #if FAST
-// expected-warning@+11 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   j = INFINITY <= a;
 #if FAST
-// expected-warning@+11 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-  // expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   j = INFINITY < a;
 #if FAST
-// expected-warning@+11 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-  // expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   j = a > NAN;
 #if FAST
-// expected-warning@+11 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with nan will always return 'false' because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   j = a >= NAN;
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
-k = std::isinf(a);
+  k = std::isinf(a);
 #if FAST
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   l = std::isnan(a);
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   o = std::isfinite(a);
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}} 
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}} 
 #endif
   m = __builtin_isinf(a);
 #if FAST
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   n = __builtin_isnan(a);
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{explicit comparison with infinity will always return 'false' because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   p = __builtin_isfinite(a);
 
@@ -225,58 +225,58 @@ k = std::isinf(a);
   j = isunorderedf(a, b);
 
 #if FAST
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   j = isunorderedf(a, NAN);
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   j = isunorderedf(a, INFINITY);
 #if FAST
-// expected-warning@+11 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_NANS
-// expected-warning@+2 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   i = std::isunordered(a, NAN);
 #if FAST
-// expected-warning@+11 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+11 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if FAST
-// expected-warning@+8 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
-#endif
-#if NO_NANS
-// expected-warning@+5 {{use of NaN will always be 'false' because NaN will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+8 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
+#endif
+#if NO_NANS
+// expected-warning@+2 {{use of nan as a function argument will not always be interpreted as such because nan will not be produced according to the currently enabled floating-point options}}
 #endif
   i = std::isunordered(a, INFINITY);
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   double y = i * numeric_limits<double>::infinity();
 
 #if FAST
-// expected-warning@+5 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+5 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
 #if NO_INFS
-// expected-warning@+2 {{use of infinity will always be 'false' because infinity will not be produced according to the currently enabled floating-point options}}
+// expected-warning@+2 {{use of infinity as a function argument will not always be interpreted as such because infinity will not be produced according to the currently enabled floating-point options}}
 #endif
   j = numeric_limits<float>::infinity();
   return 0;
