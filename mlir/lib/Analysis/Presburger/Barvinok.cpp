@@ -146,33 +146,29 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
                             std::vector({denominator}));
 }
 
-/// We use a recursive procedure to find a vector not orthogonal
+/// We use an iterative procedure to find a vector not orthogonal
 /// to a given set, ignoring the null vectors.
 /// Let the inputs be {x_1, ..., x_k}, all vectors of length n.
 ///
 /// In the following,
-/// vs[:i] means the elements of vs up to (not including) the i'th one,
+/// vs[:i] means the elements of vs up to and including the i'th one,
 /// <vs, us> means the dot product of vs and us,
 /// vs ++ [v] means the vector vs with the new element v appended to it.
 ///
-/// We proceed iteratively; for steps i = 2, ... n, we construct a vector
+/// We proceed iteratively; for steps d = 0, ... n-1, we construct a vector
 /// which is not orthogonal to any of {x_1[:i], ..., x_n[:i]}, ignoring
 /// the null vectors.
-/// At step i = 2, we let vs = [1]. Clearly this is not orthogonal to
+/// At step d = 0, we let vs = [1]. Clearly this is not orthogonal to
 /// any vector in the set {x_1[0], ..., x_n[0]}, except the null ones,
 /// which we ignore.
-/// At step i = k + 1, we need a number v
-/// s.t. <x_i[:k+1], vs++[v]> != 0 for all i.
-/// => <x_i[:k], vs> + x_i[k]*v != 0
-/// => v != - <x_i[:k], vs> / x_i[k]
+/// At step d = t + 1, we need a number v
+/// s.t. <x_i[:t+1], vs++[v]> != 0 for all i.
+/// => <x_i[:t], vs> + x_i[t+1]*v != 0
+/// => v != - <x_i[:t], vs> / x_i[t+1]
 /// We compute this value for all x_i, and then
 /// set v to be the maximum element of this set plus one. Thus
 /// v is outside the set as desired, and we append it to vs
-/// to obtain the result of the k+1'th step.
-///
-/// The base case is given in one dimension,
-/// where the vector [1] is not orthogonal to any
-/// of the input vectors (since they are all nonzero).
+/// to obtain the result of the t+1'th step.
 Point mlir::presburger::detail::getNonOrthogonalVector(
     std::vector<Point> vectors) {
   unsigned dim = vectors[0].size();
@@ -184,23 +180,23 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
            disallowedValue = Fraction(0, 1);
   Fraction newValue;
 
-  for (unsigned d = 2; d <= dim; d++) {
+  for (unsigned d = 1; d < dim; ++d) {
     lowerDimDotProducts.clear();
 
     // Compute the set of dot products <x_i[:d-1], vs> for each i.
     for (const Point &vector : vectors) {
       dotProduct = Fraction(0, 1);
-      for (unsigned i = 0; i < d - 1; i++)
+      for (unsigned i = 0; i < d; i++)
         dotProduct = dotProduct + vector[i] * newPoint[i];
       lowerDimDotProducts.push_back(dotProduct);
     }
 
-    // Compute - <x_i[:n-1], vs> / x_i[-1] for each i,
+    // Compute - <x_i[:d-1], vs> / x_i[d] for each i,
     // and find the biggest such value.
     for (unsigned i = 0, e = vectors.size(); i < e; ++i) {
-      if (vectors[i][d - 1] == 0)
+      if (vectors[i][d] == 0)
         continue;
-      disallowedValue = -lowerDimDotProducts[i] / vectors[i][d - 1];
+      disallowedValue = -lowerDimDotProducts[i] / vectors[i][d];
       if (maxDisallowedValue < disallowedValue)
         maxDisallowedValue = disallowedValue;
     }
