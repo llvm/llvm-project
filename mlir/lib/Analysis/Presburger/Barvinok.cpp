@@ -233,6 +233,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   coefficients[0] = num[0] / den[0];
 
   for (unsigned i = 1; i <= power; ++i) {
+    // If the i'th power is not in the numerator, coefficients[i]
+    // remains zero.
     if (i < num.size())
       coefficients[i] = num[i];
 
