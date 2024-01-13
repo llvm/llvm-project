@@ -492,9 +492,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
 
-- Added option `IgnoreMacros` to :doc:`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` check.
-  It makes the check ignore boolean expressions passed into macros.
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check by adding the
+  new option `IgnoreMacros` that ignores boolean expressions passed into macros.
 
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
