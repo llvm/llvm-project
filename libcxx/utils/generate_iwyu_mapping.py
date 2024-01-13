@@ -43,8 +43,6 @@ def generate_map(include):
         public = []
         if i == "__assert":
             continue
-        elif i == "__assertion_handler.in":
-            continue
         elif i == "__availability":
             continue
         elif i == "__bit_reference":
