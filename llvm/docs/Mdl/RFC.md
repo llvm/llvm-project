@@ -1,12 +1,12 @@
 
-## MDL: A Micro-Architecture Description Language for LLVM
+# MDL: A Micro-Architecture Description Language for LLVM
 
 November 2022                                   Reid Tatge        [tatge@google.com](mailto:tatge@google.com)
 
 Updated January 2024
 
 
-#### **TL;DR:**
+## **TL;DR:**
 
 We’ve created a DSL and compiler for modeling micro-architecture that handles a very broad class of architectures - CPUs, GPUs, VLIWs, DSPs, ML accelerators, and embedded devices. This effort grew out of a need to quickly develop and experiment with high-quality compilers and tools to facilitate rapid architecture exploration. We named the DSL “MDL” for “Microarchitecture Description Language”.
 
@@ -16,7 +16,7 @@ While being significantly more expressive than TableGen’s Schedules and Itiner
 The MDL compiler, associated tools, and documentation are available as open source (at https://github.com/MPACT-ORG/llvm-project/tree/all), and we would like to explore adding this to the LLVM project, and encourage contributions from others.
 
 
-#### **Background**
+## **Background**
 
 Over the last few years, we have been using LLVM to develop a compiler backend for Google’s TPU machine learning accelerators.  TPUs have complex microarchitectures and pose a number of challenges that are not seen in in typical LLVM targets:
 
@@ -34,7 +34,7 @@ Over the last few years, we have been using LLVM to develop a compiler backend f
 While some of these problems manifest in a few upstream LLVM targets, this collection of problems is a superset of the problems directly addressed by LLVM - Schedules and Itineraries are simply not sufficient to model everything. Supporting this class of architecture is therefore code-intensive - it takes around 20,000 lines of C++ code to model the TPU sub-targets. This is brittle, hard to write, debug, test, and evolve over time. In contrast, the MDL description for these sub-targets is ~2,000 lines of text, and requires very little (if any) target-specific code in the backend.
 
 
-#### **Status**
+## **Status**
 
 
 
@@ -43,14 +43,14 @@ While some of these problems manifest in a few upstream LLVM targets, this colle
 *   We’ve modified the CodeGen and MC libraries to (optionally) use our methodology for latency management.
 
 
-#### **Building**
+## **Building**
 
 
 
 *   You can build llvm with or without MDL support.  It is included by using the LLVM\_ENABLE\_MDL CMake parameter.  If included, it is currently used by default, and can be disabled with a command line option (--schedmdl=0).
 
 
-#### **Testing**
+## **Testing**
 
 
 
