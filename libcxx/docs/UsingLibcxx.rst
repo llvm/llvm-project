@@ -146,50 +146,6 @@ IWYU, you should run the tool like so:
 If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
-.. _assertion-handler:
-
-Overriding the default assertion handler
-==========================================
-
-When the library wants to terminate due to an unforeseen condition (such as a hardening assertion
-failure), the program is aborted through a special verbose termination function. The library provides
-a default function that prints an error message and calls ``std::abort()``. Note that this function is
-provided by the static or shared library, so it is only available when deploying to a platform where
-the compiled library is sufficiently recent. On older platforms, the program will terminate in an
-unspecified unsuccessful manner, but the quality of diagnostics won't be great.
-
-However, vendors can also override that mechanism at CMake configuration time. When a hardening
-assertion fails, the library invokes the ``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide
-a header that contains a custom definition of this macro and specify the path to the header via the
-``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, the contents of this header will be
-injected into library configuration headers, replacing the default implementation. The header must not
-include any standard library headers (directly or transitively) because doing so will almost always
-create a circular dependency.
-
-``_LIBCPP_ASSERTION_HANDLER(error_message, format, args...)`` is a variadic macro that takes the
-following parameters:
-
-* ``error_message`` -- the original error message that explains the hardening failure. In general, it
-  does not contain information about the source location that triggered the failure.
-* ``format`` -- a printf-style format string that contains a general description of the failure with
-  placeholders for the error message as well as details about the source location.
-* ``args...`` -- arguments to substitute in the ``format`` string. The exact order and meaning of the
-  arguments is unspecified and subject to change (but is always in sync with the format string). Note
-  that for convenience, ``args`` contain the error message as well.
-
-Programs that wish to terminate as fast as possible may use the ``error_message`` parameter that
-doesn't require any formatting. Programs that prefer having more information about the failure (such as
-the filename and the line number of the code that triggered the assertion) should use the printf-style
-formatting with ``format`` and ``args...``.
-
-When a hardening assertion fails, it means that the program is about to invoke undefined behavior. For
-this reason, the custom assertion handler is generally expected to terminate the program. If a custom
-assertion handler decides to avoid doing so (e.g. it chooses to log and continue instead), it does so
-at its own risk -- this approach should only be used in non-production builds and with an understanding
-of potential consequences. Furthermore, the custom assertion handler should not throw any exceptions as
-it may be invoked from standard library functions that are marked ``noexcept`` (so throwing will result
-in ``std::terminate`` being called).
-
 Libc++ Configuration Macros
 ===========================
 
