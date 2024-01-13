@@ -12,7 +12,7 @@ extern int dv;
 
 void test(int *dp, int (*fp)(int), int value) {
   dp = ptrauth_strip(dp, VALID_DATA_KEY);
-  uintptr_t t0 = ptrauth_blend_discriminator(dp, value);
+  ptrauth_extra_data_t t0 = ptrauth_blend_discriminator(dp, value);
   t0 = ptrauth_type_discriminator(int (*)(int));
   dp = ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
   dp = ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY, 0);
