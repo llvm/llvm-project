@@ -3497,6 +3497,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPDeclareTargetConstruct
                        &declareTargetConstruct) {
@@ -3597,7 +3598,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::pft::Evaluation &eval,
+       Fortran::lower::SymMap &symTable, Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   std::visit(
       Fortran::common::visitors{
@@ -3616,7 +3617,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           },
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct
                   &declareTargetConstruct) {
-            genOMP(converter, eval, declareTargetConstruct);
+            genOMP(converter, symTable, eval, declareTargetConstruct);
           },
           [&](const Fortran::parser::OpenMPRequiresConstruct
                   &requiresConstruct) {
@@ -3660,9 +3661,9 @@ void Fortran::lower::genOpenMPConstruct(
 
 void Fortran::lower::genOpenMPDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &eval,
+    Fortran::lower::SymMap &symTable, Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &omp) {
-  genOMP(converter, eval, omp);
+  genOMP(converter, symTable, eval, omp);
   genNestedEvaluations(converter, eval);
 }
 
