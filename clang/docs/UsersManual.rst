@@ -1132,7 +1132,7 @@ Controlling Diagnostics via Pragmas
 Clang can also control what diagnostics are enabled through the use of
 pragmas in the source code. This is useful for turning off specific
 warnings in a section of source code. Clang supports GCC's pragma for
-compatibility with existing source code, as well as several extensions.
+compatibility with existing source code.
 
 The pragma may control any warning that can be used from the command
 line. Warnings may be set to ignored, warning, error, or fatal. The
@@ -1143,8 +1143,7 @@ warnings:
 
   #pragma GCC diagnostic ignored "-Wall"
 
-In addition to all of the functionality provided by GCC's pragma, Clang
-also allows you to push and pop the current warning state. This is
+Clang also allows you to push and pop the current warning state. This is
 particularly useful when writing a header file that will be compiled by
 other people, because you don't know what warning flags they build with.
 
@@ -1157,19 +1156,16 @@ existed.
   #if foo
   #endif foo // warning: extra tokens at end of #endif directive
 
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wextra-tokens"
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wextra-tokens"
 
   #if foo
   #endif foo // no warning
 
-  #pragma clang diagnostic pop
+  #pragma GCC diagnostic pop
 
 The push and pop pragmas will save and restore the full diagnostic state
-of the compiler, regardless of how it was set. That means that it is
-possible to use push and pop around GCC compatible diagnostics and Clang
-will push and pop them appropriately, while GCC will ignore the pushes
-and pops as unknown pragmas. It should be noted that while Clang
+of the compiler, regardless of how it was set. It should be noted that while Clang
 supports the GCC pragma, Clang and GCC do not support the exact same set
 of warnings, so even when using GCC compatible #pragmas there is no
 guarantee that they will have identical behaviour on both compilers.
