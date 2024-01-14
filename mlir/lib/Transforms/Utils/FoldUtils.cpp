@@ -77,8 +77,10 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate) {
     // Check to see if we should rehoist, i.e. if a non-constant operation was
     // inserted before this one.
     Block *opBlock = op->getBlock();
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
       op->moveBefore(&opBlock->front());
+      op->setLoc(erasedFoldedLocation);
+    }
     return failure();
   }
 
@@ -112,8 +114,10 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // If this is a constant we unique'd, we don't need to insert, but we can
   // check to see if we should rehoist it.
   if (isFolderOwnedConstant(op)) {
-    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode()))
+    if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
       op->moveBefore(&opBlock->front());
+      op->setLoc(erasedFoldedLocation);
+    }
     return true;
   }
 
@@ -141,8 +145,8 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // If there is an existing constant, replace `op`.
   if (folderConstOp) {
     notifyRemoval(op);
-    appendFoldedLocation(folderConstOp, op->getLoc());
     rewriter.replaceOp(op, folderConstOp->getResults());
+    folderConstOp->setLoc(erasedFoldedLocation);
     return false;
   }
 
@@ -152,8 +156,10 @@ bool OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // anything. Otherwise, we move the constant to the insertion block.
   Block *insertBlock = &insertRegion->front();
   if (opBlock != insertBlock || (&insertBlock->front() != op &&
-                                 !isFolderOwnedConstant(op->getPrevNode())))
+                                 !isFolderOwnedConstant(op->getPrevNode()))) {
     op->moveBefore(&insertBlock->front());
+    op->setLoc(erasedFoldedLocation);
+  }
 
   folderConstOp = op;
   referencedDialects[op].push_back(op->getDialect());
@@ -194,17 +200,17 @@ void OperationFolder::clear() {
 /// Get or create a constant using the given builder. On success this returns
 /// the constant operation, nullptr otherwise.
 Value OperationFolder::getOrCreateConstant(Block *block, Dialect *dialect,
-                                           Attribute value, Type type,
-                                           Location loc) {
+                                           Attribute value, Type type) {
   // Find an insertion point for the constant.
   auto *insertRegion = getInsertionRegion(interfaces, block);
   auto &entry = insertRegion->front();
   rewriter.setInsertionPoint(&entry, entry.begin());
 
   // Get the constant map for the insertion region of this operation.
+  // Use erased location since the op is being built at the front of block.
   auto &uniquedConstants = foldScopes[insertRegion];
-  Operation *constOp =
-      tryGetOrCreateConstant(uniquedConstants, dialect, value, type, loc);
+  Operation *constOp = tryGetOrCreateConstant(uniquedConstants, dialect, value,
+                                              type, erasedFoldedLocation);
   return constOp ? constOp->getResult(0) : Value();
 }
 
@@ -248,10 +254,6 @@ OperationFolder::processFoldResults(Operation *op,
 
     // Check if the result was an SSA value.
     if (auto repl = llvm::dyn_cast_if_present<Value>(foldResults[i])) {
-      if (repl.getType() != op->getResult(i).getType()) {
-        results.clear();
-        return failure();
-      }
       results.emplace_back(repl);
       continue;
     }
@@ -259,8 +261,9 @@ OperationFolder::processFoldResults(Operation *op,
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
     Attribute attrRepl = foldResults[i].get<Attribute>();
-    if (auto *constOp = tryGetOrCreateConstant(
-            uniquedConstants, dialect, attrRepl, res.getType(), op->getLoc())) {
+    if (auto *constOp =
+            tryGetOrCreateConstant(uniquedConstants, dialect, attrRepl,
+                                   res.getType(), erasedFoldedLocation)) {
       // Ensure that this constant dominates the operation we are replacing it
       // with. This may not automatically happen if the operation being folded
       // was inserted before the constant within the insertion block.
@@ -296,7 +299,8 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   auto constKey = std::make_tuple(dialect, value, type);
   Operation *&constOp = uniquedConstants[constKey];
   if (constOp) {
-    appendFoldedLocation(constOp, loc);
+    if (loc != constOp->getLoc())
+      constOp->setLoc(erasedFoldedLocation);
     return constOp;
   }
 
@@ -319,9 +323,10 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   // materialized operation in favor of the existing one.
   if (auto *existingOp = uniquedConstants.lookup(newKey)) {
     notifyRemoval(constOp);
-    appendFoldedLocation(existingOp, constOp->getLoc());
     rewriter.eraseOp(constOp);
     referencedDialects[existingOp].push_back(dialect);
+    if (loc != existingOp->getLoc())
+      existingOp->setLoc(erasedFoldedLocation);
     return constOp = existingOp;
   }
 
@@ -329,77 +334,4 @@ OperationFolder::tryGetOrCreateConstant(ConstantMap &uniquedConstants,
   referencedDialects[constOp].assign({dialect, newDialect});
   auto newIt = uniquedConstants.insert({newKey, constOp});
   return newIt.first->second;
-}
-
-/// Helper that flattens nested fused locations to a single fused location.
-/// Fused locations nested under non-fused locations are not flattened, and
-/// calling this on non-fused locations is a no-op as a result.
-///
-/// Fused locations are only flattened into parent fused locations if the
-/// child fused location has no metadata, or if the metadata of the parent and
-/// child fused locations are the same---this to avoid breaking cases where
-/// metadata matter.
-static Location FlattenFusedLocationRecursively(const Location loc) {
-  auto fusedLoc = dyn_cast<FusedLoc>(loc);
-  if (!fusedLoc)
-    return loc;
-
-  SetVector<Location> flattenedLocs;
-  Attribute metadata = fusedLoc.getMetadata();
-  ArrayRef<Location> unflattenedLocs = fusedLoc.getLocations();
-  bool hasAnyNestedLocChanged = false;
-
-  for (const Location &unflattenedLoc : unflattenedLocs) {
-    Location flattenedLoc = FlattenFusedLocationRecursively(unflattenedLoc);
-
-    auto flattenedFusedLoc = dyn_cast<FusedLoc>(flattenedLoc);
-    if (flattenedFusedLoc && (!flattenedFusedLoc.getMetadata() ||
-                              flattenedFusedLoc.getMetadata() == metadata)) {
-      hasAnyNestedLocChanged = true;
-      ArrayRef<Location> nestedLocations = flattenedFusedLoc.getLocations();
-      flattenedLocs.insert(nestedLocations.begin(), nestedLocations.end());
-    } else {
-      if (flattenedLoc != unflattenedLoc)
-        hasAnyNestedLocChanged = true;
-
-      flattenedLocs.insert(flattenedLoc);
-    }
-  }
-
-  if (!hasAnyNestedLocChanged &&
-      unflattenedLocs.size() == flattenedLocs.size()) {
-    return loc;
-  }
-
-  return FusedLoc::get(loc->getContext(), flattenedLocs.takeVector(),
-                       fusedLoc.getMetadata());
-}
-
-void OperationFolder::appendFoldedLocation(Operation *retainedOp,
-                                           Location foldedLocation) {
-  // Append into existing fused location if it has the same tag.
-  if (auto existingFusedLoc =
-          dyn_cast<FusedLocWith<StringAttr>>(retainedOp->getLoc())) {
-    StringAttr existingMetadata = existingFusedLoc.getMetadata();
-    if (existingMetadata == fusedLocationTag) {
-      ArrayRef<Location> existingLocations = existingFusedLoc.getLocations();
-      SetVector<Location> locations(existingLocations.begin(),
-                                    existingLocations.end());
-      locations.insert(foldedLocation);
-      Location newFusedLoc = FusedLoc::get(
-          retainedOp->getContext(), locations.takeVector(), existingMetadata);
-      retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
-      return;
-    }
-  }
-
-  // Create a new fusedloc with retainedOp's loc and foldedLocation.
-  // If they're already equal, no need to fuse.
-  if (retainedOp->getLoc() == foldedLocation)
-    return;
-
-  Location newFusedLoc =
-      FusedLoc::get(retainedOp->getContext(),
-                    {retainedOp->getLoc(), foldedLocation}, fusedLocationTag);
-  retainedOp->setLoc(FlattenFusedLocationRecursively(newFusedLoc));
 }

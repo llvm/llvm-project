@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -39,7 +40,9 @@ enum class OpenVariant {
 namespace {
 
 class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
-  mutable std::unique_ptr<BugType> BT_open, BT_pthreadOnce;
+  const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
+  const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
+                               categories::UnixAPI};
   mutable std::optional<uint64_t> Val_O_CREAT;
 
 public:
@@ -64,7 +67,9 @@ public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
 private:
-  mutable std::unique_ptr<BugType> BT_mallocZero;
+  const BugType BT_mallocZero{
+      this, "Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)",
+      categories::UnixAPI};
 
   void CheckCallocZero(CheckerContext &C, const CallExpr *CE) const;
   void CheckMallocZero(CheckerContext &C, const CallExpr *CE) const;
@@ -86,14 +91,6 @@ private:
 };
 
 } //end anonymous namespace
-
-static void LazyInitialize(const CheckerBase *Checker,
-                           std::unique_ptr<BugType> &BT,
-                           const char *name) {
-  if (BT)
-    return;
-  BT.reset(new BugType(Checker, name, categories::UnixAPI));
-}
 
 //===----------------------------------------------------------------------===//
 // "open" (man 2 open)
@@ -132,9 +129,7 @@ void UnixAPIMisuseChecker::ReportOpenBug(CheckerContext &C,
   if (!N)
     return;
 
-  LazyInitialize(this, BT_open, "Improper use of 'open'");
-
-  auto Report = std::make_unique<PathSensitiveBugReport>(*BT_open, Msg, N);
+  auto Report = std::make_unique<PathSensitiveBugReport>(BT_open, Msg, N);
   Report->addRange(SR);
   C.emitReport(std::move(Report));
 }
@@ -301,10 +296,8 @@ void UnixAPIMisuseChecker::CheckPthreadOnce(CheckerContext &C,
   if (isa<VarRegion>(R) && isa<StackLocalsSpaceRegion>(R->getMemorySpace()))
     os << "  Perhaps you intended to declare the variable as 'static'?";
 
-  LazyInitialize(this, BT_pthreadOnce, "Improper use of 'pthread_once'");
-
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_pthreadOnce, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(BT_pthreadOnce, os.str(), N);
   report->addRange(CE->getArg(0)->getSourceRange());
   C.emitReport(std::move(report));
 }
@@ -341,14 +334,11 @@ bool UnixAPIPortabilityChecker::ReportZeroByteAllocation(
   if (!N)
     return false;
 
-  LazyInitialize(this, BT_mallocZero,
-                 "Undefined allocation of 0 bytes (CERT MEM04-C; CWE-131)");
-
   SmallString<256> S;
   llvm::raw_svector_ostream os(S);
   os << "Call to '" << fn_name << "' has an allocation size of 0 bytes";
   auto report =
-      std::make_unique<PathSensitiveBugReport>(*BT_mallocZero, os.str(), N);
+      std::make_unique<PathSensitiveBugReport>(BT_mallocZero, os.str(), N);
 
   report->addRange(arg->getSourceRange());
   bugreporter::trackExpressionValue(N, arg, *report);

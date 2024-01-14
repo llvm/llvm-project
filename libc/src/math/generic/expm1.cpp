@@ -61,6 +61,8 @@ constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
 constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 
+namespace {
+
 // Polynomial approximations with double precision:
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
@@ -219,11 +221,10 @@ DoubleDouble exp_double_double(double x, double kd, const DoubleDouble &exp_mid,
 // |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
-  uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint64_t x_abs = xbits.abs().uintval();
 
   // |x| <= 2^-53.
   if (x_abs <= 0x3ca0'0000'0000'0000ULL) {
@@ -261,7 +262,7 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return static_cast<double>(FPBits(FPBits::MAX_NORMAL));
+      return FPBits::max_normal();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
@@ -270,9 +271,10 @@ double set_exceptional(double x) {
   return x + static_cast<double>(FPBits::inf());
 }
 
+} // namespace
+
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   bool x_sign = xbits.get_sign();
@@ -390,7 +392,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   // -2^(-hi)
   double one_scaled =
-      FPBits::create_value(true, FPBits::EXPONENT_BIAS - hi, 0).get_val();
+      FPBits::create_value(true, FPBits::EXP_BIAS - hi, 0).get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
   DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
@@ -465,7 +467,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   if (LIBC_LIKELY(upper == lower)) {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -479,7 +481,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }

@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE" %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 !----------------------
@@ -294,8 +295,9 @@ subroutine vec_lvsl_testi8s(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[ld:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(ptr %[[addr]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_lvsl_testi8s
 
 ! CHECK-LABEL: @vec_lvsl_testi16a
@@ -311,8 +313,9 @@ subroutine vec_lvsl_testi16a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[ld:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(ptr %[[addr]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE:  store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_lvsl_testi16a
 
 ! CHECK-LABEL: @vec_lvsl_testi32a
@@ -328,8 +331,9 @@ subroutine vec_lvsl_testi32a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[ld:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(ptr %[[addr]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE:  store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_lvsl_testi32a
 
 ! CHECK-LABEL: @vec_lvsl_testf32a
@@ -344,8 +348,9 @@ subroutine vec_lvsl_testf32a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[ld:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsl(ptr %[[addr]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE:  store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE:  store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_lvsl_testf32a
 
 !----------------------
@@ -365,8 +370,9 @@ subroutine vec_lvsr_testi8s(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[ld:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[addr:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(ptr %[[ld]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[addr]], ptr %2, align 16
 end subroutine vec_lvsr_testi8s
 
 ! CHECK-LABEL: @vec_lvsr_testi16a
@@ -382,8 +388,9 @@ subroutine vec_lvsr_testi16a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[ld:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[addr:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(ptr %[[ld]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[addr]], ptr %2, align 16
 end subroutine vec_lvsr_testi16a
 
 ! CHECK-LABEL: @vec_lvsr_testi32a
@@ -399,8 +406,9 @@ subroutine vec_lvsr_testi32a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[ld:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[addr:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(ptr %[[ld]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[addr]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[addr]], ptr %2, align 16
 end subroutine vec_lvsr_testi32a
 
 ! CHECK-LABEL: @vec_lvsr_testf32a
@@ -415,8 +423,9 @@ subroutine vec_lvsr_testf32a(arg1, arg2, res)
 ! LLVMIR: %[[rshft:.*]] = ashr i64 %[[lshft]], 56
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[rshft]]
 ! LLVMIR: %[[ld:.*]] = call <16 x i8> @llvm.ppc.altivec.lvsr(ptr %[[addr]])
-! LLVMIR: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-LE: %[[sv:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[sv]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_lvsr_testf32a
 
 !----------------------
@@ -708,8 +717,9 @@ subroutine vec_xl_be_testi8a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i8, ptr %0, align 1
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i8 %[[arg1]]
 ! LLVMIR: %[[ld:.*]] = load <16 x i8>, ptr %[[addr]], align 1
-! LLVMIR: %[[shff:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <16 x i8> %[[shff]], ptr %2, align 16
+! LLVMIR-LE: %[[shff:.*]] = shufflevector <16 x i8> %[[ld]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <16 x i8> %[[shff]], ptr %2, align 16
+! LLVMIR-BE: store <16 x i8> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testi8a
 
 ! CHECK-LABEL: @vec_xl_be_testi16a
@@ -722,8 +732,9 @@ subroutine vec_xl_be_testi16a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i16, ptr %0, align 2
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i16 %[[arg1]]
 ! LLVMIR: %[[ld:.*]] = load <8 x i16>, ptr %[[addr]], align 1
-! LLVMIR: %[[shff:.*]] = shufflevector <8 x i16> %[[ld]], <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-! LLVMIR: store <8 x i16> %[[shff]], ptr %2, align 16
+! LLVMIR-LE: %[[shff:.*]] = shufflevector <8 x i16> %[[ld]], <8 x i16> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE: store <8 x i16> %[[shff]], ptr %2, align 16
+! LLVMIR-BE: store <8 x i16> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testi16a
 
 ! CHECK-LABEL: @vec_xl_be_testi32a
@@ -736,8 +747,9 @@ subroutine vec_xl_be_testi32a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i32, ptr %0, align 4
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i32 %[[arg1]]
 ! LLVMIR:  %[[ld:.*]] = load <4 x i32>, ptr %[[addr]], align 1
-! LLVMIR:  %[[shff:.*]] = shufflevector <4 x i32> %[[ld]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <4 x i32> %[[shff]], ptr %2, align 16
+! LLVMIR-LE:  %[[shff:.*]] = shufflevector <4 x i32> %[[ld]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE:  store <4 x i32> %[[shff]], ptr %2, align 16
+! LLVMIR-BE:  store <4 x i32> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testi32a
 
 ! CHECK-LABEL: @vec_xl_be_testi64a
@@ -750,8 +762,9 @@ subroutine vec_xl_be_testi64a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i64, ptr %0, align 8
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[arg1]]
 ! LLVMIR:  %[[ld:.*]] = load <2 x i64>, ptr %[[addr]], align 1
-! LLVMIR:  %[[shff:.*]] = shufflevector <2 x i64> %[[ld]], <2 x i64> undef, <2 x i32> <i32 1, i32 0>
-! LLVMIR:  store <2 x i64> %[[shff]], ptr %2, align 16
+! LLVMIR-LE:  %[[shff:.*]] = shufflevector <2 x i64> %[[ld]], <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+! LLVMIR-LE:  store <2 x i64> %[[shff]], ptr %2, align 16
+! LLVMIR-BE:  store <2 x i64> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testi64a
 
 ! CHECK-LABEL: @vec_xl_be_testf32a
@@ -764,8 +777,9 @@ subroutine vec_xl_be_testf32a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i16, ptr %0, align 2
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i16 %[[arg1]]
 ! LLVMIR:  %[[ld:.*]] = load <4 x float>, ptr %[[addr]], align 1
-! LLVMIR:  %[[shff:.*]] = shufflevector <4 x float> %[[ld]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-! LLVMIR:  store <4 x float> %[[shff]], ptr %2, align 16
+! LLVMIR-LE:  %[[shff:.*]] = shufflevector <4 x float> %[[ld]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+! LLVMIR-LE:  store <4 x float> %[[shff]], ptr %2, align 16
+! LLVMIR-BE:  store <4 x float> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testf32a
 
 ! CHECK-LABEL: @vec_xl_be_testf64a
@@ -778,8 +792,9 @@ subroutine vec_xl_be_testf64a(arg1, arg2, res)
 ! LLVMIR: %[[arg1:.*]] = load i64, ptr %0, align 8
 ! LLVMIR: %[[addr:.*]] = getelementptr i8, ptr %1, i64 %[[arg1]]
 ! LLVMIR:  %[[ld:.*]] = load <2 x double>, ptr %[[addr]], align 1
-! LLVMIR:  %[[shff:.*]] = shufflevector <2 x double> %[[ld]], <2 x double> undef, <2 x i32> <i32 1, i32 0>
-! LLVMIR:  store <2 x double> %[[shff]], ptr %2, align 16
+! LLVMIR-LE:  %[[shff:.*]] = shufflevector <2 x double> %[[ld]], <2 x double> undef, <2 x i32> <i32 1, i32 0>
+! LLVMIR-LE:  store <2 x double> %[[shff]], ptr %2, align 16
+! LLVMIR-BE:  store <2 x double> %[[ld]], ptr %2, align 16
 end subroutine vec_xl_be_testf64a
 
 !----------------------

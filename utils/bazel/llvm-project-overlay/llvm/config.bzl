@@ -86,8 +86,17 @@ os_defines = select({
     "//conditions:default": linux_defines,
 })
 
+# HAVE_BUILTIN_THREAD_POINTER is true for on Linux (outside of ppc64) for
+# all recent toolchains. Add it here by default on Linux as we can't perform a
+# configure time check.
+builtin_thread_pointer = select({
+    "@bazel_tools//src/conditions:linux_ppc64le": [],
+    "@bazel_tools//src/conditions:linux": ["HAVE_BUILTIN_THREAD_POINTER"],
+    "//conditions:default": [],
+})
+
 # TODO: We should split out host vs. target here.
-llvm_config_defines = os_defines + select({
+llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "@bazel_tools//src/conditions:windows": native_arch_defines("X86", "x86_64-pc-win32"),
     "@bazel_tools//src/conditions:darwin_arm64": native_arch_defines("AArch64", "arm64-apple-darwin"),
     "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),

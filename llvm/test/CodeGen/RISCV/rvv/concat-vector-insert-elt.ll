@@ -219,4 +219,3 @@ define void @v4xi64_concat_vector_insert_idx3(ptr %a, ptr %b, i64 %x) {
   store <4 x i64> %ins, ptr %a
   ret void
 }
-

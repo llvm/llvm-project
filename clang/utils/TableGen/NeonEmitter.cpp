@@ -550,6 +550,8 @@ class NeonEmitter {
 
   void createIntrinsic(Record *R, SmallVectorImpl<Intrinsic *> &Out);
   void genBuiltinsDef(raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs);
+  void genStreamingSVECompatibleList(raw_ostream &OS,
+                                     SmallVectorImpl<Intrinsic *> &Defs);
   void genOverloadTypeCheckCode(raw_ostream &OS,
                                 SmallVectorImpl<Intrinsic *> &Defs);
   void genIntrinsicRangeCheckCode(raw_ostream &OS,
@@ -2041,6 +2043,30 @@ void NeonEmitter::genBuiltinsDef(raw_ostream &OS,
   OS << "#endif\n\n";
 }
 
+void NeonEmitter::genStreamingSVECompatibleList(
+    raw_ostream &OS, SmallVectorImpl<Intrinsic *> &Defs) {
+  OS << "#ifdef GET_NEON_STREAMING_COMPAT_FLAG\n";
+
+  std::set<std::string> Emitted;
+  for (auto *Def : Defs) {
+    // If the def has a body (that is, it has Operation DAGs), it won't call
+    // __builtin_neon_* so we don't need to generate a definition for it.
+    if (Def->hasBody())
+      continue;
+
+    std::string Name = Def->getMangledName();
+    if (Emitted.find(Name) != Emitted.end())
+      continue;
+
+    // FIXME: We should make exceptions here for some NEON builtins that are
+    // permitted in streaming mode.
+    OS << "case NEON::BI__builtin_neon_" << Name
+       << ": BuiltinType = ArmNonStreaming; break;\n";
+    Emitted.insert(Name);
+  }
+  OS << "#endif\n\n";
+}
+
 /// Generate the ARM and AArch64 overloaded type checking code for
 /// SemaChecking.cpp, checking for unique builtin declarations.
 void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
@@ -2223,6 +2249,8 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
 
   // Generate ARM overloaded type checking code for SemaChecking.cpp
   genOverloadTypeCheckCode(OS, Defs);
+
+  genStreamingSVECompatibleList(OS, Defs);
 
   // Generate ARM range checking code for shift/lane immediates.
   genIntrinsicRangeCheckCode(OS, Defs);

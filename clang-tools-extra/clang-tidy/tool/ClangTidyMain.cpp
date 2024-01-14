@@ -462,7 +462,7 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
     if (Cur.empty())
       continue;
     Cur.consume_front("-");
-    if (Cur.startswith("clang-diagnostic"))
+    if (Cur.starts_with("clang-diagnostic"))
       continue;
     if (Cur.contains('*')) {
       SmallString<128> RegexText("^");

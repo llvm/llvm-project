@@ -63,23 +63,6 @@ private:
                            MachinePointerInfo &MPO,
                            ISD::ArgFlagsTy Flags) override;
 };
-
-struct FormalArgHandler : public M68kIncomingValueHandler {
-  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
-      : M68kIncomingValueHandler(MIRBuilder, MRI) {}
-};
-
-struct CallReturnHandler : public M68kIncomingValueHandler {
-  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                    MachineInstrBuilder &MIB)
-      : M68kIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
-
-private:
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
-
-  MachineInstrBuilder &MIB;
-};
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_M68K_GLSEL_M68KCALLLOWERING_H

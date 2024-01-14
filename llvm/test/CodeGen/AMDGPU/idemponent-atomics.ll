@@ -43,7 +43,6 @@ define i32 @global_agent_release_idempotent_or(ptr addrspace(1) %in) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    global_atomic_or v0, v[0:1], v2, off sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
@@ -63,7 +62,6 @@ define i32 @global_agent_acquire_release_idempotent_or(ptr addrspace(1) %in) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    global_atomic_or v0, v[0:1], v2, off sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
@@ -84,7 +82,6 @@ define i32 @global_agent_seq_cst_idempotent_or(ptr addrspace(1) %in) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    global_atomic_or v0, v[0:1], v2, off sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1

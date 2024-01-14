@@ -50,15 +50,11 @@ bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
 /// for instructions that benefit according to the target-specific
 /// predicate functions. shouldScheduleAdjacent will be true if any of the
 /// provided predicates are true.
+/// If BranchOnly is true, only branch instructions with one of their
+/// predecessors will be fused.
 std::unique_ptr<ScheduleDAGMutation>
-createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates);
-
-/// Create a DAG scheduling mutation to pair branch instructions with one
-/// of their predecessors back to back for instructions that benefit according
-/// to the target-specific predicate functions. shouldScheduleAdjacent will be
-/// true if any of the provided predicates are true.
-std::unique_ptr<ScheduleDAGMutation>
-createBranchMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates);
+createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
+                             bool BranchOnly = false);
 
 } // end namespace llvm
 

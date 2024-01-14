@@ -528,12 +528,13 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
         WideIV->getStartValue(), WideIV->getStepValue());
 
-    // Update scalar users of IV to use Step instead. Use SetVector to ensure
-    // the list of users doesn't contain duplicates.
-    WideIV->replaceUsesWithIf(
-        Steps, [HasOnlyVectorVFs, WideIV](VPUser &U, unsigned) {
-          return !HasOnlyVectorVFs || U.usesScalars(WideIV);
-        });
+    // Update scalar users of IV to use Step instead.
+    if (!HasOnlyVectorVFs)
+      WideIV->replaceAllUsesWith(Steps);
+    else
+      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
+        return U.usesScalars(WideIV);
+      });
   }
 }
 
@@ -828,15 +829,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Type *ATy = TypeInfo.inferScalarType(A);
     if (TruncTy == ATy) {
       Trunc->replaceAllUsesWith(A);
-    } else if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
-      auto *VPC =
-          new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
-      VPC->insertBefore(&R);
-      Trunc->replaceAllUsesWith(VPC);
-    } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-      auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
-      VPC->insertBefore(&R);
-      Trunc->replaceAllUsesWith(VPC);
+    } else {
+      // Don't replace a scalarizing recipe with a widened cast.
+      if (isa<VPReplicateRecipe>(&R))
+        break;
+      if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+        auto *VPC =
+            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        VPC->insertBefore(&R);
+        Trunc->replaceAllUsesWith(VPC);
+      } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
+        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
+        VPC->insertBefore(&R);
+        Trunc->replaceAllUsesWith(VPC);
+      }
     }
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
@@ -889,7 +895,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenMemoryInstructionRecipe>(&R))
+        continue;
+      if (isa<VPWidenMemoryInstructionRecipe>(&R) &&
+          cast<VPWidenMemoryInstructionRecipe>(&R)->isStore())
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -942,6 +951,23 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 
       auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
 
+      // Any wrapping introduced by shrinking this operation shouldn't be
+      // considered undefined behavior. So, we can't unconditionally copy
+      // arithmetic wrapping flags to VPW.
+      if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
+        VPW->dropPoisonGeneratingFlags();
+
+      // Extend result to original width.
+      auto *Ext = new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
+      Ext->insertAfter(&R);
+      ResultVPV->replaceAllUsesWith(Ext);
+      Ext->setOperand(0, ResultVPV);
+
+      if (isa<VPWidenMemoryInstructionRecipe>(&R)) {
+        assert(!cast<VPWidenMemoryInstructionRecipe>(&R)->isStore() && "stores cannot be narrowed");
+        continue;
+      }
+
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;
       for (unsigned Idx = StartIdx; Idx != R.getNumOperands(); ++Idx) {
@@ -973,17 +999,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         }
       }
 
-      // Any wrapping introduced by shrinking this operation shouldn't be
-      // considered undefined behavior. So, we can't unconditionally copy
-      // arithmetic wrapping flags to VPW.
-      if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
-        VPW->dropPoisonGeneratingFlags();
-
-      // Extend result to original width.
-      auto *Ext = new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
-      Ext->insertAfter(&R);
-      ResultVPV->replaceAllUsesWith(Ext);
-      Ext->setOperand(0, ResultVPV);
     }
   }
 

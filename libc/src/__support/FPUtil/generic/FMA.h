@@ -13,7 +13,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
@@ -95,7 +94,6 @@ LIBC_INLINE bool shift_mantissa(int shift_length, UInt128 &mant) {
 
 template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   using FPBits = fputil::FPBits<double>;
-  using FloatProp = fputil::FloatProperties<double>;
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0)) {
     return x * y + z;
@@ -128,9 +126,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   y_exp += y_bits.get_biased_exponent();
   z_exp += z_bits.get_biased_exponent();
 
-  if (LIBC_UNLIKELY(x_exp == FPBits::MAX_EXPONENT ||
-                    y_exp == FPBits::MAX_EXPONENT ||
-                    z_exp == FPBits::MAX_EXPONENT))
+  if (LIBC_UNLIKELY(x_exp == FPBits::MAX_BIASED_EXPONENT ||
+                    y_exp == FPBits::MAX_BIASED_EXPONENT ||
+                    z_exp == FPBits::MAX_BIASED_EXPONENT))
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
@@ -159,11 +157,10 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
 
   UInt128 prod_mant = x_mant * y_mant << 10;
   int prod_lsb_exp =
-      x_exp + y_exp -
-      (FPBits::EXPONENT_BIAS + 2 * MantissaWidth<double>::VALUE + 10);
+      x_exp + y_exp - (FPBits::EXP_BIAS + 2 * FPBits::FRACTION_LEN + 10);
 
   z_mant <<= 64;
-  int z_lsb_exp = z_exp - (MantissaWidth<double>::VALUE + 64);
+  int z_lsb_exp = z_exp - (FPBits::FRACTION_LEN + 64);
   bool round_bit = false;
   bool sticky_bits = false;
   bool z_shifted = false;
@@ -256,7 +253,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
 
   // Finalize the result.
   int round_mode = fputil::quick_get_round();
-  if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_EXPONENT)) {
+  if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_BIASED_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign) ||
         (round_mode == FE_DOWNWARD && !prod_sign)) {
@@ -269,10 +266,10 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   }
 
   // Remove hidden bit and append the exponent field and sign bit.
-  result = (result & FloatProp::MANTISSA_MASK) |
-           (static_cast<uint64_t>(r_exp) << FloatProp::MANTISSA_WIDTH);
+  result = (result & FPBits::FRACTION_MASK) |
+           (static_cast<uint64_t>(r_exp) << FPBits::FRACTION_LEN);
   if (prod_sign) {
-    result |= FloatProp::SIGN_MASK;
+    result |= FPBits::SIGN_MASK;
   }
 
   // Rounding.

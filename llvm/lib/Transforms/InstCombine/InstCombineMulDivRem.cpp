@@ -350,6 +350,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(&I, m_c_Mul(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNeg(Builder.CreateMul(X, Y));
 
+  // (-X * Y) * -X --> (X * Y) * X
+  // (-X << Y) * -X --> (X << Y) * X
+  if (match(Op1, m_Neg(m_Value(X)))) {
+    if (Value *NegOp0 = Negator::Negate(false, /*IsNSW*/ false, Op0, *this))
+      return BinaryOperator::CreateMul(NegOp0, X);
+  }
+
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
   {
@@ -479,13 +486,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
-
-  // min(X, Y) * max(X, Y) => X * Y.
-  if (match(&I, m_CombineOr(m_c_Mul(m_SMax(m_Value(X), m_Value(Y)),
-                                    m_c_SMin(m_Deferred(X), m_Deferred(Y))),
-                            m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
-                                    m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
 
   // (mul Op0 Op1):
   //    if Log2(Op0) folds away ->

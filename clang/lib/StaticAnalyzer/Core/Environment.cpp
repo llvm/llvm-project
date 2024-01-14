@@ -193,7 +193,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
   // Iterate over the block-expr bindings.
   for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {
     const EnvironmentEntry &BlkExpr = I.getKey();
-    const SVal &X = I.getData();
+    SVal X = I.getData();
 
     const Expr *E = dyn_cast<Expr>(BlkExpr.getStmt());
     if (!E)

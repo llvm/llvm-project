@@ -474,6 +474,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(EnableIPRA)
   SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)
+  SET_OPTION(DisableAtExitBasedGlobalDtorLowering)
+  SET_OPTION(DisableExpandReductions)
+  SET_OPTION(PrintAfterISel)
+  SET_OPTION(FSProfileFile)
+  SET_OPTION(GCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -490,6 +495,11 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
+  SET_BOOLEAN_OPTION(DebugifyAndStripAll)
+  SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
+  SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
+  SET_BOOLEAN_OPTION(DisableCFIFixup)
+  SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
 
   return Opt;
 }
@@ -937,6 +947,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
   case ExceptionHandling::AIX:
+  case ExceptionHandling::ZOS:
     addPass(createDwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::WinEH:
@@ -967,7 +978,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableCGP)
-    addPass(createCodeGenPreparePass());
+    addPass(createCodeGenPrepareLegacyPass());
 }
 
 /// Add common passes that perform LLVM IR to IR transforms in preparation for
@@ -1260,7 +1271,7 @@ void TargetPassConfig::addMachinePasses() {
   // together. Update this check once we have addressed any issues.
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
-      addPass(llvm::createBasicBlockSectionsProfileReaderPass(
+      addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
       addPass(llvm::createBasicBlockPathCloningPass());
     }

@@ -1,0 +1,692 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           16
+  sizeofcmds:      1912
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         552
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          6
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x7B8
+        size:            44
+        offset:          0x7B8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF8300D1FD7B01A9FD430091E00700F9E10300F9E80740F90041009104000094FD7B41A9FF830091C0035FD6
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x7E4
+        size:            12
+        offset:          0x7E4
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x1
+        reserved2:       0xC
+        reserved3:       0x0
+        content:         50000090100240F900021FD6
+      - sectname:        __stub_helper
+        segname:         __TEXT
+        addr:            0x7F0
+        size:            36
+        offset:          0x7F0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         5100009031220091F047BFA930000090100240F900021FD650000018F9FFFF1700000000
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x814
+        size:            35
+        offset:          0x814
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         53756767657374696F6E00110076313640303A3800420040224E53537472696E672200
+      - sectname:        __objc_methname
+        segname:         __TEXT
+        addr:            0x837
+        size:            32
+        offset:          0x837
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         2E6378785F6465737472756374005F746F7043686F696365005F6F7468657200
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x858
+        size:            4152
+        offset:          0x858
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000010000002000000000000000200000000200000000000004B80700003800000038000000E40700000000000038000000030000000C0001001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __DATA_CONST
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          3
+    flags:           16
+    Sections:
+      - sectname:        __got
+        segname:         __DATA_CONST
+        addr:            0x4000
+        size:            8
+        offset:          0x4000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x6
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+      - sectname:        __objc_classlist
+        segname:         __DATA_CONST
+        addr:            0x4008
+        size:            8
+        offset:          0x4008
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x10000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '3081000000000000'
+      - sectname:        __objc_imageinfo
+        segname:         __DATA_CONST
+        addr:            0x4010
+        size:            8
+        offset:          0x4010
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000040000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         472
+    segname:         __DATA
+    vmaddr:          32768
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          5
+    flags:           0
+    Sections:
+      - sectname:        __la_symbol_ptr
+        segname:         __DATA
+        addr:            0x8000
+        size:            8
+        offset:          0x8000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x7
+        reserved1:       0x2
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0808000000000000'
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x8008
+        size:            8
+        offset:          0x8008
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+      - sectname:        __objc_const
+        segname:         __DATA
+        addr:            0x8010
+        size:            248
+        offset:          0x8010
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         850100002800000028000000000000000000000000000000140800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000180000000100000037080000000000002108000000000000B807000000000000200000000200000058810000000000004508000000000000290800000000000000000000010000005C8100000000000050080000000000002B08000000000000030000000800000084010000080000001800000000000000000000000000000014080000000000005880000000000000000000000000000078800000000000001F080000000000000000000000000000
+      - sectname:        __objc_data
+        segname:         __DATA
+        addr:            0x8108
+        size:            80
+        offset:          0x8108
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         000000000000000000000000000000000000000000000000000000000000000010800000000000000881000000000000000000000000000000000000000000000000000000000000C080000000000000
+      - sectname:        __objc_ivar
+        segname:         __DATA
+        addr:            0x8158
+        size:            8
+        offset:          0x8158
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0800000010000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          49152
+    vmsize:          2336
+    fileoff:         49152
+    filesize:        2336
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      49152
+    rebase_size:     24
+    bind_off:        49176
+    bind_size:       128
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   49304
+    lazy_bind_size:  24
+    export_off:      49328
+    export_size:     128
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          49464
+    nsyms:           28
+    stroff:          49928
+    strsize:         1016
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       19
+    iextdefsym:      19
+    nextdefsym:      4
+    iundefsym:       23
+    nundefsym:       5
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  49912
+    nindirectsyms:   3
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         tmp.dylib
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44F3-5555-3144-A1E7-371E4713DEDE
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1179648
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         96
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 197001216
+      compatibility_version: 19660800
+    Content:         '/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation'
+    ZeroPadBytes:    3
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 14942208
+      compatibility_version: 65536
+    Content:         '/usr/lib/libobjc.A.dylib'
+    ZeroPadBytes:    8
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88342528
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         49456
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         49464
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         50944
+    datasize:        544
+LinkEditData:
+  RebaseOpcodes:
+    - Opcode:          REBASE_OPCODE_SET_TYPE_IMM
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             1
+      ExtraData:       [ 0x8 ]
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ExtraData:       [ 0x0 ]
+    - Opcode:          REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB
+      Imm:             0
+      ExtraData:       [ 0x2, 0x20 ]
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             2
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             3
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             3
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             3
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             4
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             2
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             2
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             5
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             2
+    - Opcode:          REBASE_OPCODE_ADD_ADDR_IMM_SCALED
+      Imm:             3
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DONE
+      Imm:             0
+  BindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          dyld_stub_binder
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             3
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             1
+      ULEBExtraData:   [ 0x0 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          '_OBJC_METACLASS_$_NSObject'
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   [ 0x108 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          __objc_empty_cache
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_ADD_ADDR_ULEB
+      Imm:             0
+      ULEBExtraData:   [ 0x20 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          '_OBJC_CLASS_$_NSObject'
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_ADD_ADDR_ULEB
+      Imm:             0
+      ULEBExtraData:   [ 0xFFFFFFFFFFFFFFF0 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  LazyBindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   [ 0x0 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _objc_destroyWeak
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      10
+        Name:            _OBJC_
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    4
+            NodeOffset:      77
+            Name:            'CLASS_$_Suggestion'
+            Flags:           0x0
+            Address:         0x8130
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    4
+            NodeOffset:      83
+            Name:            'METACLASS_$_Suggestion'
+            Flags:           0x0
+            Address:         0x8108
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      89
+            Name:            'IVAR_$_Suggestion._'
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    4
+                NodeOffset:      109
+                Name:            other
+                Flags:           0x0
+                Address:         0x815C
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    4
+                NodeOffset:      115
+                Name:            topChoice
+                Flags:           0x0
+                Address:         0x8158
+                Other:           0x0
+                ImportName:      ''
+  NameList:
+    - n_strx:          407
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          474
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         0
+    - n_strx:          729
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         1976
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         44
+    - n_strx:          757
+      n_type:          0x26
+      n_sect:          12
+      n_desc:          0
+      n_value:         32784
+    - n_strx:          790
+      n_type:          0x26
+      n_sect:          12
+      n_desc:          0
+      n_value:         32856
+    - n_strx:          827
+      n_type:          0x26
+      n_sect:          12
+      n_desc:          0
+      n_value:         32888
+    - n_strx:          866
+      n_type:          0x26
+      n_sect:          12
+      n_desc:          0
+      n_value:         32960
+    - n_strx:          895
+      n_type:          0x20
+      n_sect:          13
+      n_desc:          0
+      n_value:         33032
+    - n_strx:          924
+      n_type:          0x20
+      n_sect:          13
+      n_desc:          0
+      n_value:         33072
+    - n_strx:          949
+      n_type:          0x20
+      n_sect:          14
+      n_desc:          0
+      n_value:         33112
+    - n_strx:          984
+      n_type:          0x20
+      n_sect:          14
+      n_desc:          0
+      n_value:         33116
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          2
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         1976
+    - n_strx:          30
+      n_type:          0xE
+      n_sect:          12
+      n_desc:          0
+      n_value:         32784
+    - n_strx:          63
+      n_type:          0xE
+      n_sect:          12
+      n_desc:          0
+      n_value:         32856
+    - n_strx:          100
+      n_type:          0xE
+      n_sect:          12
+      n_desc:          0
+      n_value:         32888
+    - n_strx:          139
+      n_type:          0xE
+      n_sect:          12
+      n_desc:          0
+      n_value:         32960
+    - n_strx:          168
+      n_type:          0xE
+      n_sect:          11
+      n_desc:          0
+      n_value:         32776
+    - n_strx:          183
+      n_type:          0xF
+      n_sect:          13
+      n_desc:          0
+      n_value:         33032
+    - n_strx:          212
+      n_type:          0xF
+      n_sect:          13
+      n_desc:          0
+      n_value:         33072
+    - n_strx:          237
+      n_type:          0xF
+      n_sect:          14
+      n_desc:          0
+      n_value:         33112
+    - n_strx:          272
+      n_type:          0xF
+      n_sect:          14
+      n_desc:          0
+      n_value:         33116
+    - n_strx:          303
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+    - n_strx:          326
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+    - n_strx:          353
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+    - n_strx:          372
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+    - n_strx:          390
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          768
+      n_value:         0
+  StringTable:
+    - ' '
+    - '-[Suggestion .cxx_destruct]'
+    - '__OBJC_METACLASS_RO_$_Suggestion'
+    - '__OBJC_$_INSTANCE_METHODS_Suggestion'
+    - '__OBJC_$_INSTANCE_VARIABLES_Suggestion'
+    - '__OBJC_CLASS_RO_$_Suggestion'
+    - __dyld_private
+    - '_OBJC_METACLASS_$_Suggestion'
+    - '_OBJC_CLASS_$_Suggestion'
+    - '_OBJC_IVAR_$_Suggestion._topChoice'
+    - '_OBJC_IVAR_$_Suggestion._other'
+    - '_OBJC_CLASS_$_NSObject'
+    - '_OBJC_METACLASS_$_NSObject'
+    - __objc_empty_cache
+    - _objc_destroyWeak
+    - dyld_stub_binder
+    - '-[Suggestion .cxx_destruct]'
+    - '__OBJC_METACLASS_RO_$_Suggestion'
+    - '__OBJC_$_INSTANCE_METHODS_Suggestion'
+    - '__OBJC_$_INSTANCE_VARIABLES_Suggestion'
+    - '__OBJC_CLASS_RO_$_Suggestion'
+    - '_OBJC_METACLASS_$_Suggestion'
+    - '_OBJC_CLASS_$_Suggestion'
+    - '_OBJC_IVAR_$_Suggestion._topChoice'
+    - '_OBJC_IVAR_$_Suggestion._other'
+    - ''
+  IndirectSymbols: [ 0x1B, 0x1A, 0x1A ]
+  FunctionStarts:  [ 0x7B8 ]
+...

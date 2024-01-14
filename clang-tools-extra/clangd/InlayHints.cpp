@@ -286,7 +286,7 @@ std::string summarizeExpr(const Expr *E) {
     // Step through implicit nodes that clang doesn't classify as such.
     std::string VisitCXXMemberCallExpr(const CXXMemberCallExpr *E) {
       // Call to operator bool() inside if (X): dispatch to X.
-      if (E->getNumArgs() == 0 &&
+      if (E->getNumArgs() == 0 && E->getMethodDecl() &&
           E->getMethodDecl()->getDeclName().getNameKind() ==
               DeclarationName::CXXConversionFunctionName &&
           E->getSourceRange() ==
@@ -1040,7 +1040,7 @@ private:
     if (!SourcePrefix.consume_back(ParamName))
       return false;
     SourcePrefix = SourcePrefix.rtrim(IgnoreChars);
-    return SourcePrefix.endswith("/*");
+    return SourcePrefix.ends_with("/*");
   }
 
   // If "E" spells a single unqualified identifier, return that name.

@@ -134,6 +134,14 @@ def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
                                               form_duplane,
                                               shuf_to_ins]>;
 
+// Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
+def vector_unmerge_lowering : GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_UNMERGE_VALUES):$root,
+          [{ return matchScalarizeVectorUnmerge(*${root}, MRI); }]),
+  (apply [{ applyScalarizeVectorUnmerge(*${root}, MRI, B); }])
+>;
+
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
 def adjust_icmp_imm : GICombineRule <
@@ -251,7 +259,8 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge, lower_mull]> {
+                        unmerge_ext_to_unmerge, lower_mull,
+                        vector_unmerge_lowering]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

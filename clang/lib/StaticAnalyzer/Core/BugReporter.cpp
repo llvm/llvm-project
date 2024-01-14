@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -2424,6 +2427,12 @@ PathSensitiveBugReport::getLocation() const {
   }
 
   if (S) {
+    // Attributed statements usually have corrupted begin locations,
+    // it's OK to ignore attributes for our purposes and deal with
+    // the actual annotated statement.
+    if (const auto *AS = dyn_cast<AttributedStmt>(S))
+      S = AS->getSubStmt();
+
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
       return PathDiagnosticLocation::createMemberLoc(ME, SM);
@@ -2894,6 +2903,10 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   // If we mess up in a release build, we'd still prefer to just drop the bug
   // instead of trying to go on.
   if (!ValidSourceLoc)
+    return;
+
+  // If the user asked to suppress this report, we should skip it.
+  if (UserSuppressions.isSuppressed(*R))
     return;
 
   // Compute the bug report's hash to determine its equivalence class.

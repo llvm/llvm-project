@@ -14,7 +14,6 @@ add_mlir_dialect_library(MLIRBufferizationTransformOps
   MLIRFunctionInterfaces
   MLIRLinalgDialect
   MLIRParser
-  MLIRPDLDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   )

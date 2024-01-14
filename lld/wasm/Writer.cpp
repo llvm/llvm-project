@@ -439,6 +439,16 @@ void Writer::layoutMemory() {
     maxMemorySetting = 1ULL << 34;
   }
 
+  if (config->initialHeap != 0) {
+    if (config->initialHeap != alignTo(config->initialHeap, WasmPageSize))
+      error("initial heap must be " + Twine(WasmPageSize) + "-byte aligned");
+    uint64_t maxInitialHeap = maxMemorySetting - memoryPtr;
+    if (config->initialHeap > maxInitialHeap)
+      error("initial heap too large, cannot be greater than " +
+            Twine(maxInitialHeap));
+    memoryPtr += config->initialHeap;
+  }
+
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))
       error("initial memory must be " + Twine(WasmPageSize) + "-byte aligned");

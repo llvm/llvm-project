@@ -148,17 +148,6 @@ void Counter::stop() {
     ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0);
 }
 
-int64_t Counter::read() const {
-  auto ValueOrError = readOrError();
-  if (ValueOrError) {
-    if (!ValueOrError.get().empty())
-      return ValueOrError.get()[0];
-    errs() << "Counter has no reading\n";
-  } else
-    errs() << ValueOrError.takeError() << "\n";
-  return -1;
-}
-
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
 Counter::readOrError(StringRef /*unused*/) const {
   int64_t Count = 0;
@@ -186,8 +175,6 @@ Counter::~Counter() = default;
 void Counter::start() {}
 
 void Counter::stop() {}
-
-int64_t Counter::read() const { return 42; }
 
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
 Counter::readOrError(StringRef /*unused*/) const {

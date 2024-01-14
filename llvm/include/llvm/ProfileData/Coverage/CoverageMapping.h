@@ -447,7 +447,7 @@ public:
   bool isConditionIndependencePairCovered(unsigned Condition) const {
     auto It = PosToID.find(Condition);
     if (It != PosToID.end())
-      return (IndependencePairs.find(It->second) != IndependencePairs.end());
+      return IndependencePairs.contains(It->second);
     llvm_unreachable("Condition ID without an Ordinal mapping");
   }
 

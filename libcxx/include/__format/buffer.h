@@ -71,7 +71,7 @@ public:
         __obj_(__obj) {}
 
   _LIBCPP_HIDE_FROM_ABI void __reset(_CharT* __ptr, size_t __capacity) {
-    __ptr_ = __ptr;
+    __ptr_      = __ptr;
     __capacity_ = __capacity;
   }
 
@@ -115,7 +115,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Copy the data in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     const _InCharT* __first = __str.data();
     do {
       size_t __chunk = std::min(__n, __capacity_);
@@ -130,9 +130,11 @@ public:
   /// A std::transform wrapper.
   ///
   /// Like @ref __copy it may need to do type conversion.
-  template <__fmt_char_type _InCharT, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
+  template <contiguous_iterator _Iterator,
+            class _UnaryOperation,
+            __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
+  _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
+    _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
     __flush_on_overflow(__n);
@@ -144,7 +146,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Transform the data in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     do {
       size_t __chunk = std::min(__n, __capacity_);
       std::transform(__first, __first + __chunk, std::addressof(__ptr_[__size_]), __operation);
@@ -166,7 +168,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Fill the buffer in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     do {
       size_t __chunk = std::min(__n, __capacity_);
       std::fill_n(std::addressof(__ptr_[__size_]), __chunk, __value);
@@ -251,19 +253,18 @@ template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __direct_storage {};
 
 template <class _OutIt, class _CharT>
-concept __enable_direct_output = __fmt_char_type<_CharT> &&
+concept __enable_direct_output =
+    __fmt_char_type<_CharT> &&
     (same_as<_OutIt, _CharT*>
      // TODO(hardening): the following check might not apply to hardened iterators and might need to be wrapped in an
      // `#ifdef`.
-     || same_as<_OutIt, __wrap_iter<_CharT*>>
-    );
+     || same_as<_OutIt, __wrap_iter<_CharT*>>);
 
 /// Write policy for directly writing to the underlying output.
 template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_direct {
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __writer_direct(_OutIt __out_it)
-      : __out_it_(__out_it) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __writer_direct(_OutIt __out_it) : __out_it_(__out_it) {}
 
   _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() { return __out_it_; }
 
@@ -281,8 +282,7 @@ private:
 template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_iterator {
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __writer_iterator(_OutIt __out_it)
-      : __out_it_{std::move(__out_it)} {}
+  _LIBCPP_HIDE_FROM_ABI explicit __writer_iterator(_OutIt __out_it) : __out_it_{std::move(__out_it)} {}
 
   _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && { return std::move(__out_it_); }
 
@@ -304,7 +304,8 @@ private:
 template <class _Container>
 concept __insertable =
     __enable_insertable<_Container> && __fmt_char_type<typename _Container::value_type> &&
-    requires(_Container& __t, add_pointer_t<typename _Container::value_type> __first,
+    requires(_Container& __t,
+             add_pointer_t<typename _Container::value_type> __first,
              add_pointer_t<typename _Container::value_type> __last) { __t.insert(__t.end(), __first, __last); };
 
 /// Extract the container type of a \ref back_insert_iterator.
@@ -343,28 +344,29 @@ class _LIBCPP_TEMPLATE_VIS __writer_selector {
   using _Container = typename __back_insert_iterator_container<_OutIt>::type;
 
 public:
-  using type = conditional_t<!same_as<_Container, void>, __writer_container<_Container>,
-                             conditional_t<__enable_direct_output<_OutIt, _CharT>, __writer_direct<_OutIt, _CharT>,
-                                           __writer_iterator<_OutIt, _CharT>>>;
+  using type =
+      conditional_t<!same_as<_Container, void>,
+                    __writer_container<_Container>,
+                    conditional_t<__enable_direct_output<_OutIt, _CharT>,
+                                  __writer_direct<_OutIt, _CharT>,
+                                  __writer_iterator<_OutIt, _CharT>>>;
 };
 
 /// The generic formatting buffer.
 template <class _OutIt, __fmt_char_type _CharT>
-requires(output_iterator<_OutIt, const _CharT&>) class _LIBCPP_TEMPLATE_VIS
-    __format_buffer {
+  requires(output_iterator<_OutIt, const _CharT&>)
+class _LIBCPP_TEMPLATE_VIS __format_buffer {
   using _Storage =
-      conditional_t<__enable_direct_output<_OutIt, _CharT>,
-                    __direct_storage<_CharT>, __internal_storage<_CharT>>;
+      conditional_t<__enable_direct_output<_OutIt, _CharT>, __direct_storage<_CharT>, __internal_storage<_CharT>>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it)
     requires(same_as<_Storage, __internal_storage<_CharT>>)
       : __output_(__storage_.__begin(), __storage_.__buffer_size, this), __writer_(std::move(__out_it)) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it) requires(
-      same_as<_Storage, __direct_storage<_CharT>>)
-      : __output_(std::__unwrap_iter(__out_it), size_t(-1), this),
-        __writer_(std::move(__out_it)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __format_buffer(_OutIt __out_it)
+    requires(same_as<_Storage, __direct_storage<_CharT>>)
+      : __output_(std::__unwrap_iter(__out_it), size_t(-1), this), __writer_(std::move(__out_it)) {}
 
   _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return __output_.__make_output_iterator(); }
 
@@ -590,9 +592,11 @@ public:
     __size_ += __n;
   }
 
-  template <__fmt_char_type _InCharT, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI void __transform(const _InCharT* __first, const _InCharT* __last, _UnaryOperation __operation) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
+  template <contiguous_iterator _Iterator,
+            class _UnaryOperation,
+            __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
+  _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
+    _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
     if (__size_ + __n >= __capacity_)
@@ -619,7 +623,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer() { __grow_buffer(__capacity_ * 1.6); }
 
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer(size_t __capacity) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__capacity > __capacity_, "the buffer must grow");
+    _LIBCPP_ASSERT_INTERNAL(__capacity > __capacity_, "the buffer must grow");
     auto __result = std::__allocate_at_least(__alloc_, __capacity);
     auto __guard  = std::__make_exception_guard([&] {
       allocator_traits<_Alloc>::deallocate(__alloc_, __result.ptr, __result.count);

@@ -365,7 +365,7 @@ bool SymbolFilePDB::ParseDebugMacros(CompileUnit &comp_unit) {
 }
 
 bool SymbolFilePDB::ParseSupportFiles(
-    CompileUnit &comp_unit, lldb_private::FileSpecList &support_files) {
+    CompileUnit &comp_unit, lldb_private::SupportFileList &support_files) {
 
   // In theory this is unnecessary work for us, because all of this information
   // is easily (and quickly) accessible from DebugInfoPDB, so caching it a
@@ -1537,10 +1537,6 @@ void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   while (auto result = results->getNext()) {
 
-    if (MSVCUndecoratedNameParser::DropScope(
-            result->getRawSymbol().getName()) != basename)
-      continue;
-
     switch (result->getSymTag()) {
     case PDB_SymType::Enum:
     case PDB_SymType::UDT:
@@ -1551,6 +1547,10 @@ void SymbolFilePDB::FindTypes(const lldb_private::TypeQuery &query,
       // as unnamed types such as arrays, pointers, etc.
       continue;
     }
+
+    if (MSVCUndecoratedNameParser::DropScope(
+            result->getRawSymbol().getName()) != basename)
+      continue;
 
     // This should cause the type to get cached and stored in the `m_types`
     // lookup.

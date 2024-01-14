@@ -43,8 +43,6 @@ static inline unsigned *getHashTable(StringMapEntryBase **TheTable,
   return reinterpret_cast<unsigned *>(TheTable + NumBuckets + 1);
 }
 
-uint32_t StringMapImpl::hash(StringRef Key) { return xxh3_64bits(Key); }
-
 StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
   ItemSize = itemSize;
 
@@ -83,14 +81,11 @@ void StringMapImpl::init(unsigned InitSize) {
 /// specified bucket will be non-null.  Otherwise, it will be null.  In either
 /// case, the FullHashValue field of the bucket will be set to the hash value
 /// of the string.
-unsigned StringMapImpl::LookupBucketFor(StringRef Name,
-                                        uint32_t FullHashValue) {
-#ifdef EXPENSIVE_CHECKS
-  assert(FullHashValue == hash(Name));
-#endif
+unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
   // Hash table unallocated so far?
   if (NumBuckets == 0)
     init(16);
+  unsigned FullHashValue = xxh3_64bits(Name);
   if (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
@@ -144,12 +139,10 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name,
 /// FindKey - Look up the bucket that contains the specified key. If it exists
 /// in the map, return the bucket number of the key.  Otherwise return -1.
 /// This does not modify the map.
-int StringMapImpl::FindKey(StringRef Key, uint32_t FullHashValue) const {
+int StringMapImpl::FindKey(StringRef Key) const {
   if (NumBuckets == 0)
     return -1; // Really empty table?
-#ifdef EXPENSIVE_CHECKS
-  assert(FullHashValue == hash(Key));
-#endif
+  unsigned FullHashValue = xxh3_64bits(Key);
   if (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
