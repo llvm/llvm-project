@@ -290,7 +290,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   for (const Point &d : ds)
     coefficients.push_back(-dotProduct(mu, d));
 
-  // Then, the affine fn is a single floor expression, given by the
+  // Then, the affine function is a single floor expression, given by the
   // corresponding column of v.
   ParamPoint vTranspose = v.transpose();
   std::vector<std::vector<SmallVector<Fraction>>> affine;
