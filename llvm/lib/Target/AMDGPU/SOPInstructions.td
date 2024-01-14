@@ -673,6 +673,16 @@ let SubtargetPredicate = isGFX12Plus in {
     let isCommutable = 1;
   }
 
+  // The higher 32-bits of the inputs contain the sign extension bits.
+  def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
+    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+  >;
+
+  // The higher 32-bits of the inputs are zero.
+  def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
+    (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+  >;
+
 } // End SubtargetPredicate = isGFX12Plus
 
 let Uses = [SCC] in {
@@ -1186,14 +1196,12 @@ let SubtargetPredicate = isGFX10Plus in {
 let SubtargetPredicate = isGFX10GFX11 in {
   def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
   def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
-} // End SubtargetPredicate = isGFX10GFX11
 
-let SubtargetPredicate = isGFX10Plus in {
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
   def S_WAITCNT_LGKMCNT : SOPK_WAITCNT<"s_waitcnt_lgkmcnt">;
-} // End SubtargetPredicate = isGFX10Plus
+} // End SubtargetPredicate = isGFX10GFX11
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
@@ -1701,6 +1709,27 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
   def S_SINGLEUSE_VDST :
     SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = HasVGPRSingeUseHintInsts
+
+let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
+  def S_WAIT_LOADCNT :
+    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_LOADCNT_DSCNT :
+    SOPP_Pseudo<"s_wait_loadcnt_dscnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT :
+    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT_DSCNT :
+    SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_SAMPLECNT :
+    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_BVHCNT :
+    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_EXPCNT :
+    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_DSCNT :
+    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_KMCNT :
+    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
@@ -2411,10 +2440,10 @@ defm S_SETREG_IMM32_B32     : SOPK_Real64_gfx11_gfx12<0x013>;
 defm S_CALL_B64             : SOPK_Real32_gfx11_gfx12<0x014>;
 defm S_SUBVECTOR_LOOP_BEGIN : SOPK_Real32_gfx11<0x016>;
 defm S_SUBVECTOR_LOOP_END   : SOPK_Real32_gfx11<0x017>;
-defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11_gfx12<0x018>;
-defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11_gfx12<0x019>;
-defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11_gfx12<0x01a>;
-defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11_gfx12<0x01b>;
+defm S_WAITCNT_VSCNT        : SOPK_Real32_gfx11<0x018>;
+defm S_WAITCNT_VMCNT        : SOPK_Real32_gfx11<0x019>;
+defm S_WAITCNT_EXPCNT       : SOPK_Real32_gfx11<0x01a>;
+defm S_WAITCNT_LGKMCNT      : SOPK_Real32_gfx11<0x01b>;
 
 //===----------------------------------------------------------------------===//
 // SOPK - GFX10.
@@ -2516,6 +2545,15 @@ multiclass SOPP_Real_32_Renamed_gfx12<bits<7> op, SOPP_Pseudo backing_pseudo, st
 defm S_WAIT_ALU             : SOPP_Real_32_Renamed_gfx12<0x008, S_WAITCNT_DEPCTR, "s_wait_alu">;
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
 defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
+defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
+defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12<0x041>;
+defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12<0x042>;
+defm S_WAIT_BVHCNT          : SOPP_Real_32_gfx12<0x043>;
+defm S_WAIT_EXPCNT          : SOPP_Real_32_gfx12<0x044>;
+defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
+defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
+defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
+defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.

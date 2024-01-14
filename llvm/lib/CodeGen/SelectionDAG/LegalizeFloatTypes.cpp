@@ -2511,7 +2511,7 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {
     EVT VecVT = Vec->getValueType(0);
     EVT EltVT = VecVT.getVectorElementType();
 
-    uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+    uint64_t IdxVal = Idx->getAsZExtVal();
 
     switch (getTypeAction(VecVT)) {
     default: break;

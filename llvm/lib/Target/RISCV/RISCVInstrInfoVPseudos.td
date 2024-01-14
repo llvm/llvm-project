@@ -6719,12 +6719,14 @@ defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 // 15.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
 
+let IsSignExtendingOpW = 1 in
 defm PseudoVCPOP: VPseudoVPOP_M;
 
 //===----------------------------------------------------------------------===//
 // 15.3. vfirst find-first-set mask bit
 //===----------------------------------------------------------------------===//
 
+let IsSignExtendingOpW = 1 in
 defm PseudoVFIRST: VPseudoV1ST_M;
 
 //===----------------------------------------------------------------------===//

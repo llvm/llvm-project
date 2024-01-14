@@ -135,10 +135,10 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;
+    StringRef Name = Rec->getName();
     // _REV instruction should not appear before encoding optimization
     if (!Rec->isSubClassOf("X86Inst") ||
-        Rec->getValueAsBit("isAsmParserOnly") ||
-        Rec->getName().ends_with("_REV"))
+        Rec->getValueAsBit("isAsmParserOnly") || Name.ends_with("_REV"))
       continue;
 
     // Promoted legacy instruction is in EVEX space, and has REX2-encoding
@@ -149,30 +149,40 @@ void X86CompressEVEXTablesEmitter::run(raw_ostream &OS) {
             X86Local::ExplicitEVEX)
       continue;
 
-    if (NoCompressSet.find(Rec->getName()) != NoCompressSet.end())
+    if (NoCompressSet.find(Name) != NoCompressSet.end())
       continue;
 
     RecognizableInstrBase RI(*Inst);
 
+    bool IsND = RI.OpMap == X86Local::T_MAP4 && RI.HasEVEX_B && RI.HasVEX_4V;
     // Add VEX encoded instructions to one of CompressedInsts vectors according
     // to it's opcode.
     if (RI.Encoding == X86Local::VEX)
       CompressedInsts[RI.Opcode].push_back(Inst);
     // Add relevant EVEX encoded instructions to PreCompressionInsts
-    else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
-             !RI.HasEVEX_L2)
+    else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_L2 &&
+             (!RI.HasEVEX_B || IsND))
       PreCompressionInsts.push_back(Inst);
   }
 
   for (const CodeGenInstruction *Inst : PreCompressionInsts) {
     const Record *Rec = Inst->TheDef;
-    uint8_t Opcode =
-        byteFromBitsInit(Inst->TheDef->getValueAsBitsInit("Opcode"));
+    uint8_t Opcode = byteFromBitsInit(Rec->getValueAsBitsInit("Opcode"));
+    StringRef Name = Rec->getName();
     const CodeGenInstruction *NewInst = nullptr;
-    if (ManualMap.find(Rec->getName()) != ManualMap.end()) {
+    if (ManualMap.find(Name) != ManualMap.end()) {
       Record *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       NewInst = &Target.getInstruction(NewRec);
+    } else if (Name.ends_with("_EVEX")) {
+      if (auto *NewRec = Records.getDef(Name.drop_back(5)))
+        NewInst = &Target.getInstruction(NewRec);
+    } else if (Name.ends_with("_ND")) {
+      if (auto *NewRec = Records.getDef(Name.drop_back(3))) {
+        auto &TempInst = Target.getInstruction(NewRec);
+        if (isRegisterOperand(TempInst.Operands[0].Rec))
+          NewInst = &TempInst;
+      }
     } else {
       // For each pre-compression instruction look for a match in the appropriate
       // vector (instructions with the same opcode) using function object

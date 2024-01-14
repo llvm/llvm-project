@@ -6624,6 +6624,74 @@ entry:
   ret i32 %op.rdx.7
 }
 
+define i32 @extract_hi_lo(<8 x i16> %a) {
+; CHECK-SD-BASE-LABEL: extract_hi_lo:
+; CHECK-SD-BASE:       // %bb.0: // %entry
+; CHECK-SD-BASE-NEXT:    uaddlv s0, v0.8h
+; CHECK-SD-BASE-NEXT:    fmov w0, s0
+; CHECK-SD-BASE-NEXT:    ret
+;
+; CHECK-SD-DOT-LABEL: extract_hi_lo:
+; CHECK-SD-DOT:       // %bb.0: // %entry
+; CHECK-SD-DOT-NEXT:    uaddlv s0, v0.8h
+; CHECK-SD-DOT-NEXT:    fmov w0, s0
+; CHECK-SD-DOT-NEXT:    ret
+;
+; CHECK-GI-BASE-LABEL: extract_hi_lo:
+; CHECK-GI-BASE:       // %bb.0: // %entry
+; CHECK-GI-BASE-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-GI-BASE-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
+; CHECK-GI-BASE-NEXT:    addv s0, v0.4s
+; CHECK-GI-BASE-NEXT:    fmov w0, s0
+; CHECK-GI-BASE-NEXT:    ret
+;
+; CHECK-GI-DOT-LABEL: extract_hi_lo:
+; CHECK-GI-DOT:       // %bb.0: // %entry
+; CHECK-GI-DOT-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-GI-DOT-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
+; CHECK-GI-DOT-NEXT:    addv s0, v0.4s
+; CHECK-GI-DOT-NEXT:    fmov w0, s0
+; CHECK-GI-DOT-NEXT:    ret
+entry:
+  %e1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %e2 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %z1 = zext <4 x i16> %e1 to <4 x i32>
+  %z2 = zext <4 x i16> %e2 to <4 x i32>
+  %z4 = add <4 x i32> %z1, %z2
+  %z5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %z4)
+  ret i32 %z5
+}
+
+define i32 @extract_hi_hi(<8 x i16> %a) {
+; CHECK-LABEL: extract_hi_hi:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddl2 v0.4s, v0.8h, v0.8h
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %e2 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %z2 = zext <4 x i16> %e2 to <4 x i32>
+  %z4 = add <4 x i32> %z2, %z2
+  %z5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %z4)
+  ret i32 %z5
+}
+
+define i32 @extract_lo_lo(<8 x i16> %a) {
+; CHECK-LABEL: extract_lo_lo:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v0.4h
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %e1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %z1 = zext <4 x i16> %e1 to <4 x i32>
+  %z4 = add <4 x i32> %z1, %z1
+  %z5 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %z4)
+  ret i32 %z5
+}
+
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1 immarg) #1
 declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
 declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)

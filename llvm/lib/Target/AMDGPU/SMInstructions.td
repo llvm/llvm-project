@@ -29,6 +29,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let mayStore = 0;
   let mayLoad = 1;
   let hasSideEffects = 0;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
 

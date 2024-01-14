@@ -15,7 +15,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   %match = transform.structured.match ops{["transform.get_parent_op"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  transform.test_print_remark_at_operand %match, "found get_parent_op" : !transform.any_op
+  transform.debug.emit_remark_at %match, "found get_parent_op" : !transform.any_op
 }
 
 transform.sequence failures(propagate) {

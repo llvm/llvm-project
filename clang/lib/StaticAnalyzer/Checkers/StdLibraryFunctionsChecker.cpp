@@ -2201,6 +2201,25 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
+    // int ungetc(int c, FILE *stream);
+    addToFunctionSummaryMap(
+        "ungetc", Signature(ArgTypes{IntTy, FilePtrTy}, RetType{IntTy}),
+        Summary(NoEvalCall)
+            .Case({ReturnValueCondition(BO_EQ, ArgNo(0)),
+                   ArgumentCondition(0, WithinRange, {{0, UCharRangeMax}})},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv)),
+                   ArgumentCondition(0, WithinRange, {{EOFv, EOFv}})},
+                  ErrnoNEZeroIrrelevant,
+                  "Assuming that 'ungetc' fails because EOF was passed as "
+                  "character")
+            .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv)),
+                   ArgumentCondition(0, WithinRange, {{0, UCharRangeMax}})},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(ArgumentCondition(
+                0, WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}}))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
     // int fseek(FILE *stream, long offset, int whence);
     // FIXME: It can be possible to get the 'SEEK_' values (like EOFv) and use
     // these for condition of arg 2.
@@ -2255,7 +2274,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "ftell", Signature(ArgTypes{FilePtrTy}, RetType{LongTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(WithinRange, Range(1, LongMax))},
+            .Case({ReturnValueCondition(WithinRange, Range(0, LongMax))},
                   ErrnoUnchanged, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
@@ -2516,10 +2535,21 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // char *getcwd(char *buf, size_t size);
-    // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
+            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(1, WithinRange, SingleValue(0)),
+                   IsNull(Ret)},
+                  ErrnoNEZeroIrrelevant, "Assuming that argument 'size' is 0")
+            .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
+                   IsNull(Ret)},
+                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0)))
+            .ArgConstraint(
+                BufferSize(/*Buffer*/ ArgNo(0), /*BufSize*/ ArgNo(1)))
             .ArgConstraint(
                 ArgumentCondition(1, WithinRange, Range(0, SizeMax))));
 

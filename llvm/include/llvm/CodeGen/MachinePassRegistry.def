@@ -34,6 +34,7 @@ MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 #endif
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
+FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis, ())
 FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
 #undef FUNCTION_ANALYSIS
@@ -43,6 +44,7 @@ FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
 #endif
 FUNCTION_PASS("callbrprepare", CallBrPreparePass, ())
 FUNCTION_PASS("cfguard", CFGuardPass, ())
+FUNCTION_PASS("codegenprepare", CodeGenPreparePass, (TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass, ())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass, (TM))
 FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
@@ -51,6 +53,7 @@ FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass, (TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass, (TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("expandvp", ExpandVectorPredicationPass, ())
+FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, (TM))
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass, (TM))
 FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass, (TM))
@@ -64,6 +67,7 @@ FUNCTION_PASS("safe-stack", SafeStackPass, (TM))
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
 FUNCTION_PASS("select-optimize", SelectOptimizePass, (TM))
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass, (TM))
+FUNCTION_PASS("stack-protector", StackProtectorPass, (TM))
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
@@ -132,9 +136,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
-DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
-DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MACHINE_MODULE_PASS

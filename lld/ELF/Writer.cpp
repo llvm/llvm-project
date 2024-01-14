@@ -291,6 +291,11 @@ static void demoteSymbolsAndComputeIsPreemptible() {
   }
 }
 
+bool elf::hasMemtag() {
+  return config->emachine == EM_AARCH64 &&
+         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
+}
+
 // Fully static executables don't support MTE globals at this point in time, as
 // we currently rely on:
 //   - A dynamic loader to process relocations, and
@@ -298,8 +303,7 @@ static void demoteSymbolsAndComputeIsPreemptible() {
 // This restriction could be removed in future by re-using some of the ideas
 // that ifuncs use in fully static executables.
 bool elf::canHaveMemtagGlobals() {
-  return config->emachine == EM_AARCH64 &&
-         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE &&
+  return hasMemtag() &&
          (config->relocatable || config->shared || needsInterpSection());
 }
 
@@ -397,11 +401,14 @@ template <class ELFT> void elf::createSyntheticSections() {
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
 
-    if (canHaveMemtagGlobals()) {
+    if (hasMemtag()) {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
-      part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
-      add(*part.memtagDescriptors);
+      if (canHaveMemtagGlobals()) {
+        part.memtagGlobalDescriptors =
+            std::make_unique<MemtagGlobalDescriptors>();
+        add(*part.memtagGlobalDescriptors);
+      }
     }
 
     if (config->androidPackDynRelocs)
@@ -1725,8 +1732,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
-      if (part.memtagDescriptors)
-        changed |= part.memtagDescriptors->updateAllocSize();
+      if (part.memtagGlobalDescriptors)
+        changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
     const Defined *changedSym = script->assignAddresses();
