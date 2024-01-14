@@ -16,8 +16,7 @@ define float @atanhTanhInverseFast(float %x) {
 ; CHECK-LABEL: define float @atanhTanhInverseFast(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call fast float @tanhf(float [[X]])
-; CHECK-NEXT:    [[CALL1:%.*]] = call fast float @atanhf(float [[CALL]])
-; CHECK-NEXT:    ret float [[CALL1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %call = call fast float @tanhf(float %x)
   %call1 = call fast float @atanhf(float %call)
@@ -28,8 +27,7 @@ define float @sinhAsinhInverseFast(float %x) {
 ; CHECK-LABEL: define float @sinhAsinhInverseFast(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call fast float @asinhf(float [[X]])
-; CHECK-NEXT:    [[CALL1:%.*]] = call fast float @sinhf(float [[CALL]])
-; CHECK-NEXT:    ret float [[CALL1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %call = call fast float @asinhf(float %x)
   %call1 = call fast float @sinhf(float %call)
@@ -40,8 +38,7 @@ define float @asinhSinhInverseFast(float %x) {
 ; CHECK-LABEL: define float @asinhSinhInverseFast(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call fast float @sinhf(float [[X]])
-; CHECK-NEXT:    [[CALL1:%.*]] = call fast float @asinhf(float [[CALL]])
-; CHECK-NEXT:    ret float [[CALL1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %call = call fast float @sinhf(float %x)
   %call1 = call fast float @asinhf(float %call)
@@ -52,8 +49,7 @@ define float @coshAcoshInverseFast(float %x) {
 ; CHECK-LABEL: define float @coshAcoshInverseFast(
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call fast float @acoshf(float [[X]])
-; CHECK-NEXT:    [[CALL1:%.*]] = call fast float @coshf(float [[CALL]])
-; CHECK-NEXT:    ret float [[CALL1]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %call = call fast float @acoshf(float %x)
   %call1 = call fast float @coshf(float %call)
