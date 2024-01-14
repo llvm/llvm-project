@@ -288,7 +288,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 QuasiPolynomial
 mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
   std::vector<Point> allDenominators;
-  for (std::vector<Point> den : gf.getDenominators())
+  for (ArrayRef<Point> den : gf.getDenominators())
     allDenominators.insert(allDenominators.end(), den.begin(), den.end());
   Point mu = getNonOrthogonalVector(allDenominators);
 
@@ -304,7 +304,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
   std::vector<Fraction> convolution;
 
   QuasiPolynomial totalTerm(num_params, 0);
-  for (unsigned i = 0; i < num_terms; i++) {
+  for (unsigned i = 0; i < num_terms; ++i) {
     int sign = gf.getSigns()[i];
     ParamPoint v = gf.getNumerators()[i];
     std::vector<Point> ds = gf.getDenominators()[i];
@@ -326,7 +326,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // corresponding column of v.
     std::vector<std::vector<SmallVector<Fraction>>> affine;
     affine.reserve(num_dims);
-    for (unsigned j = 0; j < num_dims; j++)
+    for (unsigned j = 0; j < num_dims; ++j)
       affine.push_back({SmallVector<Fraction>(v.transpose().getRow(j))});
 
     QuasiPolynomial num(num_params, coefficients, affine);
@@ -347,10 +347,10 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // (see lines 362-72).
     unsigned numNegExps = 0;
     Fraction sumNegExps(0, 1);
-    for (unsigned j = 0; j < dens.size(); j++) {
-      if (dens[j] < Fraction(0, 1)) {
+    for (unsigned j = 0, e = dens.size(); j < e; ++j) {
+      if (dens[j] < 0) {
         numNegExps += 1;
-        sumNegExps = sumNegExps + dens[j];
+        sumNegExps += dens[j];
       }
       // All exponents will be made positive; then reduce
       // (1 - (s+1)^x)
@@ -389,7 +389,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     numeratorCoefficients.clear();
     numeratorCoefficients.push_back(
         QuasiPolynomial(num_params, 1)); // Coeff of s^0
-    for (unsigned j = 1; j <= r; j++)
+    for (unsigned j = 1; j <= r; ++j)
       numeratorCoefficients.push_back(
           (numeratorCoefficients[j - 1] *
            (num - QuasiPolynomial(num_params, j - 1)) / Fraction(j, 1))
@@ -402,7 +402,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     for (Fraction den : dens) {
       singleTermDenCoefficients.clear();
       singleTermDenCoefficients.push_back(den + 1);
-      for (unsigned j = 1; j <= den; j++)
+      for (unsigned j = 1; j <= den; ++j)
         singleTermDenCoefficients.push_back(singleTermDenCoefficients[j - 1] *
                                             (den - (j - 1)) / (j + 1));
 
@@ -414,20 +414,20 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // of all the terms.
     denominatorCoefficients.clear();
     denominatorCoefficients = eachTermDenCoefficients[0];
-    for (unsigned j = 1; j < eachTermDenCoefficients.size(); j++) {
+    for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j) {
       // The length of the convolution is the maximum of the lengths
       // of the two sequences. We pad the shorter one with zeroes.
       unsigned convlen = std::max(denominatorCoefficients.size(),
                                   eachTermDenCoefficients[j].size());
-      for (unsigned k = denominatorCoefficients.size(); k < convlen; k++)
+      for (unsigned k = denominatorCoefficients.size(); k < convlen; ++k)
         denominatorCoefficients.push_back(0);
-      for (unsigned k = eachTermDenCoefficients[j].size(); k < convlen; k++)
+      for (unsigned k = eachTermDenCoefficients[j].size(); k < convlen; ++k)
         eachTermDenCoefficients[j].push_back(0);
 
       convolution.clear();
-      for (unsigned k = 0; k < convlen; k++) {
+      for (unsigned k = 0; k < convlen; ++k) {
         Fraction sum(0, 1);
-        for (unsigned l = 0; l <= k; l++)
+        for (unsigned l = 0; l <= k; ++l)
           sum = sum +
                 denominatorCoefficients[l] * eachTermDenCoefficients[j][k - l];
         convolution.push_back(sum);
