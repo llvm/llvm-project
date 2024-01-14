@@ -101,7 +101,7 @@ QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
 
 /// Find the number of terms in the generating function corresponding to
 /// a polytope.
-QuasiPolynomial computeNumTerms(const GeneratingFunction& gf);
+QuasiPolynomial computeNumTerms(const GeneratingFunction &gf);
 
 } // namespace detail
 } // namespace presburger

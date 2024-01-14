@@ -314,7 +314,7 @@ QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
 ///
 /// We therefore use the following procedure instead:
 /// 1. Substitute x_i = (s+1)^μ_i for some vector μ. This makes the generating
-/// a function of a scalar s.
+/// function a function of a scalar s.
 /// 2. Write each term in this function as P(s)/Q(s), where P and Q are
 /// polynomials. P has coefficients as quasipolynomials in d parameters, while
 /// Q has coefficients as scalars.
