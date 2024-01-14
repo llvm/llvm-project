@@ -124,3 +124,59 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   coeff = getCoefficientInRationalFunction(3, numerator, denominator);
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
+
+// The following test is taken from
+// 
+TEST(BarvinokTest, substituteWithUnitVector) {
+  GeneratingFunction gf(
+      1, {1, 1, 1},
+      {makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
+       makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
+       makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
+      {{{-1, 1}, {-1, 0}},
+       {{1, -1}, {0, -1}},
+       {{1, 0}, {0, 1}}});
+
+  QuasiPolynomial numPoints = substituteWithUnitVector(gf);
+  EXPECT_EQ(
+      numPoints.getCoefficients(),
+      SmallVector<Fraction>(
+          {Fraction(-1, 2), Fraction(-1, 2), Fraction(1, 2), Fraction(-1, 2),
+           Fraction(-1, 2), Fraction(1, 2), Fraction(1, 1), Fraction(3, 2),
+           Fraction(-1, 2), Fraction(3, 2), Fraction(9, 4), Fraction(-3, 4),
+           Fraction(-1, 2), Fraction(-3, 4), Fraction(1, 8), Fraction(1, 8)}));
+  EXPECT_EQ(
+      numPoints.getAffine(),
+      std::vector<std::vector<Point>>(
+          {{{Fraction(1, 2), Fraction(0, 1)}, {Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {},
+           {},
+           {{Fraction(1, 2), Fraction(0, 1)}, {Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {},
+           {},
+           {{Fraction(1, 2), Fraction(0, 1)}},
+           {},
+           {},
+           {}}));
+
+  // We can gather the like terms because we know there's only
+  // either ⌊p/2⌋^2, ⌊p/2⌋, or constants.
+  Fraction pSquaredCoeff = 0, pCoeff = 0, constantTerm = 0;
+  for (unsigned i = 0; i < numPoints.getCoefficients().size(); i++)
+    if (numPoints.getAffine()[i].size() == 2)
+      pSquaredCoeff = pSquaredCoeff + numPoints.getCoefficients()[i];
+    else if (numPoints.getAffine()[i].size() == 1)
+      pCoeff = pCoeff + numPoints.getCoefficients()[i];
+    else
+      constantTerm = constantTerm + numPoints.getCoefficients()[i];
+
+  EXPECT_EQ(pSquaredCoeff, Fraction(1, 2));
+  EXPECT_EQ(pCoeff, Fraction(3, 2));
+  EXPECT_EQ(constantTerm, Fraction(1, 1));
+}

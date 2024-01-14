@@ -324,9 +324,10 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
 
     // and whose affine fn is a single floor expression, given by the
     // corresponding column of v.
-    std::vector<std::vector<SmallVector<Fraction>>> affine(num_dims);
+    std::vector<std::vector<SmallVector<Fraction>>> affine;
+    affine.reserve(num_dims);
     for (unsigned j = 0; j < num_dims; j++)
-      SmallVector<Fraction> jthCol(v.transpose().getRow(j));
+      affine.push_back({SmallVector<Fraction>(v.transpose().getRow(j))});
 
     QuasiPolynomial num(num_params, coefficients, affine);
     num = num.simplify();
@@ -343,7 +344,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
 
     // We track the number of exponents that are negative in the
     // denominator, and convert them to their absolute values
-    // (see lines 361-71).
+    // (see lines 362-72).
     unsigned numNegExps = 0;
     Fraction sumNegExps(0, 1);
     for (unsigned j = 0; j < dens.size(); j++) {
@@ -370,7 +371,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
       sign = -sign;
     num = num - QuasiPolynomial(num_params, sumNegExps);
 
-    // Take all the (-s) out, from line 328.
+    // Take all the (-s) out, from line 359.
     unsigned r = dens.size();
     if (r % 2 == 1)
       sign = -sign;
