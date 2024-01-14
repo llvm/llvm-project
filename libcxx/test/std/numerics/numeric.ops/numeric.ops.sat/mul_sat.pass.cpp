@@ -27,32 +27,32 @@ constexpr bool test_signed() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(IntegerT{3}, IntegerT{4});
-    assert(sum == IntegerT{12});
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{3}, IntegerT{4});
+    assert(prod == IntegerT{12});
   }
 
   // Saturation - max - both arguments positive
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(maxVal, IntegerT{4});
-    assert(sum == maxVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{4});
+    assert(prod == maxVal);
   }
 
   // Saturation - max - both arguments negative
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(minVal, IntegerT{-4});
-    assert(sum == maxVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{-4});
+    assert(prod == maxVal);
   }
 
   // Saturation - min - left positive, right negative
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(maxVal, IntegerT{-4});
-    assert(sum == minVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{-4});
+    assert(prod == minVal);
   }
 
   // Saturation - min - left negative, right positive
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(minVal, IntegerT{4});
-    assert(sum == minVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{4});
+    assert(prod == minVal);
   }
 
   return true;
@@ -67,14 +67,14 @@ constexpr bool test_unsigned() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(IntegerT{3}, IntegerT{4});
-    assert(sum == IntegerT{12});
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{3}, IntegerT{4});
+    assert(prod == IntegerT{12});
   }
 
   // Saturation
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(maxVal, IntegerT{4});
-    assert(sum == maxVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{4});
+    assert(prod == maxVal);
   }
 
   return true;

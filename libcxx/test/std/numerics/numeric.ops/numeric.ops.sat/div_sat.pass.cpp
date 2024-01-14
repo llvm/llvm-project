@@ -29,24 +29,24 @@ constexpr bool test_signed() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(IntegerT{3}, IntegerT{4});
-    assert(div == IntegerT{0});
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{3}, IntegerT{4});
+    assert(quot == IntegerT{0});
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(maxVal, minVal);
-    assert(div == (maxVal / minVal));
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, minVal);
+    assert(quot == (maxVal / minVal));
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(minVal, maxVal);
-    assert(div == (minVal / maxVal));
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
+    assert(quot == (minVal / maxVal));
   }
 
   // Saturation - max only
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(minVal, IntegerT{-1});
-    assert(div == maxVal);
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, IntegerT{-1});
+    assert(quot == maxVal);
   }
 
   return true;
@@ -61,13 +61,13 @@ constexpr bool test_unsigned() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(IntegerT{3}, IntegerT{4});
-    assert(div == IntegerT{0});
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{3}, IntegerT{4});
+    assert(quot == IntegerT{0});
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) div = std::div_sat(minVal, maxVal);
-    assert(div == (minVal / maxVal));
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
+    assert(quot == (minVal / maxVal));
   }
 
   // Unsigned integer devision never overflow

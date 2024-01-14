@@ -27,20 +27,36 @@ constexpr bool test_signed() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::sub_sat(IntegerT{3}, IntegerT{4});
-    assert(sum == IntegerT{-1});
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(IntegerT{3}, IntegerT{4});
+    assert(diff == IntegerT{-1});
   }
 
   // Saturation - min - left negative, right positive
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::sub_sat(minVal, IntegerT{4});
-    assert(sum == minVal);
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, IntegerT{4});
+    assert(diff == minVal);
+  }
+
+  {
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
+    assert(diff == minVal);
   }
 
   // Saturation - max - left postitive, right negative
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::sub_sat(maxVal, IntegerT{-4});
-    assert(sum == maxVal);
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(maxVal, IntegerT{-4});
+    assert(diff == maxVal);
+  }
+
+  {
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{27};
+
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
+    assert(diff == maxVal);
   }
 
   return true;
@@ -55,14 +71,22 @@ constexpr bool test_unsigned() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::sub_sat(IntegerT{3}, IntegerT{1});
-    assert(sum == IntegerT{2});
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(IntegerT{3}, IntegerT{1});
+    assert(diff == IntegerT{2});
   }
 
   // Saturation - min only
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::sub_sat(minVal, IntegerT{4});
-    assert(sum == minVal);
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, IntegerT{4});
+    assert(diff == minVal);
+  }
+
+  {
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
+    assert(diff == minVal);
   }
 
   return true;
