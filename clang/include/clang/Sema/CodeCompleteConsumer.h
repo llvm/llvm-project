@@ -335,7 +335,7 @@ public:
     /// error and don't know which completions we should give.
     CCC_Recovery,
 
-    /// Code completion in a @class forward declaration.
+    /// Code completion in a `@class` forward declaration.
     CCC_ObjCClassForwardDecl
   };
 

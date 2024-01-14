@@ -50,7 +50,6 @@ getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// If the given MemoryBuffer holds a bitcode image, return a Module
 /// for it.  Otherwise, attempt to parse it as LLVM Assembly and return
 /// a Module for it.
-/// \param DataLayoutCallback Override datalayout in the llvm assembly.
 std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
                                 LLVMContext &Context,
                                 ParserCallbacks Callbacks = {});
@@ -58,7 +57,6 @@ std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
 /// If the given file holds a bitcode image, return a Module for it.
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
 /// for it.
-/// \param DataLayoutCallback Override datalayout in the llvm assembly.
 std::unique_ptr<Module> parseIRFile(StringRef Filename, SMDiagnostic &Err,
                                     LLVMContext &Context,
                                     ParserCallbacks Callbacks = {});

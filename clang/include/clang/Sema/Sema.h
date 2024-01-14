@@ -8488,8 +8488,8 @@ public:
   /// intentionally partial, e.g., because we're checking just the initial
   /// set of template arguments.
   ///
-  /// \param Converted Will receive the converted, canonicalized template
-  /// arguments.
+  /// \param CanonicalConverted Will receive the converted, canonicalized
+  /// template arguments.
   ///
   /// \param UpdateArgsWithConversions If \c true, update \p TemplateArgs to
   /// contain the converted forms of the template arguments as written.

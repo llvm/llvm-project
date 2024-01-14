@@ -172,7 +172,7 @@ struct SimpleSymbol {
 
 /// Determine SymbolKind from Flags and parsing Name.
 ///
-/// \param Name The name of symbol.
+/// \param SymName The name of symbol.
 /// \param Flags The flags pre-determined for the symbol.
 SimpleSymbol parseSymbol(StringRef SymName,
                          const SymbolFlags Flags = SymbolFlags::None);

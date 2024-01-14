@@ -2361,7 +2361,6 @@ public:
   }
 
   /// Try to calculate op costs for min/max reduction operations.
-  /// \param CondTy Conditional type for the Select instruction.
   InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                          FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind) {
