@@ -18,24 +18,13 @@
 // constexpr T div_sat(T x, T y) noexcept;                     // freestanding
 
 #include <cassert>
-#include <concepts>
-#include <limits>
 #include <numeric>
 
 #include "check_assertion.h"
 
-#define ASSERT_CONSTEXPR(Expr) static_assert(__builtin_constant_p(Expr))
-#define ASSERT_NOT_CONSTEXPR(Expr) static_assert(!__builtin_constant_p(Expr));
-
 template <typename IntegerT>
 void test_runtime_assertion() {
-  TEST_LIBCPP_ASSERT_FAILURE((void)std::div_sat(IntegerT{3}, IntegerT{0}), "Division by 0 is undefined");
-}
-
-template <typename IntegerT>
-void test_constexpr() {
-  ASSERT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{84}));
-  ASSERT_NOT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{0}));
+  TEST_LIBCPP_ASSERT_FAILURE((void)std::div_sat(IntegerT{27}, IntegerT{0}), "Division by 0 is undefined");
 }
 
 bool test() {
@@ -45,25 +34,18 @@ bool test() {
   test_runtime_assertion<int>();
   test_runtime_assertion<long int>();
   test_runtime_assertion<long long int>();
+#ifndef _LIBCPP_HAS_NO_INT128
+  test_runtime_assertion<__int128_t>();
+#endif
   // Unsigned
   test_runtime_assertion<unsigned char>();
   test_runtime_assertion<unsigned short int>();
   test_runtime_assertion<unsigned int>();
   test_runtime_assertion<unsigned long int>();
   test_runtime_assertion<unsigned long long int>();
-
-  // Signed
-  test_constexpr<signed char>();
-  test_constexpr<short int>();
-  test_constexpr<int>();
-  test_constexpr<long int>();
-  test_constexpr<long long int>();
-  // Unsigned
-  test_constexpr<unsigned char>();
-  test_constexpr<unsigned short int>();
-  test_constexpr<unsigned int>();
-  test_constexpr<unsigned long int>();
-  test_constexpr<unsigned long long int>();
+#ifndef _LIBCPP_HAS_NO_INT128
+  test_runtime_assertion<__uint128_t>();
+#endif
 
   return true;
 }

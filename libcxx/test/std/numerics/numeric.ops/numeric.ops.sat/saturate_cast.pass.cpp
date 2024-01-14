@@ -126,7 +126,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  test();
+  assert(test());
   static_assert(test());
 
   return 0;

@@ -18,6 +18,8 @@
 #include <limits>
 #include <numeric>
 
+#include "check_constexpr.h"
+
 template <typename IntegerT>
 constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
@@ -73,6 +75,12 @@ constexpr bool test_unsigned() {
   return true;
 }
 
+template <typename IntegerT>
+void test_constexpr() {
+  TEST_EXPRESSION_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{84}));
+  TEST_EXPRESSION_NOT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{0}));
+}
+
 constexpr bool test() {
   // Signed
   test_signed<signed char>();
@@ -96,9 +104,27 @@ constexpr bool test() {
   return true;
 }
 
+bool test_constexpr() {
+  // Signed
+  test_constexpr<signed char>();
+  test_constexpr<short int>();
+  test_constexpr<int>();
+  test_constexpr<long int>();
+  test_constexpr<long long int>();
+  // Unsigned
+  test_constexpr<unsigned char>();
+  test_constexpr<unsigned short int>();
+  test_constexpr<unsigned int>();
+  test_constexpr<unsigned long int>();
+  test_constexpr<unsigned long long int>();
+
+  return true;
+}
+
 int main(int, char**) {
-  test();
+  assert(test());
   static_assert(test());
+  assert(test_constexpr());
 
   return 0;
 }
