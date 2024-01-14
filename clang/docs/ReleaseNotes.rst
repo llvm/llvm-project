@@ -861,7 +861,7 @@ Bug Fixes to C++ Support
   (`#63837 <https://github.com/llvm/llvm-project/issues/63837>`_)
 
 - Fixed a regression where clang forgets how to substitute into constraints on template-template
-  parameters. Fixes: 
+  parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
 
