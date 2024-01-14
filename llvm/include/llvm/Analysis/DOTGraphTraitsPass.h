@@ -86,7 +86,7 @@ private:
   StringRef Name;
 };
 
-static void shortenFileName(std::string &FN, unsigned char len = 250) {
+static inline void shortenFileName(std::string &FN, unsigned char len = 250) {
 
   FN = FN.substr(0, len);
 
