@@ -108,7 +108,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
     if (std::cmp_less_equal(__x, std::numeric_limits<_Rp>::min()))
       return std::numeric_limits<_Rp>::min();
     // x >= std::numeric_limits<_Rp>::max()
-    return std::numeric_limits<_Rp>::max(); 
+    return std::numeric_limits<_Rp>::max();
   }
 }
 
