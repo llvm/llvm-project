@@ -17,73 +17,72 @@
 namespace clang {
 namespace format {
 namespace {
+std::string
+separateDefinitionBlocks(llvm::StringRef Code,
+                         const std::vector<tooling::Range> &Ranges,
+                         const FormatStyle &Style = getLLVMStyle()) {
+  LLVM_DEBUG(llvm::errs() << "---\n");
+  LLVM_DEBUG(llvm::errs() << Code << "\n\n");
+  tooling::Replacements Replaces = reformat(Style, Code, Ranges, "<stdin>");
+  auto Result = applyAllReplacements(Code, Replaces);
+  EXPECT_TRUE(static_cast<bool>(Result));
+  LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+  return *Result;
+}
+
+std::string removeEmptyLines(llvm::StringRef Code) {
+  std::string Result = "";
+  for (auto Char : Code.str()) {
+    if (Result.size()) {
+      auto LastChar = Result.back();
+      if ((Char == '\n' && LastChar == '\n') ||
+          (Char == '\r' && (LastChar == '\r' || LastChar == '\n'))) {
+        continue;
+      }
+    }
+    Result.push_back(Char);
+  }
+  return Result;
+}
+
+std::string
+separateDefinitionBlocks(llvm::StringRef Code,
+                         const FormatStyle &Style = getLLVMStyle()) {
+  return separateDefinitionBlocks(
+      Code,
+      /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
+}
+
+void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+                   const FormatStyle &Style = getLLVMStyle(),
+                   llvm::StringRef ExpectedCode = "", bool Inverse = true) {
+  ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
+  bool HasOriginalCode = true;
+  if (ExpectedCode == "") {
+    ExpectedCode = Code;
+    HasOriginalCode = false;
+  }
+
+  EXPECT_EQ(ExpectedCode, separateDefinitionBlocks(ExpectedCode, Style))
+      << "Expected code is not stable";
+  if (Inverse) {
+    FormatStyle InverseStyle = Style;
+    if (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always)
+      InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+    else
+      InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+    EXPECT_NE(ExpectedCode,
+              separateDefinitionBlocks(ExpectedCode, InverseStyle))
+        << "Inverse formatting makes no difference";
+  }
+  std::string CodeToFormat =
+      HasOriginalCode ? Code.str() : removeEmptyLines(Code);
+  std::string Result = separateDefinitionBlocks(CodeToFormat, Style);
+  EXPECT_EQ(ExpectedCode, Result) << "Test failed. Formatted:\n" << Result;
+}
 
 class DefinitionBlockSeparatorTest : public ::testing::Test {
 protected:
-  static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
-                           const std::vector<tooling::Range> &Ranges,
-                           const FormatStyle &Style = getLLVMStyle()) {
-    LLVM_DEBUG(llvm::errs() << "---\n");
-    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
-    tooling::Replacements Replaces = reformat(Style, Code, Ranges, "<stdin>");
-    auto Result = applyAllReplacements(Code, Replaces);
-    EXPECT_TRUE(static_cast<bool>(Result));
-    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
-    return *Result;
-  }
-
-  static std::string
-  separateDefinitionBlocks(llvm::StringRef Code,
-                           const FormatStyle &Style = getLLVMStyle()) {
-    return separateDefinitionBlocks(
-        Code,
-        /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
-  }
-
-  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
-                            const FormatStyle &Style = getLLVMStyle(),
-                            llvm::StringRef ExpectedCode = "",
-                            bool Inverse = true) {
-    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    bool HasOriginalCode = true;
-    if (ExpectedCode == "") {
-      ExpectedCode = Code;
-      HasOriginalCode = false;
-    }
-
-    EXPECT_EQ(ExpectedCode, separateDefinitionBlocks(ExpectedCode, Style))
-        << "Expected code is not stable";
-    if (Inverse) {
-      FormatStyle InverseStyle = Style;
-      if (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always)
-        InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
-      else
-        InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-      EXPECT_NE(ExpectedCode,
-                separateDefinitionBlocks(ExpectedCode, InverseStyle))
-          << "Inverse formatting makes no difference";
-    }
-    std::string CodeToFormat =
-        HasOriginalCode ? Code.str() : removeEmptyLines(Code);
-    std::string Result = separateDefinitionBlocks(CodeToFormat, Style);
-    EXPECT_EQ(ExpectedCode, Result) << "Test failed. Formatted:\n" << Result;
-  }
-
-  static std::string removeEmptyLines(llvm::StringRef Code) {
-    std::string Result = "";
-    for (auto Char : Code.str()) {
-      if (Result.size()) {
-        auto LastChar = Result.back();
-        if ((Char == '\n' && LastChar == '\n') ||
-            (Char == '\r' && (LastChar == '\r' || LastChar == '\n'))) {
-          continue;
-        }
-      }
-      Result.push_back(Char);
-    }
-    return Result;
-  }
 };
 
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
