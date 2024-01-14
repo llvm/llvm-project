@@ -467,7 +467,9 @@ Changes in existing checks
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
   detect comparison between string and empty string literals and support
-  ``length()`` method as an alternative to ``size()``.
+  ``length()`` method as an alternative to ``size()``. Resolved false positives
+  tied to negative values from size-like methods, and one triggered by size
+  checks below zero.
 
 - Improved :doc:`readability-function-size
   <clang-tidy/checks/readability/function-size>` check configuration to use
@@ -500,6 +502,10 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check to now also
+  detect redundant in-class initializers.
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check by adding the
