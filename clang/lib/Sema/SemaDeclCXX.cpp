@@ -11322,13 +11322,18 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
       << ClassType << ConvType;
   }
 
-  if (FunctionTemplateDecl *ConversionTemplate
-                                = Conversion->getDescribedFunctionTemplate()) {
+  if (FunctionTemplateDecl *ConversionTemplate =
+          Conversion->getDescribedFunctionTemplate()) {
     if (ConvType->isUndeducedAutoType()) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
-        << Conversion->getTypeSourceInfo()->getTypeLoc().getContainedAutoTypeLoc().getSourceRange()
-        << llvm::to_underlying(Conversion->getConversionType()->getAs<AutoType>()->getKeyword())
-        << /* in declaration of conversion function template */ 24;
+          << Conversion->getTypeSourceInfo()
+                 ->getTypeLoc()
+                 .getContainedAutoTypeLoc()
+                 .getSourceRange()
+          << llvm::to_underlying(Conversion->getConversionType()
+                                     ->getAs<AutoType>()
+                                     ->getKeyword())
+          << /* in declaration of conversion function template */ 24;
     }
 
     return ConversionTemplate;
