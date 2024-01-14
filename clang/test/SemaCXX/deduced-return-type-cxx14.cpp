@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx14,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -686,3 +686,19 @@ auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
 }
 
 }
+
+struct DeducedTargetTypeOfConversionFunction {
+  operator auto() const { return char(); }
+  operator const auto() const { return float(); }
+  operator decltype(auto)() const { return double(0); }
+
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+};

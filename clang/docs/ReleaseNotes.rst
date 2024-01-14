@@ -560,6 +560,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
+  (`CWG1878: <https://cplusplus.github.io/CWG/issues/1878.html>`_)
 
 
 Improvements to Clang's time-trace
