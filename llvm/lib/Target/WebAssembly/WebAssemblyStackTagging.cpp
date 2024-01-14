@@ -9,6 +9,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -37,6 +38,10 @@ struct WebAssemblyStackTagging : public FunctionPass {
   void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size,
                    Function *StoreTagDecl, Type *ArgOp0Type);
 
+  Instruction *insertBaseTaggedPointer(
+      const MapVector<AllocaInst *, memtag::AllocaInfo> &Allocas,
+      const DominatorTree *DT);
+
   bool runOnFunction(Function &) override;
 
 private:
@@ -63,7 +68,34 @@ void WebAssemblyStackTagging::untagAlloca(AllocaInst *AI,
                                           Type *ArgOp0Type) {
 
   IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(StoreTagDecl, {IRB.getInt32(0), AI, ConstantInt::get(ArgOp0Type, Size)});
+  IRB.CreateCall(StoreTagDecl,
+                 {IRB.getInt32(0), AI, ConstantInt::get(ArgOp0Type, Size)});
+}
+
+Instruction *WebAssemblyStackTagging::insertBaseTaggedPointer(
+    const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
+    const DominatorTree *DT) {
+  BasicBlock *PrologueBB = nullptr;
+  // Try sinking IRG as deep as possible to avoid hurting shrink wrap.
+  for (auto &I : AllocasToInstrument) {
+    const memtag::AllocaInfo &Info = I.second;
+    AllocaInst *AI = Info.AI;
+    if (!PrologueBB) {
+      PrologueBB = AI->getParent();
+      continue;
+    }
+    PrologueBB = DT->findNearestCommonDominator(PrologueBB, AI->getParent());
+  }
+  assert(PrologueBB);
+
+  IRBuilder<> IRB(&PrologueBB->front());
+  Function *RdTag = Intrinsic::getDeclaration(F->getParent(),
+                                              Intrinsic::wasm_memory_randomtag);
+  Instruction *Base =
+      IRB.CreateCall(RdTag, {IRB.getInt32(0),
+                             ::llvm::ConstantPointerNull::get(IRB.getPtrTy())});
+  Base->setName("basetag");
+  return Base;
 }
 
 bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
@@ -72,11 +104,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
 
   F = &Fn;
   DL = &Fn.getParent()->getDataLayout();
-#if 1
-// Unsure of the purpose of the SSI analysis in this context.
-// Please place it under further review.
+
   SSI = &getAnalysis<StackSafetyGlobalInfoWrapperPass>().getResult();
-#endif
   memtag::StackInfoBuilder SIB(SSI);
   for (Instruction &I : instructions(F))
     SIB.visit(I);
@@ -110,18 +139,33 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     DeleteLI = std::make_unique<LoopInfo>(*DT);
     LI = DeleteLI.get();
   }
-  for (auto &I : SInfo.AllocasToInstrument) {
+  auto &AllocasToInstrument = SInfo.AllocasToInstrument;
+  if (AllocasToInstrument.empty()) {
+    return true;
+  }
+  Instruction *Base = insertBaseTaggedPointer(AllocasToInstrument, DT);
+  uint64_t NextTag = 0;
+  for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
+    uint64_t Tag = NextTag;
+    ++NextTag;
     AllocaInst *AI = Info.AI;
     IRBuilder<> IRB(Info.AI->getNextNode());
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
-    Function *RandomStoreTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_randomstoretag, {Int64Type});
+    Function *HintTagDecl = Intrinsic::getDeclaration(
+        F->getParent(), Intrinsic::wasm_memory_hinttag, {Int64Type});
     Function *StoreTagDecl = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
+    Instruction *TagPCall =
+        IRB.CreateCall(HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI,
+                                     Base, ConstantInt::get(Int64Type, Tag)});
+    if (Info.AI->hasName())
+      TagPCall->setName(Info.AI->getName() + ".tag");
+    Info.AI->replaceAllUsesWith(TagPCall);
+    TagPCall->setOperand(1, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -137,12 +181,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
       Size = alignTo(Size, kTagGranuleSize);
-      Instruction *RandomStoreTagCall = IRB.CreateCall(
-          RandomStoreTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI, ConstantInt::get(Int64Type, Size)});
-      if (Info.AI->hasName())
-        RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
-      Info.AI->replaceAllUsesWith(RandomStoreTagCall);
-      RandomStoreTagCall->setOperand(1, Info.AI);
+
+      IRBuilder<> IRB2(Start->getNextNode());
+      IRB2.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), TagPCall,
+                                     ConstantInt::get(Int64Type, Size)});
 
       auto TagEnd = [&](Instruction *Node) {
         untagAlloca(AI, Node, Size, StoreTagDecl, Int64Type);
@@ -155,12 +197,9 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      Instruction *RandomStoreTagCall = IRB.CreateCall(RandomStoreTagDecl,
-		      {ConstantInt::get(Int32Type, 0), AI, ConstantInt::get(Int64Type, Size)});
-      if (Info.AI->hasName())
-        RandomStoreTagCall->setName(Info.AI->getName() + ".tag");
-      Info.AI->replaceAllUsesWith(RandomStoreTagCall);
-      RandomStoreTagCall->setOperand(1, Info.AI);
+      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
+      IRB.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), Ptr,
+                                    ConstantInt::get(Int64Type, Size)});
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
