@@ -352,6 +352,34 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
     sign = -sign;
 }
 
+/// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
+/// where n is a QuasiPolynomial.
+std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
+                                                     unsigned r) {
+  unsigned numParams = n.getNumInputs();
+  std::vector<QuasiPolynomial> coefficients;
+  coefficients.reserve(r + 1);
+  coefficients.push_back(QuasiPolynomial(numParams, 1));
+  for (unsigned j = 1; j <= r; ++j)
+    // We use the recursive formula for binomial coefficients here and below.
+    coefficients.push_back(
+        (coefficients[j - 1] * (n - QuasiPolynomial(numParams, j - 1)) /
+         Fraction(j, 1))
+            .simplify());
+  return coefficients;
+}
+
+/// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
+/// where n is a QuasiPolynomial.
+std::vector<Fraction> getBinomialCoefficients(Fraction n, Fraction r) {
+  std::vector<Fraction> coefficients;
+  coefficients.reserve((int64_t)floor(r));
+  coefficients.push_back(1);
+  for (unsigned j = 1; j <= r; ++j)
+    coefficients.push_back(coefficients[j - 1] * (n - (j - 1)) / (j));
+  return coefficients;
+}
+
 /// We have a generating function of the form
 /// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
 ///
@@ -409,7 +437,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // absolute values by multiplying and dividing by (s+1)^(-dens[j]) if it is
     // negative. We change the sign accordingly to keep the denominator in the
     // same form.
-    // Then, we replace each (1 - (s+1)^(dens[j])) with
+    // Then, using the formula for geometric series, we replace each (1 -
+    // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
     normalizeDenominatorExponents(sign, numExp, dens);
 
@@ -431,32 +460,22 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // for which we use the `getCoefficientInRationalFunction()` function.
     unsigned r = dens.size();
 
-    // First, the coefficients of P(s), which are binomial coefficients.
-    // We need r+1 of these.
-    std::vector<QuasiPolynomial> numeratorCoefficients;
-    numeratorCoefficients.reserve(r + 1);
-    numeratorCoefficients.push_back(
-        QuasiPolynomial(numParams, 1)); // Coeff of s^0
-    for (unsigned j = 1; j <= r; ++j)
-      numeratorCoefficients.push_back(
-          (numeratorCoefficients[j - 1] *
-           (numExp - QuasiPolynomial(numParams, j - 1)) / Fraction(j, 1))
-              .simplify());
-    // Coeff of s^j
+    // First, we compute the coefficients of P(s),
+    // which are binomial coefficients.
+    // We only need the first r+1 of these, as higher-order terms do not
+    // contribute to the coefficient of s^r.
+    std::vector<QuasiPolynomial> numeratorCoefficients =
+        getBinomialCoefficients(numExp, r);
 
     // Then the coefficients of each individual term in Q(s),
-    // which are (di+1) C (k+1) for 0 ≤ k ≤ di
+    // which are (di+1) C (k+1) for 0 ≤ k ≤ di.
     std::vector<std::vector<Fraction>> eachTermDenCoefficients;
     std::vector<Fraction> singleTermDenCoefficients;
     eachTermDenCoefficients.reserve(r);
     for (const Fraction &den : dens) {
-      singleTermDenCoefficients.clear();
-      singleTermDenCoefficients.push_back(den + 1);
-      for (unsigned j = 1; j <= den; ++j)
-        singleTermDenCoefficients.push_back(singleTermDenCoefficients[j - 1] *
-                                            (den - (j - 1)) / (j + 1));
-
-      eachTermDenCoefficients.push_back(singleTermDenCoefficients);
+      singleTermDenCoefficients = getBinomialCoefficients(den + 1, den + 1);
+      eachTermDenCoefficients.push_back(
+          ArrayRef<Fraction>(singleTermDenCoefficients).slice(1));
     }
 
     // Now we find the coefficients in Q(s) itself
