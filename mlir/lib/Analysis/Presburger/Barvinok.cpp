@@ -330,7 +330,8 @@ QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
 /// Step (2) We need to express the terms in the function as quotients of
 /// polynomials. Each term is now of the form
 /// sign_i * (s+1)^n'_i / (\prod_j (1 - (s+1)^d'_{ij}))
-/// For the i'th term, we first convert all the d'_{ij} to their
+/// For the i'th term, we first normalize the denominator to have only
+/// positive exponents. We convert all the d'_{ij} to their
 /// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
 /// negative. We change the sign accordingly to keep the denominator in the
 /// same form.
@@ -366,7 +367,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   QuasiPolynomial totalTerm(numParams, 0);
   for (unsigned i = 0; i < numTerms; ++i) {
     int sign = gf.getSigns()[i];
-    std::vector<Point> ds = gf.getDenominators()[i];
+    const std::vector<Point> &ds = gf.getDenominators()[i];
 
     QuasiPolynomial num =
         substituteMuInTerm(numParams, gf.getNumerators()[i], ds, mu);
@@ -382,8 +383,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // (1 - (s+1)^dens.back())
 
     // We track the number of exponents that are negative in the
-    // denominator, and convert them to their absolute values
-    // (see lines 356-66).
+    // denominator, and convert them to their absolute values.
     unsigned numNegExps = 0;
     Fraction sumNegExps(0, 1);
     for (unsigned j = 0, e = dens.size(); j < e; ++j) {
@@ -410,7 +410,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
       sign = -sign;
     num = num - QuasiPolynomial(numParams, sumNegExps);
 
-    // Take all the (-s) out, from line 353.
+    // Take all the (-s) out.
     unsigned r = dens.size();
     if (r % 2 == 1)
       sign = -sign;
