@@ -250,19 +250,16 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
                                          std::vector<Fraction> b) {
   // The length of the convolution is the maximum of the lengths
   // of the two sequences. We pad the shorter one with zeroes.
-  unsigned convlen = std::max(a.size(), b.size());
-  for (unsigned k = a.size(); k < convlen; ++k)
-    a.push_back(0);
-  for (unsigned k = b.size(); k < convlen; ++k)
-    b.push_back(0);
+  unsigned len = std::max(a.size(), b.size());
+  a.resize(len);
+  b.resize(len);
 
   std::vector<Fraction> convolution;
-  convolution.reserve(convlen);
-  convolution.clear();
-  for (unsigned k = 0; k < convlen; ++k) {
+  convolution.reserve(len);
+  for (unsigned k = 0; k < len; ++k) {
     Fraction sum(0, 1);
     for (unsigned l = 0; l <= k; ++l)
-      sum = sum + a[l] * b[k - l];
+      sum += a[l] * b[k - l];
     convolution.push_back(sum);
   }
   return convolution;
