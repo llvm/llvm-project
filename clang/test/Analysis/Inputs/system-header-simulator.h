@@ -14,8 +14,9 @@ typedef long long __int64_t;
 typedef __int64_t __darwin_off_t;
 typedef __darwin_off_t fpos_t;
 typedef int off_t;
-
 typedef struct _FILE FILE;
+typedef struct _DIR DIR;
+
 #define SEEK_SET 0 /* Seek from beginning of file. */
 #define SEEK_CUR 1 /* Seek from current position. */
 #define SEEK_END 2 /* Seek from end of file. */
@@ -67,6 +68,10 @@ int feof(FILE *stream);
 int ferror(FILE *stream);
 int fileno(FILE *stream);
 int fflush(FILE *stream);
+
+DIR *opendir(const char *name);
+DIR *fdopendir(int fd);
+int closedir(DIR *dir);
 
 size_t strlen(const char *);
 
