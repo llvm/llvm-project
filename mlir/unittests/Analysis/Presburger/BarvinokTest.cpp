@@ -126,7 +126,9 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
 }
 
 // The following test is taken from
-//
+/// Verdoolaege, Sven, et al. "Counting integer points in parametric
+/// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+/// 37-66.
 TEST(BarvinokTest, computeNumTerms) {
   GeneratingFunction gf(
       1, {1, 1, 1},
