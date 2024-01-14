@@ -17144,8 +17144,6 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
   if (!V.hasValue())
     return false;
 
-  PrintingPolicy Policy(Context.getPrintingPolicy());
-  Policy.UseEnumerators = true;
   switch (V.getKind()) {
   case APValue::ValueKind::Int:
     if (T->isBooleanType()) {
@@ -17189,6 +17187,8 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
       }
       // print enums as either their named value or a cast
       if (T->isEnumeralType()) {
+        PrintingPolicy Policy(Context.getPrintingPolicy());
+        Policy.UseEnumerators = true;
         llvm::raw_svector_ostream OS(Str);
         V.printPretty(OS, Policy, T, &Context);
         break;
@@ -17231,16 +17231,25 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
   case APValue::ValueKind::Array:
   case APValue::ValueKind::Vector: {
     llvm::raw_svector_ostream OS(Str);
+    // we hope to emit a valid initalizer expression
+    // like `(const int[3]){1, 2, 3}`
     OS << '(' << T << ')';
+    PrintingPolicy Policy(Context.getPrintingPolicy());
+    Policy.UseEnumerators = true;
     V.printPretty(OS, Policy, T, &Context);
   } break;
 
   case APValue::ValueKind::Struct: {
     llvm::raw_svector_ostream OS(Str);
     if (T.hasQualifiers())
-      OS << '(' << T << ")";
-    else
-      OS << T;
+      OS << '(' << T << ')';
+    else {
+      PrintingPolicy TyPolicy(Context.getPrintingPolicy());
+      TyPolicy.SuppressUnwrittenScope = true;
+      T.print(OS, TyPolicy);
+    }
+    PrintingPolicy Policy(Context.getPrintingPolicy());
+    Policy.UseEnumerators = true;
     V.printPretty(OS, Policy, T, &Context);
   } break;
 

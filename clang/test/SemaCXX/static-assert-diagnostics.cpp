@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple wasm32 %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple aarch64_be-linux-gnu %s
 
 struct A {
   int a, b[3], c;
@@ -10,6 +11,7 @@ constexpr auto a0 = A{0, 0, 3, 4, 5};
 // expected-note@+1 {{evaluates to '(const A){0, {0, 3, 4}, 5} == A{1, {2, 3, 4}, 5}'}}
 static_assert(a0 == A{1, {2, 3, 4}, 5}); // expected-error {{failed}}
 
+// `operator==` wrapper type
 struct _arr {
   const int b[3];
   constexpr bool operator==(const int rhs[3]) const {
@@ -95,8 +97,22 @@ static_assert(TU{TU::S, {.s=7}} == TU{TU::S, {.s=6}}); // expected-error {{faile
 static_assert(TU{TU::U, {.u=7}} == TU{TU::U, {.u=9}}); // expected-error {{failed}}
 // expected-note@-1 {{{evaluates to 'TU{TU::U, {.u = 7}} == TU{TU::U, {.u = 9}}'}}}
 
+struct EnumArray {
+  const E nums[3];
+  constexpr bool operator==(const E rhs[3]) const {
+    for (unsigned i = 0; i < sizeof(nums) / sizeof(E); i++)
+      if (nums[i] != rhs[i])
+        return false;
+    return true;
 
-// define `std::bit_cast` as a helper for doing constexpr vector comparisons
+  };
+};
+static_assert(EnumArray{} == (const E[3]){numerator});
+
+// expected-note@+1 {{{evaluates to 'EnumArray{{}} == (const E[3]){numerator, (const E)1, (const E)2}'}}}
+static_assert(EnumArray{} == (const E[3]){(E)0, (E)1, (E)2}); // expected-error {{failed}}
+
+// define `std::bit_cast`
 namespace std {
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
@@ -105,6 +121,7 @@ constexpr To bit_cast(const From &from) {
 }
 } // namespace std
 
+namespace vector {
 typedef int v4si __attribute__((__vector_size__(16)));
 
 struct V {
@@ -165,3 +182,24 @@ static_assert(BV{{0, 1}} == BV{{1, 0}}); // expected-error {{failed}}
 
 // expected-note@+1 {{{evaluates to 'BV{{false, true, false, false, false, false, false, false}} == (bool8){true, false, false, false, false, false, false, false}'}}}
 static_assert(BV{{0, 1}} == (bool8){true, false}); // expected-error {{failed}}
+} // namespace vector
+
+namespace {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+constexpr auto bits = 0x030201;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+constexpr auto bits = 0x01020300;
+#else
+#error "don't know what to do with mixed endianness"
+#endif
+
+struct alignas(decltype(bits)) S {
+unsigned char a, b, c;
+};
+// confusing `==` on purpose
+constexpr bool operator==(const S&, const S&) { return false; }
+
+// the note should clearly implicate the `==` implementation
+// expected-note@+1 {{{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}}
+static_assert(S{1, 2, 3} == std::bit_cast<S>(bits)); // expected-error {{failed}}
+} // namespace
