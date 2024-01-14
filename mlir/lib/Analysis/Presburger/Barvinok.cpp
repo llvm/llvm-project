@@ -246,47 +246,62 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   return coefficients[power].simplify();
 }
 
-// We have a generating function of the form
-// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
-//
-// where sign_i is ±1,
-// n_i \in Q^p -> Q^d is a d-vector of affine functions on p parameters, and
-// d_{ij} \in Q^d are vectors.
-//
-// We need to find the number of terms of the form x^t in the expansion of
-// this function, for which we substitute x = (1, ..., 1).
-// However, direct substitution leads to an undefined answer due to the
-// form of the denominator.
-//
-// We therefore use the following procedure instead:
-// Find a vector μ that is not orthogonal to any of the d_{ij}.
-// Substitute x_i = (s+1)^μ_i. As μ_i is not orthogonal to d_{ij},
-// we never have (1 - (s+1)^0) = 0 in any of the terms in denominator.
-// We then find the constant term in this function, i.e., we evaluate it
-// at s = 0, which is equivalent to x = (1, ..., 1).
-//
-// Now, we have a function of the form
-// f_p(s) = \sum_i sign_i * (s+1)^n_i / (\prod_j (1 - (s+1)^d'_{ij}))
-// in which we need to find the constant term.
-// For the i'th term, we first convert all the d'_{ij} to their
-// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
-// negative. We change the sign accordingly.
-// Then, we replace each (1 - (s+1)^(d'_{ij})) with
-// (-s)(\sum_{0 ≤ k < d'_{ij}} (s+1)^k).
-// Thus the term overall has now the form
-// sign'_i * (s+1)^n'_i / (s^r * \prod_j (\sum_k (s+1)^k)).
-// This means that
-// the numerator is a polynomial in s, with coefficients as quasipolynomials,
-// and the denominator is polynomial in s, with fractional coefficients.
-// We need to find the constant term in the expansion of this term,
-// which is the same as finding the coefficient of s^r in
-// sign'_i * (s+1)^n'_i / (\prod_j (\sum_k (s+1)^k)),
-// for which we use the `getCoefficientInRationalFunction()` function.
-//
-// Verdoolaege, Sven, et al. "Counting integer points in parametric polytopes
-// using Barvinok's rational functions." Algorithmica 48 (2007): 37-66.
+/// We have a generating function of the form
+/// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
+///
+/// where sign_i is ±1,
+/// n_i \in Q^p -> Q^d is a d-vector of affine functions on p parameters, and
+/// d_{ij} \in Q^d are vectors.
+///
+/// We need to find the number of terms of the form x^t in the expansion of
+/// this function, for which we substitute x = (1, ..., 1).
+/// However, direct substitution causes the denominator to become zero.
+///
+/// We therefore use the following procedure instead:
+/// 1. Substitute x_i = (s+1)^μ_i for some vector μ. This makes the generating
+/// a function of a scalar s.
+/// 2. Write each term in this function as P(s)/Q(s), where P and Q are
+/// polynomials. P has coefficients as quasipolynomials in d parameters, while
+/// Q has coefficients as scalars.
+/// 3. Find the constant term in the expansion of each term P(s)/Q(s). This is
+/// equivalent to substituting s = 0, which by step 1's substitution is
+/// equivalent to letting x = (1, ..., 1).
+/// In this step, we cancel the factor with root zero from the numerator and
+/// denominator, thus preventing the denominator from becoming zero.
+/// Step (1) We need to find a μ_i such that we can substitute x_i =
+/// (s+1)^μ_i. After this substitution, the exponent of (s+1) in the
+/// denominator is (μ_i • d_{ij}) in each term. Clearly, this cannot become
+/// zero. Thus we find a vector μ that is not orthogonal to any of the
+/// d_{ij} and substitute x accordingly.
+///
+/// Step (2) We need to express the terms in the function as quotients of
+/// polynomials. Each term is now of the form
+/// sign_i * (s+1)^n_i / (\prod_j (1 - (s+1)^d'_{ij}))
+/// For the i'th term, we first convert all the d'_{ij} to their
+/// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
+/// negative. We change the sign accordingly.
+/// Then, we replace each (1 - (s+1)^(d'_{ij})) with
+/// (-s)(\sum_{0 ≤ k < d'_{ij}} (s+1)^k).
+/// Thus the term overall has now the form
+/// sign'_i * (s+1)^n'_i / (s^r * \prod_j (\sum_k (s+1)^k)).
+/// This means that
+/// the numerator is a polynomial in s, with coefficients as
+/// quasipolynomials (given by binomial coefficients), and the denominator
+/// is polynomial in s, with fractional coefficients (given by taking the
+/// convolution over all j).
+///
+/// Step (3) We need to find the constant term in the expansion of each
+/// term. Since each term has s^r as a factor in the denominator, we avoid
+/// substituting s = 0 directly; instead, we find the coefficient of s^r in
+/// sign'_i * (s+1)^n'_i / (\prod_j (\sum_k (s+1)^k)),
+/// for which we use the `getCoefficientInRationalFunction()` function.
+///
+/// Verdoolaege, Sven, et al. "Counting integer points in parametric
+/// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+/// 37-66.
+
 QuasiPolynomial
-mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
+mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   std::vector<Point> allDenominators;
   for (ArrayRef<Point> den : gf.getDenominators())
     allDenominators.insert(allDenominators.end(), den.begin(), den.end());

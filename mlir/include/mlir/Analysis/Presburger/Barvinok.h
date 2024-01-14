@@ -99,9 +99,9 @@ QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
                                                  ArrayRef<QuasiPolynomial> num,
                                                  ArrayRef<Fraction> den);
 
-/// Substitute the generating function with the unit vector
-/// to find the number of terms.
-QuasiPolynomial substituteWithUnitVector(GeneratingFunction);
+/// Find the number of terms in the generating function corresponding to
+/// a polytope.
+QuasiPolynomial computeNumTerms(const GeneratingFunction& gf);
 
 } // namespace detail
 } // namespace presburger
