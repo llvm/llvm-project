@@ -250,7 +250,7 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
                                          std::vector<Fraction> b) {
   // The length of the convolution is the maximum of the lengths
   // of the two sequences. We pad the shorter one with zeroes.
-  unsigned len = std::max(a.size(), b.size());
+  unsigned len = a.size() + b.size();
   a.resize(len);
   b.resize(len);
 
