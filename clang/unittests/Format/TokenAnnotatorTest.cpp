@@ -1066,6 +1066,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = (!Foo<T>) && Bar;");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[15], tok::ampamp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -2172,6 +2177,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
+  auto Style = getLLVMStyle(FormatStyle::LK_TableGen);
+  ASSERT_TRUE(Style.isTableGen());
+
+  TestLexer Lexer(Allocator, Buffers, Style);
+  AdditionalKeywords Keywords(Lexer.IdentTable);
+  auto Annotate = [&Lexer](llvm::StringRef Code) {
+    return Lexer.annotate(Code);
+  };
+
+  // Additional keywords representation test.
+  auto Tokens = Annotate("def foo : Bar<1>;");
+  ASSERT_TRUE(Keywords.isTableGenKeyword(*Tokens[0]));
+  ASSERT_TRUE(Keywords.isTableGenDefinition(*Tokens[0]));
+  ASSERT_TRUE(Tokens[0]->is(Keywords.kw_def));
+  ASSERT_TRUE(Tokens[1]->is(TT_StartOfName));
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   auto Tokens = annotate("Class::Class() : BaseClass(), Member() {}");
 
@@ -2324,6 +2347,11 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
   EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("Foo foo[] = {[0]{}};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {

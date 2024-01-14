@@ -1,4 +1,4 @@
-add_llvm_component_library(LLVMDWARFLinker
+add_llvm_component_library(LLVMDWARFLinkerClassic
   DWARFLinkerCompileUnit.cpp
   DWARFLinkerDeclContext.cpp
   DWARFLinker.cpp
@@ -16,7 +16,7 @@ add_llvm_component_library(LLVMDWARFLinker
   CodeGen
   CodeGenTypes
   DebugInfoDWARF
-  DWARFLinkerBase
+  DWARFLinker
   MC
   Object
   Support

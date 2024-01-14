@@ -2061,6 +2061,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->AddComment("EVEX TO LEGACY Compression ", false);
     else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_VEX)
       OutStreamer->AddComment("EVEX TO VEX Compression ", false);
+    else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_EVEX)
+      OutStreamer->AddComment("EVEX TO EVEX Compression ", false);
   }
 
   // Add comments for values loaded from constant pool.

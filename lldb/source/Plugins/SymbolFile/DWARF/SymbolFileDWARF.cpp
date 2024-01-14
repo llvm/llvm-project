@@ -294,7 +294,7 @@ static void ParseSupportFilesFromPrologue(
     }
 
     // Unconditionally add an entry, so the indices match up.
-    support_files.EmplaceBack(remapped_file, style, checksum);
+    support_files.EmplaceBack(FileSpec(remapped_file, style), checksum);
   }
 }
 

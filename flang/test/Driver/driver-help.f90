@@ -98,6 +98,7 @@
 ! HELP-NEXT: -g                      Generate source-level debug information
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
+! HELP-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'

@@ -232,6 +232,62 @@ protected:
   NoArgv() : CommandFixture(0, nullptr) {}
 };
 
+#if _WIN32 || _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || \
+    _SVID_SOURCE || _POSIX_SOURCE
+TEST_F(NoArgv, FdateGetDate) {
+  char input[]{"24LengthCharIsJustRight"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  // Tue May 26 21:51:03 2015\n\0
+  // index at 3, 7, 10, 19 should be space
+  // when date is less than two digit, index 8 would be space
+  // Tue May  6 21:51:03 2015\n\0
+  for (std::size_t i{0}; i < charLen; i++) {
+    if (i == 8)
+      continue;
+    if (i == 3 || i == 7 || i == 10 || i == 19) {
+      EXPECT_EQ(input[i], ' ');
+      continue;
+    }
+    EXPECT_NE(input[i], ' ');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDateTooShort) {
+  char input[]{"TooShortAllPadSpace"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  for (std::size_t i{0}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDatePadSpace) {
+  char input[]{"All char after 23 pad spaces"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  for (std::size_t i{24}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
+#else
+TEST_F(NoArgv, FdateNotSupported) {
+  char input[]{"No change due to crash"};
+
+  EXPECT_DEATH(FORTRAN_PROCEDURE_NAME(fdate)(input, sizeof(input)),
+      "fdate is not supported.");
+
+  CheckCharEqStr(input, "No change due to crash");
+}
+#endif
+
 // TODO: Test other intrinsics with this fixture.
 
 TEST_F(NoArgv, GetCommand) { CheckMissingCommandValue(); }
@@ -635,11 +691,18 @@ TEST_F(EnvironmentVariables, GetlogGetName) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
   // guarantee 1 char longer than max, last char should be pad space
-  const int charLen{LOGIN_NAME_MAX + 2};
-  char input[charLen];
+  int charLen;
+#ifdef LOGIN_NAME_MAX
+  charLen = LOGIN_NAME_MAX + 2;
+#else
+  charLen = sysconf(_SC_LOGIN_NAME_MAX) + 2;
+  if (charLen == -1)
+    charLen = _POSIX_LOGIN_NAME_MAX + 2;
+#endif
+  std::vector<char> input(charLen);
 
   FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
+  (reinterpret_cast<std::byte *>(input.data()), charLen);
 
   EXPECT_EQ(input[charLen - 1], ' ');
 }
