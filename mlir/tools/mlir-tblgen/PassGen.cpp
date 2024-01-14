@@ -308,8 +308,9 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
     llvm::interleave(
         pass.getDependentDialects(), dialectsOs,
-        [&dialectsOs](StringRef dd) {
-          dialectsOs << llvm::formatv(dialectRegistrationTemplate, dd);
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
         },
         "\n    ");
   }
@@ -426,8 +427,9 @@ static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
     llvm::interleave(
         pass.getDependentDialects(), dialectsOs,
-        [&dialectsOs](StringRef dd) {
-          dialectsOs << llvm::formatv(dialectRegistrationTemplate, dd);
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
         },
         "\n    ");
   }

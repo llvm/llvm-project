@@ -285,8 +285,9 @@ static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
     llvm::interleave(
         dialect.getDependentDialects(), dialectsOs,
-        [&dialectsOs](StringRef dd) {
-          dialectsOs << llvm::formatv(dialectRegistrationTemplate, dd);
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
         },
         "\n  ");
   }
