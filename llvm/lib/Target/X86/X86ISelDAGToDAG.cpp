@@ -2355,8 +2355,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
-        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        uint64_t Offset = (uint64_t)AddVal->getZExtValue();
+        uint64_t Offset = Src.getConstantOperandVal(1);
         if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
           SDValue Res;
