@@ -292,19 +292,12 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     allDenominators.insert(allDenominators.end(), den.begin(), den.end());
   Point mu = getNonOrthogonalVector(allDenominators);
 
-  unsigned num_params = gf.getNumParams();
-  unsigned num_dims = mu.size();
-  unsigned num_terms = gf.getDenominators().size();
+  unsigned numParams = gf.getNumParams();
+  unsigned numDims = mu.size();
+  unsigned numTerms = gf.getDenominators().size();
 
-  std::vector<Fraction> dens;
-
-  std::vector<QuasiPolynomial> numeratorCoefficients;
-  std::vector<Fraction> singleTermDenCoefficients, denominatorCoefficients;
-  std::vector<std::vector<Fraction>> eachTermDenCoefficients;
-  std::vector<Fraction> convolution;
-
-  QuasiPolynomial totalTerm(num_params, 0);
-  for (unsigned i = 0; i < num_terms; ++i) {
+  QuasiPolynomial totalTerm(numParams, 0);
+  for (unsigned i = 0; i < numTerms; ++i) {
     int sign = gf.getSigns()[i];
     ParamPoint v = gf.getNumerators()[i];
     std::vector<Point> ds = gf.getDenominators()[i];
@@ -318,23 +311,24 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
 
     // We have d terms, each of whose coefficient is the negative dot product,
     SmallVector<Fraction> coefficients;
-    coefficients.reserve(num_dims);
+    coefficients.reserve(numDims);
     for (const Point &d : ds)
       coefficients.push_back(-dotProduct(mu, d));
 
     // and whose affine fn is a single floor expression, given by the
     // corresponding column of v.
     std::vector<std::vector<SmallVector<Fraction>>> affine;
-    affine.reserve(num_dims);
-    for (unsigned j = 0; j < num_dims; ++j)
+    affine.reserve(numDims);
+    for (unsigned j = 0; j < numDims; ++j)
       affine.push_back({SmallVector<Fraction>(v.transpose().getRow(j))});
 
-    QuasiPolynomial num(num_params, coefficients, affine);
+    QuasiPolynomial num(numParams, coefficients, affine);
     num = num.simplify();
 
     // Now the numerator is (s+1)^num.
 
-    dens.clear();
+    std::vector<Fraction> dens;
+    dens.reserve(ds.size());
     // Similarly, each term in the denominator has exponent
     // given by the dot product of μ with u_i.
     for (const Point &d : ds)
@@ -344,7 +338,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
 
     // We track the number of exponents that are negative in the
     // denominator, and convert them to their absolute values
-    // (see lines 362-72).
+    // (see lines 356-66).
     unsigned numNegExps = 0;
     Fraction sumNegExps(0, 1);
     for (unsigned j = 0, e = dens.size(); j < e; ++j) {
@@ -369,9 +363,9 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // flip the sign.
     if (numNegExps % 2 == 1)
       sign = -sign;
-    num = num - QuasiPolynomial(num_params, sumNegExps);
+    num = num - QuasiPolynomial(numParams, sumNegExps);
 
-    // Take all the (-s) out, from line 359.
+    // Take all the (-s) out, from line 353.
     unsigned r = dens.size();
     if (r % 2 == 1)
       sign = -sign;
@@ -386,19 +380,22 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
 
     // First, the coefficients of P(s), which are binomial coefficients.
     // We need r+1 of these.
-    numeratorCoefficients.clear();
+    std::vector<QuasiPolynomial> numeratorCoefficients;
+    numeratorCoefficients.reserve(r + 1);
     numeratorCoefficients.push_back(
-        QuasiPolynomial(num_params, 1)); // Coeff of s^0
+        QuasiPolynomial(numParams, 1)); // Coeff of s^0
     for (unsigned j = 1; j <= r; ++j)
       numeratorCoefficients.push_back(
           (numeratorCoefficients[j - 1] *
-           (num - QuasiPolynomial(num_params, j - 1)) / Fraction(j, 1))
+           (num - QuasiPolynomial(numParams, j - 1)) / Fraction(j, 1))
               .simplify());
     // Coeff of s^j
 
     // Then the coefficients of each individual term in Q(s),
     // which are (di+1) C (k+1) for 0 ≤ k ≤ di
-    eachTermDenCoefficients.clear();
+    std::vector<std::vector<Fraction>> eachTermDenCoefficients;
+    std::vector<Fraction> singleTermDenCoefficients;
+    eachTermDenCoefficients.reserve(r);
     for (const Fraction &den : dens) {
       singleTermDenCoefficients.clear();
       singleTermDenCoefficients.push_back(den + 1);
@@ -412,7 +409,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // Now we find the coefficients in Q(s) itself
     // by taking the convolution of the coefficients
     // of all the terms.
-    denominatorCoefficients.clear();
+    std::vector<Fraction> denominatorCoefficients;
     denominatorCoefficients = eachTermDenCoefficients[0];
     for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j) {
       // The length of the convolution is the maximum of the lengths
@@ -424,6 +421,8 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
       for (unsigned k = eachTermDenCoefficients[j].size(); k < convlen; ++k)
         eachTermDenCoefficients[j].push_back(0);
 
+      std::vector<Fraction> convolution;
+      convolution.reserve(convlen);
       convolution.clear();
       for (unsigned k = 0; k < convlen; ++k) {
         Fraction sum(0, 1);
@@ -438,7 +437,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     totalTerm =
         totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,
                                                      denominatorCoefficients) *
-                        QuasiPolynomial(num_params, sign);
+                        QuasiPolynomial(numParams, sign);
   }
 
   return totalTerm.simplify();
