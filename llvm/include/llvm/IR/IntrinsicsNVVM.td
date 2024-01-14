@@ -1372,6 +1372,14 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier_cluster_wait :
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
 
+  // 'aligned' versions of the above barrier.cluster.* intrinsics
+  def int_nvvm_barrier_cluster_arrive_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;

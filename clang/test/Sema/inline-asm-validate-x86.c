@@ -132,5 +132,9 @@ void pr40890(void) {
 }
 
 void test_W(int i) {
-  asm("" : : "Wd"(test_W)); // expected-error{{invalid input constraint 'Wd' in asm}}
+  __asm__("" : : "Wd"(test_W)); // expected-error{{invalid input constraint 'Wd' in asm}}
+
+  __asm__("" : : "Ws"(test_W(0))); // expected-error{{invalid type 'void' in asm input for constraint 'Ws'}}
+  // Codegen error
+  __asm__("" : : "Ws"(i));
 }

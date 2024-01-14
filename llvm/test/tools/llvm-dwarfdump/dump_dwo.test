@@ -36,7 +36,7 @@
 # CHECK: 0x0000001a:   DW_TAG_subprogram
 # CHECK:                 DW_AT_low_pc	(0x0000000000000000)
 # CHECK:                 DW_AT_high_pc	(0x0000000000000008)
-# CHECK:                 DW_AT_frame_base	(DW_OP_reg6 RBP)
+# CHECK:                 DW_AT_frame_base	(DW_OP_reg6
 # CHECK:                 DW_AT_linkage_name	("_Z3foov")
 # CHECK:                 DW_AT_name	("foo")
 # CHECK:                 DW_AT_decl_file	(0x00)
@@ -47,7 +47,7 @@
 # CHECK: 0x0000002a:   DW_TAG_subprogram
 # CHECK:                 DW_AT_low_pc	(0x0000000000000010)
 # CHECK:                 DW_AT_high_pc	(0x0000000000000033)
-# CHECK:                 DW_AT_frame_base	(DW_OP_reg6 RBP)
+# CHECK:                 DW_AT_frame_base	(DW_OP_reg6
 # CHECK:                 DW_AT_name	("main")
 # CHECK:                 DW_AT_decl_file	(0x00)
 # CHECK:                 DW_AT_decl_line	(6)
@@ -125,7 +125,7 @@
 # LOOKUP: 0x0000002a:   DW_TAG_subprogram
 # LOOKUP:                 DW_AT_low_pc	(0x0000000000000010)
 # LOOKUP:                 DW_AT_high_pc	(0x0000000000000033)
-# LOOKUP:                 DW_AT_frame_base	(DW_OP_reg6)
+# LOOKUP:                 DW_AT_frame_base	(DW_OP_reg6
 # LOOKUP:                 DW_AT_name	("main")
 # LOOKUP:                 DW_AT_decl_file	(0x00)
 # LOOKUP:                 DW_AT_decl_line	(6)
