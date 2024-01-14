@@ -496,6 +496,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check by adding the
+  new option `IgnoreMacros` that allows to ignore boolean expressions originating
+  from expanded macros.
+
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
   the default value of the `Types` option to include ``std::span``.
