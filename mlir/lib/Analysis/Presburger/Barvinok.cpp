@@ -319,7 +319,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // We have d terms, each of whose coefficient is the negative dot product,
     SmallVector<Fraction> coefficients;
     coefficients.reserve(num_dims);
-    for (Point d : ds)
+    for (const Point &d : ds)
       coefficients.push_back(-dotProduct(mu, d));
 
     // and whose affine fn is a single floor expression, given by the
@@ -337,7 +337,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     dens.clear();
     // Similarly, each term in the denominator has exponent
     // given by the dot product of μ with u_i.
-    for (Point d : ds)
+    for (const Point &d : ds)
       dens.push_back(dotProduct(d, mu));
     // This term in the denominator is
     // (1 - (s+1)^dens.back())
@@ -399,7 +399,7 @@ mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
     // Then the coefficients of each individual term in Q(s),
     // which are (di+1) C (k+1) for 0 ≤ k ≤ di
     eachTermDenCoefficients.clear();
-    for (Fraction den : dens) {
+    for (const Fraction &den : dens) {
       singleTermDenCoefficients.clear();
       singleTermDenCoefficients.push_back(den + 1);
       for (unsigned j = 1; j <= den; ++j)
