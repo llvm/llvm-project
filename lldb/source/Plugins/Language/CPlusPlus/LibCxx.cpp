@@ -1084,3 +1084,81 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
   return ::LibcxxWStringSummaryProvider(valobj, stream, summary_options,
                                         dataobj, size);
 }
+
+bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // FIXME: These are the names used in the C++20 ostream operator. Since LLVM
+  // uses C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 12> months = {
+      "January", "February", "March",     "April",   "May",      "June",
+      "July",    "August",   "September", "October", "November", "December"};
+
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+
+  const unsigned month = ptr_sp->GetValueAsUnsigned(0);
+  if (month >= 1 && month <= 12)
+    stream << "month=" << months[month - 1];
+  else
+    stream.Printf("month=%u", month);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // FIXME: These are the names used in the C++20 ostream operator. Since LLVM
+  // uses C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 7> weekdays = {
+      "Sunday",   "Monday", "Tuesday", "Wednesday",
+      "Thursday", "Friday", "Saturday"};
+
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__wd_");
+  if (!ptr_sp)
+    return false;
+
+  const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
+  if (weekday >= 0 && weekday < 7)
+    stream << "weekday=" << weekdays[weekday];
+  else
+    stream.Printf("weekday=%u", weekday);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__y_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__y_");
+  if (!ptr_sp)
+    return false;
+  int year = ptr_sp->GetValueAsSigned(0);
+
+  ptr_sp = valobj.GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+  const unsigned month = ptr_sp->GetValueAsUnsigned(0);
+
+  ptr_sp = valobj.GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  const unsigned day = ptr_sp->GetValueAsUnsigned(0);
+
+  stream << "date=";
+  if (year < 0) {
+    stream << '-';
+    year = -year;
+  }
+  stream.Printf("%04d-%02u-%02u", year, month, day);
+
+  return true;
+}

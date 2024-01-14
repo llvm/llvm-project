@@ -446,6 +446,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+    State->Builder.SetInsertPoint(NewBB->getFirstNonPHI());
 
     // Update the branch instruction in the predecessor to branch to ExitBB.
     VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();

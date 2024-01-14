@@ -165,18 +165,14 @@ function(add_public_tablegen_target target)
 endfunction()
 
 macro(add_tablegen target project)
-  cmake_parse_arguments(ADD_TABLEGEN "SKIP_COMPONENT_LINK" "DESTINATION;EXPORT" "" ${ARGN})
+  cmake_parse_arguments(ADD_TABLEGEN "" "DESTINATION;EXPORT" "" ${ARGN})
 
-  if(NOT ADD_TABLEGEN_SKIP_COMPONENT_LINK)
-    set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
-    set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
-  endif()
+  set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
+  set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
   add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
     ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
-  if(NOT ADD_TABLEGEN_SKIP_COMPONENT_LINK)
-    set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
-  endif()
+  set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
   set(${project}_TABLEGEN_DEFAULT "${target}")
   if (LLVM_NATIVE_TOOL_DIR)

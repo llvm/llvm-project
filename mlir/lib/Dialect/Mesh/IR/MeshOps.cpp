@@ -250,7 +250,8 @@ void ClusterShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                            ClusterOp mesh) {
   build(odsBuilder, odsState,
         SmallVector<Type>(mesh.getRank(), odsBuilder.getIndexType()),
-        mesh.getSymName(), MeshAxesAttr());
+        mesh.getSymName(),
+        MeshAxesAttr::get(odsBuilder.getContext(), SmallVector<MeshAxis>()));
 }
 
 void ClusterShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
@@ -266,15 +267,15 @@ void ClusterShapeOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
 LogicalResult
 MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                         SymbolRefAttr, ArrayRef<DenseI32ArrayAttr> splitAxes,
-                         ArrayRef<int32_t> partialAxes, Partial) {
+                         FlatSymbolRefAttr, ArrayRef<MeshAxesAttr> splitAxes,
+                         ArrayRef<MeshAxis> partialAxes, Partial) {
   // TODO: At present cluster symbol ref is not verified. This is due to the
   // difficulty in fetching the corresponding symbol op based on an attribute.
 
-  llvm::SmallSet<int32_t, 4> visitedAxes;
+  llvm::SmallSet<MeshAxis, 4> visitedAxes;
 
-  auto checkMeshAxis = [&](ArrayRef<int32_t> axesArray) -> LogicalResult {
-    for (int32_t axis : axesArray) {
+  auto checkMeshAxis = [&](ArrayRef<MeshAxis> axesArray) -> LogicalResult {
+    for (MeshAxis axis : axesArray) {
       if (axis < 0)
         return emitError() << "mesh axis is expected to be non-negative";
       if (!visitedAxes.insert(axis).second)
@@ -283,8 +284,8 @@ MeshShardingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   };
 
-  for (DenseI32ArrayAttr subAxes : splitAxes) {
-    ArrayRef<int32_t> subAxesArray = subAxes.asArrayRef();
+  for (MeshAxesAttr subAxes : splitAxes) {
+    ArrayRef<MeshAxis> subAxesArray = subAxes.asArrayRef();
     if (failed(checkMeshAxis(subAxesArray)))
       return failure();
   }
@@ -318,18 +319,18 @@ bool MeshShardingAttr::operator==(MeshShardingAttr rhs) const {
 
   return llvm::all_of(llvm::make_range(getSplitAxes().begin() + minSize,
                                        getSplitAxes().end()),
-                      std::mem_fn(&DenseI32ArrayAttr::empty)) &&
+                      std::mem_fn(&MeshAxesAttr::empty)) &&
          llvm::all_of(llvm::make_range(rhs.getSplitAxes().begin() + minSize,
                                        rhs.getSplitAxes().end()),
-                      std::mem_fn(&DenseI32ArrayAttr::empty));
+                      std::mem_fn(&MeshAxesAttr::empty));
 }
 
 //===----------------------------------------------------------------------===//
-// mesh.process_index op
+// mesh.process_multi_index op
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ProcessIndexOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+ProcessMultiIndexOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto mesh = ::getMesh(getOperation(), getMeshAttr(), symbolTable);
   if (failed(mesh)) {
     return failure();
@@ -348,18 +349,36 @@ ProcessIndexOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-void ProcessIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                           ClusterOp mesh) {
+void ProcessMultiIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                                ClusterOp mesh) {
   build(odsBuilder, odsState,
         SmallVector<Type>(mesh.getRank(), odsBuilder.getIndexType()),
-        mesh.getSymName(), MeshAxesAttr());
+        mesh.getSymName(), ArrayRef<MeshAxis>());
 }
 
-void ProcessIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                           StringRef mesh, ArrayRef<MeshAxis> axes) {
+void ProcessMultiIndexOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                                StringRef mesh, ArrayRef<MeshAxis> axes) {
   build(odsBuilder, odsState,
         SmallVector<Type>(axes.size(), odsBuilder.getIndexType()), mesh,
         MeshAxesAttr::get(odsBuilder.getContext(), axes));
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.process_linear_index op
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ProcessLinearIndexOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto mesh = ::getMesh(getOperation(), getMeshAttr(), symbolTable);
+  if (failed(mesh)) {
+    return failure();
+  }
+  return success();
+}
+
+void ProcessLinearIndexOp::build(OpBuilder &odsBuilder,
+                                 OperationState &odsState, ClusterOp mesh) {
+  build(odsBuilder, odsState, mesh.getSymName());
 }
 
 //===----------------------------------------------------------------------===//

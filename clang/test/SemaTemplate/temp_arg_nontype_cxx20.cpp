@@ -93,6 +93,12 @@ namespace ConvertedConstant {
   template <A> struct X {};
   void f(X<1.0f>) {}
   void g(X<2>) {}
+
+  struct {
+    int i : 2;
+  } b;
+  template <const int&> struct Y {};
+  void f(Y<b.i>) {} // expected-error {{reference cannot bind to bit-field in converted constant expression}}
 }
 
 namespace CopyCounting {

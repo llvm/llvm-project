@@ -8,6 +8,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -401,6 +402,15 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
   op->print(os);
   EXPECT_TRUE(StringRef(os.str()).contains("inherent_attr = 42"));
   EXPECT_TRUE(StringRef(os.str()).contains("other_attr = 56"));
+
+  OwningOpRef<Operation *> reparsed = parseSourceString(os.str(), config);
+  auto trivialHash = [](Value v) { return hash_value(v); };
+  auto hash = [&](Operation *operation) {
+    return OperationEquivalence::computeHash(
+        operation, trivialHash, trivialHash,
+        OperationEquivalence::Flags::IgnoreLocations);
+  };
+  EXPECT_TRUE(hash(op.get()) == hash(reparsed.get()));
 }
 
 } // namespace

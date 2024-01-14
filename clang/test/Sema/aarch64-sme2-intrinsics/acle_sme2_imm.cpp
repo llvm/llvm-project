@@ -237,7 +237,7 @@ void test_svluti4_lane_zt_x2(svuint8_t zn_u8) __arm_streaming __arm_shared_za __
   svluti4_lane_zt_f32_x2(0, zn_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
-void test_bfmlslb_bad_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming_compatible {
+void test_bfmlslb_bad_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming {
   svbfmlslb_lane_f32(zda, zn, zm, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
   svbfmlslt_lane_f32(zda, zn, zm, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
 }

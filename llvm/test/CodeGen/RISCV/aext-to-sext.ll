@@ -19,7 +19,7 @@ define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    subw s0, a1, a0
 ; RV64I-NEXT:  .LBB0_2: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    call hoge@plt
+; RV64I-NEXT:    call hoge
 ; RV64I-NEXT:    addiw s0, s0, -1
 ; RV64I-NEXT:    bnez s0, .LBB0_2
 ; RV64I-NEXT:  # %bb.3:

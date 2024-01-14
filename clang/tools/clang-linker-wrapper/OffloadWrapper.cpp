@@ -8,6 +8,7 @@
 
 #include "OffloadWrapper.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -121,19 +122,36 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs) {
   SmallVector<Constant *, 4u> ImagesInits;
   ImagesInits.reserve(Bufs.size());
   for (ArrayRef<char> Buf : Bufs) {
+    // We embed the full offloading entry so the binary utilities can parse it.
     auto *Data = ConstantDataArray::get(C, Buf);
-    auto *Image = new GlobalVariable(M, Data->getType(), /*isConstant*/ true,
+    auto *Image = new GlobalVariable(M, Data->getType(), /*isConstant=*/true,
                                      GlobalVariable::InternalLinkage, Data,
                                      ".omp_offloading.device_image");
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     Image->setSection(".llvm.offloading");
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
-    auto *Size = ConstantInt::get(getSizeTTy(M), Buf.size());
+    StringRef Binary(Buf.data(), Buf.size());
+    assert(identify_magic(Binary) == file_magic::offload_binary &&
+           "Invalid binary format");
+
+    // The device image struct contains the pointer to the beginning and end of
+    // the image stored inside of the offload binary. There should only be one
+    // of these for each buffer so we parse it out manually.
+    const auto *Header =
+        reinterpret_cast<const object::OffloadBinary::Header *>(
+            Binary.bytes_begin());
+    const auto *Entry = reinterpret_cast<const object::OffloadBinary::Entry *>(
+        Binary.bytes_begin() + Header->EntryOffset);
+
+    auto *Begin = ConstantInt::get(getSizeTTy(M), Entry->ImageOffset);
+    auto *Size =
+        ConstantInt::get(getSizeTTy(M), Entry->ImageOffset + Entry->ImageSize);
+    Constant *ZeroBegin[] = {Zero, Begin};
     Constant *ZeroSize[] = {Zero, Size};
 
     auto *ImageB =
-        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroZero);
+        ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroBegin);
     auto *ImageE =
         ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroSize);
 

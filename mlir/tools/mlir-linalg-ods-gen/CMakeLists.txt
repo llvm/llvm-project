@@ -3,26 +3,26 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-set(LIBS
+# New mlir-linalg-ods-yaml-gen.
+add_mlir_tool(mlir-linalg-ods-yaml-gen
+  mlir-linalg-ods-yaml-gen.cpp
+)
+llvm_update_compile_flags(mlir-linalg-ods-yaml-gen)
+target_link_libraries(mlir-linalg-ods-yaml-gen PRIVATE
   MLIRIR
   MLIRSupport
   MLIRParser
-)
+  )
 
-# New mlir-linalg-ods-yaml-gen.
-add_tablegen(mlir-linalg-ods-yaml-gen MLIR_LINALG_ODS_YAML_GEN
-  DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
-  EXPORT MLIR
-  SKIP_COMPONENT_LINK
-  mlir-linalg-ods-yaml-gen.cpp
+setup_host_tool(mlir-linalg-ods-yaml-gen MLIR_LINALG_ODS_YAML_GEN MLIR_LINALG_ODS_YAML_GEN_EXE MLIR_LINALG_ODS_YAML_GEN_TARGET)
 
-  DEPENDS
-  ${LIBS}
-)
-set_target_properties(mlir-linalg-ods-yaml-gen PROPERTIES FOLDER "Tablegenning")
-target_link_libraries(mlir-linalg-ods-yaml-gen PRIVATE ${LIBS})
+if(NOT ${MLIR_LINALG_ODS_YAML_GEN_EXE} STREQUAL "mlir-linalg-ods-yaml-gen")
+  add_custom_target(mlir-linalg-ods-yaml-gen-host DEPENDS ${MLIR_LINALG_ODS_YAML_GEN_EXE})
 
-mlir_check_all_link_libraries(mlir-linalg-ods-yaml-gen)
+  if(NOT LLVM_BUILD_UTILS)
+    set_target_properties(mlir-linalg-ods-yaml-gen PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
+endif()
 
 configure_file(
   update_core_linalg_named_ops.sh.in

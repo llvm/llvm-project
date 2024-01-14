@@ -35,7 +35,7 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; CHECK:		.section .text._Z4fooTIiET_v,"axG",@progbits,_Z4fooTIiET_v,comdat
 ; CHECK-LABEL:	_Z4fooTIiET_v:
 ; CHECK-NEXT:	[[FOOCOMDAT_BEGIN:.Lfunc_begin[0-9]+]]:
-; CHECK:		.section .llvm_bb_addr_map,"Go",@llvm_bb_addr_map,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
+; CHECK:		.section .llvm_bb_addr_map,"oG",@llvm_bb_addr_map,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
 ; CHECK-NEXT:		.byte 2				# version
 ; CHECK-NEXT:		.byte 0				# feature
 ; CHECK-NEXT:		.quad [[FOOCOMDAT_BEGIN]]	# function address

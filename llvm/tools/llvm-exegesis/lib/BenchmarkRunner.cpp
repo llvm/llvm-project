@@ -356,7 +356,11 @@ private:
       if (ChildExitCode == 0) {
         // The child exited succesfully, read counter values and return
         // success
-        CounterValues[0] = Counter->read();
+        auto CounterValueOrErr = Counter->readOrError();
+        if (!CounterValueOrErr)
+          return CounterValueOrErr.takeError();
+        CounterValues = std::move(*CounterValueOrErr);
+
         return Error::success();
       }
       // The child exited, but not successfully
@@ -484,7 +488,6 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
   raw_svector_ostream OS(Buffer);
   if (Error E = assembleToStream(
           State.getExegesisTarget(), State.createTargetMachine(), BC.LiveIns,
-          BC.Key.RegisterInitialValues,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
           OS, BC.Key, GenerateMemoryInstructions)) {

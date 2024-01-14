@@ -5731,19 +5731,19 @@ define float @v_exp_f32_from_fpext_bf16(bfloat %src) {
 ; VI-LABEL: v_exp_f32_from_fpext_bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0xfffff000, v0
-; VI-NEXT:    v_sub_f32_e32 v4, v0, v1
-; VI-NEXT:    v_mul_f32_e32 v2, 0x3fb8a000, v1
-; VI-NEXT:    v_mul_f32_e32 v5, 0x39a3b295, v4
-; VI-NEXT:    v_mul_f32_e32 v4, 0x3fb8a000, v4
-; VI-NEXT:    v_rndne_f32_e32 v3, v2
-; VI-NEXT:    v_add_f32_e32 v4, v4, v5
-; VI-NEXT:    v_mul_f32_e32 v1, 0x39a3b295, v1
-; VI-NEXT:    v_sub_f32_e32 v2, v2, v3
-; VI-NEXT:    v_add_f32_e32 v1, v1, v4
-; VI-NEXT:    v_add_f32_e32 v1, v2, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; VI-NEXT:    v_sub_f32_e32 v3, v0, v0
+; VI-NEXT:    v_mul_f32_e32 v1, 0x3fb8a000, v0
+; VI-NEXT:    v_mul_f32_e32 v4, 0x39a3b295, v3
+; VI-NEXT:    v_mul_f32_e32 v3, 0x3fb8a000, v3
+; VI-NEXT:    v_rndne_f32_e32 v2, v1
+; VI-NEXT:    v_add_f32_e32 v3, v3, v4
+; VI-NEXT:    v_mul_f32_e32 v4, 0x39a3b295, v0
+; VI-NEXT:    v_sub_f32_e32 v1, v1, v2
+; VI-NEXT:    v_add_f32_e32 v3, v4, v3
+; VI-NEXT:    v_add_f32_e32 v1, v1, v3
 ; VI-NEXT:    v_exp_f32_e32 v1, v1
-; VI-NEXT:    v_cvt_i32_f32_e32 v2, v3
+; VI-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; VI-NEXT:    s_mov_b32 s4, 0xc2ce8ed0
 ; VI-NEXT:    v_cmp_ngt_f32_e32 vcc, s4, v0
 ; VI-NEXT:    s_mov_b32 s4, 0x42b17218
@@ -5757,6 +5757,7 @@ define float @v_exp_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-LABEL: v_exp_f32_from_fpext_bf16:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX900-NEXT:    v_mul_f32_e32 v1, 0x3fb8aa3b, v0
 ; GFX900-NEXT:    s_mov_b32 s4, 0x3fb8aa3b
 ; GFX900-NEXT:    v_rndne_f32_e32 v2, v1

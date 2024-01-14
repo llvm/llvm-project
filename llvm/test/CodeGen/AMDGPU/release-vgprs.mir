@@ -22,6 +22,8 @@
   define amdgpu_ps void @global_atomic() { ret void }
   define amdgpu_ps void @image_atomic() { ret void }
   define amdgpu_ps void @global_store_optnone() noinline optnone { ret void }
+  define amdgpu_cs void @with_calls() { ret void }
+  define fastcc void @with_tail_calls() { ret void }
 ...
 
 ---
@@ -564,4 +566,34 @@ body:             |
     GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
     S_WAITCNT_VSCNT undef $sgpr_null, 0
     S_ENDPGM 0
+...
+
+---
+name:            with_calls
+frameInfo:
+  hasCalls:        true
+body:             |
+  bb.0:
+    ; Make sure we don't send DEALLOC_VGPRS after a call, since there might be
+    ; scratch stores still in progress.
+    ; CHECK-LABEL: name: with_calls
+    ; CHECK-NOT: S_SENDMSG 3
+    ; CHECK: S_ENDPGM 0
+    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    $sgpr30_sgpr31 = SI_CALL undef renamable $sgpr4_sgpr5, 0, csr_amdgpu
+    S_ENDPGM 0
+...
+
+---
+name:            with_tail_calls
+frameInfo:
+  hasCalls:        true
+body:             |
+  bb.0:
+    ; Make sure we don't send DEALLOC_VGPRS when there's a tail call, since the
+    ; only valid action after DEALLOC_VGPRS is to terminate the wave.
+    ; CHECK-LABEL: name: with_tail_calls
+    ; CHECK-NOT: S_SENDMSG 3
+    GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr1, 0, 4, implicit $exec
+    SI_TCRETURN undef renamable $sgpr4_sgpr5, @with_tail_calls, 0, csr_amdgpu
 ...

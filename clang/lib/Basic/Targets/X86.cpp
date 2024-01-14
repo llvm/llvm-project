@@ -295,11 +295,13 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
       HasLegalHalfType = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -358,6 +360,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPREFETCHI = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {

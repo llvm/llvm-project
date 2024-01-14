@@ -645,7 +645,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
         unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
         TmpOffset += SL->getElementOffset(Idx);
       } else {
-        uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+        uint64_t S = GTI.getSequentialElementStride(DL);
         while (true) {
           if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
             // Constant-offset addressing.
@@ -4978,15 +4978,13 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
       if (Field)
         TotalOffs += DL.getStructLayout(StTy)->getElementOffset(Field);
     } else {
-      Type *Ty = GTI.getIndexedType();
-
       // If this is a constant subscript, handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
         if (CI->isZero())
           continue;
         // N = N + Offset
-        TotalOffs +=
-            DL.getTypeAllocSize(Ty) * cast<ConstantInt>(CI)->getSExtValue();
+        TotalOffs += GTI.getSequentialElementStride(DL) *
+                     cast<ConstantInt>(CI)->getSExtValue();
         continue;
       }
       if (TotalOffs) {
@@ -4997,7 +4995,7 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
       }
 
       // N = N + Idx * ElementSize;
-      uint64_t ElementSize = DL.getTypeAllocSize(Ty);
+      uint64_t ElementSize = GTI.getSequentialElementStride(DL);
       unsigned IdxN = getRegForGEPIndex(Idx);
       if (!IdxN)
         return false;

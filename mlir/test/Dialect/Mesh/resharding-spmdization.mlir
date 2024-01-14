@@ -19,9 +19,9 @@ func.func @split_replicated_tensor_axis(
   // CHECK-SAME: %[[ARG:.*]]: tensor<3x14xf32>
   %arg0: tensor<3x14xf32>
 ) -> tensor<3x14xf32> {
-  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
-  // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = arith.constant 14 : index
-  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_index on @mesh_1d axes = [0] : index
+  // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = arith.constant 14 : index
+  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_multi_index on @mesh_1d axes = [0] : index
   // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d axes = [0] : index
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index
   // CHECK: %[[RESULT_TENSOR_AXIS_SIZE_CHECK:.*]] = arith.cmpi eq, %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE]], %[[ZERO]] : index
@@ -41,9 +41,9 @@ func.func @split_replicated_tensor_axis_dynamic(
   // CHECK-SAME: %[[ARG:.*]]: tensor<?x3x?xf32>
   %arg0: tensor<?x3x?xf32>
 ) -> tensor<?x3x?xf32> {
-  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
-  // CHECK: %[[TWO:.*]] = arith.constant 2 : index
-  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_index on @mesh_1d_dynamic axes = [0] : index
+  // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[TWO:.*]] = arith.constant 2 : index
+  // CHECK: %[[PROCESS_INDEX:.*]] = mesh.process_multi_index on @mesh_1d_dynamic axes = [0] : index
   // CHECK: %[[MESH_AXIS_SIZE:.*]] = mesh.cluster_shape @mesh_1d_dynamic axes = [0] : index
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE:.*]] = tensor.dim %[[ARG]], %[[ZERO]] : tensor<?x3x?xf32>
   // CHECK: %[[TENSOR_SPLIT_AXIS_SIZE_MOD_MESH_AXIS_SIZE:.*]] = arith.remui %[[TENSOR_SPLIT_AXIS_SIZE]], %[[MESH_AXIS_SIZE]] : index

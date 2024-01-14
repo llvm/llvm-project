@@ -126,7 +126,11 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
     if (MI->getNumExplicitDefs() != 1)
       return false;
 
-    for (auto &UserOp : MRI.use_nodbg_operands(MI->getOperand(0).getReg())) {
+    Register DestReg = MI->getOperand(0).getReg();
+    if (!DestReg.isVirtual())
+      return false;
+
+    for (auto &UserOp : MRI.use_nodbg_operands(DestReg)) {
       const MachineInstr *UserMI = UserOp.getParent();
       unsigned OpIdx = UserOp.getOperandNo();
 
