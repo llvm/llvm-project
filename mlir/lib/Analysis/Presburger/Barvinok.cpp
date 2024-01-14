@@ -246,6 +246,28 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   return coefficients[power].simplify();
 }
 
+static std::vector<Fraction> convolution(std::vector<Fraction> a,
+                                         std::vector<Fraction> b) {
+  // The length of the convolution is the maximum of the lengths
+  // of the two sequences. We pad the shorter one with zeroes.
+  unsigned convlen = std::max(a.size(), b.size());
+  for (unsigned k = a.size(); k < convlen; ++k)
+    a.push_back(0);
+  for (unsigned k = b.size(); k < convlen; ++k)
+    b.push_back(0);
+
+  std::vector<Fraction> convolution;
+  convolution.reserve(convlen);
+  convolution.clear();
+  for (unsigned k = 0; k < convlen; ++k) {
+    Fraction sum(0, 1);
+    for (unsigned l = 0; l <= k; ++l)
+      sum = sum + a[l] * b[k - l];
+    convolution.push_back(sum);
+  }
+  return convolution;
+}
+
 /// We have a generating function of the form
 /// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
 ///
@@ -254,7 +276,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// d_{ij} \in Q^d are vectors.
 ///
 /// We need to find the number of terms of the form x^t in the expansion of
-/// this function, for which we substitute x = (1, ..., 1).
+/// this function.
 /// However, direct substitution causes the denominator to become zero.
 ///
 /// We therefore use the following procedure instead:
@@ -264,10 +286,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// polynomials. P has coefficients as quasipolynomials in d parameters, while
 /// Q has coefficients as scalars.
 /// 3. Find the constant term in the expansion of each term P(s)/Q(s). This is
-/// equivalent to substituting s = 0, which by step 1's substitution is
-/// equivalent to letting x = (1, ..., 1).
-/// In this step, we cancel the factor with root zero from the numerator and
-/// denominator, thus preventing the denominator from becoming zero.
+/// equivalent to substituting s = 0.
+///
 /// Step (1) We need to find a μ_i such that we can substitute x_i =
 /// (s+1)^μ_i. After this substitution, the exponent of (s+1) in the
 /// denominator is (μ_i • d_{ij}) in each term. Clearly, this cannot become
@@ -279,7 +299,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// sign_i * (s+1)^n_i / (\prod_j (1 - (s+1)^d'_{ij}))
 /// For the i'th term, we first convert all the d'_{ij} to their
 /// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
-/// negative. We change the sign accordingly.
+/// negative. We change the sign accordingly to keep the denominator in the
+/// same form.
 /// Then, we replace each (1 - (s+1)^(d'_{ij})) with
 /// (-s)(\sum_{0 ≤ k < d'_{ij}} (s+1)^k).
 /// Thus the term overall has now the form
@@ -299,7 +320,6 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// Verdoolaege, Sven, et al. "Counting integer points in parametric
 /// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
 /// 37-66.
-
 QuasiPolynomial
 mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   std::vector<Point> allDenominators;
@@ -314,7 +334,6 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   QuasiPolynomial totalTerm(numParams, 0);
   for (unsigned i = 0; i < numTerms; ++i) {
     int sign = gf.getSigns()[i];
-    ParamPoint v = gf.getNumerators()[i];
     std::vector<Point> ds = gf.getDenominators()[i];
 
     // Substitute x_i = (s+1)^μ_i
@@ -332,10 +351,11 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
 
     // and whose affine fn is a single floor expression, given by the
     // corresponding column of v.
+    ParamPoint vTranspose = gf.getNumerators()[i].transpose();
     std::vector<std::vector<SmallVector<Fraction>>> affine;
     affine.reserve(numDims);
     for (unsigned j = 0; j < numDims; ++j)
-      affine.push_back({SmallVector<Fraction>(v.transpose().getRow(j))});
+      affine.push_back({SmallVector<Fraction>(vTranspose.getRow(j))});
 
     QuasiPolynomial num(numParams, coefficients, affine);
     num = num.simplify();
@@ -426,28 +446,9 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // of all the terms.
     std::vector<Fraction> denominatorCoefficients;
     denominatorCoefficients = eachTermDenCoefficients[0];
-    for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j) {
-      // The length of the convolution is the maximum of the lengths
-      // of the two sequences. We pad the shorter one with zeroes.
-      unsigned convlen = std::max(denominatorCoefficients.size(),
-                                  eachTermDenCoefficients[j].size());
-      for (unsigned k = denominatorCoefficients.size(); k < convlen; ++k)
-        denominatorCoefficients.push_back(0);
-      for (unsigned k = eachTermDenCoefficients[j].size(); k < convlen; ++k)
-        eachTermDenCoefficients[j].push_back(0);
-
-      std::vector<Fraction> convolution;
-      convolution.reserve(convlen);
-      convolution.clear();
-      for (unsigned k = 0; k < convlen; ++k) {
-        Fraction sum(0, 1);
-        for (unsigned l = 0; l <= k; ++l)
-          sum = sum +
-                denominatorCoefficients[l] * eachTermDenCoefficients[j][k - l];
-        convolution.push_back(sum);
-      }
-      denominatorCoefficients = convolution;
-    }
+    for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j)
+      denominatorCoefficients =
+          convolution(denominatorCoefficients, eachTermDenCoefficients[j]);
 
     totalTerm =
         totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,

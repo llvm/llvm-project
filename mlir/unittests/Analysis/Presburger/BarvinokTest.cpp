@@ -127,7 +127,7 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
 
 // The following test is taken from
 //
-TEST(BarvinokTest, substituteWithUnitVector) {
+TEST(BarvinokTest, computeNumTerms) {
   GeneratingFunction gf(
       1, {1, 1, 1},
       {makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
@@ -135,7 +135,7 @@ TEST(BarvinokTest, substituteWithUnitVector) {
        makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
       {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}});
 
-  QuasiPolynomial numPoints = substituteWithUnitVector(gf);
+  QuasiPolynomial numPoints = computeNumTerms(gf);
 
   // First, we make sure that all the affine functions are of the form ⌊p/2⌋.
   for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine()) {
