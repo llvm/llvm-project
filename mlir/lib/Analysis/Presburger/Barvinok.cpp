@@ -268,6 +268,38 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
   return convolution;
 }
 
+/// Substitute x_i = (s+1)^μ_i in one term of a generating function,
+/// returning a quasipolynomial which represents the exponent of the
+/// numerator of the result.
+QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
+                                   std::vector<Point> ds, Point mu) {
+  unsigned numDims = mu.size();
+  // First, the exponent in the numerator becomes
+  // - (μ • u_1) * (floor(first col of v))
+  // - (μ • u_2) * (floor(second col of v)) - ...
+  // - (μ • u_d) * (floor(d'th col of v))
+  // So we store the negation of the  dot produts.
+
+  // We have d terms, each of whose coefficient is the negative dot product,
+  SmallVector<Fraction> coefficients;
+  coefficients.reserve(numDims);
+  for (const Point &d : ds)
+    coefficients.push_back(-dotProduct(mu, d));
+
+  // Then, the affine fn is a single floor expression, given by the
+  // corresponding column of v.
+  ParamPoint vTranspose = v.transpose();
+  std::vector<std::vector<SmallVector<Fraction>>> affine;
+  affine.reserve(numDims);
+  for (unsigned j = 0; j < numDims; ++j)
+    affine.push_back({SmallVector<Fraction>(vTranspose.getRow(j))});
+
+  QuasiPolynomial num(numParams, coefficients, affine);
+  num = num.simplify();
+
+  return num;
+}
+
 /// We have a generating function of the form
 /// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
 ///
@@ -328,7 +360,6 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   Point mu = getNonOrthogonalVector(allDenominators);
 
   unsigned numParams = gf.getNumParams();
-  unsigned numDims = mu.size();
   unsigned numTerms = gf.getDenominators().size();
 
   QuasiPolynomial totalTerm(numParams, 0);
@@ -336,30 +367,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     int sign = gf.getSigns()[i];
     std::vector<Point> ds = gf.getDenominators()[i];
 
-    // Substitute x_i = (s+1)^μ_i
-    // Then the exponent in the numerator becomes
-    // - (μ • u_1) * (floor(first col of v))
-    // - (μ • u_2) * (floor(second col of v)) - ...
-    // - (μ • u_d) * (floor(d'th col of v))
-    // So we store the negation of the  dot produts.
-
-    // We have d terms, each of whose coefficient is the negative dot product,
-    SmallVector<Fraction> coefficients;
-    coefficients.reserve(numDims);
-    for (const Point &d : ds)
-      coefficients.push_back(-dotProduct(mu, d));
-
-    // and whose affine fn is a single floor expression, given by the
-    // corresponding column of v.
-    ParamPoint vTranspose = gf.getNumerators()[i].transpose();
-    std::vector<std::vector<SmallVector<Fraction>>> affine;
-    affine.reserve(numDims);
-    for (unsigned j = 0; j < numDims; ++j)
-      affine.push_back({SmallVector<Fraction>(vTranspose.getRow(j))});
-
-    QuasiPolynomial num(numParams, coefficients, affine);
-    num = num.simplify();
-
+    QuasiPolynomial num =
+        substituteMuInTerm(numParams, gf.getNumerators()[i], ds, mu);
     // Now the numerator is (s+1)^num.
 
     std::vector<Fraction> dens;
