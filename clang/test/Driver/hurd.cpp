@@ -2,8 +2,8 @@
 
 // RUN: %clang -### %s --target=i686-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK %s
-// CHECK: "-cc1"
-// CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK:      "-cc1"
+// CHECK:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-gnu/10/../../../../include/c++/10"
 /// Debian specific - the path component after 'include' is i386-gnu even
 /// though the installation is i686-gnu.
@@ -29,9 +29,9 @@
 
 // RUN: %clang -### %s --target=i686-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-STATIC %s
-// CHECK-STATIC: "-cc1"
-// CHECK-STATIC: "-static-define"
-// CHECK-STATIC: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-STATIC:      "-cc1"
+// CHECK-STATIC:      "-static-define"
+// CHECK-STATIC:      "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-STATIC-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-gnu/10/../../../../include/c++/10"
 /// Debian specific - the path component after 'include' is i386-gnu even
 /// though the installation is i686-gnu.
@@ -57,9 +57,9 @@
 
 // RUN: %clang -### %s --target=i686-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
 // RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-SHARED %s
-// CHECK-SHARED: "{{.*}}ld" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-SHARED: "{{.*}}/usr/lib/gcc/i686-gnu/10/crtbeginS.o"
-// CHECK-SHARED: "-L
+// CHECK-SHARED:      "{{.*}}ld" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-SHARED:      "{{.*}}/usr/lib/gcc/i686-gnu/10/crtbeginS.o"
+// CHECK-SHARED:      "-L
 // CHECK-SHARED-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/i686-gnu/10"
 // CHECK-SHARED-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/i686-gnu/10/../../../../lib32"
 // CHECK-SHARED-SAME: {{^}} "-L[[SYSROOT]]/lib/i386-gnu"
