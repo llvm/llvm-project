@@ -367,7 +367,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   QuasiPolynomial totalTerm(numParams, 0);
   for (unsigned i = 0; i < numTerms; ++i) {
     int sign = gf.getSigns()[i];
-    const std::vector<Point> &ds = gf.getDenominators()[i];
+    std::vector<Point> ds = gf.getDenominators()[i];
 
     QuasiPolynomial num =
         substituteMuInTerm(numParams, gf.getNumerators()[i], ds, mu);
