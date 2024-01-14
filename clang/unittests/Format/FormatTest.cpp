@@ -26827,6 +26827,31 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
 }
+
+TEST_F(FormatTest, BreakAfterGNUAttributes) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakAfterAttributes = FormatStyle::ABS_Never;
+
+  verifyFormat("__attribute__((__warn_unused_result__)) const int i;", Style);
+
+  verifyFormat(
+      "__attribute__((other)) __attribute__((__warn_unused_result__)) int j;",
+      Style);
+
+  verifyFormat("__attribute__((__warn_unused_result__)) inline int f(int &i);",
+               Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("__attribute__((__warn_unused_result__))\nconst int i;", Style);
+
+  verifyFormat(
+      "__attribute__((other)) __attribute__((__warn_unused_result__))\nint j;",
+      Style);
+
+  verifyFormat("__attribute__((__warn_unused_result__))\ninline int f(int &i);",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

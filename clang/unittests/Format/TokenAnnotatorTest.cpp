@@ -2381,11 +2381,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_AttributeRParen);
+  EXPECT_FALSE(Tokens[6]->EndsCppAttributeGroup);
+  EXPECT_TRUE(Tokens[7]->EndsCppAttributeGroup);
 
   Tokens = annotate("bool foo __declspec(dllimport);");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_AttributeLParen);
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TRUE(Tokens[5]->EndsCppAttributeGroup);
 
   Tokens = annotate("bool __attribute__((unused)) foo;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
@@ -2394,6 +2397,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
   EXPECT_TOKEN(Tokens[7], tok::identifier, TT_StartOfName);
+  EXPECT_TRUE(Tokens[6]->EndsCppAttributeGroup);
+
+  Tokens = annotate("bool __attribute__((unused)) __attribute__((const)) foo;");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[9], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[13], tok::identifier, TT_StartOfName);
+  EXPECT_FALSE(Tokens[8]->EndsCppAttributeGroup);
+  EXPECT_TRUE(Tokens[12]->EndsCppAttributeGroup);
 
   Tokens = annotate("void __attribute__((x)) Foo();");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;

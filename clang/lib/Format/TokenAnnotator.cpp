@@ -489,6 +489,10 @@ private:
 
         if (OpeningParen.is(TT_AttributeLParen))
           CurrentToken->setType(TT_AttributeRParen);
+        if (CurrentToken->is(TT_AttributeRParen) && CurrentToken->Next &&
+            !CurrentToken->Next->is(tok::kw___attribute)) {
+          CurrentToken->EndsCppAttributeGroup = true;
+        }
         if (OpeningParen.is(TT_TypeDeclarationParen))
           CurrentToken->setType(TT_TypeDeclarationParen);
         if (OpeningParen.Previous &&
@@ -983,6 +987,7 @@ private:
         CurrentToken->MustBreakBefore = true;
       }
     }
+
     FormatToken *Tok = CurrentToken;
     next();
     // In Verilog primitives' state tables, `:`, `?`, and `-` aren't normal
