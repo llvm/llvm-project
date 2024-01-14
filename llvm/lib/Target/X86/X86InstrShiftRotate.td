@@ -914,7 +914,7 @@ let Predicates = [HasBMI2] in {
 
     // A right shift by less than a smaller register size that is then
     // truncated to that register size can be replaced by RORX to
-    // preserve flags with the same execution cost
+    // preserve flags with the same execution cost.
 
     def : Pat<(i8 (trunc (srl GR16:$src, (i8 immle16minus8:$shamt)))),
               (EXTRACT_SUBREG (RORX32ri (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit), imm:$shamt), sub_8bit)>;
