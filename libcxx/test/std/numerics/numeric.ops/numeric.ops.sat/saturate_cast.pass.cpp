@@ -86,6 +86,18 @@ constexpr bool test() {
   test_signed_saturated<int, long long int>();
   test_signed_saturated<long int, long long int>();
   test_signed_saturated<long long int, long long int>();
+#ifndef _LIBCPP_HAS_NO_INT128
+  test_signed_notsaturated<__int128_t, signed char>();
+  test_signed_notsaturated<__int128_t, short int>();
+  test_signed_notsaturated<__int128_t, int>();
+  test_signed_notsaturated<__int128_t, long int>();
+  test_signed_notsaturated<__int128_t, long long int>();
+  test_signed_saturated<signed char, __int128_t>();
+  test_signed_saturated<short int, __int128_t>();
+  test_signed_saturated<int, __int128_t>();
+  test_signed_saturated<long int, __int128_t>();
+  test_signed_saturated<long long int, __int128_t>();
+#endif
   // Unsigned
   test_unsigned_notsaturated<unsigned long long int, unsigned char>();
   test_unsigned_notsaturated<unsigned long long int, unsigned short int>();
@@ -97,6 +109,18 @@ constexpr bool test() {
   test_unsigned_saturated<unsigned int, unsigned long long int>();
   test_unsigned_saturated<unsigned long int, unsigned long long int>();
   test_unsigned_saturated<unsigned long long int, unsigned long long int>();
+#ifndef _LIBCPP_HAS_NO_INT128
+  test_unsigned_notsaturated<__uint128_t, unsigned char>();
+  test_unsigned_notsaturated<__uint128_t, unsigned short int>();
+  test_unsigned_notsaturated<__uint128_t, unsigned int>();
+  test_unsigned_notsaturated<__uint128_t, unsigned long int>();
+  test_unsigned_notsaturated<__uint128_t, unsigned long long int>();
+  test_unsigned_saturated<unsigned char, __uint128_t>();
+  test_unsigned_saturated<unsigned short int, __uint128_t>();
+  test_unsigned_saturated<unsigned int, __uint128_t>();
+  test_unsigned_saturated<unsigned long int, __uint128_t>();
+  test_unsigned_saturated<unsigned long long int, __uint128_t>();
+#endif
 
   return true;
 }
