@@ -28,7 +28,7 @@
 #define ASSERT_NOT_CONSTEXPR(Expr) static_assert(!__builtin_constant_p(Expr));
 
 template <typename IntegerT>
-void test_assertion() {
+void test_runtime_assertion() {
   TEST_LIBCPP_ASSERT_FAILURE((void)std::div_sat(IntegerT{3}, IntegerT{0}), "Division by 0 is undefined");
 }
 
@@ -40,17 +40,17 @@ void test_constexpr() {
 
 bool test() {
   // Signed
-  test_assertion<signed char>();
-  test_assertion<short int>();
-  test_assertion<int>();
-  test_assertion<long int>();
-  test_assertion<long long int>();
+  test_runtime_assertion<signed char>();
+  test_runtime_assertion<short int>();
+  test_runtime_assertion<int>();
+  test_runtime_assertion<long int>();
+  test_runtime_assertion<long long int>();
   // Unsigned
-  test_assertion<unsigned char>();
-  test_assertion<unsigned short int>();
-  test_assertion<unsigned int>();
-  test_assertion<unsigned long int>();
-  test_assertion<unsigned long long int>();
+  test_runtime_assertion<unsigned char>();
+  test_runtime_assertion<unsigned short int>();
+  test_runtime_assertion<unsigned int>();
+  test_runtime_assertion<unsigned long int>();
+  test_runtime_assertion<unsigned long long int>();
 
   // Signed
   test_constexpr<signed char>();
