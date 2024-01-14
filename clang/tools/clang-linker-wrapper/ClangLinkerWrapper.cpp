@@ -906,18 +906,15 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   switch (Kind) {
   case OFK_OpenMP:
-    if (Error Err =
-            offloading::OffloadWrapper().wrapOpenMPBinaries(M, BuffersToWrap))
+    if (Error Err = offloading::wrapOpenMPBinaries(M, BuffersToWrap))
       return std::move(Err);
     break;
   case OFK_Cuda:
-    if (Error Err = offloading::OffloadWrapper().wrapCudaBinary(
-            M, BuffersToWrap.front()))
+    if (Error Err = offloading::wrapCudaBinary(M, BuffersToWrap.front()))
       return std::move(Err);
     break;
   case OFK_HIP:
-    if (Error Err = offloading::OffloadWrapper().wrapHIPBinary(
-            M, BuffersToWrap.front()))
+    if (Error Err = offloading::wrapHIPBinary(M, BuffersToWrap.front()))
       return std::move(Err);
     break;
   default:

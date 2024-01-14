@@ -24,8 +24,6 @@ using namespace llvm;
 using namespace llvm::offloading;
 
 namespace {
-using EntryArrayTy = OffloadWrapper::EntryArrayTy;
-
 /// Magic number that begins the section containing the CUDA fatbinary.
 constexpr unsigned CudaFatMagic = 0x466243b1;
 constexpr unsigned HIPFatMagic = 0x48495046;
@@ -587,12 +585,11 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   // Add this function to constructors.
   appendToGlobalCtors(M, CtorFunc, /*Priority*/ 1);
 }
-
 } // namespace
 
-Error OffloadWrapper::wrapOpenMPBinaries(
-    Module &M, ArrayRef<ArrayRef<char>> Images,
-    std::optional<EntryArrayTy> EntryArray) const {
+Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                     std::optional<EntryArrayTy> EntryArray,
+                                     llvm::StringRef Suffix) {
   GlobalVariable *Desc = createBinDesc(
       M, Images,
       EntryArray
@@ -607,28 +604,30 @@ Error OffloadWrapper::wrapOpenMPBinaries(
   return Error::success();
 }
 
-Error OffloadWrapper::wrapCudaBinary(
-    Module &M, ArrayRef<char> Image,
-    std::optional<EntryArrayTy> EntryArray) const {
-  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ false, Suffix);
+Error offloading::wrapCudaBinary(Module &M, ArrayRef<char> Image,
+                                 std::optional<EntryArrayTy> EntryArray,
+                                 llvm::StringRef Suffix,
+                                 bool EmitSurfacesAndTextures) {
+  GlobalVariable *Desc = createFatbinDesc(M, Image, /*IsHip=*/false, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No fatinbary section created.");
 
-  createRegisterFatbinFunction(M, Desc, /* IsHIP */ false, EntryArray, Suffix,
+  createRegisterFatbinFunction(M, Desc, /*IsHip=*/false, EntryArray, Suffix,
                                EmitSurfacesAndTextures);
   return Error::success();
 }
 
-Error OffloadWrapper::wrapHIPBinary(
-    Module &M, ArrayRef<char> Image,
-    std::optional<EntryArrayTy> EntryArray) const {
-  GlobalVariable *Desc = createFatbinDesc(M, Image, /* IsHIP */ true, Suffix);
+Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
+                                std::optional<EntryArrayTy> EntryArray,
+                                llvm::StringRef Suffix,
+                                bool EmitSurfacesAndTextures) {
+  GlobalVariable *Desc = createFatbinDesc(M, Image, /*IsHip=*/true, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No fatinbary section created.");
 
-  createRegisterFatbinFunction(M, Desc, /* IsHIP */ true, EntryArray, Suffix,
+  createRegisterFatbinFunction(M, Desc, /*IsHip=*/true, EntryArray, Suffix,
                                EmitSurfacesAndTextures);
   return Error::success();
 }
