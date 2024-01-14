@@ -244,7 +244,11 @@ class Sema;
     /// Not a narrowing conversion.
     NK_Not_Narrowing,
 
-    /// A narrowing conversion by virtue of the source and destination types.
+    /// Not a narrowing conversion in C++23 because the source is a bit-field
+    /// whose range can fit in the target type
+    NK_BitField_Not_Narrowing,
+
+    /// A narrowing conversion by virtue of the source and target types.
     NK_Type_Narrowing,
 
     /// A narrowing conversion, because a constant expression got narrowed.
@@ -387,6 +391,7 @@ class Sema;
     NarrowingKind
     getNarrowingKind(ASTContext &Context, const Expr *Converted,
                      APValue &ConstantValue, QualType &ConstantType,
+                     unsigned &BitFieldWidth,
                      bool IgnoreFloatToIntegralConversion = false) const;
     bool isPointerConversionToBool() const;
     bool isPointerConversionToVoidPointer(ASTContext& Context) const;
