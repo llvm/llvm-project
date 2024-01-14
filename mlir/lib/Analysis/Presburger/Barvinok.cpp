@@ -245,3 +245,200 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   }
   return coefficients[power].simplify();
 }
+
+// We have a generating function of the form
+// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
+//
+// where sign_i is ±1,
+// n_i \in Q^p -> Q^d is a d-vector of affine functions on p parameters, and
+// d_{ij} \in Q^d are vectors.
+//
+// We need to find the number of terms of the form x^t in the expansion of
+// this function, for which we substitute x = (1, ..., 1).
+// However, direct substitution leads to an undefined answer due to the
+// form of the denominator.
+//
+// We therefore use the following procedure instead:
+// Find a vector μ that is not orthogonal to any of the d_{ij}.
+// Substitute x_i = (s+1)^μ_i. As μ_i is not orthogonal to d_{ij},
+// we never have (1 - (s+1)^0) = 0 in any of the terms in denominator.
+// We then find the constant term in this function, i.e., we evaluate it
+// at s = 0, which is equivalent to x = (1, ..., 1).
+//
+// Now, we have a function of the form
+// f_p(s) = \sum_i sign_i * (s+1)^n_i / (\prod_j (1 - (s+1)^d'_{ij}))
+// in which we need to find the constant term.
+// For the i'th term, we first convert all the d'_{ij} to their
+// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
+// negative. We change the sign accordingly.
+// Then, we replace each (1 - (s+1)^(d'_{ij})) with
+// (-s)(\sum_{0 ≤ k < d'_{ij}} (s+1)^k).
+// Thus the term overall has now the form
+// sign'_i * (s+1)^n'_i / (s^r * \prod_j (\sum_k (s+1)^k)).
+// This means that
+// the numerator is a polynomial in s, with coefficients as quasipolynomials,
+// and the denominator is polynomial in s, with fractional coefficients.
+// We need to find the constant term in the expansion of this term,
+// which is the same as finding the coefficient of s^r in
+// sign'_i * (s+1)^n'_i / (\prod_j (\sum_k (s+1)^k)),
+// for which we use the `getCoefficientInRationalFunction()` function.
+//
+// Verdoolaege, Sven, et al. "Counting integer points in parametric polytopes
+// using Barvinok's rational functions." Algorithmica 48 (2007): 37-66.
+QuasiPolynomial
+mlir::presburger::detail::substituteWithUnitVector(GeneratingFunction gf) {
+  std::vector<Point> allDenominators;
+  for (std::vector<Point> den : gf.getDenominators())
+    allDenominators.insert(allDenominators.end(), den.begin(), den.end());
+  Point mu = getNonOrthogonalVector(allDenominators);
+
+  unsigned num_params = gf.getNumParams();
+  unsigned num_dims = mu.size();
+  unsigned num_terms = gf.getDenominators().size();
+
+  std::vector<Fraction> dens;
+
+  std::vector<QuasiPolynomial> numeratorCoefficients;
+  std::vector<Fraction> singleTermDenCoefficients, denominatorCoefficients;
+  std::vector<std::vector<Fraction>> eachTermDenCoefficients;
+  std::vector<Fraction> convolution;
+
+  QuasiPolynomial totalTerm(num_params, 0);
+  for (unsigned i = 0; i < num_terms; i++) {
+    int sign = gf.getSigns()[i];
+    ParamPoint v = gf.getNumerators()[i];
+    std::vector<Point> ds = gf.getDenominators()[i];
+
+    // Substitute x_i = (s+1)^μ_i
+    // Then the exponent in the numerator becomes
+    // - (μ • u_1) * (floor(first col of v))
+    // - (μ • u_2) * (floor(second col of v)) - ...
+    // - (μ • u_d) * (floor(d'th col of v))
+    // So we store the negation of the  dot produts.
+
+    // We have d terms, each of whose coefficient is the negative dot product,
+    SmallVector<Fraction> coefficients;
+    coefficients.reserve(num_dims);
+    for (Point d : ds)
+      coefficients.push_back(-dotProduct(mu, d));
+
+    // and whose affine fn is a single floor expression, given by the
+    // corresponding column of v.
+    std::vector<std::vector<SmallVector<Fraction>>> affine(num_dims);
+    for (unsigned j = 0; j < num_dims; j++)
+      SmallVector<Fraction> jthCol(v.transpose().getRow(j));
+
+    QuasiPolynomial num(num_params, coefficients, affine);
+    num = num.simplify();
+
+    // Now the numerator is (s+1)^num.
+
+    dens.clear();
+    // Similarly, each term in the denominator has exponent
+    // given by the dot product of μ with u_i.
+    for (Point d : ds)
+      dens.push_back(dotProduct(d, mu));
+    // This term in the denominator is
+    // (1 - (s+1)^dens.back())
+
+    // We track the number of exponents that are negative in the
+    // denominator, and convert them to their absolute values
+    // (see lines 361-71).
+    unsigned numNegExps = 0;
+    Fraction sumNegExps(0, 1);
+    for (unsigned j = 0; j < dens.size(); j++) {
+      if (dens[j] < Fraction(0, 1)) {
+        numNegExps += 1;
+        sumNegExps = sumNegExps + dens[j];
+      }
+      // All exponents will be made positive; then reduce
+      // (1 - (s+1)^x)
+      // to
+      // (-s)*(Σ_{x-1} (s+1)^j) because x > 0
+      dens[j] = abs(dens[j]) - 1;
+    }
+
+    // If we have (1 - (s+1)^-c) in the denominator,
+    // multiply and divide by (s+1)^c.
+    // We convert all negative-exponent terms at once; therefore
+    // we multiply and divide by (s+1)^sumNegExps.
+    // Then we get
+    // -(1 - (s+1)^c) in the denominator,
+    // increase the numerator by c, and
+    // flip the sign.
+    if (numNegExps % 2 == 1)
+      sign = -sign;
+    num = num - QuasiPolynomial(num_params, sumNegExps);
+
+    // Take all the (-s) out, from line 328.
+    unsigned r = dens.size();
+    if (r % 2 == 1)
+      sign = -sign;
+
+    // Now the expression is
+    // (s+1)^num /
+    // (s^r * Π_(0 ≤ i < r) (Σ_{0 ≤ j ≤ dens[i]} (s+1)^j))
+
+    // Letting P(s) = (s+1)^num and Q(s) = Π_r (...),
+    // we need to find the coefficient of s^r in
+    // P(s)/Q(s).
+
+    // First, the coefficients of P(s), which are binomial coefficients.
+    // We need r+1 of these.
+    numeratorCoefficients.clear();
+    numeratorCoefficients.push_back(
+        QuasiPolynomial(num_params, 1)); // Coeff of s^0
+    for (unsigned j = 1; j <= r; j++)
+      numeratorCoefficients.push_back(
+          (numeratorCoefficients[j - 1] *
+           (num - QuasiPolynomial(num_params, j - 1)) / Fraction(j, 1))
+              .simplify());
+    // Coeff of s^j
+
+    // Then the coefficients of each individual term in Q(s),
+    // which are (di+1) C (k+1) for 0 ≤ k ≤ di
+    eachTermDenCoefficients.clear();
+    for (Fraction den : dens) {
+      singleTermDenCoefficients.clear();
+      singleTermDenCoefficients.push_back(den + 1);
+      for (unsigned j = 1; j <= den; j++)
+        singleTermDenCoefficients.push_back(singleTermDenCoefficients[j - 1] *
+                                            (den - (j - 1)) / (j + 1));
+
+      eachTermDenCoefficients.push_back(singleTermDenCoefficients);
+    }
+
+    // Now we find the coefficients in Q(s) itself
+    // by taking the convolution of the coefficients
+    // of all the terms.
+    denominatorCoefficients.clear();
+    denominatorCoefficients = eachTermDenCoefficients[0];
+    for (unsigned j = 1; j < eachTermDenCoefficients.size(); j++) {
+      // The length of the convolution is the maximum of the lengths
+      // of the two sequences. We pad the shorter one with zeroes.
+      unsigned convlen = std::max(denominatorCoefficients.size(),
+                                  eachTermDenCoefficients[j].size());
+      for (unsigned k = denominatorCoefficients.size(); k < convlen; k++)
+        denominatorCoefficients.push_back(0);
+      for (unsigned k = eachTermDenCoefficients[j].size(); k < convlen; k++)
+        eachTermDenCoefficients[j].push_back(0);
+
+      convolution.clear();
+      for (unsigned k = 0; k < convlen; k++) {
+        Fraction sum(0, 1);
+        for (unsigned l = 0; l <= k; l++)
+          sum = sum +
+                denominatorCoefficients[l] * eachTermDenCoefficients[j][k - l];
+        convolution.push_back(sum);
+      }
+      denominatorCoefficients = convolution;
+    }
+
+    totalTerm =
+        totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,
+                                                     denominatorCoefficients) *
+                        QuasiPolynomial(num_params, sign);
+  }
+
+  return totalTerm.simplify();
+}

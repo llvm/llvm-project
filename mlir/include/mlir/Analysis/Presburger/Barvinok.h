@@ -99,6 +99,10 @@ QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
                                                  ArrayRef<QuasiPolynomial> num,
                                                  ArrayRef<Fraction> den);
 
+/// Substitute the generating function with the unit vector
+/// to find the number of terms.
+QuasiPolynomial substituteWithUnitVector(GeneratingFunction);
+
 } // namespace detail
 } // namespace presburger
 } // namespace mlir
