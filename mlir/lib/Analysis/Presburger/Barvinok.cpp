@@ -304,7 +304,8 @@ QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
 /// f_p(x) = \sum_i sign_i * (x^n_i(p)) / (\prod_j (1 - x^d_{ij})
 ///
 /// where sign_i is ±1,
-/// n_i \in Q^p -> Q^d is a d-vector of affine functions on p parameters, and
+/// n_i \in Q^p -> Q^d is the sum of the vectors d_{ij}, weighted by the
+/// floors of d affine functions.
 /// d_{ij} \in Q^d are vectors.
 ///
 /// We need to find the number of terms of the form x^t in the expansion of
