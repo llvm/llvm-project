@@ -269,16 +269,20 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
 }
 
 /// Substitute x_i = (s+1)^μ_i in one term of a generating function,
-/// returning a quasipolynomial which represents the exponent of the
-/// numerator of the result.
-QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
-                                   std::vector<Point> ds, Point mu) {
+/// returning
+/// a quasipolynomial which represents the exponent of the numerator
+/// of the result, and
+/// a vector which represents the exponents of the denominator of the
+/// result.
+std::pair<QuasiPolynomial, std::vector<Fraction>>
+substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
+                   Point mu) {
   unsigned numDims = mu.size();
   // First, the exponent in the numerator becomes
   // - (μ • u_1) * (floor(first col of v))
   // - (μ • u_2) * (floor(second col of v)) - ...
   // - (μ • u_d) * (floor(d'th col of v))
-  // So we store the negation of the  dot produts.
+  // So we store the negation of the dot products.
 
   // We have d terms, each of whose coefficient is the negative dot product,
   SmallVector<Fraction> coefficients;
@@ -297,7 +301,52 @@ QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
   QuasiPolynomial num(numParams, coefficients, affine);
   num = num.simplify();
 
-  return num;
+  std::vector<Fraction> dens;
+  dens.reserve(ds.size());
+  // Similarly, each term in the denominator has exponent
+  // given by the dot product of μ with u_i.
+  for (const Point &d : ds)
+    dens.push_back(dotProduct(d, mu));
+  // This term in the denominator is
+  // (1 - (s+1)^dens.back())
+
+  return std::make_pair(num, dens);
+}
+
+void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
+                                   std::vector<Fraction> &dens) {
+  // We track the number of exponents that are negative in the
+  // denominator, and convert them to their absolute values.
+  unsigned numNegExps = 0;
+  Fraction sumNegExps(0, 1);
+  for (unsigned j = 0, e = dens.size(); j < e; ++j) {
+    if (dens[j] < 0) {
+      numNegExps += 1;
+      sumNegExps += dens[j];
+    }
+    // All exponents will be made positive; then reduce
+    // (1 - (s+1)^x)
+    // to
+    // (-s)*(Σ_{x-1} (s+1)^j) because x > 0
+    dens[j] = abs(dens[j]) - 1;
+  }
+
+  // If we have (1 - (s+1)^-c) in the denominator,
+  // multiply and divide by (s+1)^c.
+  // We convert all negative-exponent terms at once; therefore
+  // we multiply and divide by (s+1)^sumNegExps.
+  // Then we get
+  // -(1 - (s+1)^c) in the denominator,
+  // increase the numerator by c, and
+  // flip the sign.
+  if (numNegExps % 2 == 1)
+    sign = -sign;
+  num = num - QuasiPolynomial(num.getNumInputs(), sumNegExps);
+
+  // Take all the (-s) out.
+  unsigned r = dens.size();
+  if (r % 2 == 1)
+    sign = -sign;
 }
 
 /// We have a generating function of the form
@@ -362,58 +411,18 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   Point mu = getNonOrthogonalVector(allDenominators);
 
   unsigned numParams = gf.getNumParams();
-  unsigned numTerms = gf.getDenominators().size();
 
+  const std::vector<std::vector<Point>> &ds = gf.getDenominators();
   QuasiPolynomial totalTerm(numParams, 0);
-  for (unsigned i = 0; i < numTerms; ++i) {
+  for (unsigned i = 0, e = ds.size(); i < e; ++i) {
     int sign = gf.getSigns()[i];
-    std::vector<Point> ds = gf.getDenominators()[i];
 
-    QuasiPolynomial num =
-        substituteMuInTerm(numParams, gf.getNumerators()[i], ds, mu);
-    // Now the numerator is (s+1)^num.
+    auto [numExp, dens] =
+        substituteMuInTerm(numParams, gf.getNumerators()[i], ds[i], mu);
+    // Now the numerator is (s+1)^numExp
+    // and the denominator is \prod_j (1 - (s+1)^dens[j]).
 
-    std::vector<Fraction> dens;
-    dens.reserve(ds.size());
-    // Similarly, each term in the denominator has exponent
-    // given by the dot product of μ with u_i.
-    for (const Point &d : ds)
-      dens.push_back(dotProduct(d, mu));
-    // This term in the denominator is
-    // (1 - (s+1)^dens.back())
-
-    // We track the number of exponents that are negative in the
-    // denominator, and convert them to their absolute values.
-    unsigned numNegExps = 0;
-    Fraction sumNegExps(0, 1);
-    for (unsigned j = 0, e = dens.size(); j < e; ++j) {
-      if (dens[j] < 0) {
-        numNegExps += 1;
-        sumNegExps += dens[j];
-      }
-      // All exponents will be made positive; then reduce
-      // (1 - (s+1)^x)
-      // to
-      // (-s)*(Σ_{x-1} (s+1)^j) because x > 0
-      dens[j] = abs(dens[j]) - 1;
-    }
-
-    // If we have (1 - (s+1)^-c) in the denominator,
-    // multiply and divide by (s+1)^c.
-    // We convert all negative-exponent terms at once; therefore
-    // we multiply and divide by (s+1)^sumNegExps.
-    // Then we get
-    // -(1 - (s+1)^c) in the denominator,
-    // increase the numerator by c, and
-    // flip the sign.
-    if (numNegExps % 2 == 1)
-      sign = -sign;
-    num = num - QuasiPolynomial(numParams, sumNegExps);
-
-    // Take all the (-s) out.
-    unsigned r = dens.size();
-    if (r % 2 == 1)
-      sign = -sign;
+    normalizeDenominatorExponents(sign, numExp, dens);
 
     // Now the expression is
     // (s+1)^num /
@@ -423,6 +432,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // we need to find the coefficient of s^r in
     // P(s)/Q(s).
 
+    unsigned r = dens.size();
     // First, the coefficients of P(s), which are binomial coefficients.
     // We need r+1 of these.
     std::vector<QuasiPolynomial> numeratorCoefficients;
@@ -432,7 +442,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     for (unsigned j = 1; j <= r; ++j)
       numeratorCoefficients.push_back(
           (numeratorCoefficients[j - 1] *
-           (num - QuasiPolynomial(numParams, j - 1)) / Fraction(j, 1))
+           (numExp - QuasiPolynomial(numParams, j - 1)) / Fraction(j, 1))
               .simplify());
     // Coeff of s^j
 
