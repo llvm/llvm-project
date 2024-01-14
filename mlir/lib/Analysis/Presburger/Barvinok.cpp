@@ -469,7 +469,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
         getBinomialCoefficients(numExp, r);
 
     // Then the coefficients of each individual term in Q(s),
-    // which are (di+1) C (k+1) for 0 ≤ k ≤ di.
+    // which are (dens[i]+1) C (k+1) for 0 ≤ k ≤ dens[i].
     std::vector<std::vector<Fraction>> eachTermDenCoefficients;
     std::vector<Fraction> singleTermDenCoefficients;
     eachTermDenCoefficients.reserve(r);
