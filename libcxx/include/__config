@@ -200,6 +200,16 @@
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
 
+// We had some bugs where we use [[no_unique_address]] together with construct_at,
+// which causes UB as the call on construct_at could write to overlapping subobjects
+//
+// https://github.com/llvm/llvm-project/issues/70506
+// https://github.com/llvm/llvm-project/issues/70494
+//
+// To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
+// The below macro is used for all classes whose ABI have changed as part of fixing these bugs.
+#  define _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG __attribute__((__abi_tag__("subobj_fix_2023")))
+
 // Changes the iterator type of select containers (see below) to a bounded iterator that keeps track of whether it's
 // within the bounds of the original container and asserts it on every dereference.
 //
@@ -273,6 +283,9 @@
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
 //
+// - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
+//   be benign in our implementation.
+//
 // - `_LIBCPP_ASSERT_INTERNAL` -- checks that internal invariants of the library hold. These assertions don't depend on
 //   user input.
 //
@@ -315,6 +328,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
@@ -329,6 +343,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
@@ -342,6 +357,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
 
@@ -355,6 +371,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
@@ -1114,11 +1131,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // as well.
 #  if (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) || defined(_LIBCPP_HAS_THREAD_API_WIN32)
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
-#  endif
-
-// Some systems do not provide gets() in their C library, for security reasons.
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || defined(__OpenBSD__)
-#    define _LIBCPP_C_HAS_NO_GETS
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \

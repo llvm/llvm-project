@@ -105,7 +105,7 @@ struct struct_indirect_1 {
 };
 TEST(struct_indirect_1)
 
-// CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} noalias sret
+// CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} dead_on_unwind noalias writable sret
 
 // Should not be byval.
 // CHECK-LABEL: define {{.*}} void @take_struct_indirect_1(ptr noundef{{( %.*)?}})

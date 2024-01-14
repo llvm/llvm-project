@@ -186,6 +186,7 @@
     __cpp_lib_smart_ptr_owner_equality               202306L [C++26]
     __cpp_lib_source_location                        201907L [C++20]
     __cpp_lib_span                                   202002L [C++20]
+    __cpp_lib_span_at                                202311L [C++26]
     __cpp_lib_span_initializer_list                  202311L [C++26]
     __cpp_lib_spanstream                             202106L [C++23]
     __cpp_lib_ssize                                  201902L [C++20]
@@ -877,6 +878,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -1714,6 +1719,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -2731,6 +2740,10 @@
 
 # ifdef __cpp_lib_span
 #   error "__cpp_lib_span should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -4029,6 +4042,10 @@
 #   error "__cpp_lib_span should have the value 202002L in c++20"
 # endif
 
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_span_initializer_list
 #   error "__cpp_lib_span_initializer_list should not be defined before c++26"
 # endif
@@ -5243,17 +5260,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++23"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++23"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_quoted_string_io
@@ -5545,6 +5556,10 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++23"
+# endif
+
+# ifdef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_span_initializer_list
@@ -6496,17 +6511,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should be defined in c++26"
-#   endif
-#   if __cpp_lib_fstream_native_handle != 202306L
-#     error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_fstream_native_handle
+#   error "__cpp_lib_fstream_native_handle should be defined in c++26"
+# endif
+# if __cpp_lib_fstream_native_handle != 202306L
+#   error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6950,17 +6959,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++26"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++26"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_quoted_string_io
@@ -7282,6 +7285,13 @@
 # endif
 # if __cpp_lib_span != 202002L
 #   error "__cpp_lib_span should have the value 202002L in c++26"
+# endif
+
+# ifndef __cpp_lib_span_at
+#   error "__cpp_lib_span_at should be defined in c++26"
+# endif
+# if __cpp_lib_span_at != 202311L
+#   error "__cpp_lib_span_at should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

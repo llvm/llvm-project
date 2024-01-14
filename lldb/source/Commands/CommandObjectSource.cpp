@@ -204,7 +204,7 @@ protected:
     if (cu) {
       assert(file_spec.GetFilename().AsCString());
       bool has_path = (file_spec.GetDirectory().AsCString() != nullptr);
-      const FileSpecList &cu_file_list = cu->GetSupportFiles();
+      const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
         // Update the file to how it appears in the CU.

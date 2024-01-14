@@ -687,8 +687,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
   if (auto *I = dyn_cast<Instruction>(Ptr))
     if (Instruction *New = CloneMap.lookup(I))
       Ptr = New;
-  return Builder.CreateGEP(Type::getInt8Ty(HVC.F.getContext()), Ptr,
-                           HVC.getConstInt(Adjust), "gep");
+  return Builder.CreatePtrAdd(Ptr, HVC.getConstInt(Adjust), "gep");
 }
 
 auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,

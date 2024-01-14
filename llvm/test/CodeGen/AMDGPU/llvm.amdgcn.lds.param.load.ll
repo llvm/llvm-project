@@ -1,25 +1,32 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
-; GFX11-LABEL: {{^}}lds_param_load:
-; GFX11: s_mov_b32 m0
+; GCN-LABEL: {{^}}lds_param_load:
+; GCN: s_mov_b32 m0
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.x
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.y
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.z
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.w
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr1.x
-; GFX11: s_waitcnt expcnt(4)
-; GFX11: v_add_f32
-; GFX11: buffer_store_b32
-; GFX11: s_waitcnt expcnt(3)
-; GFX11: buffer_store_b32
-; GFX11: s_waitcnt expcnt(2)
-; GFX11: buffer_store_b32
-; GFX11: s_waitcnt expcnt(1)
-; GFX11: buffer_store_b32
-; GFX11: s_waitcnt expcnt(0)
-; GFX11: buffer_store_b32
-; GFX11: buffer_store_b32
+; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.x
+; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.y
+; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.z
+; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.w
+; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr1.x
+; GCN: s_waitcnt expcnt(4)
+; GCN: v_add_f32
+; GCN: buffer_store_b32
+; GCN: s_waitcnt expcnt(3)
+; GCN: buffer_store_b32
+; GCN: s_waitcnt expcnt(2)
+; GCN: buffer_store_b32
+; GCN: s_waitcnt expcnt(1)
+; GCN: buffer_store_b32
+; GCN: s_waitcnt expcnt(0)
+; GCN: buffer_store_b32
+; GCN: buffer_store_b32
 define amdgpu_ps void @lds_param_load(ptr addrspace(8) inreg %buf, i32 inreg %arg) #0 {
 main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %arg)

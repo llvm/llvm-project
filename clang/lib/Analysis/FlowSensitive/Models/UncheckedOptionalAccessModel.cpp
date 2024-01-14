@@ -226,7 +226,7 @@ auto isComparisonOperatorCall(L lhs_arg_matcher, R rhs_arg_matcher) {
 
 /// Ensures that `Expr` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &Expr) {
-  auto *Value = cast_or_null<BoolValue>(Env.getValue(Expr));
+  auto *Value = Env.get<BoolValue>(Expr);
   if (Value != nullptr)
     return Value->formula();
 
@@ -267,7 +267,7 @@ BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
   if (OptionalLoc == nullptr)
     return nullptr;
   StorageLocation &HasValueLoc = locForHasValue(*OptionalLoc);
-  auto *HasValueVal = cast_or_null<BoolValue>(Env.getValue(HasValueLoc));
+  auto *HasValueVal = Env.get<BoolValue>(HasValueLoc);
   if (HasValueVal == nullptr) {
     HasValueVal = &Env.makeAtomicBoolValue();
     Env.setValue(HasValueLoc, *HasValueVal);
@@ -406,7 +406,7 @@ void transferCallReturningOptional(const CallExpr *E,
   if (E->isPRValue()) {
     Loc = &State.Env.getResultObjectLocation(*E);
   } else {
-    Loc = cast_or_null<RecordStorageLocation>(State.Env.getStorageLocation(*E));
+    Loc = State.Env.get<RecordStorageLocation>(*E);
     if (Loc == nullptr) {
       Loc = &cast<RecordStorageLocation>(State.Env.createStorageLocation(*E));
       State.Env.setStorageLocation(*E, *Loc);
@@ -449,8 +449,7 @@ BoolValue &valueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
 
   // This is a constructor/assignment call for `optional<T>` with argument of
   // type `optional<U>` such that `T` is constructible from `U`.
-  auto *Loc =
-      cast_or_null<RecordStorageLocation>(State.Env.getStorageLocation(E));
+  auto *Loc = State.Env.get<RecordStorageLocation>(E);
   if (auto *HasValueVal = getHasValue(State.Env, Loc))
     return *HasValueVal;
   return State.Env.makeAtomicBoolValue();
@@ -471,8 +470,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
                         LatticeTransferState &State) {
   assert(E->getNumArgs() > 0);
 
-  if (auto *Loc = cast_or_null<RecordStorageLocation>(
-          State.Env.getStorageLocation(*E->getArg(0)))) {
+  if (auto *Loc = State.Env.get<RecordStorageLocation>(*E->getArg(0))) {
     createOptionalValue(*Loc, HasValueVal, State.Env);
 
     // Assign a storage location for the whole expression.
@@ -534,18 +532,15 @@ void transferSwapCall(const CXXMemberCallExpr *E,
                       const MatchFinder::MatchResult &,
                       LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
-  auto *OtherLoc = cast_or_null<RecordStorageLocation>(
-      State.Env.getStorageLocation(*E->getArg(0)));
+  auto *OtherLoc = State.Env.get<RecordStorageLocation>(*E->getArg(0));
   transferSwap(getImplicitObjectLocation(*E, State.Env), OtherLoc, State.Env);
 }
 
 void transferStdSwapCall(const CallExpr *E, const MatchFinder::MatchResult &,
                          LatticeTransferState &State) {
   assert(E->getNumArgs() == 2);
-  auto *Arg0Loc = cast_or_null<RecordStorageLocation>(
-      State.Env.getStorageLocation(*E->getArg(0)));
-  auto *Arg1Loc = cast_or_null<RecordStorageLocation>(
-      State.Env.getStorageLocation(*E->getArg(1)));
+  auto *Arg0Loc = State.Env.get<RecordStorageLocation>(*E->getArg(0));
+  auto *Arg1Loc = State.Env.get<RecordStorageLocation>(*E->getArg(1));
   transferSwap(Arg0Loc, Arg1Loc, State.Env);
 }
 
@@ -585,11 +580,9 @@ void transferOptionalAndOptionalCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   Environment &Env = State.Env;
   auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
-  auto *Arg0Loc = cast_or_null<RecordStorageLocation>(
-      Env.getStorageLocation(*CmpExpr->getArg(0)));
+  auto *Arg0Loc = Env.get<RecordStorageLocation>(*CmpExpr->getArg(0));
   if (auto *LHasVal = getHasValue(Env, Arg0Loc)) {
-    auto *Arg1Loc = cast_or_null<RecordStorageLocation>(
-        Env.getStorageLocation(*CmpExpr->getArg(1)));
+    auto *Arg1Loc = Env.get<RecordStorageLocation>(*CmpExpr->getArg(1));
     if (auto *RHasVal = getHasValue(Env, Arg1Loc)) {
       if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
         CmpValue = &A.makeNot(*CmpValue);
@@ -603,7 +596,7 @@ void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
                                  const clang::Expr *E, Environment &Env) {
   auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
-  auto *Loc = cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*E));
+  auto *Loc = Env.get<RecordStorageLocation>(*E);
   if (auto *HasVal = getHasValue(Env, Loc)) {
     if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
       CmpValue = &A.makeNot(*CmpValue);
@@ -616,7 +609,7 @@ void transferOptionalAndNulloptCmp(const clang::CXXOperatorCallExpr *CmpExpr,
                                    const clang::Expr *E, Environment &Env) {
   auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
-  auto *Loc = cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*E));
+  auto *Loc = Env.get<RecordStorageLocation>(*E);
   if (auto *HasVal = getHasValue(Env, Loc)) {
     if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
       CmpValue = &A.makeNot(*CmpValue);

@@ -89,8 +89,6 @@ TEST(RecordOpsTest, CopyRecord) {
         auto *S2Val = cast<RecordValue>(Env.getValue(S2));
         EXPECT_NE(S1Val, S2Val);
 
-        S1Val->setProperty("prop", Env.getBoolLiteralValue(true));
-
         copyRecord(S1, S2, Env);
 
         EXPECT_EQ(getFieldValue(&S1, *OuterIntDecl, Env),
@@ -104,8 +102,6 @@ TEST(RecordOpsTest, CopyRecord) {
         S1Val = cast<RecordValue>(Env.getValue(S1));
         S2Val = cast<RecordValue>(Env.getValue(S2));
         EXPECT_NE(S1Val, S2Val);
-
-        EXPECT_EQ(S2Val->getProperty("prop"), &Env.getBoolLiteralValue(true));
       });
 }
 
@@ -149,9 +145,6 @@ TEST(RecordOpsTest, RecordsEqual) {
 
         Env.setValue(S1.getSyntheticField("synth_int"),
                      Env.create<IntegerValue>());
-
-        cast<RecordValue>(Env.getValue(S1))
-            ->setProperty("prop", Env.getBoolLiteralValue(true));
 
         // Strategy: Create two equal records, then verify each of the various
         // ways in which records can differ causes recordsEqual to return false.
@@ -202,36 +195,6 @@ TEST(RecordOpsTest, RecordsEqual) {
         EXPECT_FALSE(recordsEqual(S1, S2, Env));
         copyRecord(S1, S2, Env);
         EXPECT_TRUE(recordsEqual(S1, S2, Env));
-
-        // S1 and S2 have the same property with different values.
-        cast<RecordValue>(Env.getValue(S2))
-            ->setProperty("prop", Env.getBoolLiteralValue(false));
-        EXPECT_FALSE(recordsEqual(S1, S2, Env));
-        copyRecord(S1, S2, Env);
-        EXPECT_TRUE(recordsEqual(S1, S2, Env));
-
-        // S1 has a property that S2 doesn't have.
-        cast<RecordValue>(Env.getValue(S1))
-            ->setProperty("other_prop", Env.getBoolLiteralValue(false));
-        EXPECT_FALSE(recordsEqual(S1, S2, Env));
-        // We modified S1 this time, so need to copy back the other way.
-        copyRecord(S2, S1, Env);
-        EXPECT_TRUE(recordsEqual(S1, S2, Env));
-
-        // S2 has a property that S1 doesn't have.
-        cast<RecordValue>(Env.getValue(S2))
-            ->setProperty("other_prop", Env.getBoolLiteralValue(false));
-        EXPECT_FALSE(recordsEqual(S1, S2, Env));
-        copyRecord(S1, S2, Env);
-        EXPECT_TRUE(recordsEqual(S1, S2, Env));
-
-        // S1 and S2 have the same number of properties, but with different
-        // names.
-        cast<RecordValue>(Env.getValue(S1))
-            ->setProperty("prop1", Env.getBoolLiteralValue(false));
-        cast<RecordValue>(Env.getValue(S2))
-            ->setProperty("prop2", Env.getBoolLiteralValue(false));
-        EXPECT_FALSE(recordsEqual(S1, S2, Env));
       });
 }
 

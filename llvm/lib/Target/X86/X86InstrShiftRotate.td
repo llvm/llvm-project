@@ -829,12 +829,12 @@ multiclass bmi_rotate<string asm, RegisterClass RC, X86MemOperand x86memop,
 let hasSideEffects = 0 in {
   def ri#Suffix : Ii8<0xF0, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, u8imm:$src2),
                       !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                  TAXD, VEX, Sched<[WriteShift]>;
+                  TA, XD, VEX, Sched<[WriteShift]>;
   let mayLoad = 1 in
   def mi#Suffix : Ii8<0xF0, MRMSrcMem, (outs RC:$dst),
                       (ins x86memop:$src1, u8imm:$src2),
                       !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                  TAXD, VEX, Sched<[WriteShiftLd]>;
+                  TA, XD, VEX, Sched<[WriteShiftLd]>;
 }
 }
 
@@ -860,23 +860,23 @@ let hasSideEffects = 0 in {
 let Predicates = [HasBMI2, NoEGPR] in {
   defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem>;
   defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem>, REX_W;
-  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem>, T8XS;
-  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem>, T8XS, REX_W;
-  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem>, T8XD;
-  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem>, T8XD, REX_W;
-  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem>, T8PD;
-  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8PD, REX_W;
+  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem>, T8, XS;
+  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem>, T8, XS, REX_W;
+  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem>, T8, XD;
+  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem>, T8, XD, REX_W;
+  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem>, T8, PD;
+  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8, PD, REX_W;
 }
 
-let Predicates = [HasBMI2, HasEGPR] in {
+let Predicates = [HasBMI2, HasEGPR, In64BitMode] in {
   defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem, "_EVEX">, EVEX;
   defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem, "_EVEX">, REX_W, EVEX;
-  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem, "_EVEX">, T8XS, EVEX;
-  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem, "_EVEX">, T8XS, REX_W, EVEX;
-  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem, "_EVEX">, T8XD, EVEX;
-  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem, "_EVEX">, T8XD, REX_W, EVEX;
-  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem, "_EVEX">, T8PD, EVEX;
-  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem, "_EVEX">, T8PD, REX_W, EVEX;
+  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem, "_EVEX">, T8, XS, EVEX;
+  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem, "_EVEX">, T8, XS, REX_W, EVEX;
+  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem, "_EVEX">, T8, XD, EVEX;
+  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem, "_EVEX">, T8, XD, REX_W, EVEX;
+  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem, "_EVEX">, T8, PD, EVEX;
+  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem, "_EVEX">, T8, PD, REX_W, EVEX;
 }
 
 let Predicates = [HasBMI2] in {

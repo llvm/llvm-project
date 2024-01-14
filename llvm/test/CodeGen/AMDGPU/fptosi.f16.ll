@@ -480,7 +480,7 @@ define amdgpu_kernel void @fptosi_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cmp_eq_f16_e64 s[4:5], 0xbc00, s4
+; VI-NEXT:    v_cmp_eq_f16_e64 s[4:5], -1.0, s4
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
@@ -492,7 +492,7 @@ define amdgpu_kernel void @fptosi_f16_to_i1(ptr addrspace(1) %out, half %in) {
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_eq_f16_e64 s2, 0xbc00, s2
+; GFX11-NEXT:    v_cmp_eq_f16_e64 s2, -1.0, s2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX11-NEXT:    s_mov_b32 s2, -1

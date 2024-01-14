@@ -321,6 +321,9 @@ LogicalResult LdMatrixOp::verify() {
   if (isTranspose && !(elementBitWidth == 16))
     return emitError()
            << "nvgpu.ldmatrix transpose works only at 16b granularity";
+  if (resShape.size() != 2) {
+    return emitError() << "results must be 2 dimensional vector";
+  }
   if (!(resShape[1] == numElementsPer32b))
     return emitError() << "expected vector register shape[1] = "
                        << numElementsPer32b;

@@ -27,15 +27,12 @@ namespace LIBC_NAMESPACE {
 // handler taking siginfo_t * argument, one can set sa_handler to sa_sigaction
 // if SA_SIGINFO is set in sa_flags.
 struct KernelSigaction {
-  using HandlerType = void(int);
-  using SiginfoHandlerType = void(int, siginfo_t *, void *);
-
   LIBC_INLINE KernelSigaction &operator=(const struct sigaction &sa) {
     sa_flags = sa.sa_flags;
     sa_restorer = sa.sa_restorer;
     sa_mask = sa.sa_mask;
     if (sa_flags & SA_SIGINFO) {
-      sa_handler = reinterpret_cast<HandlerType *>(sa.sa_sigaction);
+      sa_sigaction = sa.sa_sigaction;
     } else {
       sa_handler = sa.sa_handler;
     }
@@ -48,13 +45,16 @@ struct KernelSigaction {
     sa.sa_mask = sa_mask;
     sa.sa_restorer = sa_restorer;
     if (sa_flags & SA_SIGINFO)
-      sa.sa_sigaction = reinterpret_cast<SiginfoHandlerType *>(sa_handler);
+      sa.sa_sigaction = sa_sigaction;
     else
       sa.sa_handler = sa_handler;
     return sa;
   }
 
-  HandlerType *sa_handler;
+  union {
+    void (*sa_handler)(int);
+    void (*sa_sigaction)(int, siginfo_t *, void *);
+  };
   unsigned long sa_flags;
   void (*sa_restorer)(void);
   // Our public definition of sigset_t matches that of the kernel's definition.

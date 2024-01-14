@@ -856,6 +856,7 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
     EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
 
   incrementProfileCounter(Body);
+  maybeCreateMCDCCondBitmap();
 
   RunCleanupsScope RunCleanups(*this);
 
@@ -1444,8 +1445,10 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   }
 
   Stmt *Body = Dtor->getBody();
-  if (Body)
+  if (Body) {
     incrementProfileCounter(Body);
+    maybeCreateMCDCCondBitmap();
+  }
 
   // The call to operator delete in a deleting destructor happens
   // outside of the function-try-block, which means it's always
@@ -1548,6 +1551,7 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
   LexicalScope Scope(*this, RootCS->getSourceRange());
 
   incrementProfileCounter(RootCS);
+  maybeCreateMCDCCondBitmap();
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);

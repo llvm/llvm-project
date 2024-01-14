@@ -290,7 +290,7 @@ define <4 x float> @collectShuffleElts(<2 x float> %x, float %y) {
 ; CHECK-LABEL: @collectShuffleElts(
 ; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x float> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x float> [[X]], i64 1
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> undef, float [[X0]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> <float undef, float poison, float poison, float poison>, float [[X0]], i64 1
 ; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[X1]], i64 2
 ; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[Y:%.*]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[V3]]
@@ -462,7 +462,7 @@ define <5 x i7> @insert_nonzero_index_splat_widen(i7 %x) {
 
 define <4 x float> @insert_nonzero_index_splat_extra_use(float %x) {
 ; CHECK-LABEL: @insert_nonzero_index_splat_extra_use(
-; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i64 2
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> <float undef, float undef, float poison, float undef>, float [[X:%.*]], i64 2
 ; CHECK-NEXT:    call void @use(<4 x float> [[XV]])
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> poison, <4 x i32> <i32 poison, i32 2, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[SPLAT]]
@@ -490,7 +490,7 @@ define <4 x float> @insert_nonzero_index_splat_wrong_base(float %x, <4 x float> 
 
 define <4 x float> @insert_nonzero_index_splat_wrong_index(float %x, i32 %index) {
 ; CHECK-LABEL: @insert_nonzero_index_splat_wrong_index(
-; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> <float poison, float undef, float poison, float poison>, float [[X:%.*]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> poison, <4 x i32> <i32 poison, i32 1, i32 1, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[SPLAT]]
 ;
@@ -513,7 +513,7 @@ define <4 x float> @insert_in_splat(float %x) {
 
 define <4 x float> @insert_in_splat_extra_uses(float %x) {
 ; CHECK-LABEL: @insert_in_splat_extra_uses(
-; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i64 0
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> <float poison, float undef, float undef, float undef>, float [[X:%.*]], i64 0
 ; CHECK-NEXT:    call void @use(<4 x float> [[XV]])
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 0, i32 poison>
 ; CHECK-NEXT:    call void @use(<4 x float> [[SPLAT]])

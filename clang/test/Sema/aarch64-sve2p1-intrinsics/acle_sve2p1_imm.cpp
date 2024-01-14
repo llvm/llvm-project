@@ -114,9 +114,9 @@ void test_cntp(svcount_t c) {
 
 void test_svdot_lane_2way(svint32_t s32, svuint32_t u32, svint16_t s16, svuint16_t u16,
                           svfloat32_t f32, svfloat16_t f16) {
-  svdot_lane_s32_s16_s16(s32, s16, s16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-  svdot_lane_u32_u16_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-  svdot_lane_f32_f16_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_s32_s16(s32, s16, s16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_u32_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_f32_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
 
@@ -139,8 +139,8 @@ void test_svbfmul_lane(svbfloat16_t zn, svbfloat16_t zm, uint64_t idx){
 
 __attribute__((target("+sve2p1")))
 void test_svextq_lane(svint16_t zn_i16, svint16_t zm_i16, svfloat16_t zn_f16, svfloat16_t zm_f16){
-  svextq_lane_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
-  svextq_lane_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svextq_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
+  svextq_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
 }
 
 __attribute__((target("+sve2p1")))

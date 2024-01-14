@@ -227,6 +227,7 @@ def IsPreservesZA             : FlagType<0x10000000000>;
 def IsReadZA                  : FlagType<0x20000000000>;
 def IsWriteZA                 : FlagType<0x40000000000>;
 def IsReductionQV             : FlagType<0x80000000000>;
+def IsStreamingOrSVE2p1       : FlagType<0x80000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {

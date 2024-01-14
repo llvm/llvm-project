@@ -148,7 +148,7 @@ define <2 x i64> @PR24922(<2 x i64> %v) {
 
 define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> <float undef, float poison, float poison, float poison>
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -161,7 +161,7 @@ define <4 x float> @inselt_shuf_no_demand(float %a1, float %a2, float %a3) {
 
 define <4 x float> @inselt_shuf_no_demand_commute(float %a1, float %a2, float %a3) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_commute(
-; CHECK-NEXT:    ret <4 x float> undef
+; CHECK-NEXT:    ret <4 x float> <float undef, float poison, float poison, float poison>
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
   %out12 = insertelement <4 x float> %out1, float %a2, i32 2
@@ -192,7 +192,7 @@ define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b)
 
 define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1, float %a2, float %a3, i32 %variable_index) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_bogus_insert_index_in_chain(
-; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> undef, float [[A2:%.*]], i32 [[VARIABLE_INDEX:%.*]]
+; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> <float undef, float poison, float poison, float poison>, float [[A2:%.*]], i32 [[VARIABLE_INDEX:%.*]]
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[OUT12]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
 ;
@@ -617,8 +617,8 @@ define ptr @gep_splat_both(ptr %base, i64 %idx) {
 
 define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 ; CHECK-LABEL: @gep_all_lanes_undef(
-; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x ptr> undef, ptr [[BASE:%.*]], i64 0
-; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> undef, i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x ptr> <ptr poison, ptr undef>, ptr [[BASE:%.*]], i64 0
+; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[IDX:%.*]], i64 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC]], <2 x i64> [[IDXVEC]]
 ; CHECK-NEXT:    ret <2 x ptr> [[GEP]]
 ;
@@ -780,7 +780,7 @@ define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
 define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_wrong_demand(
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i64 0
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i64 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float undef>, float [[E0]], i64 0
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i64 2
 ; CHECK-NEXT:    ret <4 x float> [[I2]]

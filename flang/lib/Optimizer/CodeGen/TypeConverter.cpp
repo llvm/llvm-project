@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -164,7 +165,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
 std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-  auto name = derived.getName();
+  auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
   auto &callStack = getCurrentThreadRecursiveStack();

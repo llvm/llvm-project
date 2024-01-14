@@ -211,8 +211,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
   MDString *MDKernelArgType =
       getKernelArgAttribute(F, ArgIdx, "kernel_arg_type");
-  if (!MDKernelArgType || (MDKernelArgType->getString().ends_with("*") &&
-                           MDKernelArgType->getString().ends_with("_t")))
+  if (!MDKernelArgType || (!MDKernelArgType->getString().ends_with("*") &&
+                           !MDKernelArgType->getString().ends_with("_t")))
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
   if (MDKernelArgType->getString().ends_with("*"))
@@ -438,7 +438,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
       ArgVRegs.push_back(Arg.Regs[0]);
       SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
-      GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MIRBuilder.getMF());
+      if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
+        GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MIRBuilder.getMF());
     }
     if (auto Res = SPIRV::lowerBuiltin(
             DemangledName, SPIRV::InstructionSet::OpenCL_std, MIRBuilder,

@@ -507,11 +507,11 @@ def z_subcarry : PatFrag<(ops node:$lhs, node:$rhs),
 
 // Signed and unsigned comparisons.
 def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::UnsignedOnly;
 }]>;
 def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::SignedOnly;
 }]>;
 

@@ -53,6 +53,19 @@ func.func @create_vector_mask_to_constant_mask_truncation_zero() -> (vector<4x3x
 
 // -----
 
+// CHECK-LABEL: create_vector_mask_to_constant_mask_scalable_all_true
+func.func @create_vector_mask_to_constant_mask_scalable_all_true() -> (vector<8x[16]xi1>) {
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %0 = vector.vscale
+  %1 = arith.muli %0, %c16 : index
+  // CHECK: vector.constant_mask [8, 16] : vector<8x[16]xi1>
+  %10 = vector.create_mask %c8, %1 : vector<8x[16]xi1>
+  return %10 : vector<8x[16]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: create_mask_transpose_to_transposed_create_mask
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[DIM1:.*]]: index, %[[DIM2:.*]]: index
 func.func @create_mask_transpose_to_transposed_create_mask(

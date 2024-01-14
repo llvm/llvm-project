@@ -94,6 +94,31 @@ STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumZExt, "Number of non-negative deductions");
 
+static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
+  if (Constant *C = LVI->getConstant(V, At))
+    return C;
+
+  // TODO: The following really should be sunk inside LVI's core algorithm, or
+  // at least the outer shims around such.
+  auto *C = dyn_cast<CmpInst>(V);
+  if (!C)
+    return nullptr;
+
+  Value *Op0 = C->getOperand(0);
+  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
+  if (!Op1)
+    return nullptr;
+
+  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
+      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
+  if (Result == LazyValueInfo::Unknown)
+    return nullptr;
+
+  return (Result == LazyValueInfo::True)
+             ? ConstantInt::getTrue(C->getContext())
+             : ConstantInt::getFalse(C->getContext());
+}
+
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
     return false;
@@ -106,7 +131,7 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
       C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
                                  I->getParent(), I);
     else
-      C = LVI->getConstant(S->getCondition(), I);
+      C = getConstantAt(S->getCondition(), I, LVI);
 
     auto *CI = dyn_cast_or_null<ConstantInt>(C);
     if (!CI)
@@ -935,11 +960,13 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   UDiv->setDebugLoc(SDI->getDebugLoc());
   UDiv->setIsExact(SDI->isExact());
 
-  Value *Res = UDiv;
+  auto *Res = UDiv;
 
   // If the operands had two different domains, we need to negate the result.
-  if (Ops[0].D != Ops[1].D)
+  if (Ops[0].D != Ops[1].D) {
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
@@ -1105,30 +1132,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   BinOp->eraseFromParent();
   NumAnd++;
   return true;
-}
-
-
-static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
-  if (Constant *C = LVI->getConstant(V, At))
-    return C;
-
-  // TODO: The following really should be sunk inside LVI's core algorithm, or
-  // at least the outer shims around such.
-  auto *C = dyn_cast<CmpInst>(V);
-  if (!C) return nullptr;
-
-  Value *Op0 = C->getOperand(0);
-  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
-  if (!Op1) return nullptr;
-
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True) ?
-    ConstantInt::getTrue(C->getContext()) :
-    ConstantInt::getFalse(C->getContext());
 }
 
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,

@@ -1,4 +1,4 @@
-! UNSUPPORTED: system-windows, system-darwin
+! UNSUPPORTED: system-windows, system-darwin, system-aix
 
 ! RUN: %flang -x ir -o %t.c-object -c %S/Inputs/no_duplicate_main.ll
 ! RUN: %flang -o %t -c %s

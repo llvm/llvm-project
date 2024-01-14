@@ -136,6 +136,12 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
+    // This controls the availability of C++23 <print>, which
+    // has a dependency on the built library (it needs access to
+    // the underlying buffer types of std::cout, std::cerr, and std::clog.
+#  define _LIBCPP_AVAILABILITY_HAS_PRINT 1
+#  define _LIBCPP_AVAILABILITY_PRINT
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -257,6 +263,9 @@
 
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 0
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
+
+#  define _LIBCPP_AVAILABILITY_HAS_PRINT 0
+#  define _LIBCPP_AVAILABILITY_PRINT __attribute__((unavailable))
 
 // clang-format off
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 120000)   || \

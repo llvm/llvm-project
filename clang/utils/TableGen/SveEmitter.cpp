@@ -1603,6 +1603,25 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
 
+  OS << "void __arm_za_disable(void) __arm_streaming_compatible;\n\n";
+
+  OS << "__ai bool __arm_has_sme(void) __arm_streaming_compatible {\n";
+  OS << "  uint64_t x0, x1;\n";
+  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
+  OS << "  return x0 & (1ULL << 63);\n";
+  OS << "}\n\n";
+
+  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
+        "{\n";
+  OS << "  uint64_t x0, x1;\n";
+  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
+  OS << "  return x0 & 1;\n";
+  OS << "}\n\n";
+
+  OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
+        "__arm_streaming_compatible __arm_shared_za "
+        "{ }\n\n";
+
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
 
   OS << "#ifdef __cplusplus\n";
@@ -1754,11 +1773,14 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingOrSVE2p1Flag = getEnumValueForFlag("IsStreamingOrSVE2p1");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(IsStreamingOrSVE2p1Flag))
+      StreamingMap["ArmStreamingOrSVE2p1"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

@@ -6026,6 +6026,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
     bool IsFailOnly) {
 
+  AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
+  return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
+                             IsPostfixUpdate, IsFailOnly, Failure);
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
+    const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+    AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+    omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+    bool IsFailOnly, AtomicOrdering Failure) {
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -6040,7 +6051,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   bool IsInteger = E->getType()->isIntegerTy();
 
   if (Op == OMPAtomicCompareOp::EQ) {
-    AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     AtomicCmpXchgInst *Result = nullptr;
     if (!IsInteger) {
       IntegerType *IntCastTy =

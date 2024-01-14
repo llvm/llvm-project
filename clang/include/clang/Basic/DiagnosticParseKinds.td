@@ -1364,6 +1364,8 @@ def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;
+def err_acc_invalid_default_clause_kind
+    : Error<"invalid value for 'default' clause; expected 'present' or 'none'">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

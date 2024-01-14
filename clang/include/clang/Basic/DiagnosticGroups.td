@@ -348,7 +348,8 @@ def CXX98CompatPedantic : DiagGroup<"c++98-compat-pedantic",
                                      CXXPre20CompatPedantic,
                                      CXXPre23CompatPedantic]>;
 
-def CXX11Narrowing : DiagGroup<"c++11-narrowing">;
+def CXX11NarrowingConstReference : DiagGroup<"c++11-narrowing-const-reference">;
+def CXX11Narrowing : DiagGroup<"c++11-narrowing", [CXX11NarrowingConstReference]>;
 
 def CXX11WarnInconsistentOverrideDestructor :
   DiagGroup<"inconsistent-missing-destructor-override">;

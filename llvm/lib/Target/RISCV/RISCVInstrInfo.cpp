@@ -414,15 +414,16 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RISCV::GPRPF64RegClass.contains(DstReg, SrcReg)) {
-    // Emit an ADDI for both parts of GPRPF64.
+  if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
+    // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32), getKillRegState(KillSrc))
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_even),
+                getKillRegState(KillSrc))
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
-            TRI->getSubReg(DstReg, RISCV::sub_32_hi))
-        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32_hi),
+            TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd),
                 getKillRegState(KillSrc))
         .addImm(0);
     return;
@@ -607,7 +608,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::SW : RISCV::SD;
     IsScalableVector = false;
-  } else if (RISCV::GPRPF64RegClass.hasSubClassEq(RC)) {
+  } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxSD;
     IsScalableVector = false;
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
@@ -690,7 +691,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = TRI->getRegSizeInBits(RISCV::GPRRegClass) == 32 ?
              RISCV::LW : RISCV::LD;
     IsScalableVector = false;
-  } else if (RISCV::GPRPF64RegClass.hasSubClassEq(RC)) {
+  } else if (RISCV::GPRPairRegClass.hasSubClassEq(RC)) {
     Opcode = RISCV::PseudoRV32ZdinxLD;
     IsScalableVector = false;
   } else if (RISCV::FPR16RegClass.hasSubClassEq(RC)) {
@@ -1346,6 +1347,10 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
   case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
   case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
+
+  case RISCV::ANDN:  return RISCV::PseudoCCANDN;  break;
+  case RISCV::ORN:   return RISCV::PseudoCCORN;   break;
+  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;  break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
@@ -2282,9 +2287,14 @@ bool RISCVInstrInfo::shouldClusterMemOps(
     return false;
   }
 
-  // TODO: Use a more carefully chosen heuristic, e.g. only cluster if offsets
-  // indicate they likely share a cache line.
-  return ClusterSize <= 4;
+  unsigned CacheLineSize =
+      BaseOps1.front()->getParent()->getMF()->getSubtarget().getCacheLineSize();
+  // Assume a cache line size of 64 bytes if no size is set in RISCVSubtarget.
+  CacheLineSize = CacheLineSize ? CacheLineSize : 64;
+  // Cluster if the memory operations are on the same or a neighbouring cache
+  // line, but limit the maximum ClusterSize to avoid creating too much
+  // additional register pressure.
+  return ClusterSize <= 4 && std::abs(Offset1 - Offset2) < CacheLineSize;
 }
 
 // Set BaseReg (the base register operand), Offset (the byte offset being
@@ -2360,7 +2370,6 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace RISCVII;
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_CALL, "riscv-call"},
-      {MO_PLT, "riscv-plt"},
       {MO_LO, "riscv-lo"},
       {MO_HI, "riscv-hi"},
       {MO_PCREL_LO, "riscv-pcrel-lo"},
@@ -2646,6 +2655,7 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case RISCV::TH_MULSH:
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
+  case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
@@ -2802,6 +2812,7 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
+  case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
     auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());

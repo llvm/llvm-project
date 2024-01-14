@@ -83,7 +83,7 @@ using ::dr2521::operator""_div;
 
 
 #if __cplusplus >= 202302L
-namespace dr2553 { // dr2553: 18
+namespace dr2553 { // dr2553: 18 review
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
@@ -143,7 +143,7 @@ void foo() {
 #endif
 
 
-namespace dr2565 { // dr2565: 16
+namespace dr2565 { // dr2565: 16 open
 #if __cplusplus >= 202002L
   template<typename T>
     concept C = requires (typename T::type x) {

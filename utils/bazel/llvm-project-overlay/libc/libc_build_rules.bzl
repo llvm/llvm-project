@@ -139,7 +139,6 @@ def libc_math_function(
         ":__support_fputil_division_and_remainder_operations",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
-        ":__support_fputil_float_properties",
         ":__support_fputil_hypot",
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_nearest_integer_operations",

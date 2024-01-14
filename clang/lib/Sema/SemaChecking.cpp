@@ -1219,8 +1219,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (IsChkVariant) {
       FunctionName = FunctionName.drop_front(std::strlen("__builtin___"));
       FunctionName = FunctionName.drop_back(std::strlen("_chk"));
-    } else if (FunctionName.starts_with("__builtin_")) {
-      FunctionName = FunctionName.drop_front(std::strlen("__builtin_"));
+    } else {
+      FunctionName.consume_front("__builtin_");
     }
     return FunctionName;
   };
@@ -2998,7 +2998,12 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
 
-enum ArmStreamingType { ArmNonStreaming, ArmStreaming, ArmStreamingCompatible };
+enum ArmStreamingType {
+  ArmNonStreaming,
+  ArmStreaming,
+  ArmStreamingCompatible,
+  ArmStreamingOrSVE2p1
+};
 
 bool Sema::ParseSVEImmChecks(
     CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
@@ -3156,6 +3161,16 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
                                      ArmStreamingType BuiltinType) {
   ArmStreamingType FnType = getArmStreamingFnType(FD);
+  if (BuiltinType == ArmStreamingOrSVE2p1) {
+    // Check intrinsics that are available in [sve2p1 or sme/sme2].
+    llvm::StringMap<bool> CallerFeatureMap;
+    S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+    if (Builtin::evaluateRequiredTargetFeatures("sve2p1", CallerFeatureMap))
+      BuiltinType = ArmStreamingCompatible;
+    else
+      BuiltinType = ArmStreaming;
+  }
+
   if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
@@ -5388,15 +5403,17 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     QualType Op1Type = TheCall->getArg(0)->getType();
     QualType Op2Type = TheCall->getArg(1)->getType();
     QualType Op3Type = TheCall->getArg(2)->getType();
-    uint64_t ElemSize = Op1Type->isRVVType(32, false) ? 32 : 64;
+    ASTContext::BuiltinVectorTypeInfo Info =
+        Context.getBuiltinVectorTypeInfo(Op1Type->castAs<BuiltinType>());
+    uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
     if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
-                  diag::err_riscv_type_requires_extension)
-             << Op1Type << "zvknhb";
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknb";
 
-    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, ElemSize << 2) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, ElemSize << 2) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op3Type, ElemSize << 2);
+    return CheckInvalidVLENandLMUL(TI, TheCall, *this, Op1Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op2Type, ElemSize * 4) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, *this, Op3Type, ElemSize * 4);
   }
 
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf8:
@@ -6170,30 +6187,33 @@ bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
 
 void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
   const TargetInfo &TI = Context.getTargetInfo();
+
+  ASTContext::BuiltinVectorTypeInfo Info =
+      Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
+  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  unsigned MinElts = Info.EC.getKnownMinValue();
+
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
-  if ((Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ false) ||
-       Ty->isRVVType(/* ElementCount */ 1)) &&
+  if (((EltSize == 64 && Info.ElementType->isIntegerType()) || MinElts == 1) &&
       !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
-  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-      !TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+  else if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
+           !TI.hasFeature("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
-  // Check if enabled zvfbfmin for BFloat16
-  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ false,
-                    /* IsBFloat */ true) &&
-      !TI.hasFeature("experimental-zvfbfmin"))
+  else if (Info.ElementType->isBFloat16Type() &&
+           !TI.hasFeature("experimental-zvfbfmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
-  if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
-      !TI.hasFeature("zve32f"))
+  else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
+           !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
-  if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ true) &&
-      !TI.hasFeature("zve64d"))
+  else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
+           !TI.hasFeature("zve64d"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // Given that caller already checked isRVVType() before calling this function,
   // if we don't have at least zve32x supported, then we need to emit error.
-  if (!TI.hasFeature("zve32x"))
+  else if (!TI.hasFeature("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32x";
 }
 
@@ -16672,7 +16692,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     /// Have we issued a diagnostic for this object already?
     bool Diagnosed = false;
 
-    UsageInfo() = default;
+    UsageInfo();
   };
   using UsageInfoMap = llvm::SmallDenseMap<Object, UsageInfo, 16>;
 
@@ -17430,6 +17450,8 @@ public:
       Tree.merge(Elts[I]);
   }
 };
+
+SequenceChecker::UsageInfo::UsageInfo() = default;
 
 } // namespace
 
@@ -18354,7 +18376,7 @@ static bool isSetterLikeSelector(Selector sel) {
   if (sel.isUnarySelector()) return false;
 
   StringRef str = sel.getNameForSlot(0);
-  while (!str.empty() && str.front() == '_') str = str.substr(1);
+  str = str.ltrim('_');
   if (str.starts_with("set"))
     str = str.substr(3);
   else if (str.starts_with("add")) {

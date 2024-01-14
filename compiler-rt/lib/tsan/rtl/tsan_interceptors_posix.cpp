@@ -2918,7 +2918,9 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_mutex_trylock);
   TSAN_INTERCEPT(pthread_mutex_timedlock);
   TSAN_INTERCEPT(pthread_mutex_unlock);
+#if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_mutex_clocklock);
+#endif
 #if SANITIZER_GLIBC
 #  if !__GLIBC_PREREQ(2, 34)
   TSAN_INTERCEPT(__pthread_mutex_lock);

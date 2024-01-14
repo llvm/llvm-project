@@ -2035,6 +2035,12 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                              attribute.getOpenmpDeviceVersion());
+
+  if (attribute.getNoGpuLib())
+    return success();
+
   ompBuilder->createGlobalFlag(
       attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
       "__omp_rtl_debug_kind");
@@ -2056,8 +2062,6 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
           .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
       ,
       "__omp_rtl_assume_no_nested_parallelism");
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
   return success();
 }
 
@@ -2572,14 +2576,16 @@ public:
   /// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
   /// calls, or operation amendments
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
 } // namespace
 
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
+    Operation *op, ArrayRef<llvm::Instruction *> instructions,
+    NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
              attribute.getName())

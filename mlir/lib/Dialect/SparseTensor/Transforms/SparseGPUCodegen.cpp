@@ -315,6 +315,9 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
   rewriter.eraseBlock(forOp.getBody());
   rewriter.cloneRegionBefore(forallOp.getRegion(), forOp.getRegion(),
                              forOp.getRegion().begin(), irMap);
+  // Replace the scf.reduce terminator.
+  rewriter.setInsertionPoint(forOp.getBody()->getTerminator());
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(forOp.getBody()->getTerminator());
 
   // Done.
   rewriter.setInsertionPointAfter(forOp);
@@ -441,6 +444,23 @@ static bool isAdmissibleBSR(SparseTensorType &aTp) {
     SmallVector<unsigned> dims = getBlockSize(aTp.getDimToLvl());
     assert(dims.size() == 2);
     return dims[0] == dims[1] && dims[0] > 1;
+  }
+  return false;
+}
+
+/// Test for 2:4 matrix with suitable metadata.
+static bool isAdmissible24(SparseTensorType &aTp) {
+  return aTp.getDimRank() == 2 && aTp.getLvlRank() == 3 && aTp.isDenseLvl(0) &&
+         aTp.isDenseLvl(1) && aTp.is2OutOf4Lvl(2) && isAdmissibleMetaData(aTp);
+}
+
+/// Test for conversion into 2:4 matrix.
+static bool isConversionInto24(Value v) {
+  if (auto cnv = v.getDefiningOp<ConvertOp>()) {
+    Value a = cnv.getResult();
+    Value d = cnv.getSource();
+    SparseTensorType aTp = getSparseTensorType(a);
+    return isDenseTensor(d) && isAdmissible24(aTp);
   }
   return false;
 }
@@ -922,6 +942,15 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   Value C = op.getOperand(2); // we have C = AB
   SmallVector<Value> tokens;
 
+  // The cuSparselt API currently only allows pruning and compression
+  // to occur on the device. So we recognize the pattern
+  //    A' = convert A  ; dense to 2:4
+  //    C  = A'B        ; 2:4 matrix mult
+  // and then perform compression and matrix multiplication on device.
+  auto cnv = A.getDefiningOp<ConvertOp>();
+  assert(cnv);
+  A = cnv.getSource();
+
   // All input should be dense tensors.
   if (!isDenseTensor(A) || !isDenseTensor(B) || !isDenseTensor(C))
     return failure();
@@ -1257,7 +1286,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
       if (!isDenseTensor(op.getOperand(0)) && !isDenseTensor(op.getOperand(1)))
         return rewriteSpGEMM(rewriter, op, enableRT);
-      if (op->getAttr("DENSE24"))
+      if (isConversionInto24(op.getOperand(0)))
         return rewrite2To4SpMM(rewriter, op);
       return rewriteSpMM(rewriter, op, enableRT);
     }

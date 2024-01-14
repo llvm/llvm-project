@@ -611,12 +611,19 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                    diag::err_verify_missing_start) << KindStr;
       continue;
     }
+    llvm::SmallString<8> CloseBrace("}}");
+    const char *const DelimBegin = PH.C;
     PH.Advance();
+    // Count the number of opening braces for `string` kinds
+    for (; !D.RegexKind && PH.Next("{"); PH.Advance())
+      CloseBrace += '}';
     const char* const ContentBegin = PH.C; // mark content begin
-    // Search for token: }}
-    if (!PH.SearchClosingBrace("{{", "}}")) {
-      Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
-                   diag::err_verify_missing_end) << KindStr;
+    // Search for closing brace
+    StringRef OpenBrace(DelimBegin, ContentBegin - DelimBegin);
+    if (!PH.SearchClosingBrace(OpenBrace, CloseBrace)) {
+      Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                   diag::err_verify_missing_end)
+          << KindStr << CloseBrace;
       continue;
     }
     const char* const ContentEnd = PH.P; // mark content end
@@ -1144,8 +1151,7 @@ std::unique_ptr<Directive> Directive::create(bool RegexKind,
   std::string RegexStr;
   StringRef S = Text;
   while (!S.empty()) {
-    if (S.starts_with("{{")) {
-      S = S.drop_front(2);
+    if (S.consume_front("{{")) {
       size_t RegexMatchLength = S.find("}}");
       assert(RegexMatchLength != StringRef::npos);
       // Append the regex, enclosed in parentheses.

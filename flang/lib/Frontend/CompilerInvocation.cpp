@@ -245,6 +245,23 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
+  // -mframe-pointer=none/non-leaf/all option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
+    std::optional<llvm::FramePointerKind> val =
+        llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
+            .Case("none", llvm::FramePointerKind::None)
+            .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("all", llvm::FramePointerKind::All)
+            .Default(std::nullopt);
+
+    if (!val.has_value()) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    } else
+      opts.setFramePointer(val.value());
+  }
+
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
@@ -918,6 +935,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+      if (args.hasArg(clang::driver::options::OPT_nogpulib))
+        res.getLangOpts().NoGPULib = 1;
     }
 
     switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {

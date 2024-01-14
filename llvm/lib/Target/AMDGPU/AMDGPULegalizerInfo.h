@@ -27,7 +27,6 @@ class MachineIRBuilder;
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
 }
-/// This class provides the information for the target register banks.
 class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
 
@@ -35,7 +34,8 @@ public:
   AMDGPULegalizerInfo(const GCNSubtarget &ST,
                       const GCNTargetMachine &TM);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   Register getSegmentAperture(unsigned AddrSpace,
                               MachineRegisterInfo &MRI,

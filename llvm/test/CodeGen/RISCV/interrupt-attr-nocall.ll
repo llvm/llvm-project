@@ -185,7 +185,7 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(f)
 ; CHECK-RV32-NEXT:    lw a1, %lo(f)(a1)
-; CHECK-RV32-NEXT:    call __addsf3@plt
+; CHECK-RV32-NEXT:    call __addsf3
 ; CHECK-RV32-NEXT:    lui a1, %hi(d)
 ; CHECK-RV32-NEXT:    sw a0, %lo(d)(a1)
 ; CHECK-RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
@@ -280,7 +280,7 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(f)
 ; CHECK-RV32-NEXT:    lw a1, %lo(f)(a1)
-; CHECK-RV32-NEXT:    call __addsf3@plt
+; CHECK-RV32-NEXT:    call __addsf3
 ; CHECK-RV32-NEXT:    lui a1, %hi(d)
 ; CHECK-RV32-NEXT:    sw a0, %lo(d)(a1)
 ; CHECK-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -387,7 +387,7 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32-NEXT:    lw a3, %lo(i+4)(a3)
-; CHECK-RV32-NEXT:    call __adddf3@plt
+; CHECK-RV32-NEXT:    call __adddf3
 ; CHECK-RV32-NEXT:    lui a2, %hi(g)
 ; CHECK-RV32-NEXT:    sw a1, %lo(g+4)(a2)
 ; CHECK-RV32-NEXT:    sw a0, %lo(g)(a2)
@@ -467,7 +467,7 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32IF-NEXT:    lw a3, %lo(i+4)(a3)
-; CHECK-RV32IF-NEXT:    call __adddf3@plt
+; CHECK-RV32IF-NEXT:    call __adddf3
 ; CHECK-RV32IF-NEXT:    lui a2, %hi(g)
 ; CHECK-RV32IF-NEXT:    sw a1, %lo(g+4)(a2)
 ; CHECK-RV32IF-NEXT:    sw a0, %lo(g)(a2)
@@ -578,7 +578,7 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32-NEXT:    lw a3, %lo(i+4)(a3)
-; CHECK-RV32-NEXT:    call __adddf3@plt
+; CHECK-RV32-NEXT:    call __adddf3
 ; CHECK-RV32-NEXT:    lui a2, %hi(g)
 ; CHECK-RV32-NEXT:    sw a1, %lo(g+4)(a2)
 ; CHECK-RV32-NEXT:    sw a0, %lo(g)(a2)
@@ -661,7 +661,7 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32IF-NEXT:    lw a3, %lo(i+4)(a3)
-; CHECK-RV32IF-NEXT:    call __adddf3@plt
+; CHECK-RV32IF-NEXT:    call __adddf3
 ; CHECK-RV32IF-NEXT:    lui a2, %hi(g)
 ; CHECK-RV32IF-NEXT:    sw a1, %lo(g+4)(a2)
 ; CHECK-RV32IF-NEXT:    sw a0, %lo(g)(a2)

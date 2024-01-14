@@ -23,7 +23,7 @@ bb:
   %tmp1 = zext i32 %tmp to i64
   %tmp2 = getelementptr inbounds <2 x half>, ptr addrspace(1) %arg, i64 %tmp1
   %tmp3 = load <2 x half>, ptr addrspace(1) %tmp2, align 4
-  %tmp4 = tail call <2 x half> @llvm.maxnum.v2f16(<2 x half> %tmp3, <2 x half> <half 0xH3C00, half 0xH0000>) 
+  %tmp4 = tail call <2 x half> @llvm.maxnum.v2f16(<2 x half> %tmp3, <2 x half> <half 0xH3C00, half 0xH0000>)
   store <2 x half> %tmp4, ptr addrspace(1) %tmp2, align 4
   ret void
 }
@@ -96,7 +96,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_41c8:
 ; GFX9:  s_mov_b32 [[C:s[0-9]+]], 0x41c80000
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}} op_sel:[1,0] op_sel_hi:[0,1]{{$}}
+; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c80000, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_41c8(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
