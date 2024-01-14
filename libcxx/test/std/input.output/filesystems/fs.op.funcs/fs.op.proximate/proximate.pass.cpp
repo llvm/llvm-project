@@ -70,9 +70,6 @@ static void basic_test() {
       {parent_cwd, "a", parent_cwd},
       {"a", cwd, "a"},
       {"a", parent_cwd, "a"},
-      {"/", "a", "/"},
-      {"/", "a/b", "/"},
-      {"/", "a/b/", "/"},
       {"a", "/", "a"},
       {"a/b", "/", "a/b"},
       {"a", "/net", "a"},
@@ -80,6 +77,9 @@ static void basic_test() {
       {"//foo/", "//foo", "//foo/"},
       {"//foo", "//foo/", "//foo"},
 #else
+      {"/", "a", "/"},
+      {"/", "a/b", "/"},
+      {"/", "a/b/", "/"},
       {"//foo/", "//foo", "."},
       {"//foo", "//foo/", "."},
 #endif
