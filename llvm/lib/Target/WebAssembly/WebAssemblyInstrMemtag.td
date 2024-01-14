@@ -160,6 +160,51 @@ defm MEMORY_HINTSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src
                     "memory.hintstorez1tag\t$tableidx",
                     0xfc30>;
 
+let hasSideEffects = 1 in
+defm MEMORY_ADDTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$addoffset, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_addtag (i32 imm:$tableidx), rc:$src, rc:$addoffset, rc:$index))],
+                    "memory.addtag\t$dst, $tableidx, $src, $addoffset, $index",
+                    "memory.addtag\t$tableidx",
+                    0xfc31>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_ADDSTORETAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addoffset, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_addstoretag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addoffset, rc:$index))],
+                    "memory.addstoretag\t$dst, $tableidx, $src, $b16, $addoffset, $index",
+                    "memory.addstoretag\t$tableidx",
+                    0xfc32>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_ADDSTOREZTAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addoffset, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_addstoreztag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addoffset, rc:$index))],
+                    "memory.addstoreztag\t$dst, $tableidx, $src, $b16, $addoffset, $index",
+                    "memory.addstoreztag\t$tableidx",
+                    0xfc33>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_ADDSTORE1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addoffset, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_addstore1tag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addoffset, rc:$index))],
+                    "memory.addstore1tag\t$dst, $tableidx, $src, $b16, $addoffset, $index",
+                    "memory.addstore1tag\t$tableidx",
+                    0xfc34>;
+
+let hasSideEffects = 1, mayStore = 1 in
+defm MEMORY_ADDSTOREZ1TAG_A#B: I<(outs rc:$dst), (ins i32imm:$tableidx, rc:$src, rc:$b16, rc:$addoffset, rc:$index),
+                    (outs), (ins i32imm:$tableidx),
+                    [(set rc:$dst,
+                        (int_wasm_memory_addstorez1tag (i32 imm:$tableidx), rc:$src, rc:$b16, rc:$addoffset, rc:$index))],
+                    "memory.addstorez1tag\t$dst, $tableidx, $src, $b16, $addoffset, $index",
+                    "memory.addstorez1tag\t$tableidx",
+                    0xfc35>;
+
 }
 
 defm : MemoryTaggingOps<I32, "32">;
