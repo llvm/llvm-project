@@ -345,6 +345,14 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
+add_header(
+  sys_queue
+  HDR
+    sys/queue.h
+  DEPENDS
+    .llvm-libc-macros.null_macro
+)
+
 add_gen_header(
   sys_random
   DEF_FILE sys/random.h.def
