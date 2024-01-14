@@ -44,7 +44,7 @@ define i32 @testRdpc() nounwind #0 {
 ; SPARC64-NEXT:    ld [%i0], %i0
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
-  %1 = load i32, i32* @value
+  %1 = load i32, ptr @value
   ret i32 %1
 }
 
