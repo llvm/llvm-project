@@ -324,12 +324,12 @@ QuasiPolynomial substituteMuInTerm(unsigned numParams, ParamPoint v,
 /// Step (1) We need to find a μ_i such that we can substitute x_i =
 /// (s+1)^μ_i. After this substitution, the exponent of (s+1) in the
 /// denominator is (μ_i • d_{ij}) in each term. Clearly, this cannot become
-/// zero. Thus we find a vector μ that is not orthogonal to any of the
+/// zero. Hence we find a vector μ that is not orthogonal to any of the
 /// d_{ij} and substitute x accordingly.
 ///
 /// Step (2) We need to express the terms in the function as quotients of
 /// polynomials. Each term is now of the form
-/// sign_i * (s+1)^n_i / (\prod_j (1 - (s+1)^d'_{ij}))
+/// sign_i * (s+1)^n'_i / (\prod_j (1 - (s+1)^d'_{ij}))
 /// For the i'th term, we first convert all the d'_{ij} to their
 /// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
 /// negative. We change the sign accordingly to keep the denominator in the
