@@ -54,10 +54,10 @@ __m512 testZMM0(void) {
   return zmm0;
 }
 
-extern int var;
+extern int var, arr[4];
 
 // CHECK-LABEL: test_Ws(
-// CHECK:         call void asm sideeffect "// ${0:p} ${1:p}", "^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr @test_Ws)
+// CHECK:         call void asm sideeffect "// ${0:p} ${1:p} ${2:p}", "^Ws,^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr getelementptr inbounds ([4 x i32], ptr @arr, i64 0, i64 3), ptr @test_Ws)
 void test_Ws(void) {
-  asm("// %p0 %p1" :: "Ws"(&var), "Ws"(test_Ws));
+  asm("// %p0 %p1 %p2" :: "Ws"(&var), "Ws"(&arr[3]), "Ws"(test_Ws));
 }

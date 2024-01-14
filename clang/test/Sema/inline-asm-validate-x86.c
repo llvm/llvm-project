@@ -131,6 +131,6 @@ void pr40890(void) {
 #endif
 }
 
-void test_W() {
+void test_W(int i) {
   asm("" : : "Wd"(test_W)); // expected-error{{invalid input constraint 'Wd' in asm}}
 }

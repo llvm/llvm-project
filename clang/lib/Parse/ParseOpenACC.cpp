@@ -87,10 +87,9 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
   if (!Tok.is(tok::identifier))
     return OpenACCClauseKind::Invalid;
 
-  // TODO: ERICH: add new clauses here.
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
-    .Case("attach",OpenACCClauseKind::Attach)
+      .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("copy", OpenACCClauseKind::Copy)
       .Case("default", OpenACCClauseKind::Default)

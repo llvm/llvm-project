@@ -3,16 +3,18 @@
 ; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
 
 @var = external dso_local global i32, align 4
+@a = external global [4 x i32], align 16
 
 define dso_local void @test() {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    # var test
+; CHECK-NEXT:    # var a+12 test
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  call void asm sideeffect "// ${0:p} ${1:p}", "^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr @test)
+  %ai = getelementptr inbounds [4 x i32], ptr @a, i64 0, i64 3
+  call void asm sideeffect "// ${0:p} ${1:p} ${2:p}", "^Ws,^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr %ai, ptr @test)
   ret void
 }
 

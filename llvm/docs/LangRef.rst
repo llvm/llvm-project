@@ -5336,7 +5336,8 @@ X86:
   operand in a SSE register. If AVX is also enabled, can also be a 256-bit
   vector operand in an AVX register. If AVX-512 is also enabled, can also be a
   512-bit vector operand in an AVX512 register. Otherwise, an error.
-- ``Ws``: A symbolic reference or label reference.
+- ``Ws``: A symbolic reference with an optional constant addend or a label
+  reference.
 - ``x``: The same as ``v``, except that when AVX-512 is enabled, the ``x`` code
   only allocates into the first 16 AVX-512 registers, while the ``v`` code
   allocates into any of the 32 AVX-512 registers.
