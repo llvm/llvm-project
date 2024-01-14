@@ -10,7 +10,13 @@
 
 #include <concepts>
 
+#include "test_macros.h"
+
 struct SomeObject {};
+
+enum Enum {};
+
+enum class ScopedEnum {};
 
 // Concept helpers for the internal type traits for the fundamental types.
 
@@ -39,6 +45,10 @@ static_assert(!std::__libcpp_unsigned_integer<__int128_t>);
 #endif
 // Non-integer
 static_assert(!std::__libcpp_unsigned_integer<bool>);
+static_assert(!std::__libcpp_unsigned_integer<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(!std::__libcpp_unsigned_integer<wchar_t>);
+#endif
 static_assert(!std::__libcpp_unsigned_integer<char8_t>);
 static_assert(!std::__libcpp_unsigned_integer<char16_t>);
 static_assert(!std::__libcpp_unsigned_integer<char32_t>);
@@ -46,7 +56,10 @@ static_assert(!std::__libcpp_unsigned_integer<float>);
 static_assert(!std::__libcpp_unsigned_integer<double>);
 static_assert(!std::__libcpp_unsigned_integer<long double>);
 static_assert(!std::__libcpp_unsigned_integer<void>);
+static_assert(!std::__libcpp_unsigned_integer<int*>);
 static_assert(!std::__libcpp_unsigned_integer<SomeObject>);
+static_assert(!std::__libcpp_unsigned_integer<Enum>);
+static_assert(!std::__libcpp_unsigned_integer<ScopedEnum>);
 
 // template <class _Tp>
 // concept __libcpp_signed_integer;
@@ -73,6 +86,10 @@ static_assert(std::__libcpp_signed_integer<__int128_t>);
 #endif
 // Non-integer
 static_assert(!std::__libcpp_signed_integer<bool>);
+static_assert(!std::__libcpp_signed_integer<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(!std::__libcpp_signed_integer<wchar_t>);
+#endif
 static_assert(!std::__libcpp_signed_integer<char8_t>);
 static_assert(!std::__libcpp_signed_integer<char16_t>);
 static_assert(!std::__libcpp_signed_integer<char32_t>);
@@ -80,7 +97,10 @@ static_assert(!std::__libcpp_signed_integer<float>);
 static_assert(!std::__libcpp_signed_integer<double>);
 static_assert(!std::__libcpp_signed_integer<long double>);
 static_assert(!std::__libcpp_signed_integer<void>);
+static_assert(!std::__libcpp_signed_integer<int*>);
 static_assert(!std::__libcpp_signed_integer<SomeObject>);
+static_assert(!std::__libcpp_signed_integer<Enum>);
+static_assert(!std::__libcpp_signed_integer<ScopedEnum>);
 
 // template <class _Tp>
 // concept __libcpp_integer;
@@ -107,6 +127,10 @@ static_assert(std::__libcpp_integer<__int128_t>);
 #endif
 // Non-integer
 static_assert(!std::__libcpp_integer<bool>);
+static_assert(!std::__libcpp_integer<char>);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert(!std::__libcpp_integer<wchar_t>);
+#endif
 static_assert(!std::__libcpp_integer<char8_t>);
 static_assert(!std::__libcpp_integer<char16_t>);
 static_assert(!std::__libcpp_integer<char32_t>);
@@ -114,4 +138,7 @@ static_assert(!std::__libcpp_integer<float>);
 static_assert(!std::__libcpp_integer<double>);
 static_assert(!std::__libcpp_integer<long double>);
 static_assert(!std::__libcpp_integer<void>);
+static_assert(!std::__libcpp_integer<int*>);
 static_assert(!std::__libcpp_integer<SomeObject>);
+static_assert(!std::__libcpp_integer<Enum>);
+static_assert(!std::__libcpp_integer<ScopedEnum>);
