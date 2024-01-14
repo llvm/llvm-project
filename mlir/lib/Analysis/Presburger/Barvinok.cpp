@@ -313,6 +313,9 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   return std::make_pair(num, dens);
 }
 
+/// Normalize all denominator exponents `dens` to their absolute values
+/// by multiplying and dividing by the inverses.
+/// Also, take the factors (-s) out of each term of the product.
 void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
                                    std::vector<Fraction> &dens) {
   // We track the number of exponents that are negative in the
@@ -370,41 +373,16 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
 /// 3. Find the constant term in the expansion of each term P(s)/Q(s). This is
 /// equivalent to substituting s = 0.
 ///
-/// Step (1) We need to find a μ_i such that we can substitute x_i =
-/// (s+1)^μ_i. After this substitution, the exponent of (s+1) in the
-/// denominator is (μ_i • d_{ij}) in each term. Clearly, this cannot become
-/// zero. Hence we find a vector μ that is not orthogonal to any of the
-/// d_{ij} and substitute x accordingly.
-///
-/// Step (2) We need to express the terms in the function as quotients of
-/// polynomials. Each term is now of the form
-/// sign_i * (s+1)^n'_i / (\prod_j (1 - (s+1)^d'_{ij}))
-/// For the i'th term, we first normalize the denominator to have only
-/// positive exponents. We convert all the d'_{ij} to their
-/// absolute values by multiplying and dividing by (s+1)^(-d'_{ij}) if it is
-/// negative. We change the sign accordingly to keep the denominator in the
-/// same form.
-/// Then, we replace each (1 - (s+1)^(d'_{ij})) with
-/// (-s)(\sum_{0 ≤ k < d'_{ij}} (s+1)^k).
-/// Thus the term overall has now the form
-/// sign'_i * (s+1)^n'_i / (s^r * \prod_j (\sum_k (s+1)^k)).
-/// This means that
-/// the numerator is a polynomial in s, with coefficients as
-/// quasipolynomials (given by binomial coefficients), and the denominator
-/// is polynomial in s, with fractional coefficients (given by taking the
-/// convolution over all j).
-///
-/// Step (3) We need to find the constant term in the expansion of each
-/// term. Since each term has s^r as a factor in the denominator, we avoid
-/// substituting s = 0 directly; instead, we find the coefficient of s^r in
-/// sign'_i * (s+1)^n'_i / (\prod_j (\sum_k (s+1)^k)),
-/// for which we use the `getCoefficientInRationalFunction()` function.
-///
 /// Verdoolaege, Sven, et al. "Counting integer points in parametric
 /// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
 /// 37-66.
 QuasiPolynomial
 mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
+  // Step (1) We need to find a μ such that we can substitute x_i =
+  // (s+1)^μ_i. After this substitution, the exponent of (s+1) in the
+  // denominator is (μ_i • d_{ij}) in each term. Clearly, this cannot become
+  // zero. Hence we find a vector μ that is not orthogonal to any of the
+  // d_{ij} and substitute x accordingly.
   std::vector<Point> allDenominators;
   for (ArrayRef<Point> den : gf.getDenominators())
     allDenominators.insert(allDenominators.end(), den.begin(), den.end());
@@ -417,22 +395,42 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   for (unsigned i = 0, e = ds.size(); i < e; ++i) {
     int sign = gf.getSigns()[i];
 
+    // Compute the new numerator and denominator after substituting μ.
     auto [numExp, dens] =
         substituteMuInTerm(numParams, gf.getNumerators()[i], ds[i], mu);
     // Now the numerator is (s+1)^numExp
     // and the denominator is \prod_j (1 - (s+1)^dens[j]).
 
+    // Step (2) We need to express the terms in the function as quotients of
+    // polynomials. Each term is now of the form
+    // sign_i * (s+1)^numExp / (\prod_j (1 - (s+1)^dens[j]))
+    // For the i'th term, we first normalize the denominator to have only
+    // positive exponents. We convert all the dens[j] to their
+    // absolute values by multiplying and dividing by (s+1)^(-dens[j]) if it is
+    // negative. We change the sign accordingly to keep the denominator in the
+    // same form.
+    // Then, we replace each (1 - (s+1)^(dens[j])) with
+    // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
     normalizeDenominatorExponents(sign, numExp, dens);
 
-    // Now the expression is
-    // (s+1)^num /
-    // (s^r * Π_(0 ≤ i < r) (Σ_{0 ≤ j ≤ dens[i]} (s+1)^j))
+    // Thus the term overall has now the form
+    // sign'_i * (s+1)^numExp /
+    // (s^r * \prod_j (\sum_{0 ≤ k < dens[j]} (s+1)^k)).
+    // This means that
+    // the numerator is a polynomial in s, with coefficients as
+    // quasipolynomials (given by binomial coefficients), and the denominator
+    // is polynomial in s, with fractional coefficients (given by taking the
+    // convolution over all j).
 
-    // Letting P(s) = (s+1)^num and Q(s) = Π_r (...),
-    // we need to find the coefficient of s^r in
-    // P(s)/Q(s).
-
+    // Step (3) We need to find the constant term in the expansion of each
+    // term. Since each term has s^r as a factor in the denominator, we avoid
+    // substituting s = 0 directly; instead, we find the coefficient of s^r in
+    // sign'_i * (s+1)^numExp / (\prod_j (\sum_k (s+1)^k)),
+    // Letting P(s) = (s+1)^numExp and Q(s) = \prod_j (...),
+    // we need to find the coefficient of s^r in P(s)/Q(s),
+    // for which we use the `getCoefficientInRationalFunction()` function.
     unsigned r = dens.size();
+
     // First, the coefficients of P(s), which are binomial coefficients.
     // We need r+1 of these.
     std::vector<QuasiPolynomial> numeratorCoefficients;
