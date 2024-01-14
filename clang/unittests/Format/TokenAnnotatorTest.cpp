@@ -2198,6 +2198,17 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("[{ code is multiline string }]");
   ASSERT_EQ(Tokens.size(), 2u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+  EXPECT_FALSE(Tokens[0]->IsMultiline);
+  // Case with multiple lines.
+  Tokens = Annotate("[{ It can break\n"
+                    "   across lines and the line breaks\n"
+                    "   are retained in \n"
+                    "   the string. }]");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+  EXPECT_EQ(Tokens[0]->ColumnWidth, sizeof("[{ It can break\n") - 1);
+  EXPECT_TRUE(Tokens[0]->IsMultiline);
+  EXPECT_EQ(Tokens[0]->LastLineColumnWidth, sizeof("   the string. }]") - 1);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {

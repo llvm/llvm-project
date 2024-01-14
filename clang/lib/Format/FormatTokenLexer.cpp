@@ -274,13 +274,13 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     }
   }
-  if (Style.isTableGen()) {
-    if (tryMergeTokens({tok::l_square, tok::l_brace},
-                       TT_TableGenMultiLineString)) {
-      // Multi line string starts with [{
-      Tokens.back()->Tok.setKind(tok::string_literal);
-      return;
-    }
+  // TableGen's Multi line string starts with [{
+  if (Style.isTableGen() && tryMergeTokens({tok::l_square, tok::l_brace},
+                                           TT_TableGenMultiLineString)) {
+    // This must never be annotated as other types.
+    Tokens.back()->setTypeIsFinalized();
+    Tokens.back()->Tok.setKind(tok::string_literal);
+    return;
   }
 }
 
@@ -778,45 +778,31 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   if (MultiLineString->isNot(TT_TableGenMultiLineString))
     return;
 
-  bool PrevIsRBrace = false;
-  const char *FirstBreak = nullptr;
-  const char *LastBreak = nullptr;
-  const char *Begin = MultiLineString->TokenText.begin();
-  // Skip until }], the closer of multi line string found.
-  for (const char *Current = Begin, *End = Lex->getBuffer().end();
-       Current != End; ++Current) {
-    if (PrevIsRBrace && *Current == ']') {
-      // }] is the end of multi line string.
-      if (!FirstBreak)
-        FirstBreak = Current;
-      MultiLineString->TokenText = StringRef(Begin, Current - Begin + 1);
-      // ColumnWidth is only the width of the first line.
-      MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
-          StringRef(Begin, FirstBreak - Begin + 1),
-          MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
-      if (LastBreak) {
-        // Set LastLineColumnWidth if multi line string has multiple lines.
-        MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
-            StringRef(LastBreak + 1, Current - LastBreak),
-            MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
-      }
-      resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Current + 1)));
-      return;
-    }
-    PrevIsRBrace = false;
-    if (*Current == '\n') {
-      MultiLineString->IsMultiline = true;
-      // Assure LastBreak is not equal to FirstBreak.
-      if (!FirstBreak)
-        FirstBreak = Current;
-      LastBreak = Current;
-      continue;
-    }
-    if (*Current == '}') {
-      // Memorize '}'. If next character is ']', they are the closer.
-      PrevIsRBrace = true;
-      continue;
-    }
+  auto OpenOffset = Lex->getCurrentBufferOffset() - 2 /* "[{" */;
+  // "}]" is the end of multi line string.
+  auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
+  if (CloseOffset == StringRef::npos)
+    return;
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  MultiLineString->TokenText = Text;
+  resetLexer(SourceMgr.getFileOffset(
+      Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
+  // Set ColumnWidth and LastLineColumnWidth.
+  auto FirstLineText = Text;
+  auto FirstBreak = Text.find('\n');
+  if (FirstBreak != StringRef::npos) {
+    MultiLineString->IsMultiline = true;
+    FirstLineText = Text.substr(0, FirstBreak + 1);
+  }
+  // ColumnWidth holds only the width of the first line.
+  MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+      FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+  auto LastBreak = Text.rfind('\n');
+  if (LastBreak != StringRef::npos) {
+    // Set LastLineColumnWidth if it has multiple lines.
+    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        Text.substr(LastBreak + 1, Text.size()),
+        MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
   }
 }
 
