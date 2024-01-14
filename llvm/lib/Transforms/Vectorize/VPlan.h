@@ -1945,6 +1945,36 @@ public:
   }
 };
 
+/// VPUniformPerUFRecipe represents an instruction with Opcode that is uniform
+/// per UF, i.e. it generates a single scalar instance per UF.
+/// TODO: at the moment, only Cast opcodes are supported, extend to support
+///       missing opcodes to replace uniform part of VPReplicateRecipe.
+class VPUniformPerUFRecipe : public VPRecipeBase, public VPValue {
+  unsigned Opcode;
+
+  /// Result type for the cast.
+  Type *ResultTy;
+
+  Value *generate(VPTransformState &State, unsigned Part);
+
+public:
+  VPUniformPerUFRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
+      : VPRecipeBase(VPDef::VPUniformPerUFSC, {Op}), VPValue(this),
+        Opcode(Opcode), ResultTy(ResultTy) {}
+
+  ~VPUniformPerUFRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe for generating conditional branches on the bits of a mask.
 class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:

@@ -362,6 +362,7 @@ public:
     // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
     VPPredInstPHISC,
+    VPUniformPerUFSC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,

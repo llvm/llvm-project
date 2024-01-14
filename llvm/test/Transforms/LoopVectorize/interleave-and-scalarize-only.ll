@@ -184,6 +184,7 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   UNIFORM-PER-UF vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
@@ -191,7 +192,7 @@ exit:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[CAST]]>
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>

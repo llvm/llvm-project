@@ -164,6 +164,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     auto *R = cast<VPReplicateRecipe>(this);
     return R->getUnderlyingInstr()->mayHaveSideEffects();
   }
+  case VPUniformPerUFSC:
+    return false;
   default:
     return true;
   }
@@ -1117,13 +1119,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   // Ensure step has the same type as that of scalar IV.
   Type *BaseIVTy = BaseIV->getType()->getScalarType();
-  if (BaseIVTy != Step->getType()) {
-    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
-    // avoid separate truncate here.
-    assert(Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    Step = State.Builder.CreateTrunc(Step, BaseIVTy);
-  }
+  assert(BaseIVTy == Step->getType());
 
   // We build scalar steps for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1466,6 +1462,45 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 
   if (shouldPack())
     O << " (S->V)";
+}
+#endif
+
+Value *VPUniformPerUFRecipe ::generate(VPTransformState &State, unsigned Part) {
+  switch (Opcode) {
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::Trunc: {
+    Value *Op = State.get(getOperand(0), VPIteration(Part, 0));
+    return State.Builder.CreateCast(Instruction::CastOps(Opcode), Op, ResultTy);
+  }
+  default:
+    llvm_unreachable("opcode not implemented yet");
+  }
+}
+
+void VPUniformPerUFRecipe ::execute(VPTransformState &State) {
+  bool UniformAcrossUFs = all_of(operands(), [](VPValue *Op) {
+    return Op->isDefinedOutsideVectorRegions();
+  });
+  for (unsigned Part = 0; Part != State.UF; ++Part) {
+    Value *Res;
+    // Only generate a single instance, if the recipe is uniform across all UFs.
+    if (Part > 0 && UniformAcrossUFs)
+      Res = State.get(this, VPIteration(0, 0));
+    else
+      Res = generate(State, Part);
+    State.set(this, Res, VPIteration(Part, 0));
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPUniformPerUFRecipe ::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "UNIFORM-PER-UF ";
+  printAsOperand(O, SlotTracker);
+  O << " = " << Instruction::getOpcodeName(Opcode) << " ";
+  printOperands(O, SlotTracker);
+  O << " to " << *ResultTy;
 }
 #endif
 

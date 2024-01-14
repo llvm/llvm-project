@@ -505,6 +505,15 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
     HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
   }
 
+  VPTypeAnalysis TypeInfo(SE.getContext());
+  if (TypeInfo.inferScalarType(BaseIV) != TypeInfo.inferScalarType(Step)) {
+    Step = new VPUniformPerUFRecipe(Instruction::Trunc, Step,
+                                    TypeInfo.inferScalarType(BaseIV));
+    auto *VecPreheader =
+        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
+    VecPreheader->appendRecipe(Step->getDefiningRecipe());
+  }
+
   VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
   HeaderVPBB->insert(Steps, IP);
   return Steps;
