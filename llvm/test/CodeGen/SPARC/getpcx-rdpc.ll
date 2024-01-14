@@ -10,14 +10,10 @@
 
 @value = external global i32
 
-define i32 @testRdpc() #0 {
+define i32 @testRdpc() nounwind #0 {
 ; SPARC-LABEL: testRdpc:
-; SPARC:         .cfi_startproc
-; SPARC-NEXT:  ! %bb.0:
+; SPARC:       ! %bb.0:
 ; SPARC-NEXT:    save %sp, -96, %sp
-; SPARC-NEXT:    .cfi_def_cfa_register %fp
-; SPARC-NEXT:    .cfi_window_save
-; SPARC-NEXT:    .cfi_register %o7, %i7
 ; SPARC-NEXT:  .Ltmp0:
 ; SPARC-NEXT:    call .Ltmp1
 ; SPARC-NEXT:  .Ltmp2:
@@ -33,12 +29,8 @@ define i32 @testRdpc() #0 {
 ; SPARC-NEXT:    restore
 ;
 ; SPARC64-LABEL: testRdpc:
-; SPARC64:         .cfi_startproc
-; SPARC64-NEXT:  ! %bb.0:
+; SPARC64:       ! %bb.0:
 ; SPARC64-NEXT:    save %sp, -128, %sp
-; SPARC64-NEXT:    .cfi_def_cfa_register %fp
-; SPARC64-NEXT:    .cfi_window_save
-; SPARC64-NEXT:    .cfi_register %o7, %i7
 ; SPARC64-NEXT:  .Ltmp0:
 ; SPARC64-NEXT:    rd %pc, %o7
 ; SPARC64-NEXT:  .Ltmp2:
