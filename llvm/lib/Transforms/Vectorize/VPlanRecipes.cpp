@@ -452,8 +452,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
         else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
           TrackingVH<Value> ReductionStartValue =
               RdxDesc.getRecurrenceStartValue();
-          ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
-                                         ReducedPartRdx, RdxPart);
+          ReducedPartRdx = Builder.CreateOr(ReducedPartRdx, RdxPart);
         } else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
@@ -461,7 +460,9 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if (State.VF.isVector() && !PhiR->isInLoop()) {
+    if ((State.VF.isVector() ||
+         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
+        !PhiR->isInLoop()) {
       ReducedPartRdx =
           createTargetReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
       // If the reduction can be performed in a smaller type, we need to extend
