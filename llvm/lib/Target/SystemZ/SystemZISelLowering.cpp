@@ -6046,8 +6046,7 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
   SDLoc DL(Op);
   MVT ResultVT = Op.getSimpleValueType();
   SDValue Arg = Op.getOperand(0);
-  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
-  unsigned Check = CNode->getZExtValue();
+  unsigned Check = Op.getConstantOperandVal(1);
 
   unsigned TDCMask = 0;
   if (Check & fcSNan)
