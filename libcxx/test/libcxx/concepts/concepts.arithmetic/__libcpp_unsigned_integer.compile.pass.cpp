@@ -57,6 +57,7 @@ static_assert(!std::__libcpp_unsigned_integer<double>);
 static_assert(!std::__libcpp_unsigned_integer<long double>);
 static_assert(!std::__libcpp_unsigned_integer<void>);
 static_assert(!std::__libcpp_unsigned_integer<int*>);
+static_assert(!std::__libcpp_unsigned_integer<unsigned int*>);
 static_assert(!std::__libcpp_unsigned_integer<SomeObject>);
 static_assert(!std::__libcpp_unsigned_integer<SomeEnum>);
 static_assert(!std::__libcpp_unsigned_integer<SomeScopedEnum>);

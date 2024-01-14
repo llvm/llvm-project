@@ -57,6 +57,7 @@ static_assert(!std::__libcpp_signed_integer<double>);
 static_assert(!std::__libcpp_signed_integer<long double>);
 static_assert(!std::__libcpp_signed_integer<void>);
 static_assert(!std::__libcpp_signed_integer<int*>);
+static_assert(!std::__libcpp_signed_integer<unsigned int*>);
 static_assert(!std::__libcpp_signed_integer<SomeObject>);
 static_assert(!std::__libcpp_signed_integer<SomeEnum>);
 static_assert(!std::__libcpp_signed_integer<SomeScopedEnum>);
