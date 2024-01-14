@@ -260,6 +260,10 @@ Changes in existing checks
   casting during type conversions at variable initialization, now with improved
   compatibility for C++17 and later versions.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check by extending the default
+  check function names to include ``iter_swap`` and ``iter_move``.
+
 - Improved :doc:`bugprone-implicit-widening-of-multiplication-result
   <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
   to correctly emit fixes.
@@ -445,7 +449,8 @@ Changes in existing checks
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature and better handling of condition
-  noexcept expressions, eliminating false-positives.
+  noexcept expressions, eliminating false-positives. ``iter_swap`` function name
+  is checked by default.
 
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
