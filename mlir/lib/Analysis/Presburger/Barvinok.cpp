@@ -271,6 +271,9 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
 /// of the result, and
 /// a vector which represents the exponents of the denominator of the
 /// result.
+/// v represents the affine functions whose floors are multiplied by
+/// by the generators, and
+/// ds represents the list of generators.
 std::pair<QuasiPolynomial, std::vector<Fraction>>
 substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
                    Point mu) {
@@ -302,12 +305,13 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   dens.reserve(ds.size());
   // Similarly, each term in the denominator has exponent
   // given by the dot product of μ with u_i.
-  for (const Point &d : ds)
+  for (const Point &d : ds) {
+    // This term in the denominator is
+    // (1 - (s+1)^dens.back())
     dens.push_back(dotProduct(d, mu));
-  // This term in the denominator is
-  // (1 - (s+1)^dens.back())
+  }
 
-  return std::make_pair(num, dens);
+  return {num, dens};
 }
 
 /// Normalize all denominator exponents `dens` to their absolute values
