@@ -49,6 +49,7 @@ class DataLayout;
 class StringRef;
 class Type;
 class Value;
+class UnreachableInst;
 
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
@@ -3503,6 +3504,10 @@ public:
 
   BasicBlock *getDefaultDest() const {
     return cast<BasicBlock>(getOperand(1));
+  }
+
+  bool defaultDestIsUnreachable() const {
+    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {

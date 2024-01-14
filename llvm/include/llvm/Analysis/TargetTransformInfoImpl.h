@@ -65,8 +65,7 @@ public:
     (void)PSI;
     (void)BFI;
     JTSize = 0;
-    bool HasDefault =
-        !isa<UnreachableInst>(SI.getDefaultDest()->getFirstNonPHIOrDbg());
+    bool HasDefault = !SI.defaultDestIsUnreachable();
     return SI.getNumCases() + HasDefault;
   }
 
