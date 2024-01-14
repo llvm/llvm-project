@@ -488,8 +488,8 @@ Changes in existing checks
   false-positives in initializer list of record.
 
 - Improved :doc:`readability-redundant-member-init
-  <clang-tidy/checks/readability/redundant-member-init>` check to support
-  in-class initializers.
+  <clang-tidy/checks/readability/redundant-member-init>` check to now also
+  detect redundant in-class initializers.
 
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending
