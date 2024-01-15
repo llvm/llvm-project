@@ -16,8 +16,37 @@
 #include <cstddef>
 #include <initializer_list>
 #include <span>
+#include <type_traits>
 
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// SFINAE
+
+template <typename T>
+concept ConstElementType = std::is_const_v<typename T::element_type>;
+
+static_assert(ConstElementType<std::span<const int>>);
+static_assert(!ConstElementType<std::span<int>>);
+static_assert(ConstElementType<std::span<const int, 94>>);
+static_assert(!ConstElementType<std::span<int, 94>>);
+
+// template <typename T, typename I>
+// concept HasInitializerListCtr = requires(I il) { std::span<T>{il}; };
+
+// static_assert(HasInitializerListCtr<const int, std::initializer_list<const int>>);
+// static_assert(!HasInitializerListCtr<int, std::initializer_list<int>>);
+
+template <typename I, typename T, std::size_t... N>
+concept HasInitializerListCtr = requires(I il) { std::span<T, N...>{il}; };
+
+static_assert(HasInitializerListCtr<std::initializer_list<const int>, const int>);
+static_assert(!HasInitializerListCtr<std::initializer_list<int>, int>);
+static_assert(HasInitializerListCtr<std::initializer_list<const int>, const int, 94>);
+static_assert(!HasInitializerListCtr<std::initializer_list<int>, int, 94>);
+
+#endif
 
 struct Sink {
   constexpr Sink() = default;
