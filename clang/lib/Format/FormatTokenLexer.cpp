@@ -787,23 +787,21 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
-  // Set ColumnWidth and LastLineColumnWidth.
   auto FirstLineText = Text;
   auto FirstBreak = Text.find('\n');
+  // Set ColumnWidth and LastLineColumnWidth when it has multiple lines.
   if (FirstBreak != StringRef::npos) {
     MultiLineString->IsMultiline = true;
     FirstLineText = Text.substr(0, FirstBreak + 1);
+    // LastLineColumnWidth holds the width of the last line.
+    auto LastBreak = Text.rfind('\n');
+    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        Text.substr(LastBreak + 1), MultiLineString->OriginalColumn,
+        Style.TabWidth, Encoding);
   }
   // ColumnWidth holds only the width of the first line.
   MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
       FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
-  auto LastBreak = Text.rfind('\n');
-  if (LastBreak != StringRef::npos) {
-    // Set LastLineColumnWidth if it has multiple lines.
-    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
-        Text.substr(LastBreak + 1, Text.size()),
-        MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
-  }
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
