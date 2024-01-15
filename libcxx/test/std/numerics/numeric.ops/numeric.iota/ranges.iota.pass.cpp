@@ -153,9 +153,10 @@ constexpr void test_DangerousCopyAssign() {
 }
 
 void test_results() {
-  types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter> { test_results< Iter>(); });
+  types::for_each(types::cpp17_input_iterator_list<int*>{}, []<class Iter> { test_results< Iter>(); });
   test_results<cpp17_output_iterator<int*>>();
   test_results<cpp20_output_iterator<int*>>();
+  test_results<int*, sized_sentinel<int*>>();
   test_DangerousCopyAssign();
 }
 

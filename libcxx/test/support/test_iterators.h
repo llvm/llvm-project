@@ -650,7 +650,6 @@ public:
     constexpr decltype(auto) operator*() const { return *it_; }
     constexpr cpp20_input_iterator& operator++() { ++it_; return *this; }
     constexpr void operator++(int) { ++it_; }
-    constexpr cpp20_input_iterator operator++(int) requires(std::incrementable<It>) { auto tmp = *this; ++it_; return tmp;}
 
     friend constexpr It base(const cpp20_input_iterator& i) { return i.it_; }
 
@@ -1169,7 +1168,8 @@ struct Proxy : ProxyDiffTBase<T> {
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy& lhs, const Proxy& rhs)
-    requires(std::equality_comparable<T> && !std::is_reference_v<T>) = default;
+    requires(std::equality_comparable<T> && !std::is_reference_v<T>)
+  = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
   // when `T` is a reference type.
@@ -1180,7 +1180,8 @@ struct Proxy : ProxyDiffTBase<T> {
   }
 
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy& rhs)
-    requires(std::three_way_comparable<T> && !std::is_reference_v<T>) = default;
+    requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
+  = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
   // `T` is a reference type.
