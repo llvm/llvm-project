@@ -274,8 +274,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
             allOf(anyOf(hasCastKind(CK_NullToPointer),
                         hasCastKind(CK_NullToMemberPointer)),
                   hasSourceExpression(cxxBoolLiteral()))),
-      hasSourceExpression(expr(hasType(booleanType()))),
-      unless(ExceptionCases));
+      hasSourceExpression(expr(hasType(booleanType()))));
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
@@ -315,7 +314,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       traverse(
           TK_AsIs,
           implicitCastExpr(
-              ImplicitCastFromBool,
+              ImplicitCastFromBool, unless(ExceptionCases),
               // Exclude comparisons of bools, as they are always cast to
               // integers in such context:
               //   bool_expr_a == bool_expr_b
