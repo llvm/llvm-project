@@ -3207,7 +3207,6 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
 
   // Handle optional TRIM_NAME argument
   mlir::Value trim;
-  llvm::outs() << isStaticallyPresent(trimName) << "\n";
   if (isStaticallyAbsent(trimName)) {
     trim = builder.createBool(loc, true);
   } else {
