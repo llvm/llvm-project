@@ -23,7 +23,7 @@ int new_handler_called = 0;
 
 void my_new_handler() {
   ++new_handler_called;
-  throw my_bad_alloc(construction_key{});
+  throw my_bad_alloc(construction_key());
 }
 
 int main(int, char**) {
