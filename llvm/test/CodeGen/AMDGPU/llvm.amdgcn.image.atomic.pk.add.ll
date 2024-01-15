@@ -27,34 +27,23 @@ main_body:
   ret float %out0
 }
 
-define amdgpu_ps float @atomic_pk_add_bf16_1d_v2(<8 x i32> inreg %rsrc, <2 x i16> %data, i32 %s) {
+define amdgpu_ps float @atomic_pk_add_bf16_1d_v2(<8 x i32> inreg %rsrc, <2 x bfloat> %data, i32 %s) {
 ; GFX12-LABEL: atomic_pk_add_bf16_1d_v2:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    image_atomic_pk_add_bf16 v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    flat_store_b32 v[1:2], v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
-  %out = call <2 x i16> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v2i16.v2i16(<2 x i16> %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  %out_i32 = bitcast <2 x i16> %out to i32
-  %out_float = bitcast i32 %out_i32 to float
-  ret float %out_float
-}
-
-define amdgpu_ps float @atomic_pk_add_bf16_1d_v4(<8 x i32> inreg %rsrc, <4 x i16> %data, i32 %s) {
-; GFX12-LABEL: atomic_pk_add_bf16_1d_v4:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_atomic_pk_add_bf16 v[0:1], v2, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    ; return to shader part epilog
-main_body:
-  %out = call <4 x i16> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v4i16.v4i16(<4 x i16> %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
-  %out_v2i32 = bitcast <4 x i16> %out to <2 x i32>
-  %out0 = extractelement <2 x i32> %out_v2i32, i32 0
-  %out_float = bitcast i32 %out0 to float
-  ret float %out_float
+  %out = call <2 x bfloat> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v2bf16.v2bf16(<2 x bfloat> %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  store <2 x bfloat> %out, ptr null
+  ret float 1.0
 }
 
 declare <2 x half> @llvm.amdgcn.image.atomic.pk.add.f16.1d.v2f16.v2f16(<2 x half>, i32, <8 x i32>, i32, i32)
 declare <4 x half> @llvm.amdgcn.image.atomic.pk.add.f16.1d.v4f16.v4f16(<4 x half>, i32, <8 x i32>, i32, i32)
-declare <2 x i16> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v2i16.v2i16(<2 x i16>, i32, <8 x i32>, i32, i32)
-declare <4 x i16> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v4i16.v4i16(<4 x i16>, i32, <8 x i32>, i32, i32)
+declare <2 x bfloat> @llvm.amdgcn.image.atomic.pk.add.bf16.1d.v2bf16.v2bf16(<2 x bfloat>, i32, <8 x i32>, i32, i32)

@@ -1246,7 +1246,7 @@ defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
 let SubtargetPredicate = isGFX12Plus in {
 let FPAtomic = 1 in
 defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_pk_add_bf16", VGPR_32, v2i16
+  "buffer_atomic_pk_add_bf16", VGPR_32, v2bf16
 >;
 }
 
@@ -1714,7 +1714,7 @@ let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2i16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
