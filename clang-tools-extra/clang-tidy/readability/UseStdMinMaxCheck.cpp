@@ -17,6 +17,16 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()),AlgotithmHeader(Options.get("AlgorithmHeader","<algorithm>")) {}
+
+void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+}
+
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       ifStmt(
@@ -31,6 +41,12 @@ void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+void UseStdMinMaxCheck::registerPPCallbacks(const SourceManager &SM,
+                                            Preprocessor *PP,
+                                            Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
+}
+
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *lhsVar1 = Result.Nodes.getNodeAs<Expr>("lhsVar1");
   const auto *rhsVar1 = Result.Nodes.getNodeAs<Expr>("rhsVar1");
@@ -38,6 +54,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *rhsVar2 = Result.Nodes.getNodeAs<Expr>("rhsVar2");
   const auto *ifStmt = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   auto &Context = *Result.Context;
+  const SourceManager &Source = Context.getSourceManager();
 
   if (!lhsVar1 || !rhsVar1 || !lhsVar2 || !rhsVar2 || !ifStmt)
     return;
@@ -70,16 +87,17 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   if (binaryOp->getOpcode() == BO_LT || binaryOp->getOpcode() == BO_LE) {
     if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2, Context) &&
         tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2, Context)) {
+          
       diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")
           << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          std::move(replacementMax));
+                                          std::move(replacementMax))<<IncludeInserter.createIncludeInsertion(Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
     } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
                tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
       diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")
           << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          std::move(replacementMin));
+                                          std::move(replacementMin))<<IncludeInserter.createIncludeInsertion(Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
     }
   } else if (binaryOp->getOpcode() == BO_GT || binaryOp->getOpcode() == BO_GE) {
     if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2, Context) &&
@@ -87,13 +105,13 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")
           << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          std::move(replacementMin));
+                                          std::move(replacementMin))<<IncludeInserter.createIncludeInsertion(Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
     } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
                tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
       diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")
           << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          std::move(replacementMax));
+                                          std::move(replacementMax))<<IncludeInserter.createIncludeInsertion(Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
     }
   }
 }
