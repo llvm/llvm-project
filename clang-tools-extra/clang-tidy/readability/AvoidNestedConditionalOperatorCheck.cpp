@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidNestedConditionalOperatorCheck.h"
-#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -15,12 +14,6 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-
-namespace {
-constexpr const char *Description = "don't use nested conditional operator";
-constexpr const char *OutSideConditionalOperatorNote =
-    "outside conditional operator here";
-} // namespace
 
 void AvoidNestedConditionalOperatorCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -49,8 +42,11 @@ void AvoidNestedConditionalOperatorCheck::check(
   if (CO->getBeginLoc().isMacroID() || NCO->getBeginLoc().isMacroID())
     return;
 
-  diag(NCO->getBeginLoc(), Description);
-  diag(CO->getBeginLoc(), OutSideConditionalOperatorNote, DiagnosticIDs::Note);
+  diag(NCO->getBeginLoc(),
+       "conditional operator is used as sub-expression of parent conditional "
+       "operator, refrain from using nested conditional operators");
+  diag(CO->getBeginLoc(), "parent conditional operator here",
+       DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::readability

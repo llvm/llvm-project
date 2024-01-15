@@ -1,4 +1,4 @@
-//===--- AvoidNestedConditionalOperatorCheck.h - clang-tidy --*- C++ -*-===//
+//===--- AvoidNestedConditionalOperatorCheck.h - clang-tidy -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDNestedConditionalOperatorCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDNestedConditionalOperatorCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOID_NESTED_CONDITIONAL_OPERATOR_CHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOID_NESTED_CONDITIONAL_OPERATOR_CHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::readability {
 
-/// Finds nested conditional operator.
+/// Identifies instances of nested conditional operators in the code.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-nested-conditional-operator.html
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOIDNestedConditionalOperatorCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_AVOID_NESTED_CONDITIONAL_OPERATOR_CHECK_H
