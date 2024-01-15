@@ -855,7 +855,7 @@ define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @cospi_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN2v_cospif(<4 x float> [[WIDE_LOAD:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_cospif(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @cospi_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -928,7 +928,7 @@ define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erf_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN2v_erff(<4 x float> [[WIDE_LOAD:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_erff(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erf_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1001,7 +1001,7 @@ define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erfc_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN2v_erfcf(<4 x float> [[WIDE_LOAD:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_erfcf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erfc_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {

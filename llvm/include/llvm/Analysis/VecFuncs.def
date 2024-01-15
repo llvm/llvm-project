@@ -590,11 +590,11 @@ TLI_DEFINE_VECFUNC("llvm.cos.f32", "_ZGVnN4v_cosf", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC("coshf", "_ZGVnN4v_coshf", FIXED(4), "_ZGV_LLVM_N4v")
 
-TLI_DEFINE_VECFUNC("cospif", "_ZGVnN2v_cospif", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cospif", "_ZGVnN4v_cospif", FIXED(4), "_ZGV_LLVM_N4v")
 
-TLI_DEFINE_VECFUNC("erff", "_ZGVnN2v_erff", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erff", "_ZGVnN4v_erff", FIXED(4), "_ZGV_LLVM_N4v")
 
-TLI_DEFINE_VECFUNC("erfcf", "_ZGVnN2v_erfcf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erfcf", "_ZGVnN4v_erfcf", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC("expf", "_ZGVnN4v_expf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.exp.f32", "_ZGVnN4v_expf", FIXED(4), "_ZGV_LLVM_N4v")
