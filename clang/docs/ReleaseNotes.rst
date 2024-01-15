@@ -937,6 +937,9 @@ Bug Fixes to AST Handling
 - Fixed a bug where Template Instantiation failed to handle Lambda Expressions
   with certain types of Attributes.
   (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
+- Fixed a bug where the parenthesized initialization of arrays in a new
+  expression were rejected even in C++20 mode.
+  (`#78183 <https://github.com/llvm/llvm-project/issues/78183>`_)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

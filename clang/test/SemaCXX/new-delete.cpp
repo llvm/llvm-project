@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null %std_cxx17-
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,until-cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,until-cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,until-cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,until-cxx20,cxx17 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
 
 // FIXME Location is (frontend)
 // cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
@@ -340,23 +341,23 @@ namespace PR5918 { // Look for template operator new overloads.
 namespace Test1 {
 
 void f() {
-  (void)new int[10](1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new int[10](1, 2); // until-cxx20-error {{array initializer must be an initializer list}}
 
   typedef int T[10];
-  (void)new T(1, 2); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T(1, 2); // until-cxx20-error {{array initializer must be an initializer list}}
 }
 
 template<typename T>
 void g(unsigned i) {
-  (void)new T[1](i); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T[1](i);
 }
 
 template<typename T>
 void h(unsigned i) {
-  (void)new T(i); // expected-error {{array 'new' cannot have initialization arguments}}
+  (void)new T(i); // until-cxx20-error {{array initializer must be an initializer list}}
 }
 template void h<unsigned>(unsigned);
-template void h<unsigned[10]>(unsigned); // expected-note {{in instantiation of function template specialization 'Test1::h<unsigned int[10]>' requested here}}
+template void h<unsigned[10]>(unsigned); // until-cxx20-note {{in instantiation of function template specialization 'Test1::h<unsigned int[10]>' requested here}}
 
 }
 
@@ -556,7 +557,7 @@ namespace P12023 {
 
   int main()
   {
-    CopyCounter* f = new CopyCounter[10](CopyCounter()); // expected-error {{cannot have initialization arguments}}
+    CopyCounter* f = new CopyCounter[10](CopyCounter()); // until-cxx20-error {{array initializer must be an initializer list}}
       return 0;
   }
 }

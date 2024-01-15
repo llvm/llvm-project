@@ -7776,8 +7776,6 @@ def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
 def err_new_array_size_unknown_from_init : Error<
   "cannot determine allocated array size from initializer">;
-def err_new_array_init_args : Error<
-  "array 'new' cannot have initialization arguments">;
 def ext_new_paren_array_nonconst : ExtWarn<
   "when type is in parentheses, array cannot have dynamic size">;
 def err_placement_new_non_placement_delete : Error<
