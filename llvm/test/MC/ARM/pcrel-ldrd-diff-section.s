@@ -15,6 +15,10 @@
 bar:
     ldrd r0, r1, foo1    @ arm_pcrel_10_unscaled
     ldrd r0, r1, foo2-8  @ arm_pcrel_10_unscaled
+.ifdef ERR
+  @ ERR:[[#@LINE-3]]:5: error: unsupported relocation type
+  @ ERR:[[#@LINE-3]]:5: error: unsupported relocation type
+.endif
     bx lr
 
     .section .data.foo, "a", %progbits
@@ -25,11 +29,6 @@ foo1:
     .word 0x11223344, 0x55667788
 foo2:
     .word 0x99aabbcc, 0xddeeff00
-
-.ifdef ERR
-  @ ERR:[[#@LINE-14]]:5: error: unsupported relocation type
-  @ ERR:[[#@LINE-14]]:5: error: unsupported relocation type
-.endif
 
 @ ARM: R_ARM_LDRS_PC_G0
 
