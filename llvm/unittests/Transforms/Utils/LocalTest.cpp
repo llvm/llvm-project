@@ -1269,18 +1269,31 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_NE(Expr, nullptr);
   EXPECT_EQ(Expr->getElement(1), 5678U);
 
-  // Others.
+  // FP128.
   Type *FP128Ty = Type::getFP128Ty(Context);
-  Expr = createExpression(ConstantFP::get(FP128Ty, 32), FP128Ty);
-  EXPECT_EQ(Expr, nullptr);
+  Expr = createExpression(
+      ConstantFP::get(FP128Ty, APFloat(APFloat::IEEEquad(), APInt(128, 12345))),
+      FP128Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 12345U);
 
+  // X86_FP80.
   Type *X86_FP80Ty = Type::getX86_FP80Ty(Context);
-  Expr = createExpression(ConstantFP::get(X86_FP80Ty, 32), X86_FP80Ty);
-  EXPECT_EQ(Expr, nullptr);
+  Expr = createExpression(
+      ConstantFP::get(X86_FP80Ty,
+                      APFloat(APFloat::x87DoubleExtended(), APInt(80, 67890))),
+      X86_FP80Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 67890U);
 
+  // PPC_FP128.
   Type *PPC_FP128Ty = Type::getPPC_FP128Ty(Context);
-  Expr = createExpression(ConstantFP::get(PPC_FP128Ty, 32), PPC_FP128Ty);
-  EXPECT_EQ(Expr, nullptr);
+  Expr = createExpression(
+      ConstantFP::get(PPC_FP128Ty,
+                      APFloat(APFloat::PPCDoubleDouble(), APInt(80, 123890))),
+      PPC_FP128Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 123890U);
 }
 
 TEST(Local, ReplaceDPValue) {

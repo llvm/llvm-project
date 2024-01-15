@@ -62,6 +62,13 @@
 ; CHECK-DAG: ![[DBGB:[0-9]+]] = distinct !DIGlobalVariable(name: "g_ptr_undef"
 ; CHECK-DAG: ![[GB:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBGB]], expr: !DIExpression())
 
+; CHECK: ![[G10:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG10:[0-9]+]], expr: !DIExpression(DW_OP_constu, 17293822569102704640, DW_OP_stack_value))
+; CHECK-DAG: ![[DBG10]] = distinct !DIGlobalVariable(name: "g_1010", {{.*}}
+; CHECK: ![[G11:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG11:[0-9]+]], expr: !DIExpression(DW_OP_constu, 17293822569102704640, DW_OP_stack_value))
+; CHECK-DAG: ![[DBG11]] = distinct !DIGlobalVariable(name: "g_1111", {{.*}}
+; CHECK: ![[G12:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG12:[0-9]+]], expr: !DIExpression(DW_OP_constu, 14480694097861998592, DW_OP_stack_value))
+; CHECK-DAG: ![[DBG12]] = distinct !DIGlobalVariable(name: "g_1212", {{.*}}
+
 @g_1 = dso_local global i32 -4, align 4, !dbg !0
 @g_2 = dso_local global float 0x4011C28F60000000, align 4, !dbg !8
 @g_3 = dso_local global i8 97, align 1, !dbg !10
@@ -71,6 +78,9 @@
 @g_7 = dso_local global ptr null, align 8, !dbg !23
 @g_8 = dso_local global half 0xH4321, align 4, !dbg !86
 @g_9 = dso_local global bfloat 0xR3F80, align 4, !dbg !90
+@g_10 = dso_local global fp128 0xLF0000000000000004000921CAC083126, align 16, !dbg !100
+@g_11 = dso_local global ppc_fp128 0xMF0000000000000004000921CAC083126, align 16, !dbg !105
+@g_12 = dso_local global x86_fp80 0xK4000C8F5C28F5C28F800, align 16, !dbg !110
 @_ZL4g_11 = internal global i32 -5, align 4, !dbg !25
 @_ZL4g_22 = internal global float 0x4016333340000000, align 4, !dbg !27
 @_ZL4g_33 = internal global i8 98, align 1, !dbg !29
@@ -81,6 +91,9 @@
 @g_float_undef = internal global float undef, align 4, !dbg !83
 @_ZL4g_88 = internal global half 0xH5678, align 4, !dbg !88
 @_ZL4g_99 = internal global bfloat 0xR5CAE, align 4, !dbg !92
+@_ZL4g_1010 = internal global fp128 0xLF0000000000000004000921CAC083126, align 16, !dbg !102
+@_ZL4g_1111 = internal global ppc_fp128 0xMF0000000000000004000921CAC083126, align 16, !dbg !107
+@_ZL4g_1212 = internal global x86_fp80 0xK4000C8F5C28F5C28F800, align 16, !dbg !112
 @g_i32_undef = internal global i32 undef, align 4, !dbg !95
 @g_ptr_undef = internal global ptr undef, align 8, !dbg !97
 
@@ -112,6 +125,12 @@ entry:
   store i32 %9, ptr @g_1, align 4, !dbg !59
   %10 = load ptr, ptr @g_ptr_undef, align 8, !dbg !59
   store ptr %10, ptr @g_6, align 8, !dbg !59
+  %11 = load fp128, ptr @_ZL4g_1010, align 16, !dbg !59
+  store fp128 %11, ptr @g_10, align 16, !dbg !59
+  %12 = load ppc_fp128, ptr @_ZL4g_1111, align 16, !dbg !59
+  store ppc_fp128 %12, ptr @g_11, align 16, !dbg !59
+  %13 = load x86_fp80, ptr @_ZL4g_1212, align 16, !dbg !59
+  store x86_fp80 %13, ptr @g_12, align 16, !dbg !59
 
   ret void, !dbg !59
 }
@@ -133,7 +152,7 @@ entry:
 !4 = !{!5}
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
 !6 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37, !83, !86, !88, !90, !92, !95, !97}
+!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37, !83, !86, !88, !90, !92, !95, !97, !100, !102, !105, !107, !110, !112}
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = distinct !DIGlobalVariable(name: "g_2", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
@@ -198,3 +217,20 @@ entry:
 !96 = distinct !DIGlobalVariable(name: "g_i32_undef", linkageName: "g_i32_undef", scope: !2, file: !3, line: 9, type: !22, isLocal: true, isDefinition: true)
 !97 = !DIGlobalVariableExpression(var: !98, expr: !DIExpression())
 !98 = distinct !DIGlobalVariable(name: "g_ptr_undef", linkageName: "g_ptr_undef", scope: !2, file: !3, line: 14, type: !21, isLocal: true, isDefinition: true)
+
+!99 = !DIBasicType(name: "float", size: 128, encoding: DW_ATE_float)
+!100 = !DIGlobalVariableExpression(var: !101, expr: !DIExpression())
+!101 = distinct !DIGlobalVariable(name: "g_10", scope: !2, file: !3, line: 2, type: !99, isLocal: false, isDefinition: true)
+!102 = !DIGlobalVariableExpression(var: !103, expr: !DIExpression())
+!103 = distinct !DIGlobalVariable(name: "g_1010", linkageName: "_ZL4g_1010", scope: !2, file: !3, line: 15, type: !99, isLocal: true, isDefinition: true)
+
+!105 = !DIGlobalVariableExpression(var: !106, expr: !DIExpression())
+!106 = distinct !DIGlobalVariable(name: "g_11", scope: !2, file: !3, line: 2, type: !99, isLocal: false, isDefinition: true)
+!107 = !DIGlobalVariableExpression(var: !108, expr: !DIExpression())
+!108 = distinct !DIGlobalVariable(name: "g_1111", linkageName: "_ZL4g_1111", scope: !2, file: !3, line: 15, type: !99, isLocal: true, isDefinition: true)
+
+!109 = !DIBasicType(name: "float", size: 80, encoding: DW_ATE_float)
+!110 = !DIGlobalVariableExpression(var: !111, expr: !DIExpression())
+!111 = distinct !DIGlobalVariable(name: "g_12", scope: !2, file: !3, line: 2, type: !109, isLocal: false, isDefinition: true)
+!112 = !DIGlobalVariableExpression(var: !113, expr: !DIExpression())
+!113 = distinct !DIGlobalVariable(name: "g_1212", linkageName: "_ZL4g_1212", scope: !2, file: !3, line: 15, type: !109, isLocal: true, isDefinition: true)
