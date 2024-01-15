@@ -938,7 +938,7 @@ Bug Fixes to AST Handling
   with certain types of Attributes.
   (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
 - Fixed a bug where the parenthesized initialization of arrays in a new
-  expression were rejected even in C++20 mode.
+  expression were incorrectly rejected in C++20 mode.
   (`#78183 <https://github.com/llvm/llvm-project/issues/78183>`_)
 
 Miscellaneous Bug Fixes
