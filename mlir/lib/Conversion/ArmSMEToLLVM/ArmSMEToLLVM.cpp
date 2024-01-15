@@ -364,29 +364,31 @@ struct ConvertArmSMEOpToLLVMPattern : ConvertOpToLLVMPattern<SourceOp> {
   }
 };
 
+template <typename Pattern>
+static void addArmSMEConversionPattern(RewritePatternSet &patterns,
+                                       LLVMTypeConverter const &typeConverter) {
+  // Register spills/fills for ops that implement the
+  // `ArmSMETileOpInterface` and have `requiresSpillsAndFills` set to
+  // `RequiresSpillsAndFills::Yes`.
+  if constexpr (Pattern::requiresSpillsAndFillsConversion() &&
+                std::is_base_of_v<arm_sme::ArmSMETileOpInterface::Trait<
+                                      typename Pattern::ArmSMEOp>,
+                                  typename Pattern::ArmSMEOp>) {
+    // Add spill/fill conversions with a very high benefit to ensure
+    // they are lowered first.
+    patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(
+        Pattern::ArmSMEOp::getOperationName(), typeConverter,
+        /*benefit=*/1337);
+  }
+  patterns.add<Pattern>(typeConverter);
+}
+
 /// Helper to register `ConvertArmSMEOpToLLVMPattern` patterns.
-template <typename... Pattern>
+template <typename... Patterns>
 static void
 addArmSMEConversionPatterns(RewritePatternSet &patterns,
                             LLVMTypeConverter const &typeConverter) {
-  (
-      [&] {
-        // Register spills/fills for ops that implement the
-        // `ArmSMETileOpInterface` and have `requiresSpillsAndFills` set to
-        // `RequiresSpillsAndFills::Yes`.
-        if constexpr (Pattern::requiresSpillsAndFillsConversion() &&
-                      std::is_base_of_v<arm_sme::ArmSMETileOpInterface::Trait<
-                                            typename Pattern::ArmSMEOp>,
-                                        typename Pattern::ArmSMEOp>) {
-          // Add spill/fill conversions with a very high benefit to ensure
-          // they are lowered first.
-          patterns.add<ConvertArmSMESpillsAndFillsToLLVM>(
-              Pattern::ArmSMEOp::getOperationName(), typeConverter,
-              /*benefit=*/1337);
-        }
-        patterns.add<Pattern>(typeConverter);
-      }(),
-      ...);
+  (addArmSMEConversionPattern<Patterns>(patterns, typeConverter), ...);
 }
 
 struct GetTileConversion

@@ -2337,7 +2337,7 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
     if (VarT) {
-      if (!this->emitGetGlobal(*VarT, *GlobalIndex, VD))
+      if (!this->emitGetGlobalUnchecked(*VarT, *GlobalIndex, VD))
         return false;
     } else {
       if (!this->emitGetPtrGlobal(*GlobalIndex, VD))
@@ -2951,7 +2951,6 @@ bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
-/// FIXME: Handle virtual destructors.
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   assert(Desc);

@@ -958,6 +958,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when a lambda marked as ``static`` referenced a captured
   variable in an expression.
   `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+- Fixed a crash with modules and a ``constexpr`` destructor.
+  `Issue 68702 <https://github.com/llvm/llvm-project/issues/68702>`_
 
 
 OpenACC Specific Changes
@@ -1131,6 +1133,7 @@ clang-format
 - Add ``BreakAdjacentStringLiterals`` option.
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
+- Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 

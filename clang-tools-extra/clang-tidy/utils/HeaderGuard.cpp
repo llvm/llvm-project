@@ -281,7 +281,7 @@ void HeaderGuardCheck::registerPPCallbacks(const SourceManager &SM,
 
 std::string HeaderGuardCheck::sanitizeHeaderGuard(StringRef Guard) {
   // Only reserved identifiers are allowed to start with an '_'.
-  return Guard.drop_while([](char C) { return C == '_'; }).str();
+  return Guard.ltrim('_').str();
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {

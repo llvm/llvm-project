@@ -3547,23 +3547,27 @@ static void GenerateHasAttrSpellingStringSwitch(
   OS << "    .Default(0);\n";
 }
 
-// Emits the list of tokens for regular keyword attributes.
-void EmitClangAttrTokenKinds(RecordKeeper &Records, raw_ostream &OS) {
-  emitSourceFileHeader("A list of tokens generated from the attribute"
-                       " definitions",
-                       OS);
+// Emits list of regular keyword attributes with info about their arguments.
+void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  emitSourceFileHeader(
+      "A list of regular keyword attributes generated from the attribute"
+      " definitions",
+      OS);
   // Assume for now that the same token is not used in multiple regular
   // keyword attributes.
   for (auto *R : Records.getAllDerivedDefinitions("Attr"))
-    for (const auto &S : GetFlattenedSpellings(*R))
-      if (isRegularKeywordAttribute(S)) {
-        if (!R->getValueAsListOfDefs("Args").empty())
-          PrintError(R->getLoc(),
-                     "RegularKeyword attributes with arguments are not "
-                     "yet supported");
-        OS << "KEYWORD_ATTRIBUTE("
-           << S.getSpellingRecord().getValueAsString("Name") << ")\n";
-      }
+    for (const auto &S : GetFlattenedSpellings(*R)) {
+      if (!isRegularKeywordAttribute(S))
+        continue;
+      std::vector<Record *> Args = R->getValueAsListOfDefs("Args");
+      bool HasArgs = llvm::any_of(
+          Args, [](const Record *Arg) { return !Arg->getValueAsBit("Fake"); });
+
+      OS << "KEYWORD_ATTRIBUTE("
+         << S.getSpellingRecord().getValueAsString("Name") << ", "
+         << (HasArgs ? "true" : "false") << ")\n";
+    }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }
 

@@ -20,7 +20,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_shared_za {
+void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_out("za") {
   svldr_zt(0, base);
 }
 
@@ -36,6 +36,6 @@ void test_svldr_zt(const void *base) __arm_streaming_compatible __arm_shared_za 
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.str.zt(i32 0, ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svstr_zt(void *base) __arm_streaming_compatible __arm_shared_za __arm_preserves_za {
+void test_svstr_zt(void *base) __arm_streaming_compatible __arm_in("za") {
   svstr_zt(0, base);
 }

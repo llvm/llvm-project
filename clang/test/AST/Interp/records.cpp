@@ -734,8 +734,6 @@ namespace VirtualDtors {
   }
 
   static_assert(foo());
-
-
 };
 
 namespace QualifiedCalls {
