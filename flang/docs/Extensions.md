@@ -102,6 +102,11 @@ end
   in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
   compiler properly scopes these names, violations of these restrictions
   elicit only portability warnings by default.
+* The standard defines the intrinsic functions `MOD` and `MODULO`
+  for real arguments using expressions in terms of `AINT` and `FLOOR`.
+  These definitions yield fairly poor results due to floating-point
+  cancellation, and every Fortran compiler (including this one)
+  uses better algorithms.
 
 ## Extensions, deletions, and legacy features supported by default
 
