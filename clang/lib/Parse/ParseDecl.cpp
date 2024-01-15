@@ -84,7 +84,7 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
 
 /// Normalizes an attribute name by dropping prefixed and suffixed __.
 static StringRef normalizeAttrName(StringRef Name) {
-  if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
+  if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
     return Name.drop_front(2).drop_back(2);
   return Name;
 }
@@ -2661,7 +2661,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // ProduceConstructorSignatureHelp only on VarDecls.
       ExpressionStarts = SetPreferredType;
     }
-    if (ParseExpressionList(Exprs, ExpressionStarts)) {
+
+    bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
+
+    InitScope.pop();
+
+    if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
         Actions.ProduceConstructorSignatureHelp(
             ThisVarDecl->getType()->getCanonicalTypeInternal(),
@@ -2674,7 +2679,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     } else {
       // Match the ')'.
       T.consumeClose();
-      InitScope.pop();
 
       ExprResult Initializer = Actions.ActOnParenListExpr(T.getOpenLocation(),
                                                           T.getCloseLocation(),
@@ -3483,7 +3487,8 @@ void Parser::ParseDeclarationSpecifiers(
 
     case tok::coloncolon: // ::foo::bar
       // C++ scope specifier.  Annotate and loop, or bail out on error.
-      if (TryAnnotateCXXScopeToken(EnteringContext)) {
+      if (getLangOpts().CPlusPlus &&
+          TryAnnotateCXXScopeToken(EnteringContext)) {
         if (!DS.hasTypeSpecifier())
           DS.SetTypeSpecError();
         goto DoneWithDeclSpec;
@@ -6786,7 +6791,13 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     } else if (Tok.isRegularKeywordAttribute()) {
       // For consistency with attribute parsing.
       Diag(Tok, diag::err_keyword_not_allowed) << Tok.getIdentifierInfo();
+      bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
       ConsumeToken();
+      if (TakesArgs) {
+        BalancedDelimiterTracker T(*this, tok::l_paren);
+        if (!T.consumeOpen())
+          T.skipToEnd();
+      }
     } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {
       // This declarator is declaring a function, but the requires clause is
       // in the wrong place:
@@ -7854,7 +7865,7 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
 
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();
-  if (getLangOpts().C23 && !II->getName().startswith("__"))
+  if (getLangOpts().C23 && !II->getName().starts_with("__"))
     Diag(Tok.getLocation(), diag::warn_c23_compat_keyword) << Tok.getName();
 
   Token OpTok = Tok;

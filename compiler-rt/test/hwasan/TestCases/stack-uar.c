@@ -1,5 +1,6 @@
 // Tests use-after-return detection and reporting.
-// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hwasan -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // Run the same test as above, but using the __hwasan_add_frame_record libcall.
@@ -50,15 +51,16 @@ int main() {
   // CHECK: Cause: stack tag-mismatch
   // CHECK: is located in stack of thread
   // CHECK: Potentially referenced stack objects:
-  // CHECK-NEXT: {{zzz|yyy}} in buggy {{.*}}stack-uar.c:
-  // CHECK-NEXT: Memory tags around the buggy address
+  // CHECK: Cause: use-after-scope
+  // CHECK-NEXT: 0x{{.*}} is located 0 bytes inside a 2048-byte local variable {{zzz|yyy}} [0x{{.*}},0x{{.*}}) in buggy {{.*}}stack-uar.c:
+  // CHECK: Memory tags around the buggy address
 
   // NOSYM: Previously allocated frames:
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uar.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uar.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uar.c.tmp+0x{{.*}}){{$}}
   // NOSYM-NEXT: record_addr:0x{{.*}} record:0x{{.*}} ({{.*}}/stack-uar.c.tmp+0x{{.*}}){{$}}
-  // NOSYM-NEXT: Memory tags around the buggy address
+  // NOSYM: Memory tags around the buggy address
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }

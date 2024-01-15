@@ -142,9 +142,107 @@ entry:
   ret void
 }
 
+define i32 @get_fpmode_01() #0 {
+; CHECK-LABEL: get_fpmode_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    bl fegetmode
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  %fpenv = call i32 @llvm.get.fpmode.i32()
+  ret i32 %fpenv
+}
+
+define i32 @get_fpmode_02() nounwind {
+; CHECK-LABEL: get_fpmode_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r0, fpscr
+; CHECK-NEXT:    mov pc, lr
+entry:
+  %fpenv = call i32 @llvm.get.fpmode.i32()
+  ret i32 %fpenv
+}
+
+define void @set_fpmode_01(i32 %fpmode) #0 {
+; CHECK-LABEL: set_fpmode_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    str r0, [sp, #4]
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    bl fesetmode
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.set.fpmode.i32(i32 %fpmode)
+  ret void
+}
+
+define void @set_fpmode_02(i32 %fpmode) nounwind {
+; CHECK-LABEL: set_fpmode_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r1, fpscr
+; CHECK-NEXT:    mvn r2, #159
+; CHECK-NEXT:    sub r2, r2, #-134217728
+; CHECK-NEXT:    and r0, r0, r2
+; CHECK-NEXT:    mov r2, #159
+; CHECK-NEXT:    orr r2, r2, #-134217728
+; CHECK-NEXT:    and r1, r1, r2
+; CHECK-NEXT:    orr r0, r1, r0
+; CHECK-NEXT:    vmsr fpscr, r0
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.set.fpmode.i32(i32 %fpmode)
+  ret void
+}
+
+define void @reset_fpmode_01() #0 {
+; CHECK-LABEL: reset_fpmode_01:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    mvn r0, #0
+; CHECK-NEXT:    bl fesetmode
+; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    mov pc, lr
+entry:
+  call void @llvm.reset.fpmode()
+  ret void
+}
+
+define void @reset_fpmode_02() nounwind {
+; CHECK-LABEL: reset_fpmode_02:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r0, fpscr
+; CHECK-NEXT:    ldr r1, .LCPI16_0
+; CHECK-NEXT:    and r0, r0, r1
+; CHECK-NEXT:    vmsr fpscr, r0
+; CHECK-NEXT:    mov pc, lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI16_0:
+; CHECK-NEXT:    .long 4160774399 @ 0xf80060ff
+entry:
+  call void @llvm.reset.fpmode()
+  ret void
+}
+
 attributes #0 = { nounwind "use-soft-float"="true" }
 
 declare void @llvm.set.rounding(i32)
 declare i32 @llvm.get.fpenv.i32()
 declare void @llvm.set.fpenv.i32(i32 %fpenv)
 declare void @llvm.reset.fpenv()
+declare i32 @llvm.get.fpmode.i32()
+declare void @llvm.set.fpmode.i32(i32 %fpmode)
+declare void @llvm.reset.fpmode()

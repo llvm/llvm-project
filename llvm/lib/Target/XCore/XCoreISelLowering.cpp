@@ -249,7 +249,7 @@ SDValue XCoreTargetLowering::getGlobalAddressWrapper(SDValue GA,
     return DAG.getNode(XCoreISD::PCRelativeWrapper, dl, MVT::i32, GA);
 
   const auto *GVar = dyn_cast<GlobalVariable>(GV);
-  if ((GV->hasSection() && GV->getSection().startswith(".cp.")) ||
+  if ((GV->hasSection() && GV->getSection().starts_with(".cp.")) ||
       (GVar && GVar->isConstant() && GV->hasLocalLinkage()))
     return DAG.getNode(XCoreISD::CPRelativeWrapper, dl, MVT::i32, GA);
 
@@ -767,7 +767,7 @@ SDValue XCoreTargetLowering::LowerFRAMEADDR(SDValue Op,
   // An index of zero corresponds to the current function's frame address.
   // An index of one to the parent's frame address, and so on.
   // Depths > 0 not supported yet!
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() > 0)
+  if (Op.getConstantOperandVal(0) > 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -783,7 +783,7 @@ LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
   // An index of zero corresponds to the current function's return address.
   // An index of one to the parent's return address, and so on.
   // Depths > 0 not supported yet!
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() > 0)
+  if (Op.getConstantOperandVal(0) > 0)
     return SDValue();
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -905,7 +905,7 @@ LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const {
 SDValue XCoreTargetLowering::
 LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   switch (IntNo) {
     case Intrinsic::xcore_crc8:
       EVT VT = Op.getValueType();
@@ -1497,7 +1497,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   default: break;
   case ISD::INTRINSIC_VOID:
-    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+    switch (N->getConstantOperandVal(1)) {
     case Intrinsic::xcore_outt:
     case Intrinsic::xcore_outct:
     case Intrinsic::xcore_chkct: {
@@ -1733,30 +1733,30 @@ void XCoreTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   case ISD::INTRINSIC_W_CHAIN:
     {
-      unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
-      switch (IntNo) {
-      case Intrinsic::xcore_getts:
-        // High bits are known to be zero.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 16);
-        break;
-      case Intrinsic::xcore_int:
-      case Intrinsic::xcore_inct:
-        // High bits are known to be zero.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 8);
-        break;
-      case Intrinsic::xcore_testct:
-        // Result is either 0 or 1.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 1);
-        break;
-      case Intrinsic::xcore_testwct:
-        // Result is in the range 0 - 4.
-        Known.Zero = APInt::getHighBitsSet(Known.getBitWidth(),
-                                           Known.getBitWidth() - 3);
-        break;
-      }
+    unsigned IntNo = Op.getConstantOperandVal(1);
+    switch (IntNo) {
+    case Intrinsic::xcore_getts:
+      // High bits are known to be zero.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 16);
+      break;
+    case Intrinsic::xcore_int:
+    case Intrinsic::xcore_inct:
+      // High bits are known to be zero.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 8);
+      break;
+    case Intrinsic::xcore_testct:
+      // Result is either 0 or 1.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 1);
+      break;
+    case Intrinsic::xcore_testwct:
+      // Result is in the range 0 - 4.
+      Known.Zero =
+          APInt::getHighBitsSet(Known.getBitWidth(), Known.getBitWidth() - 3);
+      break;
+    }
     }
     break;
   }

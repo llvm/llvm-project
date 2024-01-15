@@ -391,8 +391,17 @@ function(runtime_register_target name)
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
   endif()
   foreach(runtime_name ${runtime_names})
+    if(NOT TARGET ${runtime_name})
+      add_custom_target(${runtime_name})
+    endif()
     add_dependencies(${runtime_name} ${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name})
+      add_custom_target(install-${runtime_name})
+    endif()
     add_dependencies(install-${runtime_name} install-${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name}-stripped)
+      add_custom_target(install-${runtime_name}-stripped)
+    endif()
     add_dependencies(install-${runtime_name}-stripped install-${runtime_name}-${name}-stripped)
   endforeach()
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
@@ -414,20 +423,16 @@ if(runtimes)
       endif()
     endforeach()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND 
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
       (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
-    if(TARGET libc-hdrgen)
-      set(libc_tools libc-hdrgen)
-      set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"
-                          "-DLLVM_LIBC_FULL_BUILD=ON")
-      list(APPEND extra_deps ${libc_tools})
-    else()
-      # We want to build the libc build tools before we can build the libc
-      # itself. So, the libc project should be included in LLVM_ENABLE_PROJECTS.
-      # This should have been done in llvm/CMakeLists.txt automatically when
-      # "libc" is detected in LLVM_ENABLE_RUNTIMES.
-      message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
+    get_host_tool_path(libc-hdrgen LIBC_HDRGEN libc_hdrgen_exe libc_hdrgen_target)
+    if(NOT libc_hdrgen_exe)
+      message(FATAL_ERROR "libc-hdrgen executable missing")
     endif()
+    set(libc_cmake_args "-DLIBC_HDRGEN_EXE=${libc_hdrgen_exe}"
+                        "-DLLVM_LIBC_FULL_BUILD=ON")
+    set(libc_tools libc_hdrgen_target)
+    list(APPEND extra_deps ${libc_hdrgen_target})
     if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
       foreach(dep clang-offload-packager nvptx-arch amdgpu-arch)
         if(TARGET ${dep})
@@ -459,11 +464,6 @@ if(runtimes)
         add_custom_target(runtimes-test-depends)
         set(test_targets "")
       endif()
-      foreach(runtime_name ${RUNTIME_NAMES})
-        add_custom_target(${runtime_name})
-        add_custom_target(install-${runtime_name})
-        add_custom_target(install-${runtime_name}-stripped)
-      endforeach()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
           add_custom_target(${component})
@@ -522,6 +522,7 @@ if(runtimes)
         FileCheck
         count
         llvm-cov
+        llvm-lto
         llvm-nm
         llvm-objdump
         llvm-profdata
@@ -529,6 +530,7 @@ if(runtimes)
         llvm-xray
         not
         obj2yaml
+        opt
         sancov
         sanstats
         llvm_gtest_main

@@ -375,9 +375,8 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   return AliasSets.back();
 }
 
-void AliasSetTracker::add(Value *Ptr, LocationSize Size,
-                          const AAMDNodes &AAInfo) {
-  addPointer(MemoryLocation(Ptr, Size, AAInfo), AliasSet::NoAccess);
+void AliasSetTracker::add(const MemoryLocation &Loc) {
+  addPointer(Loc, AliasSet::NoAccess);
 }
 
 void AliasSetTracker::add(LoadInst *LI) {

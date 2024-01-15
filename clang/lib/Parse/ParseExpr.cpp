@@ -1974,10 +1974,11 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       PreferredType.enterSubscript(Actions, Tok.getLocation(), LHS.get());
 
       // We try to parse a list of indexes in all language mode first
-      // and, in we find 0 or one index, we try to parse an OpenMP array
+      // and, in we find 0 or one index, we try to parse an OpenMP/OpenACC array
       // section. This allow us to support C++23 multi dimensional subscript and
-      // OpenMp sections in the same language mode.
-      if (!getLangOpts().OpenMP || Tok.isNot(tok::colon)) {
+      // OpenMP/OpenACC sections in the same language mode.
+      if ((!getLangOpts().OpenMP && !AllowOpenACCArraySections) ||
+          Tok.isNot(tok::colon)) {
         if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
@@ -2001,7 +2002,18 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
       }
 
-      if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
+      // Handle OpenACC first, since 'AllowOpenACCArraySections' is only enabled
+      // when actively parsing a 'var' in a 'var-list' during clause/'cache'
+      // parsing, so it is the most specific, and best allows us to handle
+      // OpenACC and OpenMP at the same time.
+      if (ArgExprs.size() <= 1 && AllowOpenACCArraySections) {
+        ColonProtectionRAIIObject RAII(*this);
+        if (Tok.is(tok::colon)) {
+          // Consume ':'
+          ColonLocFirst = ConsumeToken();
+          Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+        }
+      } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
         if (Tok.is(tok::colon)) {
           // Consume ':'
@@ -2031,6 +2043,12 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
+          // FIXME: OpenACC hasn't implemented Sema/Array section handling at a
+          // semantic level yet. For now, just reuse the OpenMP implementation
+          // as it gets the parsing/type management mostly right, and we can
+          // replace this call to ActOnOpenACCArraySectionExpr in the future.
+          // Eventually we'll genericize the OPenMPArraySectionExpr type as
+          // well.
           LHS = Actions.ActOnOMPArraySectionExpr(
               LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
               ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);

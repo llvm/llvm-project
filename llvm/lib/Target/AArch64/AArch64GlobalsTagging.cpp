@@ -37,7 +37,7 @@ static bool shouldTagGlobal(GlobalVariable &G) {
   // For now, don't instrument constant data, as it'll be in .rodata anyway. It
   // may be worth instrumenting these in future to stop them from being used as
   // gadgets.
-  if (G.getName().startswith("llvm.") || G.isThreadLocal() || G.isConstant()) {
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant()) {
     Meta.Memtag = false;
     G.setSanitizerMetadata(Meta);
     return false;

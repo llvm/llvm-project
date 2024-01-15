@@ -28,7 +28,7 @@ define void @dynamic(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
@@ -72,7 +72,7 @@ define void @dynamic_fixed(i64 %size, ptr %out1, ptr %out2) #0 {
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
@@ -122,7 +122,7 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
@@ -167,7 +167,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    add x9, x0, #15
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    sub x8, x8, x9
@@ -181,7 +181,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB3_4
 ; CHECK-NEXT:  .LBB3_6:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32
@@ -221,7 +221,7 @@ define void @dynamic_64k_guard(i64 %size, ptr %out) #0 "stack-probe-size"="65536
 ; CHECK-NEXT:    b .LBB4_1
 ; CHECK-NEXT:  .LBB4_3:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
@@ -265,7 +265,7 @@ define void @no_reserved_call_frame(i64 %n) #0 {
 ; CHECK-NEXT:    b .LBB5_1
 ; CHECK-NEXT:  .LBB5_3: // %entry
 ; CHECK-NEXT:    mov sp, x0
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    sub sp, sp, #1104
 ; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    bl callee_stack_args
@@ -344,7 +344,7 @@ define void @dynamic_sve(i64 %size, ptr %out) #0 "target-features"="+sve" {
 ; CHECK-NEXT:    b .LBB7_1
 ; CHECK-NEXT:  .LBB7_3:
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 32

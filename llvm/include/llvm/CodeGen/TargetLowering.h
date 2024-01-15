@@ -2869,6 +2869,12 @@ public:
                           getApproximateEVTForLLT(ToTy, DL, Ctx));
   }
 
+  /// Return true if truncating the specific node Val to type VT2 is free.
+  virtual bool isTruncateFree(SDValue Val, EVT VT2) const {
+    // Fallback to type matching.
+    return isTruncateFree(Val.getValueType(), VT2);
+  }
+
   virtual bool isProfitableToHoist(Instruction *I) const { return true; }
 
   /// Return true if the extension represented by \p I is free.

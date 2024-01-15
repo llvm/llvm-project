@@ -1,5 +1,6 @@
 ; UNSUPPORTED: system-windows
 ; This checks that .debug_names can be generated with monolithic, and split-dwarf, when -fdebug-type-sections is enabled.
+; It also checks that TU in .debug_info.dwo has correct DW_AT_comp_dir and DW_AT_dwo_name.
 ; Generated with: clang++ main.cpp   -g2 -gdwarf-5 -gpubnames -fdebug-types-section
 
 ; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj %s -o %t
@@ -171,7 +172,7 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV1]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
-; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001f
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000021
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:       Entry @ 0xae {
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV]]
@@ -199,12 +200,34 @@
 ; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV4]]
 ; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
 ; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
-; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000034
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000036
 ; CHECK-SPLIT-NEXT:       }
 ; CHECK-SPLIT-NEXT:     }
 ; CHECK-SPLIT-NEXT:   ]
 ; CHECK-SPLIT-NEXT: }
 
+
+
+; RUN: llvm-dwarfdump -debug-info -r 0 %t > %tdebugInfo.txt
+; RUN: llvm-dwarfdump -debug-info -r 0 %t.mainTypes.dwo >> %tdebugInfo.txt
+; RUN: cat %tdebugInfo.txt | FileCheck %s --check-prefixes=CHECK-TYPE
+
+; CHECK-TYPE:         DW_TAG_skeleton_unit
+; CHECK-TYPE-NEXT:      DW_AT_stmt_list
+; CHECK-TYPE-NEXT:      DW_AT_str_offsets_base
+; CHECK-TYPE-NEXT:      DW_AT_comp_dir  ("/typeSmall")
+; CHECK-TYPE-NEXT:      DW_AT_dwo_name
+; CHECK-TYPE-SAME:        debug-names-types.ll.tmp.mainTypes.dwo
+; CHECK-TYPE-NEXT:      DW_AT_low_pc
+; CHECK-TYPE-NEXT:      DW_AT_high_pc
+; CHECK-TYPE-NEXT:      DW_AT_addr_base
+
+; CHECK-TYPE:           DW_TAG_type_unit
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_comp_dir  ("/typeSmall")
+; CHECK-TYPE-NOT:       DW_TAG
+; CHECK-TYPE:           DW_AT_dwo_name
+; CHECK-TYPE-SAME:        debug-names-types.ll.tmp.mainTypes.dwo
 
 ; ModuleID = 'main.cpp'
 source_filename = "main.cpp"

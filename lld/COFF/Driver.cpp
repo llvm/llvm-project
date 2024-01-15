@@ -858,46 +858,6 @@ static std::string createResponseFile(const opt::InputArgList &args,
   return std::string(data.str());
 }
 
-enum class DebugKind {
-  Unknown,
-  None,
-  Full,
-  FastLink,
-  GHash,
-  NoGHash,
-  Dwarf,
-  Symtab
-};
-
-static DebugKind parseDebugKind(const opt::InputArgList &args) {
-  auto *a = args.getLastArg(OPT_debug, OPT_debug_opt);
-  if (!a)
-    return DebugKind::None;
-  if (a->getNumValues() == 0)
-    return DebugKind::Full;
-
-  DebugKind debug = StringSwitch<DebugKind>(a->getValue())
-                        .CaseLower("none", DebugKind::None)
-                        .CaseLower("full", DebugKind::Full)
-                        .CaseLower("fastlink", DebugKind::FastLink)
-                        // LLD extensions
-                        .CaseLower("ghash", DebugKind::GHash)
-                        .CaseLower("noghash", DebugKind::NoGHash)
-                        .CaseLower("dwarf", DebugKind::Dwarf)
-                        .CaseLower("symtab", DebugKind::Symtab)
-                        .Default(DebugKind::Unknown);
-
-  if (debug == DebugKind::FastLink) {
-    warn("/debug:fastlink unsupported; using /debug:full");
-    return DebugKind::Full;
-  }
-  if (debug == DebugKind::Unknown) {
-    error("/debug: unknown option: " + Twine(a->getValue()));
-    return DebugKind::None;
-  }
-  return debug;
-}
-
 static unsigned parseDebugTypes(const opt::InputArgList &args) {
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
 
@@ -1588,15 +1548,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Search paths");
     searchPaths.emplace_back("");
+    for (auto *arg : args.filtered(OPT_libpath))
+      searchPaths.push_back(arg->getValue());
     if (!config->mingw) {
       // Prefer the Clang provided builtins over the ones bundled with MSVC.
       // In MinGW mode, the compiler driver passes the necessary libpath
       // options explicitly.
       addClangLibSearchPaths(argsArr[0]);
-    }
-    for (auto *arg : args.filtered(OPT_libpath))
-      searchPaths.push_back(arg->getValue());
-    if (!config->mingw) {
       // Don't automatically deduce the lib path from the environment or MSVC
       // installations when operating in mingw mode. (This also makes LLD ignore
       // winsysroot and vctoolsdir arguments.)
@@ -1647,12 +1605,62 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_force, OPT_force_multipleres))
     config->forceMultipleRes = true;
 
+  // Don't warn about long section names, such as .debug_info, for mingw (or
+  // when -debug:dwarf is requested, handled below).
+  if (config->mingw)
+    config->warnLongSectionNames = false;
+
+  bool doGC = true;
+
   // Handle /debug
-  DebugKind debug = parseDebugKind(args);
-  if (debug == DebugKind::Full || debug == DebugKind::Dwarf ||
-      debug == DebugKind::GHash || debug == DebugKind::NoGHash) {
-    config->debug = true;
-    config->incremental = true;
+  bool shouldCreatePDB = false;
+  for (auto *arg : args.filtered(OPT_debug, OPT_debug_opt)) {
+    std::string str;
+    if (arg->getOption().getID() == OPT_debug)
+      str = "full";
+    else
+      str = StringRef(arg->getValue()).lower();
+    SmallVector<StringRef, 1> vec;
+    StringRef(str).split(vec, ',');
+    for (StringRef s : vec) {
+      if (s == "fastlink") {
+        warn("/debug:fastlink unsupported; using /debug:full");
+        s = "full";
+      }
+      if (s == "none") {
+        config->debug = false;
+        config->incremental = false;
+        config->includeDwarfChunks = false;
+        config->debugGHashes = false;
+        config->writeSymtab = false;
+        shouldCreatePDB = false;
+        doGC = true;
+      } else if (s == "full" || s == "ghash" || s == "noghash") {
+        config->debug = true;
+        config->incremental = true;
+        config->includeDwarfChunks = true;
+        if (s == "full" || s == "ghash")
+          config->debugGHashes = true;
+        shouldCreatePDB = true;
+        doGC = false;
+      } else if (s == "dwarf") {
+        config->debug = true;
+        config->incremental = true;
+        config->includeDwarfChunks = true;
+        config->writeSymtab = true;
+        config->warnLongSectionNames = false;
+        doGC = false;
+      } else if (s == "nodwarf") {
+        config->includeDwarfChunks = false;
+      } else if (s == "symtab") {
+        config->writeSymtab = true;
+        doGC = false;
+      } else if (s == "nosymtab") {
+        config->writeSymtab = false;
+      } else {
+        error("/debug: unknown option: " + s);
+      }
+    }
   }
 
   // Handle /demangle
@@ -1672,9 +1680,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->driverUponly || config->driverWdm || args.hasArg(OPT_driver);
 
   // Handle /pdb
-  bool shouldCreatePDB =
-      (debug == DebugKind::Full || debug == DebugKind::GHash ||
-       debug == DebugKind::NoGHash);
   if (shouldCreatePDB) {
     if (auto *arg = args.getLastArg(OPT_pdb))
       config->pdbPath = arg->getValue();
@@ -1837,8 +1842,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   config->noimplib = args.hasArg(OPT_noimplib);
 
+  if (args.hasArg(OPT_profile))
+    doGC = true;
   // Handle /opt.
-  bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
   std::optional<ICFLevel> icfLevel;
   if (args.hasArg(OPT_profile))
     icfLevel = ICFLevel::None;
@@ -1940,7 +1946,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   parseMerge(".didat=.rdata");
   parseMerge(".edata=.rdata");
   parseMerge(".xdata=.rdata");
+  parseMerge(".00cfg=.rdata");
   parseMerge(".bss=.data");
+
+  if (isArm64EC(config->machine))
+    parseMerge(".wowthk=.text");
 
   if (config->mingw) {
     parseMerge(".ctors=.rdata");
@@ -2028,9 +2038,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     parseSwaprun(arg->getValue());
   config->terminalServerAware =
       !config->dll && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
-  config->debugDwarf = debug == DebugKind::Dwarf;
-  config->debugGHashes = debug == DebugKind::GHash || debug == DebugKind::Full;
-  config->debugSymtab = debug == DebugKind::Symtab;
   config->autoImport =
       args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);
   config->pseudoRelocs = args.hasFlag(
@@ -2046,11 +2053,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
     warn("ignoring '/inferasanlibs', this flag is not supported");
-
-  // Don't warn about long section names, such as .debug_info, for mingw or
-  // when -debug:dwarf is requested.
-  if (config->mingw || config->debugDwarf)
-    config->warnLongSectionNames = false;
 
   if (config->incremental && args.hasArg(OPT_profile)) {
     warn("ignoring '/incremental' due to '/profile' specification");
@@ -2381,6 +2383,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute(mangle("__CTOR_LIST__"), 0);
     ctx.symtab.addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
+  if (config->debug || config->buildIDHash != BuildIDHash::None)
+    if (ctx.symtab.findUnderscore("__buildid"))
+      ctx.symtab.addUndefined(mangle("__buildid"));
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we

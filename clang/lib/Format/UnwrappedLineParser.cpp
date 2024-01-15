@@ -1333,7 +1333,7 @@ bool UnwrappedLineParser::parseModuleImport() {
         // Mark tokens up to the trailing line comments as implicit string
         // literals.
         if (FormatTok->isNot(tok::comment) &&
-            !FormatTok->TokenText.startswith("//")) {
+            !FormatTok->TokenText.starts_with("//")) {
           FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
         }
         nextToken();
@@ -1371,7 +1371,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 
   bool PreviousMustBeValue = mustBeJSIdentOrValue(Keywords, Previous);
   bool PreviousStartsTemplateExpr =
-      Previous->is(TT_TemplateString) && Previous->TokenText.endswith("${");
+      Previous->is(TT_TemplateString) && Previous->TokenText.ends_with("${");
   if (PreviousMustBeValue || Previous->is(tok::r_paren)) {
     // If the line contains an '@' sign, the previous token might be an
     // annotation, which can precede another identifier/value.
@@ -1385,7 +1385,7 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
     return addUnwrappedLine();
   bool NextMustBeValue = mustBeJSIdentOrValue(Keywords, Next);
   bool NextEndsTemplateExpr =
-      Next->is(TT_TemplateString) && Next->TokenText.startswith("}");
+      Next->is(TT_TemplateString) && Next->TokenText.starts_with("}");
   if (NextMustBeValue && !NextEndsTemplateExpr && !PreviousStartsTemplateExpr &&
       (PreviousMustBeValue ||
        Previous->isOneOf(tok::r_square, tok::r_paren, tok::plusplus,
@@ -1650,8 +1650,10 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     // In Verilog labels can be any expression, so we don't do them here.
-    if (!Style.isVerilog() && Tokens->peekNextToken()->is(tok::colon) &&
-        !Line->MustBeDeclaration) {
+    // JS doesn't have macros, and within classes colons indicate fields, not
+    // labels.
+    if (!Style.isJavaScript() && !Style.isVerilog() &&
+        Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
@@ -2306,7 +2308,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
       LeftSquare->isCppStructuredBinding(Style)) {
     return false;
   }
-  if (FormatTok->is(tok::l_square))
+  if (FormatTok->is(tok::l_square) || tok::isLiteral(FormatTok->Tok.getKind()))
     return false;
   if (FormatTok->is(tok::r_square)) {
     const FormatToken *Next = Tokens->peekNextToken(/*SkipComment=*/true);
@@ -4459,8 +4461,8 @@ continuesLineCommentSection(const FormatToken &FormatTok,
     return false;
 
   StringRef IndentContent = FormatTok.TokenText;
-  if (FormatTok.TokenText.startswith("//") ||
-      FormatTok.TokenText.startswith("/*")) {
+  if (FormatTok.TokenText.starts_with("//") ||
+      FormatTok.TokenText.starts_with("/*")) {
     IndentContent = FormatTok.TokenText.substr(2);
   }
   if (CommentPragmasRegex.match(IndentContent))
@@ -4673,6 +4675,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         conditionalCompilationEnd();
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
+      FormatTok->MustBreakBeforeFinalized = true;
     }
 
     auto IsFirstNonCommentOnLine = [](bool FirstNonCommentOnLine,
@@ -4889,6 +4892,7 @@ void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
     Line->Tokens.back().Tok->MustBreakBefore = true;
+    Line->Tokens.back().Tok->MustBreakBeforeFinalized = true;
     MustBreakBeforeNextToken = false;
   }
 }

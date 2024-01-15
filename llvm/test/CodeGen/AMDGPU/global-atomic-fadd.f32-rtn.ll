@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -stop-after=amdgpu-isel -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -stop-after=amdgpu-isel -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -check-prefix=GFX90A_GFX940 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -stop-after=amdgpu-isel -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -stop-after=amdgpu-isel -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -check-prefix=GFX11 %s
 
 define amdgpu_ps float @global_atomic_fadd_f32_rtn_intrinsic(ptr addrspace(1) %ptr, float %data) {
   ; GFX90A_GFX940-LABEL: name: global_atomic_fadd_f32_rtn_intrinsic

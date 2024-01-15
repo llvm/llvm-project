@@ -3,7 +3,7 @@
 // Ensure Pass PGOInstrumentationGenPass is invoked.
 // RUN: %clang_cc1 -O2 -fprofile-instrument=llvm %s  -fdebug-pass-manager -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PGOGENPASS-INVOKED-INSTR-GEN --check-prefix=CHECK-INSTRPROF
 // CHECK-PGOGENPASS-INVOKED-INSTR-GEN: Running pass: PGOInstrumentationGen on
-// CHECK-INSTRPROF: Running pass: InstrProfiling on
+// CHECK-INSTRPROF: Running pass: InstrProfilingLoweringPass on
 //
 // Ensure Pass PGOInstrumentationGenPass is not invoked.
 // RUN: %clang_cc1 -O2 -fprofile-instrument=clang %s -fdebug-pass-manager -emit-llvm -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PGOGENPASS-INVOKED-INSTR-GEN-CLANG
@@ -11,7 +11,7 @@
 
 // RUN: %clang_cc1 -O2 -fprofile-instrument=clang %s -fdebug-pass-manager -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-CLANG-INSTRPROF
 // RUN: %clang_cc1 -O0 -fprofile-instrument=clang %s -fdebug-pass-manager -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-CLANG-INSTRPROF
-// CHECK-CLANG-INSTRPROF: Running pass: InstrProfiling on
+// CHECK-CLANG-INSTRPROF: Running pass: InstrProfilingLoweringPass on
 
 // Ensure Pass PGOInstrumentationUsePass is invoked.
 // RUN: llvm-profdata merge -o %t.profdata %S/Inputs/pgotestir.profraw

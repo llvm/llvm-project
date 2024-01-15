@@ -410,8 +410,18 @@ static void runBenchmarkConfigurations(
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
-      AllResults.emplace_back(
-          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpFile)));
+      auto [Err, BenchmarkResult] =
+          Runner.runConfiguration(std::move(RC), DumpFile);
+      if (Err) {
+        // Errors from executing the snippets are fine.
+        // All other errors are a framework issue and should fail.
+        if (!Err.isA<SnippetExecutionFailure>()) {
+          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          exit(1);
+        }
+        BenchmarkResult.Error = toString(std::move(Err));
+      }
+      AllResults.push_back(std::move(BenchmarkResult));
     }
     Benchmark &Result = AllResults.front();
 
@@ -427,7 +437,7 @@ static void runBenchmarkConfigurations(
            ArrayRef<Benchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only iff all measurements succeeded.
+        // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
         assert(OtherResult.Measurements.size() == Result.Measurements.size() &&

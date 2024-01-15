@@ -24,23 +24,17 @@ add_header_library(
 )
 
 add_header_library(
-  float_properties
-  HDRS
-    FloatProperties.h
-  DEPENDS
-    libc.src.__support.macros.properties.float
-    libc.src.__support.uint128
-)
-
-add_header_library(
   fp_bits
   HDRS
     FPBits.h
   DEPENDS
-    .float_properties
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.properties.float
+    libc.src.__support.math_extras
+    libc.src.__support.uint128
 )
 
 add_header_library(
@@ -48,7 +42,6 @@ add_header_library(
   HDRS
     fpbits_str.h
   DEPENDS
-    .float_properties
     .fp_bits
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -229,7 +222,6 @@ add_header_library(
   HDRS
     dyadic_float.h
   DEPENDS
-    .float_properties
     .fp_bits
     .multiply_add
     libc.src.__support.common

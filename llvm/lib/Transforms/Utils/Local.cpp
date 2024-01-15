@@ -1724,9 +1724,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                           SI->getIterator());
 }
 
+namespace llvm {
 // RemoveDIs: duplicate the getDebugValueLoc method using DPValues instead of
-// dbg.value intrinsics.
-static DebugLoc getDebugValueLocDPV(DPValue *DPV) {
+// dbg.value intrinsics. In llvm namespace so that it overloads the
+// DbgVariableIntrinsic version.
+static DebugLoc getDebugValueLoc(DPValue *DPV) {
   // Original dbg.declare must have a location.
   const DebugLoc &DeclareLoc = DPV->getDebugLoc();
   MDNode *Scope = DeclareLoc.getScope();
@@ -1734,6 +1736,7 @@ static DebugLoc getDebugValueLocDPV(DPValue *DPV) {
   // Produce an unknown location with the correct scope / inlinedAt fields.
   return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
 }
+} // namespace llvm
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
@@ -1770,25 +1773,39 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
   auto *DIExpr = DPV->getExpression();
   Value *DV = SI->getValueOperand();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
-  if (!valueCoversEntireFragment(DV->getType(), DPV)) {
-    // FIXME: If storing to a part of the variable described by the dbg.declare,
-    // then we want to insert a DPValue.value for the corresponding fragment.
-    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to DPValue: " << *DPV
-                      << '\n');
-    // For now, when there is a store to parts of the variable (but we do not
-    // know which part) we insert an DPValue record to indicate that we know
-    // nothing about the variable's content.
-    DV = UndefValue::get(DV->getType());
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
-    SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
+  // If the alloca describes the variable itself, i.e. the expression in the
+  // dbg.declare doesn't start with a dereference, we can perform the
+  // conversion if the value covers the entire fragment of DII.
+  // If the alloca describes the *address* of DIVar, i.e. DIExpr is
+  // *just* a DW_OP_deref, we use DV as is for the dbg.value.
+  // We conservatively ignore other dereferences, because the following two are
+  // not equivalent:
+  //     dbg.declare(alloca, ..., !Expr(deref, plus_uconstant, 2))
+  //     dbg.value(DV, ..., !Expr(deref, plus_uconstant, 2))
+  // The former is adding 2 to the address of the variable, whereas the latter
+  // is adding 2 to the value of the variable. As such, we insist on just a
+  // deref expression.
+  bool CanConvert =
+      DIExpr->isDeref() || (!DIExpr->startsWithDeref() &&
+                            valueCoversEntireFragment(DV->getType(), DPV));
+  if (CanConvert) {
+    insertDbgValueOrDPValue(Builder, DV, DIVar, DIExpr, NewLoc,
+                            SI->getIterator());
     return;
   }
 
+  // FIXME: If storing to a part of the variable described by the dbg.declare,
+  // then we want to insert a dbg.value for the corresponding fragment.
+  LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DPV
+                    << '\n');
   assert(UseNewDbgInfoFormat);
-  // Create a DPValue directly and insert.
+
+  // For now, when there is a store to parts of the variable (but we do not
+  // know which part) we insert an dbg.value intrinsic to indicate that we
+  // know nothing about the variable's content.
+  DV = UndefValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DPValue *NewDPV = new DPValue(DVAM, DIVar, DIExpr, NewLoc.get());
   SI->getParent()->insertDPValueBefore(NewDPV, SI->getIterator());
@@ -1842,7 +1859,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, LoadInst *LI,
     return;
   }
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
@@ -1887,7 +1904,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DPValue *DPV, PHINode *APN,
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();
 
-  DebugLoc NewLoc = getDebugValueLocDPV(DPV);
+  DebugLoc NewLoc = getDebugValueLoc(DPV);
 
   // The block may be a catchswitch block, which does not have a valid
   // insertion point.
@@ -1903,17 +1920,24 @@ bool llvm::LowerDbgDeclare(Function &F) {
   bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
   SmallVector<DbgDeclareInst *, 4> Dbgs;
-  for (auto &FI : F)
-    for (Instruction &BI : FI)
-      if (auto DDI = dyn_cast<DbgDeclareInst>(&BI))
+  SmallVector<DPValue *> DPVs;
+  for (auto &FI : F) {
+    for (Instruction &BI : FI) {
+      if (auto *DDI = dyn_cast<DbgDeclareInst>(&BI))
         Dbgs.push_back(DDI);
+      for (DPValue &DPV : BI.getDbgValueRange()) {
+        if (DPV.getType() == DPValue::LocationType::Declare)
+          DPVs.push_back(&DPV);
+      }
+    }
+  }
 
-  if (Dbgs.empty())
+  if (Dbgs.empty() && DPVs.empty())
     return Changed;
 
-  for (auto &I : Dbgs) {
-    DbgDeclareInst *DDI = I;
-    AllocaInst *AI = dyn_cast_or_null<AllocaInst>(DDI->getAddress());
+  auto LowerOne = [&](auto *DDI) {
+    AllocaInst *AI =
+        dyn_cast_or_null<AllocaInst>(DDI->getVariableLocationOp(0));
     // If this is an alloca for a scalar variable, insert a dbg.value
     // at each load and store to the alloca and erase the dbg.declare.
     // The dbg.values allow tracking a variable even if it is not
@@ -1921,7 +1945,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
     if (!AI || isArray(AI) || isStructure(AI))
-      continue;
+      return;
 
     // A volatile load/store means that the alloca can't be elided anyway.
     if (llvm::any_of(AI->users(), [](User *U) -> bool {
@@ -1931,7 +1955,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
             return SI->isVolatile();
           return false;
         }))
-      continue;
+      return;
 
     SmallVector<const Value *, 8> WorkList;
     WorkList.push_back(AI);
@@ -1963,11 +1987,14 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
     DDI->eraseFromParent();
     Changed = true;
-  }
+  };
+
+  for_each(Dbgs, LowerOne);
+  for_each(DPVs, LowerOne);
 
   if (Changed)
-  for (BasicBlock &BB : F)
-    RemoveRedundantDbgInstrs(&BB);
+    for (BasicBlock &BB : F)
+      RemoveRedundantDbgInstrs(&BB);
 
   return Changed;
 }
@@ -2103,19 +2130,21 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              DIBuilder &Builder, uint8_t DIExprFlags,
                              int Offset) {
-  auto DbgDeclares = FindDbgDeclareUses(Address);
-  for (DbgVariableIntrinsic *DII : DbgDeclares) {
-    const DebugLoc &Loc = DII->getDebugLoc();
-    auto *DIVar = DII->getVariable();
+  TinyPtrVector<DbgDeclareInst *> DbgDeclares = findDbgDeclares(Address);
+  TinyPtrVector<DPValue *> DPVDeclares = findDPVDeclares(Address);
+
+  auto ReplaceOne = [&](auto *DII) {
+    assert(DII->getVariable() && "Missing variable");
     auto *DIExpr = DII->getExpression();
-    assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DIExprFlags, Offset);
-    // Insert llvm.dbg.declare immediately before DII, and remove old
-    // llvm.dbg.declare.
-    Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, DII);
-    DII->eraseFromParent();
-  }
-  return !DbgDeclares.empty();
+    DII->setExpression(DIExpr);
+    DII->replaceVariableLocationOp(Address, NewAddress);
+  };
+
+  for_each(DbgDeclares, ReplaceOne);
+  for_each(DPVDeclares, ReplaceOne);
+
+  return !DbgDeclares.empty() || !DPVDeclares.empty();
 }
 
 static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
@@ -3563,8 +3592,9 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (isa<ConstantInt>(C))
     return createIntegerExpression(C);
 
-  if (Ty.isFloatTy() || Ty.isDoubleTy()) {
-    const APFloat &APF = cast<ConstantFP>(&C)->getValueAPF();
+  auto *FP = dyn_cast<ConstantFP>(&C);
+  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+    const APFloat &APF = FP->getValueAPF();
     return DIB.createConstantValueExpression(
         APF.bitcastToAPInt().getZExtValue());
   }
@@ -3874,7 +3904,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     SmallVectorImpl<Instruction *> &InsertedInsts) {
   if (!match(I, m_Or(m_Value(), m_Value())) &&
       !match(I, m_FShl(m_Value(), m_Value(), m_Value())) &&
-      !match(I, m_FShr(m_Value(), m_Value(), m_Value())))
+      !match(I, m_FShr(m_Value(), m_Value(), m_Value())) &&
+      !match(I, m_BSwap(m_Value())))
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;

@@ -2102,7 +2102,7 @@ public:
                                  SourceLocation AttrLoc);
 
   CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
-  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+  bool CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
@@ -7110,15 +7110,7 @@ public:
                                  NestedNameSpecInfo &IdInfo,
                                  bool EnteringContext);
 
-  /// The kind of conversion to check for. Either all attributes must match exactly,
-  /// or the converted type may add/drop '__arm_preserves_za'.
-  enum class AArch64SMECallConversionKind {
-    MatchExactly,
-    MayAddPreservesZA,
-    MayDropPreservesZA,
-  };
-  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType,
-                                  AArch64SMECallConversionKind C);
+  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType);
 
   /// The parser has parsed a nested-name-specifier
   /// 'template[opt] template-name < template-args >::'.
@@ -7311,8 +7303,7 @@ public:
 
   /// ActOnLambdaExpr - This is called when the body of a lambda expression
   /// was successfully completed.
-  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                             Scope *CurScope);
+  ExprResult ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body);
 
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
@@ -9358,8 +9349,7 @@ public:
 
   QualType DeduceTemplateSpecializationFromInitializer(
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
-      const InitializationKind &Kind, MultiExprArg Init,
-      ParenListExpr *PL = nullptr);
+      const InitializationKind &Kind, MultiExprArg Init);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,
@@ -10268,11 +10258,13 @@ public:
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
   };
 
-  // Unlike the above, this evaluates constraints, which should only happen at
-  // 'constraint checking' time.
+  // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
+  // Unlike the above, this does not evaluates constraints.
+  ExprResult SubstConstraintExprWithoutSatisfaction(
+      Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Substitute the given template arguments into a list of
   /// expressions, expanding pack expansions if required.
@@ -11023,6 +11015,11 @@ public:
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
 
+  /// ActOnPragmaCXLimitedRange - Called on well formed
+  /// \#pragma STDC CX_LIMITED_RANGE
+  void ActOnPragmaCXLimitedRange(SourceLocation Loc,
+                                 LangOptions::ComplexRangeKind Range);
+
   /// Called on well formed '\#pragma clang fp' that has option 'exceptions'.
   void ActOnPragmaFPExceptions(SourceLocation Loc,
                                LangOptions::FPExceptionModeKind);
@@ -11344,9 +11341,12 @@ private:
   /// rigorous semantic checking in the new mapped directives.
   bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                         ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind BindKind,
+                        OpenMPBindClauseKind &BindKind,
                         OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective);
+                        OpenMPDirectiveKind &PrevMappedDirective,
+                        SourceLocation StartLoc, SourceLocation EndLoc,
+                        const DeclarationNameInfo &DirName,
+                        OpenMPDirectiveKind CancelRegion);
 
 public:
   /// The declarator \p D defines a function in the scope \p S which is nested
@@ -12967,7 +12967,7 @@ public:
   QualType FindCompositeObjCPointerType(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation QuestionLoc);
 
-  bool DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
+  bool DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
                                   SourceLocation QuestionLoc);
 
   void DiagnoseAlwaysNonNullPointer(Expr *E,
@@ -13847,6 +13847,7 @@ private:
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool ParseSVEImmChecks(CallExpr *TheCall,
                          SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,

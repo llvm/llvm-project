@@ -343,7 +343,7 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    call foo@plt
+; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
@@ -400,7 +400,7 @@ define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    call foo@plt
+; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb

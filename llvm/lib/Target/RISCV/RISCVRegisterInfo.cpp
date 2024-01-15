@@ -127,6 +127,9 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, RISCV::X27);
   }
 
+  // Shadow stack pointer.
+  markSuperRegs(Reserved, RISCV::SSP);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -267,8 +270,9 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -300,7 +304,6 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
     const int64_t VLENB = STI.getRealMinVLen() / 8;
     int64_t Offset = VLENB * LMUL;
@@ -344,8 +347,9 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -377,7 +381,6 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
     const int64_t VLENB = STI.getRealMinVLen() / 8;
     int64_t Offset = VLENB * LMUL;

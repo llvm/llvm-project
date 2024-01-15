@@ -1723,6 +1723,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
   uint64_t EstStackSize = MFI.estimateStackSize(MF);
   uint64_t MaxOffset = EstStackSize - 1;
 
@@ -1734,12 +1735,11 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // rather than allocating as close to possible. This could save a lot of space
   // on frames with alignment requirements.
   if (ST.enableFlatScratch()) {
-    const SIInstrInfo *TII = ST.getInstrInfo();
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                SIInstrFlags::FlatScratch))
       return false;
   } else {
-    if (SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset))
+    if (TII->isLegalMUBUFImmOffset(MaxOffset))
       return false;
   }
 

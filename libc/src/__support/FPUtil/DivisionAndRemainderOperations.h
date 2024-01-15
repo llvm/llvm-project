@@ -53,13 +53,13 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
   NormalFloat<T> normalx(xbits), normaly(ybits);
   int exp = normalx.exponent - normaly.exponent;
-  typename NormalFloat<T>::UIntType mx = normalx.mantissa,
-                                    my = normaly.mantissa;
+  typename NormalFloat<T>::StorageType mx = normalx.mantissa,
+                                       my = normaly.mantissa;
 
   q = 0;
   while (exp >= 0) {
     unsigned shift_count = 0;
-    typename NormalFloat<T>::UIntType n = mx;
+    typename NormalFloat<T>::StorageType n = mx;
     for (shift_count = 0; n < my; n <<= 1, ++shift_count)
       ;
 

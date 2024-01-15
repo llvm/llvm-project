@@ -401,6 +401,13 @@ func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant_load
+func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr
 llvm.func @bar(!llvm.ptr, !llvm.ptr, !llvm.ptr)
 llvm.func @__gxx_personality_v0(...) -> i32
@@ -574,6 +581,16 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.intr.lifetime.start 16, %p : !llvm.ptr
   // CHECK: llvm.intr.lifetime.end 16, %[[P]]
   llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: @invariant
+// CHECK-SAME: %[[P:.*]]: !llvm.ptr
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: %[[START:.*]] = llvm.intr.invariant.start 1, %[[P]] : !llvm.ptr
+  %1 = llvm.intr.invariant.start 1, %p : !llvm.ptr
+  // CHECK: llvm.intr.invariant.end %[[START]], 1, %[[P]] : !llvm.ptr
+  llvm.intr.invariant.end %1, 1, %p : !llvm.ptr
   llvm.return
 }
 

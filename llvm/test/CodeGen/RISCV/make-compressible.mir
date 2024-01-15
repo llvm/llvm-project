@@ -550,18 +550,18 @@ body:             |
     ; RV32-NEXT: renamable $f10_f = FLW $x10, 0 :: (load (s32) from %ir.g)
     ; RV32-NEXT: renamable $f11_f = FLW $x10, 4 :: (load (s32) from %ir.arrayidx1)
     ; RV32-NEXT: renamable $f12_f = FLW killed $x10, 8 :: (load (s32) from %ir.arrayidx2)
-    ; RV32-NEXT: PseudoTAIL target-flags(riscv-plt) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
     ; RV64-LABEL: name: load_common_ptr_float
     ; RV64: liveins: $x16
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: renamable $f10_f = FLW renamable $x16, 0 :: (load (s32) from %ir.g)
     ; RV64-NEXT: renamable $f11_f = FLW renamable $x16, 4 :: (load (s32) from %ir.arrayidx1)
     ; RV64-NEXT: renamable $f12_f = FLW killed renamable $x16, 8 :: (load (s32) from %ir.arrayidx2)
-    ; RV64-NEXT: PseudoTAIL target-flags(riscv-plt) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    ; RV64-NEXT: PseudoTAIL target-flags(riscv-call) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
     renamable $f10_f = FLW renamable $x16, 0 :: (load (s32) from %ir.g)
     renamable $f11_f = FLW renamable $x16, 4 :: (load (s32) from %ir.arrayidx1)
     renamable $f12_f = FLW killed renamable $x16, 8 :: (load (s32) from %ir.arrayidx2)
-    PseudoTAIL target-flags(riscv-plt) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    PseudoTAIL target-flags(riscv-call) @load_common_ptr_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
 
 ...
 ---
@@ -578,7 +578,7 @@ body:             |
     ; RV32-NEXT: renamable $f10_d = FLD $x10, 0 :: (load (s64) from %ir.g)
     ; RV32-NEXT: renamable $f11_d = FLD $x10, 8 :: (load (s64) from %ir.arrayidx1)
     ; RV32-NEXT: renamable $f12_d = FLD killed $x10, 16 :: (load (s64) from %ir.arrayidx2)
-    ; RV32-NEXT: PseudoTAIL target-flags(riscv-plt) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
     ; RV64-LABEL: name: load_common_ptr_double
     ; RV64: liveins: $x16
     ; RV64-NEXT: {{  $}}
@@ -586,11 +586,11 @@ body:             |
     ; RV64-NEXT: renamable $f10_d = FLD $x10, 0 :: (load (s64) from %ir.g)
     ; RV64-NEXT: renamable $f11_d = FLD $x10, 8 :: (load (s64) from %ir.arrayidx1)
     ; RV64-NEXT: renamable $f12_d = FLD killed $x10, 16 :: (load (s64) from %ir.arrayidx2)
-    ; RV64-NEXT: PseudoTAIL target-flags(riscv-plt) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    ; RV64-NEXT: PseudoTAIL target-flags(riscv-call) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
     renamable $f10_d = FLD renamable $x16, 0 :: (load (s64) from %ir.g)
     renamable $f11_d = FLD renamable $x16, 8 :: (load (s64) from %ir.arrayidx1)
     renamable $f12_d = FLD killed renamable $x16, 16 :: (load (s64) from %ir.arrayidx2)
-    PseudoTAIL target-flags(riscv-plt) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    PseudoTAIL target-flags(riscv-call) @load_common_ptr_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
 
 ...
 ---
@@ -746,18 +746,18 @@ body:             |
     ; RV32-NEXT: renamable $f10_f = FLW $x11, 16 :: (load (s32) from %ir.arrayidx)
     ; RV32-NEXT: renamable $f11_f = FLW $x11, 20 :: (load (s32) from %ir.arrayidx1)
     ; RV32-NEXT: renamable $f12_f = FLW killed $x11, 24 :: (load (s32) from %ir.arrayidx2)
-    ; RV32-NEXT: PseudoTAIL target-flags(riscv-plt) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
     ; RV64-LABEL: name: load_large_offset_float
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: renamable $f10_f = FLW renamable $x10, 400 :: (load (s32) from %ir.arrayidx)
     ; RV64-NEXT: renamable $f11_f = FLW renamable $x10, 404 :: (load (s32) from %ir.arrayidx1)
     ; RV64-NEXT: renamable $f12_f = FLW killed renamable $x10, 408 :: (load (s32) from %ir.arrayidx2)
-    ; RV64-NEXT: PseudoTAIL target-flags(riscv-plt) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    ; RV64-NEXT: PseudoTAIL target-flags(riscv-call) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
     renamable $f10_f = FLW renamable $x10, 400 :: (load (s32) from %ir.arrayidx)
     renamable $f11_f = FLW renamable $x10, 404 :: (load (s32) from %ir.arrayidx1)
     renamable $f12_f = FLW killed renamable $x10, 408 :: (load (s32) from %ir.arrayidx2)
-    PseudoTAIL target-flags(riscv-plt) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
+    PseudoTAIL target-flags(riscv-call) @load_large_offset_float_1, implicit $x2, implicit $f10_f, implicit $f11_f, implicit $f12_f
 
 ...
 ---
@@ -774,7 +774,7 @@ body:             |
     ; RV32-NEXT: renamable $f10_d = FLD $x11, 32 :: (load (s64) from %ir.arrayidx)
     ; RV32-NEXT: renamable $f11_d = FLD $x11, 40 :: (load (s64) from %ir.arrayidx1)
     ; RV32-NEXT: renamable $f12_d = FLD killed $x11, 48 :: (load (s64) from %ir.arrayidx2)
-    ; RV32-NEXT: PseudoTAIL target-flags(riscv-plt) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    ; RV32-NEXT: PseudoTAIL target-flags(riscv-call) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
     ; RV64-LABEL: name: load_large_offset_double
     ; RV64: liveins: $x10
     ; RV64-NEXT: {{  $}}
@@ -782,11 +782,11 @@ body:             |
     ; RV64-NEXT: renamable $f10_d = FLD $x11, 32 :: (load (s64) from %ir.arrayidx)
     ; RV64-NEXT: renamable $f11_d = FLD $x11, 40 :: (load (s64) from %ir.arrayidx1)
     ; RV64-NEXT: renamable $f12_d = FLD killed $x11, 48 :: (load (s64) from %ir.arrayidx2)
-    ; RV64-NEXT: PseudoTAIL target-flags(riscv-plt) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    ; RV64-NEXT: PseudoTAIL target-flags(riscv-call) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
     renamable $f10_d = FLD renamable $x10, 800 :: (load (s64) from %ir.arrayidx)
     renamable $f11_d = FLD renamable $x10, 808 :: (load (s64) from %ir.arrayidx1)
     renamable $f12_d = FLD killed renamable $x10, 816 :: (load (s64) from %ir.arrayidx2)
-    PseudoTAIL target-flags(riscv-plt) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
+    PseudoTAIL target-flags(riscv-call) @load_large_offset_double_1, implicit $x2, implicit $f10_d, implicit $f11_d, implicit $f12_d
 
 ...
 ---

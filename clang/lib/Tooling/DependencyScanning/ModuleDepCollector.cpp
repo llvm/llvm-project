@@ -119,6 +119,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  // LLVM options are not going to affect the AST
+  CI.getFrontendOpts().LLVMArgs.clear();
 
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
@@ -521,7 +523,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          M->getASTFile());
+          *M->getASTFile());
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -530,7 +532,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
@@ -548,7 +550,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
-                .endswith("__inferred_module.map"))
+                .ends_with("__inferred_module.map"))
           return;
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });

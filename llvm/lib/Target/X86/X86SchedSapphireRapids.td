@@ -635,10 +635,10 @@ def : InstRW<[SPRWriteResGroup10, ReadAfterVecXLd], (instregex "^(V?)PACK(S|U)S(
                                                                "^VPMULTISHIFTQBZ128rm(b?)$")>;
 def : InstRW<[SPRWriteResGroup10, ReadAfterVecXLd], (instrs VFPCLASSPHZ128rm)>;
 def : InstRW<[SPRWriteResGroup10, ReadAfterVecYLd], (instregex "^VFPCLASSP(D|H|S)Z((256)?)rm$",
-                                                               "^VPERM(I|T)2(D|Q|PS)128rm((b|k|bk|kz)?)$",
-                                                               "^VPERM(I|T)2(D|Q|PS)128rmbkz$",
-                                                               "^VPERM(I|T)2PD128rm((b|k|bk|kz)?)$",
-                                                               "^VPERM(I|T)2PD128rmbkz$")>;
+                                                               "^VPERM(I|T)2(D|Q|PS)Z128rm((b|k|bk|kz)?)$",
+                                                               "^VPERM(I|T)2(D|Q|PS)Z128rmbkz$",
+                                                               "^VPERM(I|T)2PDZ128rm((b|k|bk|kz)?)$",
+                                                               "^VPERM(I|T)2PDZ128rmbkz$")>;
 def : InstRW<[SPRWriteResGroup10, ReadAfterVecYLd], (instrs VPERMBZ128rm)>;
 
 def SPRWriteResGroup11 : SchedWriteRes<[SPRPort02_03_11, SPRPort05]> {
@@ -678,8 +678,8 @@ def : InstRW<[SPRWriteResGroup12], (instregex "^ADD_F(P?)rST0$",
                                               "^VPERM(B|D|Q)Zrr$",
                                               "^VPERM(D|Q)Z256rr((k|kz)?)$",
                                               "^VPERM(D|Q)Zrrk(z?)$",
-                                              "^VPERM(I|T)2(D|Q)(128|256)rr((k|kz)?)$",
-                                              "^VPERM(I|T)2(D|Q)rr((k|kz)?)$",
+                                              "^VPERM(I|T)2(D|Q)Z(128|256)rr((k|kz)?)$",
+                                              "^VPERM(I|T)2(D|Q)Zrr((k|kz)?)$",
                                               "^VPM(AX|IN)(S|U)QZ(128|256)rr((k|kz)?)$",
                                               "^VPMULTISHIFTQBZ(128|256)rr$",
                                               "^VPOPCNT(B|D|Q|W)Z(128|256)rr$",
@@ -1599,7 +1599,7 @@ def SPRWriteResGroup126 : SchedWriteRes<[SPRPort02_03_11]> {
   let Latency = 8;
 }
 def : InstRW<[SPRWriteResGroup126], (instregex "^MMX_MOV(D|Q)64rm$",
-                                               "^VBROADCAST(F|I)128$",
+                                               "^VBROADCAST(F|I)128rm$",
                                                "^VBROADCAST(F|I)32X(2|4)Z256rm$",
                                                "^VBROADCAST(F|I)32X(8|2Z)rm$",
                                                "^VBROADCAST(F|I)(32|64)X4rm$",
@@ -4274,7 +4274,7 @@ def SPRWriteResGroup455 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPo
 }
 def : InstRW<[SPRWriteResGroup455], (instregex "^VPCONFLICTQZ128rm((b|k|bk|kz)?)$")>;
 def : InstRW<[SPRWriteResGroup455], (instrs VPCONFLICTQZ128rmbkz)>;
-def : InstRW<[SPRWriteResGroup455, ReadAfterVecYLd], (instregex "^VPERM(I|T)2B128rm$")>;
+def : InstRW<[SPRWriteResGroup455, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZ128rm$")>;
 
 def SPRWriteResGroup456 : SchedWriteRes<[SPRPort00_01_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
@@ -4325,127 +4325,127 @@ def SPRWriteResGroup462 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPo
   let Latency = 13;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup462, ReadAfterVecYLd], (instregex "^VPERM(I|T)2B128rmk(z?)$")>;
-def : InstRW<[SPRWriteResGroup462, ReadAfterVecYLd], (instrs VPERMT2W128rm)>;
+def : InstRW<[SPRWriteResGroup462, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZ128rmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup462, ReadAfterVecYLd], (instrs VPERMT2WZ128rm)>;
 
 def SPRWriteResGroup463 : SchedWriteRes<[SPRPort00_01_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 5;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup463], (instregex "^VPERM(I|T)2B(128|256)rr$")>;
+def : InstRW<[SPRWriteResGroup463], (instregex "^VPERM(I|T)2BZ(128|256)rr$")>;
 
 def SPRWriteResGroup464 : SchedWriteRes<[SPRPort00_01_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 7;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup464], (instregex "^VPERM(I|T)2B(128|256)rrk(z?)$",
-                                               "^VPERM(I|T)2W(128|256)rr$")>;
+def : InstRW<[SPRWriteResGroup464], (instregex "^VPERM(I|T)2BZ(128|256)rrk(z?)$",
+                                               "^VPERM(I|T)2WZ(128|256)rr$")>;
 
 def SPRWriteResGroup465 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 12;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup465, ReadAfterVecYLd], (instregex "^VPERM(I|T)2B256rm$")>;
+def : InstRW<[SPRWriteResGroup465, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZ256rm$")>;
 
 def SPRWriteResGroup466 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 14;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup466, ReadAfterVecYLd], (instregex "^VPERM(I|T)2B256rmk(z?)$")>;
-def : InstRW<[SPRWriteResGroup466, ReadAfterVecYLd], (instrs VPERMI2W128rm,
-                                                             VPERMT2W256rm)>;
+def : InstRW<[SPRWriteResGroup466, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZ256rmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup466, ReadAfterVecYLd], (instrs VPERMI2WZ128rm,
+                                                             VPERMT2WZ256rm)>;
 
 def SPRWriteResGroup467 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 12;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup467, ReadAfterVecYLd], (instregex "^VPERM(I|T)2Brm$")>;
+def : InstRW<[SPRWriteResGroup467, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZrm$")>;
 
 def SPRWriteResGroup468 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 14;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup468, ReadAfterVecYLd], (instregex "^VPERM(I|T)2Brmk(z?)$")>;
-def : InstRW<[SPRWriteResGroup468, ReadAfterVecYLd], (instrs VPERMT2Wrm)>;
+def : InstRW<[SPRWriteResGroup468, ReadAfterVecYLd], (instregex "^VPERM(I|T)2BZrmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup468, ReadAfterVecYLd], (instrs VPERMT2WZrm)>;
 
 def SPRWriteResGroup469 : SchedWriteRes<[SPRPort00_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 5;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup469], (instregex "^VPERM(I|T)2Brr$")>;
+def : InstRW<[SPRWriteResGroup469], (instregex "^VPERM(I|T)2BZrr$")>;
 
 def SPRWriteResGroup470 : SchedWriteRes<[SPRPort00_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 7;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup470], (instregex "^VPERM(I|T)2Brrk(z?)$",
-                                               "^VPERM(I|T)2Wrr$")>;
+def : InstRW<[SPRWriteResGroup470], (instregex "^VPERM(I|T)2BZrrk(z?)$",
+                                               "^VPERM(I|T)2WZrr$")>;
 
 def SPRWriteResGroup471 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 16;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup471, ReadAfterVecYLd], (instregex "^VPERMI2W128rmk(z?)$",
-                                                                "^VPERMT2W256rmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup471, ReadAfterVecYLd], (instregex "^VPERMI2WZ128rmk(z?)$",
+                                                                "^VPERMT2WZ256rmk(z?)$")>;
 
 def SPRWriteResGroup472 : SchedWriteRes<[SPRPort00_01_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 9;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup472], (instregex "^VPERM(I|T)2W(128|256)rrk(z?)$")>;
+def : InstRW<[SPRWriteResGroup472], (instregex "^VPERM(I|T)2WZ(128|256)rrk(z?)$")>;
 
 def SPRWriteResGroup473 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 15;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup473, ReadAfterVecYLd], (instregex "^VPERMT2W128rmk(z?)$")>;
-def : InstRW<[SPRWriteResGroup473, ReadAfterVecYLd], (instrs VPERMI2W256rm)>;
+def : InstRW<[SPRWriteResGroup473, ReadAfterVecYLd], (instregex "^VPERMT2WZ128rmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup473, ReadAfterVecYLd], (instrs VPERMI2WZ256rm)>;
 
 def SPRWriteResGroup474 : SchedWriteRes<[SPRPort00_01_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 17;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup474, ReadAfterVecYLd], (instregex "^VPERMI2W256rmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup474, ReadAfterVecYLd], (instregex "^VPERMI2WZ256rmk(z?)$")>;
 
 def SPRWriteResGroup475 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 15;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup475, ReadAfterVecYLd], (instrs VPERMI2Wrm)>;
+def : InstRW<[SPRWriteResGroup475, ReadAfterVecYLd], (instrs VPERMI2WZrm)>;
 
 def SPRWriteResGroup476 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 17;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup476, ReadAfterVecYLd], (instregex "^VPERMI2Wrmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup476, ReadAfterVecYLd], (instregex "^VPERMI2WZrmk(z?)$")>;
 
 def SPRWriteResGroup477 : SchedWriteRes<[SPRPort00_05, SPRPort05]> {
   let ReleaseAtCycles = [1, 2];
   let Latency = 9;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup477], (instregex "^VPERM(I|T)2Wrrk(z?)$")>;
+def : InstRW<[SPRWriteResGroup477], (instregex "^VPERM(I|T)2WZrrk(z?)$")>;
 
 def SPRWriteResGroup478 : SchedWriteRes<[SPRPort00_05, SPRPort02_03_11, SPRPort05]> {
   let ReleaseAtCycles = [1, 1, 2];
   let Latency = 16;
   let NumMicroOps = 4;
 }
-def : InstRW<[SPRWriteResGroup478, ReadAfterVecYLd], (instregex "^VPERMT2Wrmk(z?)$")>;
+def : InstRW<[SPRWriteResGroup478, ReadAfterVecYLd], (instregex "^VPERMT2WZrmk(z?)$")>;
 
 def SPRWriteResGroup479 : SchedWriteRes<[SPRPort00_01, SPRPort02_03_11, SPRPort05]> {
   let Latency = 10;

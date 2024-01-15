@@ -20,7 +20,6 @@
 namespace llvm {
 
 class AMDGPUSubtarget;
-class GCNSubtarget;
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
@@ -46,6 +45,9 @@ protected:
   /// The maximal alignment is updated during IR translation or lowering
   /// stages.
   Align DynLDSAlign;
+
+  // Flag to check dynamic LDS usage by kernel.
+  bool UsesDynamicLDS = false;
 
   // Kernels + shaders. i.e. functions called by the hardware and not called
   // by other functions.
@@ -120,6 +122,10 @@ public:
   Align getDynLDSAlign() const { return DynLDSAlign; }
 
   void setDynLDSAlign(const Function &F, const GlobalVariable &GV);
+
+  void setUsesDynamicLDS(bool DynLDS);
+
+  bool isDynamicLDSUsed() const;
 };
 
 }

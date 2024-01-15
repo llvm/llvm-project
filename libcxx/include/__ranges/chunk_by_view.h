@@ -54,7 +54,8 @@ namespace ranges {
 
 template <forward_range _View, indirect_binary_predicate<iterator_t<_View>, iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
+class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG chunk_by_view
+    : public view_interface<chunk_by_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
@@ -65,7 +66,8 @@ class chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
   class __iterator;
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_next(iterator_t<_View> __current) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call __find_next() on a chunk_by_view that does not have a valid predicate.");
     auto __reversed_pred = [this]<class _Tp, class _Up>(_Tp&& __x, _Up&& __y) -> bool {
       return !std::invoke(*__pred_, std::forward<_Tp>(__x), std::forward<_Up>(__y));
@@ -77,9 +79,10 @@ class chunk_by_view : public view_interface<chunk_by_view<_View, _Pred>> {
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> __find_prev(iterator_t<_View> __current)
     requires bidirectional_range<_View>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __current != ranges::begin(__base_), "Trying to call __find_prev() on a begin iterator.");
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Attempting to decrement a begin iterator is a no-op (`__find_prev` would return the same argument given to it).
+    _LIBCPP_ASSERT_PEDANTIC(__current != ranges::begin(__base_), "Trying to call __find_prev() on a begin iterator.");
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call __find_prev() on a chunk_by_view that does not have a valid predicate.");
 
     auto __first = ranges::begin(__base_);
@@ -109,7 +112,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Pred& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a chunk_by_view that does not have a valid predicate.");
 
     auto __first = ranges::begin(__base_);
@@ -153,12 +157,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __next_, "Trying to dereference past-the-end chunk_by_view iterator.");
+    // If the iterator is at end, this would return an empty range which can be checked by the calling code and doesn't
+    // necessarily lead to a bad access.
+    _LIBCPP_ASSERT_PEDANTIC(__current_ != __next_, "Trying to dereference past-the-end chunk_by_view iterator.");
     return {__current_, __next_};
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __next_, "Trying to increment past end chunk_by_view iterator.");
+    // Attempting to increment an end iterator is a no-op (`__find_next` would return the same argument given to it).
+    _LIBCPP_ASSERT_PEDANTIC(__current_ != __next_, "Trying to increment past end chunk_by_view iterator.");
     __current_ = __next_;
     __next_    = __parent_->__find_next(__current_);
     return *this;

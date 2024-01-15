@@ -3,36 +3,18 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define double @pow_f64(double %a, double %b) {
-; CHECK-SD-LABEL: pow_f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b pow
-;
-; CHECK-GI-LABEL: pow_f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl pow
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: pow_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b pow
 entry:
   %c = call double @llvm.pow.f64(double %a, double %b)
   ret double %c
 }
 
 define float @pow_f32(float %a, float %b) {
-; CHECK-SD-LABEL: pow_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b powf
-;
-; CHECK-GI-LABEL: pow_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl powf
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: pow_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b powf
 entry:
   %c = call float @llvm.pow.f32(float %a, float %b)
   ret float %c

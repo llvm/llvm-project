@@ -70,7 +70,7 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(Root->getName(), DwarfClang);
 
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
-  EXPECT_TRUE(CompileUnit->getProducer().startswith("clang"));
+  EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
 
   EXPECT_EQ(CompileUnit->lineCount(), 0u);

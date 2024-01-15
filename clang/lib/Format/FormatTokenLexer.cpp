@@ -711,12 +711,12 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   bool Verbatim = false;
   bool Interpolated = false;
-  if (TokenText.startswith(R"($@")") || TokenText.startswith(R"(@$")")) {
+  if (TokenText.starts_with(R"($@")") || TokenText.starts_with(R"(@$")")) {
     Verbatim = true;
     Interpolated = true;
-  } else if (TokenText.startswith(R"(@")")) {
+  } else if (TokenText.starts_with(R"(@")")) {
     Verbatim = true;
-  } else if (TokenText.startswith(R"($")")) {
+  } else if (TokenText.starts_with(R"($")")) {
     Interpolated = true;
   }
 
@@ -1110,7 +1110,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
   if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
-      FormatTok->is(tok::comment) && FormatTok->TokenText.startswith("//")) {
+      FormatTok->is(tok::comment) && FormatTok->TokenText.starts_with("//")) {
     size_t BackslashPos = FormatTok->TokenText.find('\\');
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
@@ -1180,6 +1180,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
     } else if (Style.isJavaScript() &&
                FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
                                   tok::kw_operator)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
     }

@@ -137,7 +137,20 @@ struct PragmaSTDC_CX_LIMITED_RANGEHandler : public PragmaHandler {
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &Tok) override {
     tok::OnOffSwitch OOS;
-    PP.LexOnOffSwitch(OOS);
+    if (PP.LexOnOffSwitch(OOS))
+      return;
+
+    MutableArrayRef<Token> Toks(
+        PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_cx_limited_range);
+    Toks[0].setLocation(Tok.getLocation());
+    Toks[0].setAnnotationEndLoc(Tok.getLocation());
+    Toks[0].setAnnotationValue(
+        reinterpret_cast<void *>(static_cast<uintptr_t>(OOS)));
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
+                        /*IsReinject=*/false);
   }
 };
 
@@ -886,6 +899,31 @@ void Parser::HandlePragmaFEnvRound() {
 
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
   Actions.ActOnPragmaFEnvRound(PragmaLoc, RM);
+}
+
+void Parser::HandlePragmaCXLimitedRange() {
+  assert(Tok.is(tok::annot_pragma_cx_limited_range));
+  tok::OnOffSwitch OOS = static_cast<tok::OnOffSwitch>(
+      reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+
+  LangOptions::ComplexRangeKind Range;
+  switch (OOS) {
+  case tok::OOS_ON:
+    Range = LangOptions::CX_Limited;
+    break;
+  case tok::OOS_OFF:
+    Range = LangOptions::CX_Full;
+    break;
+  case tok::OOS_DEFAULT:
+    // According to ISO C99 standard chapter 7.3.4, the default value
+    // for the pragma is ``off'. -fcx-limited-range and -fcx-fortran-rules
+    // control the default value of these pragmas.
+    Range = getLangOpts().getComplexRange();
+    break;
+  }
+
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
+  Actions.ActOnPragmaCXLimitedRange(PragmaLoc, Range);
 }
 
 StmtResult Parser::HandlePragmaCaptured()

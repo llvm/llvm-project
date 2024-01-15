@@ -35,8 +35,12 @@
 
 int main(int, char**) {
   // The data is passed as-is so it does not depend on the encoding of the input.
-  std::vprint_nonunicode("{} {} ", std::make_format_args(1234, "一二三四"));
-  std::vprint_nonunicode("{} {}", std::make_format_args(true, nullptr));
+  int i         = 1234;
+  const char* s = "一二三四";
+  bool b        = true;
+  nullptr_t p   = nullptr;
+  std::vprint_nonunicode("{} {} ", std::make_format_args(i, s));
+  std::vprint_nonunicode("{} {}", std::make_format_args(b, p));
 
   return 0;
 }

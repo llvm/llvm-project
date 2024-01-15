@@ -156,7 +156,7 @@ subroutine return_char(n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_char(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}n
-! CHECK:  %[[VAL_2:.*]] = arith.constant -1 : i32
+! CHECK:  %[[VAL_2:.*]] = arith.constant 6 : i32
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index

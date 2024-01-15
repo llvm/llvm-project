@@ -587,6 +587,19 @@ bool CXXRecordDecl::isTriviallyCopyable() const {
   return true;
 }
 
+bool CXXRecordDecl::isTriviallyCopyConstructible() const {
+
+  //   A trivially copy constructible class is a class that:
+  //   -- has no non-trivial copy constructors,
+  if (hasNonTrivialCopyConstructor())
+    return false;
+  //   -- has a trivial destructor.
+  if (!hasTrivialDestructor())
+    return false;
+
+  return true;
+}
+
 void CXXRecordDecl::markedVirtualFunctionPure() {
   // C++ [class.abstract]p2:
   //   A class is abstract if it has at least one pure virtual function.

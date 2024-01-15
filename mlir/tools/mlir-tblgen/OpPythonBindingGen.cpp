@@ -295,7 +295,7 @@ static bool isODSReserved(StringRef str) {
       {"attributes", "create", "context", "ip", "operands", "print", "get_asm",
        "loc", "verify", "regions", "results", "self", "operation",
        "DIALECT_NAMESPACE", "OPERATION_NAME"});
-  return str.startswith("_ods_") || str.endswith("_ods") ||
+  return str.starts_with("_ods_") || str.ends_with("_ods") ||
          reserved.contains(str);
 }
 

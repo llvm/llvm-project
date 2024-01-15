@@ -58,13 +58,16 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -166,12 +169,6 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
   const llvm::Triple triple(targetOpts.triple);
   const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
 
-  // TODO: Share address spaces enumeration between Clang and Flang.
-  // Currently this enumeration is defined in Clang specific class
-  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
-  // and we need to move it to LLVM directory.
-  const int constantAddressSpace = 4;
-
   if (!triple.isAMDGPU()) {
     return;
   }
@@ -202,7 +199,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     originalGVOp.setValueAttr(
         builder.getIntegerAttr(int32Type, oclcABIVERsion));
     originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
     originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
     return;
   }
@@ -213,7 +210,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
       /* Name */ codeObjectVersionGlobalOpName,
       /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
   covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setAddrSpace(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
   builder.setInsertionPointToStart(mlirModule.getBody());
   builder.insert(covInfo);
@@ -712,11 +709,10 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
-// TODO: We should get this from TargetInfo. However, that depends on
-// too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
-getVScaleRange(CompilerInstance &ci,
-               const Fortran::frontend::LangOptions &langOpts) {
+getAArch64VScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+
   if (langOpts.VScaleMin || langOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
@@ -725,6 +721,63 @@ getVScaleRange(CompilerInstance &ci,
   if (featuresStr.find("+sve") != std::string::npos)
     return std::pair<unsigned, unsigned>(1, 16);
 
+  return std::nullopt;
+}
+
+static std::optional<std::pair<unsigned, unsigned>>
+getRISCVVScaleRange(CompilerInstance &ci) {
+  const auto &langOpts = ci.getInvocation().getLangOpts();
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  auto parseResult = llvm::RISCVISAInfo::parseFeatures(
+      triple.isRISCV64() ? 64 : 32, targetOpts.featuresAsWritten);
+  if (!parseResult) {
+    std::string buffer;
+    llvm::raw_string_ostream outputErrMsg(buffer);
+    handleAllErrors(parseResult.takeError(), [&](llvm::StringError &errMsg) {
+      outputErrMsg << errMsg.getMessage();
+    });
+    ci.getDiagnostics().Report(clang::diag::err_invalid_feature_combination)
+        << outputErrMsg.str();
+    return std::nullopt;
+  }
+
+  llvm::RISCVISAInfo *const isaInfo = parseResult->get();
+
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned vscaleMin = isaInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
+
+  if (langOpts.VScaleMin || langOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    vscaleMin = std::max(vscaleMin, langOpts.VScaleMin);
+    unsigned vscaleMax = langOpts.VScaleMax;
+    if (vscaleMax != 0 && vscaleMax < vscaleMin)
+      vscaleMax = vscaleMin;
+    return std::pair<unsigned, unsigned>(vscaleMin ? vscaleMin : 1, vscaleMax);
+  }
+
+  if (vscaleMin > 0) {
+    unsigned vscaleMax = isaInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(vscaleMin, vscaleMax);
+  }
+
+  return std::nullopt;
+}
+
+// TODO: We should get this from TargetInfo. However, that depends on
+// too much of clang, so for now, replicate the functionality.
+static std::optional<std::pair<unsigned, unsigned>>
+getVScaleRange(CompilerInstance &ci) {
+  const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
+
+  if (triple.isAArch64())
+    return getAArch64VScaleRange(ci);
+  if (triple.isRISCV())
+    return getRISCVVScaleRange(ci);
+
+  // All other architectures that don't support scalable vectors (i.e. don't
+  // need vscale)
   return std::nullopt;
 }
 
@@ -748,16 +801,9 @@ void CodeGenAction::generateLLVMIR() {
 
   MLIRToLLVMPassPipelineConfig config(level, opts);
 
-  const auto targetOpts = ci.getInvocation().getTargetOpts();
-  const llvm::Triple triple(targetOpts.triple);
-
-  // Only get the vscale range if AArch64.
-  if (triple.isAArch64()) {
-    auto langOpts = ci.getInvocation().getLangOpts();
-    if (auto vsr = getVScaleRange(ci, langOpts)) {
-      config.VScaleMin = vsr->first;
-      config.VScaleMax = vsr->second;
-    }
+  if (auto vsr = getVScaleRange(ci)) {
+    config.VScaleMin = vsr->first;
+    config.VScaleMax = vsr->second;
   }
 
   // Create the pass pipeline

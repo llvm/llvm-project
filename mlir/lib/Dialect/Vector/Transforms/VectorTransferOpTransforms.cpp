@@ -922,4 +922,5 @@ void mlir::vector::populateFlattenVectorTransferPatterns(
                FlattenContiguousRowMajorTransferWritePattern>(
       patterns.getContext(), benefit);
   populateShapeCastFoldingPatterns(patterns, benefit);
+  populateDropUnitDimWithShapeCastPatterns(patterns, benefit);
 }

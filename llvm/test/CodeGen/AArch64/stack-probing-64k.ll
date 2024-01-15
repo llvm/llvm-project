@@ -313,7 +313,7 @@ define void @static_16_align_131072(ptr %out) #0 {
 ; CHECK-NEXT:    b .LBB9_1
 ; CHECK-NEXT:  .LBB9_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    mov sp, x29

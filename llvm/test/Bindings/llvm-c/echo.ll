@@ -269,6 +269,17 @@ exit:
   ret void
 }
 
+define void @operandbundles() personality ptr @personalityFn {
+  call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
+  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+foo:
+  ret void
+bar:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
 define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
@@ -285,6 +296,41 @@ entry:
   call void @llvm.lifetime.start.p0(i64 1, ptr %0)
   call void @llvm.lifetime.end.p0(i64 1, ptr %0)
   call void @llvm.stackrestore(ptr %sp)
+  ret void
+}
+
+define void @test_fast_math_flags(i1 %c, float %a, float %b) {
+entry:
+  %select.f.1 = select i1 %c, float %a, float %b
+  %select.f.2 = select nsz i1 %c, float %a, float %b
+  %select.f.3 = select fast i1 %c, float %a, float %b
+  %select.f.4 = select nnan arcp afn i1 %c, float %a, float %b
+
+  br i1 %c, label %choose_a, label %choose_b
+
+choose_a:
+  br label %final
+
+choose_b:
+  br label %final
+
+final:
+  %phi.f.1 = phi float  [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.2 = phi nsz float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.3 = phi fast float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.4 = phi nnan arcp afn float [ %a, %choose_a ], [ %b, %choose_b ]
+  ret void
+}
+
+define float @test_fast_math_flags_call_inner(float %a) {
+  ret float %a
+}
+
+define void @test_fast_math_flags_call_outer(float %a) {
+  %a.1 = call float @test_fast_math_flags_call_inner(float %a)
+  %a.2 = call nsz float @test_fast_math_flags_call_inner(float %a)
+  %a.3 = call fast float @test_fast_math_flags_call_inner(float %a)
+  %a.4 = call nnan arcp afn float @test_fast_math_flags_call_inner(float %a)
   ret void
 }
 

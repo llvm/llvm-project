@@ -492,38 +492,6 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
                         : DiagnosedSilenceableFailure::success();
 }
 
-ParseResult transform::FuseOp::parse(OpAsmParser &parser,
-                                     OperationState &result) {
-  OpAsmParser::UnresolvedOperand targetOperand;
-  if (parser.parseOperand(targetOperand) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-
-  FunctionType trailingType;
-  SMLoc typeLoc;
-  if (parser.getCurrentLocation(&typeLoc) ||
-      parser.parseColonType(trailingType)) {
-    return failure();
-  }
-  if (trailingType.getNumInputs() != 1)
-    return parser.emitError(typeLoc) << "expected one input type";
-
-  result.addTypes(trailingType.getResults());
-  if (parser.resolveOperand(targetOperand, trailingType.getInput(0),
-                            result.operands))
-    return failure();
-  return success();
-}
-
-void transform::FuseOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  p << getTarget();
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : ";
-  p.printFunctionalType(TypeRange(getOperand().getType()),
-                        getResults().getTypes());
-}
-
 LogicalResult transform::FuseOp::verify() {
   SmallVector<int64_t> permutation =
       extractFromIntegerArrayAttr<int64_t>(getTileInterchange());
@@ -1125,8 +1093,11 @@ DiagnosedSilenceableFailure transform::LowerUnPackOp::applyToOne(
   rewriter.setInsertionPoint(target);
   FailureOr<LowerUnPackOpResult> res = lowerUnPack(rewriter, target);
   if (failed(res)) {
-    return mlir::emitSilenceableFailure(target->getLoc())
-           << "cannot rewrite to pad + expand + transpose";
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "cannot lower to transpose + collapse + extract";
+    diag.attachNote(target->getLoc()) << "target payload op";
+    return diag;
   }
   transformResults.push_back(res->emptyOp);
   transformResults.push_back(res->transposeOp);
@@ -1788,7 +1759,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     if (options.copyBackOp != LinalgPaddingOptions::CopyBackOp::None) {
       for (Value v : replacements) {
         Operation *copyBackOp = v.getDefiningOp();
-        if (llvm::find(copyBackOps, copyBackOp) == copyBackOps.end())
+        if (!llvm::is_contained(copyBackOps, copyBackOp))
           copyBackOps.push_back(copyBackOp);
       }
     }
@@ -2105,6 +2076,22 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
   results.reserve(maybeTilingResult->tiledOps.size());
   for (Operation *tiled : maybeTilingResult->tiledOps)
     results.push_back(tiled);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToLoopsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ConvertToLoopsOp::applyToOne(
+    transform::TransformRewriter &rewriter, TilingInterface target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  FailureOr<SmallVector<scf::ForOp>> loops =
+      scf::lowerToLoopsUsingSCFForOp(rewriter, target);
+  if (failed(loops))
+    return emitDefaultDefiniteFailure(target);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2617,7 +2604,12 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     }
 
     scf::SCFTilingOptions tilingOptions;
-    if (!tileSizes.empty()) {
+    if (tileSizes.empty()) {
+      tilingOptions.setTileSizeComputationFunction(
+          [](OpBuilder &, Operation *) -> SmallVector<OpFoldResult> {
+            return {};
+          });
+    } else {
       tilingOptions.setTileSizeComputationFunction([&, index = i](OpBuilder &b,
                                                                   Operation *) {
         SmallVector<OpFoldResult> sizes;
