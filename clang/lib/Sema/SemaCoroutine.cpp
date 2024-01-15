@@ -1798,7 +1798,7 @@ bool CoroutineStmtBuilder::makeOnException() {
 }
 
 // Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
-// attributes to the function `get_return_object`.
+// attributes to the function `get_return_object` if its return type is marked with `[[clang::coro_return_type]]` to avoid false-positive diagnostic for `get_return_object`.
 static void handleGetReturnObject(Sema &S, Expr *E) {
   if (auto *TE = dyn_cast<CXXBindTemporaryExpr>(E))
     E = TE->getSubExpr();
