@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --gpu-resolve-conditional-execution -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --gpu-kernel-outlining --gpu-resolve-conditional-execution -split-input-file | FileCheck --check-prefix=LAUNCH %s
 
 // CHECK-LABEL:func.func @conditional_execution_host
 // CHECK: (%[[DEV:.*]]: index, %[[HOST:.*]]: index)
@@ -76,3 +77,48 @@ func.func @conditional_execution_dev(%memref: memref<f32>, %fdev: f32, %fhost: f
   }
   return
 }
+
+// -----
+
+// LAUNCH-LABEL: func.func @thread_id() -> index
+// LAUNCH: %[[HOST_ID:.*]] = arith.constant 0 : index
+// LAUNCH-NEXT: %[[HOST_RES:.*]] =  scf.execute_region -> index {
+// LAUNCH-NEXT: scf.yield %[[HOST_ID]] : index
+// LAUNCH-NEXT: }
+// LAUNCH-NEXT: return %[[HOST_RES]] : index
+func.func @thread_id() -> index {
+  %val = gpu.conditional_execution device {
+    %id = gpu.thread_id x
+    gpu.yield %id: index
+  } host {
+    %id = arith.constant 0 : index
+    gpu.yield %id: index
+  } -> index
+  return %val : index
+}
+// LAUNCH-LABEL: func.func @launch()
+// LAUNCH: gpu.launch_func
+// LAUNCH-NEXT: %{{.*}} = call @thread_id() : () -> index
+// LAUNCH-NEXT: return
+func.func @launch() {
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
+                                       %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
+                                        %block_z = %c1) {
+    %id = func.call @thread_id() : () -> index
+    gpu.terminator
+  }
+  %id = func.call @thread_id() : () -> index
+  return
+}
+// LAUNCH: gpu.module @[[LAUNCH_ID:.*]] {
+// LAUNCH: gpu.func @[[LAUNCH_ID]]
+// LAUNCH: %{{.*}} = func.call @thread_id() : () -> index
+// LAUNCH-NEXT: gpu.return
+// LAUNCH-LABEL: func.func @thread_id() -> index
+// LAUNCH-NEXT: %[[DEV_RES:.*]] =  scf.execute_region -> index {
+// LAUNCH-NEXT: %[[DEV_ID:.*]] = gpu.thread_id  x
+// LAUNCH-NEXT: scf.yield %[[DEV_ID]] : index
+// LAUNCH-NEXT: }
+// LAUNCH-NEXT: return %[[DEV_RES]] : index

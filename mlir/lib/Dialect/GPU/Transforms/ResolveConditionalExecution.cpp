@@ -77,9 +77,14 @@ struct GpuConditionalExecutionOpRewriter
     else
       rewriter.inlineRegionBefore(op.getHostRegion(), execRegionOp.getRegion(),
                                   execRegionOp.getRegion().begin());
-    rewriter.eraseOp(op);
-    // This is safe because `ConditionalExecutionOp` always terminates with
-    // `gpu::YieldOp`
+    // Update the calling site.
+    if (op.getResults().empty())
+      rewriter.eraseOp(op);
+    else
+      rewriter.replaceOp(op, execRegionOp);
+
+    // This should be safe because `ConditionalExecutionOp` always terminates
+    // with `gpu::YieldOp`.
     auto yieldOp =
         dyn_cast<YieldOp>(execRegionOp.getRegion().back().getTerminator());
     rewriter.setInsertionPoint(yieldOp);
