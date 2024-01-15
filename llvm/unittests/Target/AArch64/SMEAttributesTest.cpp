@@ -54,21 +54,21 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .preservesZA());
 
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_in\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_in_zt0\"")
                       ->getFunction("foo"))
                   .isInZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_out\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_out_zt0\"")
                       ->getFunction("foo"))
                   .isOutZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_inout\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_inout_zt0\"")
                       ->getFunction("foo"))
                   .isInOutZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_preserved\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_preserved_zt0\"")
                       ->getFunction("foo"))
-                  .preservesZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_zt0_new\"")
+                  .isPreservesZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_new_zt0\"")
                       ->getFunction("foo"))
-                  .hasNewZT0Body());
+                  .isNewZT0());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
@@ -120,61 +120,56 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(SA(SA::Normal).preservesZA());
 
   // Test ZT0 State interfaces
-  SA ZT0_In = SA(SA::Normal);
-  ZT0_In.setZT0State(SA::StateValue::In);
+  SA ZT0_In = SA(SA::encodeZT0State(SA::StateValue::In));
   ASSERT_TRUE(ZT0_In.isInZT0());
   ASSERT_FALSE(ZT0_In.isOutZT0());
   ASSERT_FALSE(ZT0_In.isInOutZT0());
-  ASSERT_FALSE(ZT0_In.preservesZT0());
-  ASSERT_FALSE(ZT0_In.hasNewZT0Body());
+  ASSERT_FALSE(ZT0_In.isPreservesZT0());
+  ASSERT_FALSE(ZT0_In.isNewZT0());
   ASSERT_TRUE(ZT0_In.sharesZT0());
   ASSERT_TRUE(ZT0_In.hasZT0State());
   ASSERT_TRUE(ZT0_In.hasSharedZAInterface());
   ASSERT_FALSE(ZT0_In.hasPrivateZAInterface());
 
-  SA ZT0_Out = SA(SA::Normal);
-  ZT0_Out.setZT0State(SA::StateValue::Out);
+  SA ZT0_Out = SA(SA::encodeZT0State(SA::StateValue::Out));
   ASSERT_TRUE(ZT0_Out.isOutZT0());
   ASSERT_FALSE(ZT0_Out.isInZT0());
   ASSERT_FALSE(ZT0_Out.isInOutZT0());
-  ASSERT_FALSE(ZT0_Out.preservesZT0());
-  ASSERT_FALSE(ZT0_Out.hasNewZT0Body());
+  ASSERT_FALSE(ZT0_Out.isPreservesZT0());
+  ASSERT_FALSE(ZT0_Out.isNewZT0());
   ASSERT_TRUE(ZT0_Out.sharesZT0());
   ASSERT_TRUE(ZT0_Out.hasZT0State());
   ASSERT_TRUE(ZT0_Out.hasSharedZAInterface());
   ASSERT_FALSE(ZT0_Out.hasPrivateZAInterface());
 
-  SA ZT0_InOut = SA(SA::Normal);
-  ZT0_InOut.setZT0State(SA::StateValue::InOut);
+  SA ZT0_InOut = SA(SA::encodeZT0State(SA::StateValue::InOut));
   ASSERT_TRUE(ZT0_InOut.isInOutZT0());
   ASSERT_FALSE(ZT0_InOut.isInZT0());
   ASSERT_FALSE(ZT0_InOut.isOutZT0());
-  ASSERT_FALSE(ZT0_InOut.preservesZT0());
-  ASSERT_FALSE(ZT0_InOut.hasNewZT0Body());
+  ASSERT_FALSE(ZT0_InOut.isPreservesZT0());
+  ASSERT_FALSE(ZT0_InOut.isNewZT0());
   ASSERT_TRUE(ZT0_InOut.sharesZT0());
   ASSERT_TRUE(ZT0_InOut.hasZT0State());
   ASSERT_TRUE(ZT0_InOut.hasSharedZAInterface());
   ASSERT_FALSE(ZT0_InOut.hasPrivateZAInterface());
 
-  SA ZT0_Preserved = SA(SA::Normal);
-  ZT0_Preserved.setZT0State(SA::StateValue::Preserved);
-  ASSERT_TRUE(ZT0_Preserved.preservesZT0());
+  SA ZT0_Preserved = SA(SA::encodeZT0State(SA::StateValue::Preserved));
+  ASSERT_TRUE(ZT0_Preserved.isPreservesZT0());
   ASSERT_FALSE(ZT0_Preserved.isInZT0());
   ASSERT_FALSE(ZT0_Preserved.isOutZT0());
   ASSERT_FALSE(ZT0_Preserved.isInOutZT0());
-  ASSERT_FALSE(ZT0_Preserved.hasNewZT0Body());
+  ASSERT_FALSE(ZT0_Preserved.isNewZT0());
   ASSERT_TRUE(ZT0_Preserved.sharesZT0());
   ASSERT_TRUE(ZT0_Preserved.hasZT0State());
   ASSERT_TRUE(ZT0_Preserved.hasSharedZAInterface());
   ASSERT_FALSE(ZT0_Preserved.hasPrivateZAInterface());
 
-  SA ZT0_New = SA(SA::Normal);
-  ZT0_New.setZT0State(SA::StateValue::New);
-  ASSERT_TRUE(ZT0_New.hasNewZT0Body());
+  SA ZT0_New = SA(SA::encodeZT0State(SA::StateValue::New));
+  ASSERT_TRUE(ZT0_New.isNewZT0());
   ASSERT_FALSE(ZT0_New.isInZT0());
   ASSERT_FALSE(ZT0_New.isOutZT0());
   ASSERT_FALSE(ZT0_New.isInOutZT0());
-  ASSERT_FALSE(ZT0_New.preservesZT0());
+  ASSERT_FALSE(ZT0_New.isPreservesZT0());
   ASSERT_FALSE(ZT0_New.sharesZT0());
   ASSERT_TRUE(ZT0_New.hasZT0State());
   ASSERT_FALSE(ZT0_New.hasSharedZAInterface());
@@ -183,8 +178,8 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(SA(SA::Normal).isInZT0());
   ASSERT_FALSE(SA(SA::Normal).isOutZT0());
   ASSERT_FALSE(SA(SA::Normal).isInOutZT0());
-  ASSERT_FALSE(SA(SA::Normal).preservesZT0());
-  ASSERT_FALSE(SA(SA::Normal).hasNewZT0Body());
+  ASSERT_FALSE(SA(SA::Normal).isPreservesZT0());
+  ASSERT_FALSE(SA(SA::Normal).isNewZT0());
   ASSERT_FALSE(SA(SA::Normal).sharesZT0());
   ASSERT_FALSE(SA(SA::Normal).hasZT0State());
 }

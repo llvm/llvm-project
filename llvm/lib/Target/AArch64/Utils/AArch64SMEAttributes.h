@@ -28,11 +28,11 @@ class SMEAttrs {
 public:
   enum class StateValue {
     None = 0,
-    In = 1,        // aarch64_sme_zt0_in
-    Out = 2,       // aarch64_sme_zt0_out
-    InOut = 3,     // aarch64_sme_zt0_inout
-    Preserved = 4, // aarch64_sme_zt0_preserved
-    New = 5        // aarch64_sme_zt0_new
+    In = 1,        // aarch64_sme_in_zt0
+    Out = 2,       // aarch64_sme_out_zt0
+    InOut = 3,     // aarch64_sme_inout_zt0
+    Preserved = 4, // aarch64_sme_preserved_zt0
+    New = 5        // aarch64_sme_new_zt0
   };
 
   // Enum with bitmasks for each individual SME feature.
@@ -97,24 +97,28 @@ public:
   }
 
   // Interfaces to query ZT0 State
-  StateValue getZT0State() const {
+  static StateValue decodeZT0State(unsigned Bitmask) {
     return static_cast<StateValue>((Bitmask & ZT0_Mask) >> ZT0_Shift);
   }
-  void setZT0State(StateValue S) {
-    Bitmask |= (static_cast<unsigned>(S) << ZT0_Shift);
+  static unsigned encodeZT0State(StateValue S) {
+    return static_cast<unsigned>(S) << ZT0_Shift;
   }
 
-  bool hasNewZT0Body() const { return getZT0State() == StateValue::New; }
-  bool isInZT0() const { return getZT0State() == StateValue::In; }
-  bool isOutZT0() const { return getZT0State() == StateValue::Out; }
-  bool isInOutZT0() const { return getZT0State() == StateValue::InOut; }
-  bool preservesZT0() const { return getZT0State() == StateValue::Preserved; }
+  bool isNewZT0() const { return decodeZT0State(Bitmask) == StateValue::New; }
+  bool isInZT0() const { return decodeZT0State(Bitmask) == StateValue::In; }
+  bool isOutZT0() const { return decodeZT0State(Bitmask) == StateValue::Out; }
+  bool isInOutZT0() const {
+    return decodeZT0State(Bitmask) == StateValue::InOut;
+  }
+  bool isPreservesZT0() const {
+    return decodeZT0State(Bitmask) == StateValue::Preserved;
+  }
   bool sharesZT0() const {
-    StateValue State = getZT0State();
+    StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||
            State == StateValue::InOut || State == StateValue::Preserved;
   }
-  bool hasZT0State() const { return hasNewZT0Body() || sharesZT0(); }
+  bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
 };
 
 } // namespace llvm

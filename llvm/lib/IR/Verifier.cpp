@@ -2160,61 +2160,18 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
-  if (Attrs.hasFnAttr("aarch64_sme_zt0_new")) {
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_preserved"),
-          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_preserved' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_in"),
-          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_in' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
-          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_inout' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
-          "Attributes 'aarch64_sme_zt0_new' and 'aarch64_sme_zt0_out' "
-          "are incompatible!",
-          V);
-  }
-
-  if (Attrs.hasFnAttr("aarch64_sme_zt0_preserved")) {
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_in"),
-          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_in' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
-          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_inout' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
-          "Attributes 'aarch64_sme_zt0_preserved' and 'aarch64_sme_zt0_out' "
-          "are incompatible!",
-          V);
-  }
-
-  if (Attrs.hasFnAttr("aarch64_sme_zt0_in")) {
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_inout"),
-          "Attributes 'aarch64_sme_zt0_in' and 'aarch64_sme_zt0_inout' "
-          "are incompatible!",
-          V);
-
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
-          "Attributes 'aarch64_sme_zt0_in' and 'aarch64_sme_zt0_out' "
-          "are incompatible!",
-          V);
-  }
-
-  if (Attrs.hasFnAttr("aarch64_sme_zt0_inout")) {
-    Check(!Attrs.hasFnAttr("aarch64_sme_zt0_out"),
-          "Attributes 'aarch64_sme_zt0_inout' and 'aarch64_sme_zt0_out' "
-          "are incompatible!",
+  if (Attrs.hasFnAttr("aarch64_sme_new_zt0") ||
+      Attrs.hasFnAttr("aarch64_sme_in_zt0") ||
+      Attrs.hasFnAttr("aarch64_sme_inout_zt0") ||
+      Attrs.hasFnAttr("aarch64_sme_out_zt0") ||
+      Attrs.hasFnAttr("aarch64_sme_preserved_zt0")) {
+    Check((Attrs.hasFnAttr("aarch64_sme_new_zt0") ^
+           Attrs.hasFnAttr("aarch64_sme_in_zt0") ^
+           Attrs.hasFnAttr("aarch64_sme_inout_zt0") ^
+           Attrs.hasFnAttr("aarch64_sme_out_zt0") ^
+           Attrs.hasFnAttr("aarch64_sme_preserved_zt0")),
+          "ZT0 state attributes 'aarch64_sme_[in|inout|out|new|preserved]_zt' "
+          "are mutually exclusive!",
           V);
   }
 
