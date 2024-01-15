@@ -241,6 +241,7 @@ namespace std {
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -1180,6 +1181,9 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES variant
   using __first_type = variant_alternative_t<0, variant>;
 
 public:
+  using __trivially_relocatable =
+      conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
+
   template <bool _Dummy                                                                               = true,
             enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)

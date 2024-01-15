@@ -913,6 +913,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new
