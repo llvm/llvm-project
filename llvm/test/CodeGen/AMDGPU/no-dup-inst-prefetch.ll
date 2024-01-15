@@ -60,9 +60,7 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    s_mov_b32 s4, 0
 ; GFX12-NEXT:    s_mov_b32 s1, 0
 ; GFX12-NEXT:    ; implicit-def: $sgpr2
-; GFX12-NEXT:    s_set_inst_prefetch_distance 0x1
 ; GFX12-NEXT:    s_branch .LBB0_2
-; GFX12-NEXT:    .p2align 6
 ; GFX12-NEXT:  .LBB0_1: ; %Flow
 ; GFX12-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -101,7 +99,6 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    s_or_b32 s2, s2, s0
 ; GFX12-NEXT:    s_branch .LBB0_1
 ; GFX12-NEXT:  .LBB0_4: ; %loop0_merge
-; GFX12-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX12-NEXT:    s_endpgm
 branch1_true:
   br label %bb
