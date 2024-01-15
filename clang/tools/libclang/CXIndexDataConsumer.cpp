@@ -1074,8 +1074,8 @@ CXIndexDataConsumer::getClientContainerForDC(const DeclContext *DC) const {
   return DC ? ContainerMap.lookup(DC) : nullptr;
 }
 
-CXIdxClientFile CXIndexDataConsumer::getIndexFile(const FileEntry *File) {
-  return File ? FileMap.lookup(File) : nullptr;
+CXIdxClientFile CXIndexDataConsumer::getIndexFile(OptionalFileEntryRef File) {
+  return File ? FileMap.lookup(*File) : nullptr;
 }
 
 CXIdxLoc CXIndexDataConsumer::getIndexLoc(SourceLocation Loc) const {
@@ -1104,8 +1104,8 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
 
   if (FID.isInvalid())
     return;
-  
-  OptionalFileEntryRefDegradesToFileEntryPtr FE = SM.getFileEntryRefForID(FID);
+
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
   if (indexFile)
     *indexFile = getIndexFile(FE);
   if (file)

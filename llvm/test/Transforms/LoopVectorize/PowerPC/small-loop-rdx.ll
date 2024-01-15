@@ -9,10 +9,6 @@
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
 ; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
-; CHECK-NEXT: fadd
 ; CHECK-NOT: fadd
 ; CHECK: middle.block
 

@@ -166,7 +166,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul = fmul fast float %i14, %i13
   %arrayidx2 = getelementptr inbounds float, ptr %a, i32 %i.09
   store float %mul, ptr %arrayidx2, align 4
-  %inc = or i32 %i.09, 1
+  %inc = or disjoint i32 %i.09, 1
   %arrayidx.1 = getelementptr inbounds float, ptr %b, i32 %inc
   %i15 = load float, ptr %arrayidx.1, align 4
   %arrayidx1.1 = getelementptr inbounds float, ptr %c, i32 %inc
@@ -174,7 +174,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.1 = fmul fast float %i16, %i15
   %arrayidx2.1 = getelementptr inbounds float, ptr %a, i32 %inc
   store float %mul.1, ptr %arrayidx2.1, align 4
-  %inc.1 = or i32 %i.09, 2
+  %inc.1 = or disjoint i32 %i.09, 2
   %arrayidx.2 = getelementptr inbounds float, ptr %b, i32 %inc.1
   %i17 = load float, ptr %arrayidx.2, align 4
   %arrayidx1.2 = getelementptr inbounds float, ptr %c, i32 %inc.1
@@ -182,7 +182,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %mul.2 = fmul fast float %i18, %i17
   %arrayidx2.2 = getelementptr inbounds float, ptr %a, i32 %inc.1
   store float %mul.2, ptr %arrayidx2.2, align 4
-  %inc.2 = or i32 %i.09, 3
+  %inc.2 = or disjoint i32 %i.09, 3
   %arrayidx.3 = getelementptr inbounds float, ptr %b, i32 %inc.2
   %i19 = load float, ptr %arrayidx.3, align 4
   %arrayidx1.3 = getelementptr inbounds float, ptr %c, i32 %inc.2

@@ -200,8 +200,9 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   // If we've been given the "Preserve" flag, then just move the DPValues with
   // the instruction, no more special handling needed.
   if (BB.IsNewDbgInfoFormat && DbgMarker && !Preserve) {
-    if (I != this->getIterator()) {
-      // "this" is definitely moving; detach any existing DPValues.
+    if (I != this->getIterator() || InsertAtHead) {
+      // "this" is definitely moving in the list, or it's moving ahead of its
+      // attached DPValues. Detach any existing DPValues.
       handleMarkerRemoval();
     }
   }
@@ -217,7 +218,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
 
     // If we're inserting at point I, and not in front of the DPValues attached
     // there, then we should absorb the DPValues attached to I.
-    if (!InsertAtHead)
+    if (NextMarker && !InsertAtHead)
       DbgMarker->absorbDebugValues(*NextMarker, false);
   }
 
@@ -1091,6 +1092,8 @@ const DebugLoc &Instruction::getStableDebugLoc() const {
 }
 
 bool Instruction::isAssociative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isAssociative();
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))
     return true;

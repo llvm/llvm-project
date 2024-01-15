@@ -89,25 +89,24 @@ const SubtargetSubTypeKV *getGPUInfo(const GCNSubtarget &ST,
   return nullptr;
 }
 
-constexpr unsigned FeaturesToCheck[] = {
-    AMDGPU::FeatureGFX11Insts,
-    AMDGPU::FeatureGFX10Insts,
-    AMDGPU::FeatureGFX9Insts,
-    AMDGPU::FeatureGFX8Insts,
-    AMDGPU::FeatureDPP,
-    AMDGPU::Feature16BitInsts,
-    AMDGPU::FeatureDot1Insts,
-    AMDGPU::FeatureDot2Insts,
-    AMDGPU::FeatureDot3Insts,
-    AMDGPU::FeatureDot4Insts,
-    AMDGPU::FeatureDot5Insts,
-    AMDGPU::FeatureDot6Insts,
-    AMDGPU::FeatureDot7Insts,
-    AMDGPU::FeatureDot8Insts,
-    AMDGPU::FeatureExtendedImageInsts,
-    AMDGPU::FeatureSMemRealTime,
-    AMDGPU::FeatureSMemTimeInst
-};
+constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
+                                        AMDGPU::FeatureGFX10Insts,
+                                        AMDGPU::FeatureGFX9Insts,
+                                        AMDGPU::FeatureGFX8Insts,
+                                        AMDGPU::FeatureDPP,
+                                        AMDGPU::Feature16BitInsts,
+                                        AMDGPU::FeatureDot1Insts,
+                                        AMDGPU::FeatureDot2Insts,
+                                        AMDGPU::FeatureDot3Insts,
+                                        AMDGPU::FeatureDot4Insts,
+                                        AMDGPU::FeatureDot5Insts,
+                                        AMDGPU::FeatureDot6Insts,
+                                        AMDGPU::FeatureDot7Insts,
+                                        AMDGPU::FeatureDot8Insts,
+                                        AMDGPU::FeatureExtendedImageInsts,
+                                        AMDGPU::FeatureSMemRealTime,
+                                        AMDGPU::FeatureSMemTimeInst,
+                                        AMDGPU::FeatureGWS};
 
 FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
   FeatureBitset Result = Features;

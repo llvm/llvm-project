@@ -763,7 +763,7 @@ func.func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32
 // CHECK:             %[[A3:.*]] = memref.load %[[ARG1]][%[[arg6]], %[[arg8]]] : memref<100x100xf32>
 // CHECK:             %[[A4:.*]] = memref.load %[[ARG2]][%[[arg8]], %[[arg7]]] : memref<100x100xf32>
 // CHECK:             arith.mulf %[[A3]], %[[A4]] : f32
-// CHECK:             scf.yield
+// CHECK:             scf.reduce
 
 /////////////////////////////////////////////////////////////////////
 
@@ -789,7 +789,7 @@ func.func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>
 // CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = arith.mulf
 // CHECK-NEXT:      store
-// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:      scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
@@ -820,7 +820,7 @@ func.func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: 
 // CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = arith.mulf
 // CHECK-NEXT:      store
-// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:      scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
@@ -851,17 +851,15 @@ func.func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref
 // CHECK-NEXT:      %[[VAL_2:.*]] = memref.load
 // CHECK-NEXT:      %[[PRODUCT:.*]] = arith.mulf
 // CHECK-NEXT:      %[[SUM:.*]] = arith.addf
-// CHECK-NEXT:      scf.reduce(%[[PRODUCT]]) : f32 {
+// CHECK-NEXT:      scf.reduce(%[[PRODUCT]], %[[SUM]] : f32, f32) {
 // CHECK-NEXT:      ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
 // CHECK-NEXT:        %[[RES:.*]] = arith.addf
 // CHECK-NEXT:        scf.reduce.return %[[RES]] : f32
-// CHECK-NEXT:      }
-// CHECK-NEXT:      scf.reduce(%[[SUM]]) : f32 {
+// CHECK-NEXT:      }, {
 // CHECK-NEXT:      ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
 // CHECK-NEXT:        %[[RES:.*]] = arith.mulf
 // CHECK-NEXT:        scf.reduce.return %[[RES]] : f32
 // CHECK-NEXT:      }
-// CHECK-NEXT:      scf.yield
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
@@ -892,17 +890,15 @@ func.func @affine_parallel_with_reductions_f64(%arg0: memref<3x3xf64>, %arg1: me
 // CHECK:    %[[VAL_2:.*]] = memref.load
 // CHECK:    %[[PRODUCT:.*]] = arith.mulf
 // CHECK:    %[[SUM:.*]] = arith.addf
-// CHECK:    scf.reduce(%[[PRODUCT]]) : f64 {
+// CHECK:    scf.reduce(%[[PRODUCT]], %[[SUM]] : f64, f64) {
 // CHECK:    ^bb0(%[[LHS:.*]]: f64, %[[RHS:.*]]: f64):
 // CHECK:      %[[RES:.*]] = arith.addf
 // CHECK:      scf.reduce.return %[[RES]] : f64
-// CHECK:    }
-// CHECK:    scf.reduce(%[[SUM]]) : f64 {
+// CHECK:    }, {
 // CHECK:    ^bb0(%[[LHS:.*]]: f64, %[[RHS:.*]]: f64):
 // CHECK:      %[[RES:.*]] = arith.mulf
 // CHECK:      scf.reduce.return %[[RES]] : f64
 // CHECK:    }
-// CHECK:    scf.yield
 // CHECK:  }
 
 /////////////////////////////////////////////////////////////////////
@@ -931,15 +927,13 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 // CHECK:    %[[VAL_2:.*]] = memref.load
 // CHECK:    %[[PRODUCT:.*]] = arith.muli
 // CHECK:    %[[SUM:.*]] = arith.addi
-// CHECK:    scf.reduce(%[[PRODUCT]]) : i64 {
+// CHECK:    scf.reduce(%[[PRODUCT]], %[[SUM]] : i64, i64) {
 // CHECK:    ^bb0(%[[LHS:.*]]: i64, %[[RHS:.*]]: i64):
 // CHECK:      %[[RES:.*]] = arith.addi
 // CHECK:      scf.reduce.return %[[RES]] : i64
-// CHECK:    }
-// CHECK:    scf.reduce(%[[SUM]]) : i64 {
+// CHECK:    }, {
 // CHECK:    ^bb0(%[[LHS:.*]]: i64, %[[RHS:.*]]: i64):
 // CHECK:      %[[RES:.*]] = arith.muli
 // CHECK:      scf.reduce.return %[[RES]] : i64
 // CHECK:    }
-// CHECK:    scf.yield
 // CHECK:  }

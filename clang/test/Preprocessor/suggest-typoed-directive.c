@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=pre-c2x-cpp23 %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unknown-directives -verify=okay %s
 // RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=c2x-cpp23 %s
 // RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only -verify=c2x-cpp23 %s
 // RUN: %clang_cc1 -x c++ -std=c++23 -fsyntax-only %s -fdiagnostics-parseable-fixits 2>&1 | FileCheck %s
+// okay-no-diagnostics
 
 // id:        pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}
 // ifd:       pre-c2x-cpp23-warning@+12 {{invalid preprocessing directive, did you mean '#if'?}}

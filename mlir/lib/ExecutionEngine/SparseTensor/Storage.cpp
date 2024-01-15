@@ -17,6 +17,13 @@
 
 using namespace mlir::sparse_tensor;
 
+static inline bool isAllDense(uint64_t lvlRank, const LevelType *lvlTypes) {
+  for (uint64_t l = 0; l < lvlRank; l++)
+    if (!isDenseLT(lvlTypes[l]))
+      return false;
+  return true;
+}
+
 SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
@@ -26,15 +33,16 @@ SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
       lvlTypes(lvlTypes, lvlTypes + lvlRank),
       dim2lvlVec(dim2lvl, dim2lvl + lvlRank),
       lvl2dimVec(lvl2dim, lvl2dim + dimRank),
-      map(dimRank, lvlRank, dim2lvlVec.data(), lvl2dimVec.data()) {
+      map(dimRank, lvlRank, dim2lvlVec.data(), lvl2dimVec.data()),
+      allDense(isAllDense(lvlRank, lvlTypes)) {
   assert(dimSizes && lvlSizes && lvlTypes && dim2lvl && lvl2dim);
   // Validate dim-indexed parameters.
   assert(dimRank > 0 && "Trivial shape is unsupported");
-  for (uint64_t d = 0; d < dimRank; ++d)
+  for (uint64_t d = 0; d < dimRank; d++)
     assert(dimSizes[d] > 0 && "Dimension size zero has trivial storage");
   // Validate lvl-indexed parameters.
   assert(lvlRank > 0 && "Trivial shape is unsupported");
-  for (uint64_t l = 0; l < lvlRank; ++l) {
+  for (uint64_t l = 0; l < lvlRank; l++) {
     assert(lvlSizes[l] > 0 && "Level size zero has trivial storage");
     assert(isDenseLvl(l) || isCompressedLvl(l) || isLooseCompressedLvl(l) ||
            isSingletonLvl(l) || is2OutOf4Lvl(l));

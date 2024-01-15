@@ -118,10 +118,20 @@ if config.flang_standalone_build:
                 "PATH", config.flang_llvm_tools_dir, append_path=True
             )
 
+# On MacOS, -isysroot is needed to build binaries.
+isysroot_flag = []
+if config.osx_sysroot:
+    isysroot_flag = ["-isysroot", config.osx_sysroot]
+
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-    ToolSubst("%flang", command=FindTool("flang-new"), unresolved="fatal"),
+    ToolSubst(
+        "%flang",
+        command=FindTool("flang-new"),
+        extra_args=isysroot_flag,
+        unresolved="fatal",
+    ),
     ToolSubst(
         "%flang_fc1",
         command=FindTool("flang-new"),
@@ -163,10 +173,11 @@ if config.cc:
         and os.path.isdir(include)
     ):
         config.available_features.add("c-compiler")
-        cc_cmd = config.cc
-        if config.osx_sysroot:
-            cc_cmd += " -isysroot " + config.osx_sysroot
-        tools.append(ToolSubst("%cc", command=cc_cmd, unresolved="fatal"))
+        tools.append(
+            ToolSubst(
+                "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
+            )
+        )
         tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
         tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
         tools.append(ToolSubst("%include", command=include, unresolved="fatal"))

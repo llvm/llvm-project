@@ -431,7 +431,7 @@ bool TransformActionsImpl::canReplaceText(SourceLocation loc, StringRef text) {
   if (invalidTemp)
     return false;
 
-  return file.substr(locInfo.second).startswith(text);
+  return file.substr(locInfo.second).starts_with(text);
 }
 
 void TransformActionsImpl::commitInsert(SourceLocation loc, StringRef text) {

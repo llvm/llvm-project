@@ -449,6 +449,12 @@ void IntegerRelation::swapVar(unsigned posA, unsigned posB) {
   if (posA == posB)
     return;
 
+  VarKind kindA = space.getVarKindAt(posA);
+  VarKind kindB = space.getVarKindAt(posB);
+  unsigned relativePosA = posA - getVarKindOffset(kindA);
+  unsigned relativePosB = posB - getVarKindOffset(kindB);
+  space.swapVar(kindA, kindB, relativePosA, relativePosB);
+
   inequalities.swapColumns(posA, posB);
   equalities.swapColumns(posA, posB);
 }
@@ -1280,6 +1286,40 @@ void IntegerRelation::eliminateRedundantLocalVar(unsigned posA, unsigned posB) {
   inequalities.addToColumn(posB, posA, 1);
   equalities.addToColumn(posB, posA, 1);
   removeVar(posB);
+}
+
+/// mergeAndAlignSymbols's implementation can be broken down into two steps:
+/// 1. Merge and align identifiers into `other` from `this. If an identifier
+/// from `this` exists in `other` then we align it. Otherwise, we assume it is a
+/// new identifier and insert it into `other` in the same position as `this`.
+/// 2. Add identifiers that are in `other` but not `this to `this`.
+void IntegerRelation::mergeAndAlignSymbols(IntegerRelation &other) {
+  assert(space.isUsingIds() && other.space.isUsingIds() &&
+         "both relations need to have identifers to merge and align");
+
+  unsigned i = 0;
+  for (const Identifier identifier : space.getIds(VarKind::Symbol)) {
+    // Search in `other` starting at position `i` since the left of `i` is
+    // aligned.
+    const Identifier *findBegin =
+        other.space.getIds(VarKind::Symbol).begin() + i;
+    const Identifier *findEnd = other.space.getIds(VarKind::Symbol).end();
+    const Identifier *itr = std::find(findBegin, findEnd, identifier);
+    if (itr != findEnd) {
+      other.swapVar(other.getVarKindOffset(VarKind::Symbol) + i,
+                    other.getVarKindOffset(VarKind::Symbol) + i +
+                        std::distance(findBegin, itr));
+    } else {
+      other.insertVar(VarKind::Symbol, i);
+      other.space.getId(VarKind::Symbol, i) = identifier;
+    }
+    ++i;
+  }
+
+  for (unsigned e = other.getNumVarKind(VarKind::Symbol); i < e; ++i) {
+    insertVar(VarKind::Symbol, i);
+    space.getId(VarKind::Symbol, i) = other.space.getId(VarKind::Symbol, i);
+  }
 }
 
 /// Adds additional local ids to the sets such that they both have the union

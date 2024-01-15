@@ -8,8 +8,8 @@ namespace std {
 
 // floating-point arguments
 template<float> struct Float {};
-using F1 = Float<1.0f>; // FIXME expected-error {{sorry}}
-using F1 = Float<2.0f / 2>; // FIXME expected-error {{sorry}}
+using F1 = Float<1.0f>; // FIXME expected-error {{non-type template argument of type}}
+using F1 = Float<2.0f / 2>; // FIXME expected-error {{non-type template argument of type}}
 
 struct S { int n[3]; } s; // expected-note 1+{{here}}
 union U { int a, b; } u;
@@ -48,12 +48,12 @@ using U1 = Union<U{.b = 1}>; // expected-error {{different types}}
 
 // miscellaneous scalar types
 template<_Complex int> struct ComplexInt {};
-using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
-using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{sorry}}
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{non-type template argument of type}}
+using CI = ComplexInt<1 + 3i>; // FIXME: expected-error {{non-type template argument of type}}
 
 template<_Complex float> struct ComplexFloat {};
-using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
-using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{sorry}}
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{non-type template argument of type}}
+using CF = ComplexFloat<1.0f + 3.0fi>; // FIXME: expected-error {{non-type template argument of type}}
 
 namespace ClassNTTP {
   struct A { // expected-note 2{{candidate}}
@@ -62,12 +62,13 @@ namespace ClassNTTP {
   template<A a> constexpr int f() { return a.y; }
   static_assert(f<A{1,2}>() == 2);
 
-  template<A a> int id;
+  template<A a> int id; // #ClassNTTP1
   constexpr A a = {1, 2};
   static_assert(&id<A{1,2}> == &id<a>);
   static_assert(&id<A{1,3}> != &id<a>);
 
   int k = id<1>; // expected-error {{no viable conversion from 'int' to 'A'}}
+                 // expected-note@#ClassNTTP1 {{passing argument to parameter 'a' here}}
 
   struct B {
     constexpr B() {}
@@ -90,8 +91,14 @@ namespace ConvertedConstant {
     constexpr A(float) {}
   };
   template <A> struct X {};
-  void f(X<1.0f>) {} // OK, user-defined conversion
-  void f(X<2>) {} // expected-error {{conversion from 'int' to 'A' is not allowed in a converted constant expression}}
+  void f(X<1.0f>) {}
+  void g(X<2>) {}
+
+  struct {
+    int i : 2;
+  } b;
+  template <const int&> struct Y {};
+  void f(Y<b.i>) {} // expected-error {{reference cannot bind to bit-field in converted constant expression}}
 }
 
 namespace CopyCounting {

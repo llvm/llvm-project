@@ -51,9 +51,9 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
-def gi_dotiuvop3pmods :
-    GIComplexOperandMatcher<s32, "selectDotIUVOP3PMods">,
-    GIComplexPatternEquiv<DotIUVOP3PMods>;
+def gi_vop3pmodsneg :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
+    GIComplexPatternEquiv<VOP3PModsNeg>;
 
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
@@ -105,6 +105,11 @@ def gi_global_saddr :
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
     GIComplexPatternEquiv<MUBUFScratchOffset>;
+
+def gi_buf_soffset :
+    GIComplexOperandMatcher<s32, "selectBUFSOffset">,
+    GIComplexPatternEquiv<BUFSOffset>;
+
 def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
@@ -374,8 +379,8 @@ def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
 
-def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
-  GISDNodeXFormEquiv<set_glc>;
+def gi_extract_cpol_set_glc : GICustomOperandRenderer<"renderExtractCpolSetGLC">,
+  GISDNodeXFormEquiv<extract_cpol_set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;

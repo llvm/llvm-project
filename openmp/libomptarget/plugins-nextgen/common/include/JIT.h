@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_JIT_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_JIT_H
 
+#include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -24,7 +25,6 @@
 
 #include <functional>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 
 struct __tgt_device_image;
@@ -57,7 +57,7 @@ struct JITEngine {
 
   /// Return true if \p Image is a bitcode image that can be JITed for the given
   /// architecture.
-  bool checkBitcodeImage(const __tgt_device_image &Image);
+  Expected<bool> checkBitcodeImage(StringRef Buffer) const;
 
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
@@ -106,18 +106,16 @@ private:
   std::mutex ComputeUnitMapMutex;
 
   /// Control environment variables.
-  target::StringEnvar ReplacementObjectFileName =
-      target::StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_OBJECT");
-  target::StringEnvar ReplacementModuleFileName =
-      target::StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_MODULE");
-  target::StringEnvar PreOptIRModuleFileName =
-      target::StringEnvar("LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE");
-  target::StringEnvar PostOptIRModuleFileName =
-      target::StringEnvar("LIBOMPTARGET_JIT_POST_OPT_IR_MODULE");
-  target::UInt32Envar JITOptLevel =
-      target::UInt32Envar("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
-  target::BoolEnvar JITSkipOpt =
-      target::BoolEnvar("LIBOMPTARGET_JIT_SKIP_OPT", false);
+  StringEnvar ReplacementObjectFileName =
+      StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_OBJECT");
+  StringEnvar ReplacementModuleFileName =
+      StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_MODULE");
+  StringEnvar PreOptIRModuleFileName =
+      StringEnvar("LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE");
+  StringEnvar PostOptIRModuleFileName =
+      StringEnvar("LIBOMPTARGET_JIT_POST_OPT_IR_MODULE");
+  UInt32Envar JITOptLevel = UInt32Envar("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
+  BoolEnvar JITSkipOpt = BoolEnvar("LIBOMPTARGET_JIT_SKIP_OPT", false);
 };
 
 } // namespace target

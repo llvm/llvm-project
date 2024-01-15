@@ -2034,23 +2034,25 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     return ToDCOrErr.takeError();
   }
 
-  DeclContext *ToDC = *ToDCOrErr;
-  // Remove all declarations, which may be in wrong order in the
-  // lexical DeclContext and then add them in the proper order.
-  for (auto *D : FromDC->decls()) {
-    if (!MightNeedReordering(D))
-      continue;
+  if (const auto *FromRD = dyn_cast<RecordDecl>(FromDC)) {
+    DeclContext *ToDC = *ToDCOrErr;
+    // Remove all declarations, which may be in wrong order in the
+    // lexical DeclContext and then add them in the proper order.
+    for (auto *D : FromRD->decls()) {
+      if (!MightNeedReordering(D))
+        continue;
 
-    assert(D && "DC contains a null decl");
-    if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
-      // Remove only the decls which we successfully imported.
-      assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
-      // Remove the decl from its wrong place in the linked list.
-      ToDC->removeDecl(ToD);
-      // Add the decl to the end of the linked list.
-      // This time it will be at the proper place because the enclosing for
-      // loop iterates in the original (good) order of the decls.
-      ToDC->addDeclInternal(ToD);
+      assert(D && "DC contains a null decl");
+      if (Decl *ToD = Importer.GetAlreadyImportedOrNull(D)) {
+        // Remove only the decls which we successfully imported.
+        assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
+        // Remove the decl from its wrong place in the linked list.
+        ToDC->removeDecl(ToD);
+        // Add the decl to the end of the linked list.
+        // This time it will be at the proper place because the enclosing for
+        // loop iterates in the original (good) order of the decls.
+        ToDC->addDeclInternal(ToD);
+      }
     }
   }
 
@@ -2771,9 +2773,11 @@ ASTNodeImporter::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
     for (auto *FoundDecl : FoundDecls) {
       if (!FoundDecl->isInIdentifierNamespace(IDNS))
         continue;
-      if (auto *FoundAlias = dyn_cast<TypeAliasTemplateDecl>(FoundDecl))
-        return Importer.MapImported(D, FoundAlias);
-      ConflictingDecls.push_back(FoundDecl);
+      if (auto *FoundAlias = dyn_cast<TypeAliasTemplateDecl>(FoundDecl)) {
+        if (IsStructuralMatch(D, FoundAlias))
+          return Importer.MapImported(D, FoundAlias);
+        ConflictingDecls.push_back(FoundDecl);
+      }
     }
 
     if (!ConflictingDecls.empty()) {
@@ -3418,10 +3422,16 @@ static bool isAncestorDeclContextOf(const DeclContext *DC, const Stmt *S) {
   while (!ToProcess.empty()) {
     const Stmt *CurrentS = ToProcess.pop_back_val();
     ToProcess.append(CurrentS->child_begin(), CurrentS->child_end());
-    if (const auto *DeclRef = dyn_cast<DeclRefExpr>(CurrentS))
+    if (const auto *DeclRef = dyn_cast<DeclRefExpr>(CurrentS)) {
       if (const Decl *D = DeclRef->getDecl())
         if (isAncestorDeclContextOf(DC, D))
           return true;
+    } else if (const auto *E =
+                   dyn_cast_or_null<SubstNonTypeTemplateParmExpr>(CurrentS)) {
+      if (const Decl *D = E->getAssociatedDecl())
+        if (isAncestorDeclContextOf(DC, D))
+          return true;
+    }
   }
   return false;
 }
@@ -5919,15 +5929,22 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (ToD)
     return ToD;
 
-  bool IsFriendTemplate = D->getFriendObjectKind() != Decl::FOK_None;
-  bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
-                                            : DC->isDependentContext();
-  bool DependentFriend = IsFriendTemplate && IsDependentContext;
+  // Should check if a declaration is friend in a dependent context.
+  // Such templates are not linked together in a declaration chain.
+  // The ASTImporter strategy is to map existing forward declarations to
+  // imported ones only if strictly necessary, otherwise import these as new
+  // forward declarations. In case of the "dependent friend" declarations, new
+  // declarations are created, but not linked in a declaration chain.
+  auto IsDependentFriend = [](ClassTemplateDecl *TD) {
+    return TD->getFriendObjectKind() != Decl::FOK_None &&
+           TD->getLexicalDeclContext()->isDependentContext();
+  };
+  bool DependentFriend = IsDependentFriend(D);
 
   ClassTemplateDecl *FoundByLookup = nullptr;
 
   // We may already have a template of the same name; try to find and match it.
-  if (!DependentFriend && !DC->isFunctionOrMethod()) {
+  if (!DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
     for (auto *FoundDecl : FoundDecls) {
@@ -5943,10 +5960,13 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
         // FIXME: sufficient conditon for 'IgnoreTemplateParmDepth'?
         bool IgnoreTemplateParmDepth =
-            FoundTemplate->getFriendObjectKind() != Decl::FOK_None &&
-            !D->specializations().empty();
+            (FoundTemplate->getFriendObjectKind() != Decl::FOK_None) !=
+            (D->getFriendObjectKind() != Decl::FOK_None);
         if (IsStructuralMatch(D, FoundTemplate, /*Complain=*/true,
                               IgnoreTemplateParmDepth)) {
+          if (DependentFriend || IsDependentFriend(FoundTemplate))
+            continue;
+
           ClassTemplateDecl *TemplateWithDef =
               getTemplateDefinition(FoundTemplate);
           if (D->isThisDeclarationADefinition() && TemplateWithDef)
@@ -6133,6 +6153,11 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                                   InsertPos))
       // Add this partial specialization to the class template.
       ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
+    if (Expected<ClassTemplatePartialSpecializationDecl *> ToInstOrErr =
+            import(PartialSpec->getInstantiatedFromMember()))
+      PartSpec2->setInstantiatedFromMember(*ToInstOrErr);
+    else
+      return ToInstOrErr.takeError();
 
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
@@ -6255,17 +6280,21 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
                                               D->getTemplatedDecl()))
         continue;
       if (IsStructuralMatch(D, FoundTemplate)) {
-        // The Decl in the "From" context has a definition, but in the
-        // "To" context we already have a definition.
+        // FIXME Check for ODR error if the two definitions have
+        // different initializers?
         VarTemplateDecl *FoundDef = getTemplateDefinition(FoundTemplate);
-        if (D->isThisDeclarationADefinition() && FoundDef)
-          // FIXME Check for ODR error if the two definitions have
-          // different initializers?
-          return Importer.MapImported(D, FoundDef);
-        if (FoundTemplate->getDeclContext()->isRecord() &&
-            D->getDeclContext()->isRecord())
-          return Importer.MapImported(D, FoundTemplate);
-
+        if (D->getDeclContext()->isRecord()) {
+          assert(FoundTemplate->getDeclContext()->isRecord() &&
+                 "Member variable template imported as non-member, "
+                 "inconsistent imported AST?");
+          if (FoundDef)
+            return Importer.MapImported(D, FoundDef);
+          if (!D->isThisDeclarationADefinition())
+            return Importer.MapImported(D, FoundTemplate);
+        } else {
+          if (FoundDef && D->isThisDeclarationADefinition())
+            return Importer.MapImported(D, FoundDef);
+        }
         FoundByLookup = FoundTemplate;
         break;
       }
@@ -7820,6 +7849,18 @@ ExpectedStmt ASTNodeImporter::VisitExplicitCastExpr(ExplicitCastExpr *E) {
         *ToLParenLocOrErr, OCE->getBridgeKind(), E->getCastKind(),
         *ToBridgeKeywordLocOrErr, ToTypeInfoAsWritten, ToSubExpr);
   }
+  case Stmt::BuiltinBitCastExprClass: {
+    auto *BBC = cast<BuiltinBitCastExpr>(E);
+    ExpectedSLoc ToKWLocOrErr = import(BBC->getBeginLoc());
+    if (!ToKWLocOrErr)
+      return ToKWLocOrErr.takeError();
+    ExpectedSLoc ToRParenLocOrErr = import(BBC->getEndLoc());
+    if (!ToRParenLocOrErr)
+      return ToRParenLocOrErr.takeError();
+    return new (Importer.getToContext()) BuiltinBitCastExpr(
+        ToType, E->getValueKind(), E->getCastKind(), ToSubExpr,
+        ToTypeInfoAsWritten, *ToKWLocOrErr, *ToRParenLocOrErr);
+  }
   default:
     llvm_unreachable("Cast expression of unsupported type!");
     return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -9101,6 +9142,12 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     break;
   }
 
+  case attr::AlignValue: {
+    auto *From = cast<AlignValueAttr>(FromAttr);
+    AI.importAttr(From, AI.importArg(From->getAlignment()).value());
+    break;
+  }
+
   case attr::Format: {
     const auto *From = cast<FormatAttr>(FromAttr);
     AI.importAttr(From, Import(From->getType()), From->getFormatIdx(),
@@ -9391,7 +9438,6 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
     setImportDeclError(FromD, *Error);
     return make_error<ASTImportError>(*Error);
   }
-
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
   if (auto Error = ImportAttrs(ToD, FromD))

@@ -41,6 +41,7 @@ expand_template(
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
         "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
+        "@MLIR_ENABLE_SYCL_RUNNER@": "0",
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
@@ -359,6 +360,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
+        "//mlir:TransformDebugExtension",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectTransforms",
         "//mlir:TransformPDLExtension",
@@ -458,17 +460,42 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "TestTilingInterfaceTransformOpsIncGen",
+    includes = ["lib/Interfaces/TilingInterface"],
+    strip_include_prefix = "lib",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Interfaces/TilingInterface/TestTilingInterfaceTransformOps.td",
+    deps = [
+        "//mlir:SCFTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
 cc_library(
     name = "TestTilingInterface",
     srcs = glob(["lib/Interfaces/TilingInterface/*.cpp"]),
-    includes = ["lib/Dialect/Test"],
+    includes = ["lib/Interfaces/TilingInterface"],
     deps = [
+        ":TestTilingInterfaceTransformOpsIncGen",
         "//llvm:Support",
         "//mlir:AffineDialect",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:LinalgDialect",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefDialect",
@@ -478,6 +505,7 @@ cc_library(
         "//mlir:TensorDialect",
         "//mlir:TensorTilingInterfaceImpl",
         "//mlir:TilingInterface",
+        "//mlir:TransformDialect",
         "//mlir:Transforms",
     ],
 )
@@ -776,6 +804,26 @@ cc_library(
         "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorTransforms",
+    ],
+)
+
+cc_library(
+    name = "TestMesh",
+    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    hdrs = glob(["lib/Dialect/Mesh/**/*.h"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:MeshDialect",
+        "//mlir:MeshTransforms",
+        "//mlir:Pass",
+        "//mlir:SPIRVDialect",
+        "//mlir:Support",
+        "//mlir:Transforms",
     ],
 )
 

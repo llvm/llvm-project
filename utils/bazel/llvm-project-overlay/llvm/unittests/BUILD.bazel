@@ -299,6 +299,13 @@ cc_test(
         # keep one-per-line
         "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
     ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+        ],
+    }),
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -309,6 +316,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",

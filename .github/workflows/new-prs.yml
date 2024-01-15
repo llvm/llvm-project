@@ -15,16 +15,50 @@ on:
       - synchronize
 
 jobs:
-  automate-prs-labels:
+  greeter:
+    runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+    # Only comment on PRs that have been opened for the first time, by someone
+    # new to LLVM or to GitHub as a whole. Ideally we'd look for FIRST_TIMER
+    # or FIRST_TIME_CONTRIBUTOR, but this does not appear to work. Instead check
+    # that we do not have any of the other author associations.
+    # See https://docs.github.com/en/webhooks/webhook-events-and-payloads?actionType=opened#pull_request
+    # for all the possible values.
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.action == 'opened') &&
+      (github.event.pull_request.author_association != 'COLLABORATOR') &&
+      (github.event.pull_request.author_association != 'CONTRIBUTOR') &&
+      (github.event.pull_request.author_association != 'MANNEQUIN') &&
+      (github.event.pull_request.author_association != 'MEMBER') &&
+      (github.event.pull_request.author_association != 'OWNER')
+    steps:
+      - name: Setup Automation Script
+        run: |
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
+          chmod a+x github-automation.py
+          pip install -r requirements.txt
+
+      - name: Greet Author
+        run: |
+          ./github-automation.py \
+            --token '${{ secrets.GITHUB_TOKEN }}' \
+            pr-greeter \
+            --issue-number "${{ github.event.pull_request.number }}"
+
+  automate-prs-labels:
+    # Greet first so that only the author gets that notification.
+    needs: greeter
     runs-on: ubuntu-latest
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
     # commits tend to be accidents usually when someone made a mistake while trying
     # to rebase.  We want to ignore these pull requests to avoid excessive
     # notifications.
+    # always() means that even if greeter is skipped, this job will run.
     if: >
-      github.repository == 'llvm/llvm-project' &&
+      always() && github.repository == 'llvm/llvm-project' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.commits < 10
     steps:

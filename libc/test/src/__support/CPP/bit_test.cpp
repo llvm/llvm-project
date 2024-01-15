@@ -16,7 +16,11 @@ namespace LIBC_NAMESPACE::cpp {
 
 using UnsignedTypes =
     testing::TypeList<unsigned char, unsigned short, unsigned int,
-                      unsigned long, unsigned long long>;
+                      unsigned long, unsigned long long,
+#if defined(__SIZEOF_INT128__)
+                      __uint128_t,
+#endif
+                      cpp::UInt<128>>;
 
 TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   EXPECT_FALSE(has_single_bit<T>(T(0)));

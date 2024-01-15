@@ -180,10 +180,9 @@ entry:
 define void @mul_v16i8_17(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: mul_v16i8_17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori $a2, $zero, 17
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a2
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmul.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.b $vr1, 17
+; CHECK-NEXT:    vmul.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -196,10 +195,9 @@ entry:
 define void @mul_v8i16_17(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: mul_v8i16_17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori $a2, $zero, 17
-; CHECK-NEXT:    vreplgr2vr.h $vr0, $a2
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmul.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.h $vr1, 17
+; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -212,10 +210,9 @@ entry:
 define void @mul_v4i32_17(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: mul_v4i32_17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori $a2, $zero, 17
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a2
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmul.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.w $vr1, 17
+; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -228,10 +225,9 @@ entry:
 define void @mul_v2i64_17(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: mul_v2i64_17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ori $a2, $zero, 17
-; CHECK-NEXT:    vreplgr2vr.d $vr0, $a2
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmul.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.d $vr1, 17
+; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

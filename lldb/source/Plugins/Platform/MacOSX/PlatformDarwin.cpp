@@ -432,7 +432,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
     // Auto detect arm/thumb if it wasn't explicitly specified
     if (!bp_is_thumb) {
-      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+      lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
                       AddressClass::eCodeAlternateISA;

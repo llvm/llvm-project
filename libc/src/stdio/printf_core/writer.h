@@ -45,7 +45,7 @@ struct WriteBuffer {
   // write as much of new_str to the buffer as it can. The current position in
   // the buffer will be reset iff stream_writer is called. Calling this with an
   // empty string will flush the buffer if relevant.
-  int overflow_write(cpp::string_view new_str) {
+  LIBC_INLINE int overflow_write(cpp::string_view new_str) {
     // If there is a stream_writer, write the contents of the buffer, then
     // new_str, then clear the buffer.
     if (stream_writer != nullptr) {

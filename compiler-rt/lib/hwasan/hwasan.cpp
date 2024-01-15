@@ -678,6 +678,8 @@ uptr __hwasan_tag_pointer(uptr p, u8 tag) {
   return AddTagToPointer(p, tag);
 }
 
+u8 __hwasan_get_tag_from_pointer(uptr p) { return GetTagFromPointer(p); }
+
 void __hwasan_handle_longjmp(const void *sp_dst) {
   uptr dst = (uptr)sp_dst;
   // HWASan does not support tagged SP.

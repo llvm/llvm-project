@@ -111,6 +111,9 @@ public:
   /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 
@@ -165,7 +168,7 @@ public:
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, bool &OffsetIsScalable,
-                                    unsigned &Width,
+                                    TypeSize &Width,
                                     const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
@@ -175,11 +178,13 @@ public:
   /// \p Scale, \p Width, \p MinOffset, and \p MaxOffset accordingly.
   ///
   /// For unscaled instructions, \p Scale is set to 1.
-  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, unsigned &Width,
+  static bool getMemOpInfo(unsigned Opcode, TypeSize &Scale, TypeSize &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           int64_t Offset1, bool OffsetIsScalable1,
                            ArrayRef<const MachineOperand *> BaseOps2,
+                           int64_t Offset2, bool OffsetIsScalable2,
                            unsigned ClusterSize,
                            unsigned NumBytes) const override;
 
@@ -383,6 +388,13 @@ public:
   bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
                              unsigned Scale) const;
 
+  // Decrement the SP, issuing probes along the way. `TargetReg` is the new top
+  // of the stack. `FrameSetup` is passed as true, if the allocation is a part
+  // of constructing the activation frame of a function.
+  MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                               Register TargetReg,
+                                               bool FrameSetup) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
@@ -392,6 +404,8 @@ protected:
   /// registers as machine operands.
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+  std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;

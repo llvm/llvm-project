@@ -53,11 +53,14 @@
 # MIPS-GNU: abiflags MIPS_ABIFLAGS
 # MIPS-GNU: dwarf    MIPS_DWARF
 
+# AARCH64-LLVM: Name: aarch64_auth_relr
+# AARCH64-LLVM: Type: SHT_AARCH64_AUTH_RELR
 # AARCH64-LLVM: Name: .memtag.globals.dynamic
 # AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
 # AARCH64-LLVM: Name: .memtag.globals.static
 # AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_STATIC
 
+# AARCH64-GNU: aarch64_auth_relr       AARCH64_AUTH_RELR
 # AARCH64-GNU: .memtag.globals.dynamic AARCH64_MEMTAG_GLOBALS_DYNAMIC
 # AARCH64-GNU: .memtag.globals.static  AARCH64_MEMTAG_GLOBALS_STATIC
 
@@ -113,6 +116,8 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_AARCH64
 Sections:
+  - Name: aarch64_auth_relr
+    Type: SHT_AARCH64_AUTH_RELR
   - Name:  .memtag.globals.dynamic
     Type:  SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
   - Name:  .memtag.globals.static

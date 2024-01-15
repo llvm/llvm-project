@@ -6053,9 +6053,14 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                      << IndexExpr->getSourceRange());
 
   if ((IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
-       IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
-         && !IndexExpr->isTypeDependent())
-    Diag(LLoc, diag::warn_subscript_is_char) << IndexExpr->getSourceRange();
+       IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_U)) &&
+      !IndexExpr->isTypeDependent()) {
+    std::optional<llvm::APSInt> IntegerContantExpr =
+        IndexExpr->getIntegerConstantExpr(getASTContext());
+    if (!IntegerContantExpr.has_value() ||
+        IntegerContantExpr.value().isNegative())
+      Diag(LLoc, diag::warn_subscript_is_char) << IndexExpr->getSourceRange();
+  }
 
   // C99 6.5.2.1p1: "shall have type "pointer to *object* type". Similarly,
   // C++ [expr.sub]p1: The type "T" shall be a completely-defined object
@@ -8688,10 +8693,10 @@ ExprResult Sema::ActOnParenListExpr(SourceLocation L,
 /// Emit a specialized diagnostic when one expression is a null pointer
 /// constant and the other is not a pointer.  Returns true if a diagnostic is
 /// emitted.
-bool Sema::DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
+bool Sema::DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
                                       SourceLocation QuestionLoc) {
-  Expr *NullExpr = LHSExpr;
-  Expr *NonPointerExpr = RHSExpr;
+  const Expr *NullExpr = LHSExpr;
+  const Expr *NonPointerExpr = RHSExpr;
   Expr::NullPointerConstantKind NullKind =
       NullExpr->isNullPointerConstant(Context,
                                       Expr::NPC_ValueDependentIsNotNull);
@@ -8727,7 +8732,8 @@ bool Sema::DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
 }
 
 /// Return false if the condition expression is valid, true otherwise.
-static bool checkCondition(Sema &S, Expr *Cond, SourceLocation QuestionLoc) {
+static bool checkCondition(Sema &S, const Expr *Cond,
+                           SourceLocation QuestionLoc) {
   QualType CondTy = Cond->getType();
 
   // OpenCL v1.1 s6.3.i says the condition cannot be a floating point type.
@@ -9539,28 +9545,27 @@ static bool IsArithmeticOp(BinaryOperatorKind Opc) {
 /// expression, either using a built-in or overloaded operator,
 /// and sets *OpCode to the opcode and *RHSExprs to the right-hand side
 /// expression.
-static bool IsArithmeticBinaryExpr(Expr *E, BinaryOperatorKind *Opcode,
-                                   Expr **RHSExprs) {
+static bool IsArithmeticBinaryExpr(const Expr *E, BinaryOperatorKind *Opcode,
+                                   const Expr **RHSExprs) {
   // Don't strip parenthesis: we should not warn if E is in parenthesis.
   E = E->IgnoreImpCasts();
   E = E->IgnoreConversionOperatorSingleStep();
   E = E->IgnoreImpCasts();
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E)) {
+  if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E)) {
     E = MTE->getSubExpr();
     E = E->IgnoreImpCasts();
   }
 
   // Built-in binary operator.
-  if (BinaryOperator *OP = dyn_cast<BinaryOperator>(E)) {
-    if (IsArithmeticOp(OP->getOpcode())) {
-      *Opcode = OP->getOpcode();
-      *RHSExprs = OP->getRHS();
-      return true;
-    }
+  if (const auto *OP = dyn_cast<BinaryOperator>(E);
+      OP && IsArithmeticOp(OP->getOpcode())) {
+    *Opcode = OP->getOpcode();
+    *RHSExprs = OP->getRHS();
+    return true;
   }
 
   // Overloaded operator.
-  if (CXXOperatorCallExpr *Call = dyn_cast<CXXOperatorCallExpr>(E)) {
+  if (const auto *Call = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (Call->getNumArgs() != 2)
       return false;
 
@@ -9585,14 +9590,14 @@ static bool IsArithmeticBinaryExpr(Expr *E, BinaryOperatorKind *Opcode,
 /// ExprLooksBoolean - Returns true if E looks boolean, i.e. it has boolean type
 /// or is a logical expression such as (x==y) which has int type, but is
 /// commonly interpreted as boolean.
-static bool ExprLooksBoolean(Expr *E) {
+static bool ExprLooksBoolean(const Expr *E) {
   E = E->IgnoreParenImpCasts();
 
   if (E->getType()->isBooleanType())
     return true;
-  if (BinaryOperator *OP = dyn_cast<BinaryOperator>(E))
+  if (const auto *OP = dyn_cast<BinaryOperator>(E))
     return OP->isComparisonOp() || OP->isLogicalOp();
-  if (UnaryOperator *OP = dyn_cast<UnaryOperator>(E))
+  if (const auto *OP = dyn_cast<UnaryOperator>(E))
     return OP->getOpcode() == UO_LNot;
   if (E->getType()->isPointerType())
     return true;
@@ -9606,13 +9611,11 @@ static bool ExprLooksBoolean(Expr *E) {
 /// and binary operator are mixed in a way that suggests the programmer assumed
 /// the conditional operator has higher precedence, for example:
 /// "int x = a + someBinaryCondition ? 1 : 2".
-static void DiagnoseConditionalPrecedence(Sema &Self,
-                                          SourceLocation OpLoc,
-                                          Expr *Condition,
-                                          Expr *LHSExpr,
-                                          Expr *RHSExpr) {
+static void DiagnoseConditionalPrecedence(Sema &Self, SourceLocation OpLoc,
+                                          Expr *Condition, const Expr *LHSExpr,
+                                          const Expr *RHSExpr) {
   BinaryOperatorKind CondOpcode;
-  Expr *CondRHS;
+  const Expr *CondRHS;
 
   if (!IsArithmeticBinaryExpr(Condition, &CondOpcode, &CondRHS))
     return;
@@ -9800,8 +9803,7 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
 }
 
 // Check that the SME attributes for PSTATE.ZA and PSTATE.SM are compatible.
-bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
-                                      AArch64SMECallConversionKind C) {
+bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType) {
   unsigned FromAttributes = 0, ToAttributes = 0;
   if (const auto *FromFn =
           dyn_cast<FunctionProtoType>(Context.getCanonicalType(FromType)))
@@ -9812,25 +9814,7 @@ bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
     ToAttributes =
         ToFn->getAArch64SMEAttributes() & FunctionType::SME_AttributeMask;
 
-  if (FromAttributes == ToAttributes)
-    return false;
-
-  // If the '__arm_preserves_za' is the only difference between the types,
-  // check whether we're allowed to add or remove it.
-  if ((FromAttributes ^ ToAttributes) ==
-      FunctionType::SME_PStateZAPreservedMask) {
-    switch (C) {
-    case AArch64SMECallConversionKind::MatchExactly:
-      return true;
-    case AArch64SMECallConversionKind::MayAddPreservesZA:
-      return !(ToAttributes & FunctionType::SME_PStateZAPreservedMask);
-    case AArch64SMECallConversionKind::MayDropPreservesZA:
-      return !(FromAttributes & FunctionType::SME_PStateZAPreservedMask);
-    }
-  }
-
-  // There has been a mismatch of attributes
-  return true;
+  return FromAttributes != ToAttributes;
 }
 
 // Check if we have a conversion between incompatible cmse function pointer
@@ -9999,9 +9983,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
     return Sema::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return Sema::IncompatibleFunctionPointer;
-  if (S.IsInvalidSMECallConversion(
-          rtrans, ltrans,
-          Sema::AArch64SMECallConversionKind::MayDropPreservesZA))
+  if (S.IsInvalidSMECallConversion(rtrans, ltrans))
     return Sema::IncompatibleFunctionPointer;
   return ConvTy;
 }
@@ -13803,12 +13785,12 @@ static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
   StringRef RHSStrRef = RHSStr;
   // Do not diagnose literals with digit separators, binary, hexadecimal, octal
   // literals.
-  if (LHSStrRef.startswith("0b") || LHSStrRef.startswith("0B") ||
-      RHSStrRef.startswith("0b") || RHSStrRef.startswith("0B") ||
-      LHSStrRef.startswith("0x") || LHSStrRef.startswith("0X") ||
-      RHSStrRef.startswith("0x") || RHSStrRef.startswith("0X") ||
-      (LHSStrRef.size() > 1 && LHSStrRef.startswith("0")) ||
-      (RHSStrRef.size() > 1 && RHSStrRef.startswith("0")) ||
+  if (LHSStrRef.starts_with("0b") || LHSStrRef.starts_with("0B") ||
+      RHSStrRef.starts_with("0b") || RHSStrRef.starts_with("0B") ||
+      LHSStrRef.starts_with("0x") || LHSStrRef.starts_with("0X") ||
+      RHSStrRef.starts_with("0x") || RHSStrRef.starts_with("0X") ||
+      (LHSStrRef.size() > 1 && LHSStrRef.starts_with("0")) ||
+      (RHSStrRef.size() > 1 && RHSStrRef.starts_with("0")) ||
       LHSStrRef.contains('\'') || RHSStrRef.contains('\''))
     return;
 
@@ -15503,7 +15485,7 @@ static void checkObjCPointerIntrospection(Sema &S, ExprResult &L, ExprResult &R,
     if (const ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(Ex)) {
       Selector S = ME->getSelector();
       StringRef SelArg0 = S.getNameForSlot(0);
-      if (SelArg0.startswith("performSelector"))
+      if (SelArg0.starts_with("performSelector"))
         Diag = diag::warn_objc_pointer_masking_performSelector;
     }
 
@@ -19053,17 +19035,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
               CodeSynthesisContexts.size())
             PendingLocalImplicitInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
-          else if (Func->isConstexpr()) {
+          else if (Func->isConstexpr())
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
-            if (!Func->isDefined()) {
-              PendingInstantiationsOfConstexprEntities
-                  [Func->getTemplateInstantiationPattern()->getCanonicalDecl()]
-                      .push_back(Func);
-            }
-          } else {
+          else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));

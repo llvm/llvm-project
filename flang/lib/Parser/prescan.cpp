@@ -139,16 +139,18 @@ void Prescanner::Statement() {
         SkipSpaces();
       }
     } else {
-      // Compiler directive.  Emit normalized sentinel.
+      // Compiler directive.  Emit normalized sentinel, squash following spaces.
       EmitChar(tokens, '!');
       ++at_, ++column_;
       for (const char *sp{directiveSentinel_}; *sp != '\0';
            ++sp, ++at_, ++column_) {
         EmitChar(tokens, *sp);
       }
-      if (*at_ == ' ') {
+      if (*at_ == ' ' || *at_ == '\t') {
         EmitChar(tokens, ' ');
-        ++at_, ++column_;
+        while (*at_ == ' ' || *at_ == '\t') {
+          ++at_, ++column_;
+        }
       }
       tokens.CloseToken();
     }
@@ -706,6 +708,7 @@ void Prescanner::QuotedCharacterLiteral(
   char quote{*at_};
   const char *end{at_ + 1};
   inCharLiteral_ = true;
+  continuationInCharLiteral_ = true;
   const auto emit{[&](char ch) { EmitChar(tokens, ch); }};
   const auto insert{[&](char ch) { EmitInsertedChar(tokens, ch); }};
   bool isEscaped{false};
@@ -749,16 +752,9 @@ void Prescanner::QuotedCharacterLiteral(
         break;
       }
       inCharLiteral_ = true;
-      if (insertASpace_) {
-        if (features_.ShouldWarn(
-                common::LanguageFeature::MiscSourceExtensions)) {
-          Say(GetProvenanceRange(at_, end),
-              "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
-        }
-        insertASpace_ = false;
-      }
     }
   }
+  continuationInCharLiteral_ = false;
   inCharLiteral_ = false;
 }
 
@@ -1122,7 +1118,15 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     } else if (*p == '!' || *p == '\n' || *p == '#') {
       return nullptr;
     } else if (ampersand || IsImplicitContinuation()) {
-      if (p > nextLine_) {
+      if (continuationInCharLiteral_) {
+        // 'a'&            -> 'a''b' == "a'b"
+        //   'b'
+        if (features_.ShouldWarn(
+                common::LanguageFeature::MiscSourceExtensions)) {
+          Say(GetProvenanceRange(p, p + 1),
+              "Character literal continuation line should have been preceded by '&'"_port_en_US);
+        }
+      } else if (p > nextLine_) {
         --p;
       } else {
         insertASpace_ = true;

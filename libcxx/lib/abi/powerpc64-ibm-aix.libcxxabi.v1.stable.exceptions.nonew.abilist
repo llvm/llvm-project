@@ -506,6 +506,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb0EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb1EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__get_ostream_fileERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE4initERKNS_5ctypeIcEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcEC1EPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

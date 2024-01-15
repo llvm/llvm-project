@@ -43,7 +43,8 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class take_while_view : public view_interface<take_while_view<_View, _Pred>> {
+class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG take_while_view
+    : public view_interface<take_while_view<_View, _Pred>> {
   template <bool>
   class __sentinel;
 

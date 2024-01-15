@@ -811,7 +811,7 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
     if (IsNUW)
       return Constant::getNullValue(Op0->getType());
 
-    KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits Known = computeKnownBits(Op1, /* Depth */ 0, Q);
     if (Known.Zero.isMaxSignedValue()) {
       // Op1 is either 0 or the minimum signed value. If the sub is NSW, then
       // Op1 must be 0 because negating the minimum signed value is undefined.
@@ -1063,7 +1063,7 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   //      ("computeConstantRangeIncludingKnownBits")?
   const APInt *C;
   if (match(Y, m_APInt(C)) &&
-      computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI, Q.DT).getMaxValue().ult(*C))
+      computeKnownBits(X, /* Depth */ 0, Q).getMaxValue().ult(*C))
     return true;
 
   // Try again for any divisor:
@@ -1125,8 +1125,7 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
   if (Op0 == Op1)
     return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
 
-
-  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits Known = computeKnownBits(Op1, /* Depth */ 0, Q);
   // X / 0 -> poison
   // X % 0 -> poison
   // If the divisor is known to be zero, just return poison. This can happen in
@@ -1190,14 +1189,26 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
   if (Value *V = simplifyDivRem(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
 
-  // If this is an exact divide by a constant, then the dividend (Op0) must have
-  // at least as many trailing zeros as the divisor to divide evenly. If it has
-  // less trailing zeros, then the result must be poison.
   const APInt *DivC;
-  if (IsExact && match(Op1, m_APInt(DivC)) && DivC->countr_zero()) {
-    KnownBits KnownOp0 = computeKnownBits(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-    if (KnownOp0.countMaxTrailingZeros() < DivC->countr_zero())
-      return PoisonValue::get(Op0->getType());
+  if (IsExact && match(Op1, m_APInt(DivC))) {
+    // If this is an exact divide by a constant, then the dividend (Op0) must
+    // have at least as many trailing zeros as the divisor to divide evenly. If
+    // it has less trailing zeros, then the result must be poison.
+    if (DivC->countr_zero()) {
+      KnownBits KnownOp0 = computeKnownBits(Op0, /* Depth */ 0, Q);
+      if (KnownOp0.countMaxTrailingZeros() < DivC->countr_zero())
+        return PoisonValue::get(Op0->getType());
+    }
+
+    // udiv exact (mul nsw X, C), C --> X
+    // sdiv exact (mul nuw X, C), C --> X
+    // where C is not a power of 2.
+    Value *X;
+    if (!DivC->isPowerOf2() &&
+        (Opcode == Instruction::UDiv
+             ? match(Op0, m_NSWMul(m_Value(X), m_Specific(Op1)))
+             : match(Op0, m_NUWMul(m_Value(X), m_Specific(Op1)))))
+      return X;
   }
 
   return nullptr;
@@ -1355,7 +1366,7 @@ static Value *simplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
 
   // If any bits in the shift amount make that value greater than or equal to
   // the number of bits in the type, the shift is undefined.
-  KnownBits KnownAmt = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  KnownBits KnownAmt = computeKnownBits(Op1, /* Depth */ 0, Q);
   if (KnownAmt.getMinValue().uge(KnownAmt.getBitWidth()))
     return PoisonValue::get(Op0->getType());
 
@@ -1368,7 +1379,7 @@ static Value *simplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   // Check for nsw shl leading to a poison value.
   if (IsNSW) {
     assert(Opcode == Instruction::Shl && "Expected shl for nsw instruction");
-    KnownBits KnownVal = computeKnownBits(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits KnownVal = computeKnownBits(Op0, /* Depth */ 0, Q);
     KnownBits KnownShl = KnownBits::shl(KnownVal, KnownAmt);
 
     if (KnownVal.Zero.isSignBitSet())
@@ -1404,8 +1415,7 @@ static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
   // The low bit cannot be shifted out of an exact shift if it is set.
   // TODO: Generalize by counting trailing zeros (see fold for exact division).
   if (IsExact) {
-    KnownBits Op0Known =
-        computeKnownBits(Op0, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits Op0Known = computeKnownBits(Op0, /* Depth */ 0, Q);
     if (Op0Known.One[0])
       return Op0;
   }
@@ -1477,7 +1487,7 @@ static Value *simplifyLShrInst(Value *Op0, Value *Op1, bool IsExact,
   if (Q.IIQ.UseInstrInfo && match(Op1, m_APInt(ShRAmt)) &&
       match(Op0, m_c_Or(m_NUWShl(m_Value(X), m_APInt(ShLAmt)), m_Value(Y))) &&
       *ShRAmt == *ShLAmt) {
-    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    const KnownBits YKnown = computeKnownBits(Y, /* Depth */ 0, Q);
     const unsigned EffWidthY = YKnown.countMaxActiveBits();
     if (ShRAmt->uge(EffWidthY))
       return X;
@@ -2105,7 +2115,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op0, m_Add(m_Value(Shift), m_AllOnes())) &&
       isKnownToBeAPowerOfTwo(Shift, Q.DL, /*OrZero*/ false, 0, Q.AC, Q.CxtI,
                              Q.DT)) {
-    KnownBits Known = computeKnownBits(Shift, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits Known = computeKnownBits(Shift, /* Depth */ 0, Q);
     // Use getActiveBits() to make use of the additional power of two knowledge
     if (PowerC->getActiveBits() >= Known.getMaxValue().getActiveBits())
       return ConstantInt::getNullValue(Op1->getType());
@@ -2169,10 +2179,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                         m_Value(Y)))) {
     const unsigned Width = Op0->getType()->getScalarSizeInBits();
     const unsigned ShftCnt = ShAmt->getLimitedValue(Width);
-    const KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    const KnownBits YKnown = computeKnownBits(Y, /* Depth */ 0, Q);
     const unsigned EffWidthY = YKnown.countMaxActiveBits();
     if (EffWidthY <= ShftCnt) {
-      const KnownBits XKnown = computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      const KnownBits XKnown = computeKnownBits(X, /* Depth */ 0, Q);
       const unsigned EffWidthX = XKnown.countMaxActiveBits();
       const APInt EffBitsY = APInt::getLowBitsSet(Width, EffWidthY);
       const APInt EffBitsX = APInt::getLowBitsSet(Width, EffWidthX) << ShftCnt;
@@ -2192,6 +2202,13 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                          m_CombineAnd(m_BinOp(Or),
                                       m_c_Or(m_Deferred(X), m_Value(Y))))) &&
       match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
+    return Constant::getNullValue(Op0->getType());
+
+  const APInt *C1;
+  Value *A;
+  // (A ^ C) & (A ^ ~C) -> 0
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
@@ -2462,6 +2479,11 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
     if (Value *V = threadBinOpOverPHI(Instruction::Or, Op0, Op1, Q, MaxRecurse))
       return V;
+
+  // (A ^ C) | (A ^ ~C) -> -1, i.e. all bits set to one.
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+    return Constant::getAllOnesValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied =
@@ -2968,7 +2990,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
       return getTrue(ITy);
     break;
   case ICmpInst::ICMP_SLT: {
-    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getTrue(ITy);
     if (LHSKnown.isNonNegative())
@@ -2976,7 +2998,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     break;
   }
   case ICmpInst::ICMP_SLE: {
-    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getTrue(ITy);
     if (LHSKnown.isNonNegative() &&
@@ -2985,7 +3007,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     break;
   }
   case ICmpInst::ICMP_SGE: {
-    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getFalse(ITy);
     if (LHSKnown.isNonNegative())
@@ -2993,7 +3015,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     break;
   }
   case ICmpInst::ICMP_SGT: {
-    KnownBits LHSKnown = computeKnownBits(LHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+    KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getFalse(ITy);
     if (LHSKnown.isNonNegative() &&
@@ -3070,8 +3092,8 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       return getTrue(ITy);
 
     if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) {
-      KnownBits RHSKnown = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-      KnownBits YKnown = computeKnownBits(Y, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      KnownBits RHSKnown = computeKnownBits(RHS, /* Depth */ 0, Q);
+      KnownBits YKnown = computeKnownBits(Y, /* Depth */ 0, Q);
       if (RHSKnown.isNonNegative() && YKnown.isNegative())
         return Pred == ICmpInst::ICMP_SLT ? getTrue(ITy) : getFalse(ITy);
       if (RHSKnown.isNegative() || YKnown.isNonNegative())
@@ -3094,7 +3116,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       break;
     case ICmpInst::ICMP_SGT:
     case ICmpInst::ICMP_SGE: {
-      KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      KnownBits Known = computeKnownBits(RHS, /* Depth */ 0, Q);
       if (!Known.isNonNegative())
         break;
       [[fallthrough]];
@@ -3105,7 +3127,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
       return getFalse(ITy);
     case ICmpInst::ICMP_SLT:
     case ICmpInst::ICMP_SLE: {
-      KnownBits Known = computeKnownBits(RHS, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+      KnownBits Known = computeKnownBits(RHS, /* Depth */ 0, Q);
       if (!Known.isNonNegative())
         break;
       [[fallthrough]];
@@ -4291,7 +4313,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
-        isa<CallBase>(I))
+        isa<CallBase>(I) || isa<BitCastInst>(I))
       return nullptr;
   }
 
@@ -4331,8 +4353,17 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 
       // x & x -> x, x | x -> x
       if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
-          NewOps[0] == NewOps[1])
+          NewOps[0] == NewOps[1]) {
+        // or disjoint x, x results in poison.
+        if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BO)) {
+          if (PDI->isDisjoint()) {
+            if (!DropFlags)
+              return nullptr;
+            DropFlags->push_back(BO);
+          }
+        }
         return NewOps[0];
+      }
 
       // x - x -> 0, x ^ x -> 0. This is non-refining, because x is non-poison
       // by assumption and this case never wraps, so nowrap flags can be
@@ -4447,14 +4478,22 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
     // (X & Y) == 0 ? X | Y : X  --> X | Y
     // (X & Y) != 0 ? X | Y : X  --> X
     if (FalseVal == X && match(TrueVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (TrueWhenUnset && cast<PossiblyDisjointInst>(TrueVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
 
     // (X & Y) == 0 ? X : X | Y  --> X
     // (X & Y) != 0 ? X : X | Y  --> X | Y
     if (TrueVal == X && match(FalseVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (!TrueWhenUnset && cast<PossiblyDisjointInst>(FalseVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
   }
 
   return nullptr;
@@ -4842,14 +4881,12 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   // select ?, poison, X -> X
   // select ?, undef,  X -> X
   if (isa<PoisonValue>(TrueVal) ||
-      (Q.isUndefValue(TrueVal) &&
-       isGuaranteedNotToBePoison(FalseVal, Q.AC, Q.CxtI, Q.DT)))
+      (Q.isUndefValue(TrueVal) && impliesPoison(FalseVal, Cond)))
     return FalseVal;
   // select ?, X, poison -> X
   // select ?, X, undef  -> X
   if (isa<PoisonValue>(FalseVal) ||
-      (Q.isUndefValue(FalseVal) &&
-       isGuaranteedNotToBePoison(TrueVal, Q.AC, Q.CxtI, Q.DT)))
+      (Q.isUndefValue(FalseVal) && impliesPoison(TrueVal, Cond)))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
@@ -6064,7 +6101,7 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   Type *Int32Ty = Type::getInt32Ty(Ptr->getContext());
 
   auto *OffsetConstInt = dyn_cast<ConstantInt>(Offset);
-  if (!OffsetConstInt || OffsetConstInt->getType()->getBitWidth() > 64)
+  if (!OffsetConstInt || OffsetConstInt->getBitWidth() > 64)
     return nullptr;
 
   APInt OffsetInt = OffsetConstInt->getValue().sextOrTrunc(

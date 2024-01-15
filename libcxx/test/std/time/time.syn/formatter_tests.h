@@ -8,6 +8,8 @@
 #ifndef TEST_STD_TIME_TIME_SYN_FORMATTER_TESTS_H
 #define TEST_STD_TIME_TIME_SYN_FORMATTER_TESTS_H
 
+#include "assert_macros.h"
+#include "concat_macros.h"
 #include "make_string.h"
 #include "string_literal.h"
 #include "test_format_string.h"
@@ -34,11 +36,9 @@ using format_context = std::format_context;
 template <class CharT, class... Args>
 void check(std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
   std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-  if constexpr (std::same_as<CharT, char>)
-    if (out != expected)
-      std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   " << out
-                << '\n';
-  assert(out == expected);
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED(
+                   "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 }
 
 template <class CharT, class... Args>
@@ -47,38 +47,24 @@ void check(const std::locale& loc,
            test_format_string<CharT, Args...> fmt,
            Args&&... args) {
   std::basic_string<CharT> out = std::format(loc, fmt, std::forward<Args>(args)...);
-  if constexpr (std::same_as<CharT, char>)
-    if (out != expected)
-      std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   " << out
-                << '\n';
-  assert(out == expected);
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED(
+                   "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 }
 
 template <class CharT, class... Args>
 void check_exception([[maybe_unused]] std::string_view what,
                      [[maybe_unused]] std::basic_string_view<CharT> fmt,
                      [[maybe_unused]] const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<format_context<CharT>>(args...));
-    if constexpr (std::same_as<CharT, char>)
-      std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
-    assert(false);
-  } catch (const std::format_error& e) {
-#  if defined(_LIBCPP_VERSION)
-    if constexpr (std::same_as<CharT, char>)
-      if (e.what() != what)
-        std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
-                  << e.what() << '\n';
-    assert(e.what() == what);
-#  else
-    (void)what;
-    (void)e;
-#  endif
-    return;
-  }
-  assert(false);
-#endif
+  TEST_VALIDATE_EXCEPTION(
+      std::format_error,
+      [&]([[maybe_unused]] const std::format_error& e) {
+        TEST_LIBCPP_REQUIRE(
+            e.what() == what,
+            TEST_WRITE_CONCATENATED(
+                "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+      },
+      TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<format_context<CharT>>(args...)));
 }
 
 template <class CharT, class T>

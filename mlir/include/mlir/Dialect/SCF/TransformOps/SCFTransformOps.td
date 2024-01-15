@@ -106,9 +106,11 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
 def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
-  let summary = "Peels the last iteration of the loop";
+  let summary = "Peels the first or last iteration of the loop";
   let description = [{
-     Updates the given loop so that its step evenly divides its range and puts
+     Rewrite the given loop with a main loop and a partial (first or last) loop.
+     When the `peelFront` option is set as true, the first iteration is peeled off.
+     Otherwise, updates the given loop so that its step evenly divides its range and puts
      the remaining iteration into a separate loop or a conditional.
 
      In the absence of sufficient static information, this op may peel a loop,
@@ -118,9 +120,15 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
-     This operation returns two scf::ForOp Ops, with the first Op satisfying
-     the postcondition: "the loop trip count is divisible by the step". The
-     second loop Op contains the remaining iteration. Note that even though the
+     When `peelFront` is true, this operation returns two scf::ForOp Ops, the
+     first scf::ForOp corresponds to the first iteration of the loop which can
+     be canonicalized away in the following optimization. The second loop Op
+     contains the remaining iteration, and the new lower bound is the original
+     lower bound plus the number of steps.
+
+     When `peelFront` is not true, this operation returns two scf::ForOp Ops, with the first
+     scf::ForOp satisfying: "the loop trip count is divisible by the step".
+     The second loop Op contains the remaining iteration. Note that even though the
      Payload IR modification may be performed in-place, this operation consumes
      the operand handle and produces a new one.
 
@@ -131,6 +139,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
   let arguments =
       (ins Transform_ScfForOp:$target,
+           DefaultValuedAttr<BoolAttr, "false">:$peel_front,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
   let results = (outs TransformHandleTypeInterface:$peeled_loop,
                       TransformHandleTypeInterface:$remainder_loop);

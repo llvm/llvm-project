@@ -17,11 +17,15 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace Fortran::frontend;
@@ -156,8 +160,10 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   invoc.setFortranOpts();
   // Set the encoding to read all input files in based on user input.
   allSources->set_encoding(invoc.getFortranOpts().encoding);
+  if (!setUpTargetMachine())
+    return false;
   // Create the semantics context
-  semaContext = invoc.getSemanticsCtx(*allCookedSources);
+  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
@@ -196,4 +202,130 @@ CompilerInstance::createDiagnostics(clang::DiagnosticOptions *opts,
     diags->setClient(new TextDiagnosticPrinter(llvm::errs(), opts));
   }
   return diags;
+}
+
+// Get feature string which represents combined explicit target features
+// for AMD GPU and the target features specified by the user
+static std::string
+getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
+                                           const TargetOptions &targetOpts,
+                                           const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  // Get the set of implicit target features
+  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    std::string userKeyString = userFeature.substr(1);
+    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
+  }
+
+  if (!llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap,
+                                           errorMsg)) {
+    unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                            "Unsupported feature ID: %0");
+    diags.Report(diagID) << errorMsg.data();
+    return std::string();
+  }
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
+// Get feature string which represents combined explicit target features
+// for NVPTX and the target features specified by the user/
+// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
+static std::string
+getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
+                                          const TargetOptions &targetOpts,
+                                          const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  bool ptxVer = false;
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
+    // Check if the user provided a PTX version
+    if (userKeyString.starts_with("ptx"))
+      ptxVer = true;
+  }
+
+  // Set the default PTX version to `ptx61` if none was provided.
+  // TODO: set the default PTX version based on the chip.
+  if (!ptxVer)
+    implicitFeaturesMap["ptx61"] = true;
+
+  // Set the compute capability.
+  implicitFeaturesMap[cpu.str()] = true;
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
+std::string CompilerInstance::getTargetFeatures() {
+  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  // Clang does not append all target features to the clang -cc1 invocation.
+  // Some target features are parsed implicitly by clang::TargetInfo child
+  // class. Clang::TargetInfo classes are the basic clang classes and
+  // they cannot be reused by Flang.
+  // That's why we need to extract implicit target features and add
+  // them to the target features specified by the user
+  if (triple.isAMDGPU()) {
+    return getExplicitAndImplicitAMDGPUTargetFeatures(getDiagnostics(),
+                                                      targetOpts, triple);
+  } else if (triple.isNVPTX()) {
+    return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
+                                                     targetOpts, triple);
+  }
+  return llvm::join(targetOpts.featuresAsWritten.begin(),
+                    targetOpts.featuresAsWritten.end(), ",");
+}
+
+bool CompilerInstance::setUpTargetMachine() {
+  const TargetOptions &targetOpts = getInvocation().getTargetOpts();
+  const std::string &theTriple = targetOpts.triple;
+
+  // Create `Target`
+  std::string error;
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(theTriple, error);
+  if (!theTarget) {
+    getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
+        << error;
+    return false;
+  }
+
+  // Create `TargetMachine`
+  const auto &CGOpts = getInvocation().getCodeGenOpts();
+  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
+      llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
+  std::string featuresStr = getTargetFeatures();
+  targetMachine.reset(theTarget->createTargetMachine(
+      theTriple, /*CPU=*/targetOpts.cpu,
+      /*Features=*/featuresStr, llvm::TargetOptions(),
+      /*Reloc::Model=*/CGOpts.getRelocationModel(),
+      /*CodeModel::Model=*/std::nullopt, OptLevel));
+  assert(targetMachine && "Failed to create TargetMachine");
+  return true;
 }

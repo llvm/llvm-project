@@ -210,10 +210,10 @@ bool lld::elf::needsGot(RelExpr expr) {
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr expr) {
-  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_MIPS_GOTREL, R_PPC64_CALL,
-               R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC,
-               R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC, R_LOONGARCH_PAGE_PC>(
-      expr);
+  return oneof<R_PC, R_GOTREL, R_GOTPLTREL, R_ARM_PCA, R_MIPS_GOTREL,
+               R_PPC64_CALL, R_PPC64_RELAX_TOC, R_AARCH64_PAGE_PC,
+               R_RELAX_GOT_PC, R_RISCV_PC_INDIRECT, R_PPC64_RELAX_GOT_PC,
+               R_LOONGARCH_PAGE_PC>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -988,8 +988,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!config->isPic)
     return true;
 
-  // The size of a non preemptible symbol is a constant.
-  if (e == R_SIZE)
+  // Constant when referencing a non-preemptible symbol.
+  if (e == R_SIZE || e == R_RISCV_LEB128)
     return true;
 
   // For the target and the relocation, we want to know if they are
@@ -1158,8 +1158,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // When producing an executable, we can perform copy relocations (for
-  // STT_OBJECT) and canonical PLT (for STT_FUNC).
-  if (!config->shared) {
+  // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
+  if (!config->shared && sym.isShared()) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));
@@ -1669,7 +1669,7 @@ void elf::postScanRelocations() {
       return;
 
     if (sym.isTagged() && sym.isDefined())
-      mainPart->memtagDescriptors->addSymbol(sym);
+      mainPart->memtagGlobalDescriptors->addSymbol(sym);
 
     if (!sym.needsDynReloc())
       return;

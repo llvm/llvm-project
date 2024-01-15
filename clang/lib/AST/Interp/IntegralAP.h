@@ -182,17 +182,13 @@ public:
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    *R = IntegralAP(A.V - 1);
-    return false;
+    IntegralAP<Signed> One(1, A.bitWidth());
+    return add(A, One, A.bitWidth() + 1, R);
   }
 
   static bool decrement(IntegralAP A, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
-    *R = IntegralAP(A.V - 1);
-    return false;
+    IntegralAP<Signed> One(1, A.bitWidth());
+    return sub(A, One, A.bitWidth() + 1, R);
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
@@ -208,14 +204,18 @@ public:
   }
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.srem(B.V));
+    else
+      *R = IntegralAP(A.V.urem(B.V));
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    // FIXME: Implement.
-    assert(false);
+    if constexpr (Signed)
+      *R = IntegralAP(A.V.sdiv(B.V));
+    else
+      *R = IntegralAP(A.V.udiv(B.V));
     return false;
   }
 

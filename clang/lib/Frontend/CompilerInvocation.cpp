@@ -1861,6 +1861,20 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_funified_lto))
       Opts.PrepareForThinLTO = true;
   }
+  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
+                               options::OPT_fno_fat_lto_objects)) {
+    if (A->getOption().matches(options::OPT_ffat_lto_objects)) {
+      if (Arg *Uni = Args.getLastArg(options::OPT_funified_lto,
+                                     options::OPT_fno_unified_lto)) {
+        if (Uni->getOption().matches(options::OPT_fno_unified_lto))
+          Diags.Report(diag::err_drv_incompatible_options)
+              << A->getAsString(Args) << "-fno-unified-lto";
+      } else
+        Diags.Report(diag::err_drv_argument_only_allowed_with)
+            << A->getAsString(Args) << "-funified-lto";
+    }
+  }
+
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -2815,7 +2829,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                "-interface-stub-version=ifs-v1"
             << ErrorMessage;
         ProgramAction = frontend::ParseSyntaxOnly;
-      } else if (!ArgStr.startswith("ifs-")) {
+      } else if (!ArgStr.starts_with("ifs-")) {
         std::string ErrorMessage =
             "Invalid interface stub format: " + ArgStr.str() + ".";
         Diags.Report(diag::err_drv_invalid_value)
@@ -4092,13 +4106,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
     // Check the version number is valid: either 3.x (0 <= x <= 9) or
     // y or y.0 (4 <= y <= current version).
-    if (!VerParts.first.startswith("0") &&
-        !VerParts.first.getAsInteger(10, Major) &&
-        3 <= Major && Major <= CLANG_VERSION_MAJOR &&
-        (Major == 3 ? VerParts.second.size() == 1 &&
-                      !VerParts.second.getAsInteger(10, Minor)
-                    : VerParts.first.size() == Ver.size() ||
-                      VerParts.second == "0")) {
+    if (!VerParts.first.starts_with("0") &&
+        !VerParts.first.getAsInteger(10, Major) && 3 <= Major &&
+        Major <= CLANG_VERSION_MAJOR &&
+        (Major == 3
+             ? VerParts.second.size() == 1 &&
+                   !VerParts.second.getAsInteger(10, Minor)
+             : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
       if (Major == 3 && Minor <= 8)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver3_8);
@@ -4145,10 +4159,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
       StringRef SignKey = A->getValue();
       if (!SignScope.empty() && !SignKey.empty()) {
-        if (SignKey.equals_insensitive("a_key"))
+        if (SignKey == "a_key")
           Opts.setSignReturnAddressKey(
               LangOptions::SignReturnAddressKeyKind::AKey);
-        else if (SignKey.equals_insensitive("b_key"))
+        else if (SignKey == "b_key")
           Opts.setSignReturnAddressKey(
               LangOptions::SignReturnAddressKeyKind::BKey);
         else
@@ -4351,6 +4365,9 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
   if (Opts.SourceDateEpoch)
     GenerateArg(Consumer, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch));
 
+  if (Opts.DefineTargetOSMacros)
+    GenerateArg(Consumer, OPT_fdefine_target_os_macros);
+
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
 }
@@ -4448,6 +4465,10 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
+
+  Opts.DefineTargetOSMacros =
+      Args.hasFlag(OPT_fdefine_target_os_macros,
+                   OPT_fno_define_target_os_macros, Opts.DefineTargetOSMacros);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4773,6 +4794,18 @@ std::string CompilerInvocation::getModuleHash() const {
   if (getCodeGenOpts().DebugTypeExtRefs)
     HBuilder.addRange(getCodeGenOpts().DebugPrefixMap);
 
+  // Extend the signature with the affecting debug options.
+  if (getHeaderSearchOpts().ModuleFormat == "obj") {
+#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
+  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+#define BENIGN_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+#include "clang/Basic/DebugOptions.def"
+  }
+
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
   SanitizerSet SanHash = getLangOpts().Sanitize;
@@ -4819,6 +4852,7 @@ std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
 void CompilerInvocation::resetNonModularOptions() {
   getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
+  getCodeGenOpts().resetNonModularOptions(getHeaderSearchOpts().ModuleFormat);
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {

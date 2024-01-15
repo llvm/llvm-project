@@ -622,8 +622,16 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
+// AArch64 2023 Architecture Extensions (v9.5-A)
+
 def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
-  "Enable ARMv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+    "Enable Armv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+
+def FeaturePAuthLR : SubtargetFeature<"pauth-lr", "HasPAuthLR",
+    "true", "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
+
+def FeatureTLBIW : SubtargetFeature<"tlbiw", "HasTLBIW", "true",
+  "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
@@ -786,7 +794,7 @@ let F = [HasSVE2p1, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSSVE_FP8FMA, HasSMEF8F16,
+  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSVE2orSME2, HasSSVE_FP8FMA, HasSMEF8F16,
                        HasSMEF8F32, HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
                        SVE2p1Unsupported.F);
 }
@@ -800,7 +808,7 @@ let F = [HasSME2p1, HasSVE2p1_or_HasSME2p1] in
 def SME2p1Unsupported : AArch64Unsupported;
 
 def SME2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
+  let F = !listconcat([HasSME2, HasSVE2orSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA,
                       HasSMEF8F16, HasSMEF8F32],
                       SME2p1Unsupported.F);
 }
@@ -810,7 +818,7 @@ def SMEUnsupported : AArch64Unsupported {
                       SME2Unsupported.F);
 }
 
-let F = [HasPAuth] in
+let F = [HasPAuth, HasPAuthLR] in
 def PAUnsupported : AArch64Unsupported;
 
 include "AArch64SchedA53.td"
@@ -1397,7 +1405,7 @@ def ProcessorFeatures {
                                  FeatureSSBS];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
-                                 FeatureFlagM, FeatureFP16FML, FeaturePAuth,
+                                 FeatureFlagM, FeaturePAuth,
                                  FeaturePerfMon, FeatureRCPC, FeatureSPE,
                                  FeatureSSBS];
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
@@ -1483,9 +1491,9 @@ def ProcessorFeatures {
                                        FeatureFPARMv8, FeatureFullFP16, FeatureNEON,
                                        FeatureRCPC, FeatureSPE, FeatureSSBS,
                                        FeaturePerfMon];
-  list<SubtargetFeature> NeoverseN2 = [HasV8_5aOps, FeatureBF16, FeatureETE,
+  list<SubtargetFeature> NeoverseN2 = [HasV9_0aOps, FeatureBF16, FeatureETE,
                                        FeatureMatMulInt8, FeatureMTE, FeatureSVE2,
-                                       FeatureSVE2BitPerm, FeatureTRBE, FeatureCrypto,
+                                       FeatureSVE2BitPerm, FeatureTRBE,
                                        FeaturePerfMon];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
@@ -1512,7 +1520,8 @@ def ProcessorFeatures {
                                           FeaturePAuth, FeaturePerfMon];
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
-                                   FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
+                                   FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
+                                   FeatureJS, FeatureComplxNum];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES];

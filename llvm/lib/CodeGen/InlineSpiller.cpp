@@ -55,7 +55,6 @@
 #include <iterator>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 

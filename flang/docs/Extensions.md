@@ -315,11 +315,17 @@ end
 * When a file included via an `INCLUDE` line or `#include` directive
   has a continuation marker at the end of its last line in free form,
   Fortran line continuation works.
+* A `NAMELIST` input group may omit its trailing `/` character if
+  it is followed by another `NAMELIST` input group.
+* A `NAMELIST` input group may begin with either `&` or `$`.
+* A comma in a fixed-width numeric input field terminates the
+  field rather than signaling an invalid character error.
 
 ### Extensions supported when enabled by options
 
 * C-style backslash escape sequences in quoted CHARACTER literals
-  (but not Hollerith) [-fbackslash]
+  (but not Hollerith) [-fbackslash], including Unicode escapes
+  with `\U`.
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
   [-flogical-abbreviations]
 * `.XOR.` as a synonym for `.NEQV.` [-fxor-operator]
@@ -641,6 +647,19 @@ module m
 end
 ```
 
+* When an intrinsic procedure appears in the specification part of a module
+  only in function references, but not an explicit `INTRINSIC` statement,
+  its name is not brought into other scopes by a `USE` statement.
+
+* The subclause on rounding in formatted I/O (13.7.2.3.8 in F'2023)
+  only discusses rounding for decimal-to/from-binary conversions,
+  omitting any mention of rounding for hexadecimal conversions.
+  As other compilers do apply rounding, so does this one.
+
+* For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
+  essentially ignored unless there are some unmasked array entries and
+  *all* of them are NaNs.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
@@ -650,3 +669,7 @@ end
   but every Fortran compiler allows the encoding to be changed on an
   open unit.
 
+* A `NAMELIST` input item that references a scalar element of a vector
+  or contiguous array can be used as the initial element of a storage
+  sequence.  For example, "&GRP A(1)=1. 2. 3./" is treated as if had been
+  "&GRP A(1:)=1. 2. 3./".

@@ -337,7 +337,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXXABI_USE_LLVM_UNWINDER:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.
@@ -369,6 +369,7 @@ libc++ Feature Options
   **Default**: ``ON``
 
   Build libc++ with run time type information.
+  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF.
 
 .. option:: LIBCXX_INCLUDE_TESTS:BOOL
 

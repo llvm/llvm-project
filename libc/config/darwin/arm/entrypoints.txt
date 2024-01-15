@@ -193,6 +193,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl

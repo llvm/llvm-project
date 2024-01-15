@@ -93,7 +93,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
                         cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(false));
+                        cl::init(true));
 
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
@@ -213,13 +213,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
 
   SmallString<512> Key;
-  Key += "RVVMin";
-  Key += std::to_string(RVVBitsMin);
-  Key += "RVVMax";
-  Key += std::to_string(RVVBitsMax);
-  Key += CPU;
-  Key += TuneCPU;
-  Key += FS;
+  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
+                           << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -549,7 +544,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
+  if (TM->getTargetTriple().isRISCV64()) {
     addPass(createRISCVOptWInstrsPass());
   }
 }

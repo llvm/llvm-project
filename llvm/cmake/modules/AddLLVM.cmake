@@ -241,6 +241,12 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
       set(LLVM_LINKER_IS_GNULD YES CACHE INTERNAL "")
       message(STATUS "Linker detection: GNU ld")
+    elseif("${stderr}" MATCHES "(illumos)" OR
+           "${stdout}" MATCHES "(illumos)")
+      set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD YES CACHE INTERNAL "")
+      set(LLVM_LINKER_IS_SOLARISLD_ILLUMOS YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Solaris ld (illumos)")
     elseif("${stderr}" MATCHES "Solaris Link Editors" OR
            "${stdout}" MATCHES "Solaris Link Editors")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")

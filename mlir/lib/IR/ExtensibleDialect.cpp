@@ -407,10 +407,16 @@ void ExtensibleDialect::registerDynamicType(
   assert(registered &&
          "Trying to create a new dynamic type with an existing name");
 
+  // The StringAttr allocates the type name StringRef for the duration of the
+  // MLIR context.
+  MLIRContext *ctx = getContext();
+  auto nameAttr =
+      StringAttr::get(ctx, getNamespace() + "." + typePtr->getName());
+
   auto abstractType = AbstractType::get(
       *dialect, DynamicAttr::getInterfaceMap(), DynamicType::getHasTraitFn(),
       DynamicType::getWalkImmediateSubElementsFn(),
-      DynamicType::getReplaceImmediateSubElementsFn(), typeID);
+      DynamicType::getReplaceImmediateSubElementsFn(), typeID, nameAttr);
 
   /// Add the type to the dialect and the type uniquer.
   addType(typeID, std::move(abstractType));
@@ -437,10 +443,16 @@ void ExtensibleDialect::registerDynamicAttr(
   assert(registered &&
          "Trying to create a new dynamic attribute with an existing name");
 
+  // The StringAttr allocates the attribute name StringRef for the duration of
+  // the MLIR context.
+  MLIRContext *ctx = getContext();
+  auto nameAttr =
+      StringAttr::get(ctx, getNamespace() + "." + attrPtr->getName());
+
   auto abstractAttr = AbstractAttribute::get(
       *dialect, DynamicAttr::getInterfaceMap(), DynamicAttr::getHasTraitFn(),
       DynamicAttr::getWalkImmediateSubElementsFn(),
-      DynamicAttr::getReplaceImmediateSubElementsFn(), typeID);
+      DynamicAttr::getReplaceImmediateSubElementsFn(), typeID, nameAttr);
 
   /// Add the type to the dialect and the type uniquer.
   addAttribute(typeID, std::move(abstractAttr));

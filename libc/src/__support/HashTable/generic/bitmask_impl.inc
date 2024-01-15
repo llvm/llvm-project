@@ -34,14 +34,14 @@ LIBC_INLINE constexpr bitmask_t repeat_byte(bitmask_t byte) {
   return byte;
 }
 
-using BitMask = BitMaskAdaptor<bitmask_t, repeat_byte(0x80), 0x8ull>;
+using BitMask = BitMaskAdaptor<bitmask_t, 0x8ull>;
 using IteratableBitMask = IteratableBitMaskAdaptor<BitMask>;
 
 struct Group {
   bitmask_t data;
 
   // Load a group of control words from an arbitary address.
-  LIBC_INLINE static Group load(const void *__restrict addr) {
+  LIBC_INLINE static Group load(const void *addr) {
     union {
       bitmask_t value;
       char bytes[sizeof(bitmask_t)];
@@ -49,6 +49,11 @@ struct Group {
     for (size_t i = 0; i < sizeof(bitmask_t); ++i)
       data.bytes[i] = static_cast<const char *>(addr)[i];
     return {data.value};
+  }
+
+  // Load a group of control words from an aligned address.
+  LIBC_INLINE static Group load_aligned(const void *addr) {
+    return *static_cast<const Group *>(addr);
   }
 
   // Find out the lanes equal to the given byte and return the bitmask
@@ -98,13 +103,18 @@ struct Group {
     auto cmp = data ^ repeat_byte(byte);
     auto result = LIBC_NAMESPACE::Endian::to_little_endian(
         (cmp - repeat_byte(0x01)) & ~cmp & repeat_byte(0x80));
-    return {result};
+    return {BitMask{result}};
   }
 
   // Find out the lanes equal to EMPTY or DELETE (highest bit set) and
   // return the bitmask with corresponding bits set.
   LIBC_INLINE BitMask mask_available() const {
     return {LIBC_NAMESPACE::Endian::to_little_endian(data) & repeat_byte(0x80)};
+  }
+
+  LIBC_INLINE IteratableBitMask occupied() const {
+    return {
+        {static_cast<bitmask_t>(mask_available().word ^ repeat_byte(0x80))}};
   }
 };
 } // namespace internal

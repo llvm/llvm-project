@@ -900,8 +900,8 @@ public:
   /// Return true if \p SymbolName was generated internally and was not present
   /// in the input binary.
   bool isInternalSymbolName(const StringRef Name) {
-    return Name.startswith("SYMBOLat") || Name.startswith("DATAat") ||
-           Name.startswith("HOLEat");
+    return Name.starts_with("SYMBOLat") || Name.starts_with("DATAat") ||
+           Name.starts_with("HOLEat");
   }
 
   MCSymbol *getHotTextStartSymbol() const {

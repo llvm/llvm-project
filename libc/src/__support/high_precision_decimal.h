@@ -344,8 +344,8 @@ public:
         int64_t temp_exponent = static_cast<int64_t>(this->decimal_point) +
                                 static_cast<int64_t>(add_to_exponent);
 
-        // Theoretically these numbers should be MAX_EXPONENT for long double,
-        // but that should be ~16,000 which is much less than 1 << 30.
+        // Theoretically these numbers should be MAX_BIASED_EXPONENT for long
+        // double, but that should be ~16,000 which is much less than 1 << 30.
         if (temp_exponent > (1 << 30)) {
           temp_exponent = (1 << 30);
         } else if (temp_exponent < -(1 << 30)) {

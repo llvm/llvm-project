@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_IPO_PROFILEDCALLGRAPH_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
@@ -115,9 +114,8 @@ public:
           uint64_t CallsiteCount = 0;
           LineLocation Callsite = Callee->getCallSiteLoc();
           if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
-            SampleRecord::CallTargetMap &TargetCounts = CallTargets.get();
-            auto It = TargetCounts.find(CalleeSamples->getFunction());
-            if (It != TargetCounts.end())
+            auto It = CallTargets->find(CalleeSamples->getFunction());
+            if (It != CallTargets->end())
               CallsiteCount = It->second;
           }
           Weight = std::max(CallsiteCount, CalleeEntryCount);
