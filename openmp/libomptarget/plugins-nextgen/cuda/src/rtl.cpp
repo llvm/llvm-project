@@ -545,7 +545,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return nullptr;
 
     if (auto Err = setContext()) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return nullptr;
     }
 
@@ -580,7 +580,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err =
             Plugin::check(Res, "Error in cuMemAlloc[Host|Managed]: %s")) {
-      REPORT("Failure to alloc memory: %s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return nullptr;
     }
     return MemAlloc;
@@ -592,7 +592,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return OFFLOAD_SUCCESS;
 
     if (auto Err = setContext()) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return OFFLOAD_FAIL;
     }
 
@@ -618,7 +618,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     }
 
     if (auto Err = Plugin::check(Res, "Error in cuMemFree[Host]: %s")) {
-      REPORT("Failure to free memory: %s\n", toString(std::move(Err)).data());
+      consumeError(std::move(Err));
       return OFFLOAD_FAIL;
     }
     return OFFLOAD_SUCCESS;
@@ -1503,7 +1503,8 @@ Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   const char *Desc = "Unknown error";
   CUresult Ret = cuGetErrorString(ResultCode, &Desc);
   if (Ret != CUDA_SUCCESS)
-    REPORT("Unrecognized " GETNAME(TARGET_NAME) " error code %d\n", Code);
+    return createStringError(inconvertibleErrorCode(),
+                             "Unrecognized CUDA error code %d\n", Code);
 
   return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
                                                     ErrFmt, Args..., Desc);
