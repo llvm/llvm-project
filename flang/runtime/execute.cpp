@@ -87,7 +87,7 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
           "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Invalid command line");
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
