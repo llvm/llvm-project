@@ -217,7 +217,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"execute_command_line",
      &I::genExecuteCommandLine,
      {{{"command", asBox},
-       {"wait", asValue, handleDynamicOptional},
+       {"wait", asAddr, handleDynamicOptional},
        {"exitstat", asBox, handleDynamicOptional},
        {"cmdstat", asBox, handleDynamicOptional},
        {"cmdmsg", asBox, handleDynamicOptional}}},
@@ -2913,7 +2913,8 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
 // EXECUTE_COMMAND_LINE
 void IntrinsicLibrary::genExecuteCommandLine(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 5);
+  // Optional KIND argument.
+  assert(args.size() >= 1);
   mlir::Value command = fir::getBase(args[0]);
   const fir::ExtendedValue &wait = args[1];
   const fir::ExtendedValue &exitstat = args[2];
@@ -2925,9 +2926,29 @@ void IntrinsicLibrary::genExecuteCommandLine(
 
   mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
 
-  mlir::Value waitBool = isStaticallyPresent(wait)
-                             ? fir::getBase(wait)
-                             : builder.createBool(loc, true);
+  mlir::Value waitBool;
+  if (isStaticallyAbsent(wait)) {
+    waitBool = builder.createBool(loc, true);
+  } else {
+    mlir::Type i1Ty = builder.getI1Type();
+    mlir::Value waitAddr = fir::getBase(wait);
+    mlir::Value waitIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, waitAddr);
+    waitBool = builder
+               .genIfOp(loc, {i1Ty}, waitIsPresentAtRuntime,
+                        /*withElseRegion=*/true)
+               .genThen([&]() {
+                 auto waitLoad = builder.create<fir::LoadOp>(loc, waitAddr);
+                 mlir::Value cast = builder.createConvert(loc, i1Ty, waitLoad);
+                 builder.create<fir::ResultOp>(loc, cast);
+               })
+               .genElse([&]() {
+                 mlir::Value trueVal = builder.createBool(loc, true);
+                 builder.create<fir::ResultOp>(loc, trueVal);
+               })
+               .getResults()[0];
+  }
+
   mlir::Value exitstatBox =
       isStaticallyPresent(exitstat)
           ? fir::getBase(exitstat)
@@ -3185,6 +3206,7 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
 
   // Handle optional TRIM_NAME argument
   mlir::Value trim;
+  llvm::outs() << isStaticallyPresent(trimName) << "\n";
   if (isStaticallyAbsent(trimName)) {
     trim = builder.createBool(loc, true);
   } else {
