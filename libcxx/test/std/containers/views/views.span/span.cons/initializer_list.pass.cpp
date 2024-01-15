@@ -5,12 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
 
 // constexpr explicit(extent != dynamic_extent) span(std::initializer_list<value_type> il); // Since C++26
 
+#include <any>
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
@@ -89,9 +91,48 @@ constexpr bool test() {
   return true;
 }
 
+// Test P2447R4 "Annex C examples"
+
+constexpr int three(std::span<void* const> sp) { return sp.size(); }
+
+constexpr int four(std::span<const std::any> sp) { return sp.size(); }
+
+bool test_P2447R4_annex_c_examples() {
+  // 1. Overload resolution is affected
+  // --> tested in "initializer_list.verify.cpp"
+
+  // 2. The `initializer_list` ctor has high precedence
+  // --> tested in "initializer_list.verify.cpp"
+
+  // 3. Implicit two-argument construction with a highly convertible value_type
+#if TEST_STD_VER >= 26
+  {
+    void* a[10];
+    assert(three({a, 0}) == 2);
+  }
+  {
+    std::any a[10];
+    assert(four({a, a + 10}) == 2);
+  }
+#else
+  {
+    void* a[10];
+    assert(three({a, 0}) == 0);
+  }
+  {
+    std::any a[10];
+    assert(four({a, a + 10}) == 10);
+  }
+#endif
+
+  return true;
+}
+
 int main(int, char**) {
-  test();
+  assert(test());
   static_assert(test());
+
+  assert(test_P2447R4_annex_c_examples());
 
   return 0;
 }
