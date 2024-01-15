@@ -1703,7 +1703,7 @@ bool IsDummy(const Symbol &symbol) {
 bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
-  return object && object->CanBeAssumedShape() &&
+  return object && object->IsAssumedShape() &&
       !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
