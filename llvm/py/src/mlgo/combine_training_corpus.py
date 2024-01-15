@@ -28,17 +28,17 @@ from absl import flags
 
 from compiler_opt.tools import combine_training_corpus_lib
 
-flags.DEFINE_string('root_dir', '', 'root dir of module paths to combine.')
+flags.DEFINE_string("root_dir", "", "root dir of module paths to combine.")
 
 FLAGS = flags.FLAGS
 
 
 def main(argv):
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
+    if len(argv) > 1:
+        raise app.UsageError("Too many command-line arguments.")
 
-  combine_training_corpus_lib.combine_corpus(FLAGS.root_dir)
+    combine_training_corpus_lib.combine_corpus(FLAGS.root_dir)
 
 
-if __name__ == '__main__':
-  app.run(main)
+if __name__ == "__main__":
+    app.run(main)

@@ -18,30 +18,33 @@ from absl import logging
 
 from compiler_opt.tools import make_corpus_lib
 
-flags.DEFINE_string('input_dir', None, 'The input directory.')
-flags.DEFINE_string('output_dir', None, 'The output directory.')
+flags.DEFINE_string("input_dir", None, "The input directory.")
+flags.DEFINE_string("output_dir", None, "The output directory.")
 flags.DEFINE_string(
-    'default_args', '',
-    'The compiler flags to compile with when using downstream tooling.')
+    "default_args",
+    "",
+    "The compiler flags to compile with when using downstream tooling.",
+)
 
-flags.mark_flag_as_required('input_dir')
-flags.mark_flag_as_required('output_dir')
+flags.mark_flag_as_required("input_dir")
+flags.mark_flag_as_required("output_dir")
 
 FLAGS = flags.FLAGS
 
 
 def main(_):
-  logging.warning(
-      'Using this tool does not guarantee that the bitcode is taken at '
-      'the correct stage for consumption during model training. Make '
-      'sure to validate assumptions about where the bitcode is coming '
-      'from before using it in production.')
-  relative_paths = make_corpus_lib.load_bitcode_from_directory(FLAGS.input_dir)
-  make_corpus_lib.copy_bitcode(relative_paths, FLAGS.input_dir,
-                               FLAGS.output_dir)
-  make_corpus_lib.write_corpus_manifest(relative_paths, FLAGS.output_dir,
-                                        FLAGS.default_args.split())
+    logging.warning(
+        "Using this tool does not guarantee that the bitcode is taken at "
+        "the correct stage for consumption during model training. Make "
+        "sure to validate assumptions about where the bitcode is coming "
+        "from before using it in production."
+    )
+    relative_paths = make_corpus_lib.load_bitcode_from_directory(FLAGS.input_dir)
+    make_corpus_lib.copy_bitcode(relative_paths, FLAGS.input_dir, FLAGS.output_dir)
+    make_corpus_lib.write_corpus_manifest(
+        relative_paths, FLAGS.output_dir, FLAGS.default_args.split()
+    )
 
 
-if __name__ == '__main__':
-  app.run(main)
+if __name__ == "__main__":
+    app.run(main)
