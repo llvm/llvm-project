@@ -81,6 +81,33 @@ def TargetAttr : OpenMP_Attr<"Target", "target"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+def TargetRegionEntryInfoAttr :
+    OpenMP_Attr<"TargetRegionEntryInfo", "tgt_entry_info"> {
+  let description = [{
+    The `tgt_entry_info` attribute provides information to identify offload
+    entries uniquely. This attribute partially reflects the information in the
+    `llvm::TargetRegionEntryInfo` struct.
+
+    The information in this attribute can be used to generate the unique
+    identifier used to refer the offload symbol.
+
+    The optional `section` parameter can be used to emit the entry in an specific
+    entry rather than using the `omp_offloading_entries` data section. This
+    array has to be created before translating the Op generating the entry.
+
+    Example:
+    ```mlir
+    omp.tgt_entry_info<deviceID = 1, fileID = 0, line = 1, section = @entryArray>
+    ```
+  }];
+  let parameters = (ins
+    "unsigned":$deviceID,
+    "unsigned":$fileID,
+    "unsigned":$line,
+    OptionalParameter<"FlatSymbolRefAttr">:$section
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 class OpenMP_Op<string mnemonic, list<Trait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
@@ -1443,6 +1470,9 @@ def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterfa
     The optional $nowait elliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
 
+    The optional $info paremeter specifies the information that should be used to
+    create the offload entry in the IR.
+
     TODO:  is_device_ptr, depend, defaultmap, in_reduction
 
   }];
@@ -1451,7 +1481,8 @@ def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterfa
                        Optional<AnyInteger>:$device,
                        Optional<AnyInteger>:$thread_limit,
                        UnitAttr:$nowait,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<AnyType>:$map_operands,
+                       OptionalAttr<TargetRegionEntryInfoAttr>:$targetRegionEntryInfo);
 
   let regions = (region AnyRegion:$region);
 
@@ -1461,6 +1492,7 @@ def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, OutlineableOpenMPOpInterfa
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
     | `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
+    | `info` `=` qualified($targetRegionEntryInfo)
     ) $region attr-dict
   }];
 
