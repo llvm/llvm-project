@@ -2935,18 +2935,19 @@ void IntrinsicLibrary::genExecuteCommandLine(
     mlir::Value waitIsPresentAtRuntime =
         builder.genIsNotNullAddr(loc, waitAddr);
     waitBool = builder
-               .genIfOp(loc, {i1Ty}, waitIsPresentAtRuntime,
-                        /*withElseRegion=*/true)
-               .genThen([&]() {
-                 auto waitLoad = builder.create<fir::LoadOp>(loc, waitAddr);
-                 mlir::Value cast = builder.createConvert(loc, i1Ty, waitLoad);
-                 builder.create<fir::ResultOp>(loc, cast);
-               })
-               .genElse([&]() {
-                 mlir::Value trueVal = builder.createBool(loc, true);
-                 builder.create<fir::ResultOp>(loc, trueVal);
-               })
-               .getResults()[0];
+                   .genIfOp(loc, {i1Ty}, waitIsPresentAtRuntime,
+                            /*withElseRegion=*/true)
+                   .genThen([&]() {
+                     auto waitLoad = builder.create<fir::LoadOp>(loc, waitAddr);
+                     mlir::Value cast =
+                         builder.createConvert(loc, i1Ty, waitLoad);
+                     builder.create<fir::ResultOp>(loc, cast);
+                   })
+                   .genElse([&]() {
+                     mlir::Value trueVal = builder.createBool(loc, true);
+                     builder.create<fir::ResultOp>(loc, trueVal);
+                   })
+                   .getResults()[0];
   }
 
   mlir::Value exitstatBox =
