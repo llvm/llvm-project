@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseStdMinMaxCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "../utils/ASTUtils.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 #include <optional>
@@ -60,34 +60,40 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   auto rhsVar1Str = Lexer::getSourceText(
       CharSourceRange::getTokenRange(rhsVar1->getSourceRange()),
       Context.getSourceManager(), Context.getLangOpts());
-  
-  auto replacementMax = lhsVar2Str.str() + " = std::max(" + lhsVar1Str.str() + ", " + rhsVar1Str.str() + ")";
-  auto replacementMin = lhsVar2Str.str() + " = std::min(" + lhsVar1Str.str() + ", " + rhsVar1Str.str() + ")";
+
+  auto replacementMax = lhsVar2Str.str() + " = std::max(" + lhsVar1Str.str() +
+                        ", " + rhsVar1Str.str() + ")";
+  auto replacementMin = lhsVar2Str.str() + " = std::min(" + lhsVar1Str.str() +
+                        ", " + rhsVar1Str.str() + ")";
   auto *operatorStr = binaryOp->getOpcodeStr().data();
 
   if (binaryOp->getOpcode() == BO_LT || binaryOp->getOpcode() == BO_LE) {
-    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2,Context) &&
-        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2,Context)) {
-      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")<< operatorStr
+    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2, Context) &&
+        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2, Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")
+          << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                    std::move(replacementMax));
-    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2,Context) &&
-               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2,Context)) {
-      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")<< operatorStr
+                                          std::move(replacementMax));
+    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
+               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")
+          << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                    std::move(replacementMin));
+                                          std::move(replacementMin));
     }
   } else if (binaryOp->getOpcode() == BO_GT || binaryOp->getOpcode() == BO_GE) {
-    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2,Context) &&
-        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2,Context)) {
-      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")<< operatorStr
+    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2, Context) &&
+        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2, Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")
+          << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                    std::move(replacementMin));
-    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2,Context) &&
-               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2,Context)) {
-      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")<< operatorStr
+                                          std::move(replacementMin));
+    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
+               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")
+          << operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                    std::move(replacementMax));
+                                          std::move(replacementMax));
     }
   }
 }
