@@ -416,10 +416,6 @@ public:
   RVVTypePtr getOutputType() const { return OutputType; }
   const RVVTypes &getInputTypes() const { return InputTypes; }
   llvm::StringRef getBuiltinName() const { return BuiltinName; }
-  llvm::StringRef getName() const { return "__riscv_" + Name; }
-  llvm::StringRef getOverloadedName() const {
-    return "__riscv_" + OverloadedName;
-  }
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasPolicy() const { return Scheme != PolicyScheme::SchemeNone; }

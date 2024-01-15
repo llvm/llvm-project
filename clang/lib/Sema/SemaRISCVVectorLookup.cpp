@@ -387,6 +387,8 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   // Put into IntrinsicList.
   uint16_t Index = IntrinsicList.size();
+  assert(IntrinsicList.size() == (size_t)Index &&
+         "Intrinsics indices overflow.");
   IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
@@ -463,7 +465,8 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
 bool RISCVIntrinsicManagerImpl::CreateIntrinsicIfFound(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP) {
-  StringRef Name = II->getName().substr(8);
+  StringRef Name = II->getName();
+  Name.consume_front("__riscv_");
 
   // Lookup the function name from the overload intrinsics first.
   auto OvIItr = OverloadIntrinsics.find(Name);
