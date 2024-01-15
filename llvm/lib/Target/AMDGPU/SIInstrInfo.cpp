@@ -1976,10 +1976,9 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
-        .addFrameIndex(FrameIndex) // addr
-        .addMemOperand(MMO)        // offset
-        .addImm(0)                 // last_use
-        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+      .addFrameIndex(FrameIndex) // addr
+      .addMemOperand(MMO)
+      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -1990,7 +1989,6 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
       .addImm(0)                           // offset
-      .addImm(0)                           // last_use
       .addMemOperand(MMO);
 }
 
