@@ -417,24 +417,45 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
   return std::nullopt;
 }
 
-bool DummyDataObject::CanBePassedViaImplicitInterface() const {
+bool DummyDataObject::CanBePassedViaImplicitInterface(
+    std::string *whyNot) const {
   if ((attrs &
           Attrs{Attr::Allocatable, Attr::Asynchronous, Attr::Optional,
               Attr::Pointer, Attr::Target, Attr::Value, Attr::Volatile})
           .any()) {
+    if (whyNot) {
+      *whyNot = "a dummy argument has the allocatable, asynchronous, optional, "
+                "pointer, target, value, or volatile attribute";
+    }
     return false; // 15.4.2.2(3)(a)
   } else if ((type.attrs() &
                  TypeAndShape::Attrs{TypeAndShape::Attr::AssumedShape,
                      TypeAndShape::Attr::AssumedRank,
                      TypeAndShape::Attr::Coarray})
                  .any()) {
+    if (whyNot) {
+      *whyNot = "a dummy argument is assumed-shape, assumed-rank, or a coarray";
+    }
     return false; // 15.4.2.2(3)(b-d)
   } else if (type.type().IsPolymorphic()) {
+    if (whyNot) {
+      *whyNot = "a dummy argument is polymorphic";
+    }
     return false; // 15.4.2.2(3)(f)
   } else if (cudaDataAttr) {
+    if (whyNot) {
+      *whyNot = "a dummy argument has a CUDA data attribute";
+    }
     return false;
   } else if (const auto *derived{GetDerivedTypeSpec(type.type())}) {
-    return derived->parameters().empty(); // 15.4.2.2(3)(e)
+    if (derived->parameters().empty()) { // 15.4.2.2(3)(e)
+      return true;
+    } else {
+      if (whyNot) {
+        *whyNot = "a dummy argument has derived type parameters";
+      }
+      return false;
+    }
   } else {
     return true;
   }
@@ -493,8 +514,12 @@ bool DummyProcedure::IsCompatibleWith(
   return true;
 }
 
-bool DummyProcedure::CanBePassedViaImplicitInterface() const {
+bool DummyProcedure::CanBePassedViaImplicitInterface(
+    std::string *whyNot) const {
   if ((attrs & Attrs{Attr::Optional, Attr::Pointer}).any()) {
+    if (whyNot) {
+      *whyNot = "a dummy procedure is optional or a pointer";
+    }
     return false; // 15.4.2.2(3)(a)
   }
   return true;
@@ -895,11 +920,11 @@ common::Intent DummyArgument::GetIntent() const {
       u);
 }
 
-bool DummyArgument::CanBePassedViaImplicitInterface() const {
+bool DummyArgument::CanBePassedViaImplicitInterface(std::string *whyNot) const {
   if (const auto *object{std::get_if<DummyDataObject>(&u)}) {
-    return object->CanBePassedViaImplicitInterface();
+    return object->CanBePassedViaImplicitInterface(whyNot);
   } else if (const auto *proc{std::get_if<DummyProcedure>(&u)}) {
-    return proc->CanBePassedViaImplicitInterface();
+    return proc->CanBePassedViaImplicitInterface(whyNot);
   } else {
     return true;
   }
@@ -970,13 +995,23 @@ bool FunctionResult::IsAssumedLengthCharacter() const {
   }
 }
 
-bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
+bool FunctionResult::CanBeReturnedViaImplicitInterface(
+    std::string *whyNot) const {
   if (attrs.test(Attr::Pointer) || attrs.test(Attr::Allocatable)) {
+    if (whyNot) {
+      *whyNot = "the function result is a pointer or allocatable";
+    }
     return false; // 15.4.2.2(4)(b)
   } else if (cudaDataAttr) {
+    if (whyNot) {
+      *whyNot = "the function result has CUDA attributes";
+    }
     return false;
   } else if (const auto *typeAndShape{GetTypeAndShape()}) {
     if (typeAndShape->Rank() > 0) {
+      if (whyNot) {
+        *whyNot = "the function result is an array";
+      }
       return false; // 15.4.2.2(4)(a)
     } else {
       const DynamicType &type{typeAndShape->type()};
@@ -986,31 +1021,52 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
           return true;
         } else if (const auto *param{type.charLengthParamValue()}) {
           if (const auto &expr{param->GetExplicit()}) {
-            return IsConstantExpr(*expr); // 15.4.2.2(4)(c)
+            if (IsConstantExpr(*expr)) { // 15.4.2.2(4)(c)
+              return true;
+            } else {
+              if (whyNot) {
+                *whyNot = "the function result's length is not constant";
+              }
+              return false;
+            }
           } else if (param->isAssumed()) {
             return true;
           }
         }
+        if (whyNot) {
+          *whyNot = "the function result's length is not known to the caller";
+        }
         return false;
       case TypeCategory::Derived:
-        if (!type.IsPolymorphic()) {
+        if (type.IsPolymorphic()) {
+          if (whyNot) {
+            *whyNot = "the function result is polymorphic";
+          }
+          return false;
+        } else {
           const auto &spec{type.GetDerivedTypeSpec()};
           for (const auto &pair : spec.parameters()) {
             if (const auto &expr{pair.second.GetExplicit()}) {
               if (!IsConstantExpr(*expr)) {
+                if (whyNot) {
+                  *whyNot = "the function result's derived type has a "
+                            "non-constant parameter";
+                }
                 return false; // 15.4.2.2(4)(c)
               }
             }
           }
           return true;
         }
-        return false;
       default:
         return true;
       }
     }
   } else {
-    return false; // 15.4.2.2(4)(b) - procedure pointer
+    if (whyNot) {
+      *whyNot = "the function result has unknown type or shape";
+    }
+    return false; // 15.4.2.2(4)(b) - procedure pointer?
   }
 }
 
@@ -1341,20 +1397,30 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
   return callee;
 }
 
-bool Procedure::CanBeCalledViaImplicitInterface() const {
-  // TODO: Pass back information on why we return false
-  if (attrs.test(Attr::Elemental) || attrs.test(Attr::BindC)) {
+bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
+  if (attrs.test(Attr::Elemental)) {
+    if (whyNot) {
+      *whyNot = "the procedure is elemental";
+    }
+    return false; // 15.4.2.2(5,6)
+  } else if (attrs.test(Attr::BindC)) {
+    if (whyNot) {
+      *whyNot = "the procedure is BIND(C)";
+    }
     return false; // 15.4.2.2(5,6)
   } else if (cudaSubprogramAttrs &&
       *cudaSubprogramAttrs != common::CUDASubprogramAttrs::Host &&
       *cudaSubprogramAttrs != common::CUDASubprogramAttrs::Global) {
+    if (whyNot) {
+      *whyNot = "the procedure is CUDA but neither HOST nor GLOBAL";
+    }
     return false;
   } else if (IsFunction() &&
-      !functionResult->CanBeReturnedViaImplicitInterface()) {
+      !functionResult->CanBeReturnedViaImplicitInterface(whyNot)) {
     return false;
   } else {
     for (const DummyArgument &arg : dummyArguments) {
-      if (!arg.CanBePassedViaImplicitInterface()) {
+      if (!arg.CanBePassedViaImplicitInterface(whyNot)) {
         return false;
       }
     }
