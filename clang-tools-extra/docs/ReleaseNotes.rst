@@ -224,6 +224,11 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
+- New :doc:`readability-avoid-nested-conditional-operator
+  <clang-tidy/checks/readability/avoid-nested-conditional-operator>` check.
+
+  Identifies instances of nested conditional operators in the code.
+
 - New :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
 
