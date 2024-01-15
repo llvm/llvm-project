@@ -93,8 +93,8 @@ public:
   void removeFromParent();
   void eraseFromParent();
 
-  DPValue *getNextNode() { return &*(++getIterator()); }
-  DPValue *getPrevNode() { return &*(--getIterator()); }
+  DPValue *getNextNode() { return &*std::next(getIterator()); }
+  DPValue *getPrevNode() { return &*std::prev(getIterator()); }
 
   using self_iterator = simple_ilist<DPValue>::iterator;
   using const_self_iterator = simple_ilist<DPValue>::const_iterator;
