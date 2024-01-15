@@ -89,8 +89,7 @@ private:
     std::size_t found_at = got_msg.find(msg_);
     if (found_at == std::string_view::npos)
       return false;
-    // Allow any match
-    return true;
+    return found_at == 0 && got_msg.size() == msg_.size();
   }
 private:
   bool is_empty_;

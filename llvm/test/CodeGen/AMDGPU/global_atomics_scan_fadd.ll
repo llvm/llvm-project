@@ -626,8 +626,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1164-NEXT:  .LBB1_4:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe:
@@ -675,8 +673,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1132-NEXT:  .LBB1_4:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe:
@@ -988,8 +984,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1164-DPP-NEXT:  .LBB1_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_align4_unsafe:
@@ -1051,8 +1045,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB1_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, align 4
@@ -3036,8 +3028,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1164-NEXT:  .LBB5_4:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe:
@@ -3085,8 +3075,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1132-NEXT:  .LBB5_4:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe:
@@ -3398,8 +3386,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1164-DPP-NEXT:  .LBB5_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe:
@@ -3461,8 +3447,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB5_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic
@@ -3764,8 +3748,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1164-NEXT:  .LBB6_4:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp:
@@ -3813,8 +3795,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
 ; GFX1132-NEXT:  .LBB6_4:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp:
@@ -4126,8 +4106,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1164-DPP-NEXT:  .LBB6_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_div_value_agent_scope_unsafe_structfp:
@@ -4189,8 +4167,6 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v4, v0, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB6_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
   %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic

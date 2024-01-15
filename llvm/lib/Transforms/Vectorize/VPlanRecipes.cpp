@@ -120,6 +120,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return false;
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::Or:
     case Instruction::ICmp:
     case Instruction::Select:
     case VPInstruction::Not:

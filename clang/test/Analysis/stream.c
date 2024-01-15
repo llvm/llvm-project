@@ -39,6 +39,18 @@ void check_fputs(void) {
   fclose(fp);
 }
 
+void check_fprintf(void) {
+  FILE *fp = tmpfile();
+  fprintf(fp, "ABC"); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
+void check_ungetc(void) {
+  FILE *fp = tmpfile();
+  ungetc('A', fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_fseek(void) {
   FILE *fp = tmpfile();
   fseek(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}
@@ -265,9 +277,8 @@ void check_escape4(void) {
     return;
   fwrite("1", 1, 1, F); // may fail
 
-  // no escape at (non-StreamChecker-handled) system call
-  // FIXME: all such calls should be handled by the checker
-  fprintf(F, "0");
+  // no escape at a non-StreamChecker-handled system call
+  setbuf(F, "0");
 
   fwrite("1", 1, 1, F); // expected-warning {{might be 'indeterminate'}}
   fclose(F);

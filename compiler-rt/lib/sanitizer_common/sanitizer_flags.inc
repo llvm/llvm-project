@@ -279,3 +279,6 @@ COMMON_FLAG(bool, test_only_replace_dlopen_main_program, false,
 COMMON_FLAG(bool, enable_symbolizer_markup, SANITIZER_FUCHSIA,
             "Use sanitizer symbolizer markup, available on Linux "
             "and always set true for Fuchsia.")
+
+COMMON_FLAG(bool, detect_invalid_join, true,
+            "If set, check invalid joins of threads.")

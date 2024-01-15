@@ -138,8 +138,11 @@ public:
 
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding. It returns the *entry* mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
+  /// tail folding.
+  void createBlockInMask(BasicBlock *BB, VPlan &Plan);
+
+  /// Returns the *entry* mask for the block \p BB.
+  VPValue *getBlockInMask(BasicBlock *BB) const;
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.

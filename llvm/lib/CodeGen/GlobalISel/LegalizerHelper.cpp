@@ -958,6 +958,13 @@ static RTLIB::Libcall
 getStateLibraryFunctionFor(MachineInstr &MI, const TargetLowering &TLI) {
   RTLIB::Libcall RTLibcall;
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_GET_FPENV:
+    RTLibcall = RTLIB::FEGETENV;
+    break;
+  case TargetOpcode::G_SET_FPENV:
+  case TargetOpcode::G_RESET_FPENV:
+    RTLibcall = RTLIB::FESETENV;
+    break;
   case TargetOpcode::G_GET_FPMODE:
     RTLibcall = RTLIB::FEGETMODE;
     break;
@@ -1232,18 +1239,21 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     MI.eraseFromParent();
     return Result;
   }
+  case TargetOpcode::G_GET_FPENV:
   case TargetOpcode::G_GET_FPMODE: {
     LegalizeResult Result = createGetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
+  case TargetOpcode::G_SET_FPENV:
   case TargetOpcode::G_SET_FPMODE: {
     LegalizeResult Result = createSetStateLibcall(MIRBuilder, MI, LocObserver);
     if (Result != Legalized)
       return Result;
     break;
   }
+  case TargetOpcode::G_RESET_FPENV:
   case TargetOpcode::G_RESET_FPMODE: {
     LegalizeResult Result =
         createResetStateLibcall(MIRBuilder, MI, LocObserver);

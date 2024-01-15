@@ -141,7 +141,7 @@ template <class... Tuples> tuple<CTypes...> tuple_cat(Tuples&&... tpls); // cons
 
 // [tuple.apply], calling a function with a tuple of arguments:
 template <class F, class Tuple>
-  constexpr decltype(auto) apply(F&& f, Tuple&& t); // C++17
+  constexpr decltype(auto) apply(F&& f, Tuple&& t) noexcept(see below);  // C++17 noexcept since C++23
 template <class T, class Tuple>
   constexpr T make_from_tuple(Tuple&& t); // C++17
 

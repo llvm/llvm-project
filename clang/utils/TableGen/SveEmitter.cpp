@@ -1619,7 +1619,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "}\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
-        "__arm_streaming_compatible __arm_shared_za "
+        "__arm_streaming_compatible __arm_out(\"za\") "
         "{ }\n\n";
 
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);

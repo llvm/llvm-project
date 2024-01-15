@@ -22,6 +22,9 @@ extern "C" {
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
 
+// GNU extension subroutine FDATE
+void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);
+
 // GNU Fortran 77 compatibility function IARGC.
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 

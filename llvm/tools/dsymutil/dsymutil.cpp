@@ -37,7 +37,6 @@
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -55,6 +54,7 @@
 using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
+using namespace llvm::dwarf_linker;
 
 namespace {
 enum ID {
@@ -373,7 +373,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     Options.Toolchain = Toolchain->getValue();
 
   if (Args.hasArg(OPT_assembly))
-    Options.LinkOpts.FileType = DWARFLinker::OutputFileType::Assembly;
+    Options.LinkOpts.FileType = DWARFLinkerBase::OutputFileType::Assembly;
 
   if (opt::Arg *NumThreads = Args.getLastArg(OPT_threads))
     Options.LinkOpts.Threads = atoi(NumThreads->getValue());
@@ -607,8 +607,6 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
 }
 
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
-
   // Parse arguments.
   DsymutilOptTable T;
   unsigned MAI;

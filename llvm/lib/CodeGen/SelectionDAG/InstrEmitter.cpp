@@ -551,7 +551,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
     SDValue N2 = Node->getOperand(2);
-    unsigned SubIdx = cast<ConstantSDNode>(N2)->getZExtValue();
+    unsigned SubIdx = N2->getAsZExtVal();
 
     // Figure out the register class to create for the destreg.  It should be
     // the largest legal register class supporting SubIdx sub-registers.
@@ -650,7 +650,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
       // Skip physical registers as they don't have a vreg to get and we'll
       // insert copies for them in TwoAddressInstructionPass anyway.
       if (!R || !R->getReg().isPhysical()) {
-        unsigned SubIdx = cast<ConstantSDNode>(Op)->getZExtValue();
+        unsigned SubIdx = Op->getAsZExtVal();
         unsigned SubReg = getVR(Node->getOperand(i-1), VRBaseMap);
         const TargetRegisterClass *TRC = MRI->getRegClass(SubReg);
         const TargetRegisterClass *SRC =
