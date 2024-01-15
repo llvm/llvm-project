@@ -33,7 +33,8 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-  private:
+
+private:
   utils::IncludeInserter IncludeInserter;
   StringRef AlgotithmHeader;
 };
