@@ -1184,7 +1184,7 @@ struct GenericPluginTy {
 
   /// Return true if host globals can be enabled on a system that supprots
   /// unified shared memory.
-  virtual bool canUseHostGlobals() const { return false; }
+  virtual bool canUseHostGlobals() { return false; }
 
 protected:
   /// Indicate whether a device id is valid.
