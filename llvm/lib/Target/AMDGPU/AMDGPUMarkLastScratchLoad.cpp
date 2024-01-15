@@ -115,10 +115,8 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       }
 
       if (LastLoad) {
-        MachineOperand *LastUse =
-            SII->getNamedOperand(*LastLoad, AMDGPU::OpName::last_use);
-        assert(LastUse && "This instruction must have a last_use operand");
-        LastUse->setImm(1);
+        MachineMemOperand *MMO = *LastLoad->memoperands_begin();
+        MMO->setFlags(MOLastUse);
         Changed = true;
         LLVM_DEBUG(dbgs() << "  Found last load: " << *LastLoad;);
       }
