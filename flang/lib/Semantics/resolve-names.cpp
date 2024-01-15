@@ -4554,6 +4554,9 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
   auto &details{symbol.get<ObjectEntityDetails>()};
+  if (details.init() || symbol.test(Symbol::Flag::InDataStmt)) {
+    Say(name, "Named constant '%s' already has a value"_err_en_US);
+  }
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
@@ -4932,6 +4935,8 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else if (MustBeScalar(symbol)) {
         Say(name,
             "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+      } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
+        Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
         details->set_shape(arraySpec());
       }
@@ -7577,9 +7582,11 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
                     "Pointer initializer must be intrinsic NULL()"_err_en_US);
               } else if (IsPointer(ultimate)) {
                 if (auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+                  CHECK(!object->init());
                   object->set_init(std::move(*nullInit));
                 } else if (auto *procPtr{
                                ultimate.detailsIf<ProcEntityDetails>()}) {
+                  CHECK(!procPtr->init());
                   procPtr->set_init(nullptr);
                 }
               } else {
@@ -7679,6 +7686,8 @@ void DeclarationVisitor::NonPointerInitialization(
             "'%s' is a pointer but is not initialized like one"_err_en_US);
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         if (details->init()) {
+          SayWithDecl(name, *name.symbol,
+              "'%s' has already been initialized"_err_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
         } else if (ultimate.owner().IsParameterizedDerivedType()) {
@@ -8928,7 +8937,12 @@ private:
         resolver_.PointerInitialization(name, *target);
       } else if (const auto *expr{
                      std::get_if<parser::ConstantExpr>(&init->u)}) {
-        resolver_.NonPointerInitialization(name, *expr);
+        if (name.symbol) {
+          if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
+              !object || !object->init()) {
+            resolver_.NonPointerInitialization(name, *expr);
+          }
+        }
       }
     }
   }
