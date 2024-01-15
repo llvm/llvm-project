@@ -193,23 +193,38 @@ private:
       Section.emitString(Include.getForm(), *IncludeStr);
     }
 
+    bool HasChecksums = P.ContentTypes.HasMD5;
+    bool HasInlineSources = P.ContentTypes.HasSource;
+
+    dwarf::Form FileNameForm = dwarf::DW_FORM_string;
+    dwarf::Form LLVMSourceForm = dwarf::DW_FORM_string;
+
     if (P.FileNames.empty()) {
       // file_name_entry_format_count (ubyte).
       Section.emitIntVal(0, 1);
     } else {
+      FileNameForm = P.FileNames[0].Name.getForm();
+      LLVMSourceForm = P.FileNames[0].Source.getForm();
+
       // file_name_entry_format_count (ubyte).
-      Section.emitIntVal(2 + (P.ContentTypes.HasMD5 ? 1 : 0), 1);
+      Section.emitIntVal(
+          2 + (HasChecksums ? 1 : 0) + (HasInlineSources ? 1 : 0), 1);
 
       // file_name_entry_format (sequence of ULEB128 pairs).
       encodeULEB128(dwarf::DW_LNCT_path, Section.OS);
-      encodeULEB128(P.FileNames[0].Name.getForm(), Section.OS);
+      encodeULEB128(FileNameForm, Section.OS);
 
       encodeULEB128(dwarf::DW_LNCT_directory_index, Section.OS);
       encodeULEB128(dwarf::DW_FORM_data1, Section.OS);
 
-      if (P.ContentTypes.HasMD5) {
+      if (HasChecksums) {
         encodeULEB128(dwarf::DW_LNCT_MD5, Section.OS);
         encodeULEB128(dwarf::DW_FORM_data16, Section.OS);
+      }
+
+      if (HasInlineSources) {
+        encodeULEB128(dwarf::DW_LNCT_LLVM_source, Section.OS);
+        encodeULEB128(LLVMSourceForm, Section.OS);
       }
     }
 
@@ -226,13 +241,26 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(File.Name.getForm(), *FileNameStr);
+      Section.emitString(FileNameForm, *FileNameStr);
       Section.emitIntVal(File.DirIdx, 1);
 
-      if (P.ContentTypes.HasMD5) {
+      if (HasChecksums) {
+        assert((File.Checksum.size() == 16) &&
+               "checksum size is not equal to 16 bytes.");
         Section.emitBinaryData(
             StringRef(reinterpret_cast<const char *>(File.Checksum.data()),
                       File.Checksum.size()));
+      }
+
+      if (HasInlineSources) {
+        std::optional<const char *> FileSourceStr =
+            dwarf::toString(File.Source);
+        if (!FileSourceStr) {
+          U.warn("cann't read string from line table.");
+          return;
+        }
+
+        Section.emitString(LLVMSourceForm, *FileSourceStr);
       }
     }
   }

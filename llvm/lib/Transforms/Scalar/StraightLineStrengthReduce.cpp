@@ -233,13 +233,9 @@ private:
   void factorArrayIndex(Value *ArrayIdx, const SCEV *Base, uint64_t ElementSize,
                         GetElementPtrInst *GEP);
 
-  // Emit code that computes the "bump" from Basis to C. If the candidate is a
-  // GEP and the bump is not divisible by the element size of the GEP, this
-  // function sets the BumpWithUglyGEP flag to notify its caller to bump the
-  // basis using an ugly GEP.
+  // Emit code that computes the "bump" from Basis to C.
   static Value *emitBump(const Candidate &Basis, const Candidate &C,
-                         IRBuilder<> &Builder, const DataLayout *DL,
-                         bool &BumpWithUglyGEP);
+                         IRBuilder<> &Builder, const DataLayout *DL);
 
   const DataLayout *DL = nullptr;
   DominatorTree *DT = nullptr;
@@ -581,25 +577,10 @@ static void unifyBitWidth(APInt &A, APInt &B) {
 Value *StraightLineStrengthReduce::emitBump(const Candidate &Basis,
                                             const Candidate &C,
                                             IRBuilder<> &Builder,
-                                            const DataLayout *DL,
-                                            bool &BumpWithUglyGEP) {
+                                            const DataLayout *DL) {
   APInt Idx = C.Index->getValue(), BasisIdx = Basis.Index->getValue();
   unifyBitWidth(Idx, BasisIdx);
   APInt IndexOffset = Idx - BasisIdx;
-
-  BumpWithUglyGEP = false;
-  if (Basis.CandidateKind == Candidate::GEP) {
-    APInt ElementSize(
-        IndexOffset.getBitWidth(),
-        DL->getTypeAllocSize(
-            cast<GetElementPtrInst>(Basis.Ins)->getResultElementType()));
-    APInt Q, R;
-    APInt::sdivrem(IndexOffset, ElementSize, Q, R);
-    if (R == 0)
-      IndexOffset = Q;
-    else
-      BumpWithUglyGEP = true;
-  }
 
   // Compute Bump = C - Basis = (i' - i) * S.
   // Common case 1: if (i' - i) is 1, Bump = S.
@@ -645,8 +626,7 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     return;
 
   IRBuilder<> Builder(C.Ins);
-  bool BumpWithUglyGEP;
-  Value *Bump = emitBump(Basis, C, Builder, DL, BumpWithUglyGEP);
+  Value *Bump = emitBump(Basis, C, Builder, DL);
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
   switch (C.CandidateKind) {
   case Candidate::Add:
@@ -673,28 +653,13 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
     }
     break;
   }
-  case Candidate::GEP:
-    {
-    Type *OffsetTy = DL->getIndexType(C.Ins->getType());
+  case Candidate::GEP: {
     bool InBounds = cast<GetElementPtrInst>(C.Ins)->isInBounds();
-    if (BumpWithUglyGEP) {
-      // C = (char *)Basis + Bump
-      unsigned AS = Basis.Ins->getType()->getPointerAddressSpace();
-      Type *CharTy = PointerType::get(Basis.Ins->getContext(), AS);
-      Reduced = Builder.CreateBitCast(Basis.Ins, CharTy);
-      Reduced =
-          Builder.CreateGEP(Builder.getInt8Ty(), Reduced, Bump, "", InBounds);
-      Reduced = Builder.CreateBitCast(Reduced, C.Ins->getType());
-    } else {
-      // C = gep Basis, Bump
-      // Canonicalize bump to pointer size.
-      Bump = Builder.CreateSExtOrTrunc(Bump, OffsetTy);
-      Reduced = Builder.CreateGEP(
-          cast<GetElementPtrInst>(Basis.Ins)->getResultElementType(), Basis.Ins,
-          Bump, "", InBounds);
-    }
-      break;
-    }
+    // C = (char *)Basis + Bump
+    Reduced =
+        Builder.CreateGEP(Builder.getInt8Ty(), Basis.Ins, Bump, "", InBounds);
+    break;
+  }
   default:
     llvm_unreachable("C.CandidateKind is invalid");
   };

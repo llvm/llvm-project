@@ -39,6 +39,12 @@ void check_fputs(void) {
   fclose(fp);
 }
 
+void check_ungetc(void) {
+  FILE *fp = tmpfile();
+  ungetc('A', fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_fseek(void) {
   FILE *fp = tmpfile();
   fseek(fp, 0, 0); // expected-warning {{Stream pointer might be NULL}}

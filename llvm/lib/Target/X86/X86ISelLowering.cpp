@@ -4822,8 +4822,8 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
     APInt UndefSrcElts(NumSrcElts, 0);
     SmallVector<APInt, 64> SrcEltBits;
-    auto *CN = cast<ConstantSDNode>(Op.getOperand(0).getOperand(0));
-    SrcEltBits.push_back(CN->getAPIntValue().zextOrTrunc(SrcEltSizeInBits));
+    const APInt &C = Op.getOperand(0).getConstantOperandAPInt(0);
+    SrcEltBits.push_back(C.zextOrTrunc(SrcEltSizeInBits));
     SrcEltBits.append(NumSrcElts - 1, APInt(SrcEltSizeInBits, 0));
     return CastBitData(UndefSrcElts, SrcEltBits);
   }
@@ -17224,6 +17224,7 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
          "Cannot lower 512-bit vectors w/o basic ISA!");
 
   int NumElts = Mask.size();
+  int NumV2Elements = count_if(Mask, [NumElts](int M) { return M >= NumElts; });
 
   // Try to recognize shuffles that are just padding a subvector with zeros.
   int SubvecElts = 0;
@@ -17289,17 +17290,18 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     Offset += NumElts; // Increment for next iteration.
   }
 
-  // If we're broadcasting a SETCC result, try to broadcast the ops instead.
+  // If we're performing an unary shuffle on a SETCC result, try to shuffle the
+  // ops instead.
   // TODO: What other unary shuffles would benefit from this?
-  if (isBroadcastShuffleMask(Mask) && V1.getOpcode() == ISD::SETCC &&
-      V1->hasOneUse()) {
+  if (NumV2Elements == 0 && V1.getOpcode() == ISD::SETCC && V1->hasOneUse()) {
     SDValue Op0 = V1.getOperand(0);
     SDValue Op1 = V1.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(V1.getOperand(2))->get();
     EVT OpVT = Op0.getValueType();
-    return DAG.getSetCC(
-        DL, VT, DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT), Mask),
-        DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
+    if (OpVT.getScalarSizeInBits() >= 32 || isBroadcastShuffleMask(Mask))
+      return DAG.getSetCC(
+          DL, VT, DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT), Mask),
+          DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
   }
 
   MVT ExtVT;

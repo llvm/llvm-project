@@ -1024,6 +1024,10 @@ namespace DiscardExprs {
     __null;
     __builtin_offsetof(A, a);
     1,2;
+    (int)1.0;
+    (float)1;
+    (double)1.0f;
+    (signed)4u;
 
     return 0;
   }

@@ -50,6 +50,7 @@ static_assert(!std::ranges::__simple_view<NoConstView>);
 static_assert( std::ranges::__simple_view<DifferentSentinel>);
 static_assert(!std::ranges::__simple_view<WrongConstSentinel>);
 
+// To make sure __simple_view and the test version of the concept stay in sync.
 static_assert(simple_view<SimpleView>);
 static_assert(!simple_view<WrongConstView>);
 static_assert(!simple_view<NoConstView>);

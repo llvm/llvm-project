@@ -193,6 +193,12 @@ set(C_INCLUDE_DIRS "" CACHE STRING
 set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
 set(DEFAULT_SYSROOT "" CACHE STRING
   "Default <path> to all compiler invocations for --sysroot=<path>." )
+if(GCC_INSTALL_PREFIX)
+  message(WARNING "GCC_INSTALL_PREFIX is deprecated and will be removed. Use "
+    "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
+    "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
+    "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
+endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 

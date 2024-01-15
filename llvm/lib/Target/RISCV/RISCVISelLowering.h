@@ -633,9 +633,7 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
-  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
-    return ISD::SIGN_EXTEND;
-  }
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;

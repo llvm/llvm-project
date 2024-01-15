@@ -841,3 +841,48 @@ TRIM, UBOUND, UNPACK, VERIFY.
 
 Coarray, non standard, IEEE and ISO_C_BINDINGS intrinsic functions that can be
 used in constant expressions have currently no folding support at all.
+
+### Standard Intrinsics: EXECUTE_COMMAND_LINE
+
+#### Usage and Info
+
+- **Standard:** Fortran 2008 and later, specified in 16.9.73
+- **Class:** Subroutine
+- **Syntax:** `CALL EXECUTE_COMMAND_LINE(COMMAND [, WAIT, EXITSTAT, CMDSTAT, CMDMSG ])`
+- **Arguments:**
+
+  | Argument  | Description                                                  |
+  |-----------|--------------------------------------------------------------|
+  | `COMMAND` | Shall be a default CHARACTER scalar.                         |
+  | `WAIT`    | (Optional) Shall be a default LOGICAL scalar.                |
+  | `EXITSTAT`| (Optional) Shall be an INTEGER of the default kind.          |
+  | `CMDSTAT` | (Optional) Shall be an INTEGER of the default kind.          |
+  | `CMDMSG`  | (Optional) Shall be a CHARACTER scalar of the default kind.  |
+
+#### Implementation Specifics
+
+- **`COMMAND`:**
+  - Must be preset.
+
+- **`WAIT`:**
+  - If set to `false`, the command is executed asynchronously. If not preset or set to `false`, it is executed synchronously.
+  - Sync: achieved by passing command into `std::system` on all systems.
+  - Async: achieved by calling a `fork()` on POSIX-compatible systems, or `CreateProcess()` on Windows.
+
+- **`CMDSTAT`:**
+  - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
+  - -1: The processor does not support command line execution.
+  - \+ (positive value): An error condition occurs.
+    - 1: Fork Error, where `pid_t < 0`, would only occur on POSIX-compatible systems.
+    - 2: Execution Error, a command exits with status -1.
+    - 3: Invalid Command Error, determined by the exit code depending on the system.
+      - On Windows, if the exit code is 1.
+      - On POSIX-compatible systems, if the exit code is 127 or 126.
+    - 4: Signal error, either it is stopped or killed by signal, would only occur on POSIX-compatible systems.
+  - 0: Otherwise.
+
+- **`CMDMSG`:**
+  - If an error condition occurs, it is assigned an explanatory message. Otherwise, it remains unchanged.
+  - If a condition occurs that would assign a nonzero value to `CMDSTAT` but the `CMDSTAT` variable is not present, error termination is initiated.
+    - On POSIX-compatible systems, this applies to both synchronous and asynchronous error termination. When the execution mode is set to async with error termination, the child process (async process) will be terminated with no effect on the parent process (continues).
+    - On Windows, this only applies to synchronous error termination.

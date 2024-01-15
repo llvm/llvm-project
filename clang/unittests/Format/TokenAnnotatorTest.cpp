@@ -2324,6 +2324,11 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
   EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("Foo foo[] = {[0]{}};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {

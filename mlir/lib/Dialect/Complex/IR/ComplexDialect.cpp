@@ -11,12 +11,25 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/Complex/IR/ComplexOpsDialect.cpp.inc"
+
+namespace {
+/// This class defines the interface for handling inlining for complex
+/// dialect operations.
+struct ComplexInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  /// All complex dialect ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
 
 void complex::ComplexDialect::initialize() {
   addOperations<
@@ -28,6 +41,7 @@ void complex::ComplexDialect::initialize() {
 #include "mlir/Dialect/Complex/IR/ComplexAttributes.cpp.inc"
       >();
   declarePromisedInterface<ComplexDialect, ConvertToLLVMPatternInterface>();
+  addInterfaces<ComplexInlinerInterface>();
 }
 
 Operation *complex::ComplexDialect::materializeConstant(OpBuilder &builder,

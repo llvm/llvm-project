@@ -213,6 +213,8 @@ namespace dr2387 { // dr2387: 9
 #endif
 }
 
+// dr2390 is in dr2390.cpp
+
 namespace dr2394 { // dr2394: 15
 
 struct A {};

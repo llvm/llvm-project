@@ -518,6 +518,45 @@ struct OuterProductOpConversion
   }
 };
 
+/// Lower `arm_sme.streaming_vl` to SME CNTS intrinsics.
+///
+/// Example:
+///
+///   %0 = arm_sme.streaming_vl <half>
+///
+/// is converted to:
+///
+///   %cnt = "arm_sme.intr.cntsh"() : () -> i64
+///   %0 = arith.index_cast %cnt : i64 to index
+///
+struct StreamingVLOpConversion
+    : public ConvertOpToLLVMPattern<arm_sme::StreamingVLOp> {
+  using ConvertOpToLLVMPattern<arm_sme::StreamingVLOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arm_sme::StreamingVLOp streamingVlOp,
+                  arm_sme::StreamingVLOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = streamingVlOp.getLoc();
+    auto i64Type = rewriter.getI64Type();
+    auto *intrOp = [&]() -> Operation * {
+      switch (streamingVlOp.getTypeSize()) {
+      case arm_sme::TypeSize::Byte:
+        return rewriter.create<arm_sme::aarch64_sme_cntsb>(loc, i64Type);
+      case arm_sme::TypeSize::Half:
+        return rewriter.create<arm_sme::aarch64_sme_cntsh>(loc, i64Type);
+      case arm_sme::TypeSize::Word:
+        return rewriter.create<arm_sme::aarch64_sme_cntsw>(loc, i64Type);
+      case arm_sme::TypeSize::Double:
+        return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
+      }
+    }();
+    rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
+        streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -555,7 +594,9 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
       arm_sme::aarch64_sme_st1w_vert, arm_sme::aarch64_sme_st1d_vert,
       arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
       arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa>();
+      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
+      arm_sme::aarch64_sme_cntsb, arm_sme::aarch64_sme_cntsh,
+      arm_sme::aarch64_sme_cntsw, arm_sme::aarch64_sme_cntsd>();
   target.addLegalDialect<arith::ArithDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
 }
@@ -572,8 +613,8 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
 
   patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
                MoveVectorToTileSliceConversion, StoreTileSliceConversion,
-               OuterProductOpConversion, ZeroOpConversion, GetTileConversion>(
-      converter);
+               OuterProductOpConversion, ZeroOpConversion, GetTileConversion,
+               StreamingVLOpConversion>(converter);
 }
 
 std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {

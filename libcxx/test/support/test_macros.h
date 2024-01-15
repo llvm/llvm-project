@@ -451,6 +451,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_SHORT_WCHAR
 #endif
 
+#ifdef _LIBCPP_ABI_MICROSOFT
+#  define TEST_ABI_MICROSOFT
+#endif
+
 // This is a temporary workaround for user-defined `operator new` definitions
 // not being picked up on Apple platforms in some circumstances. This is under
 // investigation and should be short-lived.

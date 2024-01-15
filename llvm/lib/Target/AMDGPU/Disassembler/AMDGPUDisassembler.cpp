@@ -625,7 +625,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       MI = MCInst(); // clear
 
-      Res = tryDecodeInst(DecoderTableDPP8GFX12_1064, MI, QW, Address, CS);
+      Res =
+          tryDecodeInst(DecoderTableDPP8GFX12_1064,
+                        DecoderTableDPP8GFX12_10_FAKE1664, MI, QW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
