@@ -16,8 +16,7 @@ from typing import Dict, List, Optional
 
 from absl import logging
 
-from compiler_opt.rl import constant
-
+_UNSPECIFIED_OVERRIDE = ['<UNSPECIFIED>']
 
 # TODO(ml-compiler-opt): maybe we can also convert here the cmdline file,from a
 # \0 - separated list of strings, to a \n one.
@@ -378,7 +377,7 @@ def write_corpus_manifest(
     # This comes first rather than later so global_command_override is at the top
     # of the .json after being written
     if thinlto_build == "local":
-        corpus_description = {"global_command_override": constant.UNSPECIFIED_OVERRIDE}
+        corpus_description = {"global_command_override": _UNSPECIFIED_OVERRIDE}
     else:
         corpus_description = {}
 

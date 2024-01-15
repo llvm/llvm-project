@@ -31,7 +31,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
-from compiler_opt.tools import extract_ir_lib
+from mlgo import extract_ir_lib
 
 flags.DEFINE_string(
     "input",

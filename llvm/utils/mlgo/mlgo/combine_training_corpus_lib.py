@@ -5,10 +5,9 @@
 
 import os
 import json
+import glob
 
 from absl import logging
-
-import tensorflow as tf
 
 _FILE_NAME = "corpus_description.json"
 
@@ -18,10 +17,10 @@ def combine_corpus(root_dir: str) -> None:
     output_corpus_description = {}
 
     corpus_description_glob = os.path.join(root_dir, "*/" + _FILE_NAME)
-    for corpus_description_path in tf.io.gfile.glob(corpus_description_glob):
+    for corpus_description_path in glob.glob(corpus_description_glob):
         logging.info("processing %s", corpus_description_path)
 
-        with tf.io.gfile.GFile(corpus_description_path, "r") as f:
+        with open(corpus_description_path, encoding="utf-8") as f:
             corpus_description = json.load(f)
             sub_dir = os.path.basename(os.path.dirname(corpus_description_path))
             module_names.extend(
@@ -35,5 +34,5 @@ def combine_corpus(root_dir: str) -> None:
 
     output_corpus_description["modules"] = module_names
 
-    with tf.io.gfile.GFile(os.path.join(root_dir, _FILE_NAME), "w") as f:
+    with open(os.path.join(root_dir, _FILE_NAME), "w") as f:
         json.dump(output_corpus_description, f, indent=2)
