@@ -369,6 +369,126 @@ public:
   }
 };
 
+// Specialization for the X86 Extended Precision type.
+template <>
+struct FPRep<FPType::X86_Binary80> : public FPRepBase<FPType::X86_Binary80> {
+  using UP = FPRepBase<FPType::X86_Binary80>;
+  using typename UP::StorageType;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::MANTISSA_PRECISION;
+
+protected:
+  using typename UP::Exp;
+  using typename UP::Sig;
+  using UP::encode;
+
+public:
+  // The x86 80 bit float represents the leading digit of the mantissa
+  // explicitly. This is the mask for that bit.
+  static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
+                                                   << FRACTION_LEN;
+  // The X80 significand is made of an explicit bit and the fractional part.
+  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0,
+                "the explicit bit and the fractional part should not overlap");
+  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
+                "the explicit bit and the fractional part should cover the "
+                "whole significand");
+
+  LIBC_INLINE constexpr bool is_nan() const {
+    // Most encoding forms from the table found in
+    // https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
+    // are interpreted as NaN.
+    // More precisely :
+    // - Pseudo-Infinity
+    // - Pseudo Not a Number
+    // - Signalling Not a Number
+    // - Floating-point Indefinite
+    // - Quiet Not a Number
+    // - Unnormal
+    // This can be reduced to the following logic:
+    if (exp_bits() == encode(Exp::BITS_ALL_ONES))
+      return !is_inf();
+    if (exp_bits() != encode(Exp::BITS_ALL_ZEROES))
+      return (sig_bits() & encode(Sig::MSB)) == 0;
+    return false;
+  }
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return exp_sig_bits() >=
+           encode(Exp::BITS_ALL_ONES, Sig::MSB | (Sig::MSB >> 1));
+  }
+  LIBC_INLINE constexpr bool is_signaling_nan() const {
+    return is_nan() && !is_quiet_nan();
+  }
+  LIBC_INLINE constexpr bool is_inf() const {
+    return exp_sig_bits() == encode(Exp::BITS_ALL_ONES, Sig::MSB);
+  }
+  LIBC_INLINE constexpr bool is_zero() const {
+    return exp_sig_bits() == encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE constexpr bool is_finite() const {
+    return !is_inf() && !is_nan();
+  }
+  LIBC_INLINE
+  constexpr bool is_subnormal() const {
+    return exp_sig_bits() > encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE constexpr bool is_normal() const {
+    const auto exp = exp_bits();
+    if (exp == encode(Exp::BITS_ALL_ZEROES) ||
+        exp == encode(Exp::BITS_ALL_ONES))
+      return false;
+    return get_implicit_bit();
+  }
+
+  LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE static constexpr StorageType one(bool sign = false) {
+    return encode(sign, Exp::ZERO, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::ONE);
+  }
+  LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ONES ^ Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
+    return encode(sign, Exp::MIN, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
+    return encode(sign, Exp::MAX, Sig::BITS_ALL_ONES);
+  }
+  LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ONES, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
+                                                     StorageType v = 0) {
+    return encode(sign, Exp::BITS_ALL_ONES,
+                  Sig::MSB | (v ? Sig{v} : (Sig::MSB >> 2)));
+  }
+  LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
+                                                           StorageType v = 0) {
+    return encode(sign, Exp::BITS_ALL_ONES,
+                  Sig::MSB | (Sig::MSB >> 1) | Sig{v});
+  }
+
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
+    return sig_bits();
+  }
+
+  // The following functions are specific to this implementation.
+  // TODO: Remove if possible.
+  LIBC_INLINE constexpr bool get_implicit_bit() const {
+    return bits & EXPLICIT_BIT_MASK;
+  }
+
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
+  }
+};
+
 } // namespace internal
 
 // Returns the FPType corresponding to C++ type T on the host.
@@ -402,41 +522,23 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
 
-// A generic class to represent single precision, double precision, and quad
-// precision IEEE 754 floating point formats.
+// A generic class to represent floating point formats.
 // On most platforms, the 'float' type corresponds to single precision floating
 // point numbers, the 'double' type corresponds to double precision floating
 // point numers, and the 'long double' type corresponds to the quad precision
 // floating numbers. On x86 platforms however, the 'long double' type maps to
-// an x87 floating point format. This format is an IEEE 754 extension format.
-// It is handled as an explicit specialization of this class.
+// an x87 floating point format.
 template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
   using UP = internal::FPRep<get_fp_type<T>()>;
   using Rep = UP;
-
-private:
-  using UP::EXP_SIG_MASK;
-  using UP::SIG_LEN;
-  using UP::SIG_MASK;
-
-public:
   using StorageType = typename UP::StorageType;
+
   using UP::bits;
-  using UP::EXP_BIAS;
   using UP::EXP_LEN;
-  using UP::EXP_MASK;
-  using UP::EXP_MASK_SHIFT;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::SIGN_MASK;
-  using UP::TOTAL_LEN;
   using UP::UP;
 
-  using UP::encode;
-  using UP::get_biased_exponent;
-  using UP::is_zero;
   // Constants.
   static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   static constexpr StorageType MIN_NORMAL = UP::min_normal(false);
@@ -467,7 +569,7 @@ public:
   LIBC_INLINE constexpr bool is_inf_or_nan() const { return !UP::is_finite(); }
 
   LIBC_INLINE constexpr FPBits abs() const {
-    return FPBits(bits & EXP_SIG_MASK);
+    return FPBits(bits & UP::EXP_SIG_MASK);
   }
 
   // Methods below this are used by tests.
@@ -510,8 +612,10 @@ public:
 
   LIBC_INLINE static constexpr FPBits<T>
   create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
-    return FPBits(encode(sign, typename UP::Exp(biased_exp - UP::EXP_BIAS),
-                         typename UP::Sig(mantissa)));
+    static_assert(get_fp_type<T>() != FPType::X86_Binary80,
+                  "This function is not tested for X86 Extended Precision");
+    return FPBits(UP::encode(sign, typename UP::Exp(biased_exp - UP::EXP_BIAS),
+                             typename UP::Sig(mantissa)));
   }
 
   // The function convert integer number and unbiased exponent to proper float
@@ -526,6 +630,8 @@ public:
   //   5) Number is unsigned, so the result can be only positive.
   LIBC_INLINE static constexpr FPBits<T> make_value(StorageType number,
                                                     int ep) {
+    static_assert(get_fp_type<T>() != FPType::X86_Binary80,
+                  "This function is not tested for X86 Extended Precision");
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
     int lz = cpp::countl_zero(number) - EXP_LEN;
@@ -545,9 +651,5 @@ public:
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
-
-#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
-#include "x86_64/LongDoubleBits.h"
-#endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
