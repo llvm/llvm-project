@@ -4,7 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mlgo"
-version = "0.0.1"
-description = "A small example package"
+description = "Tooling for ML in LLVM"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.8,<3.11"
+dependencies = [
+  "absl-py>=1.0.0"
+]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "mlgo.__version__"}
