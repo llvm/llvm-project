@@ -657,6 +657,10 @@ end
   we don't round.  This seems to be how the Intel Fortran compilers
   behave.
 
+* For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
+  essentially ignored unless there are some unmasked array entries and
+  *all* of them are NaNs.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
