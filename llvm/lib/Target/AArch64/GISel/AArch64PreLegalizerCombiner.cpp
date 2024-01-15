@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -335,53 +336,44 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     SmallVector<Register, 4> Ext1UnmergeReg;
     SmallVector<Register, 4> Ext2UnmergeReg;
     if (SrcTy.getNumElements() % 16 != 0) {
-      // Unmerge source to v8i8, append a new v8i8 of 0s and the merge to v16s
-      SmallVector<Register, 4> PadUnmergeDstReg1;
-      SmallVector<Register, 4> PadUnmergeDstReg2;
-      unsigned NumOfVec = SrcTy.getNumElements() / 8;
+      SmallVector<Register> Leftover1;
+      SmallVector<Register> Leftover2;
 
-      // Unmerge the source to v8i8
-      MachineInstr *PadUnmerge1 =
-          Builder.buildUnmerge(LLT::fixed_vector(8, 8), Ext1SrcReg);
-      MachineInstr *PadUnmerge2 =
-          Builder.buildUnmerge(LLT::fixed_vector(8, 8), Ext2SrcReg);
-      for (unsigned i = 0; i < NumOfVec; i++) {
-        PadUnmergeDstReg1.push_back(PadUnmerge1->getOperand(i).getReg());
-        PadUnmergeDstReg2.push_back(PadUnmerge2->getOperand(i).getReg());
+      // Split the elements into v16i8 and v8i8
+      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT LeftoverTy1, LeftoverTy2;
+      if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
+                         LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
+                         MRI)) ||
+          (!extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
+                         LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder,
+                         MRI))) {
+        llvm_unreachable("Unable to split this vector properly");
       }
 
-      // Pad the vectors with a v8i8 constant of 0s
-      MachineInstr *v8Zeroes =
-          Builder.buildConstant(LLT::fixed_vector(8, 8), 0);
-      PadUnmergeDstReg1.push_back(v8Zeroes->getOperand(0).getReg());
-      PadUnmergeDstReg2.push_back(v8Zeroes->getOperand(0).getReg());
+      // Pad the leftover v8i8 vector with register of 0s of type v8i8
+      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
+                              ->getOperand(0)
+                              .getReg();
 
-      // Merge them all back to v16i8
-      NumOfVec = (NumOfVec + 1) / 2;
-      for (unsigned i = 0; i < NumOfVec; i++) {
-        Ext1UnmergeReg.push_back(
-            Builder
-                .buildMergeLikeInstr(
-                    LLT::fixed_vector(16, 8),
-                    {PadUnmergeDstReg1[i * 2], PadUnmergeDstReg1[(i * 2) + 1]})
-                .getReg(0));
-        Ext2UnmergeReg.push_back(
-            Builder
-                .buildMergeLikeInstr(
-                    LLT::fixed_vector(16, 8),
-                    {PadUnmergeDstReg2[i * 2], PadUnmergeDstReg2[(i * 2) + 1]})
-                .getReg(0));
-      }
+      Ext1UnmergeReg.push_back(
+          Builder
+              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+                                   {Leftover1[0], v8Zeroes})
+              .getReg(0));
+      Ext2UnmergeReg.push_back(
+          Builder
+              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+                                   {Leftover2[0], v8Zeroes})
+              .getReg(0));
+
     } else {
       // Unmerge the source vectors to v16i8
-      MachineInstr *Ext1Unmerge =
-          Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext1SrcReg);
-      MachineInstr *Ext2Unmerge =
-          Builder.buildUnmerge(LLT::fixed_vector(16, 8), Ext2SrcReg);
-      for (unsigned i = 0, e = SrcTy.getNumElements() / 16; i < e; i++) {
-        Ext1UnmergeReg.push_back(Ext1Unmerge->getOperand(i).getReg());
-        Ext2UnmergeReg.push_back(Ext2Unmerge->getOperand(i).getReg());
-      }
+      unsigned SrcNumElts = SrcTy.getNumElements();
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
+                   Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
+                   Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
