@@ -835,7 +835,7 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   if (CalleeStreamingMode != CallerStreamingMode &&
       CalleeStreamingMode != Sema::ArmStreamingCompatible)
     CGM.getDiags().Report(CallLoc,
-                          diag::err_function_alwaysinline_attribute_mismatch)
+                          diag::err_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 }
 
