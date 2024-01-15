@@ -2172,6 +2172,7 @@ createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
 /// \param [inout] converter - converter to use for the clauses.
 /// \param [in]    loc - location in source code.
 /// \param [in]    eval - current PFT node/evaluation.
+/// \param [in]    genNested - whether to generate FIR for nested evaluations
 /// \oaran [in]    clauses - list of clauses to process.
 /// \param [in]    args - block arguments (induction variable[s]) for the
 ////                      region.
