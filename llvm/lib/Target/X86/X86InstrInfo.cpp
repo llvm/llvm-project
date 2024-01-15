@@ -3470,8 +3470,20 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
 
   const MCInstrDesc &Desc = MI.getDesc();
 
-  // An instruction cannot have a memory reference if it has fewer than
-  // AddrNumOperands (= 5) explicit operands.
+  // Directly invoke the MC-layer routine for real (i.e., non-pseudo)
+  // instructions (fast case).
+  if (!X86II::isPseudo(Desc.TSFlags)) {
+    int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+    if (MemRefIdx >= 0)
+      return MemRefIdx + X86II::getOperandBias(Desc);
+    assert(none_of(Desc.operands(), isMemOp) &&
+           "Got false negative from X86II::getMemoryOperandNo()!");
+    return -1;
+  }
+
+  // Otherwise, handle pseudo instructions by examining the type of their
+  // operands (slow case). An instruction cannot have a memory reference if it
+  // has fewer than AddrNumOperands (= 5) explicit operands.
   if (Desc.getNumOperands() < X86::AddrNumOperands) {
     assert(none_of(Desc.operands(), isMemOp) &&
            "Expected no operands to have OPERAND_MEMORY type!");
@@ -3491,12 +3503,6 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
       return i;
     }
   }
-
-  // Fall back to the MC-layer routine, which only handles real (not pseudo)
-  // insturctions.
-  const int FallbackMemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
-  if (FallbackMemOpNo >= 0)
-    return FallbackMemOpNo + X86II::getOperandBias(Desc);
 
   return -1;
 }
