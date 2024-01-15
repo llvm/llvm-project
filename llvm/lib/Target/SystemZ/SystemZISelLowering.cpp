@@ -8176,20 +8176,22 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
 MachineBasicBlock *
 SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
                                         MachineBasicBlock *BB) const {
+  MachineFunction &MF = *BB->getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+  assert(TFL->hasReservedCallFrame(MF) &&
+         "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
   // Do the work of MachineFrameInfo::computeMaxCallFrameSize() early and
   // remove these nodes. Given that these nodes start out as a glued sequence
   // it seems best to handle them here after instruction selection and
   // scheduling.
-  MachineFrameInfo &MFI = BB->getParent()->getFrameInfo();
   uint32_t NumBytes = MI.getOperand(0).getImm();
   if (NumBytes > MFI.getMaxCallFrameSize())
     MFI.setMaxCallFrameSize(NumBytes);
   MFI.setAdjustsStack(true);
 
-  // Set the NumBytes value to 0 to avoid problems of maintaining the call
-  // frame size across CFG edges.  TODO: MI could be erased, but it seems to
-  // help scheduling around calls slightly (fix MachineScheduler + handle the
-  // adjustsStack implication).
+  // TODO: MI should be erased. For now, keep it around as it seems to help
+  // eliminate COPYs around calls slightly in general (fix MachineScheduler?).
   MI.getOperand(0).setImm(0);
 
   return BB;

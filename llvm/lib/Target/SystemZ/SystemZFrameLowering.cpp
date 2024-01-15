@@ -66,22 +66,6 @@ SystemZFrameLowering::create(const SystemZSubtarget &STI) {
   return std::make_unique<SystemZELFFrameLowering>();
 }
 
-MachineBasicBlock::iterator SystemZFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MI) const {
-  switch (MI->getOpcode()) {
-  case SystemZ::ADJCALLSTACKDOWN:
-  case SystemZ::ADJCALLSTACKUP:
-    assert(hasReservedCallFrame(MF) &&
-           "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
-    return MBB.erase(MI);
-    break;
-
-  default:
-    llvm_unreachable("Unexpected call frame instruction");
-  }
-}
-
 namespace {
 struct SZFrameSortingObj {
   bool IsValid = false;     // True if we care about this Object.
@@ -439,6 +423,16 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
   return true;
 }
 
+static void removeCallSeqPseudos(MachineFunction &MF) {
+  // TODO: These could have been removed in finalize isel already as they are
+  // not mapped as frame instructions. See comment in emitAdjCallStack().
+  for (auto &MBB : MF)
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
+      if (MI.getOpcode() == SystemZ::ADJCALLSTACKDOWN ||
+          MI.getOpcode() == SystemZ::ADJCALLSTACKUP)
+        MI.eraseFromParent();
+}
+
 void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
@@ -480,6 +474,8 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
       ZFI->getRestoreGPRRegs().LowGPR != SystemZ::R6D)
     for (auto &MO : MRI->use_nodbg_operands(SystemZ::R6D))
       MO.setIsKill(false);
+
+  removeCallSeqPseudos(MF);
 }
 
 // Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
@@ -1471,6 +1467,8 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
   // with existing compilers.
   MFFrame.setMaxCallFrameSize(
       std::max(64U, (unsigned)alignTo(MFFrame.getMaxCallFrameSize(), 64)));
+
+  removeCallSeqPseudos(MF);
 }
 
 // Determines the size of the frame, and creates the deferred spill objects.

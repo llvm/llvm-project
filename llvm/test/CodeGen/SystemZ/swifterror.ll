@@ -30,8 +30,8 @@ entry:
 define float @caller(ptr %error_ref) {
 ; CHECK-LABEL: caller:
 ; Make a copy of error_ref because r2 is getting clobbered
-; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
-; CHECK-DAG: lghi %r9, 0
+; CHECK: lgr %r[[REG1:[0-9]+]], %r2
+; CHECK: lghi %r9, 0
 ; CHECK: brasl %r14, foo
 ; CHECK: %r2, %r9
 ; CHECK: jlh
@@ -197,7 +197,7 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-LABEL: foo_sret:
 ; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
 ; CHECK-DAG: lr %r[[REG2:[0-9]+]], %r3
-; CHECK-DAG: lghi %r2, 16
+; CHECK: lghi %r2, 16
 ; CHECK: brasl %r14, malloc
 ; CHECK: mvi 8(%r2), 1
 ; CHECK: st %r[[REG2]], 4(%r[[REG1]])
@@ -280,7 +280,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
 ; CHECK-DAG: lgr %r[[REG2:[0-9]+]], %r3
 ; The first swifterror value:
-; CHECK-DAG: lghi %r9, 0
+; CHECK: lghi %r9, 0
 ; CHECK: brasl %r14, foo
 ; CHECK: ltgr %r2, %r9
 ; CHECK: jlh

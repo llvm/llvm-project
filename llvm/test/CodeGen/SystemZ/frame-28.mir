@@ -179,7 +179,9 @@ body:             |
     VST64 renamable $f16d, %stack.0, 0, $noreg
     VST64 renamable $f16d, %stack.0, 0, $noreg
     VST64 renamable $f16d, %stack.1, 0, $noreg
+    ADJCALLSTACKDOWN 0, 0
     CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    ADJCALLSTACKUP 0, 0
     $f17d = IMPLICIT_DEF
     VST64 renamable $f17d, %stack.1, 0, $noreg
     Return

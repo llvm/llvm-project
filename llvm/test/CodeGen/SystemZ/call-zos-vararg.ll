@@ -88,16 +88,13 @@ entry:
   ret i64 %retval
 }
 
-; TODO: Unfortunately the lgdr is scheduled below the COPY from $r1d, causing
-; an overlap and thus an extra copy.
 ; CHECK-LABEL: call_vararg_both0:
 ; CHECK:         stmg 6, 7, 1872(4)
 ; CHECK-NEXT:    aghi 4, -192
 ; CHECK-NEXT:    lg 6, 40(5)
 ; CHECK-NEXT:    lg 5, 32(5)
-; CHECK-NEXT:    lgdr 0, 0
 ; CHECK-NEXT:    lgr 2, 1
-; CHECK-NEXT:    lgr 1, 0
+; CHECK-NEXT:    lgdr 1, 0
 ; CHECK-NEXT:    basr 7, 6
 ; CHECK-NEXT:    bcr 0, 0
 ; CHECK-NEXT:    lg 7, 2072(4)
