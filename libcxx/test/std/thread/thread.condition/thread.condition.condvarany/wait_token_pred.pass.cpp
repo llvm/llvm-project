@@ -142,10 +142,12 @@ void test() {
       pred_started.wait(false);
       ss.request_stop();
       request_stop_called.store(true);
+      request_stop_called.notify_all();
     });
 
     std::same_as<bool> auto r = cv.wait(lock, ss.get_token(), [&]() {
       pred_started.store(true);
+      pred_started.notify_all();
       request_stop_called.wait(false);
       return false;
     });

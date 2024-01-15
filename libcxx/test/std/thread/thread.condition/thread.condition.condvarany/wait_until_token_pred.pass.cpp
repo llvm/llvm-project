@@ -203,12 +203,14 @@ void test() {
       pred_started.wait(false);
       ss.request_stop();
       request_stop_called.store(true);
+      request_stop_called.notify_all();
     });
 
     ElapsedTimeCheck check(10min);
 
     std::same_as<bool> auto r = cv.wait_until(lock, ss.get_token(), oneHourLater, [&]() {
       pred_started.store(true);
+      pred_started.notify_all();
       request_stop_called.wait(false);
       return false;
     });
