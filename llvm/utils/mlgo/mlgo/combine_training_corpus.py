@@ -40,5 +40,9 @@ def main(argv):
     combine_training_corpus_lib.combine_corpus(FLAGS.root_dir)
 
 
-if __name__ == "__main__":
+def entrypoint():
     app.run(main)
+
+
+if __name__ == "__main__":
+    entrypoint()

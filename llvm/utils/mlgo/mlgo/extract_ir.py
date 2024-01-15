@@ -156,6 +156,10 @@ def main(argv):
     )
 
 
-if __name__ == "__main__":
+def entrypoint():
     multiprocessing.set_start_method("fork")
     app.run(main)
+
+
+if __name__ == "__main__":
+    entrypoint()
