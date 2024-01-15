@@ -2380,6 +2380,18 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
       procBindKindAttr);
 }
 
+static mlir::omp::SectionOp
+genSectionOp(Fortran::lower::AbstractConverter &converter,
+             Fortran::lower::pft::Evaluation &eval,
+             mlir::Location currentLocation,
+             const Fortran::parser::OmpClauseList &sectionsClauseList) {
+  // Currently only private/firstprivate clause is handled, and
+  // all privatization is done within `omp.section` operations.
+  return genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
+                                             /*outerCombined=*/false,
+                                             &sectionsClauseList);
+}
+
 static mlir::omp::SingleOp
 genSingleOp(Fortran::lower::AbstractConverter &converter,
             Fortran::lower::pft::Evaluation &eval,
@@ -3387,37 +3399,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::SymMap &symTable,
        Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-  mlir::Location currentLocation = converter.getCurrentLocation();
-  const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
-      eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
-  assert(parentOmpConstruct &&
-         "No enclosing parent OpenMPConstruct on SECTION construct");
-  const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
-      std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
-          &parentOmpConstruct->u);
-  assert(sectionsConstruct && "SECTION construct must have parent"
-                              "SECTIONS construct");
-  const Fortran::parser::OmpClauseList &sectionsClauseList =
-      std::get<Fortran::parser::OmpClauseList>(
-          std::get<Fortran::parser::OmpBeginSectionsDirective>(
-              sectionsConstruct->t)
-              .t);
-  // Currently only private/firstprivate clause is handled, and
-  // all privatization is done within `omp.section` operations.
-  symTable.pushScope();
-  genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
-                                      /*outerCombined=*/false,
-                                      &sectionsClauseList);
-  genNestedEvaluations(converter, eval);
-  symTable.popScope();
-}
-
-static void
-genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::SymMap &symTable,
-       Fortran::semantics::SemanticsContext &semanticsContext,
-       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionsConstruct &sectionsConstruct) {
   mlir::Location currentLocation = converter.getCurrentLocation();
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands;
@@ -3458,7 +3439,18 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                                        /*reductions=*/nullptr, allocateOperands,
                                        allocatorOperands, nowaitClauseOperand);
 
-  genNestedEvaluations(converter, eval);
+  const auto &sectionBlocks =
+      std::get<Fortran::parser::OmpSectionBlocks>(sectionsConstruct.t);
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto ip = firOpBuilder.saveInsertionPoint();
+  for (const auto &[nblock, neval] :
+       llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
+    symTable.pushScope();
+    genSectionOp(converter, neval, currentLocation, sectionsClauseList);
+    genNestedEvaluations(converter, neval);
+    symTable.popScope();
+    firOpBuilder.restoreInsertionPoint(ip);
+  }
 }
 
 static void
@@ -3578,8 +3570,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    sectionsConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-            genOMP(converter, symTable, semanticsContext, eval,
-                   sectionConstruct);
+            // SECTION constructs are handled as a part of SECTIONS.
+            llvm_unreachable("Unexpected standalone OMP SECTION");
           },
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
             genOMP(converter, symTable, semanticsContext, eval, loopConstruct);

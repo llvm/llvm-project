@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -O3 -start-before=livevars %s
-#
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -O3 -start-before=livevars %s -o /dev/null 2>&1
 # Test that coalesing of an empty live range (undef) does not cause failure.
 
 --- |
