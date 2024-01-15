@@ -252,7 +252,8 @@ bool RISCVTargetInfo::initFeatureMap(
   // extension target features.
   const auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
   if (I != FeaturesVec.end()) {
-    std::vector OverrideFeatures = std::vector(std::next(I), FeaturesVec.end());
+    std::vector<std::string> OverrideFeatures =
+        std::vector(std::next(I), FeaturesVec.end());
 
     // Add back any non ISA extension features, e.g. +relax.
     auto IsNonISAExtFeature = [](const std::string &Feature) {
@@ -387,7 +388,8 @@ static void handleFullArchString(StringRef FullArchStr,
   } else {
     // Append a full list of features, including any negative extensions so that
     // we override the CPU's features.
-    std::vector<std::string> FeatStrings = (*RII)->toFeatures(true);
+    std::vector<std::string> FeatStrings =
+        (*RII)->toFeatures(/* AddAllExtensions */ true);
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }
