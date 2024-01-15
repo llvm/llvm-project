@@ -446,9 +446,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
       {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
       MVT::i64, Custom);
 
-  for (auto VT : {MVT::i8, MVT::i16}) {
+  for (auto VT : {MVT::i8, MVT::i16})
     setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
-  }
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
@@ -3085,10 +3084,10 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   assert(ResultVT == Arg.getValueType());
 
   auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
-  auto SubVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
   auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+  auto ShiftVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
+  NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, ShiftVal);
   NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
-  NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, SubVal);
   return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
 }
 
