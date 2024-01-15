@@ -681,10 +681,7 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
 TEST_F(EnvironmentVariables, GetlogGetName) {
   const int charLen{3};
   char input[charLen]{"\0\0"};
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
-
+  FORTRAN_PROCEDURE_NAME(getlog)(input, charLen);
   EXPECT_NE(input[0], '\0');
 }
 
@@ -700,10 +697,7 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
     charLen = _POSIX_LOGIN_NAME_MAX + 2;
 #endif
   std::vector<char> input(charLen);
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input.data()), charLen);
-
+  FORTRAN_PROCEDURE_NAME(getlog)(input.data(), charLen);
   EXPECT_EQ(input[charLen - 1], ' ');
 }
 #endif
@@ -715,8 +709,7 @@ TEST_F(EnvironmentVariables, GetlogEnvGetName) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName");
   }
@@ -728,8 +721,7 @@ TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginN");
   }
@@ -741,8 +733,7 @@ TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName ");
   }
