@@ -1585,8 +1585,27 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     return cast<DILocalVariable>(NewVar);
   };
 
-  auto UpdateDPValuesOnInst = [&](Instruction &I) -> void {
-    for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
+  auto UpdateDbgRecordsOnInst = [&](Instruction &I) -> void {
+    for (DbgRecord &DR : I.getDbgValueRange()) {
+      if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
+        // Point the intrinsic to a fresh label within the new function if the
+        // intrinsic was not inlined from some other function. Matches
+        // llvm.dbg.label intrinsic version in loop below.
+        if (DPL->getDebugLoc().getInlinedAt())
+          continue;
+        DILabel *OldLabel = DPL->getLabel();
+        DINode *&NewLabel = RemappedMetadata[OldLabel];
+        if (!NewLabel) {
+          DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
+              *OldLabel->getScope(), *NewSP, Ctx, Cache);
+          NewLabel = DILabel::get(Ctx, NewScope, OldLabel->getName(),
+                                  OldLabel->getFile(), OldLabel->getLine());
+        }
+        DPL->setLabel(cast<DILabel>(NewLabel));
+        continue;
+      }
+
+      DPValue &DPV = cast<DPValue>(DR);
       // Apply the two updates that dbg.values get: invalid operands, and
       // variable metadata fixup.
       if (any_of(DPV.location_ops(), IsInvalidLocation)) {
@@ -1599,13 +1618,11 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
       if (!DPV.getDebugLoc().getInlinedAt())
         DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
-      DPV.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DPV.getDebugLoc(),
-                                                           *NewSP, Ctx, Cache));
     }
   };
 
   for (Instruction &I : instructions(NewFunc)) {
-    UpdateDPValuesOnInst(I);
+    UpdateDbgRecordsOnInst(I);
 
     auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
     if (!DII)
@@ -1658,6 +1675,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
           DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
+    for (DbgRecord &DR : I.getDbgValueRange())
+      DR.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DR.getDebugLoc(),
+                                                          *NewSP, Ctx, Cache));
 
     // Loop info metadata may contain line locations. Fix them up.
     auto updateLoopInfoLoc = [&Ctx, &Cache, NewSP](Metadata *MD) -> Metadata * {
