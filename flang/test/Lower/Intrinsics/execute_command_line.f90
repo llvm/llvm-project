@@ -46,15 +46,15 @@ end subroutine all_args
 subroutine only_command_default_wait_true(command)
 CHARACTER(30) :: command
 call execute_command_line(command)
-! CHECK-NEXT:     %c48_i32 = arith.constant 48 : i32 
+! CHECK-NEXT:     %[[c48:.*]] = arith.constant 48 : i32 
 ! CHECK-NEXT:     %true = arith.constant true 
-! CHECK-NEXT:     %c30 = arith.constant 30 : index
+! CHECK-NEXT:     %[[c30:.*]] = arith.constant 30 : index
 ! CHECK-NEXT:     %[[commandUnbox:.*]]:2 = fir.unboxchar %[[cmdArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NEXT:     %[[commandCast:.*]] = fir.convert %[[commandUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,30>>
-! CHECK-NEXT:     %[[commandDeclare:.*]] = fir.declare %[[commandCast]] typeparams %c30 {uniq_name = "_QFonly_command_default_wait_trueEcommand"} : (!fir.ref<!fir.char<1,30>>, index) -> !fir.ref<!fir.char<1,30>>
+! CHECK-NEXT:     %[[commandDeclare:.*]] = fir.declare %[[commandCast]] typeparams %c[[c30]] {uniq_name = "_QFonly_command_default_wait_trueEcommand"} : (!fir.ref<!fir.char<1,30>>, index) -> !fir.ref<!fir.char<1,30>>
 ! CHECK-NEXT:     %[[commandBox:.*]] = fir.embox %[[commandDeclare]] : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
 ! CHECK-NEXT:     %[[absent:.*]] = fir.absent !fir.box<none>
 ! CHECK:          %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
-! CHECK:          %[[VAL_8:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %true, %[[absent]], %[[absent]], %[[absent]], %[[VAL_7:.*]], %c48_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:          %[[VAL_8:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %true, %[[absent]], %[[absent]], %[[absent]], %[[VAL_7:.*]], %[[c48]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:     return
 end subroutine only_command_default_wait_true
