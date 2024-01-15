@@ -8443,9 +8443,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Res = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
   }
-  case Intrinsic::riscv_vfmv_s_f:
-    return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, Op.getSimpleValueType(),
-                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::riscv_vfmv_f_s:
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(),
                        Op.getOperand(1), DAG.getConstant(0, DL, XLenVT));

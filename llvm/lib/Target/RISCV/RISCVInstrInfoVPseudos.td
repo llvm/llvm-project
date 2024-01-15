@@ -241,6 +241,8 @@ def VLOpFrag : PatFrag<(ops), (XLenVT (VLOp (XLenVT AVL:$vl)))>;
 // This must be kept in sync with RISCV::VLMaxSentinel.
 def VLMax : OutPatFrag<(ops), (XLenVT -1)>;
 
+def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
+
 // List of EEW.
 defvar EEWList = [8, 16, 32, 64];
 
@@ -7405,22 +7407,6 @@ foreach vti = NoGroupIntegerVectors in {
   def : Pat<(XLenVT (riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2))),
             (PseudoVMV_X_S $rs2, vti.Log2SEW)>;
   // vmv.s.x is handled with a custom node in RISCVInstrInfoVVLPatterns.td
-}
-
-//===----------------------------------------------------------------------===//
-// 16.2. Floating-Point Scalar Move Instructions
-//===----------------------------------------------------------------------===//
-
-foreach fvti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<fvti>.Predicates in {
-    def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
-                           (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMV_S_"#fvti.ScalarSuffix#"_" #
-                                  fvti.LMul.MX)
-               (fvti.Vector $rs1),
-               (fvti.Scalar fvti.ScalarRegClass:$rs2),
-               GPR:$vl, fvti.Log2SEW)>;
-  }
 }
 
 //===----------------------------------------------------------------------===//
