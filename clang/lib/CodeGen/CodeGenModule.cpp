@@ -7776,7 +7776,7 @@ private:
 class XteamRedExprChecker final : public ConstStmtVisitor<XteamRedExprChecker> {
 public:
   XteamRedExprChecker(const CodeGenModule::XteamRedVarMap &RVM)
-      : RedMap{RVM}, IsSupported{true} {}
+      : RedMap(RVM), IsSupported(true) {}
   XteamRedExprChecker() = delete;
 
   bool isSupported() const { return IsSupported; }
@@ -7784,6 +7784,19 @@ public:
   void VisitStmt(const Stmt *S) {
     if (!S)
       return;
+
+    auto isExprXteamRedVar = [this](const Expr *E) {
+      if (!isa<DeclRefExpr>(E))
+        return false;
+      auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+      if (!isa<VarDecl>(Decl))
+        return false;
+      auto *VD = cast<VarDecl>(Decl);
+      if (RedMap.find(VD) != RedMap.end())
+        return true;
+      return false;
+    };
+
     if (isa<BinaryOperator>(S)) {
       const BinaryOperator *BinOpExpr = cast<BinaryOperator>(S);
       // Even though we filtered out everything except the sum reduction
@@ -7793,19 +7806,7 @@ public:
       // red-var = red-var + <expr> and red-var = <expr> + red-var.
       // We punt on anything more complex.
 
-      auto isExprXteamRedVar = [this](Expr *E) {
-        if (!isa<DeclRefExpr>(E))
-          return false;
-        auto *Decl = cast<DeclRefExpr>(E)->getDecl();
-        if (!isa<VarDecl>(Decl))
-          return false;
-        auto *VD = cast<VarDecl>(Decl);
-        if (RedMap.find(VD) != RedMap.end())
-          return true;
-        return false;
-      };
-
-      Expr *LHS = BinOpExpr->getLHS()->IgnoreImpCasts();
+      const Expr *LHS = BinOpExpr->getLHS()->IgnoreImpCasts();
       if (isExprXteamRedVar(LHS)) {
         auto BinOpExprOp = BinOpExpr->getOpcode();
         if (BinOpExprOp != BO_Assign && BinOpExprOp != BO_AddAssign &&
@@ -7816,18 +7817,18 @@ public:
         // We only need to further examine the assignment case.
         // If += or +, Codegen will extract the rhs.
         if (BinOpExpr->getOpcode() == BO_Assign) {
-          Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
+          const Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
           if (!isa<BinaryOperator>(RHS)) {
             IsSupported = false;
             return;
           }
-          BinaryOperator *BinOpRHS = cast<BinaryOperator>(RHS);
+          const BinaryOperator *BinOpRHS = cast<BinaryOperator>(RHS);
           if (BinOpRHS->getOpcode() != BO_Add) {
             IsSupported = false;
             return;
           }
-          Expr *LHSBinOpRHS = BinOpRHS->getLHS()->IgnoreImpCasts();
-          Expr *RHSBinOpRHS = BinOpRHS->getRHS()->IgnoreImpCasts();
+          const Expr *LHSBinOpRHS = BinOpRHS->getLHS()->IgnoreImpCasts();
+          const Expr *RHSBinOpRHS = BinOpRHS->getRHS()->IgnoreImpCasts();
           if (!isExprXteamRedVar(LHSBinOpRHS) &&
               !isExprXteamRedVar(RHSBinOpRHS)) {
             IsSupported = false;
@@ -7835,14 +7836,25 @@ public:
           }
         }
       }
+    } else if (isa<UnaryOperator>(S)) {
+      const Expr *UnaryOpExpr =
+          cast<UnaryOperator>(S)->getSubExpr()->IgnoreImpCasts();
+      // Xteam reduction does not handle unary operators currently.
+      if (isExprXteamRedVar(UnaryOpExpr)) {
+        IsSupported = false;
+        return;
+      }
     }
+
     for (const Stmt *Child : S->children())
       if (Child)
         Visit(Child);
   }
 
 private:
+  /// Map of reduction variables for this directive.
   const CodeGenModule::XteamRedVarMap &RedMap;
+  /// Set to false if codegen does not support the reduction expression.
   bool IsSupported;
 };
 
