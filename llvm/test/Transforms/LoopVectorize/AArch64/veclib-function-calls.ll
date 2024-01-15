@@ -2648,20 +2648,20 @@ for.cond.cleanup:
 declare void @sincospi(double, ptr, ptr)
 declare void @sincospif(float, ptr, ptr)
 
-define void @test_sincospi(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
-; SLEEF-NEON-LABEL: define void @test_sincospi
+define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+; SLEEF-NEON-LABEL: define void @sincospi_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; SLEEF-NEON:    call void @_ZGVnN2vl8l8_sincospi(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ;
-; SLEEF-SVE-LABEL: define void @test_sincospi
+; SLEEF-SVE-LABEL: define void @sincospi_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; SLEEF-SVE:    call void @_ZGVsMxvl8l8_sincospi(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
-; ARMPL-NEON-LABEL: define void @test_sincospi
+; ARMPL-NEON-LABEL: define void @sincospi_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; ARMPL-NEON:    call void @armpl_vsincospiq_f64(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ;
-; ARMPL-SVE-LABEL: define void @test_sincospi
+; ARMPL-SVE-LABEL: define void @sincospi_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; ARMPL-SVE:    call void @armpl_svsincospi_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
@@ -2683,20 +2683,20 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_sincospif(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
-; SLEEF-NEON-LABEL: define void @test_sincospif
+define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+; SLEEF-NEON-LABEL: define void @sincospi_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; SLEEF-NEON:    call void @_ZGVnN4vl4l4_sincospif(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ;
-; SLEEF-SVE-LABEL: define void @test_sincospif
+; SLEEF-SVE-LABEL: define void @sincospi_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; SLEEF-SVE:    call void @_ZGVsMxvl4l4_sincospif(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
-; ARMPL-NEON-LABEL: define void @test_sincospif
+; ARMPL-NEON-LABEL: define void @sincospi_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; ARMPL-NEON:    call void @armpl_vsincospiq_f32(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
 ;
-; ARMPL-SVE-LABEL: define void @test_sincospif
+; ARMPL-SVE-LABEL: define void @sincospi_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; ARMPL-SVE:    call void @armpl_svsincospi_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
