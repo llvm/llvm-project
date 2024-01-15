@@ -2361,7 +2361,7 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   SDValue V2 = Op.getOperand(1);
   uint32_t Selector = 0;
   for (auto I : llvm::enumerate(SVN->getMask())) {
-    if (I.value() != -1)
+    if (I.value() != -1) // -1 is a placeholder for undef.
       Selector |= (I.value() << (I.index() * 4));
   }
 
