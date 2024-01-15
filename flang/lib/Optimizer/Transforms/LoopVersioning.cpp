@@ -105,26 +105,24 @@ struct ArgsUsageInLoop {
   // Debug dump of the structure members assuming that
   // the information has been collected for the given loop.
   void dump(fir::DoLoopOp loop) const {
-    // clang-format off
-    LLVM_DEBUG(
-        mlir::OpPrintingFlags printFlags;
-        printFlags.skipRegions();
-        llvm::dbgs() << "Arguments usage info for loop:\n";
-        loop.print(llvm::dbgs(), printFlags);
-        llvm::dbgs() << "\nUsed args:\n";
-        for (auto &use : usageInfo) {
-          mlir::Value v = use.first;
-          v.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "\nCannot transform args:\n";
-        for (mlir::Value arg : cannotTransform) {
-          arg.print(llvm::dbgs(), printFlags);
-          llvm::dbgs() << "\n";
-        }
-        llvm::dbgs() << "====\n"
-    );
-    // clang-format on
+    LLVM_DEBUG({
+      mlir::OpPrintingFlags printFlags;
+      printFlags.skipRegions();
+      llvm::dbgs() << "Arguments usage info for loop:\n";
+      loop.print(llvm::dbgs(), printFlags);
+      llvm::dbgs() << "\nUsed args:\n";
+      for (auto &use : usageInfo) {
+        mlir::Value v = use.first;
+        v.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "\nCannot transform args:\n";
+      for (mlir::Value arg : cannotTransform) {
+        arg.print(llvm::dbgs(), printFlags);
+        llvm::dbgs() << "\n";
+      }
+      llvm::dbgs() << "====\n";
+    });
   }
 
   // Erase usageInfo and cannotTransform entries for a set
@@ -344,15 +342,13 @@ void LoopVersioningPass::runOnOperation() {
   });
 
   // Dump loops info after initial collection.
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Initial usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Initial usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Clear argument usage for parent loops if an inner loop
   // contains a non-transformable usage.
@@ -382,15 +378,13 @@ void LoopVersioningPass::runOnOperation() {
     });
   }
 
-  // clang-format off
-  LLVM_DEBUG(
-      llvm::dbgs() << "Final usage info:\n";
-      for (fir::DoLoopOp loop : originalLoops) {
-        auto &argsInLoop = argsInLoops[loop];
-        argsInLoop.dump(loop);
-      }
-  );
-  // clang-format on
+  LLVM_DEBUG({
+    llvm::dbgs() << "Final usage info:\n";
+    for (fir::DoLoopOp loop : originalLoops) {
+      auto &argsInLoop = argsInLoops[loop];
+      argsInLoop.dump(loop);
+    }
+  });
 
   // Reduce the collected information to a list of loops
   // with attached arguments usage information.
