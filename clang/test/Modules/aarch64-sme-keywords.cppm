@@ -50,7 +50,7 @@ import A;
 // CHECK-DAG: attributes #[[STREAMING_DECL]] = {{{.*}} "aarch64_pstate_sm_enabled" {{.*}}}
 // CHECK-DAG: attributes #[[STREAMING_COMPATIBLE_DECL]] = {{{.*}} "aarch64_pstate_sm_compatible" {{.*}}}
 // CHECK-DAG: attributes #[[SHARED_ZA_USE]] = { "aarch64_pstate_za_shared" }
-// CHECK-DAG: attributes #[[PRESERVES_ZA_USE]] = { "aarch64_pstate_za_preserved" }
+// CHECK-DAG: attributes #[[PRESERVES_ZA_USE]] = { "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" }
 // CHECK-DAG: attributes #[[STREAMING_USE]] = { "aarch64_pstate_sm_enabled" }
 // CHECK-DAG: attributes #[[STREAMING_COMPATIBLE_USE]] = { "aarch64_pstate_sm_compatible" }
 
