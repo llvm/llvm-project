@@ -113,18 +113,15 @@ let TargetPrefix = "riscv" in {
 
 let TargetPrefix = "riscv" in {
 
-  class MOPGPRIntrinsics
+  // Zimop
+  def int_riscv_mopr
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-  class MOPGPRGPRIntrinsics
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_moprr
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-                              [IntrNoMem, IntrSpeculatable]>;
-
-  // Zimop
-  def int_riscv_mopr : MOPGPRIntrinsics;
-  def int_riscv_moprr : MOPGPRGPRIntrinsics;
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 } // TargetPrefix = "riscv"
 
