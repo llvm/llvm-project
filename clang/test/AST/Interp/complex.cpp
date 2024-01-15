@@ -45,9 +45,9 @@ static_assert(__imag(13) == 0, "");
 constexpr int ignoredCast() {
   I2;
   (int)I2;
-  /* (float)I2; FIXME*/
+  (float)I2;
   D1;
-  /* (int)D1; FIXME*/
+  (int)D1;
   (double)D1;
   return 0;
 }
