@@ -1353,6 +1353,19 @@ std::optional<bool> AreEquivalentInInterface(
   }
 }
 
+bool CheckForCoindexedObject(parser::ContextualMessages &messages,
+    const std::optional<ActualArgument> &arg, const std::string &procName,
+    const std::string &argName) {
+  if (arg && ExtractCoarrayRef(arg->UnwrapExpr())) {
+    messages.Say(arg->sourceLocation(),
+        "'%s' argument to '%s' may not be a coindexed object"_err_en_US,
+        argName, procName);
+    return false;
+  } else {
+    return true;
+  }
+}
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
