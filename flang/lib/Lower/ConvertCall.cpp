@@ -158,7 +158,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   bool mustPopSymMap = false;
 
   // Is procedure pointer functin result.
-  bool isProcedurePointer = resultType->isa<fir::BoxProcType>();
+  bool isProcedurePointer = resultType && resultType->isa<fir::BoxProcType>();
   if (!isProcedurePointer && caller.mustMapInterfaceSymbols()) {
     symMap.pushScope();
     mustPopSymMap = true;
@@ -1385,7 +1385,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
   // For procedure pointer function result, just return the call.
-  if (callContext.resultType->isa<fir::BoxProcType>())
+  if (callContext.resultType && callContext.resultType->isa<fir::BoxProcType>())
     return hlfir::EntityWithAttributes(fir::getBase(result));
 
   /// Clean-up associations and copy-in.
