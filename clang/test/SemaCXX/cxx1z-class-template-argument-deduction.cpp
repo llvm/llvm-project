@@ -656,6 +656,13 @@ struct A {
   A(int array[10], T) {}
 };
 
+template<typename T>
+struct B {
+   B(T array[]) {}
+   B(int array[], T) {}
+};
+
+
 int foo();
 
 void bar() {
@@ -665,6 +672,9 @@ void bar() {
   int array[10];
   A test3(array);
   A test4(array, 1);
+
+  B test5(array);
+  B test6(array, 1);
 }
 } // namespace GH51710
 

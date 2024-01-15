@@ -2589,10 +2589,8 @@ private:
     }
     // Handle arrays and functions decay.
     auto NewType = NewDI->getType();
-    if (NewType->isArrayType())
-      NewType = SemaRef.Context.getArrayDecayedType(NewType);
-    else if (NewType->isFunctionType())
-      NewType = SemaRef.Context.getPointerType(NewType);
+    if (NewType->isArrayType() || NewType->isFunctionType())
+      NewType = SemaRef.Context.getDecayedType(NewType);
 
     ParmVarDecl *NewParam = ParmVarDecl::Create(
         SemaRef.Context, DC, OldParam->getInnerLocStart(),
