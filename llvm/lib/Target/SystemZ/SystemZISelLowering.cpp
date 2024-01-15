@@ -9186,6 +9186,7 @@ MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
+
   Register SrcReg = MI.getOperand(0).getReg();
 
   // Create new virtual register of the same class as source.
