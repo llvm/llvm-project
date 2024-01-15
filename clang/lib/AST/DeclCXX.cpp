@@ -1383,6 +1383,34 @@ void CXXRecordDecl::addedMember(Decl *D) {
   }
 }
 
+bool CXXRecordDecl::isLiteral() const {
+  const LangOptions &LangOpts = getLangOpts();
+  if (!(LangOpts.CPlusPlus20 ? hasConstexprDestructor()
+                             : hasTrivialDestructor()))
+    return false;
+
+  if (isLambda() && !LangOpts.CPlusPlus17)
+    return false;
+
+  if (hasNonLiteralTypeFieldsOrBases()) {
+    // CWG2598
+    // is an aggregate union type that has either no variant
+    // members or at least one variant member of non-volatile literal type,
+    if (!isUnion())
+      return false;
+    bool HasAtLeastOneTrivialMember =
+        fields().empty() || any_of(fields(), [this](const FieldDecl *D) {
+          return !D->getType().isVolatileQualified() &&
+                 D->getType().isTrivialType(getASTContext());
+        });
+    if (!HasAtLeastOneTrivialMember)
+      return false;
+  }
+
+  return isAggregate() || isLambda() || hasConstexprNonCopyMoveConstructor() ||
+         hasTrivialDefaultConstructor();
+}
+
 void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
   DD->setIneligibleOrNotSelected(false);
   addedEligibleSpecialMemberFunction(DD, SMF_Destructor);
