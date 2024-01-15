@@ -1,6 +1,6 @@
-// RUN: sed -e s/ATTR_USE/__arm_streaming/g -e s/ATTR_NAME/__arm_streaming/g %s > %t
+// RUN: sed -e "s@ATTR_USE@__arm_streaming@g" -e "s@ATTR_NAME@__arm_streaming@g" %s > %t
 // RUN: %clang_cc1 -fcxx-exceptions -fdeclspec -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions -triple aarch64-none-linux-gnu -target-feature +sme -x c++ %t
-// RUN: sed -e s/ATTR_USE/__arm_inout\(\"za\"\)/g -e s/ATTR_NAME/__arm_inout/g %s > %t
+// RUN: sed -e "s@ATTR_USE@__arm_inout\(\"za\"\)@g" -e "s@ATTR_NAME@__arm_inout@g" %s > %t
 // RUN: %clang_cc1 -fcxx-exceptions -fdeclspec -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions -triple aarch64-none-linux-gnu -target-feature +sme -x c++ %t
 
 // Need std::initializer_list

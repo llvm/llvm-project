@@ -1,7 +1,7 @@
-// RUN: sed -e s/ATTR_USE/__arm_streaming/g -e s/ATTR_NAME/__arm_streaming/g %s > %t
+// RUN: sed -e "s@ATTR_USE@__arm_streaming@g" -e "s@ATTR_NAME@__arm_streaming@g" %s > %t
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,notc2x -Wno-strict-prototypes %t
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,c2x %t
-// RUN: sed -e s/ATTR_USE/__arm_inout\(\"za\"\)/g -e s/ATTR_NAME/__arm_inout/g %s > %t
+// RUN: sed -e "s@ATTR_USE@__arm_inout\(\"za\"\)@g" -e "s@ATTR_NAME@__arm_inout@g" %s > %t
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,notc2x -Wno-strict-prototypes %t
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,c2x %t
 
