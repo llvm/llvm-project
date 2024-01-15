@@ -293,7 +293,10 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
   let results = (outs TransformHandleTypeInterface:$transformed,
                       Variadic<TransformHandleTypeInterface>:$loops);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
   let hasVerifier = 1;
 }
 
@@ -1268,6 +1271,33 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
         ::mlir::transform::TransformState &state);
   }];
 }
+
+def ConvertToLoopsOp : Op<Transform_Dialect, "structured.convert_to_loops",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    For operations that implement the `TilingInterface`, and implement
+    the `generateScalarImplementation` method, lowers the operation to
+    loops. This operation does not return any handles.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` type($target)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::TilingInterface target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // DecomposeInterfaceOp
