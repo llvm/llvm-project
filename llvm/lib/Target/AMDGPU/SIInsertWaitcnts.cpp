@@ -733,7 +733,11 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         auto AAI = MemOp->getAAInfo();
         // Alias scope information gives a way to definitely identify an
         // original memory object and practically produced in the module LDS
-        // lowering pass.
+        // lowering pass. If there is no scope available we will not be able
+        // to disambiguate LDS aliasing as after the module lowering all LDS
+        // is squashed into a single big object. Do not attemt to use one of
+        // the limited LDSDMAStores for something we will not be able to use
+        // anyway.
         if (!AAI || !AAI.Scope)
           break;
         for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
@@ -1232,6 +1236,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         // VM_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
         bool FoundAliasingStore = false;
+        // Only objects with alias scope info were added to LDSDMAScopes array.
+        // In the absense of the scope info we will not be able to disambiguate
+        // aliasing here. There is no need to try searching for a corresponding
+        // store slot. This is conservatively correct because in that case we
+        // will produce a wait using the first (general) LDS DMA wait slot which
+        // will wait on all of them anyway.
         if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
