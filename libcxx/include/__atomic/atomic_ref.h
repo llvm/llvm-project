@@ -144,10 +144,10 @@ struct __atomic_ref_base {
         __order == memory_order::relaxed || __order == memory_order::consume || __order == memory_order::acquire ||
             __order == memory_order::seq_cst,
         "memory order argument to atomic wait operation is invalid");
-    __cxx_atomic_wait(__ptr_, __old, __order);
+    std::__cxx_atomic_wait(__ptr_, __old, __order);
   }
-  _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { __cxx_atomic_notify_one(__ptr_); }
-  _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { __cxx_atomic_notify_all(__ptr_); }
+  _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__cxx_atomic_notify_one(__ptr_); }
+  _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__cxx_atomic_notify_all(__ptr_); }
 
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(&__obj) {}
 };
