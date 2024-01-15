@@ -203,6 +203,9 @@ namespace llvm {
     bool error(LocTy L, const Twine &Msg) const { return Lex.Error(L, Msg); }
     bool tokError(const Twine &Msg) const { return error(Lex.getLoc(), Msg); }
 
+    bool checkValueID(LocTy L, StringRef Kind, StringRef Prefix,
+                      unsigned NextID, unsigned ID) const;
+
     /// Restore the internal name and slot mappings using the mappings that
     /// were created at an earlier parsing stage.
     void restoreParsingState(const SlotMapping *Slots);
@@ -459,8 +462,10 @@ namespace llvm {
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
       int FunctionNumber;
+
     public:
-      PerFunctionState(LLParser &p, Function &f, int functionNumber);
+      PerFunctionState(LLParser &p, Function &f, int functionNumber,
+                       ArrayRef<unsigned> UnnamedArgNums);
       ~PerFunctionState();
 
       Function &getFunction() const { return F; }
@@ -590,9 +595,12 @@ namespace llvm {
       ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
           : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
     };
-    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList, bool &IsVarArg);
-    bool parseFunctionHeader(Function *&Fn, bool IsDefine);
-    bool parseFunctionBody(Function &Fn);
+    bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
+                           SmallVectorImpl<unsigned> &UnnamedArgNums,
+                           bool &IsVarArg);
+    bool parseFunctionHeader(Function *&Fn, bool IsDefine,
+                             SmallVectorImpl<unsigned> &UnnamedArgNums);
+    bool parseFunctionBody(Function &Fn, ArrayRef<unsigned> UnnamedArgNums);
     bool parseBasicBlock(PerFunctionState &PFS);
 
     enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

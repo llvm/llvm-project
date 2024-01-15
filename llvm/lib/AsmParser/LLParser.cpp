@@ -54,6 +54,9 @@
 
 using namespace llvm;
 
+// Avoid large gaps in the NumberedVals vector.
+static const size_t MaxNumberedValSkip = 1000;
+
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
@@ -572,7 +575,8 @@ bool LLParser::parseDeclare() {
   }
 
   Function *F;
-  if (parseFunctionHeader(F, false))
+  SmallVector<unsigned> UnnamedArgNums;
+  if (parseFunctionHeader(F, false, UnnamedArgNums))
     return true;
   for (auto &MD : MDs)
     F->addMetadata(MD.first, *MD.second);
@@ -586,8 +590,10 @@ bool LLParser::parseDefine() {
   Lex.Lex();
 
   Function *F;
-  return parseFunctionHeader(F, true) || parseOptionalFunctionMetadata(*F) ||
-         parseFunctionBody(*F);
+  SmallVector<unsigned> UnnamedArgNums;
+  return parseFunctionHeader(F, true, UnnamedArgNums) ||
+         parseOptionalFunctionMetadata(*F) ||
+         parseFunctionBody(*F, UnnamedArgNums);
 }
 
 /// parseGlobalType
@@ -2925,6 +2931,19 @@ bool LLParser::parseOptionalOperandBundles(
   return false;
 }
 
+bool LLParser::checkValueID(LocTy Loc, StringRef Kind, StringRef Prefix,
+                            unsigned NextID, unsigned ID) const {
+  if (ID < NextID)
+    return error(Loc, Kind + " expected to be numbered '" + Prefix +
+                          Twine(NextID) + "' or greater");
+
+  if (ID > NextID + MaxNumberedValSkip)
+    return error(Loc, "value numbers can skip at most " +
+                          Twine(MaxNumberedValSkip) + " values");
+
+  return false;
+}
+
 /// parseArgumentList - parse the argument list for a function type or function
 /// prototype.
 ///   ::= '(' ArgTypeListI ')'
@@ -2935,6 +2954,7 @@ bool LLParser::parseOptionalOperandBundles(
 ///   ::= ArgType (',' ArgType)*
 ///
 bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
+                                 SmallVectorImpl<unsigned> &UnnamedArgNums,
                                  bool &IsVarArg) {
   unsigned CurValID = 0;
   IsVarArg = false;
@@ -2961,12 +2981,19 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
     if (Lex.getKind() == lltok::LocalVar) {
       Name = Lex.getStrVal();
       Lex.Lex();
-    } else if (Lex.getKind() == lltok::LocalVarID) {
-      if (Lex.getUIntVal() != CurValID)
-        return error(TypeLoc, "argument expected to be numbered '%" +
-                                  Twine(CurValID) + "'");
-      ++CurValID;
-      Lex.Lex();
+    } else {
+      unsigned ArgID;
+      if (Lex.getKind() == lltok::LocalVarID) {
+        ArgID = Lex.getUIntVal();
+        if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
+          return true;
+        Lex.Lex();
+      } else {
+        ArgID = CurValID;
+      }
+
+      UnnamedArgNums.push_back(ArgID);
+      CurValID = ArgID + 1;
     }
 
     if (!FunctionType::isValidArgumentType(ArgTy))
@@ -2995,13 +3022,17 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
         Name = Lex.getStrVal();
         Lex.Lex();
       } else {
+        unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
-          if (Lex.getUIntVal() != CurValID)
-            return error(TypeLoc, "argument expected to be numbered '%" +
-                                      Twine(CurValID) + "'");
+          ArgID = Lex.getUIntVal();
+          if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
+            return true;
           Lex.Lex();
+        } else {
+          ArgID = CurValID;
         }
-        ++CurValID;
+        UnnamedArgNums.push_back(ArgID);
+        CurValID = ArgID + 1;
         Name = "";
       }
 
@@ -3027,7 +3058,8 @@ bool LLParser::parseFunctionType(Type *&Result) {
 
   SmallVector<ArgInfo, 8> ArgList;
   bool IsVarArg;
-  if (parseArgumentList(ArgList, IsVarArg))
+  SmallVector<unsigned> UnnamedArgNums;
+  if (parseArgumentList(ArgList, UnnamedArgNums, IsVarArg))
     return true;
 
   // Reject names on the arguments lists.
@@ -3263,13 +3295,19 @@ bool LLParser::parseTargetExtType(Type *&Result) {
 //===----------------------------------------------------------------------===//
 
 LLParser::PerFunctionState::PerFunctionState(LLParser &p, Function &f,
-                                             int functionNumber)
+                                             int functionNumber,
+                                             ArrayRef<unsigned> UnnamedArgNums)
   : P(p), F(f), FunctionNumber(functionNumber) {
 
   // Insert unnamed arguments into the NumberedVals list.
-  for (Argument &A : F.args())
-    if (!A.hasName())
+  auto It = UnnamedArgNums.begin();
+  for (Argument &A : F.args()) {
+    if (!A.hasName()) {
+      unsigned ArgNum = *It++;
+      NumberedVals.resize(ArgNum);
       NumberedVals.push_back(&A);
+    }
+  }
 }
 
 LLParser::PerFunctionState::~PerFunctionState() {
@@ -3400,9 +3438,9 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
     if (NameID == -1)
       NameID = NumberedVals.size();
 
-    if (unsigned(NameID) != NumberedVals.size())
-      return P.error(NameLoc, "instruction expected to be numbered '%" +
-                                  Twine(NumberedVals.size()) + "'");
+    if (P.checkValueID(NameLoc, "instruction", "%", NumberedVals.size(),
+                       NameID))
+      return true;
 
     auto FI = ForwardRefValIDs.find(NameID);
     if (FI != ForwardRefValIDs.end()) {
@@ -3416,6 +3454,9 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
       Sentinel->deleteValue();
       ForwardRefValIDs.erase(FI);
     }
+
+    // Fill in skipped IDs using nullptr.
+    NumberedVals.resize(unsigned(NameID));
 
     NumberedVals.push_back(Inst);
     return false;
@@ -3464,12 +3505,13 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
                                                  int NameID, LocTy Loc) {
   BasicBlock *BB;
   if (Name.empty()) {
-    if (NameID != -1 && unsigned(NameID) != NumberedVals.size()) {
-      P.error(Loc, "label expected to be numbered '" +
-                       Twine(NumberedVals.size()) + "'");
-      return nullptr;
+    if (NameID != -1) {
+      if (P.checkValueID(Loc, "label", "", NumberedVals.size(), NameID))
+        return nullptr;
+    } else {
+      NameID = NumberedVals.size();
     }
-    BB = getBB(NumberedVals.size(), Loc);
+    BB = getBB(NameID, Loc);
     if (!BB) {
       P.error(Loc, "unable to create block numbered '" +
                        Twine(NumberedVals.size()) + "'");
@@ -3489,7 +3531,8 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 
   // Remove the block from forward ref sets.
   if (Name.empty()) {
-    ForwardRefValIDs.erase(NumberedVals.size());
+    ForwardRefValIDs.erase(NameID);
+    NumberedVals.resize(NameID);
     NumberedVals.push_back(BB);
   } else {
     // BB forward references are already in the function symbol table.
@@ -5934,7 +5977,8 @@ bool LLParser::parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
 ///       '(' ArgList ')' OptAddrSpace OptFuncAttrs OptSection OptionalAlign
 ///       OptGC OptionalPrefix OptionalPrologue OptPersonalityFn
-bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
+bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
+                                   SmallVectorImpl<unsigned> &UnnamedArgNums) {
   // parse the linkage.
   LocTy LinkageLoc = Lex.getLoc();
   unsigned Linkage;
@@ -6022,7 +6066,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
   Constant *PersonalityFn = nullptr;
   Comdat *C;
 
-  if (parseArgumentList(ArgList, IsVarArg) ||
+  if (parseArgumentList(ArgList, UnnamedArgNums, IsVarArg) ||
       parseOptionalUnnamedAddr(UnnamedAddr) ||
       parseOptionalProgramAddrSpace(AddrSpace) ||
       parseFnAttributeValuePairs(FuncAttrs, FwdRefAttrGrps, false,
@@ -6217,7 +6261,8 @@ bool LLParser::PerFunctionState::resolveForwardRefBlockAddresses() {
 
 /// parseFunctionBody
 ///   ::= '{' BasicBlock+ UseListOrderDirective* '}'
-bool LLParser::parseFunctionBody(Function &Fn) {
+bool LLParser::parseFunctionBody(Function &Fn,
+                                 ArrayRef<unsigned> UnnamedArgNums) {
   if (Lex.getKind() != lltok::lbrace)
     return tokError("expected '{' in function body");
   Lex.Lex();  // eat the {.
@@ -6225,7 +6270,7 @@ bool LLParser::parseFunctionBody(Function &Fn) {
   int FunctionNumber = -1;
   if (!Fn.hasName()) FunctionNumber = NumberedVals.size()-1;
 
-  PerFunctionState PFS(*this, Fn, FunctionNumber);
+  PerFunctionState PFS(*this, Fn, FunctionNumber, UnnamedArgNums);
 
   // Resolve block addresses and allow basic blocks to be forward-declared
   // within this function.
