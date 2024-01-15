@@ -14,7 +14,7 @@ declare void @use_i64(i64)
 define i1 @srem_sgt_test1(i64 %x) {
 ; CHECK-LABEL: @srem_sgt_test1(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i64 [[X:%.*]], 34360750831
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[Y]], 34360750829
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[Y]], 34360750830
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i64 %x, 34360750831
@@ -25,7 +25,7 @@ define i1 @srem_sgt_test1(i64 %x) {
 define i1 @srem_slt_test1(i64 %x) {
 ; CHECK-LABEL: @srem_slt_test1(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i64 [[X:%.*]], 34360750831
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[Y]], 34360750830
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[Y]], 34360750830
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i64 %x, 34360750831
@@ -36,7 +36,7 @@ define i1 @srem_slt_test1(i64 %x) {
 define i1 @srem_sgt_test2(i32 %x) {
 ; CHECK-LABEL: @srem_sgt_test2(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i32 [[X:%.*]], 1074977277
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y]], 1074977275
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[Y]], 1074977276
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i32 %x, 1074977277
@@ -47,7 +47,7 @@ define i1 @srem_sgt_test2(i32 %x) {
 define i1 @srem_slt_test2(i32 %x) {
 ; CHECK-LABEL: @srem_slt_test2(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i32 [[X:%.*]], 1074977277
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 1074977276
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[Y]], 1074977276
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i32 %x, 1074977277
@@ -58,7 +58,7 @@ define i1 @srem_slt_test2(i32 %x) {
 define i1 @srem_sgt_test3(i16 %x) {
 ; CHECK-LABEL: @srem_sgt_test3(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i16 [[X:%.*]], 2259
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[Y]], 2257
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[Y]], 2258
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i16 %x, 2259
@@ -69,7 +69,7 @@ define i1 @srem_sgt_test3(i16 %x) {
 define i1 @srem_slt_test3(i16 %x) {
 ; CHECK-LABEL: @srem_slt_test3(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i16 [[X:%.*]], 2259
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[Y]], 2258
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[Y]], 2258
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i16 %x, 2259
@@ -80,7 +80,7 @@ define i1 @srem_slt_test3(i16 %x) {
 define i1 @srem_sgt_test4(i8 %x) {
 ; CHECK-LABEL: @srem_sgt_test4(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i8 [[X:%.*]], 50
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[Y]], 48
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[Y]], 49
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i8 %x, 50
@@ -91,7 +91,7 @@ define i1 @srem_sgt_test4(i8 %x) {
 define i1 @srem_slt_test4(i8 %x) {
 ; CHECK-LABEL: @srem_slt_test4(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i8 [[X:%.*]], 50
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y]], 49
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[Y]], 49
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i8 %x, 50
@@ -101,8 +101,8 @@ define i1 @srem_slt_test4(i8 %x) {
 
 define i1 @test_srem_slt_constant(i32 %a) {
 ; CHECK-LABEL: @test_srem_slt_constant(
-; CHECK-NEXT:    [[Y:%.*]] = srem i32 [[A:%.*]], 512
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 511
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -2147483137
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 511
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i32 %a, 512
@@ -112,8 +112,8 @@ define i1 @test_srem_slt_constant(i32 %a) {
 
 define i1 @test_srem_sgt_constant(i32 %a) {
 ; CHECK-LABEL: @test_srem_sgt_constant(
-; CHECK-NEXT:    [[Y:%.*]] = srem i32 [[A:%.*]], 512
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y]], 510
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -2147483137
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 511
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i32 %a, 512
@@ -123,8 +123,8 @@ define i1 @test_srem_sgt_constant(i32 %a) {
 
 define <2 x i1> @test_srem_slt_constant_splat(<2 x i32> %a) {
 ; CHECK-LABEL: @test_srem_slt_constant_splat(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[Y]], <i32 511, i32 511>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -2147483137, i32 -2147483137>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 511, i32 511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 512, i32 512>
@@ -134,8 +134,8 @@ define <2 x i1> @test_srem_slt_constant_splat(<2 x i32> %a) {
 
 define <2 x i1> @test_srem_sgt_constant_splat(<2 x i32> %a) {
 ; CHECK-LABEL: @test_srem_sgt_constant_splat(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 510, i32 510>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -2147483137, i32 -2147483137>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 511, i32 511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 512, i32 512>
@@ -147,7 +147,7 @@ define <2 x i1> @test_srem_sgt_constant_splat(<2 x i32> %a) {
 define i1 @srem_sgt_test(i16 %x) {
 ; CHECK-LABEL: @srem_sgt_test(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i16 [[X:%.*]], 2259
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[Y]], -2258
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[Y]], -2258
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i16 %x, -2259
@@ -158,7 +158,7 @@ define i1 @srem_sgt_test(i16 %x) {
 define i1 @srem_sle_test(i16 %x) {
 ; CHECK-LABEL: @srem_sle_test(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i16 [[X:%.*]], 2259
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[Y]], -2257
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[Y]], -2258
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = srem i16 %x, -2259
@@ -169,7 +169,7 @@ define i1 @srem_sle_test(i16 %x) {
 define <2 x i1> @test_srem_sgt_constant_splat_neg(<2 x i32> %a) {
 ; CHECK-LABEL: @test_srem_sgt_constant_splat_neg(
 ; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 -511, i32 -511>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[Y]], <i32 -511, i32 -511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 -512, i32 -512>
@@ -180,7 +180,7 @@ define <2 x i1> @test_srem_sgt_constant_splat_neg(<2 x i32> %a) {
 define <2 x i1> @test_srem_slt_constant_splat_neg(<2 x i32> %a) {
 ; CHECK-LABEL: @test_srem_slt_constant_splat_neg(
 ; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[Y]], <i32 -510, i32 -510>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[Y]], <i32 -511, i32 -511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 -512, i32 -512>
@@ -192,7 +192,7 @@ define <2 x i1> @test_srem_slt_constant_splat_neg(<2 x i32> %a) {
 define i1 @test_urem_slt(i32 %x) {
 ; CHECK-LABEL: @test_urem_slt(
 ; CHECK-NEXT:    [[Y:%.*]] = urem i32 [[X:%.*]], 12235
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[Y]], 12234
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[Y]], 12234
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = urem i32 %x, 12235
@@ -203,7 +203,7 @@ define i1 @test_urem_slt(i32 %x) {
 define i1 @test_urem_sge(i32 %x) {
 ; CHECK-LABEL: @test_urem_sge(
 ; CHECK-NEXT:    [[Y:%.*]] = urem i32 [[X:%.*]], 13546
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[Y]], 13544
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[Y]], 13545
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = urem i32 %x, 13546
@@ -214,7 +214,7 @@ define i1 @test_urem_sge(i32 %x) {
 define i1 @test_urem_uge(i32 %x) {
 ; CHECK-LABEL: @test_urem_uge(
 ; CHECK-NEXT:    [[Y:%.*]] = urem i32 [[X:%.*]], 18642
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[Y]], 18640
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[Y]], 18641
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = urem i32 %x, 18642
@@ -225,7 +225,7 @@ define i1 @test_urem_uge(i32 %x) {
 define i1 @test_urem_ult(i32 %x) {
 ; CHECK-LABEL: @test_urem_ult(
 ; CHECK-NEXT:    [[Y:%.*]] = urem i32 [[X:%.*]], 15344
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[Y]], 15343
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[Y]], 15343
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %y = urem i32 %x, 15344
@@ -235,8 +235,8 @@ define i1 @test_urem_ult(i32 %x) {
 
 define <2 x i1> @test_urem_slt_constant_splat(<2 x i32> %a) {
 ; CHECK-LABEL: @test_urem_slt_constant_splat(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[Y]], <i32 511, i32 511>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -2147483137, i32 -2147483137>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 511, i32 511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 512, i32 512>
@@ -246,8 +246,8 @@ define <2 x i1> @test_urem_slt_constant_splat(<2 x i32> %a) {
 
 define <2 x i1> @test_urem_sgt_constant_splat(<2 x i32> %a) {
 ; CHECK-LABEL: @test_urem_sgt_constant_splat(
-; CHECK-NEXT:    [[Y:%.*]] = srem <2 x i32> [[A:%.*]], <i32 512, i32 512>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 510, i32 510>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -2147483137, i32 -2147483137>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 511, i32 511>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %y = srem <2 x i32> %a, <i32 512, i32 512>
