@@ -4499,8 +4499,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     default: break;
     case ARM::LDRrs:
     case ARM::LDRBrs: {
-      unsigned ShOpVal =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShOpVal = DefNode->getConstantOperandVal(2);
       unsigned ShImm = ARM_AM::getAM2Offset(ShOpVal);
       if (ShImm == 0 ||
           (ShImm == 2 && ARM_AM::getAM2ShiftOpc(ShOpVal) == ARM_AM::lsl))
@@ -4512,8 +4511,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case ARM::t2LDRHs:
     case ARM::t2LDRSHs: {
       // Thumb2 mode: lsl only.
-      unsigned ShAmt =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShAmt = DefNode->getConstantOperandVal(2);
       if (ShAmt == 0 || ShAmt == 2)
         Latency = *Latency - 1;
       break;
@@ -4526,8 +4524,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     default: break;
     case ARM::LDRrs:
     case ARM::LDRBrs: {
-      unsigned ShOpVal =
-        cast<ConstantSDNode>(DefNode->getOperand(2))->getZExtValue();
+      unsigned ShOpVal = DefNode->getConstantOperandVal(2);
       unsigned ShImm = ARM_AM::getAM2Offset(ShOpVal);
       if (ShImm == 0 ||
           ((ShImm == 1 || ShImm == 2 || ShImm == 3) &&

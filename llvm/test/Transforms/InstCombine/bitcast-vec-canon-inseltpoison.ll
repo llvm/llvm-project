@@ -74,7 +74,7 @@ entry:
 
 define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> undef, double [[X:%.*]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> poison, double [[X:%.*]], i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[I:%.*]] = bitcast <3 x double> [[TMP1]] to <3 x i64>
 ; CHECK-NEXT:    ret <3 x i64> [[I]]
 ;
@@ -87,7 +87,7 @@ define <3 x i64> @bitcast_inselt_undef(double %x, i32 %idx) {
 
 define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_fp(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[X:%.*]], i567 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> poison, i32 [[X:%.*]], i567 [[IDX:%.*]]
 ; CHECK-NEXT:    [[I:%.*]] = bitcast <3 x i32> [[TMP1]] to <3 x float>
 ; CHECK-NEXT:    ret <3 x float> [[I]]
 ;
@@ -98,7 +98,7 @@ define <3 x float> @bitcast_inselt_undef_fp(i32 %x, i567 %idx) {
 
 define <vscale x 3 x float> @bitcast_inselt_undef_vscale(i32 %x, i567 %idx) {
 ; CHECK-LABEL: @bitcast_inselt_undef_vscale(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 3 x i32> undef, i32 [[X:%.*]], i567 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <vscale x 3 x i32> poison, i32 [[X:%.*]], i567 [[IDX:%.*]]
 ; CHECK-NEXT:    [[I:%.*]] = bitcast <vscale x 3 x i32> [[TMP1]] to <vscale x 3 x float>
 ; CHECK-NEXT:    ret <vscale x 3 x float> [[I]]
 ;

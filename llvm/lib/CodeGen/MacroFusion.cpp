@@ -212,15 +212,9 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates) {
+llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
+                                   bool BranchOnly) {
   if (EnableMacroFusion)
-    return std::make_unique<MacroFusion>(Predicates, true);
-  return nullptr;
-}
-
-std::unique_ptr<ScheduleDAGMutation> llvm::createBranchMacroFusionDAGMutation(
-    ArrayRef<MacroFusionPredTy> Predicates) {
-  if (EnableMacroFusion)
-    return std::make_unique<MacroFusion>(Predicates, false);
+    return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
   return nullptr;
 }

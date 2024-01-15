@@ -1,21 +1,21 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 // CHECK: mesh.cluster @mesh0
-mesh.cluster @mesh0(rank = 3, dim_sizes = 2x2x4)
+mesh.cluster @mesh0(shape = 2x2x4)
 
-// CHECK: mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
-mesh.cluster @mesh1(rank = 2, dim_sizes = 4)
+// CHECK: mesh.cluster @mesh1(shape = 4x?)
+mesh.cluster @mesh1(shape = 4x?)
 
-// CHECK: mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
-mesh.cluster @mesh2(rank = 2, dim_sizes = ?x4)
+// CHECK: mesh.cluster @mesh2(shape = ?x4)
+mesh.cluster @mesh2(shape = ?x4)
 
-// CHECK: mesh.cluster @mesh3
-mesh.cluster @mesh3(rank = 2)
+// CHECK: mesh.cluster @mesh3(shape = ?x?)
+mesh.cluster @mesh3(shape = ?x?)
 
-mesh.cluster @mesh4(rank = 1, dim_sizes = 3)
+mesh.cluster @mesh4(shape = 3)
 
-// CHECK: mesh.cluster @mesh5(rank = 1)
-mesh.cluster @mesh5(rank = 1, dim_sizes = [])
+// CHECK: mesh.cluster @mesh5(shape = ?)
+mesh.cluster @mesh5(shape = ?)
 
 // CHECK-LABEL: func @mesh_shard_encoding_fully_replicated
 func.func @mesh_shard_encoding_fully_replicated(
@@ -130,6 +130,62 @@ func.func @mesh_shard_op_two_users(%arg0 : tensor<4x8xf32>) ->
   // CHECK-DAG: mesh.shard %[[V0]] to <@mesh0, {{\[\[}}2]]> annotate_for_users : tensor<4x8xf32>
   %2 = mesh.shard %0 to <@mesh0, [[2]]> annotate_for_users : tensor<4x8xf32>
   return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
+}
+
+// CHECK-LABEL: func @cluster_shape
+func.func @cluster_shape() -> (index, index) {
+  // CHECK: %[[RES:.*]]:2 = mesh.cluster_shape @mesh0 axes = [0, 1] : index, index
+  %0:2 = mesh.cluster_shape @mesh0 axes = [0, 1] : index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1 : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// CHECK-LABEL: func @cluster_shape_default_axes
+func.func @cluster_shape_default_axes() -> (index, index, index) {
+  // CHECK: %[[RES:.*]]:3 = mesh.cluster_shape @mesh0 : index, index, index
+  %0:3 = mesh.cluster_shape @mesh0 : index, index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @cluster_shape_empty_axes
+func.func @cluster_shape_empty_axes() -> (index, index, index) {
+  // CHECK: %[[RES:.*]]:3 = mesh.cluster_shape @mesh0 : index, index, index
+  %0:3 = mesh.cluster_shape @mesh0 axes = [] : index, index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @process_multi_index
+func.func @process_multi_index() -> (index, index) {
+  // CHECK: %[[RES:.*]]:2 = mesh.process_multi_index on @mesh0 axes = [0, 1] : index, index
+  %0:2 = mesh.process_multi_index on @mesh0 axes = [0, 1] : index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1 : index, index
+  return %0#0, %0#1 : index, index
+}
+
+// CHECK-LABEL: func @process_multi_index_default_axes
+func.func @process_multi_index_default_axes() -> (index, index, index) {
+  // CHECK: %[[RES:.*]]:3 = mesh.process_multi_index on @mesh0 : index, index, index
+  %0:3 = mesh.process_multi_index on @mesh0 : index, index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @process_multi_index_empty_axes
+func.func @process_multi_index_empty_axes() -> (index, index, index) {
+  // CHECK: %[[RES:.*]]:3 = mesh.process_multi_index on @mesh0 : index, index, index
+  %0:3 = mesh.process_multi_index on @mesh0 axes = [] : index, index, index
+  // CHECK: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// CHECK-LABEL: func @process_linear_index
+func.func @process_linear_index() -> index {
+  // CHECK: %[[RES:.*]] = mesh.process_linear_index on @mesh0 : index
+  %0 = mesh.process_linear_index on @mesh0 : index
+  // CHECK: return %[[RES]] : index
+  return %0 : index
 }
 
 // CHECK-LABEL: func @all_reduce

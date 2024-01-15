@@ -57,7 +57,7 @@ define void @buildvector_v8f32_splat(ptr %dst, float %a0) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_splat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
-; CHECK-NEXT:    xvrepl128vei.w $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -71,7 +71,7 @@ define void @buildvector_v4f64_splat(ptr %dst, double %a0) nounwind {
 ; CHECK-LABEL: buildvector_v4f64_splat:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; CHECK-NEXT:    xvrepl128vei.d $xr0, $xr0, 0
+; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

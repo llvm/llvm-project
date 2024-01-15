@@ -93,8 +93,8 @@ jobs:
 
     - name: Build Clang
       run: |
-        cmake -G Ninja  -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_ENABLE_ASSERTIONS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DLLVM_ENABLE_PROJECTS=clang -S llvm -B build
-        ninja -v -C build
+        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B build
+        ninja -v -C build clang
 
 
   build-binaries:
@@ -152,6 +152,7 @@ jobs:
         -triple ${{ matrix.target.triple }} \
         -use-ninja \
         -no-checkout \
+        -use-cmake-cache \
         -no-test-suite \
         -configure-flags "-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
 

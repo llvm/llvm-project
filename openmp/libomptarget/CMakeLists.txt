@@ -150,3 +150,11 @@ add_subdirectory(${LIBOMPTARGET_SRC_DIR})
 
 # Add tests.
 add_subdirectory(test)
+
+# Add unit tests if GMock/GTest is present
+if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
+  if (NOT TARGET llvm_gtest)
+    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+  endif()
+  add_subdirectory(unittests)
+endif()

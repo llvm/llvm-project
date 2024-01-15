@@ -108,6 +108,8 @@ class X86AsmParser : public MCTargetAsmParser {
 
   // Does this instruction use apx extended register?
   bool UseApxExtendedReg = false;
+  // Is this instruction explicitly required not to update flags?
+  bool ForcedNoFlag = false;
 
 private:
   SMLoc consumeToken() {
@@ -263,8 +265,7 @@ private:
         return 0;
 
       SmallVector<ICToken, 16> OperandStack;
-      for (unsigned i = 0, e = PostfixStack.size(); i != e; ++i) {
-        ICToken Op = PostfixStack[i];
+      for (const ICToken &Op : PostfixStack) {
         if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
           OperandStack.push_back(Op);
         } else if (isUnaryOperator(Op.first)) {
@@ -1731,8 +1732,8 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
       OrigOperands.pop_back();
   }
   // OrigOperands.append(FinalOperands.begin(), FinalOperands.end());
-  for (unsigned int i = 0; i < FinalOperands.size(); ++i)
-    OrigOperands.push_back(std::move(FinalOperands[i]));
+  for (auto &Op : FinalOperands)
+    OrigOperands.push_back(std::move(Op));
 
   return false;
 }
@@ -2313,8 +2314,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
 
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
-  if (DotDispStr.starts_with("."))
-    DotDispStr = DotDispStr.drop_front(1);
+  DotDispStr.consume_front(".");
   StringRef TrailingDot;
 
   // .Imm gets lexed as a real.
@@ -3062,6 +3062,35 @@ bool X86AsmParser::ParseMemOperand(unsigned SegReg, const MCExpr *Disp,
                                       ErrMsg))
     return Error(BaseLoc, ErrMsg);
 
+  // If the displacement is a constant, check overflows. For 64-bit addressing,
+  // gas requires isInt<32> and otherwise reports an error. For others, gas
+  // reports a warning and allows a wider range. E.g. gas allows
+  // [-0xffffffff,0xffffffff] for 32-bit addressing (e.g. Linux kernel uses
+  // `leal -__PAGE_OFFSET(%ecx),%esp` where __PAGE_OFFSET is 0xc0000000).
+  if (BaseReg || IndexReg) {
+    if (auto CE = dyn_cast<MCConstantExpr>(Disp)) {
+      auto Imm = CE->getValue();
+      bool Is64 = X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
+                  X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg);
+      bool Is16 = X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg);
+      if (Is64) {
+        if (!isInt<32>(Imm))
+          return Error(BaseLoc, "displacement " + Twine(Imm) +
+                                    " is not within [-2147483648, 2147483647]");
+      } else if (!Is16) {
+        if (!isUInt<32>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+          Warning(BaseLoc, "displacement " + Twine(Imm) +
+                               " shortened to 32-bit signed " +
+                               Twine(static_cast<int32_t>(Imm)));
+        }
+      } else if (!isUInt<16>(Imm < 0 ? -uint64_t(Imm) : uint64_t(Imm))) {
+        Warning(BaseLoc, "displacement " + Twine(Imm) +
+                             " shortened to 16-bit signed " +
+                             Twine(static_cast<int16_t>(Imm)));
+      }
+    }
+  }
+
   if (SegReg || BaseReg || IndexReg)
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), SegReg, Disp,
                                              BaseReg, IndexReg, Scale, StartLoc,
@@ -3098,6 +3127,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   ForcedVEXEncoding = VEXEncoding_Default;
   ForcedDispEncoding = DispEncoding_Default;
   UseApxExtendedReg = false;
+  ForcedNoFlag = false;
 
   // Parse pseudo prefixes.
   while (true) {
@@ -3122,6 +3152,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         ForcedDispEncoding = DispEncoding_Disp8;
       else if (Prefix == "disp32")
         ForcedDispEncoding = DispEncoding_Disp32;
+      else if (Prefix == "nf")
+        ForcedNoFlag = true;
       else
         return Error(NameLoc, "unknown prefix");
 
@@ -3968,6 +4000,8 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   const MCInstrDesc &MCID = MII.get(Opc);
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
+    return Match_Unsupported;
+  if (ForcedNoFlag != !!(MCID.TSFlags & X86II::EVEX_NF))
     return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&

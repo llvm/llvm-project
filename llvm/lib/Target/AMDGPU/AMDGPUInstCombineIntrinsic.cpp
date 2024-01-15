@@ -402,6 +402,35 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
   return DemandedElts;
 }
 
+// Trim elements of the end of the vector \p V, if they are
+// equal to the first element of the vector.
+static APInt defaultComponentBroadcast(Value *V) {
+  auto *VTy = cast<FixedVectorType>(V->getType());
+  unsigned VWidth = VTy->getNumElements();
+  APInt DemandedElts = APInt::getAllOnes(VWidth);
+  Value *FirstComponent = findScalarElement(V, 0);
+
+  SmallVector<int> ShuffleMask;
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
+    SVI->getShuffleMask(ShuffleMask);
+
+  for (int I = VWidth - 1; I > 0; --I) {
+    if (ShuffleMask.empty()) {
+      auto *Elt = findScalarElement(V, I);
+      if (!Elt || (Elt != FirstComponent && !isa<UndefValue>(Elt)))
+        break;
+    } else {
+      // Detect identical elements in the shufflevector result, even though
+      // findScalarElement cannot tell us what that element is.
+      if (ShuffleMask[I] != ShuffleMask[0] && ShuffleMask[I] != PoisonMaskElem)
+        break;
+    }
+    DemandedElts.clearBit(I);
+  }
+
+  return DemandedElts;
+}
+
 static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     IntrinsicInst &II,
                                                     APInt DemandedElts,
@@ -1140,8 +1169,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!isa<FixedVectorType>(II.getArgOperand(0)->getType()))
       break;
 
-    APInt DemandedElts =
-        trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    APInt DemandedElts;
+    if (ST->hasDefaultComponentBroadcast())
+      DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
+    else if (ST->hasDefaultComponentZero())
+      DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    else
+      break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,
@@ -1241,6 +1275,10 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     ConstantInt *DMask = cast<ConstantInt>(Args[DMaskIdx]);
     unsigned DMaskVal = DMask->getZExtValue() & 0xf;
 
+    // dmask 0 has special semantics, do not simplify.
+    if (DMaskVal == 0)
+      return nullptr;
+
     // Mask off values that are undefined because the dmask doesn't cover them
     DemandedElts &= (1 << llvm::popcount(DMaskVal)) - 1;
 
@@ -1261,7 +1299,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   unsigned NewNumElts = DemandedElts.popcount();
   if (!NewNumElts)
-    return UndefValue::get(IIVTy);
+    return PoisonValue::get(IIVTy);
 
   if (NewNumElts >= VWidth && DemandedElts.isMask()) {
     if (DMaskIdx >= 0)
@@ -1299,7 +1337,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
 
   if (IsLoad) {
     if (NewNumElts == 1) {
-      return IC.Builder.CreateInsertElement(UndefValue::get(IIVTy), NewCall,
+      return IC.Builder.CreateInsertElement(PoisonValue::get(IIVTy), NewCall,
                                             DemandedElts.countr_zero());
     }
 

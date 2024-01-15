@@ -1243,17 +1243,17 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
 ; GFX9-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0x3020706
-; GFX9-NEXT:    v_perm_b32 v2, v2, v3, s4
-; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    v_perm_b32 v2, v3, v2, s4
+; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v2, v2, v3, 0x3020706
-; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0x3020706
+; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

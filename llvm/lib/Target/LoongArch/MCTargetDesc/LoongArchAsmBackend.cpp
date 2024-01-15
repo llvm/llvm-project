@@ -91,6 +91,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
@@ -128,6 +129,15 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
+static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
+                        MutableArrayRef<char> Data, uint64_t Value) {
+  unsigned I;
+  for (I = 0; I != Data.size() && Value; ++I, Value >>= 7)
+    Data[I] |= uint8_t(Value & 0x7f);
+  if (Value)
+    Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
+}
+
 void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,
@@ -142,6 +152,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
     return;
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
   MCContext &Ctx = Asm.getContext();
+
+  // Fixup leb128 separately.
+  if (Fixup.getTargetKind() == FK_Data_leb128)
+    return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Value, Ctx);
@@ -173,8 +187,52 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     return !Target.isAbsolute();
   }
+}
+
+static inline std::pair<MCFixupKind, MCFixupKind>
+getRelocPairForSize(unsigned Size) {
+  switch (Size) {
+  default:
+    llvm_unreachable("unsupported fixup size");
+  case 6:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD6),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB6));
+  case 8:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD8),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB8));
+  case 16:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD16),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB16));
+  case 32:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD32),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB32));
+  case 64:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
+  case 128:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD_ULEB128),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB_ULEB128));
+  }
+}
+
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
+                                                       MCAsmLayout &Layout,
+                                                       int64_t &Value) const {
+  const MCExpr &Expr = LF.getValue();
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Layout))
+    return std::make_pair(false, false);
+  LF.getFixups().push_back(
+      MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  return std::make_pair(true, true);
 }
 
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -188,6 +246,65 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   for (; Count >= 4; Count -= 4)
     OS.write("\0\0\x40\x03", 4);
 
+  return true;
+}
+
+bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
+                                                  const MCFragment &F,
+                                                  const MCFixup &Fixup,
+                                                  const MCValue &Target,
+                                                  uint64_t &FixedValue) const {
+  std::pair<MCFixupKind, MCFixupKind> FK;
+  uint64_t FixedValueA, FixedValueB;
+  const MCSymbol &SA = Target.getSymA()->getSymbol();
+  const MCSymbol &SB = Target.getSymB()->getSymbol();
+
+  bool force = !SA.isInSection() || !SB.isInSection();
+  if (!force) {
+    const MCSection &SecA = SA.getSection();
+    const MCSection &SecB = SB.getSection();
+
+    // We need record relocation if SecA != SecB. Usually SecB is same as the
+    // section of Fixup, which will be record the relocation as PCRel. If SecB
+    // is not same as the section of Fixup, it will report error. Just return
+    // false and then this work can be finished by handleFixup.
+    if (&SecA != &SecB)
+      return false;
+
+    // In SecA == SecB case. If the linker relaxation is enabled, we need record
+    // the ADD, SUB relocations. Otherwise the FixedValue has already been calc-
+    // ulated out in evaluateFixup, return true and avoid record relocations.
+    if (!STI.hasFeature(LoongArch::FeatureRelax))
+      return true;
+  }
+
+  switch (Fixup.getKind()) {
+  case llvm::FK_Data_1:
+    FK = getRelocPairForSize(8);
+    break;
+  case llvm::FK_Data_2:
+    FK = getRelocPairForSize(16);
+    break;
+  case llvm::FK_Data_4:
+    FK = getRelocPairForSize(32);
+    break;
+  case llvm::FK_Data_8:
+    FK = getRelocPairForSize(64);
+    break;
+  case llvm::FK_Data_leb128:
+    FK = getRelocPairForSize(128);
+    break;
+  default:
+    llvm_unreachable("unsupported fixup size");
+  }
+  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSymB());
+  auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
+  auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
+  auto &Asm = Layout.getAssembler();
+  Asm.getWriter().recordRelocation(Asm, Layout, &F, FA, A, FixedValueA);
+  Asm.getWriter().recordRelocation(Asm, Layout, &F, FB, B, FixedValueB);
+  FixedValue = FixedValueA - FixedValueB;
   return true;
 }
 

@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Threading.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -631,54 +630,6 @@ public:
 
   /// Check if \p OS is a pointer of type raw_fd_stream*.
   static bool classof(const raw_ostream *OS);
-};
-
-//===----------------------------------------------------------------------===//
-// Socket Streams
-//===----------------------------------------------------------------------===//
-
-/// A raw stream for sockets reading/writing
-
-class raw_socket_stream;
-
-// Make sure that calls to WSAStartup and WSACleanup are balanced.
-#ifdef _WIN32
-class WSABalancer {
-public:
-  WSABalancer();
-  ~WSABalancer();
-};
-#endif // _WIN32
-
-class ListeningSocket {
-  int FD;
-  std::string SocketPath;
-  ListeningSocket(int SocketFD, StringRef SocketPath);
-#ifdef _WIN32
-  WSABalancer _;
-#endif // _WIN32
-
-public:
-  static Expected<ListeningSocket> createUnix(
-      StringRef SocketPath,
-      int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
-  Expected<std::unique_ptr<raw_socket_stream>> accept();
-  ListeningSocket(ListeningSocket &&LS);
-  ~ListeningSocket();
-};
-class raw_socket_stream : public raw_fd_stream {
-  uint64_t current_pos() const override { return 0; }
-#ifdef _WIN32
-  WSABalancer _;
-#endif // _WIN32
-
-public:
-  raw_socket_stream(int SocketFD);
-  /// Create a \p raw_socket_stream connected to the Unix domain socket at \p
-  /// SocketPath.
-  static Expected<std::unique_ptr<raw_socket_stream>>
-  createConnectedUnix(StringRef SocketPath);
-  ~raw_socket_stream();
 };
 
 //===----------------------------------------------------------------------===//

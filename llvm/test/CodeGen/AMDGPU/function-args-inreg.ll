@@ -1870,5 +1870,149 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
   ret void
 }
 
+define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
+; GFX9-LABEL: void_func_bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    global_store_short v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store bfloat %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
+; GFX9-LABEL: void_func_v2bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_v2bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store <2 x bfloat> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @void_func_v3bf16_inreg(<3 x bfloat> inreg %arg0) #0 {
+; GFX9-LABEL: void_func_v3bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s5
+; GFX9-NEXT:    global_store_short v[0:1], v0, off
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_v3bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store <3 x bfloat> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @void_func_v4bf16_inreg(<4 x bfloat> inreg %arg0) #0 {
+; GFX9-LABEL: void_func_v4bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_v4bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store <4 x bfloat> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @void_func_v8bf16_inreg(<8 x bfloat> inreg %arg0) #0 {
+; GFX9-LABEL: void_func_v8bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_v8bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store <8 x bfloat> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
+define void @void_func_v16bf16_inreg(<16 x bfloat> inreg %arg0) #0 {
+; GFX9-LABEL: void_func_v16bf16_inreg:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s8
+; GFX9-NEXT:    v_mov_b32_e32 v1, s9
+; GFX9-NEXT:    v_mov_b32_e32 v2, s10
+; GFX9-NEXT:    v_mov_b32_e32 v3, s11
+; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-NEXT:    v_mov_b32_e32 v2, s6
+; GFX9-NEXT:    v_mov_b32_e32 v3, s7
+; GFX9-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_v16bf16_inreg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
+; GFX11-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
+; GFX11-NEXT:    v_dual_mov_b32 v4, s0 :: v_dual_mov_b32 v5, s1
+; GFX11-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v7, s3
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store <16 x bfloat> %arg0, ptr addrspace(1) undef
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline }
+
+
+
+
+
+
+

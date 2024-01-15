@@ -111,6 +111,9 @@ public:
   /// Returns the immediate offset operator of a load/store.
   static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
 
+  /// Returns the shift amount operator of a load/store.
+  static const MachineOperand &getLdStAmountOp(const MachineInstr &MI);
+
   /// Returns whether the instruction is FP or NEON.
   static bool isFpOrNEON(const MachineInstr &MI);
 

@@ -129,10 +129,8 @@ def warn_module_system_bit_conflict : Warning<
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
 
-def warn_reading_std_cxx_module_by_implicit_paths : Warning<
-  "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "
-  "consider to specify the dependencies explicitly">,
-  InGroup<DiagGroup<"read-modules-implicitly">>;
+def err_failed_to_find_module_file : Error<
+  "failed to find module file for module '%0'">;
 } // let CategoryName
 
 let CategoryName = "AST Serialization Issue" in {

@@ -1345,3 +1345,11 @@ GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
   Cost.first += (Size + 255) / 256;
   return Cost;
 }
+
+unsigned GCNTTIImpl::getPrefetchDistance() const {
+  return ST->hasPrefetch() ? 128 : 0;
+}
+
+bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
+  return AMDGPU::isFlatGlobalAddrSpace(AS);
+}

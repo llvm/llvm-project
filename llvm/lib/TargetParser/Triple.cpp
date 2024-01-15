@@ -1206,12 +1206,14 @@ static VersionTuple parseVersionFromName(StringRef Name) {
 }
 
 VersionTuple Triple::getEnvironmentVersion() const {
+  return parseVersionFromName(getEnvironmentVersionString());
+}
+
+StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentName = getEnvironmentName();
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
-  if (EnvironmentName.starts_with(EnvironmentTypeName))
-    EnvironmentName = EnvironmentName.substr(EnvironmentTypeName.size());
-
-  return parseVersionFromName(EnvironmentName);
+  EnvironmentName.consume_front(EnvironmentTypeName);
+  return EnvironmentName;
 }
 
 VersionTuple Triple::getOSVersion() const {

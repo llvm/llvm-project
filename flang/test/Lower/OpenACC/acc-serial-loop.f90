@@ -83,7 +83,7 @@ subroutine acc_serial_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncAttr}
+! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
 
   !$acc serial loop async(1)
   DO i = 1, n
@@ -124,7 +124,7 @@ subroutine acc_serial_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {waitAttr}
+! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
 
   !$acc serial loop wait(1)
   DO i = 1, n
@@ -132,7 +132,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.serial wait([[WAIT1]] : i32) {
+! CHECK:      acc.serial wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -147,7 +147,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 ! CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.serial wait([[WAIT2]], [[WAIT3]] : i32, i32) {
+! CHECK:      acc.serial wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -162,7 +162,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.serial wait([[WAIT4]], [[WAIT5]] : i32, i32) {
+! CHECK:      acc.serial wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
@@ -411,7 +411,7 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {seq}
+! CHECK-NEXT:   } attributes {seq = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -424,7 +424,7 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto}
+! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -437,7 +437,7 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {independent}
+! CHECK-NEXT:   } attributes {independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -461,7 +461,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT:   acc.loop gang(num=[[GANGNUM1]] : i32) {
+! CHECK-NEXT:   acc.loop gang({num=[[GANGNUM1]] : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -475,7 +475,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT:   acc.loop gang(num=[[GANGNUM2]] : i32) {
+! CHECK-NEXT:   acc.loop gang({num=[[GANGNUM2]] : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -488,7 +488,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop gang(num=%{{.*}} : i32, static=%{{.*}} : i32) {
+! CHECK:        acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -574,7 +574,7 @@ subroutine acc_serial_loop
 ! CHECK:          fir.do_loop
 ! CHECK:            fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {collapse = 2 : i64}
+! CHECK-NEXT:   } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -605,7 +605,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {
 ! CHECK:        [[TILESIZE:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop tile([[TILESIZE]] : i32) {
+! CHECK:        acc.loop tile({[[TILESIZE]] : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -619,7 +619,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {
 ! CHECK:        [[TILESIZEM1:%.*]] = arith.constant -1 : i32
-! CHECK:        acc.loop tile([[TILESIZEM1]] : i32) {
+! CHECK:        acc.loop tile({[[TILESIZEM1]] : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -636,7 +636,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop tile([[TILESIZE1]], [[TILESIZE2]] : i32, i32) {
+! CHECK:        acc.loop tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -649,7 +649,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop tile(%{{.*}} : i32) {
+! CHECK:        acc.loop tile({%{{.*}} : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -664,7 +664,7 @@ subroutine acc_serial_loop
   END DO
 
 ! CHECK:      acc.serial {
-! CHECK:        acc.loop tile(%{{.*}}, %{{.*}} : i32, i32) {
+! CHECK:        acc.loop tile({%{{.*}} : i32, %{{.*}} : i32}) {
 ! CHECK:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}

@@ -108,7 +108,8 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void BPFTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
   PB.registerPipelineParsingCallback(
       [](StringRef PassName, FunctionPassManager &FPM,
          ArrayRef<PassBuilder::PipelineElement>) {
@@ -148,7 +149,9 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 }
 
 void BPFPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
   addPass(createBPFCheckAndAdjustIR());
+
   TargetPassConfig::addIRPasses();
 }
 

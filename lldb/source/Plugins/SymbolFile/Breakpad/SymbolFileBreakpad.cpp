@@ -278,13 +278,14 @@ bool SymbolFileBreakpad::ParseLineTable(CompileUnit &comp_unit) {
 }
 
 bool SymbolFileBreakpad::ParseSupportFiles(CompileUnit &comp_unit,
-                                           FileSpecList &support_files) {
+                                           SupportFileList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit.GetID()).data;
   if (!data.support_files)
     ParseLineTableAndSupportFiles(comp_unit, data);
 
-  support_files = std::move(*data.support_files);
+  for (auto &fs : *data.support_files)
+    support_files.Append(fs);
   return true;
 }
 

@@ -32,7 +32,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-
 namespace __formatter {
 
 #if _LIBCPP_STD_VER >= 20
@@ -42,10 +41,10 @@ namespace __formatter {
 /// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
 /// input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __write_string(
-    basic_string_view<_CharT> __str,
-    output_iterator<const _CharT&> auto __out_it,
-    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto
+__write_string(basic_string_view<_CharT> __str,
+               output_iterator<const _CharT&> auto __out_it,
+               __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   if (!__specs.__has_precision())
     return __formatter::__write_string_no_precision(__str, std::move(__out_it), __specs);
 
@@ -54,8 +53,8 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string(
   return __formatter::__write(__str.begin(), __str.end(), std::move(__out_it), __specs, __size);
 }
 
-#  endif // _LIBCPP_STD_VER >= 20
-# if _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 23
 
 struct __nul_terminator {};
 
@@ -72,7 +71,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   std::ranges::copy(std::begin(__buffer), __r.ptr, __out_it);
 
   __str += _CharT('}');
@@ -100,11 +99,11 @@ _LIBCPP_HIDE_FROM_ABI void __write_escape_ill_formed_code_unit(basic_string<_Cha
 
 template <class _CharT>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool __is_escaped_sequence_written(basic_string<_CharT>& __str, char32_t __value) {
-#    ifdef _LIBCPP_HAS_NO_UNICODE
+#  ifdef _LIBCPP_HAS_NO_UNICODE
   // For ASCII assume everything above 127 is printable.
   if (__value > 127)
     return false;
-#    endif
+#  endif
 
   if (!__escaped_output_table::__needs_escape(__value))
     return false;
@@ -213,7 +212,7 @@ __format_escaped_string(basic_string_view<_CharT> __values,
   return __formatter::__write_string(basic_string_view{__str}, std::move(__out_it), __specs);
 }
 
-#  endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23
 
 } // namespace __formatter
 

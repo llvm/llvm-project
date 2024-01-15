@@ -291,8 +291,8 @@ public:
     /// \p If the handler wants the assignments to be delayed until after
     /// mem loc assignments, then it sets \p Thunk to the thunk to do the
     /// assignment.
-    /// \return The number of \p VAs that have been assigned after the first
-    ///         one, and which should therefore be skipped from further
+    /// \return The number of \p VAs that have been assigned including the
+    ///         first one, and which should therefore be skipped from further
     ///         processing.
     virtual unsigned assignCustomValue(ArgInfo &Arg, ArrayRef<CCValAssign> VAs,
                                        std::function<void()> *Thunk = nullptr) {

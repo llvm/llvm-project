@@ -40,7 +40,7 @@ namespace Fortran::runtime {
 // cases of FINDLOC, MAXLOC, & MINLOC).  These are the cases without DIM= or
 // cases where the argument has rank 1 and DIM=, if present, must be 1.
 template <typename TYPE, typename ACCUMULATOR>
-inline void DoTotalReduction(const Descriptor &x, int dim,
+inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
     const Descriptor *mask, ACCUMULATOR &accumulator, const char *intrinsic,
     Terminator &terminator) {
   if (dim < 0 || dim > 1) {
@@ -76,7 +76,7 @@ inline void DoTotalReduction(const Descriptor &x, int dim,
 }
 
 template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
-inline CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
+inline RT_API_ATTRS CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask,
     ACCUMULATOR &&accumulator, const char *intrinsic) {
   Terminator terminator{source, line};
@@ -98,7 +98,7 @@ inline CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
 // lower bounds other than one.  This utility subroutine creates an
 // array of subscripts [j,_,k] for result subscripts [j,k] so that the
 // elements of array(j,:,k) can be reduced.
-inline void GetExpandedSubscripts(SubscriptValue at[],
+inline RT_API_ATTRS void GetExpandedSubscripts(SubscriptValue at[],
     const Descriptor &descriptor, int zeroBasedDim,
     const SubscriptValue from[]) {
   descriptor.GetLowerBounds(at);
@@ -113,8 +113,9 @@ inline void GetExpandedSubscripts(SubscriptValue at[],
 }
 
 template <typename TYPE, typename ACCUMULATOR>
-inline void ReduceDimToScalar(const Descriptor &x, int zeroBasedDim,
-    SubscriptValue subscripts[], TYPE *result, ACCUMULATOR &accumulator) {
+inline RT_API_ATTRS void ReduceDimToScalar(const Descriptor &x,
+    int zeroBasedDim, SubscriptValue subscripts[], TYPE *result,
+    ACCUMULATOR &accumulator) {
   SubscriptValue xAt[maxRank];
   GetExpandedSubscripts(xAt, x, zeroBasedDim, subscripts);
   const auto &dim{x.GetDimension(zeroBasedDim)};
@@ -133,9 +134,9 @@ inline void ReduceDimToScalar(const Descriptor &x, int zeroBasedDim,
 }
 
 template <typename TYPE, typename ACCUMULATOR>
-inline void ReduceDimMaskToScalar(const Descriptor &x, int zeroBasedDim,
-    SubscriptValue subscripts[], const Descriptor &mask, TYPE *result,
-    ACCUMULATOR &accumulator) {
+inline RT_API_ATTRS void ReduceDimMaskToScalar(const Descriptor &x,
+    int zeroBasedDim, SubscriptValue subscripts[], const Descriptor &mask,
+    TYPE *result, ACCUMULATOR &accumulator) {
   SubscriptValue xAt[maxRank], maskAt[maxRank];
   GetExpandedSubscripts(xAt, x, zeroBasedDim, subscripts);
   GetExpandedSubscripts(maskAt, mask, zeroBasedDim, subscripts);
@@ -162,7 +163,7 @@ inline void ReduceDimMaskToScalar(const Descriptor &x, int zeroBasedDim,
 
 // Utility: establishes & allocates the result array for a partial
 // reduction (i.e., one with DIM=).
-static void CreatePartialReductionResult(Descriptor &result,
+static RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
     const Descriptor &x, std::size_t resultElementSize, int dim,
     Terminator &terminator, const char *intrinsic, TypeCode typeCode) {
   int xRank{x.rank()};
@@ -192,9 +193,10 @@ static void CreatePartialReductionResult(Descriptor &result,
 // Partial reductions with DIM=
 
 template <typename ACCUMULATOR, TypeCategory CAT, int KIND>
-inline void PartialReduction(Descriptor &result, const Descriptor &x,
-    std::size_t resultElementSize, int dim, const Descriptor *mask,
-    Terminator &terminator, const char *intrinsic, ACCUMULATOR &accumulator) {
+inline RT_API_ATTRS void PartialReduction(Descriptor &result,
+    const Descriptor &x, std::size_t resultElementSize, int dim,
+    const Descriptor *mask, Terminator &terminator, const char *intrinsic,
+    ACCUMULATOR &accumulator) {
   CreatePartialReductionResult(result, x, resultElementSize, dim, terminator,
       intrinsic, TypeCode{CAT, KIND});
   SubscriptValue at[maxRank];
@@ -233,8 +235,8 @@ struct PartialIntegerReductionHelper {
   template <int KIND> struct Functor {
     static constexpr int Intermediate{
         std::max(KIND, 4)}; // use at least "int" for intermediate results
-    void operator()(Descriptor &result, const Descriptor &x, int dim,
-        const Descriptor *mask, Terminator &terminator,
+    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
+        int dim, const Descriptor *mask, Terminator &terminator,
         const char *intrinsic) const {
       using Accumulator =
           ACCUM<CppTypeFor<TypeCategory::Integer, Intermediate>>;
@@ -248,9 +250,9 @@ struct PartialIntegerReductionHelper {
 };
 
 template <template <typename> class INTEGER_ACCUM>
-inline void PartialIntegerReduction(Descriptor &result, const Descriptor &x,
-    int dim, int kind, const Descriptor *mask, const char *intrinsic,
-    Terminator &terminator) {
+inline RT_API_ATTRS void PartialIntegerReduction(Descriptor &result,
+    const Descriptor &x, int dim, int kind, const Descriptor *mask,
+    const char *intrinsic, Terminator &terminator) {
   ApplyIntegerKind<
       PartialIntegerReductionHelper<INTEGER_ACCUM>::template Functor, void>(
       kind, terminator, result, x, dim, mask, terminator, intrinsic);
@@ -261,8 +263,8 @@ struct PartialFloatingReductionHelper {
   template <int KIND> struct Functor {
     static constexpr int Intermediate{
         std::max(KIND, 8)}; // use at least "double" for intermediate results
-    void operator()(Descriptor &result, const Descriptor &x, int dim,
-        const Descriptor *mask, Terminator &terminator,
+    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
+        int dim, const Descriptor *mask, Terminator &terminator,
         const char *intrinsic) const {
       using Accumulator = ACCUM<CppTypeFor<TypeCategory::Real, Intermediate>>;
       Accumulator accumulator{x};
@@ -277,7 +279,7 @@ struct PartialFloatingReductionHelper {
 template <template <typename> class INTEGER_ACCUM,
     template <typename> class REAL_ACCUM,
     template <typename> class COMPLEX_ACCUM>
-inline void TypedPartialNumericReduction(Descriptor &result,
+inline RT_API_ATTRS void TypedPartialNumericReduction(Descriptor &result,
     const Descriptor &x, int dim, const char *source, int line,
     const Descriptor *mask, const char *intrinsic) {
   Terminator terminator{source, line};
@@ -307,7 +309,8 @@ inline void TypedPartialNumericReduction(Descriptor &result,
 
 template <typename ACCUMULATOR> struct LocationResultHelper {
   template <int KIND> struct Functor {
-    void operator()(ACCUMULATOR &accumulator, const Descriptor &result) const {
+    RT_API_ATTRS void operator()(
+        ACCUMULATOR &accumulator, const Descriptor &result) const {
       accumulator.GetResult(
           result.OffsetElement<CppTypeFor<TypeCategory::Integer, KIND>>());
     }
@@ -316,9 +319,9 @@ template <typename ACCUMULATOR> struct LocationResultHelper {
 
 template <typename ACCUMULATOR> struct PartialLocationHelper {
   template <int KIND> struct Functor {
-    void operator()(Descriptor &result, const Descriptor &x, int dim,
-        const Descriptor *mask, Terminator &terminator, const char *intrinsic,
-        ACCUMULATOR &accumulator) const {
+    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
+        int dim, const Descriptor *mask, Terminator &terminator,
+        const char *intrinsic, ACCUMULATOR &accumulator) const {
       // Element size of the destination descriptor is the size
       // of {TypeCategory::Integer, KIND}.
       PartialReduction<ACCUMULATOR, TypeCategory::Integer, KIND>(result, x,

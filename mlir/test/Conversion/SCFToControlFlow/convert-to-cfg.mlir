@@ -254,6 +254,7 @@ func.func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step) {
     %c1 = arith.constant 1 : index
+    scf.reduce
   }
   return
 }
@@ -347,7 +348,7 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // CHECK:   return %[[ITER_ARG]]
   %0 = scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) -> f32 {
     %cst = arith.constant 42.0 : f32
-    scf.reduce(%cst) : f32 {
+    scf.reduce(%cst : f32) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.mulf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
@@ -383,14 +384,12 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   %0:2 = scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                        step (%arg4, %step) init(%arg5, %init) -> (f32, i64) {
     %cf = arith.constant 42.0 : f32
-    scf.reduce(%cf) : f32 {
+    %2 = func.call @generate() : () -> i64
+    scf.reduce(%cf, %2 : f32, i64) {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = arith.addf %lhs, %rhs : f32
       scf.reduce.return %1 : f32
-    }
-
-    %2 = func.call @generate() : () -> i64
-    scf.reduce(%2) : i64 {
+    }, {
     ^bb0(%lhs: i64, %rhs: i64):
       %3 = arith.ori %lhs, %rhs : i64
       scf.reduce.return %3 : i64
@@ -580,7 +579,7 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
         scf.yield %2 : index
       }
     }
-    scf.yield
+    scf.reduce
   }
 
   // CHECK: ^[[LOOP_CONT]]:

@@ -328,6 +328,12 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (D.IsFlangMode()) {
+    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    CmdArgs.push_back("-lm");
+    CmdArgs.push_back("-lpthread");
+  }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));

@@ -341,11 +341,12 @@ bool RealOutputEditing<KIND>::EditEorDOutput(const DataEdit &edit) {
         ConvertToDecimal(significantDigits, edit.modes.round, flags)};
     if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
       return editWidth > 0 &&
-              converted.length > static_cast<std::size_t>(editWidth)
+              converted.length + trailingBlanks_ >
+                  static_cast<std::size_t>(editWidth)
           ? EmitRepeated(io_, '*', editWidth)
           : EmitPrefix(edit, converted.length, editWidth) &&
               EmitAscii(io_, converted.str, converted.length) &&
-              EmitSuffix(edit);
+              EmitRepeated(io_, ' ', trailingBlanks_) && EmitSuffix(edit);
     }
     if (!IsZero()) {
       converted.decimalExponent -= scale;
@@ -522,8 +523,9 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       zeroesBeforePoint = 1; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
-        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
-    int width{editWidth > 0 ? editWidth : totalLength};
+        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
+        trailingBlanks_ /* G editing converted to F */};
+    int width{editWidth > 0 || trailingBlanks_ ? editWidth : totalLength};
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
     }
@@ -574,8 +576,11 @@ DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
   trailingBlanks_ = 0;
   if (editWidth > 0) {
     int expoDigits{edit.expoDigits.value_or(0)};
+    // F'2023 13.7.5.2.3 p5: "If 0 <= s <= d, the scale factor has no effect
+    // and F(w − n).(d − s),n(’b’) editing is used where b is a blank and
+    // n is 4 for Gw.d editing, e + 2 for Gw.dEe editing if e > 0, and
+    // 4 for Gw.dE0 editing."
     trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4; // 'n'
-    *edit.width = std::max(0, editWidth - trailingBlanks_);
   }
   if (edit.digits.has_value()) {
     *edit.digits = std::max(0, *edit.digits - expo);
@@ -649,7 +654,7 @@ auto RealOutputEditing<KIND>::ConvertToHexadecimal(
     // x_.binaryPrecision is constant, so / can be used for readability.
     int shift{x_.binaryPrecision - 4};
     typename BinaryFloatingPoint::RawType one{1};
-    auto remaining{(one << shift) - one};
+    auto remaining{(one << x_.binaryPrecision) - one};
     for (int digits{0}; digits < significantDigits; ++digits) {
       if ((flags & decimal::Minimize) && !(fraction & remaining)) {
         break;
@@ -682,7 +687,8 @@ bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
     flags |= decimal::AlwaysSign;
   }
   int editWidth{edit.width.value_or(0)}; // 'w' field
-  if (editWidth == 0 && !edit.digits) { // EX0 (no .d)
+  if ((editWidth == 0 && !edit.digits) || editDigits == 0) {
+    // EX0 or EXw.0
     flags |= decimal::Minimize;
     significantDigits = 28; // enough for 128-bit F.P.
   }

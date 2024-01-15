@@ -135,6 +135,12 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+static bool IsClassStructOrUnionType(lldb::SBType t) {
+  return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
+                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
+         0;
+}
+
 /// Create a short summary for a container that contains the summary of its
 /// first children, so that the user can get a glimpse of its contents at a
 /// glance.
@@ -173,21 +179,23 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
     lldb::SBValue child = v.GetChildAtIndex(i);
 
     if (llvm::StringRef name = child.GetName(); !name.empty()) {
-      llvm::StringRef value;
+      llvm::StringRef desc;
       if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
-        value = summary;
+        desc = summary;
+      else if (llvm::StringRef value = child.GetValue(); !value.empty())
+        desc = value;
+      else if (IsClassStructOrUnionType(child.GetType()))
+        desc = "{...}";
       else
-        value = child.GetValue();
+        continue;
 
-      if (!value.empty()) {
-        // If the child is an indexed entry, we don't show its index to save
-        // characters.
-        if (name.starts_with("["))
-          os << separator << value;
-        else
-          os << separator << name << ":" << value;
-        separator = ", ";
-      }
+      // If the child is an indexed entry, we don't show its index to save
+      // characters.
+      if (name.starts_with("["))
+        os << separator << desc;
+      else
+        os << separator << name << ":" << desc;
+      separator = ", ";
     }
   }
   os << "}";
@@ -209,46 +217,6 @@ static std::optional<std::string> TryCreateAutoSummary(lldb::SBValue value) {
 
   // We only support auto summaries for containers.
   return TryCreateAutoSummaryForContainer(value);
-}
-
-std::string ValueToString(lldb::SBValue v) {
-  std::string result;
-  llvm::raw_string_ostream strm(result);
-
-  lldb::SBError error = v.GetError();
-  if (!error.Success()) {
-    strm << "<error: " << error.GetCString() << ">";
-  } else {
-    llvm::StringRef value = v.GetValue();
-    llvm::StringRef nonAutoSummary = v.GetSummary();
-    std::optional<std::string> summary = !nonAutoSummary.empty()
-                                             ? nonAutoSummary.str()
-                                             : TryCreateAutoSummary(v);
-    if (!value.empty()) {
-      strm << value;
-      if (summary)
-        strm << ' ' << *summary;
-    } else if (summary) {
-      strm << *summary;
-
-      // As last resort, we print its type and address if available.
-    } else {
-      if (llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
-          !type_name.empty()) {
-        strm << type_name;
-        lldb::addr_t address = v.GetLoadAddress();
-        if (address != LLDB_INVALID_ADDRESS)
-          strm << " @ " << llvm::format_hex(address, 0);
-      }
-    }
-  }
-  return result;
-}
-
-void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
-                    llvm::StringRef key) {
-  std::string result = ValueToString(v);
-  EmplaceSafeString(object, key, result);
 }
 
 void FillResponse(const llvm::json::Object &request,
@@ -1045,6 +1013,109 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
   return name_builder.GetData();
 }
 
+VariableDescription::VariableDescription(lldb::SBValue v, bool format_hex,
+                                         bool is_name_duplicated,
+                                         std::optional<std::string> custom_name)
+    : v(v) {
+  name = custom_name
+             ? *custom_name
+             : CreateUniqueVariableNameForDisplay(v, is_name_duplicated);
+
+  type_obj = v.GetType();
+  std::string raw_display_type_name =
+      llvm::StringRef(type_obj.GetDisplayTypeName()).str();
+  display_type_name =
+      !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
+
+  if (format_hex)
+    v.SetFormat(lldb::eFormatHex);
+
+  llvm::raw_string_ostream os_display_value(display_value);
+
+  if (lldb::SBError sb_error = v.GetError(); sb_error.Fail()) {
+    error = sb_error.GetCString();
+    os_display_value << "<error: " << error << ">";
+  } else {
+    value = llvm::StringRef(v.GetValue()).str();
+    summary = llvm::StringRef(v.GetSummary()).str();
+    if (summary.empty())
+      auto_summary = TryCreateAutoSummary(v);
+
+    std::optional<std::string> effective_summary =
+        !summary.empty() ? summary : auto_summary;
+
+    if (!value.empty()) {
+      os_display_value << value;
+      if (effective_summary)
+        os_display_value << " " << *effective_summary;
+    } else if (effective_summary) {
+      os_display_value << *effective_summary;
+
+      // As last resort, we print its type and address if available.
+    } else {
+      if (!raw_display_type_name.empty()) {
+        os_display_value << raw_display_type_name;
+        lldb::addr_t address = v.GetLoadAddress();
+        if (address != LLDB_INVALID_ADDRESS)
+          os_display_value << " @ " << llvm::format_hex(address, 0);
+      }
+    }
+  }
+
+  lldb::SBStream evaluateStream;
+  v.GetExpressionPath(evaluateStream);
+  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+}
+
+llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
+  llvm::json::Object extensions;
+  if (error)
+    EmplaceSafeString(extensions, "error", *error);
+  if (!value.empty())
+    EmplaceSafeString(extensions, "value", value);
+  if (!summary.empty())
+    EmplaceSafeString(extensions, "summary", summary);
+  if (auto_summary)
+    EmplaceSafeString(extensions, "autoSummary", *auto_summary);
+
+  if (lldb::SBDeclaration decl = v.GetDeclaration(); decl.IsValid()) {
+    llvm::json::Object decl_obj;
+    if (lldb::SBFileSpec file = decl.GetFileSpec(); file.IsValid()) {
+      char path[PATH_MAX] = "";
+      if (file.GetPath(path, sizeof(path)) &&
+          lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
+        decl_obj.try_emplace("path", std::string(path));
+      }
+    }
+
+    if (int line = decl.GetLine())
+      decl_obj.try_emplace("line", line);
+    if (int column = decl.GetColumn())
+      decl_obj.try_emplace("column", column);
+
+    if (!decl_obj.empty())
+      extensions.try_emplace("declaration", std::move(decl_obj));
+  }
+  return extensions;
+}
+
+std::string VariableDescription::GetResult(llvm::StringRef context) {
+  // In repl and hover context, the results can be displayed as multiple lines
+  // so more detailed descriptions can be returned.
+  if (context != "repl" && context != "hover")
+    return display_value;
+
+  if (!v.IsValid())
+    return display_value;
+
+  // Try the SBValue::GetDescription(), which may call into language runtime
+  // specific formatters (see ValueObjectPrinter).
+  lldb::SBStream stream;
+  v.GetDescription(stream);
+  llvm::StringRef description = stream.GetData();
+  return description.trim().str();
+}
+
 // "Variable": {
 //   "type": "object",
 //   "description": "A Variable is a name/value pair. Optionally a variable
@@ -1104,27 +1175,56 @@ std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
 //     }
-//     "declaration": {
-//       "type": "object | undefined",
-//       "description": "Extension to the protocol that indicates the source
-//                       location where the variable was declared. This value
-//                       might not be present if no declaration is available.",
+//
+//
+//     "$__lldb_extensions": {
+//       "description": "Unofficial extensions to the protocol",
 //       "properties": {
-//         "path": {
-//           "type": "string | undefined",
-//           "description": "The source file path where the variable was
-//                           declared."
-//         },
-//         "line": {
-//           "type": "number | undefined",
-//           "description": "The 1-indexed source line where the variable was
-//                          declared."
-//         },
-//         "column": {
-//           "type": "number | undefined",
-//           "description": "The 1-indexed source column where the variable was
-//                          declared."
+//         "declaration": {
+//         "type": "object",
+//         "description": "The source location where the variable was declared.
+//                         This value won't be present if no declaration is
+//                         available.",
+//         "properties": {
+//           "path": {
+//             "type": "string",
+//             "description": "The source file path where the variable was
+//                            declared."
+//           },
+//           "line": {
+//             "type": "number",
+//             "description": "The 1-indexed source line where the variable was
+//                             declared."
+//           },
+//           "column": {
+//             "type": "number",
+//             "description": "The 1-indexed source column where the variable
+//                             was declared."
+//           }
 //         }
+//       },
+//       "value":
+//         "type": "string",
+//         "description": "The internal value of the variable as returned by
+//                         This is effectively SBValue.GetValue(). The other
+//                         `value` entry in the top-level variable response is,
+//                          on the other hand, just a display string for the
+//                          variable."
+//       },
+//       "summary":
+//         "type": "string",
+//         "description": "The summary string of the variable. This is
+//                         effectively SBValue.GetSummary()."
+//       },
+//       "autoSummary":
+//         "type": "string",
+//         "description": "The auto generated summary if using
+//                         `enableAutoVariableSummaries`."
+//       },
+//       "error":
+//         "type": "string",
+//         "description": "An error message generated if LLDB couldn't inspect
+//                         the variable."
 //       }
 //     }
 //   },
@@ -1134,81 +1234,57 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex,
                                  bool is_name_duplicated,
                                  std::optional<std::string> custom_name) {
+  VariableDescription desc(v, format_hex, is_name_duplicated, custom_name);
   llvm::json::Object object;
-  EmplaceSafeString(
-      object, "name",
-      custom_name ? *custom_name
-                  : CreateUniqueVariableNameForDisplay(v, is_name_duplicated));
+  EmplaceSafeString(object, "name", desc.name);
+  EmplaceSafeString(object, "value", desc.display_value);
 
-  if (format_hex)
-    v.SetFormat(lldb::eFormatHex);
-  SetValueForKey(v, object, "value");
-  auto type_obj = v.GetType();
-  auto type_cstr = type_obj.GetDisplayTypeName();
+  if (!desc.evaluate_name.empty())
+    EmplaceSafeString(object, "evaluateName", desc.evaluate_name);
+
   // If we have a type with many children, we would like to be able to
   // give a hint to the IDE that the type has indexed children so that the
-  // request can be broken up in grabbing only a few children at a time. We want
-  // to be careful and only call "v.GetNumChildren()" if we have an array type
-  // or if we have a synthetic child provider. We don't want to call
-  // "v.GetNumChildren()" on all objects as class, struct and union types don't
-  // need to be completed if they are never expanded. So we want to avoid
-  // calling this to only cases where we it makes sense to keep performance high
-  // during normal debugging.
+  // request can be broken up in grabbing only a few children at a time. We
+  // want to be careful and only call "v.GetNumChildren()" if we have an array
+  // type or if we have a synthetic child provider. We don't want to call
+  // "v.GetNumChildren()" on all objects as class, struct and union types
+  // don't need to be completed if they are never expanded. So we want to
+  // avoid calling this to only cases where we it makes sense to keep
+  // performance high during normal debugging.
 
-  // If we have an array type, say that it is indexed and provide the number of
-  // children in case we have a huge array. If we don't do this, then we might
-  // take a while to produce all children at onces which can delay your debug
-  // session.
-  const bool is_array = type_obj.IsArrayType();
+  // If we have an array type, say that it is indexed and provide the number
+  // of children in case we have a huge array. If we don't do this, then we
+  // might take a while to produce all children at onces which can delay your
+  // debug session.
+  const bool is_array = desc.type_obj.IsArrayType();
   const bool is_synthetic = v.IsSynthetic();
   if (is_array || is_synthetic) {
     const auto num_children = v.GetNumChildren();
     // We create a "[raw]" fake child for each synthetic type, so we have to
-    // account for it when returning indexed variables. We don't need to do this
-    // for non-indexed ones.
+    // account for it when returning indexed variables. We don't need to do
+    // this for non-indexed ones.
     bool has_raw_child = is_synthetic && g_dap.enable_synthetic_child_debugging;
     int actual_num_children = num_children + (has_raw_child ? 1 : 0);
     if (is_array) {
       object.try_emplace("indexedVariables", actual_num_children);
     } else if (num_children > 0) {
-      // If a type has a synthetic child provider, then the SBType of "v" won't
-      // tell us anything about what might be displayed. So we can check if the
-      // first child's name is "[0]" and then we can say it is indexed.
+      // If a type has a synthetic child provider, then the SBType of "v"
+      // won't tell us anything about what might be displayed. So we can check
+      // if the first child's name is "[0]" and then we can say it is indexed.
       const char *first_child_name = v.GetChildAtIndex(0).GetName();
       if (first_child_name && strcmp(first_child_name, "[0]") == 0)
         object.try_emplace("indexedVariables", actual_num_children);
     }
   }
-  EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);
+  EmplaceSafeString(object, "type", desc.display_type_name);
   if (varID != INT64_MAX)
     object.try_emplace("id", varID);
   if (v.MightHaveChildren())
     object.try_emplace("variablesReference", variablesReference);
   else
     object.try_emplace("variablesReference", (int64_t)0);
-  lldb::SBStream evaluateStream;
-  v.GetExpressionPath(evaluateStream);
-  const char *evaluateName = evaluateStream.GetData();
-  if (evaluateName && evaluateName[0])
-    EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
 
-  if (lldb::SBDeclaration decl = v.GetDeclaration(); decl.IsValid()) {
-    llvm::json::Object decl_obj;
-    if (lldb::SBFileSpec file = decl.GetFileSpec(); file.IsValid()) {
-      char path[PATH_MAX] = "";
-      if (file.GetPath(path, sizeof(path)) &&
-          lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
-        decl_obj.try_emplace("path", std::string(path));
-      }
-    }
-
-    if (int line = decl.GetLine())
-      decl_obj.try_emplace("line", line);
-    if (int column = decl.GetColumn())
-      decl_obj.try_emplace("column", column);
-
-    object.try_emplace("declaration", std::move(decl_obj));
-  }
+  object.try_emplace("$__lldb_extensions", desc.GetVariableExtensionsJSON());
   return llvm::json::Value(std::move(object));
 }
 
