@@ -298,7 +298,7 @@ struct CounterMappingRegion {
                        unsigned ExpandedFileID, unsigned LineStart,
                        unsigned ColumnStart, unsigned LineEnd,
                        unsigned ColumnEnd, RegionKind Kind)
-      : MCDCParams(MCDCParams), ExpandedFileID(ExpandedFileID),
+      : MCDCParams(MCDCParams), FileID(FileID), ExpandedFileID(ExpandedFileID),
         LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
         ColumnEnd(ColumnEnd), Kind(Kind) {}
 
