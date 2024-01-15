@@ -11,7 +11,6 @@
 
 // constexpr explicit(extent != dynamic_extent) span(std::initializer_list<value_type> il); // Since C++26
 
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
@@ -31,12 +30,6 @@ static_assert(ConstElementType<std::span<const int>>);
 static_assert(!ConstElementType<std::span<int>>);
 static_assert(ConstElementType<std::span<const int, 94>>);
 static_assert(!ConstElementType<std::span<int, 94>>);
-
-// template <typename T, typename I>
-// concept HasInitializerListCtr = requires(I il) { std::span<T>{il}; };
-
-// static_assert(HasInitializerListCtr<const int, std::initializer_list<const int>>);
-// static_assert(!HasInitializerListCtr<int, std::initializer_list<int>>);
 
 template <typename I, typename T, std::size_t... N>
 concept HasInitializerListCtr = requires(I il) { std::span<T, N...>{il}; };
