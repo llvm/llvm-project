@@ -22,6 +22,7 @@ include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -961,7 +962,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
   let assemblyFormat = "attr-dict";
 }
 
-def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
+def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
@@ -974,6 +975,8 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
     gpu.yield %f0, %f1 : f32, f32
     ```
   }];
+
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
 // These mirror the reduction combining kinds from the vector dialect.
