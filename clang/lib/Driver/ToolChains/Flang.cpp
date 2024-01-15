@@ -403,12 +403,10 @@ void Flang::addTargetOptions(const ArgList &Args,
         if (A->getValue() == StringRef{"Accelerate"}) {
           CmdArgs.push_back("-framework");
           CmdArgs.push_back("Accelerate");
-          A->render(Args, CmdArgs);
         }
       }
-    } else {
-      A->render(Args, CmdArgs);
     }
+    A->render(Args, CmdArgs);
   }
 
   if (Triple.isKnownWindowsMSVCEnvironment()) {

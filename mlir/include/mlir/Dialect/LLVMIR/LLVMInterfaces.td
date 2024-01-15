@@ -92,7 +92,7 @@ def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface">
       }]
       >,
     StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the IntegerOverflowFlagsAttr attribute
+      /*desc=*/        [{Returns the name of the IntegerOveflowFlagsAttr attribute
                          for the operation}],
       /*returnType=*/  "StringRef",
       /*methodName=*/  "getIntegerOverflowAttrName",

@@ -21,6 +21,7 @@
 #include <windows.h>
 #else
 #include <signal.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -69,8 +70,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("Execution error with system status code: %d", status);
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Execution error");
+      StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
     }
   }
 #ifdef _WIN32
@@ -85,8 +86,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash(
           "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Invalid command line");
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
@@ -94,8 +95,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "killed by signal");
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "killed by signal");
     }
   }
 #endif
@@ -104,8 +105,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "stopped by signal");
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "stopped by signal");
     }
   }
 #endif
@@ -116,7 +117,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-  const char *newCmd{EnsureNullTerminated(
+  char *newCmd{EnsureNullTerminated(
       command.OffsetElement(), command.ElementBytes(), terminator)};
 
   if (exitstat) {
@@ -150,19 +151,19 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
     // add "cmd.exe /c " to the beginning of command
     const char *prefix{"cmd.exe /c "};
-    char *newCmdWin{(char *)AllocateMemoryOrCrash(
-        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1)};
+    char *newCmdWin{static_cast<char *>(AllocateMemoryOrCrash(
+        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1))};
     std::strcpy(newCmdWin, prefix);
     std::strcat(newCmdWin, newCmd);
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
-    wchar_t *wcmd{(wchar_t *)AllocateMemoryOrCrash(
-        terminator, sizeNeeded * sizeof(wchar_t))};
+    wchar_t *wcmd{static_cast<wchar_t *>(
+        AllocateMemoryOrCrash(terminator, sizeNeeded * sizeof(wchar_t)))};
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    FreeMemory((void *)newCmdWin);
+    FreeMemory(newCmdWin);
 
     if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
@@ -178,7 +179,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         CheckAndCopyCharsToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
-    FreeMemory((void *)wcmd);
+    FreeMemory(wcmd);
 #else
     // terminated children do not become zombies
     signal(SIGCHLD, SIG_IGN);
@@ -199,7 +200,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   }
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
-    FreeMemory((void *)newCmd);
+    FreeMemory(newCmd);
   }
 }
 

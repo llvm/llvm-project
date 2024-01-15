@@ -1,5 +1,5 @@
 
-#define BUFFER_SIZE 32
+#define BUFFER_SIZE 16
 struct PointType {
   int x;
   int y;

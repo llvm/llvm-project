@@ -895,7 +895,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenMemoryInstructionRecipe>(&R))
+        continue;
+      if (isa<VPWidenMemoryInstructionRecipe>(&R) &&
+          cast<VPWidenMemoryInstructionRecipe>(&R)->isStore())
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -948,6 +951,23 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 
       auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
 
+      // Any wrapping introduced by shrinking this operation shouldn't be
+      // considered undefined behavior. So, we can't unconditionally copy
+      // arithmetic wrapping flags to VPW.
+      if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
+        VPW->dropPoisonGeneratingFlags();
+
+      // Extend result to original width.
+      auto *Ext = new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
+      Ext->insertAfter(&R);
+      ResultVPV->replaceAllUsesWith(Ext);
+      Ext->setOperand(0, ResultVPV);
+
+      if (isa<VPWidenMemoryInstructionRecipe>(&R)) {
+        assert(!cast<VPWidenMemoryInstructionRecipe>(&R)->isStore() && "stores cannot be narrowed");
+        continue;
+      }
+
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;
       for (unsigned Idx = StartIdx; Idx != R.getNumOperands(); ++Idx) {
@@ -979,17 +999,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         }
       }
 
-      // Any wrapping introduced by shrinking this operation shouldn't be
-      // considered undefined behavior. So, we can't unconditionally copy
-      // arithmetic wrapping flags to VPW.
-      if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
-        VPW->dropPoisonGeneratingFlags();
-
-      // Extend result to original width.
-      auto *Ext = new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
-      Ext->insertAfter(&R);
-      ResultVPV->replaceAllUsesWith(Ext);
-      Ext->setOperand(0, ResultVPV);
     }
   }
 
