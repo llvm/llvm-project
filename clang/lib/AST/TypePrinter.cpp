@@ -937,15 +937,20 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   OS << ')';
 
   FunctionType::ExtInfo Info = T->getExtInfo();
+  unsigned SMEBits = T->getAArch64SMEAttributes();
 
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask))
+  if (SMEBits & FunctionType::SME_PStateSMCompatibleMask)
     OS << " __arm_streaming_compatible";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask))
+  if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     OS << " __arm_streaming";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask))
-    OS << " __arm_shared_za";
-  if ((T->getAArch64SMEAttributes() & FunctionType::SME_PStateZAPreservedMask))
-    OS << " __arm_preserves_za";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
+    OS << " __arm_preserves(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
+    OS << " __arm_in(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out)
+    OS << " __arm_out(\"za\")";
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
+    OS << " __arm_inout(\"za\")";
 
   printFunctionAfter(Info, OS);
 
@@ -1788,14 +1793,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "__arm_streaming_compatible";
     return;
   }
-  if (T->getAttrKind() == attr::ArmSharedZA) {
-    OS << "__arm_shared_za";
-    return;
-  }
-  if (T->getAttrKind() == attr::ArmPreservesZA) {
-    OS << "__arm_preserves_za";
-    return;
-  }
 
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
@@ -1839,8 +1836,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::WebAssemblyFuncref:
   case attr::ArmStreaming:
   case attr::ArmStreamingCompatible:
-  case attr::ArmSharedZA:
-  case attr::ArmPreservesZA:
+  case attr::ArmIn:
+  case attr::ArmOut:
+  case attr::ArmInOut:
+  case attr::ArmPreserves:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
