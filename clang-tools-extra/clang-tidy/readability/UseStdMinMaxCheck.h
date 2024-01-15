@@ -13,7 +13,7 @@
 
 namespace clang::tidy::readability {
 
-/// replaces certain conditional statements with equivalent ``std::min`` or
+/// Replaces certain conditional statements with equivalent ``std::min`` or
 /// ``std::max`` expressions, improving readability and promoting the use of
 /// standard library functions.
 ///

@@ -12,9 +12,16 @@ int bar(int x, int y) {
   return x < y ? x : y;
 }
 
+class MyClass {
+public:
+  int member1;
+  int member2;
+};
+
 void foo() {
   int value1,value2,value3;
   short value4;
+  MyClass obj;
 
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   if (value1 < value2)
@@ -55,4 +62,60 @@ void foo() {
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   if (value1 < bar(value2, value3))
     value1 = bar(value2, value3); // CHECK-FIXES: value1 = std::max(value1, bar(value2, value3));
+  
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `<=` [readability-use-std-min-max]
+  if (value1 <= value2)
+    value2 = value1; // CHECK-FIXES: value2 = std::min(value1, value2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<=` [readability-use-std-min-max]
+  if (value1 <= value2)
+    value1 = value2; // CHECK-FIXES: value1 = std::max(value1, value2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `>=` [readability-use-std-min-max]
+  if (value2 >= value1)
+    value1 = value2; // CHECK-FIXES: value1 = std::max(value2, value1);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `>=` [readability-use-std-min-max]
+  if (value2 >= value1)
+    value2 = value1; // CHECK-FIXES: value2 = std::min(value2, value1);
+  
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  if (obj.member1 < obj.member2)
+    obj.member1 = obj.member2; // CHECK-FIXES: obj.member1 = std::max(obj.member1, obj.member2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  if (obj.member1 < obj.member2)
+    obj.member2 = obj.member1; // CHECK-FIXES: obj.member2 = std::min(obj.member1, obj.member2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  if (obj.member2 > obj.member1)
+    obj.member2 = obj.member1; // CHECK-FIXES: obj.member2 = std::min(obj.member2, obj.member1);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
+  if (obj.member2 > obj.member1)
+    obj.member1 = obj.member2; // CHECK-FIXES: obj.member1 = std::max(obj.member2, obj.member1);
+  
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  if (obj.member1 < value4)
+    obj.member1 = value4; // CHECK-FIXES: obj.member1 = std::max(obj.member1, value4);
+  
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  if (obj.member1 + value2 < value3)
+    value3 = obj.member1 + value2; // CHECK-FIXES: value3 = std::min(obj.member1 + value2, value3);
+  
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `<=` [readability-use-std-min-max]
+  if (value1 <= obj.member2)
+    obj.member2 = value1; // CHECK-FIXES: obj.member2 = std::min(value1, obj.member2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `<=` [readability-use-std-min-max]
+  if (value1 <= obj.member2)
+    value1 = obj.member2; // CHECK-FIXES: value1 = std::max(value1, obj.member2);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::max` instead of `>=` [readability-use-std-min-max]
+  if (obj.member2 >= value1)
+    value1 = obj.member2; // CHECK-FIXES: value1 = std::max(obj.member2, value1);
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use `std::min` instead of `>=` [readability-use-std-min-max]
+  if (obj.member2 >= value1)
+    obj.member2 = value1; // CHECK-FIXES: obj.member2 = std::min(obj.member2, value1);
 }

@@ -8,6 +8,7 @@
 
 #include "UseStdMinMaxCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "../utils/ASTUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 #include <optional>
@@ -47,6 +48,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation ifLocation = ifStmt->getIfLoc();
   SourceLocation thenLocation = ifStmt->getEndLoc();
+
   auto lhsVar1Str = Lexer::getSourceText(
       CharSourceRange::getTokenRange(lhsVar1->getSourceRange()),
       Context.getSourceManager(), Context.getLangOpts());
@@ -58,38 +60,34 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   auto rhsVar1Str = Lexer::getSourceText(
       CharSourceRange::getTokenRange(rhsVar1->getSourceRange()),
       Context.getSourceManager(), Context.getLangOpts());
+  
+  auto replacementMax = lhsVar2Str.str() + " = std::max(" + lhsVar1Str.str() + ", " + rhsVar1Str.str() + ")";
+  auto replacementMin = lhsVar2Str.str() + " = std::min(" + lhsVar1Str.str() + ", " + rhsVar1Str.str() + ")";
+  auto *operatorStr = binaryOp->getOpcodeStr().data();
 
-  auto rhsVar2Str = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(rhsVar2->getSourceRange()),
-      Context.getSourceManager(), Context.getLangOpts());
-
-  if (binaryOp->getOpcode() == BO_LT) {
-    if (lhsVar1Str == lhsVar2Str && rhsVar1Str == rhsVar2Str) {
-      diag(ifStmt->getIfLoc(), "use `std::max` instead of `<`")
+  if (binaryOp->getOpcode() == BO_LT || binaryOp->getOpcode() == BO_LE) {
+    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2,Context) &&
+        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2,Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")<< operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          lhsVar2Str.str() + " = std::max(" +
-                                              lhsVar1Str.str() + ", " +
-                                              rhsVar1Str.str() + ")");
-    } else if (lhsVar1Str == rhsVar2Str && rhsVar1Str == lhsVar2Str) {
-      diag(ifStmt->getIfLoc(), "use `std::min` instead of `<`")
+                                    std::move(replacementMax));
+    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2,Context) &&
+               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2,Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")<< operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          lhsVar2Str.str() + " = std::min(" +
-                                              lhsVar1Str.str() + ", " +
-                                              rhsVar1Str.str() + ")");
+                                    std::move(replacementMin));
     }
-  } else if (binaryOp->getOpcode() == BO_GT) {
-    if (lhsVar1Str == lhsVar2Str && rhsVar1Str == rhsVar2Str) {
-      diag(ifStmt->getIfLoc(), "use `std::min` instead of `>`")
+  } else if (binaryOp->getOpcode() == BO_GT || binaryOp->getOpcode() == BO_GE) {
+    if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2,Context) &&
+        tidy::utils::areStatementsIdentical(rhsVar1, rhsVar2,Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")<< operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          lhsVar2Str.str() + " = std::min(" +
-                                              lhsVar1Str.str() + ", " +
-                                              rhsVar1Str.str() + ")");
-    } else if (lhsVar1Str == rhsVar2Str && rhsVar1Str == lhsVar2Str) {
-      diag(ifStmt->getIfLoc(), "use `std::max` instead of `>`")
+                                    std::move(replacementMin));
+    } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2,Context) &&
+               tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2,Context)) {
+      diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")<< operatorStr
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
-                                          lhsVar2Str.str() + " = std::max(" +
-                                              lhsVar1Str.str() + ", " +
-                                              rhsVar1Str.str() + ")");
+                                    std::move(replacementMax));
     }
   }
 }
