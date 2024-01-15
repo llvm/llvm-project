@@ -292,8 +292,8 @@ static const Module *getModuleFromDPI(const DPMarker *Marker) {
   return M ? M->getParent() : nullptr;
 }
 
-static const Module *getModuleFromDPI(const DPValue *DPV) {
-  return DPV->getMarker() ? getModuleFromDPI(DPV->getMarker()) : nullptr;
+static const Module *getModuleFromDPI(const DbgRecord *DR) {
+  return DR->getMarker() ? getModuleFromDPI(DR->getMarker()) : nullptr;
 }
 
 static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
@@ -2676,6 +2676,7 @@ public:
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
   void printDPValue(const DPValue &DPI);
+  void printDPLabel(const DPLabel &DPL);
   void printDbgRecord(const DbgRecord &DPI);
 
   void printUseListOrder(const Value *V, const std::vector<unsigned> &Shuffle);
@@ -4622,6 +4623,16 @@ void AssemblyWriter::printDPValue(const DPValue &Value) {
   Out << " }";
 }
 
+void AssemblyWriter::printDPLabel(const DPLabel &Label) {
+  // There's no formal representation of a DPLabel -- print purely as
+  // a debugging aid.
+  Out << "  DPLabel { ";
+  auto WriterCtx = getContext();
+  WriteAsOperandInternal(Out, Label.getLabel(), WriterCtx, true);
+  Out << " marker @" << Label.getMarker();
+  Out << " }";
+}
+
 void AssemblyWriter::printMetadataAttachments(
     const SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs,
     StringRef Separator) {
@@ -4885,6 +4896,12 @@ void DPMarker::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   W.printDPMarker(*this);
 }
 
+void DPLabel::print(raw_ostream &ROS, bool IsForDebug) const {
+
+  ModuleSlotTracker MST(getModuleFromDPI(this), true);
+  print(ROS, MST, IsForDebug);
+}
+
 void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                     bool IsForDebug) const {
   // There's no formal representation of a DPValue -- print purely as a
@@ -4902,6 +4919,24 @@ void DPValue::print(raw_ostream &ROS, ModuleSlotTracker &MST,
                           : nullptr);
   AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
   W.printDPValue(*this);
+}
+
+void DPLabel::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                    bool IsForDebug) const {
+  // There's no formal representation of a DbgLabelRecord -- print purely as
+  // a debugging aid.
+  formatted_raw_ostream OS(ROS);
+  SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  SlotTracker &SlotTable =
+      MST.getMachine() ? *MST.getMachine() : EmptySlotTable;
+  auto incorporateFunction = [&](const Function *F) {
+    if (F)
+      MST.incorporateFunction(*F);
+  };
+  incorporateFunction(Marker->getParent() ? Marker->getParent()->getParent()
+                                          : nullptr);
+  AssemblyWriter W(OS, SlotTable, getModuleFromDPI(this), nullptr, IsForDebug);
+  W.printDPLabel(*this);
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
