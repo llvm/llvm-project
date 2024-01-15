@@ -292,7 +292,7 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
+  if (F->doesThisDeclarationHaveABody()) {
     auto CFCtx = ControlFlowContext::build(*F);
     // FIXME: Handle errors.
     assert(CFCtx);
