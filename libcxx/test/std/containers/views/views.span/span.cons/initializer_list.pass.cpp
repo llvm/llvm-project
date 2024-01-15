@@ -17,6 +17,7 @@
 #include <span>
 #include <type_traits>
 
+#include "test_convertible.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 26
@@ -31,6 +32,8 @@ static_assert(!ConstElementType<std::span<int>>);
 static_assert(ConstElementType<std::span<const int, 94>>);
 static_assert(!ConstElementType<std::span<int, 94>>);
 
+// Constructor constraings
+
 template <typename I, typename T, std::size_t... N>
 concept HasInitializerListCtr = requires(I il) { std::span<T, N...>{il}; };
 
@@ -38,6 +41,15 @@ static_assert(HasInitializerListCtr<std::initializer_list<const int>, const int>
 static_assert(!HasInitializerListCtr<std::initializer_list<int>, int>);
 static_assert(HasInitializerListCtr<std::initializer_list<const int>, const int, 94>);
 static_assert(!HasInitializerListCtr<std::initializer_list<int>, int, 94>);
+
+// Constructor conditionally explicit
+
+static_assert(!test_convertible<std::span<const int, 28>, std::initializer_list<int>>(),
+              "This constructor must be explicit");
+static_assert(std::is_constructible_v<std::span<const int, 28>, std::initializer_list<int>>);
+static_assert(test_convertible<std::span<const int>, std::initializer_list<int>>(),
+              "This constructor must not be explicit");
+static_assert(std::is_constructible_v<std::span<const int>, std::initializer_list<int>>);
 
 #endif
 

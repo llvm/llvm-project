@@ -233,7 +233,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit span(std::initializer_list<value_type> __il)
     requires is_const_v<element_type>
       : __data_{__il.begin()} {
-    _LIBCPP_ASSERT_INTERNAL(_Extent == __il.size(), "Size mismatch in span's constructor _Extent != __il.size().");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+        _Extent == __il.size(), "Size mismatch in span's constructor _Extent != __il.size().");
   }
 #  endif
 
