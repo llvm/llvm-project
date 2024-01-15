@@ -153,6 +153,7 @@ Changes to the RISC-V Backend
   "SiFive Custom Instruction Extension" as SiFive defines it. The LLVM project
   needs to work with SiFive to define and document real extension names for
   individual CSRs and instructions.
+* ``-mcpu=sifive-p450`` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
