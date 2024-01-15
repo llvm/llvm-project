@@ -120,18 +120,15 @@ constexpr void test_result(std::array<int, N> input, int starting_value, std::ar
   { // (range) overload
     // inthe range overload adds the additional constraint that it must be an outputrange
     // so skip this for the input iterators we test
-    if constexpr (!std::is_same_v<Iter, cpp17_input_iterator<int*>> &&
-                  !std::is_same_v<Iter, cpp20_input_iterator<int*>>) {
-      auto in_begin = Iter(input.data());
-      auto in_end   = Sent(Iter(input.data() + input.size()));
-      auto range    = std::ranges::subrange(std::move(in_begin), std::move(in_end));
+    auto in_begin = Iter(input.data());
+    auto in_end   = Sent(Iter(input.data() + input.size()));
+    auto range    = std::ranges::subrange(std::move(in_begin), std::move(in_end));
 
-      std::same_as<std::ranges::out_value_result<Iter, int>> decltype(auto) result =
-          std::ranges::iota(range, starting_value);
-      assert(result.out == in_end);
-      assert(result.value == starting_value + static_cast<int>(N));
-      assert(std::ranges::equal(input, expected));
-    }
+    std::same_as<std::ranges::out_value_result<Iter, int>> decltype(auto) result =
+        std::ranges::iota(range, starting_value);
+    assert(result.out == in_end);
+    assert(result.value == starting_value + static_cast<int>(N));
+    assert(std::ranges::equal(input, expected));
   }
 }
 

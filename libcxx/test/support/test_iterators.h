@@ -650,6 +650,7 @@ public:
     constexpr decltype(auto) operator*() const { return *it_; }
     constexpr cpp20_input_iterator& operator++() { ++it_; return *this; }
     constexpr void operator++(int) { ++it_; }
+    constexpr cpp20_input_iterator operator++(int) requires(std::incrementable<It>) { auto tmp = *this; ++it_; return tmp;}
 
     friend constexpr It base(const cpp20_input_iterator& i) { return i.it_; }
 
@@ -1087,22 +1088,18 @@ static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 // which we need in certain situations. For example when we want
 // std::weakly_incrementable<Proxy<T>> to be true.
 template <class T>
-struct ProxyDiffTBase {};
+struct ProxyDiffTBase {
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
+};
 
 template <class T>
   requires requires { std::iter_difference_t<T>{}; }
 struct ProxyDiffTBase<T> {
   using difference_type = std::iter_difference_t<T>;
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
 };
-
-// These concepts allow us to conditionally add the pre-/postfix operators
-// when T also supports those member functions. Like ProxyDiffTBase, this
-// is necessary when we want std::weakly_incrementable<Proxy<T>> to be true.
-template <class T>
-concept HasPreIncrementOp = requires(T const& obj) { ++obj; };
-
-template <class T>
-concept HasPostIncrementOp = requires(T const& obj) { obj++; };
 
 // Proxy
 // ======================================================================
@@ -1172,10 +1169,7 @@ struct Proxy : ProxyDiffTBase<T> {
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy& lhs, const Proxy& rhs)
-    requires(std::equality_comparable<T> && !std::is_reference_v<T>)
-  {
-    return lhs.data == rhs.data;
-  };
+    requires(std::equality_comparable<T> && !std::is_reference_v<T>) = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
   // when `T` is a reference type.
@@ -1186,10 +1180,7 @@ struct Proxy : ProxyDiffTBase<T> {
   }
 
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy& rhs)
-    requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
-  {
-    return lhs.data <=> rhs.data;
-  };
+    requires(std::three_way_comparable<T> && !std::is_reference_v<T>) = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
   // `T` is a reference type.
@@ -1199,16 +1190,24 @@ struct Proxy : ProxyDiffTBase<T> {
     return lhs.data <=> rhs.data;
   }
 
-  // Needed to allow certain types to be weakly_incremental
+  // Needed to allow certain types to be weakly_incrementable
   constexpr Proxy& operator++()
-    requires(HasPreIncrementOp<T>)
+    requires(std::weakly_incrementable<std::remove_reference_t<T>>)
   {
     ++data;
     return *this;
   }
 
   constexpr Proxy operator++(int)
-    requires(HasPostIncrementOp<T>)
+    requires(std::incrementable<std::remove_reference_t<T>>)
+  {
+    Proxy tmp = *this;
+    operator++();
+    return tmp;
+  }
+
+  void operator++(int)
+    requires(std::weakly_incrementable<std::remove_reference_t<T>> && !std::incrementable<std::remove_reference_t<T>>)
   {
     Proxy tmp = *this;
     operator++();
