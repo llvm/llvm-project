@@ -227,7 +227,7 @@ New checks
 - New :doc:`readability-avoid-nested-conditional-operator
   <clang-tidy/checks/readability/avoid-nested-conditional-operator>` check.
 
-  Finds nested conditional operator.
+  Identifies instances of nested conditional operators in the code.
 
 - New :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
