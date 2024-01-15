@@ -59,6 +59,19 @@ getAttrKindToNameMapping() {
   return kindNamePairs;
 }
 
+static llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind>
+getAttrNameToKindMapping() {
+  static auto attrNameToKindMapping = []() {
+    static llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind>
+        nameKindMap;
+    for (auto kindNamePair : getAttrKindToNameMapping()) {
+      nameKindMap.insert({kindNamePair.second, kindNamePair.first});
+    }
+    return nameKindMap;
+  }();
+  return attrNameToKindMapping;
+}
+
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir
