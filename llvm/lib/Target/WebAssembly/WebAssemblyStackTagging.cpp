@@ -197,7 +197,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       auto *HintStoreTagDecl = Intrinsic::getDeclaration(
-          F->getParent(), Intrinsic::wasm_memory_hintstoretag, {Int64Type});
+          F->getParent(), Intrinsic::wasm_memory_hintstoretag,
+          {Int64Type, Int64Type});
       auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
                                       {ConstantInt::get(Int32Type, 0), Info.AI,
                                        ConstantInt::get(Int64Type, Size), Base,
