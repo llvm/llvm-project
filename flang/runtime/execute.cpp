@@ -70,8 +70,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("Execution error with system status code: %d", status);
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Execution error");
+      StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Execution error");
     }
   }
 #ifdef _WIN32
@@ -86,8 +86,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
       terminator.Crash(
           "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "Invalid command line");
+      StoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "Invalid command line");
     }
   }
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
@@ -95,8 +95,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "killed by signal");
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "killed by signal");
     }
   }
 #endif
@@ -105,8 +105,8 @@ int TerminationCheck(int status, const Descriptor *cmdstat,
     if (!cmdstat) {
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
     } else {
-      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CopyCharsToDescriptor(*cmdmsg, "stopped by signal");
+      StoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyCharsToDescriptor(cmdmsg, "stopped by signal");
     }
   }
 #endif
