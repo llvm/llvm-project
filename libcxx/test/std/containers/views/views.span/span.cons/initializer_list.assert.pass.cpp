@@ -17,23 +17,16 @@
 // constexpr explicit(extent != dynamic_extent) span(std::initializer_list<value_type> il); // Since C++26
 
 #include <cassert>
-#include <span>
 #include <initializer_list>
+#include <span>
 
 #include "check_assertion.h"
-
-// template <std::size_t N>
-// void test_runtime_assertion(std::span<const int, N> sp) {
-//   static_assert(std::dynamic_extent != sp.extent);
-// }
 
 bool test() {
   TEST_LIBCPP_ASSERT_FAILURE(
       (std::span<const int, 4>({1, 2, 3, 9084, 5})), "Size mismatch in span's constructor _Extent != __il.size().");
   TEST_LIBCPP_ASSERT_FAILURE((std::span<const int, 4>(std::initializer_list<int>{1, 2, 3, 9084, 5})),
                              "Size mismatch in span's constructor _Extent != __il.size().");
-  // TEST_LIBCPP_ASSERT_FAILURE((test_runtime_assertion(std::span<const int, 4>({1, 2, 3, 9084, 0}))),
-  //                            "Size mismatch in span's constructor _Extent != __il.size().");
 
   return true;
 }

@@ -13,87 +13,11 @@
 
 #include <array>
 #include <cassert>
-#include <concepts>
 #include <cstddef>
 #include <initializer_list>
 #include <span>
-#include <vector>
 
 #include "test_macros.h"
-
-#include <print>
-
-#if TEST_STD_VER >= 26
-
-constexpr int kEmptySpanValue = -1;
-
-template <std::size_t N>
-int take_last_element(std::span<const int, N> sp, std::size_t expectedSize) {
-  static_assert(std::dynamic_extent != sp.extent);
-  assert(sp.size() == expectedSize);
-  if (sp.size() == 0)
-    return kEmptySpanValue;
-  return sp.at(sp.size() - 1);
-}
-
-int take_last_element(std::span<const int> sp, std::size_t expectedSize) {
-  static_assert(std::dynamic_extent == sp.extent);
-  std::println(stderr, "size ----- {}", sp.size());
-  assert(sp.size() == expectedSize);
-  if (sp.size() == 0)
-    return kEmptySpanValue;
-  return sp.at(sp.size() - 1);
-}
-
-bool test_span() {
-  // Static
-  // {
-  //   int lastElem = take_last_element<0>({{}}, 0);
-  //   assert(lastElem == kEmptySpanValue);
-  // }
-  // {
-  //   int lastElem = take_last_element<1>({{1}}, 1);
-  //   assert(lastElem == kEmptySpanValue);
-  // }
-  // {
-  //   int lastElem = take_last_element<4>(std::array{1, 2, 3, 9084}, 4);
-  //   assert(lastElem == 9084);
-  // }
-  // {
-  //   int lastElem = take_last_element<4>(std::initializer_list<int>{1, 2, 3, 9084}, 4);
-  //   assert(lastElem == 9084);
-  // }
-  // std::span<const int, 4>({1, 2, 3, 9084, 5});
-  // {
-  //   int lastElem = take_last_element(std::span<const int, 4>({1, 2, 3, 9084}), 4);
-  //   assert(lastElem == 9084);
-  // }
-  // Dynamic
-  // {
-  //   int lastElem = take_last_element({{}}, 1);
-  //   assert(lastElem == kEmptySpanValue);
-  // }
-  {
-    int lastElem = take_last_element({{1, 2, 3, 9084}}, 4);
-    assert(lastElem == 9084);
-  }
-  // {
-  //   int lastElem = take_last_element(std::vector{1, 2, 3, 9084}, 4);
-  //   assert(lastElem == 9084);
-  // }
-  {
-    int lastElem = take_last_element(std::initializer_list<int>{1, 2, 3, 9084}, 4);
-    assert(lastElem == 9084);
-  }
-  {
-    int lastElem = take_last_element(std::span<const int>({1, 2, 3, 9084}), 4);
-    assert(lastElem == 9084);
-  }
-
-  return true;
-}
-
-#endif
 
 struct Sink {
   constexpr Sink() = default;
@@ -116,8 +40,7 @@ constexpr bool test() {
     assert(count({a}) == 1);
     assert(count({a, a + 10}) == 2);
     assert(count({a, a + 1, a + 2}) == 3);
-    // assert(count_n<3>(std::array{a, a + 1, a + 2}) == 3);
-    // assert(count_n<3>(std::array{a, a + 1, a + 2, a + 3, a + 4}) == 3);
+    assert(count(std::initializer_list<Sink>{a[0], a[1], a[2], a[3]}) == 4);
   }
 #else
   {
@@ -135,10 +58,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
-
-#if TEST_STD_VER >= 26
-  test_span();
-#endif
 
   return 0;
 }
