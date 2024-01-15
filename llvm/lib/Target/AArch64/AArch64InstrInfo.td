@@ -173,7 +173,7 @@ def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFAMINMAX), "faminmax">;
 def HasFP8FMA        : Predicate<"Subtarget->hasFP8FMA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8FMA), "fp8fma">;
-def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
+def HasSSVE_FP8FMA   : Predicate<"Subtarget->hasSSVE_FP8FMA() || "
                                  "(Subtarget->hasSVE2() && Subtarget->hasFP8FMA())">,
                                  AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
                                                            (all_of FeatureSVE2, FeatureFP8FMA)),
