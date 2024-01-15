@@ -55,6 +55,11 @@ namespace lldb_private {
 
 class Progress {
 public:
+  /// Enum that indicates the type of progress report
+  enum class ProgressReportType {
+    eAggregateProgressReport,
+    eNonAggregateProgressReport
+  };
   /// Construct a progress object that will report information.
   ///
   /// The constructor will create a unique progress reporting object and
@@ -63,13 +68,30 @@ public:
   ///
   /// @param [in] title The title of this progress activity.
   ///
-  /// @param [in] total The total units of work to be done if specified, if
-  /// set to UINT64_MAX then an indeterminate progress indicator should be
+  /// @param [in] report_type Enum value indicating how the progress is being
+  /// reported. Progress reports considered "aggregate" are reports done for
+  /// operations that may happen multiple times during a debug session.
+  ///
+  /// For example, when a debug session is first started it needs to parse the
+  /// symbol tables for all files that were initially included and this
+  /// operation will deliver progress reports. If new symbol tables need to be
+  /// parsed later during the session then these will also be parsed and deliver
+  /// more progress reports. This type of operation would use the
+  /// eAggregateProgressReport enum. Using this enum would allow these progress
+  /// reports to be grouped together as one, even though their reports are
+  /// happening individually.
+  ///
+  /// @param [in] total Optional total units of work to be done if specified, if
+  /// unset then an indeterminate progress indicator should be
   /// displayed.
   ///
   /// @param [in] debugger An optional debugger pointer to specify that this
   /// progress is to be reported only to specific debuggers.
-  Progress(std::string title, uint64_t total = UINT64_MAX,
+  ///
+  Progress(std::string title,
+           ProgressReportType report_type =
+               ProgressReportType::eNonAggregateProgressReport,
+           std::optional<uint64_t> total = std::nullopt,
            lldb_private::Debugger *debugger = nullptr);
 
   /// Destroy the progress object.
@@ -97,12 +119,17 @@ private:
   /// The title of the progress activity.
   std::string m_title;
   std::mutex m_mutex;
+  /// Set to eAggregateProgressReport if the progress event is aggregate;
+  /// meaning it will happen multiple times during a debug session as individual
+  /// progress events
+  ProgressReportType m_report_type =
+      ProgressReportType::eNonAggregateProgressReport;
   /// A unique integer identifier for progress reporting.
   const uint64_t m_id;
   /// How much work ([0...m_total]) that has been completed.
   uint64_t m_completed;
-  /// Total amount of work, UINT64_MAX for non deterministic progress.
-  const uint64_t m_total;
+  /// Total amount of work, use a std::nullopt for non deterministic progress.
+  const std::optional<uint64_t> m_total;
   /// The optional debugger ID to report progress to. If this has no value then
   /// all debuggers will receive this event.
   std::optional<lldb::user_id_t> m_debugger_id;

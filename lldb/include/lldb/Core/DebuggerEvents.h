@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -21,10 +22,11 @@ class Stream;
 class ProgressEventData : public EventData {
 public:
   ProgressEventData(uint64_t progress_id, std::string title, std::string update,
-                    uint64_t completed, uint64_t total, bool debugger_specific)
+                    uint64_t completed, uint64_t total, bool debugger_specific,
+                    Progress::ProgressReportType report_type)
       : m_title(std::move(title)), m_details(std::move(update)),
         m_id(progress_id), m_completed(completed), m_total(total),
-        m_debugger_specific(debugger_specific) {}
+        m_debugger_specific(debugger_specific), m_report_type(report_type) {}
 
   static llvm::StringRef GetFlavorString();
 
@@ -52,6 +54,10 @@ public:
   const std::string &GetTitle() const { return m_title; }
   const std::string &GetDetails() const { return m_details; }
   bool IsDebuggerSpecific() const { return m_debugger_specific; }
+  bool IsAggregate() const {
+    return m_report_type ==
+           Progress::ProgressReportType::eAggregateProgressReport;
+  }
 
 private:
   /// The title of this progress event. The value is expected to remain stable
@@ -68,6 +74,7 @@ private:
   uint64_t m_completed;
   const uint64_t m_total;
   const bool m_debugger_specific;
+  const Progress::ProgressReportType m_report_type;
   ProgressEventData(const ProgressEventData &) = delete;
   const ProgressEventData &operator=(const ProgressEventData &) = delete;
 };

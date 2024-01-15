@@ -37,5 +37,14 @@ class TestProgressReporting(TestBase):
 
         event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
         progress_data = lldb.SBDebugger.GetProgressDataFromEvent(event)
-        message = progress_data.GetValueForKey("message").GetStringValue(100)
-        self.assertGreater(len(message), 0)
+        title = progress_data.GetValueForKey("title").GetStringValue(100)
+        self.assertGreater(len(title), 0)
+
+        is_aggregate = progress_data.GetValueForKey("is_aggregate")
+        self.assertTrue(
+            is_aggregate.IsValid(),
+            "ProgressEventData key 'is_aggregate' does not exist.",
+        )
+        self.assertTrue(
+            is_aggregate, "ProgressEventData key 'is_aggregate' should be true."
+        )

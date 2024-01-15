@@ -11,14 +11,18 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <optional>
+
 using namespace lldb;
 using namespace lldb_private;
 
 std::atomic<uint64_t> Progress::g_id(0);
 
-Progress::Progress(std::string title, uint64_t total,
+Progress::Progress(std::string title, ProgressReportType report_type,
+                   std::optional<uint64_t> total,
                    lldb_private::Debugger *debugger)
-    : m_title(title), m_id(++g_id), m_completed(0), m_total(total) {
+    : m_title(title), m_report_type(report_type), m_id(++g_id), m_completed(0),
+      m_total(total) {
   assert(total > 0);
   if (debugger)
     m_debugger_id = debugger->GetID();
@@ -31,7 +35,7 @@ Progress::~Progress() {
   // destructed so it indicates the progress dialog/activity should go away.
   std::lock_guard<std::mutex> guard(m_mutex);
   if (!m_completed)
-    m_completed = m_total;
+    m_completed = m_total.value();
   ReportProgress();
 }
 
@@ -40,8 +44,8 @@ void Progress::Increment(uint64_t amount, std::string update) {
     std::lock_guard<std::mutex> guard(m_mutex);
     // Watch out for unsigned overflow and make sure we don't increment too
     // much and exceed m_total.
-    if (amount > (m_total - m_completed))
-      m_completed = m_total;
+    if (amount > (m_total.value() - m_completed))
+      m_completed = m_total.value();
     else
       m_completed += amount;
     ReportProgress(update);
@@ -52,8 +56,8 @@ void Progress::ReportProgress(std::string update) {
   if (!m_complete) {
     // Make sure we only send one notification that indicates the progress is
     // complete.
-    m_complete = m_completed == m_total;
+    m_complete = m_completed == m_total.value();
     Debugger::ReportProgress(m_id, m_title, std::move(update), m_completed,
-                             m_total, m_debugger_id);
+                             m_total.value(), m_debugger_id, m_report_type);
   }
 }

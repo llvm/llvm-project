@@ -67,6 +67,7 @@ ProgressEventData::GetAsStructuredData(const Event *event_ptr) {
   dictionary_sp->AddIntegerItem("total", progress_data->GetTotal());
   dictionary_sp->AddBooleanItem("debugger_specific",
                                 progress_data->IsDebuggerSpecific());
+  dictionary_sp->AddBooleanItem("is_aggregate", progress_data->IsAggregate());
 
   return dictionary_sp;
 }
