@@ -2587,12 +2587,18 @@ private:
                           : ParamTy->isRValueReferenceType() ? VK_XValue
                                                              : VK_PRValue);
     }
+    // Handle arrays and functions decay.
+    auto NewType = NewDI->getType();
+    if (NewType->isArrayType())
+      NewType = SemaRef.Context.getArrayDecayedType(NewType);
+    else if (NewType->isFunctionType())
+      NewType = SemaRef.Context.getPointerType(NewType);
 
     ParmVarDecl *NewParam = ParmVarDecl::Create(SemaRef.Context, DC,
                                                 OldParam->getInnerLocStart(),
                                                 OldParam->getLocation(),
                                                 OldParam->getIdentifier(),
-                                                NewDI->getType(),
+                                                NewType,
                                                 NewDI,
                                                 OldParam->getStorageClass(),
                                                 NewDefArg.get());
