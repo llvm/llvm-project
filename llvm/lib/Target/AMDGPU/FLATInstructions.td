@@ -1035,11 +1035,17 @@ let SubtargetPredicate = isGFX12Plus in {
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w32", VReg_128>;
     defm GLOBAL_LOAD_TR_B64_w32   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w32", VReg_64>;
   }
-  let WaveSizePredicate = isWave64 in {
-    defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
-    defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
-  }
 } // End SubtargetPredicate = isGFX12Plus
+
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10 in {
+  defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
+  defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
+}
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
+  defm GLOBAL_LOAD_B128_TR_B6 : FLAT_Global_Load_Pseudo <"global_load_b128_tr_b6", VReg_128>;
+  defm GLOBAL_LOAD_B64_TR_B4  : FLAT_Global_Load_Pseudo <"global_load_b64_tr_b4",  VReg_64>;
+}
 
 let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
   defm GLOBAL_ATOMIC_FCMPSWAP :
@@ -2797,7 +2803,7 @@ let WaveSizePredicate = isWave32, DecoderNamespace = "GFX12" in {
   defm GLOBAL_LOAD_TR_B64_w32      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_tr_b64">;
 }
 
-let WaveSizePredicate = isWave64, DecoderNamespace = "GFX12W64" in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12Not12_10, DecoderNamespace = "GFX12W64" in {
   defm GLOBAL_LOAD_TR_B128_w64     : VGLOBAL_Real_AllAddr_gfx12<0x057, "GLOBAL_LOAD_TR_B128_w64", "global_load_tr_b128">;
   defm GLOBAL_LOAD_TR_B64_w64      : VGLOBAL_Real_AllAddr_gfx12<0x058, "GLOBAL_LOAD_TR_B64_w64", "global_load_tr_b64">;
 }
@@ -2841,4 +2847,57 @@ defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;
 let SubtargetPredicate = isGFX12_10Plus in {
 defm FLAT_PREFETCH_B8              : VFLAT_Real_Base_gfx12<0x05d>;
 defm GLOBAL_PREFETCH_B8            : VGLOBAL_Real_AllAddr_gfx12<0x05d>;
+}
+
+//===----------------------------------------------------------------------===//
+// GFX1210
+//===----------------------------------------------------------------------===//
+
+class VFLAT_Real_gfx1210 <bits<8> op, FLAT_Pseudo ps,
+                          string opName = ps.Mnemonic> :
+  VFLAT_Real <op, ps, opName>,
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX12_10> {
+  let AssemblerPredicate = isGFX12_10Plus;
+  let DecoderNamespace = "GFX12_10";
+
+  let Inst{25-24} = !if(ps.is_flat_scratch, 0b01,
+                        !if(ps.is_flat_global, 0b10, 0b00));
+  let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
+}
+
+class MnemonicAlias_gfx1210<string from, string to> :
+  MnemonicAlias<from, to>, Requires<[isGFX12_10Plus]> {
+  Predicate WaveSizePredicate;
+}
+
+multiclass VFLAT_Aliases_gfx1210<string ps, string opName, int renamed, string alias> {
+  if renamed then
+    def _renamed_gfx1210 : MnemonicAlias_gfx1210<!cast<FLAT_Pseudo>(ps).Mnemonic, opName>;
+  if !not(!empty(alias)) then
+    def _alias_gfx1210 : MnemonicAlias_gfx1210<alias, opName>;
+}
+
+multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
+                                   int renamed = false, string alias = ""> :
+  VFLAT_Aliases_gfx1210<ps, opName, renamed, alias> {
+  def _gfx1210 : VFLAT_Real_gfx1210<op, !cast<FLAT_Pseudo>(ps), opName> {
+    let Inst{6-0} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
+  }
+}
+
+multiclass VFLAT_Real_SADDR_gfx1210<bits<8> op, string ps, string opName> {
+  def _SADDR_gfx1210 : VFLAT_Real_gfx1210<op, !cast<FLAT_Pseudo>(ps#"_SADDR"), opName>;
+}
+
+multiclass VGLOBAL_Real_AllAddr_gfx1210<bits<8> op, string ps = NAME, string opName = !tolower(NAME),
+                                        int renamed = false, string alias = ""> :
+  VFLAT_Real_Base_gfx1210<op, ps, opName, renamed, alias>,
+  VFLAT_Real_SADDR_gfx1210<op, ps, opName>;
+
+let WaveSizePredicate = isWave32 in {
+  defm GLOBAL_LOAD_B128_TR_B16 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_b128_tr_b16", true>;
+  defm GLOBAL_LOAD_B64_TR_B8   : VGLOBAL_Real_AllAddr_gfx1210<0x058, "GLOBAL_LOAD_TR_B64_w32", "global_load_b64_tr_b8", true>;
+
+  defm GLOBAL_LOAD_B128_TR_B6  : VGLOBAL_Real_AllAddr_gfx1210<0x075>;
+  defm GLOBAL_LOAD_B64_TR_B4   : VGLOBAL_Real_AllAddr_gfx1210<0x074>;
 }

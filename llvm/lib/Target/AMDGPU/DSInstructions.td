@@ -310,6 +310,12 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
   }
 }
 
+multiclass DS_1A_RET_NoM0<string opName, RegisterClass rc = VGPR_32> {
+  let has_m0_read = 0 in {
+    def "" : DS_1A_RET<opName, rc>;
+  }
+}
+
 class DS_1A_RET_Tied<string opName, RegisterClass rc = VGPR_32> :
   DS_1A_RET<opName, rc, 1>;
 
@@ -765,6 +771,17 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_ds_cond_sub_u32">;
 
 } // let SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX12_10Plus in {
+
+let WaveSizePredicate = isWave32, mayStore = 0 in {
+defm DS_LOAD_B64_TR_B4   : DS_1A_RET_NoM0<"ds_load_b64_tr_b4",   VReg_64>;
+defm DS_LOAD_B128_TR_B6  : DS_1A_RET_NoM0<"ds_load_b128_tr_b6",  VReg_128>;
+defm DS_LOAD_B64_TR_B8   : DS_1A_RET_NoM0<"ds_load_b64_tr_b8",   VReg_64>;
+defm DS_LOAD_B128_TR_B16 : DS_1A_RET_NoM0<"ds_load_b128_tr_b16", VReg_128>;
+} // let WaveSizePredicate = isWave32, mayStore = 0
+
+} //let SubtargetPredicate = isGFX12_10Plus
 
 //===----------------------------------------------------------------------===//
 // DS Patterns
@@ -1268,6 +1285,13 @@ defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
 defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
+  defm DS_LOAD_B64_TR_B4       : DS_Real_gfx12<0x0fa>;
+  defm DS_LOAD_B128_TR_B6      : DS_Real_gfx12<0x0fb>;
+  defm DS_LOAD_B64_TR_B8       : DS_Real_gfx12<0x0fc>;
+  defm DS_LOAD_B128_TR_B16     : DS_Real_gfx12<0x0fd>;
+}
 
 defm DS_BVH_STACK_PUSH4_POP1_RTN_B32     : DS_Real_Renamed_gfx12<0x0e0,
   DS_BVH_STACK_RTN_B32, "ds_bvh_stack_push4_pop1_rtn_b32">;
