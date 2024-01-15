@@ -1273,8 +1273,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       isa<FunctionNoProtoType>(NewQType.getTypePtr()))
     return false;
 
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
 
   // The signature of a function includes the types of its
   // parameters (C++ 1.3.10), which includes the presence or absence

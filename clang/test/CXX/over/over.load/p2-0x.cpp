@@ -24,6 +24,11 @@ class Y {
   void k() &&; // expected-error{{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
 };
 
+struct GH76358 {
+    template<int> void f() && {}
+    template<typename T> void f() const {}
+};
+
 
 #if __cplusplus >= 202002L
 namespace GH58962 {
