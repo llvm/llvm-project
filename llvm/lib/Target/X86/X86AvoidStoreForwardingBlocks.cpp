@@ -289,8 +289,10 @@ static unsigned getYMMtoXMMStoreOpcode(unsigned StoreOpcode) {
 }
 
 static int getAddrOffset(const MachineInstr *MI) {
-  int AddrOffset = X86::getFirstAddrOperandIdx(*MI);
+  const MCInstrDesc &Descl = MI->getDesc();
+  int AddrOffset = X86II::getMemoryOperandNo(Descl.TSFlags);
   assert(AddrOffset != -1 && "Expected Memory Operand");
+  AddrOffset += X86II::getOperandBias(Descl);
   return AddrOffset;
 }
 

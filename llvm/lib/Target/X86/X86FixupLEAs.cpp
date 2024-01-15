@@ -650,8 +650,10 @@ void FixupLEAPass::processInstruction(MachineBasicBlock::iterator &I,
                                       MachineBasicBlock &MBB) {
   // Process a load, store, or LEA instruction.
   MachineInstr &MI = *I;
-  const int AddrOffset = X86::getFirstAddrOperandIdx(MI);
+  const MCInstrDesc &Desc = MI.getDesc();
+  int AddrOffset = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (AddrOffset >= 0) {
+    AddrOffset += X86II::getOperandBias(Desc);
     MachineOperand &p = MI.getOperand(AddrOffset + X86::AddrBaseReg);
     if (p.isReg() && p.getReg() != X86::ESP) {
       seekLEAFixup(p, I, MBB);
