@@ -2054,9 +2054,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // Clean up the temporary files afterwards.
     if (sys::fs::remove(LinkerOutputFilePath))
-      return Plugin::error("Failed to remove temporary file for lld");
+      return Plugin::error("Failed to remove temporary output file for lld");
     if (sys::fs::remove(LinkerInputFilePath))
-      return Plugin::error("Failed to remove temporary file for lld");
+      return Plugin::error("Failed to remove temporary input file for lld");
 
     return std::move(*BufferOrErr);
   }
