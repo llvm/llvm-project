@@ -1067,7 +1067,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       // where the syntax forbids a type.
       const Token &Next = NextToken();
 
-      if (getLangOpts().CPlusPlus26 && Next.is(tok::ellipsis) &&
+      if (Next.is(tok::ellipsis) &&
           Tok.is(tok::identifier) && GetLookAheadToken(2).is(tok::l_square)) {
         // Annotate the token and tail recurse.
         // If the token is not annotated, then it might be an expression pack

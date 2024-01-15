@@ -4416,8 +4416,6 @@ public:
   }
 
   ArrayRef<Expr *> getExpressions() const {
-    if (TransformedExpressions == 0)
-      return {};
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
 
