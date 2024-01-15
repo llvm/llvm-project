@@ -206,7 +206,7 @@ struct __unlock_guard {
 
   _LIBCPP_HIDE_FROM_ABI __unlock_guard(_Lock& __lock) : __lock_(__lock) { __lock_.unlock(); }
 
-  _LIBCPP_HIDE_FROM_ABI ~__unlock_guard() noexcept // turns exception to std::terminate
+  _LIBCPP_HIDE_FROM_ABI ~__unlock_guard() _NOEXCEPT // turns exception to std::terminate
   {
     __lock_.lock();
   }
@@ -263,16 +263,26 @@ condition_variable_any::wait_for(_Lock& __lock, const chrono::duration<_Rep, _Pe
 
 template <class _Lock, class _Predicate>
 bool condition_variable_any::wait(_Lock& __user_lock, stop_token __stoken, _Predicate __pred) {
-  // It is not safe to call the destructor on the other thread while waiting,
-  // even if we copy the shared_ptr<mutex> inside the function,
-  // because the stop_callback needs the internal cv.
-  // In order to make it work, we need to change the ABI to make both
-  // mutex and internal cv to be hold inside the shared_ptr, and
-  // make a local copy inside this function
-
   if (__stoken.stop_requested())
     return __pred();
-  std::stop_callback __cb(__stoken, [this] { notify_all(); });
+
+  // Per https://eel.is/c++draft/thread.condition.condvarany#general-note-2,
+  // we do need to take a copy of the shared pointer __mut_
+  // This ensures that a thread can call the destructor immediately after calling
+  // notify_all, without waiting all the wait calls.
+  // A thread can also safely call the destructor immediately after calling
+  // request_stop, as the call to request_stop would evaluate the callback,
+  // which accesses the internal condition variable, immediately on the same thread.
+  // In this situation, it is OK even without copying a shared ownership the internal
+  // condition variable. However, this needs the evaluation of stop_callback to
+  // happen-before the destruction.
+  // The spec only says "Only the notification to unblock the wait needs to happen
+  // before destruction". To make this work, we need to copy the shared ownership of
+  // the internal condition variable inside this function, which is not possible
+  // with the current ABI.
+  shared_ptr<mutex> __mut = __mut_;
+
+  stop_callback __cb(__stoken, [this] { notify_all(); });
 
   while (true) {
     if (__pred())
@@ -282,14 +292,15 @@ bool condition_variable_any::wait(_Lock& __user_lock, stop_token __stoken, _Pred
     // so that the notification cannot come in between the stop_requested
     // check and entering the wait.
     // Note that the stop_callback takes the same internal lock before notifying
-    unique_lock<mutex> __internal_lock(*__mut_);
+    unique_lock<mutex> __internal_lock(*__mut);
     if (__stoken.stop_requested())
       break;
 
     __unlock_guard<_Lock> __unlock(__user_lock);
-    unique_lock<mutex> __internal_lock2(std::move(__internal_lock));
+    unique_lock<mutex> __internal_lock2(
+        std::move(__internal_lock)); // switch unlock order between __internal_lock and __user_lock
     __cv_.wait(__internal_lock2);
-  } // __mut_.unlock(), __lock.lock()
+  } // __internal_lock2.unlock(), __user_lock.lock()
   return __pred();
 }
 
@@ -301,22 +312,25 @@ bool condition_variable_any::wait_until(
     _Predicate __pred) {
   if (__stoken.stop_requested())
     return __pred();
+
+  shared_ptr<mutex> __mut = __mut_;
   stop_callback __cb(__stoken, [this] { notify_all(); });
 
   while (true) {
     if (__pred())
       return true;
 
-    unique_lock<mutex> __internal_lock(*__mut_);
+    unique_lock<mutex> __internal_lock(*__mut);
     if (__stoken.stop_requested())
       break;
 
     __unlock_guard<_Lock> __unlock(__user_lock);
-    unique_lock<mutex> __internal_lock2(std::move(__internal_lock));
+    unique_lock<mutex> __internal_lock2(
+        std::move(__internal_lock)); // switch unlock order between __internal_lock and __user_lock
 
     if (__cv_.wait_until(__internal_lock2, __abs_time) == cv_status::timeout)
       break;
-  }
+  } // __internal_lock2.unlock(), __user_lock.lock()
   return __pred();
 }
 

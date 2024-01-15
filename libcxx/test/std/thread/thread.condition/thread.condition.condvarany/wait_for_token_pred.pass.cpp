@@ -29,6 +29,7 @@
 #include <stop_token>
 #include <thread>
 
+#include "helpers.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
@@ -43,6 +44,8 @@ void test() {
     Mutex mutex;
     Lock lock{mutex};
     ss.request_stop();
+
+    ElapsedTimeCheck check(1min);
 
     // [Note 4: The returned value indicates whether the predicate evaluated to true
     // regardless of whether the timeout was triggered or a stop request was made.]
@@ -69,6 +72,8 @@ void test() {
     Mutex mutex;
     Lock lock{mutex};
 
+    ElapsedTimeCheck check(1min);
+
     std::same_as<bool> auto r1 = cv.wait_for(lock, ss.get_token(), -1h, []() { return true; });
     assert(r1);
 
@@ -82,6 +87,8 @@ void test() {
     std::condition_variable_any cv;
     Mutex mutex;
     Lock lock{mutex};
+
+    ElapsedTimeCheck check(1min);
 
     std::same_as<bool> auto r1 = cv.wait_for(lock, ss.get_token(), -1h, []() { return false; });
     assert(!r1);
@@ -117,6 +124,8 @@ void test() {
       cv.notify_all();
     });
 
+    ElapsedTimeCheck check(10min);
+
     std::same_as<bool> auto r1 = cv.wait_for(lock, ss.get_token(), 1h, [&]() { return flag; });
     assert(flag);
     assert(r1);
@@ -142,6 +151,8 @@ void test() {
         std::this_thread::sleep_for(2ms);
       }
     });
+
+    ElapsedTimeCheck check(10min);
 
     std::same_as<bool> auto r = cv.wait_for(lock, ss.get_token(), 1h, [&]() {
       start.store(true);
@@ -174,6 +185,8 @@ void test() {
       std::jthread thread_;
     };
 
+    ElapsedTimeCheck check(10min);
+
     [[maybe_unused]] MyThread my_thread;
   }
 
@@ -191,6 +204,8 @@ void test() {
       ss.request_stop();
       request_stop_called.store(true);
     });
+
+    ElapsedTimeCheck check(10min);
 
     std::same_as<bool> auto r = cv.wait_for(lock, ss.get_token(), 1h, [&]() {
       pred_started.store(true);
@@ -212,6 +227,7 @@ void test() {
     Lock lock{mutex};
 
     try {
+      ElapsedTimeCheck check(10min);
       cv.wait_for(lock, ss.get_token(), 1h, []() -> bool { throw 5; });
       assert(false);
     } catch (int i) {
