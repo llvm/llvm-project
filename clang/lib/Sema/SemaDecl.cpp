@@ -3819,8 +3819,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // It is not permitted to redeclare an SME function with different SME
   // attributes.
-  if (IsInvalidSMECallConversion(Old->getType(), New->getType(),
-                                 AArch64SMECallConversionKind::MatchExactly)) {
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType())) {
     Diag(New->getLocation(), diag::err_sme_attr_mismatch)
         << New->getType() << Old->getType();
     Diag(OldLocation, diag::note_previous_declaration);
@@ -12180,13 +12179,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   // Check if the function definition uses any AArch64 SME features without
   // having the '+sme' feature enabled.
   if (DeclIsDefn) {
+    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
-    bool UsesZA = NewFD->hasAttr<ArmNewZAAttr>();
+    bool UsesZA = Attr && Attr->isNewZA();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      UsesZA |= EPI.AArch64SMEAttributes & FunctionType::SME_PStateZASharedMask;
+      UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
+                FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {

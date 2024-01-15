@@ -3700,6 +3700,12 @@ def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
+def err_conflicting_attributes_arm_state : Error<
+  "conflicting attributes for state '%0'">;
+def err_unknown_arm_state : Error<
+  "unknown state '%0'">;
+def err_missing_arm_state : Error<
+  "missing state for %0">;
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
