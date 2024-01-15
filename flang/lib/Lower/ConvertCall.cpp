@@ -156,7 +156,10 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   // Handle cases where caller must allocate the result or a fir.box for it.
   bool mustPopSymMap = false;
-  if (caller.mustMapInterfaceSymbols()) {
+
+  // Is procedure pointer functin result.
+  bool isProcedurePointer = resultType->isa<fir::BoxProcType>();
+  if (!isProcedurePointer && caller.mustMapInterfaceSymbols()) {
     symMap.pushScope();
     mustPopSymMap = true;
     Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
@@ -201,6 +204,8 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     llvm::SmallVector<mlir::Value> extents;
     llvm::SmallVector<mlir::Value> lengths;
     if (!caller.callerAllocateResult())
+      return {};
+    if (isProcedurePointer)
       return {};
     mlir::Type type = caller.getResultStorageType();
     if (type.isa<fir::SequenceType>())
@@ -446,6 +451,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       callResult = call.getResult(0);
   }
 
+  // if (!isProcedurePointer && caller.mustSaveResult()) {
   if (caller.mustSaveResult()) {
     assert(allocatedResult.has_value());
     builder.create<fir::SaveResultOp>(loc, callResult,
@@ -1379,6 +1385,9 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
+  // For procedure pointer function result, just return the call.
+  if (callContext.resultType->isa<fir::BoxProcType>())
+    return hlfir::EntityWithAttributes(fir::getBase(result));
 
   /// Clean-up associations and copy-in.
   for (auto cleanUp : callCleanUps)

@@ -1433,9 +1433,14 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    TODO(
-        getLoc(),
-        "lowering function references that return procedure pointers to HLFIR");
+    fir::FirOpBuilder &builder = getBuilder();
+    Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
+    auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
+    mlir::Type resType = fir::BoxProcType::get(builder.getContext(), procTy);
+    auto result = Fortran::lower::convertCallToHLFIR(
+        getLoc(), getConverter(), expr, resType, getSymMap(), getStmtCtx());
+    assert(result.has_value());
+    return *result;
   }
 
   template <typename T>
