@@ -35,8 +35,9 @@
 
 template <class Mutex, class Lock>
 void test() {
-  const auto oneHourAgo   = std::chrono::steady_clock::now() - std::chrono::hours(1);
-  const auto oneHourLater = std::chrono::steady_clock::now() + std::chrono::hours(1);
+  using namespace std::chrono_literals;
+  const auto oneHourAgo   = std::chrono::steady_clock::now() - 1h;
+  const auto oneHourLater = std::chrono::steady_clock::now() + 1h;
 
   // stop_requested before hand
   {
