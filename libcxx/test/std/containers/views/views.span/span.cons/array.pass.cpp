@@ -95,7 +95,7 @@ constexpr bool testSpan()
 
     std::span<const int> s5 = {{1,2}};
 #if TEST_STD_VER >= 26
-    std::span<const int, 2> s6({1,2});
+    std::span<const int, 2> s6({1, 2});
 #else
     std::span<const int, 2> s6 = {{1,2}};
 #endif
