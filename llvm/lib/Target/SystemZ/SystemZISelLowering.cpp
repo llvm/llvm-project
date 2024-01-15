@@ -9188,9 +9188,6 @@ MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
   DebugLoc DL = MI.getDebugLoc();
   Register SrcReg = MI.getOperand(0).getReg();
 
-  // This instruction will raise an exception if the input is a SNaN.
-  //  MI.clearFlag(MachineInstr::MIFlag::NoFPExcept);
-
   // Create new virtual register of the same class as source.
   const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
   Register DstReg = MRI->createVirtualRegister(RC);

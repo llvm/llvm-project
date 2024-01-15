@@ -555,7 +555,7 @@ bool SystemZElimCompare::optimizeCompareZero(
 
   // Also do a forward search to handle cases where an instruction after the
   // compare can be converted, like
-  // LTGR %r0d, %r0d; %r1d = LGR %r0d  =>  LTGR %r1d, %r0d          XXXX
+  // CGHI %r0d, 0; %r1d = LGR %r0d  =>  LTGR %r1d, %r0d
   auto MIRange = llvm::make_range(
       std::next(MachineBasicBlock::iterator(&Compare)), MBB.end());
   for (MachineInstr &MI : llvm::make_early_inc_range(MIRange)) {
