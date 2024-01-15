@@ -505,8 +505,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 // Create the constructor and destructor to register the fatbinary with the CUDA
 // runtime.
 void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
-                                  bool IsHIP,
-                                  std::optional<EntryArrayTy> EntryArrayOpt,
+                                  bool IsHIP, EntryArrayTy EntryArray,
                                   StringRef Suffix,
                                   bool EmitSurfacesAndTextures) {
   LLVMContext &C = M.getContext();
@@ -557,12 +556,6 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   CtorBuilder.CreateAlignedStore(
       Handle, BinaryHandleGlobal,
       Align(M.getDataLayout().getPointerTypeSize(PtrTy)));
-  EntryArrayTy EntryArray =
-      (EntryArrayOpt ? *EntryArrayOpt
-                     : (IsHIP ? offloading::getOffloadEntryArray(
-                                    M, "hip_offloading_entries")
-                              : offloading::getOffloadEntryArray(
-                                    M, "cuda_offloading_entries")));
   CtorBuilder.CreateCall(createRegisterGlobalsFunction(M, IsHIP, EntryArray,
                                                        Suffix,
                                                        EmitSurfacesAndTextures),
@@ -588,14 +581,9 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 } // namespace
 
 Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
-                                     std::optional<EntryArrayTy> EntryArray,
+                                     EntryArrayTy EntryArray,
                                      llvm::StringRef Suffix) {
-  GlobalVariable *Desc = createBinDesc(
-      M, Images,
-      EntryArray
-          ? *EntryArray
-          : offloading::getOffloadEntryArray(M, "omp_offloading_entries"),
-      Suffix);
+  GlobalVariable *Desc = createBinDesc(M, Images, EntryArray, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
@@ -605,13 +593,13 @@ Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
 }
 
 Error offloading::wrapCudaBinary(Module &M, ArrayRef<char> Image,
-                                 std::optional<EntryArrayTy> EntryArray,
+                                 EntryArrayTy EntryArray,
                                  llvm::StringRef Suffix,
                                  bool EmitSurfacesAndTextures) {
   GlobalVariable *Desc = createFatbinDesc(M, Image, /*IsHip=*/false, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
-                             "No fatinbary section created.");
+                             "No fatbin section created.");
 
   createRegisterFatbinFunction(M, Desc, /*IsHip=*/false, EntryArray, Suffix,
                                EmitSurfacesAndTextures);
@@ -619,13 +607,12 @@ Error offloading::wrapCudaBinary(Module &M, ArrayRef<char> Image,
 }
 
 Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
-                                std::optional<EntryArrayTy> EntryArray,
-                                llvm::StringRef Suffix,
+                                EntryArrayTy EntryArray, llvm::StringRef Suffix,
                                 bool EmitSurfacesAndTextures) {
   GlobalVariable *Desc = createFatbinDesc(M, Image, /*IsHip=*/true, Suffix);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
-                             "No fatinbary section created.");
+                             "No fatbin section created.");
 
   createRegisterFatbinFunction(M, Desc, /*IsHip=*/true, EntryArray, Suffix,
                                EmitSurfacesAndTextures);

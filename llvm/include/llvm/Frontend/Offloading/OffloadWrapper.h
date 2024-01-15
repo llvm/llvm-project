@@ -20,10 +20,10 @@ using EntryArrayTy = std::pair<GlobalVariable *, GlobalVariable *>;
 /// \param EntryArray Optional pair pointing to the `__start` and `__stop`
 /// symbols holding the `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
-llvm::Error
-wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
-                   std::optional<EntryArrayTy> EntryArray = std::nullopt,
-                   llvm::StringRef Suffix = "");
+llvm::Error wrapOpenMPBinaries(llvm::Module &M,
+                               llvm::ArrayRef<llvm::ArrayRef<char>> Images,
+                               EntryArrayTy EntryArray,
+                               llvm::StringRef Suffix = "");
 
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.
@@ -32,11 +32,9 @@ wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.
-llvm::Error
-wrapCudaBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
-               std::optional<EntryArrayTy> EntryArray = std::nullopt,
-               llvm::StringRef Suffix = "",
-               bool EmitSurfacesAndTextures = true);
+llvm::Error wrapCudaBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
+                           EntryArrayTy EntryArray, llvm::StringRef Suffix = "",
+                           bool EmitSurfacesAndTextures = true);
 
 /// Wraps the input bundled image into the module \p M as global symbols and
 /// registers the images with the HIP runtime.
@@ -46,8 +44,7 @@ wrapCudaBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.
 llvm::Error wrapHIPBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
-                          std::optional<EntryArrayTy> EntryArray = std::nullopt,
-                          llvm::StringRef Suffix = "",
+                          EntryArrayTy EntryArray, llvm::StringRef Suffix = "",
                           bool EmitSurfacesAndTextures = true);
 } // namespace offloading
 } // namespace llvm
