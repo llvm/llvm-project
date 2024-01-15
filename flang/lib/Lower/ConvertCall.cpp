@@ -451,7 +451,6 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       callResult = call.getResult(0);
   }
 
-  // if (!isProcedurePointer && caller.mustSaveResult()) {
   if (caller.mustSaveResult()) {
     assert(allocatedResult.has_value());
     builder.create<fir::SaveResultOp>(loc, callResult,
