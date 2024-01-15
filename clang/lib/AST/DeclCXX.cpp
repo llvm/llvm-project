@@ -1398,12 +1398,12 @@ bool CXXRecordDecl::isLiteral() const {
     // members or at least one variant member of non-volatile literal type,
     if (!isUnion())
       return false;
-    bool HasAtLeastOneTrivialMember =
+    bool HasAtLeastOneLiteralMember =
         fields().empty() || any_of(fields(), [this](const FieldDecl *D) {
           return !D->getType().isVolatileQualified() &&
                  D->getType()->isLiteralType(getASTContext());
         });
-    if (!HasAtLeastOneTrivialMember)
+    if (!HasAtLeastOneLiteralMember)
       return false;
   }
 

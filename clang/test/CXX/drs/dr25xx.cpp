@@ -256,6 +256,19 @@ static_assert(__is_literal(union5), "");
 
 struct Literal { constexpr Literal() {} };
 union union6 { NonLiteral NL; Literal L; };
+static_assert(__is_literal(union6), "");
+
+#if __cplusplus >= 202003L
+struct A { A(); };
+union U {
+  A a;
+  constexpr U() {}
+  constexpr ~U() {}
+};
+static_assert(!__is_literal(U), "");
+#endif
+
+
 
 #endif
 }
