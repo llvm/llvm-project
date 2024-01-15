@@ -5262,9 +5262,7 @@ static SDValue PerformANDCombine(SDNode *N,
       return SDValue();
     }
 
-    unsigned ExtType =
-      cast<ConstantSDNode>(Val->getOperand(Val->getNumOperands()-1))->
-        getZExtValue();
+    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
     if (ExtType == ISD::SEXTLOAD) {
       // If for some reason the load is a sextload, the and is needed to zero
       // out the high 8 bits
