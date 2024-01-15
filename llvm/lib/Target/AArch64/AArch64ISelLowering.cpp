@@ -8209,16 +8209,17 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Emit SMSTOP before returning from a locally streaming function
   SMEAttrs FuncAttrs(MF.getFunction());
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
-    SDValue PStateSM;
     if (FuncAttrs.hasStreamingCompatibleInterface()) {
       Register Reg = FuncInfo->getPStateSMReg();
       assert(Reg.isValid() && "PStateSM Register is invalid");
-      PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
-    } else {
-      PStateSM = DAG.getConstant(1, DL, MVT::i64);
-    }
-    Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
-                                /*Glue*/ SDValue(), PStateSM, /*Entry*/ true);
+      SDValue PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
+      Chain =
+          changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
+                              /*Glue*/ SDValue(), PStateSM, /*Entry*/ false);
+    } else
+      Chain = changeStreamingMode(
+          DAG, DL, /*Enable*/ false, Chain,
+          /*Glue*/ SDValue(), DAG.getConstant(1, DL, MVT::i64), /*Entry*/ true);
     Glue = Chain.getValue(1);
   }
 

@@ -29,7 +29,7 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    tbz w8, #0, .LBB0_4
+; CHECK-NEXT:    tbnz w8, #0, .LBB0_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB0_4:
@@ -71,7 +71,7 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl normal_callee
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    tbz w19, #0, .LBB1_4
+; CHECK-NEXT:    tbnz w19, #0, .LBB1_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB1_4:
@@ -115,7 +115,7 @@ define void @streaming_body_and_streaming_compatible_interface_multi_basic_block
 ; CHECK-NEXT:    cbz w8, .LBB2_6
 ; CHECK-NEXT:  // %bb.3: // %if.else
 ; CHECK-NEXT:    bl streaming_compatible_callee
-; CHECK-NEXT:    tbz w19, #0, .LBB2_5
+; CHECK-NEXT:    tbnz w19, #0, .LBB2_5
 ; CHECK-NEXT:  // %bb.4: // %if.else
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_5: // %if.else
@@ -129,7 +129,7 @@ define void @streaming_body_and_streaming_compatible_interface_multi_basic_block
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl normal_callee
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    tbz w19, #0, .LBB2_8
+; CHECK-NEXT:    tbnz w19, #0, .LBB2_8
 ; CHECK-NEXT:  // %bb.7: // %if.then
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_8: // %if.then
