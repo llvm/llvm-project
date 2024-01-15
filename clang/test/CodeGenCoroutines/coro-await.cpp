@@ -127,7 +127,7 @@ extern "C" void f1(int) {
   // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::coroutine_traits<void, int>::promise_type"
   // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   co_yield 42;
-  // CHECK: call void @_ZNSt16coroutine_traitsIJviEE12promise_type11yield_valueEi(ptr sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], ptr {{[^,]*}} %[[PROMISE]], i32 42)
+  // CHECK: call void @_ZNSt16coroutine_traitsIJviEE12promise_type11yield_valueEi(ptr dead_on_unwind writable sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], ptr {{[^,]*}} %[[PROMISE]], i32 42)
 
   // See if we need to suspend:
   // --------------------------
@@ -194,20 +194,20 @@ extern "C" void UseAggr(Aggr&&);
 extern "C" void TestAggr() {
   UseAggr(co_await AggrAwaiter{});
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr sret(%struct.Aggr) align 4 %[[AwaitResume:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr dead_on_unwind writable sret(%struct.Aggr) align 4 %[[AwaitResume:.+]],
   // CHECK: call void @UseAggr(ptr nonnull align 4 dereferenceable(12) %[[AwaitResume]])
   // CHECK: call void @_ZN4AggrD1Ev(ptr {{[^,]*}} %[[AwaitResume]])
   // CHECK: call void @Whatever()
 
   co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr sret(%struct.Aggr) align 4 %[[AwaitResume2:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr dead_on_unwind writable sret(%struct.Aggr) align 4 %[[AwaitResume2:.+]],
   // CHECK: call void @_ZN4AggrD1Ev(ptr {{[^,]*}} %[[AwaitResume2]])
   // CHECK: call void @Whatever()
 
   Aggr Val = co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr sret(%struct.Aggr) align 4 %[[AwaitResume3:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr dead_on_unwind writable sret(%struct.Aggr) align 4 %[[AwaitResume3:.+]],
   // CHECK: call void @Whatever()
   // CHECK: call void @_ZN4AggrD1Ev(ptr {{[^,]*}} %[[AwaitResume3]])
 }
@@ -252,7 +252,7 @@ extern "C" void TestOpAwait() {
 
   co_await MyAgg{};
   // CHECK: call void @_ZN5MyAggawEv(ptr {{[^,]*}} %
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr sret(%struct.Aggr) align 4 %
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(ptr dead_on_unwind writable sret(%struct.Aggr) align 4 %
 }
 
 // CHECK-LABEL: EndlessLoop(

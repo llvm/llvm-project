@@ -422,7 +422,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   pthread_attr_t attr;
   int status;
   size_t size = 0;

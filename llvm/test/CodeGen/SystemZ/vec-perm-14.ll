@@ -1,16 +1,14 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
-;
-; Test that only one vperm of the vector compare is needed for both extracts.
 
+; Test that no vperm of the vector compare is needed for the extracts.
 define void @fun() {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    vlrepf %v0, 0(%r1)
 ; CHECK-NEXT:    vgbm %v1, 0
-; CHECK-NEXT:    larl %r1, .LCPI0_0
 ; CHECK-NEXT:    vceqb %v0, %v0, %v1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
-; CHECK-NEXT:    vperm %v0, %v0, %v0, %v1
+; CHECK-NEXT:    vuphb %v0, %v0
+; CHECK-NEXT:    vuphh %v0, %v0
 ; CHECK-NEXT:    vlgvf %r0, %v0, 0
 ; CHECK-NEXT:    tmll %r0, 1
 ; CHECK-NEXT:    je .LBB0_2

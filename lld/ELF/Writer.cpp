@@ -405,8 +405,9 @@ template <class ELFT> void elf::createSyntheticSections() {
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
       if (canHaveMemtagGlobals()) {
-        part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
-        add(*part.memtagDescriptors);
+        part.memtagGlobalDescriptors =
+            std::make_unique<MemtagGlobalDescriptors>();
+        add(*part.memtagGlobalDescriptors);
       }
     }
 
@@ -1731,8 +1732,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
-      if (part.memtagDescriptors)
-        changed |= part.memtagDescriptors->updateAllocSize();
+      if (part.memtagGlobalDescriptors)
+        changed |= part.memtagGlobalDescriptors->updateAllocSize();
     }
 
     const Defined *changedSym = script->assignAddresses();

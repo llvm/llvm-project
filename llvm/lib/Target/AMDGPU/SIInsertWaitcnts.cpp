@@ -292,8 +292,8 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
-  void setNonKernelFunctionInitialState() {
-    setScoreUB(VS_CNT, getWaitCountMax(VS_CNT));
+  void setStateOnFunctionEntryOrReturn() {
+    setScoreUB(VS_CNT, getScoreLB(VS_CNT) + getWaitCountMax(VS_CNT));
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
 
@@ -874,11 +874,11 @@ static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
 }
 
 bool SIInsertWaitcnts::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
-  unsigned Opcode = Waitcnt->getOpcode();
-  if (!SIInstrInfo::isSoftWaitcnt(Opcode))
+  unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Waitcnt->getOpcode());
+  if (Opcode == Waitcnt->getOpcode())
     return false;
 
-  Waitcnt->setDesc(TII->get(SIInstrInfo::getNonSoftWaitcntOpcode(Opcode)));
+  Waitcnt->setDesc(TII->get(Opcode));
   return true;
 }
 
@@ -898,10 +898,10 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(
     if (II.isMetaInstruction())
       continue;
 
-    unsigned Opcode = II.getOpcode();
-    bool IsSoft = SIInstrInfo::isSoftWaitcnt(Opcode);
+    unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
+    bool IsSoft = Opcode != II.getOpcode();
 
-    if (SIInstrInfo::isWaitcnt(Opcode)) {
+    if (Opcode == AMDGPU::S_WAITCNT) {
       // Update required wait count. If this is a soft waitcnt (= it was added
       // by an earlier pass), it may be entirely removed.
       unsigned IEnc = II.getOperand(0).getImm();
@@ -918,7 +918,7 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(
         WaitcntInstr = &II;
 
     } else {
-      assert(SIInstrInfo::isWaitcntVsCnt(Opcode));
+      assert(Opcode == AMDGPU::S_WAITCNT_VSCNT);
       assert(II.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
 
       unsigned OldVSCnt =
@@ -1487,6 +1487,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZeroExceptVsCnt());
+      ScoreBrackets->setStateOnFunctionEntryOrReturn();
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
@@ -1589,9 +1590,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 }
 
 static bool isWaitInstr(MachineInstr &Inst) {
-  auto Opcode = Inst.getOpcode();
-  return SIInstrInfo::isWaitcnt(Opcode) ||
-         (SIInstrInfo::isWaitcntVsCnt(Opcode) && Inst.getOperand(0).isReg() &&
+  unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Inst.getOpcode());
+  return Opcode == AMDGPU::S_WAITCNT ||
+         (Opcode == AMDGPU::S_WAITCNT_VSCNT && Inst.getOperand(0).isReg() &&
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
 }
 
@@ -1879,7 +1880,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
     auto NonKernelInitialState =
         std::make_unique<WaitcntBrackets>(ST, Limits, Encoding);
-    NonKernelInitialState->setNonKernelFunctionInitialState();
+    NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;

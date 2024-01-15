@@ -12668,11 +12668,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_MAVERICK, {}, {}},
       {ARM::AEK_XSCALE, {}, {}},
   };
-  bool EnableFeature = true;
-  if (Name.starts_with_insensitive("no")) {
-    EnableFeature = false;
-    Name = Name.substr(2);
-  }
+  bool EnableFeature = !Name.consume_front_insensitive("no");
   uint64_t FeatureKind = ARM::parseArchExt(Name);
   if (FeatureKind == ARM::AEK_INVALID)
     return Error(ExtLoc, "unknown architectural extension: " + Name);
