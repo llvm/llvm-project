@@ -1022,18 +1022,13 @@ std::optional<OpResult> DwarfExprAST::traverse(DIOp::Composite Composite,
 
 std::optional<OpResult> DwarfExprAST::traverseMathOp(uint8_t DwarfOp,
                                                      ChildrenT Children) {
-  auto LHS = traverse(Children[0].get(), ValueKind::LocationDesc);
+  auto LHS = traverse(Children[0].get(), ValueKind::Value);
   if (!LHS)
     return std::nullopt;
-  auto RHS = traverse(Children[1].get(), ValueKind::LocationDesc);
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
   if (!RHS)
     return std::nullopt;
 
-  // FIXME: These operands are getting read backwards.
-  readToValue(Children[0].get());
-  emitDwarfOp(dwarf::DW_OP_swap);
-  readToValue(Children[1].get());
-  emitDwarfOp(dwarf::DW_OP_swap);
   emitDwarfOp(DwarfOp);
   return OpResult{LHS->Ty, ValueKind::Value};
 }
@@ -1043,11 +1038,10 @@ std::optional<OpResult> DwarfExprAST::traverse(DIOp::ByteOffset ByteOffset,
   auto LHS = traverse(Children[0].get(), ValueKind::LocationDesc);
   if (!LHS)
     return std::nullopt;
-  auto RHS = traverse(Children[1].get(), ValueKind::LocationDesc);
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
   if (!RHS)
     return std::nullopt;
 
-  RHS = convertValueKind(*RHS, ValueKind::Value);
   emitDwarfOp(dwarf::DW_OP_LLVM_offset);
   return OpResult{ByteOffset.getResultType(), ValueKind::LocationDesc};
 }
@@ -1057,11 +1051,10 @@ std::optional<OpResult> DwarfExprAST::traverse(DIOp::BitOffset BitOffset,
   auto LHS = traverse(Children[0].get(), ValueKind::LocationDesc);
   if (!LHS)
     return std::nullopt;
-  auto RHS = traverse(Children[1].get(), ValueKind::LocationDesc);
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
   if (!RHS)
     return std::nullopt;
 
-  RHS = convertValueKind(*RHS, ValueKind::Value);
   emitDwarfOp(dwarf::DW_OP_LLVM_bit_offset);
   return OpResult{BitOffset.getResultType(), ValueKind::LocationDesc};
 }

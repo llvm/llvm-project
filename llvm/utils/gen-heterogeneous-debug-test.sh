@@ -441,10 +441,10 @@ di_version=4
 
 for i in "${!scalar_tys[@]}"; do
 
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset"
+add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset"
 gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(${scalar_tys[$i]})"
 
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address"
+add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address"
 gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(ptr), DIOpDeref(${scalar_tys[$i]})"
 
 deref_and_mask_ops="DW_OP_deref_size 0x$(printf '%x' "${scalar_ty_byte_sizes[$i]}")"
@@ -452,10 +452,10 @@ if [[ "${scalar_ty_bit_masks[$i]}" -ne 0 ]]; then
   deref_and_mask_ops+=", DW_OP_constu 0x$(printf '%x' "${scalar_ty_bit_masks[$i]}"), DW_OP_and"
 fi
 
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, $deref_and_mask_ops, DW_OP_stack_value"
+add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, $deref_and_mask_ops, DW_OP_stack_value"
 gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(${scalar_tys[$i]}), DIOpRead()"
 
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, $deref_and_mask_ops, DW_OP_stack_value"
+add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, $deref_and_mask_ops, DW_OP_stack_value"
 gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(ptr), DIOpDeref(${scalar_tys[$i]}), DIOpRead()"
 
 done

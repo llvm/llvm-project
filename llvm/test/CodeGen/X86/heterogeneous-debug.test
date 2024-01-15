@@ -3743,7 +3743,7 @@ body:             |
   
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var104")
 ---
 name:            Fun104
@@ -3759,7 +3759,7 @@ body:             |
     RET64 debug-location !11
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var105")
 ---
 name:            Fun105
@@ -3775,7 +3775,7 @@ body:             |
     RET64 debug-location !19
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_constu 0x1, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_constu 0x1, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var106")
 ---
 name:            Fun106
@@ -3791,7 +3791,7 @@ body:             |
     RET64 debug-location !27
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_constu 0x1, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_constu 0x1, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var107")
 ---
 name:            Fun107
@@ -3807,7 +3807,7 @@ body:             |
     RET64 debug-location !35
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var108")
 ---
 name:            Fun108
@@ -3823,7 +3823,7 @@ body:             |
     RET64 debug-location !43
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var109")
 ---
 name:            Fun109
@@ -3839,7 +3839,7 @@ body:             |
     RET64 debug-location !51
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_constu 0xf, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_constu 0xf, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var110")
 ---
 name:            Fun110
@@ -3855,7 +3855,7 @@ body:             |
     RET64 debug-location !59
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_constu 0xf, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_constu 0xf, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var111")
 ---
 name:            Fun111
@@ -3871,7 +3871,7 @@ body:             |
     RET64 debug-location !67
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var112")
 ---
 name:            Fun112
@@ -3887,7 +3887,7 @@ body:             |
     RET64 debug-location !75
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var113")
 ---
 name:            Fun113
@@ -3903,7 +3903,7 @@ body:             |
     RET64 debug-location !83
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x1, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var114")
 ---
 name:            Fun114
@@ -3919,7 +3919,7 @@ body:             |
     RET64 debug-location !91
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -1, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x1, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var115")
 ---
 name:            Fun115
@@ -3935,7 +3935,7 @@ body:             |
     RET64 debug-location !99
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var116")
 ---
 name:            Fun116
@@ -3951,7 +3951,7 @@ body:             |
     RET64 debug-location !107
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var117")
 ---
 name:            Fun117
@@ -3967,7 +3967,7 @@ body:             |
     RET64 debug-location !115
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var118")
 ---
 name:            Fun118
@@ -3983,7 +3983,7 @@ body:             |
     RET64 debug-location !123
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var119")
 ---
 name:            Fun119
@@ -3999,7 +3999,7 @@ body:             |
     RET64 debug-location !131
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var120")
 ---
 name:            Fun120
@@ -4015,7 +4015,7 @@ body:             |
     RET64 debug-location !139
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var121")
 ---
 name:            Fun121
@@ -4031,7 +4031,7 @@ body:             |
     RET64 debug-location !147
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x3, DW_OP_constu 0x1ffff, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x3, DW_OP_constu 0x1ffff, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var122")
 ---
 name:            Fun122
@@ -4047,7 +4047,7 @@ body:             |
     RET64 debug-location !155
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x3, DW_OP_constu 0x1ffff, DW_OP_and, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x3, DW_OP_constu 0x1ffff, DW_OP_and, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var123")
 ---
 name:            Fun123
@@ -4063,7 +4063,7 @@ body:             |
     RET64 debug-location !163
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var124")
 ---
 name:            Fun124
@@ -4079,7 +4079,7 @@ body:             |
     RET64 debug-location !171
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var125")
 ---
 name:            Fun125
@@ -4095,7 +4095,7 @@ body:             |
     RET64 debug-location !179
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x4, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x4, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var126")
 ---
 name:            Fun126
@@ -4111,7 +4111,7 @@ body:             |
     RET64 debug-location !187
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x4, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x4, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var127")
 ---
 name:            Fun127
@@ -4127,7 +4127,7 @@ body:             |
     RET64 debug-location !195
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var128")
 ---
 name:            Fun128
@@ -4143,7 +4143,7 @@ body:             |
     RET64 debug-location !203
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var129")
 ---
 name:            Fun129
@@ -4159,7 +4159,7 @@ body:             |
     RET64 debug-location !211
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var130")
 ---
 name:            Fun130
@@ -4175,7 +4175,7 @@ body:             |
     RET64 debug-location !219
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var131")
 ---
 name:            Fun131
@@ -4191,7 +4191,7 @@ body:             |
     RET64 debug-location !227
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var132")
 ---
 name:            Fun132
@@ -4207,7 +4207,7 @@ body:             |
     RET64 debug-location !235
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var133")
 ---
 name:            Fun133
@@ -4223,7 +4223,7 @@ body:             |
     RET64 debug-location !243
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x10, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x10, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var134")
 ---
 name:            Fun134
@@ -4239,7 +4239,7 @@ body:             |
     RET64 debug-location !251
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x10, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x10, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var135")
 ---
 name:            Fun135
@@ -4255,7 +4255,7 @@ body:             |
     RET64 debug-location !259
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var136")
 ---
 name:            Fun136
@@ -4271,7 +4271,7 @@ body:             |
     RET64 debug-location !267
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var137")
 ---
 name:            Fun137
@@ -4287,7 +4287,7 @@ body:             |
     RET64 debug-location !275
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var138")
 ---
 name:            Fun138
@@ -4303,7 +4303,7 @@ body:             |
     RET64 debug-location !283
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var139")
 ---
 name:            Fun139
@@ -4319,7 +4319,7 @@ body:             |
     RET64 debug-location !291
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var140")
 ---
 name:            Fun140
@@ -4335,7 +4335,7 @@ body:             |
     RET64 debug-location !299
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var141")
 ---
 name:            Fun141
@@ -4351,7 +4351,7 @@ body:             |
     RET64 debug-location !307
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var142")
 ---
 name:            Fun142
@@ -4367,7 +4367,7 @@ body:             |
     RET64 debug-location !315
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -2, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x2, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var143")
 ---
 name:            Fun143
@@ -4383,7 +4383,7 @@ body:             |
     RET64 debug-location !323
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var144")
 ---
 name:            Fun144
@@ -4399,7 +4399,7 @@ body:             |
     RET64 debug-location !331
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var145")
 ---
 name:            Fun145
@@ -4415,7 +4415,7 @@ body:             |
     RET64 debug-location !339
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x4, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x4, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var146")
 ---
 name:            Fun146
@@ -4431,7 +4431,7 @@ body:             |
     RET64 debug-location !347
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x4, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -4, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x4, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var147")
 ---
 name:            Fun147
@@ -4447,7 +4447,7 @@ body:             |
     RET64 debug-location !355
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var148")
 ---
 name:            Fun148
@@ -4463,7 +4463,7 @@ body:             |
     RET64 debug-location !363
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var149")
 ---
 name:            Fun149
@@ -4479,7 +4479,7 @@ body:             |
     RET64 debug-location !371
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var150")
 ---
 name:            Fun150
@@ -4495,7 +4495,7 @@ body:             |
     RET64 debug-location !379
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var151")
 ---
 name:            Fun151
@@ -4511,7 +4511,7 @@ body:             |
     RET64 debug-location !387
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset
 # CHECK-NEXT: DW_AT_name ("Var152")
 ---
 name:            Fun152
@@ -4527,7 +4527,7 @@ body:             |
     RET64 debug-location !395
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address
 # CHECK-NEXT: DW_AT_name ("Var153")
 ---
 name:            Fun153
@@ -4543,7 +4543,7 @@ body:             |
     RET64 debug-location !403
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x10, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x10, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var154")
 ---
 name:            Fun154
@@ -4559,7 +4559,7 @@ body:             |
     RET64 debug-location !411
 ...
 # CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x10, DW_OP_stack_value
+# CHECK-NEXT: DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -16, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x10, DW_OP_stack_value
 # CHECK-NEXT: DW_AT_name ("Var155")
 ---
 name:            Fun155

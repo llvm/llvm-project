@@ -26,8 +26,8 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructEmpty")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z21Test_Func_StructEmpty11StructEmpty() #0 !dbg !24 {
@@ -44,8 +44,8 @@ declare void @llvm.dbg.def(metadata, metadata) #1
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructEmpty")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z21Test_Kern_StructEmpty11StructEmpty(ptr addrspace(4) byref(%struct.StructEmpty) align 1 %0) #2 !dbg !33 {
@@ -63,8 +63,8 @@ declare void @llvm.memcpy.p0.p4.i64(i8* noalias nocapture writeonly, ptr addrspa
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructSingleElement")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z29Test_Func_StructSingleElement19StructSingleElement(i8 %.coerce) #0 !dbg !39 {
@@ -80,8 +80,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructSingleElement")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z29Test_Kern_StructSingleElement19StructSingleElement(i8 %.coerce) #2 !dbg !50 {
@@ -97,8 +97,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructSingleElementRecursive")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z38Test_Func_StructSingleElementRecursive28StructSingleElementRecursive(i8 %.coerce) #0 !dbg !56 {
@@ -115,8 +115,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructSingleElementRecursive")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z38Test_Kern_StructSingleElementRecursive28StructSingleElementRecursive(i8 %.coerce) #2 !dbg !67 {
@@ -133,8 +133,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructTrivialCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z38Test_Func_StructTrivialCopyTrivialMove28StructTrivialCopyTrivialMove(i8 %.coerce) #0 !dbg !73 {
@@ -150,8 +150,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructTrivialCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z38Test_Kern_StructTrivialCopyTrivialMove28StructTrivialCopyTrivialMove(i8 %.coerce) #2 !dbg !94 {
@@ -167,8 +167,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructNoCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z33Test_Func_StructNoCopyTrivialMove23StructNoCopyTrivialMove(i8 %.coerce) #0 !dbg !100 {
@@ -184,8 +184,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructNoCopyTrivialMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z33Test_Kern_StructNoCopyTrivialMove23StructNoCopyTrivialMove(i8 %.coerce) #2 !dbg !121 {
@@ -201,8 +201,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_AT_name ("Test_Func_StructTrivialCopyNoMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z33Test_Func_StructTrivialCopyNoMove23StructTrivialCopyNoMove(i8 %.coerce) #0 !dbg !127 {
@@ -218,8 +218,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructTrivialCopyNoMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z33Test_Kern_StructTrivialCopyNoMove23StructTrivialCopyNoMove(i8 %.coerce) #2 !dbg !148 {
@@ -249,8 +249,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructNoCopyNoMove")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z28Test_Kern_StructNoCopyNoMove18StructNoCopyNoMove(i8 %.coerce) #2 !dbg !175 {
@@ -266,8 +266,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct2Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct2Bytes12StructNBytesILj2EE(i16 %.coerce) #0 !dbg !181 {
@@ -282,8 +282,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct2Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct2Bytes12StructNBytesILj2EE(ptr addrspace(4) byref(%struct.StructNBytes) align 1 %0) #2 !dbg !198 {
@@ -298,8 +298,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct3Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct3Bytes12StructNBytesILj3EE(i32 %.coerce) #0 !dbg !204 {
@@ -320,8 +320,8 @@ declare void @llvm.memcpy.p0.p0.i64(i8* noalias nocapture writeonly, i8* noalias
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct3Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct3Bytes12StructNBytesILj3EE(ptr addrspace(4) byref(%struct.StructNBytes.0) align 1 %0) #2 !dbg !221 {
@@ -336,8 +336,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct4Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct4Bytes12StructNBytesILj4EE(i32 %.coerce) #0 !dbg !227 {
@@ -352,8 +352,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct4Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct4Bytes12StructNBytesILj4EE(ptr addrspace(4) byref(%struct.StructNBytes.1) align 1 %0) #2 !dbg !244 {
@@ -368,8 +368,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct5Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct5Bytes12StructNBytesILj5EE([2 x i32] %.coerce) #0 !dbg !250 {
@@ -387,8 +387,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct5Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct5Bytes12StructNBytesILj5EE(ptr addrspace(4) byref(%struct.StructNBytes.2) align 1 %0) #2 !dbg !267 {
@@ -403,8 +403,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct6Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct6Bytes12StructNBytesILj6EE([2 x i32] %.coerce) #0 !dbg !273 {
@@ -422,8 +422,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct6Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct6Bytes12StructNBytesILj6EE(ptr addrspace(4) byref(%struct.StructNBytes.3) align 1 %0) #2 !dbg !290 {
@@ -438,8 +438,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct7Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct7Bytes12StructNBytesILj7EE([2 x i32] %.coerce) #0 !dbg !296 {
@@ -457,8 +457,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct7Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct7Bytes12StructNBytesILj7EE(ptr addrspace(4) byref(%struct.StructNBytes.4) align 1 %0) #2 !dbg !313 {
@@ -473,8 +473,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct8Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct8Bytes12StructNBytesILj8EE([2 x i32] %.coerce) #0 !dbg !319 {
@@ -489,8 +489,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct8Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct8Bytes12StructNBytesILj8EE(ptr addrspace(4) byref(%struct.StructNBytes.5) align 1 %0) #2 !dbg !336 {
@@ -505,8 +505,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Struct9Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z22Test_Func_Struct9Bytes12StructNBytesILj9EE(i8 %.coerce0, [8 x i8] %.coerce1) #0 !dbg !342 {
@@ -524,8 +524,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct9Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct9Bytes12StructNBytesILj9EE(ptr addrspace(4) byref(%struct.StructNBytes.6) align 1 %0) #2 !dbg !359 {
@@ -554,8 +554,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Struct64Bytes")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z23Test_Kern_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(4) byref(%struct.StructNBytes.7) align 1 %0) #2 !dbg !382 {
@@ -570,8 +570,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Int8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z15Test_Func_Int8Tc(i8 noundef signext %0) #0 !dbg !388 {
@@ -586,8 +586,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Int8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z15Test_Kern_Int8Tc(i8 noundef %0) #2 !dbg !396 {
@@ -602,8 +602,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_UInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z16Test_Func_UInt8Th(i8 noundef zeroext %0) #0 !dbg !402 {
@@ -618,8 +618,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_UInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z16Test_Kern_UInt8Th(i8 noundef %0) #2 !dbg !410 {
@@ -634,8 +634,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Int16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z16Test_Func_Int16Ts(i16 noundef signext %0) #0 !dbg !416 {
@@ -650,8 +650,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Int16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z16Test_Kern_Int16Ts(i16 noundef %0) #2 !dbg !424 {
@@ -666,8 +666,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_UInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z17Test_Func_UInt16Tt(i16 noundef zeroext %0) #0 !dbg !430 {
@@ -682,8 +682,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_UInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z17Test_Kern_UInt16Tt(i16 noundef %0) #2 !dbg !438 {
@@ -698,8 +698,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Int32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z16Test_Func_Int32Ti(i32 noundef %0) #0 !dbg !444 {
@@ -714,8 +714,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Int32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z16Test_Kern_Int32Ti(i32 noundef %0) #2 !dbg !452 {
@@ -730,8 +730,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_UInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z17Test_Func_UInt32Tj(i32 noundef %0) #0 !dbg !458 {
@@ -746,8 +746,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_UInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z17Test_Kern_UInt32Tj(i32 noundef %0) #2 !dbg !466 {
@@ -762,8 +762,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Int64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z16Test_Func_Int64Tl(i64 noundef %0) #0 !dbg !472 {
@@ -778,8 +778,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Int64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z16Test_Kern_Int64Tl(i64 noundef %0) #2 !dbg !480 {
@@ -794,8 +794,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_UInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z17Test_Func_UInt64Tm(i64 noundef %0) #0 !dbg !486 {
@@ -810,8 +810,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_UInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z17Test_Kern_UInt64Tm(i64 noundef %0) #2 !dbg !494 {
@@ -826,8 +826,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z19Test_Func_EnumInt8T9EnumInt8T(i8 noundef signext %0) #0 !dbg !500 {
@@ -842,8 +842,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z19Test_Kern_EnumInt8T9EnumInt8T(i8 noundef %0) #2 !dbg !508 {
@@ -858,8 +858,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumUInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z20Test_Func_EnumUInt8T10EnumUInt8T(i8 noundef zeroext %0) #0 !dbg !514 {
@@ -874,8 +874,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumUInt8T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z20Test_Kern_EnumUInt8T10EnumUInt8T(i8 noundef %0) #2 !dbg !522 {
@@ -890,8 +890,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z20Test_Func_EnumInt16T10EnumInt16T(i16 noundef signext %0) #0 !dbg !528 {
@@ -906,8 +906,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z20Test_Kern_EnumInt16T10EnumInt16T(i16 noundef %0) #2 !dbg !536 {
@@ -922,8 +922,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumUInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z21Test_Func_EnumUInt16T11EnumUInt16T(i16 noundef zeroext %0) #0 !dbg !542 {
@@ -938,8 +938,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumUInt16T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z21Test_Kern_EnumUInt16T11EnumUInt16T(i16 noundef %0) #2 !dbg !550 {
@@ -954,8 +954,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z20Test_Func_EnumInt32T10EnumInt32T(i32 noundef %0) #0 !dbg !556 {
@@ -970,8 +970,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z20Test_Kern_EnumInt32T10EnumInt32T(i32 noundef %0) #2 !dbg !564 {
@@ -986,8 +986,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumUInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z21Test_Func_EnumUInt32T11EnumUInt32T(i32 noundef %0) #0 !dbg !570 {
@@ -1002,8 +1002,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumUInt32T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z21Test_Kern_EnumUInt32T11EnumUInt32T(i32 noundef %0) #2 !dbg !578 {
@@ -1018,8 +1018,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z20Test_Func_EnumInt64T10EnumInt64T(i64 noundef %0) #0 !dbg !584 {
@@ -1034,8 +1034,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z20Test_Kern_EnumInt64T10EnumInt64T(i64 noundef %0) #2 !dbg !592 {
@@ -1050,8 +1050,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_EnumUInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z21Test_Func_EnumUInt64T11EnumUInt64T(i64 noundef %0) #0 !dbg !598 {
@@ -1066,8 +1066,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_EnumUInt64T")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z21Test_Kern_EnumUInt64T11EnumUInt64T(i64 noundef %0) #2 !dbg !606 {
@@ -1082,8 +1082,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_PromotableInteger")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z27Test_Func_PromotableIntegerb(i1 noundef zeroext %0) #0 !dbg !612 {
@@ -1099,8 +1099,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_PromotableInteger")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit4, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z27Test_Kern_PromotableIntegerb(i1 noundef %0) #2 !dbg !621 {
@@ -1116,8 +1116,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Pointer")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z17Test_Func_PointerPi(ptr noundef %0) #0 !dbg !627 {
@@ -1132,8 +1132,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Pointer")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z17Test_Kern_PointerPi(ptr addrspace(1) noundef %.coerce) #2 !dbg !636 {
@@ -1153,8 +1153,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_Reference")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z19Test_Func_ReferenceRi(ptr noundef nonnull align 4 dereferenceable(4) %0) #0 !dbg !642 {
@@ -1169,8 +1169,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_Reference")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z19Test_Kern_ReferenceRi(ptr addrspace(1) noundef nonnull align 4 dereferenceable(4) %.coerce) #2 !dbg !651 {
@@ -1190,8 +1190,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructSinglePointerElement")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z36Test_Func_StructSinglePointerElement26StructSinglePointerElement(ptr %.coerce) #0 !dbg !657 {
@@ -1207,8 +1207,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructSinglePointerElement")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z36Test_Kern_StructSinglePointerElement26StructSinglePointerElement(ptr addrspace(1) %.coerce) #2 !dbg !668 {
@@ -1225,8 +1225,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_StructPointerElements")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z31Test_Func_StructPointerElements21StructPointerElements(ptr %.coerce0, ptr %.coerce1) #0 !dbg !674 {
@@ -1244,8 +1244,8 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_StructPointerElements")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z31Test_Kern_StructPointerElements21StructPointerElements(ptr addrspace(4) byref(%struct.StructPointerElements) align 8 %0) #2 !dbg !688 {
@@ -1260,29 +1260,29 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_ParamRegLimitExpandedStruct")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit0, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline nounwind optnone
 define dso_local void @_Z37Test_Func_ParamRegLimitExpandedStructlllllli22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i32 noundef %6, i32 %.coerce0, i64 %.coerce1) #0 !dbg !694 {
@@ -1328,29 +1328,29 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_ParamRegLimitExpandedStruct")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z37Test_Kern_ParamRegLimitExpandedStructlllllli22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i32 noundef %6, ptr addrspace(4) byref(%struct.StructMultipleElements) align 8 %7) #2 !dbg !727 {
@@ -1393,26 +1393,26 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Func_ParamRegLimitUnexpandedStruct")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit16, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_regx SGPR32_LO16, DW_OP_deref_size 0x4, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
 ; FIXME: fix byval
 ; CHECK: DW_AT_location (<empty>)
@@ -1456,29 +1456,29 @@ entry:
 ; CHECK: DW_TAG_subprogram
 ; CHECK-LABEL: DW_AT_name ("Test_Kern_ParamRegLimitUnexpandedStruct")
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit24, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x20, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x28, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x30, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x38, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x40, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_constu 0x48, DW_OP_LLVM_user DW_OP_LLVM_offset)
 ; CHECK: DW_TAG_formal_parameter
-; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_offset)
-; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_lit6, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_deref_size 0x4, DW_OP_swap, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_LLVM_user DW_OP_LLVM_offset)
+; CHECK-ORIG-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_offset)
+; CHECK-USER-OPS: DW_AT_location (DW_OP_lit0, DW_OP_lit6, DW_OP_shr, DW_OP_stack_value, DW_OP_deref_size 0x4, DW_OP_constu 0x5, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_lit8, DW_OP_LLVM_user DW_OP_LLVM_offset)
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 define dso_local amdgpu_kernel void @_Z39Test_Kern_ParamRegLimitUnexpandedStructlllllll22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i64 noundef %6, ptr addrspace(4) byref(%struct.StructMultipleElements) align 8 %7) #2 !dbg !783 {
