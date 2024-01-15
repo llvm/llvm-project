@@ -827,12 +827,13 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   if (!Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  auto CalleeIsStreaming =
-      Sema::getArmStreamingFnType(Callee) == Sema::ArmStreaming;
-  auto CallerIsStreaming =
-      Sema::getArmStreamingFnType(Caller) == Sema::ArmStreaming;
+  auto CalleeStreamingMode = Sema::getArmStreamingFnType(Callee);
+  auto CallerStreamingMode = Sema::getArmStreamingFnType(Caller);
 
-  if (CalleeIsStreaming && !CallerIsStreaming)
+  // The caller can inline the callee if their streaming modes match or the
+  // callee is streaming compatible
+  if (CalleeStreamingMode != CallerStreamingMode &&
+      CalleeStreamingMode != Sema::ArmStreamingCompatible)
     CGM.getDiags().Report(CallLoc,
                           diag::err_function_alwaysinline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
