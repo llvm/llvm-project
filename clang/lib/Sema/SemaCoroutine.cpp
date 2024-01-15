@@ -1802,8 +1802,7 @@ bool CoroutineStmtBuilder::makeOnException() {
 static void handleGetReturnObject(Sema &S, Expr *E) {
   if (auto *TE = dyn_cast<CXXBindTemporaryExpr>(E))
     E = TE->getSubExpr();
-  auto *CE = dyn_cast<CallExpr>(E);
-  assert(CE);
+  auto *CE = cast<CallExpr>(E);
   auto *MD = CE->getDirectCallee();
   if (!MD)
     return;
