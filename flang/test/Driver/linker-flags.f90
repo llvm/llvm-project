@@ -13,6 +13,7 @@
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
 ! Verify that linking the runtime explicitly doesn't result in a multiple definitions of main error
+! UNSUPPORTED: system-windows
 ! RUN: %flang -lFortran_main -lFortranRuntime -lFortranDecimal %S/Inputs/hello.f90 -o %s.out
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
