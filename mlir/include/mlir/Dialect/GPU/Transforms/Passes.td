@@ -250,4 +250,35 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
   ];
 }
 
+def GpuResolveConditionalExecutionPass :
+    Pass<"gpu-resolve-conditional-execution", ""> {
+  let summary = "Resolve all conditional execution operations";
+  let description = [{
+    This pass searches for all `gpu.conditional_execution` operations and
+    inlines the appropriate region depending on the execution context. If the
+    operation is inside any of the [`gpu.module`, `gpu.func`, `gpu.launch`]
+    operations, then the pass inlines the device region; otherwise, it
+    inlines the host region.
+    Example:
+    ```
+    func.func @conditional_execution(%dev: index, %host: index) {
+      %0 = gpu.conditional_execution device {
+        gpu.yield %dev : index
+      } host {
+        gpu.yield %host : index
+      } -> index
+      return
+    }
+    // mlir-opt --gpu-resolve-conditional-execution
+    func.func @conditional_execution(%dev: index, %host: index) {
+      %0 = scf.execute_region -> index {
+        scf.yield %host : index
+      }
+      return
+    }
+    ```
+  }];
+  let dependentDialects = ["scf::SCFDialect"];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES

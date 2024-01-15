@@ -2205,6 +2205,46 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionalExecutionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConditionalExecutionOp::verify() {
+  Region &devRegion = getDeviceRegion();
+  Region &hostRegion = getHostRegion();
+  if (devRegion.empty() && hostRegion.empty())
+    return emitError("both regions can't be empty");
+  if (getResults().size() > 0 && (devRegion.empty() || hostRegion.empty()))
+    return emitError(
+        "when there are results both regions have to be specified");
+  if ((!devRegion.empty() &&
+       !mlir::isa<YieldOp>(devRegion.back().getTerminator())) ||
+      (!hostRegion.empty() &&
+       !mlir::isa<YieldOp>(hostRegion.back().getTerminator()))) {
+    return emitError(
+        "conditional execution regions must terminate with gpu.yield");
+  }
+  return success();
+}
+
+void ConditionalExecutionOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Both sub-regions always return to the parent.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  Region &devRegion = getDeviceRegion();
+  Region &hostRegion = getHostRegion();
+
+  // Don't consider the regions if they are empty.
+  regions.push_back(devRegion.empty() ? RegionSuccessor()
+                                      : RegionSuccessor(&devRegion));
+  regions.push_back(hostRegion.empty() ? RegionSuccessor()
+                                       : RegionSuccessor(&hostRegion));
+}
+
+//===----------------------------------------------------------------------===//
 // GPU target options
 //===----------------------------------------------------------------------===//
 

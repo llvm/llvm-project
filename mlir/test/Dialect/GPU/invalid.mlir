@@ -818,3 +818,24 @@ func.func @main(%arg0 : index) {
   return
 }
 
+// -----
+
+func.func @conditional_execution(%sz : index) {
+  // @expected-error@+1 {{when there are results both regions have to be specified}}
+  %val = gpu.conditional_execution device {
+    gpu.yield %sz: index
+  } -> index
+  return
+}
+
+// -----
+
+func.func @conditional_execution(%sz : index) {
+  // @expected-error@+1 {{'gpu.conditional_execution' op  region control flow edge from Region #0 to parent results: source has 0 operands, but target successor needs 1}}
+  %val = gpu.conditional_execution device {
+    gpu.yield %sz: index
+  } host {
+    gpu.yield
+  } -> index
+  return
+}

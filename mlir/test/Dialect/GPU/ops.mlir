@@ -423,3 +423,18 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
     gpu.return
   }
 }
+
+func.func @conditional_execution(%sz : index) {
+  %val = gpu.conditional_execution device {
+    gpu.yield %sz: index
+  } host {
+    gpu.yield %sz: index
+  } -> index
+  gpu.conditional_execution device {
+    gpu.yield
+  }
+  gpu.conditional_execution host {
+    gpu.yield
+  }
+  return
+}
