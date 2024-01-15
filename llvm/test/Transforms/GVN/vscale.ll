@@ -363,7 +363,8 @@ define void @missing_load_elimination(i1 %c, ptr %p, ptr %q, <vscale x 4 x i32> 
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[V:%.*]], ptr [[P1]], align 16
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[T:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[T]], ptr [[Q:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void
