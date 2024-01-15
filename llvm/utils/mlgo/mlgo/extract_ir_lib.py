@@ -16,7 +16,8 @@ from typing import Dict, List, Optional
 
 from absl import logging
 
-_UNSPECIFIED_OVERRIDE = ['<UNSPECIFIED>']
+_UNSPECIFIED_OVERRIDE = ["<UNSPECIFIED>"]
+
 
 # TODO(ml-compiler-opt): maybe we can also convert here the cmdline file,from a
 # \0 - separated list of strings, to a \n one.
