@@ -2351,18 +2351,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(Name.starts_with("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);
 
-    bool IsX86 = Name.starts_with("x86.");
-    if (IsX86)
-      Name = Name.substr(4);
-    bool IsNVVM = Name.starts_with("nvvm.");
-    if (IsNVVM)
-      Name = Name.substr(5);
-    bool IsARM = Name.starts_with("arm.");
-    if (IsARM)
-      Name = Name.substr(4);
-    bool IsAMDGCN = Name.starts_with("amdgcn.");
-    if (IsAMDGCN)
-      Name = Name.substr(7);
+    bool IsX86 = Name.consume_front("x86.");
+    bool IsNVVM = Name.consume_front("nvvm.");
+    bool IsARM = Name.consume_front("arm.");
+    bool IsAMDGCN = Name.consume_front("amdgcn.");
 
     if (IsX86 && Name.starts_with("sse4a.movnt.")) {
       SmallVector<Metadata *, 1> Elts;

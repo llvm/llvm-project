@@ -132,6 +132,7 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
         NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
@@ -144,6 +145,15 @@ def barrier_cluster_arrive_relaxed:
         int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
 def barrier_cluster_wait:
         INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
+
+// 'aligned' versions of the cluster barrier intrinsics
+def barrier_cluster_arrive_aligned:
+        INT_BARRIER_CLUSTER<"arrive.aligned", int_nvvm_barrier_cluster_arrive_aligned>;
+def barrier_cluster_arrive_relaxed_aligned:
+        INT_BARRIER_CLUSTER<"arrive.relaxed.aligned",
+        int_nvvm_barrier_cluster_arrive_relaxed_aligned, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait_aligned:
+        INT_BARRIER_CLUSTER<"wait.aligned", int_nvvm_barrier_cluster_wait_aligned>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
