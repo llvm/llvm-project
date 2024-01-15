@@ -233,7 +233,7 @@ protected:
 };
 
 #if _WIN32 || _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || \
-    _SVID_SOURCE || _POSIX_SOURCE
+    _SVID_SOURCE || defined(_POSIX_SOURCE)
 TEST_F(NoArgv, FdateGetDate) {
   char input[]{"24LengthCharIsJustRight"};
   const std::size_t charLen = sizeof(input);
