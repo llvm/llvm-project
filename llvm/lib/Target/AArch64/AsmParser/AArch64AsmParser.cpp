@@ -6868,7 +6868,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  std::optional<AArch64::ArchInfo> ArchInfo = AArch64::parseArch(Arch);
+  const AArch64::ArchInfo *ArchInfo = AArch64::parseArch(Arch);
   if (!ArchInfo)
     return Error(ArchLoc, "unknown arch name");
 
@@ -6970,7 +6970,7 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  const std::optional<llvm::AArch64::ArchInfo> CpuArch = llvm::AArch64::getArchForCpu(CPU);
+  const llvm::AArch64::ArchInfo *CpuArch = llvm::AArch64::getArchForCpu(CPU);
   if (!CpuArch) {
     Error(CurLoc, "unknown CPU name");
     return false;
