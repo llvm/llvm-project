@@ -90,20 +90,22 @@ set(sources
   array-constructor.cpp
   assign.cpp
   buffer.cpp
+  character.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
-  copy.cpp
-  character.cpp
   connection.cpp
-  derived.cpp
+  copy.cpp
   derived-api.cpp
-  descriptor.cpp
+  derived.cpp
   descriptor-io.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
+  execute.cpp
   extensions.cpp
   extrema.cpp
   file.cpp
@@ -111,10 +113,10 @@ set(sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  iostat.cpp
   io-api.cpp
   io-error.cpp
   io-stmt.cpp
+  iostat.cpp
   main.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -123,11 +125,11 @@ set(sources
   namelist.cpp
   non-tbp-dio.cpp
   numeric.cpp
+  pointer.cpp
+  product.cpp
   ragged.cpp
   random.cpp
   reduction.cpp
-  pointer.cpp
-  product.cpp
   stat.cpp
   stop.cpp
   sum.cpp
@@ -139,8 +141,8 @@ set(sources
   transformational.cpp
   type-code.cpp
   type-info.cpp
-  unit.cpp
   unit-map.cpp
+  unit.cpp
   utf.cpp
 )
 
@@ -151,10 +153,29 @@ option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
 # List of files that are buildable for all devices.
 set(supported_files
   ISO_Fortran_binding.cpp
+  allocatable.cpp
+  array-constructor.cpp
   assign.cpp
+  character.cpp
+  copy.cpp
+  derived-api.cpp
   derived.cpp
   descriptor.cpp
+  dot-product.cpp
+  extrema.cpp
+  findloc.cpp
+  inquiry.cpp
+  matmul-transpose.cpp
+  matmul.cpp
+  memory.cpp
+  misc-intrinsic.cpp
+  numeric.cpp
+  pointer.cpp
+  product.cpp
+  ragged.cpp
   stat.cpp
+  sum.cpp
+  support.cpp
   terminator.cpp
   tools.cpp
   transformational.cpp
@@ -187,6 +208,10 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   if ("${CMAKE_CUDA_COMPILER_ID}" MATCHES "NVIDIA")
     set(CUDA_COMPILE_OPTIONS
       --expt-relaxed-constexpr
+      # Disable these warnings:
+      #   'long double' is treated as 'double' in device code
+      -Xcudafe --diag_suppress=20208
+      -Xcudafe --display_error_number
       )
   endif()
   set_source_files_properties(${supported_files} PROPERTIES COMPILE_OPTIONS

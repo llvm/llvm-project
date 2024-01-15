@@ -114,15 +114,6 @@ public:
   ///     The error type enumeration value.
   lldb::ErrorType GetType() const;
 
-  /// Set accessor from a kern_return_t.
-  ///
-  /// Set accessor for the error value to \a err and the error type to \c
-  /// MachKernel.
-  ///
-  /// \param[in] err
-  ///     A mach error code.
-  void SetMachError(uint32_t err);
-
   void SetExpressionError(lldb::ExpressionResults, const char *mssg);
 
   int SetExpressionErrorWithFormat(lldb::ExpressionResults, const char *format,

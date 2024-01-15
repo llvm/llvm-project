@@ -3,8 +3,8 @@
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
-  transform.test_print_remark_at_operand %arg1, "first extra" : !transform.any_op
-  transform.test_print_remark_at_operand %arg2, "second extra" : !transform.any_op
+  transform.debug.emit_remark_at %arg1, "first extra" : !transform.any_op
+  transform.debug.emit_remark_at %arg2, "second extra" : !transform.any_op
 }
 
 // expected-remark @below {{first extra}}
@@ -59,8 +59,8 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
   transform.sequence %arg0, %arg1, %arg2 : !transform.any_op, !transform.any_op, !transform.any_op failures(propagate) {
   ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
-    transform.test_print_remark_at_operand %arg4, "first extra" : !transform.any_op
-    transform.test_print_remark_at_operand %arg5, "second extra" : !transform.any_op
+    transform.debug.emit_remark_at %arg4, "first extra" : !transform.any_op
+    transform.debug.emit_remark_at %arg5, "second extra" : !transform.any_op
   }
 }
 

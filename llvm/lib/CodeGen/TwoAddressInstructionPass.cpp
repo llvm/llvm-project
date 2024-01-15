@@ -1124,8 +1124,7 @@ bool TwoAddressInstructionPass::rescheduleKillAboveMI(
       }
     }
 
-    for (unsigned i = 0, e = OtherDefs.size(); i != e; ++i) {
-      Register MOReg = OtherDefs[i];
+    for (Register MOReg : OtherDefs) {
       if (regOverlapsSet(Uses, MOReg))
         return false;
       if (MOReg.isPhysical() && regOverlapsSet(LiveDefs, MOReg))
@@ -1937,13 +1936,16 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   }
 
   bool DefEmitted = false;
+  bool DefIsPartial = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
     MachineOperand &UseMO = MI.getOperand(i);
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
-    if (UseMO.isUndef())
+    if (UseMO.isUndef()) {
+      DefIsPartial = true;
       continue;
+    }
 
     // Defer any kill flag to the last operand using SrcReg. Otherwise, we
     // might insert a COPY that uses SrcReg after is was killed.
@@ -1988,8 +1990,14 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
   } else {
-    if (LIS)
+    if (LIS) {
+      // Force interval recomputation if we moved from full definition
+      // of register to partial.
+      if (DefIsPartial && LIS->hasInterval(DstReg) &&
+          MRI->shouldTrackSubRegLiveness(DstReg))
+        LIS->removeInterval(DstReg);
       LIS->RemoveMachineInstrFromMaps(MI);
+    }
 
     LLVM_DEBUG(dbgs() << "Eliminated: " << MI);
     MI.eraseFromParent();

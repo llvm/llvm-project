@@ -61,7 +61,7 @@ __attribute__((noinline)) void foo() {
 #if defined(_LIBUNWIND_ARM_EHABI)
   // Create a mock exception object.
   memset(e, '\0', sizeof(*e));
-  strcpy(reinterpret_cast<char *>(&e->exception_class), "CLNGUNW");
+  memcpy(&e->exception_class, "CLNGUNW", sizeof(e->exception_class));
 #endif
   _Unwind_ForcedUnwind(e, stop, (void *)&foo);
 }

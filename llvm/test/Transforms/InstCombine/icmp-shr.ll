@@ -1046,7 +1046,7 @@ define i1 @lshr_pow2_ugt(i8 %x) {
 
 define i1 @lshr_pow2_ugt_use(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ugt_use(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1094,7 +1094,7 @@ define i1 @lshr_pow2_ugt1(i8 %x) {
 
 define i1 @ashr_pow2_ugt(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ugt(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1107,7 +1107,7 @@ define i1 @ashr_pow2_ugt(i8 %x) {
 
 define i1 @lshr_pow2_sgt(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_sgt(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[S]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1128,7 +1128,7 @@ define i1 @lshr_pow2_ult(i8 %x) {
 
 define i1 @lshr_pow2_ult_use(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_ult_use(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[S]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1186,7 +1186,7 @@ define i1 @lshr_pow2_ult_smin(i8 %x) {
 
 define i1 @ashr_pow2_ult(i8 %x) {
 ; CHECK-LABEL: @ashr_pow2_ult(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[S]], -96
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -1199,7 +1199,7 @@ define i1 @ashr_pow2_ult(i8 %x) {
 
 define i1 @lshr_pow2_slt(i8 %x) {
 ; CHECK-LABEL: @lshr_pow2_slt(
-; CHECK-NEXT:    [[S:%.*]] = lshr i8 -128, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i8 -128, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[S]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

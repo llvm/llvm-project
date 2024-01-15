@@ -2,10 +2,7 @@
 
 # RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -snippets-file=%s -execution-mode=subprocess | FileCheck %s
 
-# CHECK: error:           'The benchmarking subprocess sent unexpected signal: Segmentation fault'
+# CHECK: error: The snippet encountered a segmentation fault at address 10
 
-# TODO: Sometimes transiently fails on PTRACE_ATTACH
-# ALLOW_RETRIES: 2
-
-# LLVM-EXEGESIS-DEFREG RBX 0
+# LLVM-EXEGESIS-DEFREG RBX 10
 movq (%rbx), %rax

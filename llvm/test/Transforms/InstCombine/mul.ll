@@ -964,6 +964,28 @@ define i32 @PR57278_mul_assume(i32 %a) {
 
 declare void @llvm.assume(i1)
 
+define i32 @PR57278_or_disjoint_nuw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nuw i32 %add, 3
+  ret i32 %mul
+}
+
+define i32 @PR57278_or_disjoint_nsw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nsw i32 %add, 3
+  ret i32 %mul
+}
+
 ; https://alive2.llvm.org/ce/z/XYpv9q
 define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec(
@@ -981,8 +1003,8 @@ define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec_poison(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i32> [[SHL]], <i32 3, i32 poison>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[ADD]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw <2 x i32> [[TMP1]], <i32 9, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl = shl nuw <2 x i32> %v1, <i32 2, i32 poison>
@@ -1233,14 +1255,187 @@ define <2 x i32> @test_mul_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test_mul_canonicalize_multiple_uses(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_canonicalize_multiple_uses(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
 ;
   %neg = sub i32 0, %x
   %mul = mul i32 %neg, %y
   %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_nsw_mul_nsw_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %y
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_mul_nsw_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_mul_nsw_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %y
+  %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_nsw_mul_neg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_mul_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_mul_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %x
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i8 @mul_mul_nsw_neg_onearg(i8 %x) {
+; CHECK-LABEL: @mul_mul_nsw_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i8 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[MUL2]]
+;
+  %neg = sub i8 0, %x
+  %mul = mul nsw i8 %neg, %x
+  %mul2 = mul i8 %mul, %neg
+  ret i8 %mul2
+}
+
+define i32 @mul_nsw_mul_nsw_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_mul_nsw_neg_onearg(
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul nsw i32 %neg, %x
+  %mul2 = mul nsw i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_nsw_shl_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_nsw_shl_nsw_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl nsw i32 %neg, %y
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_shl_nsw_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_shl_nsw_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl nsw i32 %neg, %y
+  %mul = mul i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_nsw_shl_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_nsw_shl_neg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %y
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_nsw_shl_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_shl_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %x
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i8 @mul_shl_nsw_neg_onearg(i8 %x) {
+; CHECK-LABEL: @mul_shl_nsw_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %neg = sub i8 0, %x
+  %shl = shl nsw i8 %neg, %x
+  %mul = mul i8 %shl, %neg
+  ret i8 %mul
+}
+
+define i32 @mul_nsw_shl_nsw_neg_onearg(i32 %x) {
+; CHECK-LABEL: @mul_nsw_shl_nsw_neg_onearg(
+; CHECK-NEXT:    [[SHL_NEG:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %neg = sub i32 0, %x
+  %shl = mul nsw i32 %neg, %x
+  %mul = mul nsw i32 %shl, %neg
+  ret i32 %mul
+}
+
+define i32 @mul_use_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_use_mul_neg(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %mul = mul i32 %neg, %y
+  call void @use32(i32 %mul)
+  %mul2 = mul i32 %mul, %neg
+  ret i32 %mul2
+}
+
+define i32 @mul_shl_use_mul_neg(i32 %x,i32 %y) {
+; CHECK-LABEL: @mul_shl_use_mul_neg(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[NEG]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[SHL]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[SHL]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %neg = sub i32 0, %x
+  %shl = shl i32 %neg, %y
+  call void @use32(i32 %shl)
+  %mul2 = mul i32 %shl, %neg
   ret i32 %mul2
 }
 
@@ -1765,7 +1960,7 @@ define <2 x i16> @sext_negpow2_vec(<2 x i8> %x) {
 define <2 x i16> @sext_negpow2_too_small_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sext_negpow2_too_small_vec(
 ; CHECK-NEXT:    [[SX:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[SX]], <i16 -128, i16 poison>
+; CHECK-NEXT:    [[R:%.*]] = mul nsw <2 x i16> [[SX]], <i16 -128, i16 poison>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %sx = sext <2 x i8> %x to <2 x i16>

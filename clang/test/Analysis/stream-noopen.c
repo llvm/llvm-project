@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
@@ -9,7 +9,7 @@
 // enable only StdCLibraryFunctions checker
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.ExprInspection
@@ -136,6 +136,31 @@ void test_rewind(FILE *F) {
   clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
                                    // expected-warning@-1{{FALSE}}
   rewind(F);
+}
+
+void test_ungetc(FILE *F) {
+  int Ret = ungetc('X', F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
+  if (Ret == 'X') {
+    if (errno) {} // expected-warning {{undefined}}
+  } else {
+    clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
+    clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
+  }
+  clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
+  clang_analyzer_eval(ferror(F)); // expected-warning {{UNKNOWN}}
+}
+
+void test_ungetc_EOF(FILE *F, int C) {
+  int Ret = ungetc(EOF, F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
+  clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
+  clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
+  Ret = ungetc(C, F);
+  if (Ret == EOF) {
+    clang_analyzer_eval(C == EOF); // expected-warning {{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
+  }
 }
 
 void test_feof(FILE *F) {

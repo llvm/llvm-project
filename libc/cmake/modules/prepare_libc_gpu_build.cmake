@@ -5,8 +5,9 @@ endif()
 
 # Set up the target architectures to build the GPU libc for.
 set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
-                             "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
-                             "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
+                             "gfx908;gfx90a;gfx90c;gfx940;gfx941;gfx942"
+                             "gfx1010;gfx1030;gfx1031;gfx1032;gfx1033;gfx1034"
+                             "gfx1035;gfx1036"
                              "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
                             "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
@@ -78,6 +79,9 @@ set(LIBC_GPU_TEST_JOBS "" CACHE STRING "Number of jobs to use for GPU tests")
 if(LIBC_GPU_TEST_JOBS)
   set_property(GLOBAL PROPERTY JOB_POOLS LIBC_GPU_TEST_POOL=${LIBC_GPU_TEST_JOBS})
   set(LIBC_HERMETIC_TEST_JOB_POOL JOB_POOL LIBC_GPU_TEST_POOL)
+else()
+  set_property(GLOBAL PROPERTY JOB_POOLS LIBC_GPU_TEST_POOL=1)
+  set(LIBC_HERMETIC_TEST_JOB_POOL JOB_POOL LIBC_GPU_TEST_POOL)
 endif()
 
 set(LIBC_GPU_TEST_ARCHITECTURE "" CACHE STRING "Architecture for the GPU tests")
@@ -120,8 +124,5 @@ if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   # The AMDGPU environment uses different code objects to encode the ABI for
   # kernel calls and intrinsic functions. We want to specify this manually to
   # conform to whatever the test suite was built to handle.
-  # FIXME: The test suite currently hangs when compiled targeting version five.
-  # This occurrs during traversal of the callback array in the startup code. We
-  # deliberately use version four until this can be addressed.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 4)
+  set(LIBC_GPU_CODE_OBJECT_VERSION 5)
 endif()

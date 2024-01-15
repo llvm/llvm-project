@@ -26,7 +26,7 @@ public:
   constexpr counting_projection(Proj proj, int& count) : proj_(std::move(proj)), count_(&count) {}
 
   template <class T>
-  constexpr decltype(auto) operator()(T && value) const {
+  constexpr decltype(auto) operator()(T&& value) const {
     ++(*count_);
     return std::invoke(proj_, std::forward<T>(value));
   }

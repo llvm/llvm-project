@@ -20,6 +20,7 @@ class EXPCommon<bit row, bit done, string asm = ""> : InstSI<
   let EXP_CNT = 1;
   let mayLoad = done;
   let mayStore = 1;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let Uses = !if(row, [EXEC, M0], [EXEC]);
   let SchedRW = [WriteExport];
@@ -41,8 +42,8 @@ class EXP_Real_ComprVM<bit done, string pseudo, int subtarget>
 }
 
 // Real instruction with optional asm operand "row_en".
-class EXP_Real_Row<bit row, bit done, string pseudo, int subtarget>
-  : EXPCommon<row, done, "exp$tgt $src0, $src1, $src2, $src3"
+class EXP_Real_Row<bit row, bit done, string pseudo, int subtarget, string name = "exp">
+  : EXPCommon<row, done, name#"$tgt $src0, $src1, $src2, $src3"
                          #!if(done, " done", "")#!if(row, " row_en", "")>,
     SIMCInstr<pseudo, subtarget> {
   let AsmMatchConverter = "cvtExp";
@@ -105,12 +106,12 @@ def EXP_gfx10      : EXP_Real_gfx10<0, "EXP">;
 def EXP_DONE_gfx10 : EXP_Real_gfx10<1, "EXP_DONE">;
 
 //===----------------------------------------------------------------------===//
-// GFX11+
+// GFX11
 //===----------------------------------------------------------------------===//
 
 class EXP_Real_gfx11<bit _row, bit _done, string pseudo>
   : EXP_Real_Row<_row, _done, pseudo, SIEncodingFamily.GFX11>, EXPe_Row {
-  let AssemblerPredicate = isGFX11Plus;
+  let AssemblerPredicate = isGFX11Only;
   let DecoderNamespace = "GFX11";
   let row = _row;
   let done = _done;
@@ -120,6 +121,24 @@ def EXP_gfx11          : EXP_Real_gfx11<0, 0, "EXP">;
 def EXP_DONE_gfx11     : EXP_Real_gfx11<0, 1, "EXP_DONE">;
 def EXP_ROW_gfx11      : EXP_Real_gfx11<1, 0, "EXP_ROW">;
 def EXP_ROW_DONE_gfx11 : EXP_Real_gfx11<1, 1, "EXP_ROW_DONE">;
+
+//===----------------------------------------------------------------------===//
+// GFX12+
+//===----------------------------------------------------------------------===//
+
+class VEXPORT_Real_gfx12<bit _row, bit _done, string pseudo>
+  : EXP_Real_Row<_row, _done, pseudo, SIEncodingFamily.GFX12, "export">,
+    EXPe_Row, MnemonicAlias<"exp", "export">, Requires<[isGFX12Plus]> {
+  let AssemblerPredicate = isGFX12Plus;
+  let DecoderNamespace = "GFX12";
+  let row = _row;
+  let done = _done;
+}
+
+def EXPORT_gfx12          : VEXPORT_Real_gfx12<0, 0, "EXP">;
+def EXPORT_DONE_gfx12     : VEXPORT_Real_gfx12<0, 1, "EXP_DONE">;
+def EXPORT_ROW_gfx12      : VEXPORT_Real_gfx12<1, 0, "EXP_ROW">;
+def EXPORT_ROW_DONE_gfx12 : VEXPORT_Real_gfx12<1, 1, "EXP_ROW_DONE">;
 
 //===----------------------------------------------------------------------===//
 // EXP Patterns

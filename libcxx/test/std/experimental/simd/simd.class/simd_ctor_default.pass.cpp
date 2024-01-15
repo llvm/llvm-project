@@ -19,7 +19,7 @@
 namespace ex = std::experimental::parallelism_v2;
 
 // See https://www.open-std.org/jtc1/sc22/WG21/docs/papers/2019/n4808.pdf
-// Default intialization performs no initialization of the elements; value-initialization initializes each element with T().
+// Default initialization performs no initialization of the elements; value-initialization initializes each element with T().
 // Thus, default initialization leaves the elements in an indeterminate state.
 template <class T, std::size_t>
 struct CheckSimdDefaultCtor {

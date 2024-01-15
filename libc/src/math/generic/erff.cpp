@@ -154,7 +154,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
   double xd = static_cast<double>(x);
   double xsq = xd * xd;
 
-  const uint32_t EIGHT = 3 << FPBits::FloatProp::MANTISSA_WIDTH;
+  const uint32_t EIGHT = 3 << FPBits::FRACTION_LEN;
   int idx = static_cast<int>(FPBits(x_abs + EIGHT).get_val());
 
   double x4 = xsq * xsq;

@@ -152,7 +152,8 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return "false";
   }
 
-  if (const auto *IntLit = dyn_cast<IntegerLiteral>(Expression)) {
+  if (const auto *IntLit =
+          dyn_cast<IntegerLiteral>(Expression->IgnoreParens())) {
     return (IntLit->getValue() == 0) ? "false" : "true";
   }
 
@@ -273,8 +274,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
             allOf(anyOf(hasCastKind(CK_NullToPointer),
                         hasCastKind(CK_NullToMemberPointer)),
                   hasSourceExpression(cxxBoolLiteral()))),
-      hasSourceExpression(expr(hasType(booleanType()))),
-      unless(ExceptionCases));
+      hasSourceExpression(expr(hasType(booleanType()))));
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
@@ -314,7 +314,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       traverse(
           TK_AsIs,
           implicitCastExpr(
-              ImplicitCastFromBool,
+              ImplicitCastFromBool, unless(ExceptionCases),
               // Exclude comparisons of bools, as they are always cast to
               // integers in such context:
               //   bool_expr_a == bool_expr_b
@@ -385,7 +385,7 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
               << DestType;
 
   if (const auto *BoolLiteral =
-          dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr())) {
+          dyn_cast<CXXBoolLiteralExpr>(Cast->getSubExpr()->IgnoreParens())) {
     Diag << tooling::fixit::createReplacement(
         *Cast, getEquivalentForBoolLiteral(BoolLiteral, DestType, Context));
   } else {

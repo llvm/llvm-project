@@ -40,8 +40,7 @@ define arm_aapcs_vfpcc <4 x i8> @vabd_v4s8(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-NEXT:    vmovlb.s8 q0, q0
 ; CHECK-NEXT:    vmovlb.s16 q1, q1
 ; CHECK-NEXT:    vmovlb.s16 q0, q0
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
-; CHECK-NEXT:    vabs.s32 q0, q0
+; CHECK-NEXT:    vabd.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
   %sextsrc1 = sext <4 x i8> %src1 to <4 x i16>
   %sextsrc2 = sext <4 x i8> %src2 to <4 x i16>

@@ -20,6 +20,7 @@ add_flang_library(FIRTransforms
   OMPFunctionFiltering.cpp
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
+  FunctionAttr.cpp
 
   DEPENDS
   FIRDialect

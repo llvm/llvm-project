@@ -178,7 +178,8 @@ public:
       : RecordPragma(CI.getPreprocessor(), Out) {}
   RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
       : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
-        UniqueStrings(Arena) {}
+        Arena(std::make_shared<llvm::BumpPtrAllocator>()),
+        UniqueStrings(*Arena) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -204,7 +205,7 @@ public:
           std::unique(It.getSecond().begin(), It.getSecond().end()),
           It.getSecond().end());
     }
-    Out->Arena = std::move(Arena);
+    Out->Arena.emplace_back(std::move(Arena));
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -240,20 +241,10 @@ public:
     // Make sure current include is covered by the export pragma.
     if ((Top.Block && HashLine > Top.SeenAtLine) ||
         Top.SeenAtLine == HashLine) {
-      if (IncludedHeader) {
-        switch (IncludedHeader->kind()) {
-        case Header::Physical:
-          Out->IWYUExportBy[IncludedHeader->physical().getUniqueID()]
-              .push_back(Top.Path);
-          break;
-        case Header::Standard:
-          Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
-          break;
-        case Header::Verbatim:
-          assert(false && "unexpected Verbatim header");
-          break;
-        }
-      }
+      if (IncludedFile)
+        Out->IWYUExportBy[IncludedFile->getUniqueID()].push_back(Top.Path);
+      if (IncludedHeader && IncludedHeader->kind() == Header::Standard)
+        Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
         Out->ShouldKeep.insert(IncludedFile->getUniqueID());
@@ -287,7 +278,7 @@ public:
     int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
 
     if (InMainFile) {
-      if (Pragma->startswith("keep")) {
+      if (Pragma->starts_with("keep")) {
         KeepStack.push_back({CommentLine, false});
       } else if (Pragma->starts_with("begin_keep")) {
         KeepStack.push_back({CommentLine, true});
@@ -310,9 +301,10 @@ public:
       StringRef PublicHeader;
       if (Pragma->consume_front(", include ")) {
         // We always insert using the spelling from the pragma.
-        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
-                                ? (*Pragma)
-                                : ("\"" + *Pragma + "\"").str());
+        PublicHeader =
+            save(Pragma->starts_with("<") || Pragma->starts_with("\"")
+                     ? (*Pragma)
+                     : ("\"" + *Pragma + "\"").str());
       }
       Out->IWYUPublic.insert({CommentUID, PublicHeader});
       return false;
@@ -323,11 +315,11 @@ public:
     }
     auto Filename = FE->getName();
     // Record export pragma.
-    if (Pragma->startswith("export")) {
+    if (Pragma->starts_with("export")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
-    } else if (Pragma->startswith("begin_exports")) {
+    } else if (Pragma->starts_with("begin_exports")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
-    } else if (Pragma->startswith("end_exports")) {
+    } else if (Pragma->starts_with("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
       if (!ExportStack.empty()) {
@@ -345,7 +337,7 @@ private:
   const SourceManager &SM;
   const HeaderSearch &HeaderInfo;
   PragmaIncludes *Out;
-  llvm::BumpPtrAllocator Arena;
+  std::shared_ptr<llvm::BumpPtrAllocator> Arena;
   /// Intern table for strings. Contents are on the arena.
   llvm::StringSaver UniqueStrings;
 

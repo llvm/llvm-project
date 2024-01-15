@@ -23,5 +23,5 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/thinlto/fo
 
 RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/thinlto/foobar.dylib -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
 
-CHECK-NOT: could not find object file symbol for symbol __ZZ9function2vE12magic_static
-CHECK-NOT: could not find object file symbol for symbol __ZGVZ9function2vE12magic_static
+CHECK-NOT: could not find symbol '__ZZ9function2vE12magic_static'
+CHECK-NOT: could not find symbol 'symbol __ZGVZ9function2vE12magic_static'

@@ -67,6 +67,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -188,8 +189,8 @@ static cl::opt<unsigned> SetupCostDepthLimit(
     "lsr-setupcost-depth-limit", cl::Hidden, cl::init(7),
     cl::desc("The limit on recursion depth for LSRs setup cost"));
 
-static cl::opt<bool> AllowTerminatingConditionFoldingAfterLSR(
-    "lsr-term-fold", cl::Hidden, cl::init(false),
+static cl::opt<cl::boolOrDefault> AllowTerminatingConditionFoldingAfterLSR(
+    "lsr-term-fold", cl::Hidden,
     cl::desc("Attempt to replace primary IV with other IV."));
 
 static cl::opt<bool> AllowDropSolutionIfLessProfitable(
@@ -5599,7 +5600,8 @@ void LSRInstance::RewriteForPHI(
                                       .setKeepOneInputPHIs());
           } else {
             SmallVector<BasicBlock*, 2> NewBBs;
-            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DT, &LI);
+            DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+            SplitLandingPadPredecessors(Parent, BB, "", "", NewBBs, &DTU, &LI);
             NewBB = NewBBs[0];
           }
           // If NewBB==NULL, then SplitCriticalEdge refused to split because all
@@ -6814,7 +6816,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // iteration. The simplest case to consider is a candidate IV which is
     // narrower than the trip count (and thus original IV), but this can
     // also happen due to non-unit strides on the candidate IVs.
-    if (!AddRec->hasNoSelfWrap())
+    if (!AddRec->hasNoSelfWrap() ||
+        !SE.isKnownNonZero(AddRec->getStepRecurrence(SE)))
       continue;
 
     const SCEVAddRecExpr *PostInc = AddRec->getPostIncExpr(SE);
@@ -6938,7 +6941,19 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     }
   }
 
-  if (AllowTerminatingConditionFoldingAfterLSR) {
+  const bool EnableFormTerm = [&] {
+    switch (AllowTerminatingConditionFoldingAfterLSR) {
+    case cl::BOU_TRUE:
+      return true;
+    case cl::BOU_FALSE:
+      return false;
+    case cl::BOU_UNSET:
+      return TTI.shouldFoldTerminatingConditionAfterLSR();
+    }
+    llvm_unreachable("Unhandled cl::boolOrDefault enum");
+  }();
+
+  if (EnableFormTerm) {
     if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI)) {
       auto [ToFold, ToHelpFold, TermValueS, MustDrop] = *Opt;
 
@@ -6992,7 +7007,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       LLVM_DEBUG(dbgs() << "Old term-cond:\n"
                         << *OldTermCond << "\n"
-                        << "New term-cond:\b" << *NewTermCond << "\n");
+                        << "New term-cond:\n" << *NewTermCond << "\n");
 
       BI->setCondition(NewTermCond);
 

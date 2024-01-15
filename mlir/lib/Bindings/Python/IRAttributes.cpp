@@ -1032,7 +1032,7 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseResourceElementsAttribute
-  getFromBuffer(py::buffer buffer, std::string name, PyType type,
+  getFromBuffer(py::buffer buffer, const std::string &name, const PyType &type,
                 std::optional<size_t> alignment, bool isMutable,
                 DefaultingPyMlirContext contextWrapper) {
     if (!mlirTypeIsAShaped(type)) {

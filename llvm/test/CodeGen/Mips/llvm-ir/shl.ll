@@ -94,69 +94,60 @@ entry:
 define signext i8 @shl_i8(i8 signext %a, i8 signext %b) {
 ; MIPS2-LABEL: shl_i8:
 ; MIPS2:       # %bb.0: # %entry
-; MIPS2-NEXT:    andi $1, $5, 255
-; MIPS2-NEXT:    sllv $1, $4, $1
+; MIPS2-NEXT:    sllv $1, $4, $5
 ; MIPS2-NEXT:    sll $1, $1, 24
 ; MIPS2-NEXT:    jr $ra
 ; MIPS2-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32-LABEL: shl_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 255
-; MIPS32-NEXT:    sllv $1, $4, $1
+; MIPS32-NEXT:    sllv $1, $4, $5
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sra $2, $1, 24
 ;
 ; MIPS32R2-LABEL: shl_i8:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    andi $1, $5, 255
-; MIPS32R2-NEXT:    sllv $1, $4, $1
+; MIPS32R2-NEXT:    sllv $1, $4, $5
 ; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    seb $2, $1
 ;
 ; MIPS32R6-LABEL: shl_i8:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    andi $1, $5, 255
-; MIPS32R6-NEXT:    sllv $1, $4, $1
+; MIPS32R6-NEXT:    sllv $1, $4, $5
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    seb $2, $1
 ;
 ; MIPS3-LABEL: shl_i8:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    andi $1, $5, 255
-; MIPS3-NEXT:    sllv $1, $4, $1
+; MIPS3-NEXT:    sllv $1, $4, $5
 ; MIPS3-NEXT:    sll $1, $1, 24
 ; MIPS3-NEXT:    jr $ra
 ; MIPS3-NEXT:    sra $2, $1, 24
 ;
 ; MIPS4-LABEL: shl_i8:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    andi $1, $5, 255
-; MIPS4-NEXT:    sllv $1, $4, $1
+; MIPS4-NEXT:    sllv $1, $4, $5
 ; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64-LABEL: shl_i8:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    andi $1, $5, 255
-; MIPS64-NEXT:    sllv $1, $4, $1
+; MIPS64-NEXT:    sllv $1, $4, $5
 ; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sra $2, $1, 24
 ;
 ; MIPS64R2-LABEL: shl_i8:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    andi $1, $5, 255
-; MIPS64R2-NEXT:    sllv $1, $4, $1
+; MIPS64R2-NEXT:    sllv $1, $4, $5
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    seb $2, $1
 ;
 ; MIPS64R6-LABEL: shl_i8:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    andi $1, $5, 255
-; MIPS64R6-NEXT:    sllv $1, $4, $1
+; MIPS64R6-NEXT:    sllv $1, $4, $5
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    seb $2, $1
 ;
@@ -182,69 +173,60 @@ entry:
 define signext i16 @shl_i16(i16 signext %a, i16 signext %b) {
 ; MIPS2-LABEL: shl_i16:
 ; MIPS2:       # %bb.0: # %entry
-; MIPS2-NEXT:    andi $1, $5, 65535
-; MIPS2-NEXT:    sllv $1, $4, $1
+; MIPS2-NEXT:    sllv $1, $4, $5
 ; MIPS2-NEXT:    sll $1, $1, 16
 ; MIPS2-NEXT:    jr $ra
 ; MIPS2-NEXT:    sra $2, $1, 16
 ;
 ; MIPS32-LABEL: shl_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 65535
-; MIPS32-NEXT:    sllv $1, $4, $1
+; MIPS32-NEXT:    sllv $1, $4, $5
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sra $2, $1, 16
 ;
 ; MIPS32R2-LABEL: shl_i16:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    andi $1, $5, 65535
-; MIPS32R2-NEXT:    sllv $1, $4, $1
+; MIPS32R2-NEXT:    sllv $1, $4, $5
 ; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    seh $2, $1
 ;
 ; MIPS32R6-LABEL: shl_i16:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    andi $1, $5, 65535
-; MIPS32R6-NEXT:    sllv $1, $4, $1
+; MIPS32R6-NEXT:    sllv $1, $4, $5
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    seh $2, $1
 ;
 ; MIPS3-LABEL: shl_i16:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    andi $1, $5, 65535
-; MIPS3-NEXT:    sllv $1, $4, $1
+; MIPS3-NEXT:    sllv $1, $4, $5
 ; MIPS3-NEXT:    sll $1, $1, 16
 ; MIPS3-NEXT:    jr $ra
 ; MIPS3-NEXT:    sra $2, $1, 16
 ;
 ; MIPS4-LABEL: shl_i16:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    andi $1, $5, 65535
-; MIPS4-NEXT:    sllv $1, $4, $1
+; MIPS4-NEXT:    sllv $1, $4, $5
 ; MIPS4-NEXT:    sll $1, $1, 16
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    sra $2, $1, 16
 ;
 ; MIPS64-LABEL: shl_i16:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    andi $1, $5, 65535
-; MIPS64-NEXT:    sllv $1, $4, $1
+; MIPS64-NEXT:    sllv $1, $4, $5
 ; MIPS64-NEXT:    sll $1, $1, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sra $2, $1, 16
 ;
 ; MIPS64R2-LABEL: shl_i16:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    andi $1, $5, 65535
-; MIPS64R2-NEXT:    sllv $1, $4, $1
+; MIPS64R2-NEXT:    sllv $1, $4, $5
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    seh $2, $1
 ;
 ; MIPS64R6-LABEL: shl_i16:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    andi $1, $5, 65535
-; MIPS64R6-NEXT:    sllv $1, $4, $1
+; MIPS64R6-NEXT:    sllv $1, $4, $5
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    seh $2, $1
 ;
@@ -486,7 +468,6 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS2-NEXT:    lwr $3, 7($4)
 ; MIPS2-NEXT:    andi $1, $1, 7
 ; MIPS2-NEXT:    not $6, $1
-; MIPS2-NEXT:    andi $6, $6, 31
 ; MIPS2-NEXT:    sllv $7, $3, $1
 ; MIPS2-NEXT:    srlv $6, $2, $6
 ; MIPS2-NEXT:    lwl $2, 0($4)
@@ -539,7 +520,6 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32-NEXT:    lwr $3, 7($4)
 ; MIPS32-NEXT:    andi $1, $1, 7
 ; MIPS32-NEXT:    not $6, $1
-; MIPS32-NEXT:    andi $6, $6, 31
 ; MIPS32-NEXT:    sllv $7, $3, $1
 ; MIPS32-NEXT:    srlv $6, $2, $6
 ; MIPS32-NEXT:    lwl $2, 0($4)
@@ -591,7 +571,6 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R2-NEXT:    lwr $3, 7($4)
 ; MIPS32R2-NEXT:    andi $1, $1, 7
 ; MIPS32R2-NEXT:    not $6, $1
-; MIPS32R2-NEXT:    andi $6, $6, 31
 ; MIPS32R2-NEXT:    sllv $7, $3, $1
 ; MIPS32R2-NEXT:    srlv $6, $2, $6
 ; MIPS32R2-NEXT:    lwl $2, 0($4)
@@ -633,7 +612,6 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R6-NEXT:    lw $3, 4($4)
 ; MIPS32R6-NEXT:    andi $1, $1, 7
 ; MIPS32R6-NEXT:    not $6, $1
-; MIPS32R6-NEXT:    andi $6, $6, 31
 ; MIPS32R6-NEXT:    sllv $7, $3, $1
 ; MIPS32R6-NEXT:    srlv $6, $2, $6
 ; MIPS32R6-NEXT:    lw $2, 0($4)

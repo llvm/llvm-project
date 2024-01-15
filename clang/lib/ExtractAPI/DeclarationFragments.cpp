@@ -15,6 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/QualTypeNames.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
@@ -23,6 +25,40 @@
 
 using namespace clang::extractapi;
 using namespace llvm;
+
+namespace {
+
+void findTypeLocForBlockDecl(const clang::TypeSourceInfo *TSInfo,
+                             clang::FunctionTypeLoc &Block,
+                             clang::FunctionProtoTypeLoc &BlockProto) {
+  if (!TSInfo)
+    return;
+
+  clang::TypeLoc TL = TSInfo->getTypeLoc().getUnqualifiedLoc();
+  while (true) {
+    // Look through qualified types
+    if (auto QualifiedTL = TL.getAs<clang::QualifiedTypeLoc>()) {
+      TL = QualifiedTL.getUnqualifiedLoc();
+      continue;
+    }
+
+    if (auto AttrTL = TL.getAs<clang::AttributedTypeLoc>()) {
+      TL = AttrTL.getModifiedLoc();
+      continue;
+    }
+
+    // Try to get the function prototype behind the block pointer type,
+    // then we're done.
+    if (auto BlockPtr = TL.getAs<clang::BlockPointerTypeLoc>()) {
+      TL = BlockPtr.getPointeeLoc().IgnoreParens();
+      Block = TL.getAs<clang::FunctionTypeLoc>();
+      BlockProto = TL.getAs<clang::FunctionProtoTypeLoc>();
+    }
+    break;
+  }
+}
+
+} // namespace
 
 DeclarationFragments &DeclarationFragments::appendSpace() {
   if (!Fragments.empty()) {
@@ -218,7 +254,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   // Declaration fragments of a pointer type is the declaration fragments of
   // the pointee type followed by a `*`,
-  if (T->isPointerType())
+  if (T->isPointerType() && !T->isFunctionPointerType())
     return Fragments
         .append(getFragmentsForType(T->getPointeeType(), Context, After))
         .append(" *", DeclarationFragments::FragmentKind::Text);
@@ -449,10 +485,6 @@ DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
         .append(VarDecl::getStorageClassSpecifierString(SC),
                 DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();
-  QualType T =
-      Var->getTypeSourceInfo()
-          ? Var->getTypeSourceInfo()->getType()
-          : Var->getASTContext().getUnqualifiedObjCPointerType(Var->getType());
 
   // Capture potential fragments that needs to be placed after the variable name
   // ```
@@ -460,8 +492,23 @@ DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   // char (*ptr_to_array)[6];
   // ```
   DeclarationFragments After;
-  return Fragments.append(getFragmentsForType(T, Var->getASTContext(), After))
-      .appendSpace()
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(Var->getTypeSourceInfo(), BlockLoc, BlockProtoLoc);
+
+  if (!BlockLoc) {
+    QualType T = Var->getTypeSourceInfo()
+                     ? Var->getTypeSourceInfo()->getType()
+                     : Var->getASTContext().getUnqualifiedObjCPointerType(
+                           Var->getType());
+
+    Fragments.append(getFragmentsForType(T, Var->getASTContext(), After))
+        .appendSpace();
+  } else {
+    Fragments.append(getFragmentsForBlock(Var, BlockLoc, BlockProtoLoc, After));
+  }
+
+  return Fragments
       .append(Var->getName(), DeclarationFragments::FragmentKind::Identifier)
       .append(std::move(After))
       .append(";", DeclarationFragments::FragmentKind::Text);
@@ -504,13 +551,23 @@ DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
   DeclarationFragments Fragments, After;
 
-  QualType T = Param->getTypeSourceInfo()
-                   ? Param->getTypeSourceInfo()->getType()
-                   : Param->getASTContext().getUnqualifiedObjCPointerType(
-                         Param->getType());
+  auto *TSInfo = Param->getTypeSourceInfo();
 
-  DeclarationFragments TypeFragments =
-      getFragmentsForType(T, Param->getASTContext(), After);
+  QualType T = TSInfo ? TSInfo->getType()
+                      : Param->getASTContext().getUnqualifiedObjCPointerType(
+                            Param->getType());
+
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(TSInfo, BlockLoc, BlockProtoLoc);
+
+  DeclarationFragments TypeFragments;
+  if (BlockLoc)
+    TypeFragments.append(
+        getFragmentsForBlock(Param, BlockLoc, BlockProtoLoc, After));
+  else
+    TypeFragments.append(getFragmentsForType(T, Param->getASTContext(), After));
+
   if (TypeFragments.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
       0) {
     std::string ProperArgName = getNameForTemplateArgument(
@@ -522,17 +579,60 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
     TypeFragments.begin()->Spelling.swap(ProperArgName);
   }
 
-  if (Param->isObjCMethodParameter())
+  if (Param->isObjCMethodParameter()) {
     Fragments.append("(", DeclarationFragments::FragmentKind::Text)
         .append(std::move(TypeFragments))
-        .append(") ", DeclarationFragments::FragmentKind::Text);
-  else
-    Fragments.append(std::move(TypeFragments)).appendSpace();
+        .append(std::move(After))
+        .append(") ", DeclarationFragments::FragmentKind::Text)
+        .append(Param->getName(),
+                DeclarationFragments::FragmentKind::InternalParam);
+  } else {
+    Fragments.append(std::move(TypeFragments));
+    if (!T->isBlockPointerType())
+      Fragments.appendSpace();
+    Fragments
+        .append(Param->getName(),
+                DeclarationFragments::FragmentKind::InternalParam)
+        .append(std::move(After));
+  }
+  return Fragments;
+}
 
-  return Fragments
-      .append(Param->getName(),
-              DeclarationFragments::FragmentKind::InternalParam)
-      .append(std::move(After));
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForBlock(
+    const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+    FunctionProtoTypeLoc &BlockProto, DeclarationFragments &After) {
+  DeclarationFragments Fragments;
+
+  DeclarationFragments RetTyAfter;
+  auto ReturnValueFragment = getFragmentsForType(
+      Block.getTypePtr()->getReturnType(), BlockDecl->getASTContext(), After);
+
+  Fragments.append(std::move(ReturnValueFragment))
+      .append(std::move(RetTyAfter))
+      .appendSpace()
+      .append("(^", DeclarationFragments::FragmentKind::Text);
+
+  After.append(")", DeclarationFragments::FragmentKind::Text);
+  unsigned NumParams = Block.getNumParams();
+
+  if (!BlockProto || NumParams == 0) {
+    if (BlockProto && BlockProto.getTypePtr()->isVariadic())
+      After.append("(...)", DeclarationFragments::FragmentKind::Text);
+    else
+      After.append("()", DeclarationFragments::FragmentKind::Text);
+  } else {
+    After.append("(", DeclarationFragments::FragmentKind::Text);
+    for (unsigned I = 0; I != NumParams; ++I) {
+      if (I)
+        After.append(", ", DeclarationFragments::FragmentKind::Text);
+      After.append(getFragmentsForParam(Block.getParam(I)));
+      if (I == NumParams - 1 && BlockProto.getTypePtr()->isVariadic())
+        After.append(", ...", DeclarationFragments::FragmentKind::Text);
+    }
+    After.append(")", DeclarationFragments::FragmentKind::Text);
+  }
+
+  return Fragments;
 }
 
 DeclarationFragments
@@ -595,10 +695,17 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   Fragments.append(std::move(After));
 
   Fragments.append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = Func->getNumParams(); i != end; ++i) {
+  unsigned NumParams = Func->getNumParams();
+  for (unsigned i = 0; i != NumParams; ++i) {
     if (i)
       Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
     Fragments.append(getFragmentsForParam(Func->getParamDecl(i)));
+  }
+
+  if (Func->isVariadic()) {
+    if (NumParams > 0)
+      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+    Fragments.append("...", DeclarationFragments::FragmentKind::Text);
   }
   Fragments.append(")", DeclarationFragments::FragmentKind::Text);
 
@@ -1248,14 +1355,27 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
     Fragments.append(")", DeclarationFragments::FragmentKind::Text);
   }
 
-  // Build the property type and name, and return the completed fragments.
-  return Fragments.appendSpace()
-      .append(getFragmentsForType(Property->getType(),
-                                  Property->getASTContext(), After))
-      .appendSpace()
+  Fragments.appendSpace();
+
+  FunctionTypeLoc BlockLoc;
+  FunctionProtoTypeLoc BlockProtoLoc;
+  findTypeLocForBlockDecl(Property->getTypeSourceInfo(), BlockLoc,
+                          BlockProtoLoc);
+
+  auto PropType = Property->getType();
+  if (!BlockLoc)
+    Fragments
+        .append(getFragmentsForType(PropType, Property->getASTContext(), After))
+        .appendSpace();
+  else
+    Fragments.append(
+        getFragmentsForBlock(Property, BlockLoc, BlockProtoLoc, After));
+
+  return Fragments
       .append(Property->getName(),
               DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
+      .append(std::move(After))
+      .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(

@@ -199,11 +199,17 @@ void SSAUpdater::RewriteUse(Use &U) {
 
 void SSAUpdater::UpdateDebugValues(Instruction *I) {
   SmallVector<DbgValueInst *, 4> DbgValues;
-  llvm::findDbgValues(DbgValues, I);
+  SmallVector<DPValue *, 4> DPValues;
+  llvm::findDbgValues(DbgValues, I, &DPValues);
   for (auto &DbgValue : DbgValues) {
     if (DbgValue->getParent() == I->getParent())
       continue;
     UpdateDebugValue(I, DbgValue);
+  }
+  for (auto &DPV : DPValues) {
+    if (DPV->getParent() == I->getParent())
+      continue;
+    UpdateDebugValue(I, DPV);
   }
 }
 
@@ -214,14 +220,29 @@ void SSAUpdater::UpdateDebugValues(Instruction *I,
   }
 }
 
+void SSAUpdater::UpdateDebugValues(Instruction *I,
+                                   SmallVectorImpl<DPValue *> &DPValues) {
+  for (auto &DPV : DPValues) {
+    UpdateDebugValue(I, DPV);
+  }
+}
+
 void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
   BasicBlock *UserBB = DbgValue->getParent();
   if (HasValueForBlock(UserBB)) {
     Value *NewVal = GetValueAtEndOfBlock(UserBB);
     DbgValue->replaceVariableLocationOp(I, NewVal);
-  }
-  else
+  } else
     DbgValue->setKillLocation();
+}
+
+void SSAUpdater::UpdateDebugValue(Instruction *I, DPValue *DPV) {
+  BasicBlock *UserBB = DPV->getParent();
+  if (HasValueForBlock(UserBB)) {
+    Value *NewVal = GetValueAtEndOfBlock(UserBB);
+    DPV->replaceVariableLocationOp(I, NewVal);
+  } else
+    DPV->setKillLocation();
 }
 
 void SSAUpdater::RewriteUseAfterInsertions(Use &U) {

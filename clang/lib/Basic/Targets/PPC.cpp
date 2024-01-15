@@ -53,7 +53,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
-      HasFloat128 = true;
+      HasFloat128 = !getTriple().isOSAIX();
     } else if (Feature == "+power9-vector") {
       HasP9Vector = true;
     } else if (Feature == "+power10-vector") {
@@ -212,6 +212,7 @@ static void defineXLCompatMacros(MacroBuilder &Builder) {
   Builder.defineMacro("__darn_32", "__builtin_darn_32");
   Builder.defineMacro("__darn_raw", "__builtin_darn_raw");
   Builder.defineMacro("__dcbf", "__builtin_dcbf");
+  Builder.defineMacro("__fence", "__builtin_ppc_fence");
   Builder.defineMacro("__fmadd", "__builtin_fma");
   Builder.defineMacro("__fmadds", "__builtin_fmaf");
   Builder.defineMacro("__abs", "__builtin_abs");

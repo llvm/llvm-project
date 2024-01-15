@@ -13,7 +13,7 @@ entry:
 }
 
 define ptr @parent(ptr align 8 dereferenceable(72) %f, i16 %val1, i16 %val2, i32 %val3) align 2 {
-; CHECK-LABEL: define nonnull ptr @parent
+; CHECK-LABEL: define noundef nonnull ptr @parent
 ; CHECK-SAME: (ptr readonly returned align 8 dereferenceable(72) [[F:%.*]], i16 [[VAL1:%.*]], i16 [[VAL2:%.*]], i32 [[VAL3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[F]], i64 64

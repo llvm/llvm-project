@@ -328,7 +328,7 @@ for.body:                                         ; preds = %entry, %for.body
   %mul1 = mul nuw nsw i64 %i.021, 3
   %arrayidx2 = getelementptr inbounds float, ptr %dst, i64 %mul1
   store float %0, ptr %arrayidx2, align 4
-  %add = or i64 %mul, 1
+  %add = or disjoint i64 %mul, 1
   %arrayidx4 = getelementptr inbounds float, ptr %src, i64 %add
   %1 = load float, ptr %arrayidx4, align 4
   %add6 = add nuw nsw i64 %mul1, 1
@@ -349,13 +349,13 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-NOTF-LABEL: @reverse(
 ; CHECK-NOTF:       vector.body:
 ; CHECK-NOTF-NOT:     %{{.*}} = phi <vscale x 4 x i1>
-; CHECK-NOTF:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr %17, align 8
+; CHECK-NOTF:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
 ; CHECK-NOTF:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
 
 ; CHECK-TF-NOREV-LABEL: @reverse(
 ; CHECK-TF-NOREV:       vector.body:
 ; CHECK-TF-NOREV-NOT:     %{{.*}} = phi <vscale x 4 x i1>
-; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr %17, align 8
+; CHECK-TF-NOREV:         %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
 ; CHECK-TF-NOREV:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
 
 ; CHECK-TF-LABEL: @reverse(
@@ -375,12 +375,6 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 2 x i1>
 ; CHECK-TF-NOREC:         %[[REVERSE_MASK:.*]] = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %[[ACTIVE_LANE_MASK]])
 ; CHECK-TF-NOREC:         %[[MASKED_LOAD:.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0({{.*}} <vscale x 2 x i1> %reverse
-
-; CHECK-TF-NEOVERSE-V1-LABEL: @reverse(
-; CHECK-TF-NEOVERSE-V1:       vector.body:
-; CHECK-TF-NEOVERSE-V1-NOT:     %{{.*}} = phi <vscale x 4 x i1>
-; CHECK-TF-NEOVERSE-V1:         %[[LOAD:.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* %18, align 8
-; CHECK-TF-NEOVERSE-V1:         %{{.*}} = call <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double> %[[LOAD]])
 
 entry:
   br label %for.body

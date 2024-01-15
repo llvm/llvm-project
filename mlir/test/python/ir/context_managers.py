@@ -15,13 +15,7 @@ def run(f):
 def testContextEnterExit():
     with Context() as ctx:
         assert Context.current is ctx
-    try:
-        _ = Context.current
-    except ValueError as e:
-        # CHECK: No current Context
-        print(e)
-    else:
-        assert False, "Expected exception"
+    assert Context.current is None
 
 
 run(testContextEnterExit)

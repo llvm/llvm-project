@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -52,7 +51,6 @@ char &llvm::SpillPlacementID = SpillPlacement::ID;
 INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
@@ -60,7 +58,6 @@ void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfo>();
   AU.addRequiredTransitive<EdgeBundles>();
-  AU.addRequiredTransitive<MachineLoopInfo>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -195,7 +192,6 @@ struct SpillPlacement::Node {
 bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   bundles = &getAnalysis<EdgeBundles>();
-  loops = &getAnalysis<MachineLoopInfo>();
 
   assert(!nodes && "Leaking node array");
   nodes = new Node[bundles->getNumBundles()];

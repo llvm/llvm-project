@@ -260,9 +260,10 @@
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
   DECLARE_SYMBOL_VISIBILITY_UNMANGLED(name) SEPARATOR                          \
-  CFI_START SEPARATOR                                                          \
   DECLARE_FUNC_ENCODING                                                        \
-  name: SEPARATOR BTI_C
+  name:                                                                        \
+  SEPARATOR CFI_START                                                          \
+  SEPARATOR BTI_C
 
 #define DEFINE_COMPILERRT_FUNCTION_ALIAS(name, target)                         \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \

@@ -24,6 +24,8 @@ enum class ExceptionHandling {
   WinEH,    ///< Windows Exception Handling
   Wasm,     ///< WebAssembly Exception Handling
   AIX,      ///< AIX Exception Handling
+  ZOS,      ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the PPA1
+            ///< is used instead of an .eh_frame section.
 };
 
 enum class EmitDwarfUnwindType {

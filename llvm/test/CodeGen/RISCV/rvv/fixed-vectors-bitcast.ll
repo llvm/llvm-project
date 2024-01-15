@@ -495,7 +495,7 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a) {
 ; RV32ELEN32-LABEL: bitcast_i64_v4i16:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32ELEN32-NEXT:    vmv.v.x v8, a0
 ; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32ELEN32-NEXT:    ret
 ;
@@ -530,7 +530,7 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a) {
 ; RV32ELEN32-LABEL: bitcast_i64_v2i32:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32ELEN32-NEXT:    vmv.v.x v8, a0
 ; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32ELEN32-NEXT:    ret
 ;

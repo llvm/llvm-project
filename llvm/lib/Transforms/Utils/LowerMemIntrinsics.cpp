@@ -446,11 +446,6 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 
   IRBuilder<> Builder(OrigBB->getTerminator());
 
-  // Cast pointer to the type of value getting stored
-  unsigned dstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
-  DstAddr = Builder.CreateBitCast(DstAddr,
-                                  PointerType::get(SetValue->getType(), dstAS));
-
   Builder.CreateCondBr(
       Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
       LoopBB);

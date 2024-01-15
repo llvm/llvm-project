@@ -1,0 +1,223 @@
+# RUN: llc %s -run-pass=machine-sink --aarch64-enable-sink-fold=true -o - | FileCheck %s
+--- |
+  target triple = "aarch64-linux"
+
+  @.str = private unnamed_addr constant [12 x i8] c"result: %d\0A\00", align 1, !dbg !0
+
+  define i32 @foo(i32 %x, i32 %y) !dbg !18 {
+  entry:
+    %add = add i32 %x, 3, !dbg !25
+    %add1 = add i32 %add, %y, !dbg !26
+    ret i32 %add1, !dbg !27
+  }
+
+  define i32 @baz(i32 %y) !dbg !28 {
+  entry:
+    %add1.i = add i32 %y, 23, !dbg !34
+    tail call void @bar(ptr nonnull @.str, i32 %add1.i), !dbg !36
+    ret i32 0, !dbg !37
+  }
+
+  declare !dbg !38 void @bar(ptr noundef, i32 noundef)
+
+  !llvm.dbg.cu = !{!7}
+  !llvm.module.flags = !{!9, !10, !11, !12, !13, !14, !15, !16}
+  !llvm.ident = !{!17}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(scope: null, file: !2, line: 9, type: !3, isLocal: true, isDefinition: true)
+  !2 = !DIFile(filename: "m.c", directory: "/home/chill")
+  !3 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 96, elements: !5)
+  !4 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_unsigned_char)
+  !5 = !{!6}
+  !6 = !DISubrange(count: 12)
+  !7 = distinct !DICompileUnit(language: DW_LANG_C11, file: !2, producer: "clang version 18.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !8, splitDebugInlining: false, nameTableKind: None)
+  !8 = !{!0}
+  !9 = !{i32 7, !"Dwarf Version", i32 5}
+  !10 = !{i32 2, !"Debug Info Version", i32 3}
+  !11 = !{i32 1, !"wchar_size", i32 4}
+  !12 = !{i32 8, !"PIC Level", i32 2}
+  !13 = !{i32 7, !"PIE Level", i32 2}
+  !14 = !{i32 7, !"uwtable", i32 2}
+  !15 = !{i32 7, !"frame-pointer", i32 1}
+  !16 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !17 = !{!"clang version 18.0.0"}
+  !18 = distinct !DISubprogram(name: "foo", scope: !2, file: !2, line: 1, type: !19, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !7, retainedNodes: !22)
+  !19 = !DISubroutineType(types: !20)
+  !20 = !{!21, !21, !21}
+  !21 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !22 = !{!23, !24}
+  !23 = !DILocalVariable(name: "x", arg: 1, scope: !18, file: !2, line: 1, type: !21)
+  !24 = !DILocalVariable(name: "y", arg: 2, scope: !18, file: !2, line: 1, type: !21)
+  !25 = !DILocation(line: 2, column: 12, scope: !18)
+  !26 = !DILocation(line: 2, column: 16, scope: !18)
+  !27 = !DILocation(line: 2, column: 3, scope: !18)
+  !28 = distinct !DISubprogram(name: "baz", scope: !2, file: !2, line: 7, type: !29, scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !7, retainedNodes: !31)
+  !29 = !DISubroutineType(types: !30)
+  !30 = !{!21, !21}
+  !31 = !{!32, !33}
+  !32 = !DILocalVariable(name: "y", arg: 1, scope: !28, file: !2, line: 7, type: !21)
+  !33 = !DILocalVariable(name: "result", scope: !28, file: !2, line: 8, type: !21)
+  !34 = !DILocation(line: 2, column: 16, scope: !18, inlinedAt: !35)
+  !35 = distinct !DILocation(line: 8, column: 16, scope: !28)
+  !36 = !DILocation(line: 9, column: 3, scope: !28)
+  !37 = !DILocation(line: 10, column: 3, scope: !28)
+  !38 = !DISubprogram(name: "bar", scope: !2, file: !2, line: 5, type: !39, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+  !39 = !DISubroutineType(types: !40)
+  !40 = !{null, !41, !21}
+  !41 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !42, size: 64)
+  !42 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !4)
+
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32, preferred-register: '' }
+  - { id: 1, class: gpr32, preferred-register: '' }
+  - { id: 2, class: gpr32common, preferred-register: '' }
+  - { id: 3, class: gpr32sp, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: foo
+
+    ; Check the source location of the ADDWri was reused (usually the
+    ; copy to $w0 carries the same debug location as the return)
+
+    ; CHECK: $w0 = ADDWri {{.*}}, 3, 0, debug-location !26
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0, debug-location !27
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %2:gpr32common = ADDWrr %0, %1, debug-location !25
+    $w0 = ADDWri %2, 3, 0, debug-location !26
+    RET_ReallyLR implicit $w0, debug-location !27
+
+...
+---
+name:            baz
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gpr32common, preferred-register: '' }
+  - { id: 1, class: gpr32sp, preferred-register: '' }
+  - { id: 2, class: gpr64common, preferred-register: '' }
+  - { id: 3, class: gpr32all, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: baz
+
+    ; Check the source location of the ADDWri was reused (usually the
+    ; copy to $w1 carries the same debug location as the BL)
+
+    ; CHECK:     $x0 = COPY  {{.*}}, debug-location !36
+    ; CHECK-NEXT: $w1 = ADDWri {{.*}}, 23, 0, debug-location !34
+    ; CHECK-NEXT: BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $sp, debug-location !36
+
+    %0:gpr32common = COPY $w0
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !36
+    %2:gpr64common = MOVaddr target-flags(aarch64-page) @.str, target-flags(aarch64-pageoff, aarch64-nc) @.str, debug-location !36
+    $x0 = COPY %2, debug-location !36
+    $w1 = ADDWri %0, 23, 0, debug-location !34
+    BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $w1, implicit-def $sp, debug-location !36
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !36
+    %3:gpr32all = COPY $wzr
+    $w0 = COPY %3, debug-location !37
+    RET_ReallyLR implicit $w0, debug-location !37
+
+...

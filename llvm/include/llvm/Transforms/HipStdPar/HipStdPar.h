@@ -23,7 +23,6 @@
 namespace llvm {
 
 class Module;
-class ModuleAnaysisManager;
 
 class HipStdParAcceleratorCodeSelectionPass
   : public PassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {

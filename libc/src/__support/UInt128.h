@@ -11,12 +11,12 @@
 
 #include "UInt.h"
 
-#if !defined(__SIZEOF_INT128__)
-using UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
-using Int128 = LIBC_NAMESPACE::cpp::Int<128>;
-#else
+#if defined(__SIZEOF_INT128__)
 using UInt128 = __uint128_t;
 using Int128 = __int128_t;
+#else
+using UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
+using Int128 = LIBC_NAMESPACE::cpp::Int<128>;
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT128_H

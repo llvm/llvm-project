@@ -266,7 +266,9 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [],
+        "@platforms//os:windows": [
+            "ws2_32.lib",
+        ],
         "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
@@ -962,19 +964,45 @@ cc_library(
 
 cc_library(
     name = "TextAPI",
-    srcs = glob([
-        "lib/TextAPI/**/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/TextAPI/**/*.h",
-        "include/llvm/TextAPI/**/*.def",
-        "lib/TextAPI/**/*.h",
-    ]),
+    srcs = glob(
+        [
+            "lib/TextAPI/**/*.cpp",
+        ],
+        exclude = ["lib/TextAPI/BinaryReader/**"],
+    ),
+    hdrs = glob(
+        [
+            "include/llvm/TextAPI/**/*.h",
+            "include/llvm/TextAPI/**/*.def",
+            "lib/TextAPI/**/*.h",
+        ],
+        exclude = [
+            "lib/TextAPI/BinaryReader/**",
+            "include/llvm/TextAPI/DylibReader.h",
+        ],
+    ),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":Support",
         ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "TextAPIBinaryReader",
+    srcs = glob([
+        "lib/TextAPI/BinaryReader/**/*.cpp",
+    ]),
+    hdrs = ["include/llvm/TextAPI/DylibReader.h"] + glob(
+        ["lib/TextAPI/BinaryReader/**/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Object",
+        ":Support",
+        ":TargetParser",
+        ":TextAPI",
     ],
 )
 
@@ -1801,6 +1829,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CFGuard",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -1934,10 +1963,12 @@ llvm_target_lib_list = [lib for lib in [
         "name": "BPF",
         "short_name": "BPF",
         "tbl_outs": [
+            ("-gen-register-bank", "lib/Target/BPF/BPFGenRegisterBank.inc"),
             ("-gen-asm-writer", "lib/Target/BPF/BPFGenAsmWriter.inc"),
             ("-gen-asm-matcher", "lib/Target/BPF/BPFGenAsmMatcher.inc"),
             ("-gen-callingconv", "lib/Target/BPF/BPFGenCallingConv.inc"),
             ("-gen-dag-isel", "lib/Target/BPF/BPFGenDAGISel.inc"),
+            ("-gen-global-isel", "lib/Target/BPF/BPFGenGlobalISel.inc"),
             ("-gen-disassembler", "lib/Target/BPF/BPFGenDisassemblerTables.inc"),
             ("-gen-emitter", "lib/Target/BPF/BPFGenMCCodeEmitter.inc"),
             ("-gen-instr-info", "lib/Target/BPF/BPFGenInstrInfo.inc"),
@@ -2156,7 +2187,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-EVEX2VEX-tables", "lib/Target/X86/X86GenEVEX2VEXTables.inc"),
+            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
@@ -2237,10 +2268,10 @@ gentbl(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
-      ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
-      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPostLegalizerCombiner", "lib/Target/RISCV/RISCVGenPostLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/RISCV/RISCVGISel.td",
@@ -2341,10 +2372,10 @@ gentbl(
         deps = [
             ":BinaryFormat",
             ":CodeGenTypes",
+            ":Core",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
-            ":Core",
             ":Support",
             ":Target",
             ":config",
@@ -2549,24 +2580,25 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":CFGuard",
         ":CodeGen",
-        ":common_transforms",
-        ":config",
         ":Core",
         ":Coroutines",
         ":HipStdPar",
-        ":InstCombine",
-        ":Instrumentation",
         ":IPO",
         ":IRPrinter",
+        ":InstCombine",
+        ":Instrumentation",
         ":MLPolicies",
         ":ObjCARC",
-        ":pass_registry_def",
         ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
         ":Vectorize",
+        ":common_transforms",
+        ":config",
+        ":pass_registry_def",
     ],
 )
 
@@ -2687,6 +2719,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
+        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -2802,19 +2835,18 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Debugging/*.h",
-    ]),
+    ]) + ["include/llvm-c/LLJITUtils.h"],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
-        ":OrcShared",
-        ":OrcJIT",
         ":JITLink",
+        ":OrcJIT",
+        ":OrcShared",
         ":Support",
         ":TargetParser",
     ],
 )
-
 
 cc_library(
     name = "OrcTargetProcess",
@@ -2855,10 +2887,10 @@ cc_library(
 cc_library(
     name = "DWARFLinker",
     srcs = glob([
-        "lib/DWARFLinker/*.cpp",
-        "lib/DWARFLinker/*.h",
+        "lib/DWARFLinker/Classic/*.cpp",
+        "lib/DWARFLinker/Classic/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/Classic/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -2869,21 +2901,39 @@ cc_library(
         ":Support",
         ":Target",
         ":TargetParser",
+        ":DWARFLinkerBase",
+    ],
+)
+
+cc_library(
+    name = "DWARFLinkerBase",
+    srcs = glob([
+        "lib/DWARFLinker/*.cpp",
+        "lib/DWARFLinker/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DebugInfoDWARF",
+        ":Support",
+        ":Target",
     ],
 )
 
 cc_library(
     name = "DWARFLinkerParallel",
     srcs = glob([
-        "lib/DWARFLinkerParallel/*.cpp",
-        "lib/DWARFLinkerParallel/*.h",
+        "lib/DWARFLinker/Parallel/*.cpp",
+        "lib/DWARFLinker/Parallel/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/Parallel/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":CodeGen",
-        ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -3117,9 +3167,9 @@ cc_library(
         ":MC",
         ":MCA",
         ":MCDisassembler",
-        ":MCJIT",
         ":Object",
         ":ObjectYAML",
+        ":OrcJIT",
         ":Support",
         ":Target",
         ":config",
@@ -3249,9 +3299,9 @@ cc_binary(
         ":Interpreter",
         ":MCJIT",
         ":Object",
+        ":OrcDebugging",
         ":OrcJIT",
         ":OrcTargetProcess",
-        ":OrcDebugging",
         ":Support",
         ":TargetParser",
         ":config",
@@ -4703,7 +4753,7 @@ cc_binary(
     srcs = glob([
         "tools/llvm-symbolizer/*.cpp",
         "tools/llvm-symbolizer/*.h",
-    ]) + [ "llvm-symbolizer-driver.cpp"],
+    ]) + ["llvm-symbolizer-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4815,7 +4865,6 @@ expand_template(
     },
     template = "cmake/modules/llvm-driver-template.cpp.in",
 )
-
 
 cc_binary(
     name = "sancov",
@@ -5003,6 +5052,7 @@ cc_binary(
         "utils/count/*.h",
     ]),
     stamp = 0,
+    deps = [":Support"],
 )
 
 cc_binary(
@@ -5172,6 +5222,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "ReadTAPIOptsTableGen",
+    strip_include_prefix = "tools/llvm-readtapi",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-readtapi/TapiOpts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-readtapi/TapiOpts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-readtapi",
     testonly = True,
@@ -5182,9 +5244,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":BinaryFormat",
         ":Object",
+        ":Option",
+        ":ReadTAPIOptsTableGen",
         ":Support",
         ":TextAPI",
+        ":TextAPIBinaryReader",
     ],
 )
 

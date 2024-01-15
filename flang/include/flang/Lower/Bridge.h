@@ -22,6 +22,10 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 
+namespace llvm {
+class DataLayout;
+} // namespace llvm
+
 namespace Fortran {
 namespace common {
 class IntrinsicTypeDefaultKinds;
@@ -59,10 +63,12 @@ public:
          llvm::StringRef triple, fir::KindMapping &kindMap,
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-         const Fortran::common::LanguageFeatureControl &languageFeatures) {
+         const Fortran::common::LanguageFeatureControl &languageFeatures,
+         const llvm::DataLayout *dataLayout = nullptr) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
-                          loweringOptions, envDefaults, languageFeatures);
+                          loweringOptions, envDefaults, languageFeatures,
+                          dataLayout);
   }
 
   //===--------------------------------------------------------------------===//
@@ -113,6 +119,8 @@ public:
 
   Fortran::lower::StatementContext &fctCtx() { return functionContext; }
 
+  Fortran::lower::StatementContext &openAccCtx() { return openAccContext; }
+
   bool validModule() { return getModule(); }
 
   //===--------------------------------------------------------------------===//
@@ -138,12 +146,14 @@ private:
       fir::KindMapping &kindMap,
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-      const Fortran::common::LanguageFeatureControl &languageFeatures);
+      const Fortran::common::LanguageFeatureControl &languageFeatures,
+      const llvm::DataLayout *dataLayout);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
   Fortran::semantics::SemanticsContext &semanticsContext;
   Fortran::lower::StatementContext functionContext;
+  Fortran::lower::StatementContext openAccContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::evaluate::TargetCharacteristics &targetCharacteristics;

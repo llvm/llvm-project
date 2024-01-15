@@ -1,8 +1,9 @@
 /* c-arcmt-test.c */
 
 #include "clang-c/Index.h"
-#include <stdlib.h>
+#include "llvm/Support/AutoConvert.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #if defined(_WIN32)
 #include <io.h>
@@ -107,6 +108,14 @@ static void flush_atexit(void) {
 }
 
 int main(int argc, const char **argv) {
+#ifdef __MVS__
+  if (enableAutoConversion(fileno(stdout)) == -1)
+    fprintf(stderr, "Setting conversion on stdout failed\n");
+
+  if (enableAutoConversion(fileno(stderr)) == -1)
+    fprintf(stderr, "Setting conversion on stderr failed\n");
+#endif
+
   thread_info client_data;
 
   atexit(flush_atexit);

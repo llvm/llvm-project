@@ -8,7 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// REQUIRES: libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
 // Make sure that reaching std::unreachable() with assertions enabled triggers an assertion.

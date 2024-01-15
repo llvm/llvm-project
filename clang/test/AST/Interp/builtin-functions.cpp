@@ -274,6 +274,7 @@ namespace SourceLocation {
   }
 }
 
+#define BITSIZE(x) (sizeof(x) * 8)
 namespace popcount {
   static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
   static_assert(__builtin_popcount(0) == 0, "");
@@ -283,7 +284,6 @@ namespace popcount {
   static_assert(__builtin_popcountll(0) == 0, "");
 
   /// From test/Sema/constant-builtins-2.c
-#define BITSIZE(x) (sizeof(x) * 8)
   char popcount1[__builtin_popcount(0) == 0 ? 1 : -1];
   char popcount2[__builtin_popcount(0xF0F0) == 8 ? 1 : -1];
   char popcount3[__builtin_popcount(~0) == BITSIZE(int) ? 1 : -1];
@@ -294,4 +294,72 @@ namespace popcount {
   char popcount8[__builtin_popcountll(0LL) == 0 ? 1 : -1];
   char popcount9[__builtin_popcountll(0xF0F0LL) == 8 ? 1 : -1];
   char popcount10[__builtin_popcountll(~0LL) == BITSIZE(long long) ? 1 : -1];
+}
+
+namespace parity {
+  /// From test/Sema/constant-builtins-2.c
+  char parity1[__builtin_parity(0) == 0 ? 1 : -1];
+  char parity2[__builtin_parity(0xb821) == 0 ? 1 : -1];
+  char parity3[__builtin_parity(0xb822) == 0 ? 1 : -1];
+  char parity4[__builtin_parity(0xb823) == 1 ? 1 : -1];
+  char parity5[__builtin_parity(0xb824) == 0 ? 1 : -1];
+  char parity6[__builtin_parity(0xb825) == 1 ? 1 : -1];
+  char parity7[__builtin_parity(0xb826) == 1 ? 1 : -1];
+  char parity8[__builtin_parity(~0) == 0 ? 1 : -1];
+  char parity9[__builtin_parityl(1L << (BITSIZE(long) - 1)) == 1 ? 1 : -1];
+  char parity10[__builtin_parityll(1LL << (BITSIZE(long long) - 1)) == 1 ? 1 : -1];
+}
+
+namespace clrsb {
+  char clrsb1[__builtin_clrsb(0) == BITSIZE(int) - 1 ? 1 : -1];
+  char clrsb2[__builtin_clrsbl(0L) == BITSIZE(long) - 1 ? 1 : -1];
+  char clrsb3[__builtin_clrsbll(0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clrsb4[__builtin_clrsb(~0) == BITSIZE(int) - 1 ? 1 : -1];
+  char clrsb5[__builtin_clrsbl(~0L) == BITSIZE(long) - 1 ? 1 : -1];
+  char clrsb6[__builtin_clrsbll(~0LL) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clrsb7[__builtin_clrsb(1) == BITSIZE(int) - 2 ? 1 : -1];
+  char clrsb8[__builtin_clrsb(~1) == BITSIZE(int) - 2 ? 1 : -1];
+  char clrsb9[__builtin_clrsb(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+  char clrsb10[__builtin_clrsb(~(1 << (BITSIZE(int) - 1))) == 0 ? 1 : -1];
+  char clrsb11[__builtin_clrsb(0xf) == BITSIZE(int) - 5 ? 1 : -1];
+  char clrsb12[__builtin_clrsb(~0x1f) == BITSIZE(int) - 6 ? 1 : -1];
+}
+
+namespace bitreverse {
+  char bitreverse1[__builtin_bitreverse8(0x01) == 0x80 ? 1 : -1];
+  char bitreverse2[__builtin_bitreverse16(0x3C48) == 0x123C ? 1 : -1];
+  char bitreverse3[__builtin_bitreverse32(0x12345678) == 0x1E6A2C48 ? 1 : -1];
+  char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+}
+
+namespace expect {
+  constexpr int a() {
+    return 12;
+  }
+  static_assert(__builtin_expect(a(),1) == 12, "");
+  static_assert(__builtin_expect_with_probability(a(), 1, 1.0) == 12, "");
+}
+
+namespace rotateleft {
+  char rotateleft1[__builtin_rotateleft8(0x01, 5) == 0x20 ? 1 : -1];
+  char rotateleft2[__builtin_rotateleft16(0x3210, 11) == 0x8190 ? 1 : -1];
+  char rotateleft3[__builtin_rotateleft32(0x76543210, 22) == 0x841D950C ? 1 : -1];
+  char rotateleft4[__builtin_rotateleft64(0xFEDCBA9876543210ULL, 55) == 0x87F6E5D4C3B2A19ULL ? 1 : -1];
+}
+
+namespace rotateright {
+  char rotateright1[__builtin_rotateright8(0x01, 5) == 0x08 ? 1 : -1];
+  char rotateright2[__builtin_rotateright16(0x3210, 11) == 0x4206 ? 1 : -1];
+  char rotateright3[__builtin_rotateright32(0x76543210, 22) == 0x50C841D9 ? 1 : -1];
+  char rotateright4[__builtin_rotateright64(0xFEDCBA9876543210ULL, 55) == 0xB97530ECA86421FDULL ? 1 : -1];
+}
+
+namespace ffs {
+  char ffs1[__builtin_ffs(0) == 0 ? 1 : -1];
+  char ffs2[__builtin_ffs(1) == 1 ? 1 : -1];
+  char ffs3[__builtin_ffs(0xfbe71) == 1 ? 1 : -1];
+  char ffs4[__builtin_ffs(0xfbe70) == 5 ? 1 : -1];
+  char ffs5[__builtin_ffs(1U << (BITSIZE(int) - 1)) == BITSIZE(int) ? 1 : -1];
+  char ffs6[__builtin_ffsl(0x10L) == 5 ? 1 : -1];
+  char ffs7[__builtin_ffsll(0x100LL) == 9 ? 1 : -1];
 }

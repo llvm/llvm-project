@@ -119,8 +119,8 @@ struct SymbolEntry {
   }
 
   bool isSwiftSymbol() const {
-    return StringRef(Name).startswith("_$s") ||
-           StringRef(Name).startswith("_$S");
+    return StringRef(Name).starts_with("_$s") ||
+           StringRef(Name).starts_with("_$S");
   }
 
   std::optional<uint32_t> section() const {

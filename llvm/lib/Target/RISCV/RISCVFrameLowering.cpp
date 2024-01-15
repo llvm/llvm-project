@@ -526,7 +526,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     RealStackSize = FirstSPAdjustAmount;
   }
 
-  if (RVFI->isPushable(MF) && FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
+  if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
+      FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
     // stack space.
     uint64_t Spimm = std::min(StackSize, (uint64_t)48);
@@ -980,11 +981,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
       RISCV::X5, RISCV::X6, RISCV::X7,                  /* t0-t2 */
       RISCV::X10, RISCV::X11,                           /* a0-a1, a2-a7 */
       RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17,
-      RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31, 0 /* t3-t6 */
+      RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31 /* t3-t6 */
     };
 
-    for (unsigned i = 0; CSRegs[i]; ++i)
-      SavedRegs.set(CSRegs[i]);
+    for (auto Reg : CSRegs)
+      SavedRegs.set(Reg);
 
     if (MF.getSubtarget<RISCVSubtarget>().hasStdExtF()) {
 

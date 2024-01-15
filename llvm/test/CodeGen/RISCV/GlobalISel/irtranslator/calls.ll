@@ -399,3 +399,69 @@ entry:
   call void @void_sret_args(ptr sret(%struct.Foo) @foo)
   ret void
 }
+
+declare external void @external_function()
+
+define void @test_call_external() {
+  ; RV32I-LABEL: name: test_call_external
+  ; RV32I: bb.1.entry:
+  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @external_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoRET
+  ;
+  ; RV64I-LABEL: name: test_call_external
+  ; RV64I: bb.1.entry:
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @external_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoRET
+entry:
+  call void @external_function()
+  ret void
+}
+
+declare dso_local void @dso_local_function()
+
+define void @test_call_local() {
+  ; RV32I-LABEL: name: test_call_local
+  ; RV32I: bb.1.entry:
+  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoRET
+  ;
+  ; RV64I-LABEL: name: test_call_local
+  ; RV64I: bb.1.entry:
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @dso_local_function, csr_ilp32_lp64, implicit-def $x1
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoRET
+entry:
+  call void @dso_local_function()
+  ret void
+}
+
+define void @test_indirect_call(ptr %func) {
+  ; RV32I-LABEL: name: test_indirect_call
+  ; RV32I: bb.1 (%ir-block.0):
+  ; RV32I-NEXT:   liveins: $x10
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   [[COPY:%[0-9]+]]:gprjalr(p0) = COPY $x10
+  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoCALLIndirect [[COPY]](p0), csr_ilp32_lp64, implicit-def $x1
+  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoRET
+  ;
+  ; RV64I-LABEL: name: test_indirect_call
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:gprjalr(p0) = COPY $x10
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoCALLIndirect [[COPY]](p0), csr_ilp32_lp64, implicit-def $x1
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoRET
+  call void %func()
+  ret void
+}

@@ -32,7 +32,7 @@ public:
       bool PutEmptyString = false)
       : Translator(Translator) {
     if (PutEmptyString)
-      EmptyString = getEntry("");
+      getEntry("");
   }
 
   DwarfStringPoolEntryRef getEntry(StringRef S);
@@ -59,7 +59,6 @@ private:
   MapTy Strings;
   uint64_t CurrentEndOffset = 0;
   unsigned NumEntries = 0;
-  DwarfStringPoolEntryRef EmptyString;
   std::function<StringRef(StringRef Input)> Translator;
 };
 

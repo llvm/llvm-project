@@ -54,6 +54,21 @@ public:
   /// nullptr.
   Block *findNearestCommonDominator(Block *a, Block *b) const;
 
+  /// Finds the nearest common dominator block for the given range of blocks.
+  /// If no common dominator can be found, this function will return nullptr.
+  template <typename BlockRangeT>
+  Block *findNearestCommonDominator(BlockRangeT &&blocks) const {
+    if (blocks.begin() == blocks.end())
+      return nullptr;
+    Block *dom = *blocks.begin();
+    for (auto it = ++blocks.begin(); it != blocks.end(); ++it) {
+      dom = findNearestCommonDominator(dom, *it);
+      if (!dom)
+        return nullptr;
+    }
+    return dom;
+  }
+
   /// Get the root dominance node of the given region. Note that this operation
   /// is only defined for multi-block regions!
   DominanceInfoNode *getRootNode(Region *region) {

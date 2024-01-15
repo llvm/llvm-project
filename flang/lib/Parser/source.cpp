@@ -46,7 +46,7 @@ void SourceFile::RecordLineStarts() {
 void SourceFile::IdentifyPayload() {
   llvm::StringRef content{buf_->getBufferStart(), buf_->getBufferSize()};
   constexpr llvm::StringLiteral UTF8_BOM{"\xef\xbb\xbf"};
-  if (content.startswith(UTF8_BOM)) {
+  if (content.starts_with(UTF8_BOM)) {
     bom_end_ = UTF8_BOM.size();
     encoding_ = Encoding::UTF_8;
   }

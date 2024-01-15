@@ -1020,6 +1020,27 @@ def G_FNEARBYINT : GenericInstruction {
 // it is modeled as a side effect, because constrained intrinsics use the same
 // method.
 
+// Reading floating-point environment.
+def G_GET_FPENV : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point environment.
+def G_SET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
+// Setting default floating-point environment.
+def G_RESET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 // Reading floating-point control modes.
 def G_GET_FPMODE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1207,6 +1228,15 @@ def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i32imm:$ordering, i32imm:$scope);
   let hasSideEffects = true;
+}
+
+// Generic opcode equivalent to the llvm.prefetch intrinsic.
+def G_PREFETCH : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$address, i32imm:$rw, i32imm:$locality, i32imm:$cachetype);
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
 }
 
 //------------------------------------------------------------------------------

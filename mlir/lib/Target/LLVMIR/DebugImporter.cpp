@@ -50,10 +50,11 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
-  return DICompileUnitAttr::get(context, node->getSourceLanguage(),
-                                translate(node->getFile()),
-                                getStringAttrOrNull(node->getRawProducer()),
-                                node->isOptimized(), emissionKind.value());
+  return DICompileUnitAttr::get(
+      context, DistinctAttr::create(UnitAttr::get(context)),
+      node->getSourceLanguage(), translate(node->getFile()),
+      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
+      emissionKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -116,6 +117,23 @@ DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
                                      node->getDiscriminator());
 }
 
+DIGlobalVariableAttr
+DebugImporter::translateImpl(llvm::DIGlobalVariable *node) {
+  // Names of DIGlobalVariables can be empty. MLIR models them as null, instead
+  // of empty strings, so this special handling is necessary.
+  auto convertToStringAttr = [&](StringRef name) -> StringAttr {
+    if (name.empty())
+      return {};
+    return StringAttr::get(context, node->getName());
+  };
+  return DIGlobalVariableAttr::get(
+      context, translate(node->getScope()),
+      convertToStringAttr(node->getName()),
+      convertToStringAttr(node->getLinkageName()), translate(node->getFile()),
+      node->getLine(), translate(node->getType()), node->isLocalToUnit(),
+      node->isDefinition(), node->getAlignInBits());
+}
+
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
   return DILocalVariableAttr::get(context, translate(node->getScope()),
                                   getStringAttrOrNull(node->getRawName()),
@@ -145,6 +163,10 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
 }
 
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
+  // Only definitions require a distinct identifier.
+  mlir::DistinctAttr id;
+  if (node->isDistinct())
+    id = DistinctAttr::create(UnitAttr::get(context));
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is a cyclic dependency.
@@ -154,7 +176,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
-  return DISubprogramAttr::get(context, translate(node->getUnit()), scope,
+  return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
@@ -231,6 +253,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIGlobalVariable>(node))
+      return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILabel>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILexicalBlock>(node))
@@ -270,15 +294,38 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   Location result = FileLineColLoc::get(context, loc->getFilename(),
                                         loc->getLine(), loc->getColumn());
 
-  // Add call site information, if available.
-  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
-    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
-
   // Add scope information.
   assert(loc->getScope() && "expected non-null scope");
   result = FusedLocWith<DIScopeAttr>::get({result}, translate(loc->getScope()),
                                           context);
+
+  // Add call site information, if available.
+  if (llvm::DILocation *inlinedAt = loc->getInlinedAt())
+    result = CallSiteLoc::get(result, translateLoc(inlinedAt));
+
   return result;
+}
+
+DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  SmallVector<DIExpressionElemAttr> ops;
+
+  // Begin processing the operations.
+  for (const llvm::DIExpression::ExprOperand &op : node->expr_ops()) {
+    SmallVector<uint64_t> operands;
+    operands.reserve(op.getNumArgs());
+    for (const auto &i : llvm::seq(op.getNumArgs()))
+      operands.push_back(op.getArg(i));
+    const auto attr = DIExpressionElemAttr::get(context, op.getOp(), operands);
+    ops.push_back(attr);
+  }
+  return DIExpressionAttr::get(context, ops);
+}
+
+DIGlobalVariableExpressionAttr DebugImporter::translateGlobalVariableExpression(
+    llvm::DIGlobalVariableExpression *node) {
+  return DIGlobalVariableExpressionAttr::get(
+      context, translate(node->getVariable()),
+      translateExpression(node->getExpression()));
 }
 
 StringAttr DebugImporter::getStringAttrOrNull(llvm::MDString *stringNode) {

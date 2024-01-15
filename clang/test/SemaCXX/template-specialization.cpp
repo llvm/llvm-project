@@ -19,3 +19,36 @@ int main() {
   B::foo<4>(); // expected-note {{in instantiation of function template specialization 'B::foo<4>'}}
   return 0;
 }
+
+namespace GH70375 {
+
+template <typename Ty>
+struct S {
+  static void bar() {
+    Ty t;
+    t.foo();
+  }
+
+  static void take(Ty&) {}
+};
+
+template <typename P>
+struct Outer {
+  template <typename C>
+  struct Inner;
+
+  using U = S<Inner<P>>;
+
+  template <>
+  struct Inner<void> {
+    void foo() {
+      U::take(*this);
+    }
+  };
+};
+
+void instantiate() {
+  Outer<void>::U::bar();
+}
+
+}

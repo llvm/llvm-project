@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -51,11 +50,13 @@ public:
     AppleA14,
     AppleA15,
     AppleA16,
+    AppleA17,
     Carmel,
     CortexA35,
     CortexA53,
     CortexA55,
     CortexA510,
+    CortexA520,
     CortexA57,
     CortexA65,
     CortexA72,
@@ -67,11 +68,13 @@ public:
     CortexA78C,
     CortexA710,
     CortexA715,
+    CortexA720,
     CortexR82,
     CortexX1,
     CortexX1C,
     CortexX2,
     CortexX3,
+    CortexX4,
     ExynosM3,
     Falkor,
     Kryo,
@@ -391,6 +394,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   bool hasSVEorSME() const { return hasSVE() || hasSME(); }
+  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
 
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's

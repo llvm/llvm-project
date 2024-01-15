@@ -4,8 +4,8 @@
 ; reflected in the probability computation because the weight is larger than
 ; the branch weight cap (about 2 billion).
 ;
-; CHECK: edge for.body -> if.then probability is 0x0cccba45 / 0x80000000 = 10.00%
-; CHECK: edge for.body -> if.else probability is 0x733345bb / 0x80000000 = 90.00% [HOT edge]
+; CHECK: edge %for.body -> %if.then probability is 0x0cccba45 / 0x80000000 = 10.00%
+; CHECK: edge %for.body -> %if.else probability is 0x733345bb / 0x80000000 = 90.00% [HOT edge]
 
 @y = common global i64 0, align 8
 @x = common global i64 0, align 8

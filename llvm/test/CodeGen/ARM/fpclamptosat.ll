@@ -4158,7 +4158,7 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
   %15 = trunc i64 %14 to i32
   %16 = getelementptr inbounds i32, ptr %0, i32 %6
   store i32 %15, ptr %16, align 4
-  %17 = or i32 %6, 1
+  %17 = or disjoint i32 %6, 1
   %18 = getelementptr inbounds float, ptr %1, i32 %17
   %19 = load float, ptr %18, align 4
   %20 = fmul float %19, 0x41E0000000000000
@@ -4354,7 +4354,7 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
   %15 = trunc i64 %14 to i32
   %16 = getelementptr inbounds i32, ptr %0, i32 %6
   store i32 %15, ptr %16, align 4
-  %17 = or i32 %6, 1
+  %17 = or disjoint i32 %6, 1
   %18 = getelementptr inbounds float, ptr %1, i32 %17
   %19 = load float, ptr %18, align 4
   %20 = fmul float %19, 0x41E0000000000000

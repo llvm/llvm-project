@@ -46,7 +46,8 @@ void LLVM::AllocaOp::handleBlockArgument(const MemorySlot &slot,
   for (Operation *user : getOperation()->getUsers())
     if (auto declareOp = llvm::dyn_cast<LLVM::DbgDeclareOp>(user))
       rewriter.create<LLVM::DbgValueOp>(declareOp.getLoc(), argument,
-                                        declareOp.getVarInfo());
+                                        declareOp.getVarInfo(),
+                                        declareOp.getLocationExpr());
 }
 
 void LLVM::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
@@ -174,7 +175,8 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
   for (Operation *user : slot.ptr.getUsers())
     if (auto declareOp = dyn_cast<LLVM::DbgDeclareOp>(user))
       rewriter.create<LLVM::DbgValueOp>(declareOp->getLoc(), getValue(),
-                                        declareOp.getVarInfo());
+                                        declareOp.getVarInfo(),
+                                        declareOp.getLocationExpr());
   return DeletionKind::Delete;
 }
 
@@ -242,6 +244,28 @@ bool LLVM::LifetimeEndOp::canUsesBeRemoved(
 }
 
 DeletionKind LLVM::LifetimeEndOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::InvariantStartOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantStartOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::InvariantEndOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
   return DeletionKind::Delete;
 }

@@ -978,7 +978,14 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
 
   AlignTokens(
       Style,
-      [](Change const &C) {
+      [&](Change const &C) {
+        if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
+          for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
+            if (Prev->is(tok::equal))
+              return false;
+          if (C.Tok->is(TT_FunctionTypeLParen))
+            return true;
+        }
         if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
@@ -1316,6 +1323,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
         auto Offset = std::distance(Cells.begin(), CellIter);
         for (const auto *Next = CellIter->NextColumnElement; Next;
              Next = Next->NextColumnElement) {
+          if (RowCount >= CellDescs.CellCounts.size())
+            break;
           auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
           auto *End = Start + Offset;
           ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
@@ -1379,7 +1388,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     auto Offset = std::distance(Cells.begin(), CellIter);
     for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > CellDescs.CellCounts.size())
+      if (RowCount >= CellDescs.CellCounts.size())
         break;
       auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
       auto *End = Start + Offset;
@@ -1442,8 +1451,10 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
       } else if (C.Tok->is(tok::comma)) {
         if (!Cells.empty())
           Cells.back().EndIndex = i;
-        if (C.Tok->getNextNonComment()->isNot(tok::r_brace)) // dangling comma
+        if (const auto *Next = C.Tok->getNextNonComment();
+            Next && Next->isNot(tok::r_brace)) { // dangling comma
           ++Cell;
+        }
       }
     } else if (Depth == 1) {
       if (C.Tok == MatchingParen) {

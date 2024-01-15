@@ -302,13 +302,16 @@ bool isScalarBoxedRecordType(mlir::Type ty) {
 }
 
 bool isAssumedType(mlir::Type ty) {
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>()) {
-    if (boxTy.getEleTy().isa<mlir::NoneType>())
-      return true;
-    if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
-      return seqTy.getEleTy().isa<mlir::NoneType>();
-  }
-  return false;
+  // Rule out CLASS(*) which are `fir.class<[fir.array] none>`.
+  if (mlir::isa<fir::ClassType>(ty))
+    return false;
+  mlir::Type valueType = fir::unwrapPassByRefType(fir::unwrapRefType(ty));
+  // Refuse raw `none` or `fir.array<none>` since assumed type
+  // should be in memory variables.
+  if (valueType == ty)
+    return false;
+  mlir::Type inner = fir::unwrapSequenceType(valueType);
+  return mlir::isa<mlir::NoneType>(inner);
 }
 
 bool isAssumedShape(mlir::Type ty) {
@@ -331,20 +334,16 @@ bool isAllocatableOrPointerArray(mlir::Type ty) {
 }
 
 bool isPolymorphicType(mlir::Type ty) {
-  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
-    ty = refTy;
-  // CLASS(*)
-  if (ty.isa<fir::ClassType>())
+  // CLASS(T) or CLASS(*)
+  if (mlir::isa<fir::ClassType>(fir::unwrapRefType(ty)))
     return true;
   // assumed type are polymorphic.
   return isAssumedType(ty);
 }
 
 bool isUnlimitedPolymorphicType(mlir::Type ty) {
-  if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
-    ty = refTy;
   // CLASS(*)
-  if (auto clTy = ty.dyn_cast<fir::ClassType>()) {
+  if (auto clTy = mlir::dyn_cast<fir::ClassType>(fir::unwrapRefType(ty))) {
     if (clTy.getEleTy().isa<mlir::NoneType>())
       return true;
     mlir::Type innerType = clTy.unwrapInnerType();
@@ -847,6 +846,12 @@ fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       KindTy fKind) {
   // TODO
   return mlir::success();
+}
+
+mlir::Type fir::RealType::getFloatType(const fir::KindMapping &kindMap) const {
+  auto fkind = getFKind();
+  auto realTypeID = kindMap.getRealTypeID(fkind);
+  return fir::fromRealTypeID(getContext(), realTypeID, fkind);
 }
 
 //===----------------------------------------------------------------------===//

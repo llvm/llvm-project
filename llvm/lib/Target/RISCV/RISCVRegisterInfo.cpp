@@ -85,10 +85,11 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   // Mark any registers requested to be reserved as such
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
-    if (MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(Reg))
+    if (Subtarget.isRegisterReservedByUser(Reg))
       markSuperRegs(Reserved, Reg);
   }
 
@@ -118,6 +119,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Floating point environment registers.
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    if (Subtarget.isRVE())
+      report_fatal_error("Graal reserved registers do not exist in RVE");
+    markSuperRegs(Reserved, RISCV::X23);
+    markSuperRegs(Reserved, RISCV::X27);
+  }
+
+  // Shadow stack pointer.
+  markSuperRegs(Reserved, RISCV::SSP);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -259,8 +270,9 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -291,12 +303,19 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
                 "Unexpected subreg numbering");
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
-  uint32_t ShiftAmount = Log2_32(LMUL);
-  if (ShiftAmount != 0)
-    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
-        .addReg(VL)
-        .addImm(ShiftAmount);
+  // Optimize for constant VLEN.
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    int64_t Offset = VLENB * LMUL;
+    STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
+  } else {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(LMUL);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+  }
 
   Register SrcReg = II->getOperand(0).getReg();
   Register Base = II->getOperand(1).getReg();
@@ -328,8 +347,9 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -360,12 +380,19 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
                 "Unexpected subreg numbering");
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
-  uint32_t ShiftAmount = Log2_32(LMUL);
-  if (ShiftAmount != 0)
-    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
-        .addReg(VL)
-        .addImm(ShiftAmount);
+  // Optimize for constant VLEN.
+  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    int64_t Offset = VLENB * LMUL;
+    STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
+  } else {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(LMUL);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+  }
 
   Register DestReg = II->getOperand(0).getReg();
   Register Base = II->getOperand(1).getReg();

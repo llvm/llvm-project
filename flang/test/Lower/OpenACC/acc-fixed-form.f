@@ -1,4 +1,3 @@
-! RUN: bbc -ffixed-form -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -ffixed-form -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
       subroutine sub1()

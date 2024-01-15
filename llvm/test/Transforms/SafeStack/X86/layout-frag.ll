@@ -1,5 +1,6 @@
 ; Test that safestack layout reuses a region w/o fragmentation.
 ; RUN: opt -safe-stack -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -safe-stack-coloring=1 -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 define void @f() safestack {
 ; CHECK-LABEL: define void @f

@@ -48,7 +48,7 @@ define void @alloca_icmp_null_exit_count() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 3
+; CHECK-NEXT:  Loop %loop: Trip multiple is 3
 ;
 entry:
   %alloca = alloca [3 x i32], align 4

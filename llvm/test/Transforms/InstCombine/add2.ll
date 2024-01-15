@@ -28,7 +28,7 @@ define i32 @test3(i32 %A) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], 128
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[A]], 30
-; CHECK-NEXT:    [[F:%.*]] = or i32 [[B]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint i32 [[B]], [[C]]
 ; CHECK-NEXT:    ret i32 [[F]]
 ;
   %B = and i32 %A, 128
@@ -330,7 +330,7 @@ define i16 @mul_add_to_mul_9(i16 %a) {
 define i16 @add_cttz(i16 %a) {
 ; CHECK-LABEL: @add_cttz(
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[B:%.*]] = or i16 [[CTTZ]], -8
+; CHECK-NEXT:    [[B:%.*]] = or disjoint i16 [[CTTZ]], -8
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
   ; llvm.cttz.i16(..., /*is_zero_undefined=*/true) implies the value returned
@@ -352,7 +352,7 @@ declare i16 @llvm.cttz.i16(i16, i1)
 define i16 @add_cttz_2(i16 %a) {
 ; CHECK-LABEL: @add_cttz_2(
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[A:%.*]], i1 true), !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[B:%.*]] = or i16 [[CTTZ]], -16
+; CHECK-NEXT:    [[B:%.*]] = or disjoint i16 [[CTTZ]], -16
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
   ; llvm.cttz.i16(..., /*is_zero_undefined=*/true) implies the value returned

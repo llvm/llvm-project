@@ -1,0 +1,151 @@
+//===--- OpenACCKinds.h - OpenACC Enums -------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Defines some OpenACC-specific enums and functions.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_BASIC_OPENACCKINDS_H
+#define LLVM_CLANG_BASIC_OPENACCKINDS_H
+
+namespace clang {
+// Represents the Construct/Directive kind of a pragma directive. Note the
+// OpenACC standard is inconsistent between calling these Construct vs
+// Directive, but we're calling it a Directive to be consistent with OpenMP.
+enum class OpenACCDirectiveKind {
+  // Compute Constructs.
+  Parallel,
+  Serial,
+  Kernels,
+
+  // Data Environment. "enter data" and "exit data" are also referred to in the
+  // Executable Directives section, but just as a back reference to the Data
+  // Environment.
+  Data,
+  EnterData,
+  ExitData,
+  HostData,
+
+  // Misc.
+  Loop,
+  Cache,
+
+  // Combined Constructs.
+  ParallelLoop,
+  SerialLoop,
+  KernelsLoop,
+
+  // Atomic Construct.
+  Atomic,
+
+  // Declare Directive.
+  Declare,
+
+  // Executable Directives. "wait" is first referred to here, but ends up being
+  // in its own section after "routine".
+  Init,
+  Shutdown,
+  Set,
+  Update,
+  Wait,
+
+  // Procedure Calls in Compute Regions.
+  Routine,
+
+  // Invalid.
+  Invalid,
+};
+
+enum class OpenACCAtomicKind {
+  Read,
+  Write,
+  Update,
+  Capture,
+  Invalid,
+};
+
+/// Represents the kind of an OpenACC clause.
+enum class OpenACCClauseKind {
+  /// 'finalize' clause, allowed on 'exit data' directive.
+  Finalize,
+  /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
+  IfPresent,
+  /// 'seq' clause, allowed on 'loop' and 'routine' directives.
+  Seq,
+  /// 'independent' clause, allowed on 'loop' directives.
+  Independent,
+  /// 'auto' clause, allowed on 'loop' directives.
+  Auto,
+  /// 'worker' clause, allowed on 'loop' and 'routine' directives.
+  Worker,
+  /// 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
+  /// arguments for 'routine', so the 'loop' version is not yet implemented
+  /// completely.
+  Vector,
+  /// 'nohost' clause, allowed on 'routine' directives.
+  NoHost,
+  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
+  /// constructs.
+  Default,
+  /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
+  /// Executable Constructs, and Combined Constructs.
+  If,
+  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
+  Self,
+  /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
+  /// 'declare'.
+  Copy,
+  /// 'use_device' clause, allowed on 'host_data' construct.
+  UseDevice,
+  /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'enter data'.
+  Attach,
+  /// 'delete' clause, allowed on the 'exit data' construct.
+  Delete,
+  /// 'detach' clause, allowed on the 'exit data' construct.
+  Detach,
+  /// 'device' clause, allowed on the 'update' construct.
+  Device,
+  /// 'deviceptr' clause, allowed on Compute and Combined Constructs, plus
+  /// 'data' and 'declare'.
+  DevicePtr,
+  /// 'device_resident' clause, allowed on the 'declare' construct.
+  DeviceResident,
+  /// 'firstprivate' clause, allowed on 'parallel', 'serial', 'parallel loop',
+  /// and 'serial loop' constructs.
+  FirstPrivate,
+  /// 'host' clause, allowed on 'update' construct.
+  Host,
+  /// 'link' clause, allowed on 'declare' construct.
+  Link,
+  /// 'no_create' clause, allowed on allowed on Compute and Combined constructs,
+  /// plus 'data'.
+  NoCreate,
+  /// 'present' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'declare'.
+  Present,
+  /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
+  /// loop', and 'serial loop' constructs.
+  Private,
+
+  /// Represents an invalid clause, for the purposes of parsing.
+  Invalid,
+};
+
+enum class OpenACCDefaultClauseKind {
+  /// 'none' option.
+  None,
+  /// 'present' option.
+  Present,
+  /// Not a valid option.
+  Invalid,
+};
+} // namespace clang
+
+#endif // LLVM_CLANG_BASIC_OPENACCKINDS_H

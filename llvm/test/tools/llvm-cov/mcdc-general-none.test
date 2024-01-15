@@ -1,0 +1,82 @@
+// Test visualization of general MC/DC constructs with 0 executed test vectors.
+
+// RUN: llvm-profdata merge %S/Inputs/mcdc-general-none.proftext -o %t.profdata
+// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT
+
+// CHECK: test(bool
+
+// CHECK:  ------------------
+// CHECK-NEXT:  |---> MC/DC Decision Region (12:7) to (12:27)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Number of Conditions: 4
+// CHECK-NEXT:  |     Condition C1 --> (12:8)
+// CHECK-NEXT:  |     Condition C2 --> (12:13)
+// CHECK-NEXT:  |     Condition C3 --> (12:20)
+// CHECK-NEXT:  |     Condition C4 --> (12:25)
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  Executed MC/DC Test Vectors:
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  None.
+// CHECK-NEXT:  |
+// CHECK-NEXT:  |  C1-Pair: not covered
+// CHECK-NEXT:  |  C2-Pair: not covered
+// CHECK-NEXT:  |  C3-Pair: not covered
+// CHECK-NEXT:  |  C4-Pair: not covered
+// CHECK-NEXT:  |  MC/DC Coverage for Decision: 0.00%
+// CHECK-NEXT:  |
+// CHECK-NEXT:  ------------------
+
+
+// Turn off MC/DC visualization.
+// RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=NOMCDC
+// NOMCDC-NOT: MC/DC Decision Region
+
+// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
+// REPORT-NEXT: -------------------------------------------------------------------------------------------------------------------------------------------
+// REPORT-NEXT: _Z4testbbbb                      25       0 100.00%         9       0 100.00%        24       2  91.67%                  12      12   0.00%
+// REPORT-NEXT: main                              1       0 100.00%        11       0 100.00%         0       0   0.00%                   0       0   0.00%
+// REPORT-NEXT: ---
+// REPORT-NEXT: TOTAL                            26       0 100.00%        20       0 100.00%        24       2  91.67%                  12      12   0.00%
+
+// Turn off MC/DC summary.
+// RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT_NOMCDC
+// REPORT_NOMCDC-NOT: TOTAL{{.*}}12                   12    0.00%
+
+
+// Test file-level report.
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=FILEREPORT
+// FILEREPORT: TOTAL{{.*}}12                   12    0.00%
+
+
+// Test html output.
+// RUN: llvm-cov show --show-mcdc-summary --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp -format html -o %t.html.dir
+// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/tmp/mcdc-general.cpp.html %s
+// HTML-COUNT-4: MC/DC Decision Region (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>
+
+// RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.html.dir/index.html %s
+// HTML-INDEX-LABEL: <table>
+// HTML-INDEX: <td class='column-entry-bold'>Filename</td>
+// HTML-INDEX: <td class='column-entry-bold'>Function Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Line Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Region Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Branch Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>MC/DC</td>
+// HTML-INDEX: <a href='coverage{{.*}}mcdc-general.cpp.html'{{.*}}mcdc-general.cpp</a>
+// HTML-INDEX: <td class='column-entry-green'>
+// HTML-INDEX: 100.00% (2/2)
+// HTML-INDEX: 100.00% (20/20)
+// HTML-INDEX: 100.00% (26/26)
+// HTML-INDEX: 91.67% (22/24)
+// HTML-INDEX: 0.00% (0/12)
+// HTML-INDEX: Totals
+
+Instructions for regenerating the test:
+
+# cd %S/Inputs
+cp mcdc-general.cpp /tmp
+
+clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
+    -fcoverage-mapping /tmp/mcdc-general.cpp -o /tmp/mcdc-general.o
+
+mv /tmp/mcdc-general.o %S/Inputs

@@ -307,6 +307,8 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   void loadVectorConstant(const SystemZVectorConstantInfo &VCI,
                           SDNode *Node);
 
+  SDNode *loadPoolVectorConstant(APInt Val, EVT VT, SDLoc DL);
+
   // Try to use gather instruction Opcode to implement vector insertion N.
   bool tryGather(SDNode *N, unsigned Opcode);
 
@@ -463,7 +465,8 @@ bool SystemZDAGToDAGISel::expandAddress(SystemZAddressingMode &AM,
                                         bool IsBase) const {
   SDValue N = IsBase ? AM.Base : AM.Index;
   unsigned Opcode = N.getOpcode();
-  if (Opcode == ISD::TRUNCATE) {
+  // Look through no-op truncations.
+  if (Opcode == ISD::TRUNCATE && N.getOperand(0).getValueSizeInBits() <= 64) {
     N = N.getOperand(0);
     Opcode = N.getOpcode();
   }
@@ -783,6 +786,8 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   switch (Opcode) {
   case ISD::TRUNCATE: {
     if (RxSBG.Opcode == SystemZ::RNSBG)
+      return false;
+    if (N.getOperand(0).getValueSizeInBits() > 64)
       return false;
     uint64_t BitSize = N.getValueSizeInBits();
     uint64_t Mask = allOnes(BitSize);
@@ -1183,6 +1188,35 @@ void SystemZDAGToDAGISel::loadVectorConstant(
   SelectCode(Op.getNode());
 }
 
+SDNode *SystemZDAGToDAGISel::loadPoolVectorConstant(APInt Val, EVT VT, SDLoc DL) {
+  SDNode *ResNode;
+  assert (VT.getSizeInBits() == 128);
+
+  SDValue CP = CurDAG->getTargetConstantPool(
+      ConstantInt::get(Type::getInt128Ty(*CurDAG->getContext()), Val),
+      TLI->getPointerTy(CurDAG->getDataLayout()));
+
+  EVT PtrVT = CP.getValueType();
+  SDValue Ops[] = {
+    SDValue(CurDAG->getMachineNode(SystemZ::LARL, DL, PtrVT, CP), 0),
+    CurDAG->getTargetConstant(0, DL, PtrVT),
+    CurDAG->getRegister(0, PtrVT),
+    CurDAG->getEntryNode()
+  };
+  ResNode = CurDAG->getMachineNode(SystemZ::VL, DL, VT, MVT::Other, Ops);
+
+  // Annotate ResNode with memory operand information so that MachineInstr
+  // queries work properly. This e.g. gives the register allocation the
+  // required information for rematerialization.
+  MachineFunction& MF = CurDAG->getMachineFunction();
+  MachineMemOperand *MemOp =
+      MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                              MachineMemOperand::MOLoad, 16, Align(8));
+
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
+  return ResNode;
+}
+
 bool SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
   SDValue ElemV = N->getOperand(2);
   auto *ElemN = dyn_cast<ConstantSDNode>(ElemV);
@@ -1558,6 +1592,9 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
                 break;
           }
         }
+        // Don't split an XOR with -1 as LCGR/AGHI is more compact.
+        if (Opcode == ISD::XOR && Op1->isAllOnes())
+          break;
         if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {
           splitLargeImmediate(Opcode, Node, Node->getOperand(0),
                               Val - uint32_t(Val), uint32_t(Val));
@@ -1579,16 +1616,49 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case ISD::BSWAP:
+    if (Node->getValueType(0) == MVT::i128) {
+      SDLoc DL(Node);
+      SDValue Src = Node->getOperand(0);
+      Src = CurDAG->getNode(ISD::BITCAST, DL, MVT::v16i8, Src);
+
+      uint64_t Bytes[2] = { 0x0706050403020100ULL, 0x0f0e0d0c0b0a0908ULL };
+      SDNode *Mask = loadPoolVectorConstant(APInt(128, Bytes), MVT::v16i8, DL);
+      SDValue Ops[] = { Src, Src, SDValue(Mask, 0) };
+      SDValue Res = SDValue(CurDAG->getMachineNode(SystemZ::VPERM, DL,
+                                                   MVT::v16i8, Ops), 0);
+
+      Res = CurDAG->getNode(ISD::BITCAST, DL, MVT::i128, Res);
+      SDNode *ResNode = Res.getNode();
+      ReplaceNode(Node, ResNode);
+      SelectCode(Src.getNode());
+      SelectCode(ResNode);
+      return;
+    }
+    break;
+
   case ISD::Constant:
     // If this is a 64-bit constant that is out of the range of LLILF,
     // LLIHF and LGFI, split it into two 32-bit pieces.
     if (Node->getValueType(0) == MVT::i64) {
-      uint64_t Val = cast<ConstantSDNode>(Node)->getZExtValue();
+      uint64_t Val = Node->getAsZExtVal();
       if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val) && !isInt<32>(Val)) {
         splitLargeImmediate(ISD::OR, Node, SDValue(), Val - uint32_t(Val),
                             uint32_t(Val));
         return;
       }
+    }
+    if (Node->getValueType(0) == MVT::i128) {
+      const APInt &Val = Node->getAsAPIntVal();
+      SystemZVectorConstantInfo VCI(Val);
+      if (VCI.isVectorConstantLegal(*Subtarget)) {
+        loadVectorConstant(VCI, Node);
+        return;
+      }
+      // If we can't materialize the constant we need to use a literal pool.
+      SDNode *ResNode = loadPoolVectorConstant(Val, MVT::i128, SDLoc(Node));
+      ReplaceNode(Node, ResNode);
+      return;
     }
     break;
 
@@ -1600,16 +1670,15 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     if ((Op1.getOpcode() == ISD::LOAD && Op0.getOpcode() != ISD::LOAD) ||
         (Subtarget->hasLoadStoreOnCond2() &&
          Node->getValueType(0).isInteger() &&
+         Node->getValueType(0).getSizeInBits() <= 64 &&
          Op1.getOpcode() == ISD::Constant &&
          isInt<16>(cast<ConstantSDNode>(Op1)->getSExtValue()) &&
          !(Op0.getOpcode() == ISD::Constant &&
            isInt<16>(cast<ConstantSDNode>(Op0)->getSExtValue())))) {
       SDValue CCValid = Node->getOperand(2);
       SDValue CCMask = Node->getOperand(3);
-      uint64_t ConstCCValid =
-        cast<ConstantSDNode>(CCValid.getNode())->getZExtValue();
-      uint64_t ConstCCMask =
-        cast<ConstantSDNode>(CCMask.getNode())->getZExtValue();
+      uint64_t ConstCCValid = CCValid.getNode()->getAsZExtVal();
+      uint64_t ConstCCMask = CCMask.getNode()->getAsZExtVal();
       // Invert the condition.
       CCMask = CurDAG->getTargetConstant(ConstCCValid ^ ConstCCMask,
                                          SDLoc(Node), CCMask.getValueType());

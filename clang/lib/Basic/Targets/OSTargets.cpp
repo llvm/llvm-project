@@ -224,6 +224,9 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       else if (Opts.CPlusPlus14)
         Builder.defineMacro("_MSVC_LANG", "201402L");
     }
+
+    if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2022_3))
+      Builder.defineMacro("_MSVC_CONSTEXPR_ATTRIBUTE");
   }
 
   if (Opts.MicrosoftExt) {

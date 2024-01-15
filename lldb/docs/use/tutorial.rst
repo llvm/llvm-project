@@ -431,7 +431,7 @@ a variable called 'global' for write operation, but only stop if the condition
    Watchpoint 1: addr = 0x100001018 size = 4 state = enabled type = w
       declare @ '/Volumes/data/lldb/svn/ToT/test/functionalities/watchpoint/watchpoint_commands/condition/main.cpp:12'
       condition = '(global==5)'
-      hw_index = 0  hit_count = 5     ignore_count = 0
+      hit_count = 5     ignore_count = 0
    (lldb)
 
 Starting or Attaching to Your Program

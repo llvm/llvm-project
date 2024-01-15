@@ -19,7 +19,7 @@ define void @trip_count_4294967295() {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4294967294
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4294967294
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4294967295
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4294967295
 ;
 entry:
   br label %for.body
@@ -48,7 +48,7 @@ define void @trip_count_4294967296() {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 4294967295
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 4294967295
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -77,7 +77,7 @@ define void @trip_count_8589935692() {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 8589934591
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 8589934591
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -106,7 +106,7 @@ define void @trip_count_9223372036854775808() {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 9223372036854775807
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 9223372036854775807
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 2147483648
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 2147483648
 ;
 entry:
   br label %for.body
@@ -135,7 +135,7 @@ define void @trip_count_18446744073709551615() {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is -2
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   br label %for.body

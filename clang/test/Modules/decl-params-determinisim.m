@@ -19,26 +19,32 @@
 // RUN: diff %t1.pcm %t2.pcm
 
 /// Spot check entries to make sure they are in current ordering.
-/// op13 encodes the anonymous decl number which should be in order.
+/// op6 encodes the anonymous decl number which should be in order.
+
+/// NOTE: This test case is on determinism of TypeID for function declaration.
+/// Change related to TypeID (or PredefinedTypeIDs) will affect the result and
+/// will require update for this test case. Currently, TypeID is at op6 and the
+/// test checks the IDs are in strict ordering.
+
 // CHECK: <TYPE_FUNCTION_PROTO
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op11=4024
+// CHECK-SAME: op5=2
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op11=4032
+// CHECK-SAME: op5=3
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op11=4040
+// CHECK-SAME: op5=4
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op11=4048
+// CHECK-SAME: op5=5
 
 /// Decl records start at 43
 // CHECK: <DECL_RECORD
-// CHECK-SAME: op9=4352
+// CHECK-SAME: op5=43
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op9=4360
+// CHECK-SAME: op5=44
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op9=4368
+// CHECK-SAME: op5=45
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op9=4376
+// CHECK-SAME: op5=46
 
 //--- headers/a.h
 void f(struct A0 *a0,

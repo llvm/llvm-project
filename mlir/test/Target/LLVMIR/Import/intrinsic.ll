@@ -465,7 +465,6 @@ define void @trap_intrinsics() {
 
 ; CHECK-LABEL:  llvm.func @memcpy_test
 define void @memcpy_test(i32 %0, ptr %1, ptr %2) {
-  ; CHECK: %[[CST:.+]] = llvm.mlir.constant(10 : i64) : i64
   ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   call void @llvm.memcpy.p0.p0.i32(ptr %1, ptr %2, i32 %0, i1 false)
   ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
@@ -721,6 +720,13 @@ define void @coro_resume(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @coro_promise
+define void @coro_promise(ptr %0, i32 %1, i1 %2) {
+  ; CHECK: llvm.intr.coro.promise %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, i32, i1) -> !llvm.ptr
+  %4 = call ptr @llvm.coro.promise(ptr %0, i32 %1, i1 %2)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @eh_typeid_for
 define void @eh_typeid_for(ptr %0) {
   ; CHECK: llvm.intr.eh.typeid.for %{{.*}} : (!llvm.ptr) -> i32
@@ -752,6 +758,29 @@ define void @lifetime(ptr %0) {
   call void @llvm.lifetime.start.p0(i64 16, ptr %0)
   ; CHECK: llvm.intr.lifetime.end 32, %{{.*}} : !llvm.ptr
   call void @llvm.lifetime.end.p0(i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @invariant
+define void @invariant(ptr %0) {
+  ; CHECK: %[[START:.*]] = llvm.intr.invariant.start 16, %{{.*}} : !llvm.ptr
+  %2 = call ptr @llvm.invariant.start.p0(i64 16, ptr %0)
+  ; CHECK: llvm.intr.invariant.end %[[START]], 32, %{{.*}} : !llvm.ptr
+  call void @llvm.invariant.end.p0(ptr %2, i64 32, ptr %0)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_insert
+define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
+  ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
+  %3 = call <vscale x 4 x float>  @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %0, <4 x float> %1, i64 4);
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @vector_extract
+define void @vector_extract(<vscale x 4 x float> %0) {
+  ; llvm.intr.vector.extract %{{.*}}[0] : vector<4xf32> from !llvm.vec<? x 4 x  f32>
+  %2 = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> %0, i64 0);
   ret void
 }
 
@@ -1024,6 +1053,7 @@ declare i8 @llvm.coro.suspend(token, i1)
 declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
+declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
 declare i32 @llvm.eh.typeid.for(ptr)
 declare ptr @llvm.stacksave.p0()
 declare ptr addrspace(1) @llvm.stacksave.p1()
@@ -1083,5 +1113,10 @@ declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32)
 declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32)
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
+declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)

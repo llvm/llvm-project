@@ -213,20 +213,20 @@ public:
 };
 
 /// Populates 'loops' with IVs of the affine.for ops surrounding 'op' ordered
-/// from the outermost 'affine.for' operation to the innermost one.
+/// from the outermost 'affine.for' operation to the innermost one while not
+/// traversing outside of the surrounding affine scope.
 void getAffineForIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
 /// Populates 'ivs' with IVs of the surrounding affine.for and affine.parallel
-/// ops ordered from the outermost one to the innermost.
+/// ops ordered from the outermost one to the innermost while not traversing
+/// outside of the surrounding affine scope.
 void getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs);
 
 /// Populates 'ops' with affine operations enclosing `op` ordered from outermost
-/// to innermost. affine.for, affine.if, or affine.parallel ops comprise such
-/// surrounding affine ops.
-/// TODO: Change this to return a list of enclosing ops up until the op that
-/// starts an `AffineScope`. In such a case, `ops` is guaranteed by design to
-/// have a successive chain of affine parent ops, and this is primarily what is
-/// needed for most analyses.
+/// to innermost while stopping at the boundary of the affine scope. affine.for,
+/// affine.if, or affine.parallel ops comprise such surrounding affine ops.
+/// `ops` is guaranteed by design to have a successive chain of affine parent
+/// ops.
 void getEnclosingAffineOps(Operation &op, SmallVectorImpl<Operation *> *ops);
 
 /// Returns the nesting depth of this operation, i.e., the number of loops
