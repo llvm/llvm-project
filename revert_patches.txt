@@ -1,5 +1,2 @@
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
-
-Reverts due to libunwind
-[libc++abi] Improve error message when libunwind is missing from LLVM_ENABLE_RUNTIMES (#77991)
