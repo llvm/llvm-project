@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
-// RUN:   -convert-vector-to-arm-sme -allocate-arm-sme-tiles  \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
+// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
+// RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
 // RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops"  \
 // RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
 // RUN:   -convert-arm-sme-to-llvm -convert-vector-to-llvm=enable-arm-sve -cse \
