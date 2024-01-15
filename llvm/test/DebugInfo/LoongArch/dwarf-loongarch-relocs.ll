@@ -45,7 +45,7 @@
 ; DWARF:       DW_AT_name ("dwarf-loongarch-relocs.c")
 ; DWARF:       DW_AT_comp_dir (".")
 ; DWARF:       DW_AT_name ("foo")
-; DWARF-NEXT:  DW_AT_decl_file ("./dwarf-loongarch-relocs.c")
+; DWARF-NEXT:  DW_AT_decl_file ("{{.*}}dwarf-loongarch-relocs.c")
 ; DWARF-NEXT:  DW_AT_decl_line (1)
 ; DWARF-NEXT:  DW_AT_type (0x00000032 "int")
 ; DWARF:       DW_AT_name ("int")
