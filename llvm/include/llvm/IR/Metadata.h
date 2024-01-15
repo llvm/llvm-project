@@ -222,6 +222,12 @@ protected:
 public:
   DPValue *getUser();
   const DPValue *getUser() const;
+  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// is a pointer to one of the pointers in `DebugValues` (so should be type
+  /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
+  /// *Old.
+  /// For manually replacing elements of DebugValues,
+  /// `resetDebugValue(Idx, NewDebugValue)` should be used instead.
   void handleChangedValue(void *Old, Metadata *NewDebugValue);
   DebugValueUser() = default;
   explicit DebugValueUser(std::array<Metadata *, 3> DebugValues)

@@ -87,19 +87,13 @@ DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
   return NewDPVDeclare;
 }
 
-DPValue *DPValue::createDPVAssign(Metadata *Value, DILocalVariable *Variable,
+DPValue *DPValue::createDPVAssign(Value *Val, DILocalVariable *Variable,
                                   DIExpression *Expression,
-                                  DIAssignID *AssignID, Metadata *Address,
+                                  DIAssignID *AssignID, Value *Address,
                                   DIExpression *AddressExpression,
-                                  const DILocation *DI,
-                                  Instruction *InsertBefore) {
-  auto *NewDPVAssign = new DPValue(Value, Variable, Expression, AssignID,
-                                   Address, AddressExpression, DI);
-  if (InsertBefore) {
-    InsertBefore->getParent()->insertDPValueBefore(NewDPVAssign,
-                                                   InsertBefore->getIterator());
-  }
-  return NewDPVAssign;
+                                  const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Val), Variable, Expression, AssignID,
+                     ValueAsMetadata::get(Address), AddressExpression, DI);
 }
 
 DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
@@ -110,9 +104,9 @@ DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
                                         const DILocation *DI) {
   auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
   assert(Link && "Linked instruction must have DIAssign metadata attached");
-  auto *NewDPVAssign = new DPValue(
-      ValueAsMetadata::get(Val), Variable, Expression, cast<DIAssignID>(Link),
-      ValueAsMetadata::get(Address), AddressExpression, DI);
+  auto *NewDPVAssign = DPValue::createDPVAssign(Val, Variable, Expression,
+                                                cast<DIAssignID>(Link), Address,
+                                                AddressExpression, DI);
   LinkedInstr->getParent()->insertDPValueAfter(NewDPVAssign, LinkedInstr);
   return NewDPVAssign;
 }

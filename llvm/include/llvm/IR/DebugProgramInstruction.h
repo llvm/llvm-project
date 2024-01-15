@@ -129,12 +129,11 @@ public:
           DIAssignID *AssignID, Metadata *Address,
           DIExpression *AddressExpression, const DILocation *DI);
 
-  static DPValue *createDPVAssign(Metadata *Value, DILocalVariable *Variable,
+  static DPValue *createDPVAssign(Value *Val, DILocalVariable *Variable,
                                   DIExpression *Expression,
-                                  DIAssignID *AssignID, Metadata *Address,
+                                  DIAssignID *AssignID, Value *Address,
                                   DIExpression *AddressExpression,
-                                  const DILocation *DI,
-                                  Instruction *InsertBefore = nullptr);
+                                  const DILocation *DI);
   static DPValue *createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
                                         DILocalVariable *Variable,
                                         DIExpression *Expression,
