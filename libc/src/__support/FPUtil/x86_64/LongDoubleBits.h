@@ -26,19 +26,22 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
-template <>
-struct FPBits<long double> : public internal::FPRep<FPType::X86_Binary80> {
-  using UP = internal::FPRep<FPType::X86_Binary80>;
-  using StorageType = typename UP::StorageType;
+namespace internal {
 
-private:
-  using UP::bits;
-  using UP::EXP_SIG_MASK;
-  using UP::QUIET_NAN_MASK;
+template <>
+struct FPRep<FPType::X86_Binary80> : public FPRepBase<FPType::X86_Binary80> {
+  using UP = FPRepBase<FPType::X86_Binary80>;
+  using typename UP::StorageType;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+  using UP::MANTISSA_PRECISION;
+
+protected:
+  using typename UP::Exp;
+  using typename UP::Sig;
+  using UP::encode;
 
 public:
-  // Constants.
-  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
   // The x86 80 bit float represents the leading digit of the mantissa
   // explicitly. This is the mask for that bit.
   static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
@@ -49,13 +52,117 @@ public:
   static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
                 "the explicit bit and the fractional part should cover the "
                 "whole significand");
-  static constexpr StorageType MIN_SUBNORMAL = StorageType(1);
-  // Subnormal numbers include the implicit bit in x86 long double formats.
-  static constexpr StorageType MAX_SUBNORMAL = FRACTION_MASK;
-  static constexpr StorageType MIN_NORMAL =
-      (StorageType(1) << SIG_LEN) | EXPLICIT_BIT_MASK;
-  static constexpr StorageType MAX_NORMAL =
-      (StorageType(MAX_BIASED_EXPONENT - 1) << SIG_LEN) | SIG_MASK;
+
+  LIBC_INLINE constexpr bool is_nan() const {
+    // Most encoding forms from the table found in
+    // https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
+    // are interpreted as NaN.
+    // More precisely :
+    // - Pseudo-Infinity
+    // - Pseudo Not a Number
+    // - Signalling Not a Number
+    // - Floating-point Indefinite
+    // - Quiet Not a Number
+    // - Unnormal
+    // This can be reduced to the following logic:
+    if (exp_bits() == encode(Exp::BITS_ALL_ONES))
+      return !is_inf();
+    if (exp_bits() != encode(Exp::BITS_ALL_ZEROES))
+      return (sig_bits() & encode(Sig::MSB)) == 0;
+    return false;
+  }
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return exp_sig_bits() >=
+           encode(Exp::BITS_ALL_ONES, Sig::MSB | (Sig::MSB >> 1));
+  }
+  LIBC_INLINE constexpr bool is_signaling_nan() const {
+    return is_nan() && !is_quiet_nan();
+  }
+  LIBC_INLINE constexpr bool is_inf() const {
+    return exp_sig_bits() == encode(Exp::BITS_ALL_ONES, Sig::MSB);
+  }
+  LIBC_INLINE constexpr bool is_zero() const {
+    return exp_sig_bits() == encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE constexpr bool is_finite() const {
+    return !is_inf() && !is_nan();
+  }
+  LIBC_INLINE
+  constexpr bool is_subnormal() const {
+    return exp_sig_bits() > encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE constexpr bool is_normal() const {
+    const auto exp = exp_bits();
+    if (exp == encode(Exp::BITS_ALL_ZEROES) ||
+        exp == encode(Exp::BITS_ALL_ONES))
+      return false;
+    return get_implicit_bit();
+  }
+
+  LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+  }
+  LIBC_INLINE static constexpr StorageType one(bool sign = false) {
+    return encode(sign, Exp::ZERO, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::ONE);
+  }
+  LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ONES ^ Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
+    return encode(sign, Exp::MIN, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
+    return encode(sign, Exp::MAX, Sig::BITS_ALL_ONES);
+  }
+  LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
+    return encode(sign, Exp::BITS_ALL_ONES, Sig::MSB);
+  }
+  LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
+                                                     StorageType v = 0) {
+    return encode(sign, Exp::BITS_ALL_ONES,
+                  Sig::MSB | (v ? Sig{v} : (Sig::MSB >> 2)));
+  }
+  LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
+                                                           StorageType v = 0) {
+    return encode(sign, Exp::BITS_ALL_ONES,
+                  Sig::MSB | (Sig::MSB >> 1) | Sig{v});
+  }
+
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
+    return sig_bits();
+  }
+
+  LIBC_INLINE constexpr bool get_implicit_bit() const {
+    return bits & EXPLICIT_BIT_MASK;
+  }
+
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
+  }
+};
+} // namespace internal
+
+template <>
+struct FPBits<long double> : public internal::FPRep<FPType::X86_Binary80> {
+  using UP = internal::FPRep<FPType::X86_Binary80>;
+  using Rep = UP;
+  using StorageType = typename UP::StorageType;
+
+private:
+  using UP::bits;
+  using UP::EXP_SIG_MASK;
+
+public:
+  // Constants.
+  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
+  static constexpr StorageType MIN_NORMAL = UP::min_normal(false);
+  static constexpr StorageType MAX_NORMAL = UP::max_normal(false);
+  static constexpr StorageType MIN_SUBNORMAL = UP::min_subnormal(false);
+  static constexpr StorageType MAX_SUBNORMAL = UP::max_subnormal(false);
 
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
@@ -82,90 +189,44 @@ public:
     return cpp::bit_cast<long double>(bits);
   }
 
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    return bits & SIG_MASK;
-  }
-
-  LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return bits & EXPLICIT_BIT_MASK;
-  }
-
-  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    if (get_implicit_bit() != implicitVal)
-      bits ^= EXPLICIT_BIT_MASK;
-  }
-
-  LIBC_INLINE constexpr bool is_inf() const {
-    return get_biased_exponent() == MAX_BIASED_EXPONENT &&
-           get_mantissa() == 0 && get_implicit_bit() == 1;
-  }
-
-  LIBC_INLINE constexpr bool is_nan() const {
-    if (get_biased_exponent() == MAX_BIASED_EXPONENT) {
-      return (get_implicit_bit() == 0) || get_mantissa() != 0;
-    } else if (get_biased_exponent() != 0) {
-      return get_implicit_bit() == 0;
-    }
-    return false;
-  }
-
-  LIBC_INLINE constexpr bool is_inf_or_nan() const {
-    return (get_biased_exponent() == MAX_BIASED_EXPONENT) ||
-           (get_biased_exponent() != 0 && get_implicit_bit() == 0);
-  }
-
-  LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return (bits & EXP_SIG_MASK) >= (EXP_MASK | QUIET_NAN_MASK);
-  }
+  LIBC_INLINE constexpr bool is_inf_or_nan() const { return !UP::is_finite(); }
 
   // Methods below this are used by tests.
 
   LIBC_INLINE static constexpr long double zero(bool sign = false) {
-    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
-                      | 0                                 // exponent
-                      | 0                                 // explicit bit
-                      | 0;                                // mantissa
-    return FPBits(rep).get_val();
+    return FPBits(UP::zero(sign)).get_val();
   }
 
   LIBC_INLINE static constexpr long double neg_zero() { return zero(true); }
 
   LIBC_INLINE static constexpr long double inf(bool sign = false) {
-    StorageType rep = (sign ? SIGN_MASK : StorageType(0)) // sign
-                      | EXP_MASK                          // exponent
-                      | EXPLICIT_BIT_MASK                 // explicit bit
-                      | 0;                                // mantissa
-    return FPBits(rep).get_val();
+    return FPBits(UP::inf(sign)).get_val();
   }
 
   LIBC_INLINE static constexpr long double neg_inf() { return inf(true); }
 
   LIBC_INLINE static constexpr long double min_normal() {
-    return FPBits(MIN_NORMAL).get_val();
+    return FPBits(UP::min_normal(false)).get_val();
   }
 
   LIBC_INLINE static constexpr long double max_normal() {
-    return FPBits(MAX_NORMAL).get_val();
+    return FPBits(UP::max_normal(false)).get_val();
   }
 
   LIBC_INLINE static constexpr long double min_denormal() {
-    return FPBits(MIN_SUBNORMAL).get_val();
+    return FPBits(UP::min_subnormal(false)).get_val();
   }
 
   LIBC_INLINE static constexpr long double max_denormal() {
-    return FPBits(MAX_SUBNORMAL).get_val();
+    return FPBits(UP::max_subnormal(false)).get_val();
   }
 
   LIBC_INLINE static constexpr long double build_nan(StorageType v) {
-    StorageType rep = 0                      // sign
-                      | EXP_MASK             // exponent
-                      | EXPLICIT_BIT_MASK    // explicit bit
-                      | (v & FRACTION_MASK); // mantissa
-    return FPBits(rep).get_val();
+    return FPBits(UP::build_nan(false, v)).get_val();
   }
 
   LIBC_INLINE static constexpr long double build_quiet_nan(StorageType v) {
-    return build_nan(QUIET_NAN_MASK | v);
+    return FPBits(UP::build_quiet_nan(false, v)).get_val();
   }
 };
 
