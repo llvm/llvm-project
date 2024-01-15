@@ -53,6 +53,7 @@ constexpr int ignoredCast() {
 }
 static_assert(ignoredCast() == 0, "");
 static_assert((int)I1 == 1, "");
+static_assert((float)D == 1.0f, "");
 
 
 /// Standalone complex expressions.
