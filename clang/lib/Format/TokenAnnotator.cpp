@@ -4842,7 +4842,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
-    if (Right.isNot(tok::l_paren)) {
+    if (!Right.isOneOf(tok::r_paren, tok::l_paren, tok::exclaim)) {
       // The alternative operators for ~ and ! are "compl" and "not".
       // If they are used instead, we do not want to combine them with
       // the token to the right, unless that is a left paren.
