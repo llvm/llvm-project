@@ -1401,7 +1401,7 @@ bool CXXRecordDecl::isLiteral() const {
     bool HasAtLeastOneTrivialMember =
         fields().empty() || any_of(fields(), [this](const FieldDecl *D) {
           return !D->getType().isVolatileQualified() &&
-                 D->getType().isTrivialType(getASTContext());
+                 D->getType()->isLiteralType(getASTContext());
         });
     if (!HasAtLeastOneTrivialMember)
       return false;

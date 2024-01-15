@@ -253,5 +253,9 @@ static_assert(!__is_literal(union4), "");
 
 union union5 { static NonLiteral NL; };
 static_assert(__is_literal(union5), "");
+
+struct Literal { constexpr Literal() {} };
+union union6 { NonLiteral NL; Literal L; };
+
 #endif
 }
