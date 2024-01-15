@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple powerpc64-ibm-aix-xcoff | FileCheck %s --check-prefix=CHECKASM
-
+; RUN: llc --try-experimental-debuginfo-iterators < %s -mtriple powerpc64-ibm-aix-xcoff | FileCheck %s --check-prefix=CHECKASM
 ; This is a case copied from test/DebugInfo/Generic/debug-label-mi.ll. This test
 ; is to explicitly check that fast isel for XCOFF works as expected for debug
 ; related intrinsics.
