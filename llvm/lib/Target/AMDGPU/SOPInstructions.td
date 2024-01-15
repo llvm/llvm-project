@@ -1117,12 +1117,14 @@ def S_GETREG_B32 : SOPK_Pseudo <
 let Defs = [MODE], Uses = [MODE] in {
 
 // FIXME: Need to truncate immediate to 16-bits.
-class S_SETREG_B32_Pseudo : SOPK_Pseudo <
+class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   "s_setreg_b32",
   (outs), (ins SReg_32:$sdst, hwreg:$simm16),
-  "$simm16, $sdst">;
+  "$simm16, $sdst",
+  pattern>;
 
-def S_SETREG_B32 : S_SETREG_B32_Pseudo {
+def S_SETREG_B32 : S_SETREG_B32_Pseudo <
+  [(int_amdgcn_s_setreg (i32 SIMM16bit:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
   // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
@@ -1157,9 +1159,6 @@ def S_SETREG_IMM32_B32_mode : S_SETREG_IMM32_B32_Pseudo {
 }
 
 } // End Defs = [MODE], Uses = [MODE]
-
-def : GCNPat<(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst),
-             (S_SETREG_B32 $sdst, (as_i16timm $simm16))>;
 
 class SOPK_WAITCNT<string opName, list<dag> pat=[]> :
     SOPK_Pseudo<
