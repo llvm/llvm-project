@@ -186,12 +186,12 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 define amdgpu_ps i64 @s_udiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-LABEL: s_udiv_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_or_b64 s[4:5], s[0:1], s[2:3]
+; CHECK-NEXT:    s_mov_b32 s6, 0
+; CHECK-NEXT:    s_mov_b32 s7, -1
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[4:5], 0
 ; CHECK-NEXT:    s_mov_b32 s4, 1
-; CHECK-NEXT:    s_or_b64 s[6:7], s[0:1], s[2:3]
-; CHECK-NEXT:    s_mov_b32 s8, 0
-; CHECK-NEXT:    s_mov_b32 s9, -1
-; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
-; CHECK-NEXT:    v_cmp_ne_u64_e64 vcc, s[6:7], 0
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, s2
 ; CHECK-NEXT:    s_cbranch_vccz .LBB1_2
 ; CHECK-NEXT:  ; %bb.1:

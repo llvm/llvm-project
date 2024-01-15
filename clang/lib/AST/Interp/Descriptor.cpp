@@ -275,8 +275,8 @@ Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
 }
 
 /// Unknown-size arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
-                       UnknownSize)
+Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem,
+                       bool IsTemporary, UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(UnknownSizeMark), MDSize(0),
       AllocSize(alignof(void *) + sizeof(InitMapPtr)), ElemDesc(Elem),
@@ -286,7 +286,7 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
 }
 
 /// Composite records.
-Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
       Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),

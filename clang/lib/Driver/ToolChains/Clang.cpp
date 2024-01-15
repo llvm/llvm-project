@@ -1508,7 +1508,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
         << Triple.getArchName();
 
   StringRef Scope, Key;
-  bool IndirectBranches, BranchProtectionPAuthLR;
+  bool IndirectBranches, BranchProtectionPAuthLR, GuardedControlStack;
 
   if (A->getOption().matches(options::OPT_msign_return_address_EQ)) {
     Scope = A->getValue();
@@ -1518,6 +1518,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     Key = "a_key";
     IndirectBranches = false;
     BranchProtectionPAuthLR = false;
+    GuardedControlStack = false;
   } else {
     StringRef DiagMsg;
     llvm::ARM::ParsedBranchProtection PBP;
@@ -1531,6 +1532,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     Key = PBP.Key;
     BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
     IndirectBranches = PBP.BranchTargetEnforcement;
+    GuardedControlStack = PBP.GuardedControlStack;
   }
 
   CmdArgs.push_back(
@@ -1543,6 +1545,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
+  if (GuardedControlStack)
+    CmdArgs.push_back("-mguarded-control-stack");
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -5748,20 +5752,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
-    if (!Triple.isX86()) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getOption().getName() << TripleStr;
-    } else {
-      bool IsMediumCM = false;
-      if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ))
-        IsMediumCM = StringRef(A->getValue()) == "medium";
-      if (!IsMediumCM) {
+  if (Triple.getArch() == llvm::Triple::x86_64) {
+    bool IsMediumCM = false;
+    bool IsLargeCM = false;
+    if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
+      IsMediumCM = StringRef(A->getValue()) == "medium";
+      IsLargeCM = StringRef(A->getValue()) == "large";
+    }
+    if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
+      if (!IsMediumCM && !IsLargeCM) {
         D.Diag(diag::warn_drv_large_data_threshold_invalid_code_model)
             << A->getOption().getRenderName();
       } else {
         A->render(Args, CmdArgs);
       }
+    } else if (IsMediumCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=65536");
+    } else if (IsLargeCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=0");
     }
   }
 

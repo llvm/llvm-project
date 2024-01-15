@@ -539,10 +539,13 @@ void LazyValueInfoImpl::solve() {
     }
     std::pair<BasicBlock *, Value *> e = BlockValueStack.back();
     assert(BlockValueSet.count(e) && "Stack value should be in BlockValueSet!");
+    unsigned StackSize = BlockValueStack.size();
+    (void) StackSize;
 
     if (solveBlockValue(e.second, e.first)) {
       // The work item was completely processed.
-      assert(BlockValueStack.back() == e && "Nothing should have been pushed!");
+      assert(BlockValueStack.size() == StackSize &&
+             BlockValueStack.back() == e && "Nothing should have been pushed!");
 #ifndef NDEBUG
       std::optional<ValueLatticeElement> BBLV =
           TheCache.getCachedValueInfo(e.second, e.first);
@@ -556,7 +559,8 @@ void LazyValueInfoImpl::solve() {
       BlockValueSet.erase(e);
     } else {
       // More work needs to be done before revisiting.
-      assert(BlockValueStack.back() != e && "Stack should have been pushed!");
+      assert(BlockValueStack.size() == StackSize + 1 &&
+             "Exactly one element should have been pushed!");
     }
   }
 }

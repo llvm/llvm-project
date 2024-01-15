@@ -2887,10 +2887,10 @@ cc_library(
 cc_library(
     name = "DWARFLinker",
     srcs = glob([
-        "lib/DWARFLinker/*.cpp",
-        "lib/DWARFLinker/*.h",
+        "lib/DWARFLinker/Classic/*.cpp",
+        "lib/DWARFLinker/Classic/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/Classic/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -2901,21 +2901,39 @@ cc_library(
         ":Support",
         ":Target",
         ":TargetParser",
+        ":DWARFLinkerBase",
+    ],
+)
+
+cc_library(
+    name = "DWARFLinkerBase",
+    srcs = glob([
+        "lib/DWARFLinker/*.cpp",
+        "lib/DWARFLinker/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DWARFLinker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":CodeGen",
+        ":DebugInfoDWARF",
+        ":Support",
+        ":Target",
     ],
 )
 
 cc_library(
     name = "DWARFLinkerParallel",
     srcs = glob([
-        "lib/DWARFLinkerParallel/*.cpp",
-        "lib/DWARFLinkerParallel/*.h",
+        "lib/DWARFLinker/Parallel/*.cpp",
+        "lib/DWARFLinker/Parallel/*.h",
     ]),
-    hdrs = glob(["include/llvm/DWARFLinkerParallel/*.h"]),
+    hdrs = glob(["include/llvm/DWARFLinker/Parallel/*.h"]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
         ":CodeGen",
-        ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",

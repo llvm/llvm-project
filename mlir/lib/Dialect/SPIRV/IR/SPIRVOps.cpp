@@ -374,8 +374,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
 
   auto coopElementType =
       llvm::TypeSwitch<Type, Type>(getType())
-          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
-                spirv::JointMatrixINTELType>(
+          .Case<spirv::CooperativeMatrixType, spirv::JointMatrixINTELType>(
               [](auto coopType) { return coopType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -1677,8 +1676,7 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 LogicalResult spirv::MatrixTimesScalarOp::verify() {
   Type elementType =
       llvm::TypeSwitch<Type, Type>(getMatrix().getType())
-          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
-                spirv::MatrixType>(
+          .Case<spirv::CooperativeMatrixType, spirv::MatrixType>(
               [](auto matrixType) { return matrixType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -1817,7 +1815,7 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  if (llvm::isa<spirv::CooperativeMatrixNVType>(cType))
+  if (llvm::isa<spirv::CooperativeMatrixType>(cType))
     return emitError("unsupported composite type  ") << cType;
   if (llvm::isa<spirv::JointMatrixINTELType>(cType))
     return emitError("unsupported composite type  ") << cType;

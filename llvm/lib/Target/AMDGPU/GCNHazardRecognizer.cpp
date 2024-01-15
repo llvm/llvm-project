@@ -1476,12 +1476,13 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
       std::numeric_limits<int>::max())
     return false;
 
-  if (LdsdirCanWait)
+  if (LdsdirCanWait) {
     TII.getNamedOperand(*MI, AMDGPU::OpName::waitvsrc)->setImm(0);
-  else
+  } else {
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
             TII.get(AMDGPU::S_WAITCNT_DEPCTR))
         .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+  }
 
   return true;
 }

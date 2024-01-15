@@ -2022,8 +2022,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       auto *FramePtr = GetFramePointer(Alloca);
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtr,
-                                         ConstantInt::get(ITy, Value));
+      auto *AliasPtr =
+          Builder.CreatePtrAdd(FramePtr, ConstantInt::get(ITy, Value));
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(CB, U); });
     }

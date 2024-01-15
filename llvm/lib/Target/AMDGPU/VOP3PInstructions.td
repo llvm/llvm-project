@@ -635,13 +635,29 @@ class MAIFrag<SDPatternOperator Op, code pred> : PatFrag <
   pred
 >;
 
-let GISelPredicateCode = [{ return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class AgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs = [{
+  return MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
 
-let GISelPredicateCode = [{ return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }] in
-class VgprMAIFrag<SDPatternOperator Op> :
-  MAIFrag<Op, [{ return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
+defvar MayNeedAGPRs_gisel = [{
+  return MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs = [{
+  return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+defvar MayNotNeedAGPRs_gisel = [{
+  return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
+}];
+
+class AgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNeedAGPRs> {
+  let GISelPredicateCode = MayNeedAGPRs_gisel;
+}
+
+class VgprMAIFrag<SDPatternOperator Op> : MAIFrag<Op, MayNotNeedAGPRs> {
+  let GISelPredicateCode = MayNotNeedAGPRs_gisel;
+}
 
 let SubtargetPredicate = HasMAIInsts in {
 
@@ -665,12 +681,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(NoDstOverlap, null_frag, AgprMAIFrag<node>)>,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node>)>,
                  MFMATable<0, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(NoDstOverlap, null_frag, VgprMAIFrag<node>)>,
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node>)>,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
@@ -678,12 +694,13 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node,
       let Constraints = !if(NoDstOverlap, "$vdst = $src2", ""),
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
-        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P), AgprMAIFrag<node>>,
+        def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node>)>,
                          MFMATable<1, NAME # "_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      VgprMAIFrag<node>>,
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node>)>,
                               MFMATable<1, NAME # "_vgprcd_e64">;
       }
     }

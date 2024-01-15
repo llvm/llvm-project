@@ -173,6 +173,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v16bf16, &AMDGPU::SGPR_256RegClass);
     addRegisterClass(MVT::v32i16, &AMDGPU::SGPR_512RegClass);
     addRegisterClass(MVT::v32f16, &AMDGPU::SGPR_512RegClass);
+    addRegisterClass(MVT::v32bf16, &AMDGPU::SGPR_512RegClass);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -719,11 +720,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::LOAD, MVT::v32i16, MVT::v16i32);
     setOperationAction(ISD::LOAD, MVT::v32f16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v32f16, MVT::v16i32);
+    setOperationAction(ISD::LOAD, MVT::v32bf16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v32bf16, MVT::v16i32);
 
     setOperationAction(ISD::STORE, MVT::v32i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v32i16, MVT::v16i32);
     setOperationAction(ISD::STORE, MVT::v32f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v32f16, MVT::v16i32);
+    setOperationAction(ISD::STORE, MVT::v32bf16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v32bf16, MVT::v16i32);
 
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v2i32, Expand);
@@ -1178,6 +1183,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
         Info.ptrVal = RsrcArg;
     }
 
+    auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+    if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
+      Info.flags |= MachineMemOperand::MOVolatile;
     Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory() ||
         IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load ||
@@ -5807,8 +5815,7 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
 static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
                                   SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  const auto *CD = cast<ConstantSDNode>(N->getOperand(3));
-  unsigned CondCode = CD->getZExtValue();
+  unsigned CondCode = N->getConstantOperandVal(3);
   if (!ICmpInst::isIntPredicate(static_cast<ICmpInst::Predicate>(CondCode)))
     return DAG.getUNDEF(VT);
 
@@ -5842,9 +5849,8 @@ static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI,
 static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI,
                                   SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  const auto *CD = cast<ConstantSDNode>(N->getOperand(3));
 
-  unsigned CondCode = CD->getZExtValue();
+  unsigned CondCode = N->getConstantOperandVal(3);
   if (!FCmpInst::isFPPredicate(static_cast<FCmpInst::Predicate>(CondCode)))
     return DAG.getUNDEF(VT);
 
@@ -6756,7 +6762,7 @@ SDValue SITargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   EVT InsVT = Ins.getValueType();
   EVT EltVT = VecVT.getVectorElementType();
   unsigned InsNumElts = InsVT.getVectorNumElements();
-  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  unsigned IdxVal = Idx->getAsZExtVal();
   SDLoc SL(Op);
 
   if (EltVT.getScalarSizeInBits() == 16 && IdxVal % 2 == 0) {
@@ -7539,9 +7545,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       NumVDataDwords = Is64Bit ? 2 : 1;
     }
   } else {
-    auto *DMaskConst =
-        cast<ConstantSDNode>(Op.getOperand(ArgOffset + Intr->DMaskIndex));
-    DMask = DMaskConst->getZExtValue();
+    DMask = Op->getConstantOperandVal(ArgOffset + Intr->DMaskIndex);
     DMaskLanes = BaseOpcode->Gather4 ? 4 : llvm::popcount(DMask);
 
     if (BaseOpcode->Store) {
@@ -7762,7 +7766,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
+  if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
+               AMDGPU::CPol::VOLATILE))
     return Op;
 
   SmallVector<SDValue, 26> Ops;
@@ -7791,7 +7796,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(IsA16 ? True : False);
   if (!Subtarget->hasGFX90AInsts()) {
     Ops.push_back(TFE); //tfe
-  } else if (cast<ConstantSDNode>(TFE)->getZExtValue()) {
+  } else if (TFE->getAsZExtVal()) {
     report_fatal_error("TFE is not supported on this GPU");
   }
   if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
@@ -7939,7 +7944,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   setBufferOffsets(Offset, DAG, &Ops[3],
                    NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
 
-  uint64_t InstOffset = cast<ConstantSDNode>(Ops[5])->getZExtValue();
+  uint64_t InstOffset = Ops[5]->getAsZExtVal();
   for (unsigned i = 0; i < NumLoads; ++i) {
     Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
     Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
@@ -8141,6 +8146,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                            SDLoc(Op), MVT::i32);
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned CPol = Op.getConstantOperandVal(3);
+    // s_buffer_load, because of how it's optimized, can't be volatile
+    // so reject ones with the volatile bit set.
     if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
                      ? AMDGPU::CPol::ALL
                      : AMDGPU::CPol::ALL_pregfx12))
@@ -8347,12 +8354,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 // SGPR_NULL to avoid generating an extra s_mov with zero.
 static SDValue selectSOffset(SDValue SOffset, SelectionDAG &DAG,
                              const GCNSubtarget *Subtarget) {
-  if (Subtarget->hasRestrictedSOffset())
-    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(SOffset)) {
-      if (SOffsetConst->isZero()) {
-        return DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32);
-      }
-    }
+  if (Subtarget->hasRestrictedSOffset() && isNullConstant(SOffset))
+    return DAG.getRegister(AMDGPU::SGPR_NULL, MVT::i32);
   return SOffset;
 }
 
