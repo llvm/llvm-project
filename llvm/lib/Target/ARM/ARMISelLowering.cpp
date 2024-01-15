@@ -4246,8 +4246,7 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
 static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
                                  const ARMSubtarget *Subtarget) {
   SDLoc dl(Op);
-  ConstantSDNode *SSIDNode = cast<ConstantSDNode>(Op.getOperand(2));
-  auto SSID = static_cast<SyncScope::ID>(SSIDNode->getZExtValue());
+  auto SSID = static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
   if (SSID == SyncScope::SingleThread)
     return Op;
 
@@ -4261,8 +4260,8 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
                        DAG.getConstant(0, dl, MVT::i32));
   }
 
-  ConstantSDNode *OrdN = cast<ConstantSDNode>(Op.getOperand(1));
-  AtomicOrdering Ord = static_cast<AtomicOrdering>(OrdN->getZExtValue());
+  AtomicOrdering Ord =
+      static_cast<AtomicOrdering>(Op.getConstantOperandVal(1));
   ARM_MB::MemBOpt Domain = ARM_MB::ISH;
   if (Subtarget->isMClass()) {
     // Only a full system barrier exists in the M-class architectures.
@@ -20087,8 +20086,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     return;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(1));
-    Intrinsic::ID IntID = static_cast<Intrinsic::ID>(CN->getZExtValue());
+    Intrinsic::ID IntID =
+        static_cast<Intrinsic::ID>(Op->getConstantOperandVal(1));
     switch (IntID) {
     default: return;
     case Intrinsic::arm_ldaex:
