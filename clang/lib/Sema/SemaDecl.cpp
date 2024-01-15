@@ -11898,6 +11898,13 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     NewFD->setInvalidDecl();
   }
 
+  if (NewFD->hasAttr<PureAttr>() || NewFD->hasAttr<ConstAttr>()) {
+    if (isa<CXXConstructorDecl>(NewFD))
+      Diag(NewFD->getLocation(), diag::warn_pure_attr_on_cxx_constructor);
+    else if (NewFD->getReturnType()->isVoidType())
+      Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void);
+  }
+
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
   //   a constructor declares that member function to be const.

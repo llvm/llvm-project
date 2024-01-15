@@ -692,6 +692,13 @@ def warn_maybe_falloff_nonvoid_function : Warning<
 def warn_falloff_nonvoid_function : Warning<
   "non-void function does not return a value">,
   InGroup<ReturnType>;
+def warn_pure_attr_on_cxx_constructor : Warning<
+  "constructor cannot be 'pure' (undefined behavior)">,
+  InGroup<IncorrectAttributeUsage>;
+def warn_pure_function_returns_void : Warning<
+  "'pure' attribute on function returning 'void'">,
+  InGroup<IncorrectAttributeUsage>;
+
 def err_maybe_falloff_nonvoid_block : Error<
   "non-void block does not return a value in all control paths">;
 def err_falloff_nonvoid_block : Error<
