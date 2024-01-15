@@ -6,7 +6,7 @@ if __name__ == "__main__":
     try:
         sys.path.append(os.path.dirname(__file__))
 
-        import ompd
+        from ompd import ompd
 
         ompd.main()
         print("OMPD GDB support loaded")
