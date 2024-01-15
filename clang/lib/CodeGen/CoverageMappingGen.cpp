@@ -717,17 +717,17 @@ public:
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, MCDCConditionID ID) {
-      CondIDs[CodeGenFunction::stripCond(Cond)] = ID;
+    CondIDs[CodeGenFunction::stripCond(Cond)] = ID;
   }
 
   /// Set the ID of the next condition when the given condition is True.
   void setTrueCondID(const Expr *Cond, MCDCConditionID ID) {
-      TrueCondIDs[CodeGenFunction::stripCond(Cond)] = ID;
+    TrueCondIDs[CodeGenFunction::stripCond(Cond)] = ID;
   }
 
   /// Set the ID of the next condition when the given condition is False.
   void setFalseCondID(const Expr *Cond, MCDCConditionID ID) {
-      FalseCondIDs[CodeGenFunction::stripCond(Cond)] = ID;
+    FalseCondIDs[CodeGenFunction::stripCond(Cond)] = ID;
   }
 
   /// Return the ID of a given condition.
