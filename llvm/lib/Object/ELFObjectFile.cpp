@@ -315,7 +315,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
     else
       llvm_unreachable("XLEN should be 32 or 64.");
 
-    Features.addFeaturesVector(ISAInfo->toFeatureVector());
+    Features.addFeaturesVector(ISAInfo->toFeatures());
   }
 
   return Features;

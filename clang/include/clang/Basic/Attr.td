@@ -143,6 +143,11 @@ def ExternalGlobalVar : SubsetSubject<Var,
                                !S->isLocalExternDecl()}],
                              "external global variables">;
 
+def NonTLSGlobalVar : SubsetSubject<Var,
+                             [{S->hasGlobalStorage() &&
+                               S->getTLSKind() == 0}],
+                             "non-TLS global variables">;
+
 def InlineFunction : SubsetSubject<Function,
                              [{S->isInlineSpecified()}], "inline functions">;
 
@@ -431,6 +436,7 @@ def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
+def TargetLoongArch : TargetArch<["loongarch32", "loongarch64"]>;
 def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
@@ -1116,6 +1122,14 @@ def CoroWrapper : InheritableAttr {
 def CoroLifetimeBound : InheritableAttr {
   let Spellings = [Clang<"coro_lifetimebound">];
   let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroLifetimeBoundDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroDisableLifetimeBound : InheritableAttr {
+  let Spellings = [Clang<"coro_disable_lifetimebound">];
+  let Subjects = SubjectList<[Function]>;
   let LangOpts = [CPlusPlus];
   let Documentation = [CoroLifetimeBoundDoc];
   let SimpleHandler = 1;
@@ -2525,16 +2539,45 @@ def ArmStreamingCompatible : TypeAttr, TargetSpecificAttr<TargetAArch64> {
   let Documentation = [ArmSmeStreamingCompatibleDocs];
 }
 
-def ArmSharedZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_shared_za">];
-  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [ArmSmeSharedZADocs];
+def ArmNew : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_new">];
+  let Args = [VariadicStringArgument<"NewArgs">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [ArmNewDocs];
+
+  let AdditionalMembers = [{
+    bool isNewZA() const {
+      return llvm::is_contained(newArgs(), "za");
+    }
+  }];
 }
 
-def ArmPreservesZA : TypeAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_preserves_za">];
+def ArmIn : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_in">];
+  let Args = [VariadicStringArgument<"InArgs">];
   let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
-  let Documentation = [ArmSmePreservesZADocs];
+  let Documentation = [ArmInDocs];
+}
+
+def ArmOut : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_out">];
+  let Args = [VariadicStringArgument<"OutArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmOutDocs];
+}
+
+def ArmInOut : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_inout">];
+  let Args = [VariadicStringArgument<"InOutArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmInOutDocs];
+}
+
+def ArmPreserves : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_preserves">];
+  let Args = [VariadicStringArgument<"PreserveArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmPreservesDocs];
 }
 
 def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
@@ -2542,14 +2585,6 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [ArmSmeLocallyStreamingDocs];
 }
-
-def ArmNewZA : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
-  let Spellings = [RegularKeyword<"__arm_new_za">];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [ArmSmeNewZADocs];
-}
-def : MutualExclusions<[ArmNewZA, ArmSharedZA]>;
-def : MutualExclusions<[ArmNewZA, ArmPreservesZA]>;
 
 
 def Pure : InheritableAttr {
@@ -2728,6 +2763,15 @@ def PragmaClangTextSection : InheritableAttr {
   let Args = [StringArgument<"Name">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [InternalOnly];
+}
+
+def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
+  let Spellings = [GCC<"model">];
+  let Args = [EnumArgument<"Model", "llvm::CodeModel::Model",
+              ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
+              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
+  let Documentation = [CodeModelDocs];
 }
 
 def Sentinel : InheritableAttr {
@@ -4347,5 +4391,23 @@ def CodeAlign: StmtAttr {
   let AdditionalMembers = [{
     static constexpr int MinimumAlignment = 1;
     static constexpr int MaximumAlignment = 4096;
+  }];
+}
+
+def CountedBy : InheritableAttr {
+  let Spellings = [Clang<"counted_by">];
+  let Subjects = SubjectList<[Field]>;
+  let Args = [IdentifierArgument<"CountedByField">];
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+  // FIXME: This is ugly. Let using a DeclArgument would be nice, but a Decl
+  // isn't yet available due to the fact that we're still parsing the
+  // structure. Maybe that code could be changed sometime in the future.
+  code AdditionalMembers = [{
+    private:
+      SourceRange CountedByFieldLoc;
+    public:
+      SourceRange getCountedByFieldLoc() const { return CountedByFieldLoc; }
+      void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
 }

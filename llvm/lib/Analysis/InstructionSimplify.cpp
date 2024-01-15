@@ -2204,6 +2204,13 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
     return Constant::getNullValue(Op0->getType());
 
+  const APInt *C1;
+  Value *A;
+  // (A ^ C) & (A ^ ~C) -> 0
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+    return Constant::getNullValue(Op0->getType());
+
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
       // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
@@ -2472,6 +2479,11 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
     if (Value *V = threadBinOpOverPHI(Instruction::Or, Op0, Op1, Q, MaxRecurse))
       return V;
+
+  // (A ^ C) | (A ^ ~C) -> -1, i.e. all bits set to one.
+  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+    return Constant::getAllOnesValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied =
@@ -4301,7 +4313,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
-        isa<CallBase>(I))
+        isa<CallBase>(I) || isa<BitCastInst>(I))
       return nullptr;
   }
 

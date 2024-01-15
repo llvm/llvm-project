@@ -1141,3 +1141,39 @@ define <4 x i32> @vec_const_sub_const_sub_nonsplat(<4 x i32> %arg) {
   %t1 = sub <4 x i32> <i32 2, i32 3, i32 undef, i32 2>, %t0
   ret <4 x i32> %t1
 }
+
+; (x|c1)+c2 where (x|c1) is addlike
+define i32 @add_const_disjoint_or_const(i32 %arg) {
+; X86-LABEL: add_const_disjoint_or_const:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $10, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_const_disjoint_or_const:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 10(%rdi), %eax
+; X64-NEXT:    retq
+  %t0 = or disjoint i32 %arg, 8
+  %t1 = add i32 %t0, 2
+  ret i32 %t1
+}
+
+; (x+c1)|c2 where the outer or is addlike
+define i32 @disjoint_or_const_add_const(i32 %arg) {
+; X86-LABEL: disjoint_or_const_add_const:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $10, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: disjoint_or_const_add_const:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 10(%rdi), %eax
+; X64-NEXT:    retq
+  %t0 = add i32 %arg, 8
+  %t1 = or disjoint i32 %t0, 2
+  ret i32 %t1
+}

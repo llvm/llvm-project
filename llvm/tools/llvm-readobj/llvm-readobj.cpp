@@ -42,7 +42,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -633,7 +632,6 @@ std::unique_ptr<ScopedPrinter> createWriter() {
 }
 
 int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ReadobjOptTable Tbl;

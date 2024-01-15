@@ -519,6 +519,7 @@ span array
 span cstddef
 span initializer_list
 span limits
+span stdexcept
 span version
 sstream cstddef
 sstream istream

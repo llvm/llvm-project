@@ -1,6 +1,14 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
+# ATT:   movdiri	%ecx, 123(%eax,%ebx,4)
+# INTEL: movdiri	dword ptr [eax + 4*ebx + 123], ecx
+0x67,0x62,0xf4,0x7c,0x08,0xf9,0x4c,0x98,0x7b
+
+# ATT:   movdiri	%r9, 123(%rax,%rbx,4)
+# INTEL: movdiri	qword ptr [rax + 4*rbx + 123], r9
+0x62,0x74,0xfc,0x08,0xf9,0x4c,0x98,0x7b
+
 # ATT:   movdiri	%r18d, 291(%r28,%r29,4)
 # INTEL: movdiri	dword ptr [r28 + 4*r29 + 291], r18d
 0x62,0x8c,0x78,0x08,0xf9,0x94,0xac,0x23,0x01,0x00,0x00

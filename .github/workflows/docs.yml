@@ -167,4 +167,3 @@ jobs:
         run: |
           cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ./llvm
           TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man
-

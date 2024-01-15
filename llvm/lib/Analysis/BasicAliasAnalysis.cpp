@@ -69,7 +69,7 @@ static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
                                           cl::init(true));
 
 static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(false));
+                                                   cl::Hidden, cl::init(true));
 
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
@@ -639,7 +639,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           continue;
 
         // Don't attempt to analyze GEPs if the scalable index is not zero.
-        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
         if (AllocTypeSize.isScalable()) {
           Decomposed.Base = V;
           return Decomposed;
@@ -650,7 +650,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         continue;
       }
 
-      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
       if (AllocTypeSize.isScalable()) {
         Decomposed.Base = V;
         return Decomposed;
@@ -1543,28 +1543,45 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           TLI, NullIsValidLocation)))
     return AliasResult::NoAlias;
 
-  if (CtxI && EnableSeparateStorageAnalysis) {
-    for (auto &AssumeVH : AC.assumptions()) {
-      if (!AssumeVH)
+  if (EnableSeparateStorageAnalysis) {
+    for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
+      if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
 
-      AssumeInst *Assume = cast<AssumeInst>(AssumeVH);
+      AssumeInst *Assume = cast<AssumeInst>(Elem);
+      OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
+      if (OBU.getTagName() == "separate_storage") {
+        assert(OBU.Inputs.size() == 2);
+        const Value *Hint1 = OBU.Inputs[0].get();
+        const Value *Hint2 = OBU.Inputs[1].get();
+        // This is often a no-op; instcombine rewrites this for us. No-op
+        // getUnderlyingObject calls are fast, though.
+        const Value *HintO1 = getUnderlyingObject(Hint1);
+        const Value *HintO2 = getUnderlyingObject(Hint2);
 
-      for (unsigned Idx = 0; Idx < Assume->getNumOperandBundles(); Idx++) {
-        OperandBundleUse OBU = Assume->getOperandBundleAt(Idx);
-        if (OBU.getTagName() == "separate_storage") {
-          assert(OBU.Inputs.size() == 2);
-          const Value *Hint1 = OBU.Inputs[0].get();
-          const Value *Hint2 = OBU.Inputs[1].get();
-          // This is often a no-op; instcombine rewrites this for us. No-op
-          // getUnderlyingObject calls are fast, though.
-          const Value *HintO1 = getUnderlyingObject(Hint1);
-          const Value *HintO2 = getUnderlyingObject(Hint2);
+        auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
+          if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+            return isValidAssumeForContext(Assume, PtrI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          if (const Argument *PtrA = dyn_cast<Argument>(Ptr)) {
+            const Instruction *FirstI =
+                &*PtrA->getParent()->getEntryBlock().begin();
+            return isValidAssumeForContext(Assume, FirstI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          return false;
+        };
 
-          if (((O1 == HintO1 && O2 == HintO2) ||
-               (O1 == HintO2 && O2 == HintO1)) &&
-              isValidAssumeForContext(Assume, CtxI, DT))
+        if ((O1 == HintO1 && O2 == HintO2) || (O1 == HintO2 && O2 == HintO1)) {
+          // Note that we go back to V1 and V2 for the
+          // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
+          // so strictly more assumptions are valid for them.
+          if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
+                                               /* AllowEphemerals */ true)) ||
+              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
             return AliasResult::NoAlias;
+          }
         }
       }
     }

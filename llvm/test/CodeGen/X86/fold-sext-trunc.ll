@@ -1,5 +1,9 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 ; RUN: llc < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
+
+; RUN: llc --try-experimental-debuginfo-iterators < %s -mtriple=x86_64-- | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after livedebugvalues -o - | FileCheck %s -check-prefix=MIR
+
 ; PR4050
 
 %0 = type { i64 }

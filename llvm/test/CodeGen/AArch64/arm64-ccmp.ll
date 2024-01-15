@@ -14,7 +14,7 @@ define i32 @single_same(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB0_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
@@ -42,7 +42,7 @@ define i32 @single_different(i32 %a, i32 %b) nounwind ssp {
 ; SDISEL-NEXT:    bl _foo
 ; SDISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; SDISEL-NEXT:  LBB1_2: ; %if.end
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: single_different:
@@ -55,7 +55,7 @@ define i32 @single_different(i32 %a, i32 %b) nounwind ssp {
 ; GISEL-NEXT:    bl _foo
 ; GISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; GISEL-NEXT:  LBB1_2: ; %if.end
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 entry:
   %cmp = icmp sle i32 %a, 5
@@ -88,7 +88,7 @@ define i32 @single_flagclobber(i32 %a, i32 %b) nounwind ssp {
 ; SDISEL-NEXT:    bl _foo
 ; SDISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; SDISEL-NEXT:  LBB2_3: ; %if.end
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: single_flagclobber:
@@ -106,7 +106,7 @@ define i32 @single_flagclobber(i32 %a, i32 %b) nounwind ssp {
 ; GISEL-NEXT:    bl _foo
 ; GISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; GISEL-NEXT:  LBB2_3: ; %if.end
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
@@ -144,7 +144,7 @@ define i32 @single_flagclobber_tbz(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB3_3: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
@@ -178,13 +178,13 @@ define i32 @speculate_division(i32 %a, i32 %b) nounwind ssp {
 ; SDISEL-NEXT:    ccmp w8, #16, #0, ge
 ; SDISEL-NEXT:    b.le LBB4_2
 ; SDISEL-NEXT:  ; %bb.1: ; %if.end
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ; SDISEL-NEXT:  LBB4_2: ; %if.then
 ; SDISEL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; SDISEL-NEXT:    bl _foo
 ; SDISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: speculate_division:
@@ -194,13 +194,13 @@ define i32 @speculate_division(i32 %a, i32 %b) nounwind ssp {
 ; GISEL-NEXT:    ccmp w8, #17, #0, gt
 ; GISEL-NEXT:    b.lt LBB4_2
 ; GISEL-NEXT:  ; %bb.1: ; %if.end
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB4_2: ; %if.then
 ; GISEL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; GISEL-NEXT:    bl _foo
 ; GISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -230,13 +230,13 @@ define i32 @single_fcmp(i32 %a, float %b) nounwind ssp {
 ; SDISEL-NEXT:    fccmp s0, s1, #8, ge
 ; SDISEL-NEXT:    b.ge LBB5_2
 ; SDISEL-NEXT:  ; %bb.1: ; %if.end
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ; SDISEL-NEXT:  LBB5_2: ; %if.then
 ; SDISEL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; SDISEL-NEXT:    bl _foo
 ; SDISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; SDISEL-NEXT:    mov w0, #7
+; SDISEL-NEXT:    mov w0, #7 ; =0x7
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: single_fcmp:
@@ -248,13 +248,13 @@ define i32 @single_fcmp(i32 %a, float %b) nounwind ssp {
 ; GISEL-NEXT:    fccmp s0, s1, #8, gt
 ; GISEL-NEXT:    b.ge LBB5_2
 ; GISEL-NEXT:  ; %bb.1: ; %if.end
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB5_2: ; %if.then
 ; GISEL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; GISEL-NEXT:    bl _foo
 ; GISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; GISEL-NEXT:    mov w0, #7
+; GISEL-NEXT:    mov w0, #7 ; =0x7
 ; GISEL-NEXT:    ret
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -318,7 +318,7 @@ define i32 @cbz_head(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB7_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -346,13 +346,13 @@ define i32 @immediate_range(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    cmp w1, #32
 ; CHECK-NEXT:    b.eq LBB8_3
 ; CHECK-NEXT:  ; %bb.2: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB8_3: ; %if.then
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 5
@@ -380,7 +380,7 @@ define i32 @cbz_second(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB9_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -408,7 +408,7 @@ define i32 @cbnz_second(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB10_2: ; %if.end
-; CHECK-NEXT:    mov w0, #7
+; CHECK-NEXT:    mov w0, #7 ; =0x7
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -466,7 +466,7 @@ define i64 @select_and(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 ;
 ; GISEL-LABEL: select_and:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5
+; GISEL-NEXT:    mov w8, #5 ; =0x5
 ; GISEL-NEXT:    cmp w8, w1
 ; GISEL-NEXT:    ccmp w0, w1, #0, ne
 ; GISEL-NEXT:    csel x0, x2, x3, lt
@@ -488,7 +488,7 @@ define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 ;
 ; GISEL-LABEL: select_or:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5
+; GISEL-NEXT:    mov w8, #5 ; =0x5
 ; GISEL-NEXT:    cmp w8, w1
 ; GISEL-NEXT:    ccmp w0, w1, #8, eq
 ; GISEL-NEXT:    csel x0, x2, x3, lt
@@ -510,7 +510,7 @@ define float @select_or_float(i32 %w0, i32 %w1, float %x2, float %x3) {
 ;
 ; GISEL-LABEL: select_or_float:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5
+; GISEL-NEXT:    mov w8, #5 ; =0x5
 ; GISEL-NEXT:    cmp w8, w1
 ; GISEL-NEXT:    ccmp w0, w1, #8, eq
 ; GISEL-NEXT:    fcsel s0, s0, s1, lt
@@ -528,17 +528,22 @@ define i64 @gccbug(i64 %x0, i64 %x1) {
 ; SDISEL-NEXT:    cmp x0, #2
 ; SDISEL-NEXT:    ccmp x0, #4, #4, ne
 ; SDISEL-NEXT:    ccmp x1, #0, #0, eq
-; SDISEL-NEXT:    mov w8, #1
+; SDISEL-NEXT:    mov w8, #1 ; =0x1
 ; SDISEL-NEXT:    cinc x0, x8, eq
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: gccbug:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #2
+; GISEL-NEXT:    cmp x1, #0
+; GISEL-NEXT:    cset w8, eq
 ; GISEL-NEXT:    cmp x0, #2
-; GISEL-NEXT:    ccmp x0, #4, #4, ne
-; GISEL-NEXT:    ccmp x1, #0, #0, eq
-; GISEL-NEXT:    csinc x0, x8, xzr, eq
+; GISEL-NEXT:    cset w9, eq
+; GISEL-NEXT:    cmp x0, #4
+; GISEL-NEXT:    cset w10, eq
+; GISEL-NEXT:    orr w9, w10, w9
+; GISEL-NEXT:    and w8, w9, w8
+; GISEL-NEXT:    and x8, x8, #0x1
+; GISEL-NEXT:    add x0, x8, #1
 ; GISEL-NEXT:    ret
   %cmp0 = icmp eq i64 %x1, 0
   %cmp1 = icmp eq i64 %x0, 2
@@ -592,7 +597,7 @@ define i32 @select_andor32(i32 %v1, i32 %v2, i32 %v3) {
 ; SDISEL-LABEL: select_andor32:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmp w1, w2
-; SDISEL-NEXT:    mov w8, #32
+; SDISEL-NEXT:    mov w8, #32 ; =0x20
 ; SDISEL-NEXT:    ccmp w0, w8, #4, lt
 ; SDISEL-NEXT:    ccmp w0, w1, #0, eq
 ; SDISEL-NEXT:    csel w0, w0, w1, eq
@@ -600,7 +605,7 @@ define i32 @select_andor32(i32 %v1, i32 %v2, i32 %v3) {
 ;
 ; GISEL-LABEL: select_andor32:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #32
+; GISEL-NEXT:    mov w8, #32 ; =0x20
 ; GISEL-NEXT:    cmp w1, w2
 ; GISEL-NEXT:    ccmp w0, w8, #4, lt
 ; GISEL-NEXT:    ccmp w0, w1, #0, eq
@@ -701,11 +706,11 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; SDISEL-NEXT:    ccmp w0, #13, #0, ge
 ; SDISEL-NEXT:    cset w8, gt
 ; SDISEL-NEXT:    cmp w0, #22
-; SDISEL-NEXT:    mov w9, #44
+; SDISEL-NEXT:    mov w9, #44 ; =0x2c
 ; SDISEL-NEXT:    ccmp w0, w9, #0, ge
 ; SDISEL-NEXT:    csel w8, wzr, w8, le
 ; SDISEL-NEXT:    cmp w0, #99
-; SDISEL-NEXT:    mov w9, #77
+; SDISEL-NEXT:    mov w9, #77 ; =0x4d
 ; SDISEL-NEXT:    ccmp w0, w9, #4, ne
 ; SDISEL-NEXT:    cset w9, eq
 ; SDISEL-NEXT:    tst w8, w9

@@ -40,8 +40,8 @@ __attribute__((target("cpu=sifive-u54"))) void testAttrCpuOnly() {}
 // CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }
 // CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
 // CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+experimental-zicond,+f,+m,+save-restore,+v,+zbb,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
-// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,-relax,-zfa" }
-// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,-relax,-zbb,-zfa" }
+// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,-relax" }
+// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,-relax" }
 // CHECK: attributes #6 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
-// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore,-relax,-zbb,-zfa" }
-// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei,-relax,-zbb,-zfa" }
+// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore,-relax" }
+// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei,-relax" }

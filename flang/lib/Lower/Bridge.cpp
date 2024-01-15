@@ -3092,6 +3092,10 @@ private:
 
   //===--------------------------------------------------------------------===//
 
+  void genFIR(const Fortran::parser::NotifyWaitStmt &stmt) {
+    genNotifyWaitStatement(*this, stmt);
+  }
+
   void genFIR(const Fortran::parser::EventPostStmt &stmt) {
     genEventPostStatement(*this, stmt);
   }

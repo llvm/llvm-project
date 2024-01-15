@@ -5467,8 +5467,6 @@ std::string ObjectFileMachO::GetIdentifierString() {
           uint32_t strsize = payload_size - sizeof(uint32_t);
           std::string result(strsize, '\0');
           m_data.CopyData(payload_offset, strsize, result.data());
-          while (result.back() == '\0')
-            result.resize(result.size() - 1);
           LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
                     result.c_str());
           return result;
@@ -5488,8 +5486,6 @@ std::string ObjectFileMachO::GetIdentifierString() {
         std::string result(ident_command.cmdsize, '\0');
         if (m_data.CopyData(offset, ident_command.cmdsize, result.data()) ==
             ident_command.cmdsize) {
-          while (result.back() == '\0')
-            result.resize(result.size() - 1);
           LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
           return result;
         }

@@ -36,7 +36,8 @@ struct DataForTest {
 
   template <typename T>
   std::vector<uint8_t> makeElfData(uint8_t Class, uint8_t Encoding,
-                                   uint16_t Machine) {
+                                   uint16_t Machine, uint8_t OS,
+                                   uint16_t Flags) {
     T Ehdr{}; // Zero-initialise the header.
     Ehdr.e_ident[ELF::EI_MAG0] = 0x7f;
     Ehdr.e_ident[ELF::EI_MAG1] = 'E';
@@ -45,9 +46,11 @@ struct DataForTest {
     Ehdr.e_ident[ELF::EI_CLASS] = Class;
     Ehdr.e_ident[ELF::EI_DATA] = Encoding;
     Ehdr.e_ident[ELF::EI_VERSION] = 1;
+    Ehdr.e_ident[ELF::EI_OSABI] = OS;
     Ehdr.e_type = ELF::ET_REL;
     Ehdr.e_machine = Machine;
     Ehdr.e_version = 1;
+    Ehdr.e_flags = Flags;
     Ehdr.e_ehsize = sizeof(T);
 
     bool IsLittleEndian = Encoding == ELF::ELFDATA2LSB;
@@ -64,12 +67,13 @@ struct DataForTest {
     return Bytes;
   }
 
-  DataForTest(uint8_t Class, uint8_t Encoding, uint16_t Machine) {
+  DataForTest(uint8_t Class, uint8_t Encoding, uint16_t Machine,
+              uint8_t OS = ELF::ELFOSABI_NONE, uint16_t Flags = 0) {
     if (Class == ELF::ELFCLASS64)
-      Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine);
+      Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine, OS, Flags);
     else {
       assert(Class == ELF::ELFCLASS32);
-      Data = makeElfData<ELF::Elf32_Ehdr>(Class, Encoding, Machine);
+      Data = makeElfData<ELF::Elf32_Ehdr>(Class, Encoding, Machine, OS, Flags);
     }
   }
 };
@@ -285,6 +289,35 @@ TEST(ELFObjectFileTest, MachineTestForXtensa) {
                                       "elf64-unknown", "elf64-unknown"};
   for (auto [Idx, Data] : enumerate(generateData(ELF::EM_XTENSA)))
     checkFormatAndArch(Data, Formats[Idx], Triple::xtensa);
+}
+
+TEST(ELFObjectFileTest, CheckOSAndTriple) {
+  std::tuple<uint16_t, uint8_t, StringRef> Formats[] = {
+      {ELF::EM_AMDGPU, ELF::ELFOSABI_AMDGPU_HSA, "amdgcn-amd-amdhsa"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_LINUX, "x86_64--linux"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_NETBSD, "x86_64--netbsd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_HURD, "x86_64--hurd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_SOLARIS, "x86_64--solaris"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_AIX, "x86_64--aix"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_FREEBSD, "x86_64--freebsd"},
+      {ELF::EM_X86_64, ELF::ELFOSABI_OPENBSD, "x86_64--openbsd"},
+      {ELF::EM_CUDA, ELF::ELFOSABI_CUDA, "nvptx64-nvidia-cuda"}};
+  for (auto [Machine, OS, Triple] : Formats) {
+    const DataForTest D(ELF::ELFCLASS64, ELF::ELFDATA2LSB, Machine, OS,
+                        ELF::EF_AMDGPU_MACH_AMDGCN_LAST);
+    Expected<ELF64LEObjectFile> ELFObjOrErr = ELF64LEObjectFile::create(
+        MemoryBufferRef(toStringRef(D.Data), "dummyELF"));
+    ASSERT_THAT_EXPECTED(ELFObjOrErr, Succeeded());
+
+    auto &ELFObj = *ELFObjOrErr;
+    llvm::Triple TheTriple = ELFObj.makeTriple();
+
+    // The AMDGPU architecture will be unknown on big-endian testers.
+    if (TheTriple.getArch() == Triple::UnknownArch)
+      continue;
+
+    EXPECT_EQ(Triple, TheTriple.getTriple());
+  }
 }
 
 // ELF relative relocation type test.
@@ -984,10 +1017,23 @@ Sections:
               BrProb:      0xffffffff
           - BBFreq:         1000
             Successors:    []
-)");
+  - Name: .llvm_bb_addr_map_5
+    Type: SHT_LLVM_BB_ADDR_MAP
+  # Link: 0 (by default, can be overriden)
+    Entries:
+      - Version: 2
+        Address: 0x55555
+        Feature: 0x0
+        BBEntries:
+          - ID:            2
+            AddressOffset: 0x0
+            Size:          0x2
+            Metadata:      0x4
+    PGOAnalyses: [{}]
+ )");
 
   BBAddrMap E1(0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}});
-  PGOAnalysisMap P1 = {892, {{}}, {true, false, false}};
+  PGOAnalysisMap P1 = {892, {}, {true, false, false}};
   BBAddrMap E2(0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}});
   PGOAnalysisMap P2 = {{}, {{BlockFrequency(343), {}}}, {false, true, false}};
   BBAddrMap E3(0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}},
@@ -1016,16 +1062,18 @@ Sections:
        {BlockFrequency(18), {{3, BranchProbability::getRaw(0xffff'ffff)}}},
        {BlockFrequency(1000), {}}},
       {true, true, true}};
+  BBAddrMap E5(0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}}});
+  PGOAnalysisMap P5 = {{}, {}, {false, false, false}};
 
-  std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
+  std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
   std::vector<BBAddrMap> Section2BBAddrMaps = {E1, E2};
-  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4};
+  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4, E5};
 
-  std::vector<PGOAnalysisMap> Section0PGOAnalysisMaps = {P4};
+  std::vector<PGOAnalysisMap> Section0PGOAnalysisMaps = {P4, P5};
   std::vector<PGOAnalysisMap> Section1PGOAnalysisMaps = {P3};
   std::vector<PGOAnalysisMap> Section2PGOAnalysisMaps = {P1, P2};
-  std::vector<PGOAnalysisMap> AllPGOAnalysisMaps = {P1, P2, P3, P4};
+  std::vector<PGOAnalysisMap> AllPGOAnalysisMaps = {P1, P2, P3, P4, P5};
 
   auto DoCheckSucceeds =
       [&](StringRef YamlString, std::optional<unsigned> TextSectionIndex,
@@ -1048,6 +1096,10 @@ Sections:
         if (ExpectedPGO) {
           EXPECT_EQ(BBAddrMaps->size(), PGOAnalyses.size());
           EXPECT_EQ(PGOAnalyses, *ExpectedPGO);
+          for (auto &&[BB, PGO] : llvm::zip(*BBAddrMaps, PGOAnalyses)) {
+            if (PGO.FeatEnable.BBFreq || PGO.FeatEnable.BrProb)
+              EXPECT_EQ(BB.getBBEntries().size(), PGO.BBEntries.size());
+          }
         }
       };
 
@@ -1099,9 +1151,9 @@ Sections:
     Link: 10
 )";
 
-  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/4,
+  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/5,
                "unable to get the linked-to section for "
-               "SHT_LLVM_BB_ADDR_MAP section with index 4: invalid section "
+               "SHT_LLVM_BB_ADDR_MAP section with index 5: invalid section "
                "index: 10");
   // Linked sections are not checked when we don't target a specific text
   // section.
@@ -1117,7 +1169,7 @@ Sections:
 )";
 
   DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-               "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: "
+               "unable to read SHT_LLVM_BB_ADDR_MAP section with index 5: "
                "unable to decode LEB128 at offset 0x0000000a: malformed "
                "uleb128, extends past end");
   // Check that we can read the other section's bb-address-maps which are
@@ -1273,13 +1325,12 @@ Sections:
 )";
 
   auto ErroringMatcher = [](const Elf_Shdr &Sec) -> Expected<bool> {
-    if(Sec.sh_type == ELF::SHT_PROGBITS)
+    if (Sec.sh_type == ELF::SHT_PROGBITS)
       return createError("This was supposed to fail.");
     return false;
   };
 
-  DoCheckFails(OneTextSection, ErroringMatcher,
-               "This was supposed to fail.");
+  DoCheckFails(OneTextSection, ErroringMatcher, "This was supposed to fail.");
 
   StringRef MissingRelocatableContent = R"(
 Sections:

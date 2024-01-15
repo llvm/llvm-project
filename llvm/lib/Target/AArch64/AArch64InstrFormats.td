@@ -12586,6 +12586,7 @@ def : TokenAlias<".4S", ".4s">;
 def : TokenAlias<".2D", ".2d">;
 def : TokenAlias<".1Q", ".1q">;
 def : TokenAlias<".2H", ".2h">;
+def : TokenAlias<".2B", ".2b">;
 def : TokenAlias<".B", ".b">;
 def : TokenAlias<".H", ".h">;
 def : TokenAlias<".S", ".s">;

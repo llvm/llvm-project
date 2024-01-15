@@ -742,6 +742,7 @@ span functional
 span initializer_list
 span iterator
 span limits
+span stdexcept
 span type_traits
 span version
 sstream cstddef

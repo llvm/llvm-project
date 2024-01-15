@@ -4799,6 +4799,8 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
+  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
+
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5642,6 +5644,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
+                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
@@ -7107,15 +7110,7 @@ public:
                                  NestedNameSpecInfo &IdInfo,
                                  bool EnteringContext);
 
-  /// The kind of conversion to check for. Either all attributes must match exactly,
-  /// or the converted type may add/drop '__arm_preserves_za'.
-  enum class AArch64SMECallConversionKind {
-    MatchExactly,
-    MayAddPreservesZA,
-    MayDropPreservesZA,
-  };
-  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType,
-                                  AArch64SMECallConversionKind C);
+  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType);
 
   /// The parser has parsed a nested-name-specifier
   /// 'template[opt] template-name < template-args >::'.
@@ -10263,11 +10258,13 @@ public:
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
   };
 
-  // Unlike the above, this evaluates constraints, which should only happen at
-  // 'constraint checking' time.
+  // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
+  // Unlike the above, this does not evaluates constraints.
+  ExprResult SubstConstraintExprWithoutSatisfaction(
+      Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Substitute the given template arguments into a list of
   /// expressions, expanding pack expansions if required.
@@ -11344,9 +11341,12 @@ private:
   /// rigorous semantic checking in the new mapped directives.
   bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                         ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind BindKind,
+                        OpenMPBindClauseKind &BindKind,
                         OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective);
+                        OpenMPDirectiveKind &PrevMappedDirective,
+                        SourceLocation StartLoc, SourceLocation EndLoc,
+                        const DeclarationNameInfo &DirName,
+                        OpenMPDirectiveKind CancelRegion);
 
 public:
   /// The declarator \p D defines a function in the scope \p S which is nested
@@ -12967,7 +12967,7 @@ public:
   QualType FindCompositeObjCPointerType(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation QuestionLoc);
 
-  bool DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
+  bool DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
                                   SourceLocation QuestionLoc);
 
   void DiagnoseAlwaysNonNullPointer(Expr *E,

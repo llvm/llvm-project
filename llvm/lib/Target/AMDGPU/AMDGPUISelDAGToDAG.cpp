@@ -303,6 +303,7 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
 
     switch (N->getOpcode()) {
     case ISD::BUILD_VECTOR:
+      // TODO: Match load d16 from shl (extload:i16), 16
       MadeChange |= matchLoadD16FromBuildVector(N);
       break;
     default:
@@ -317,26 +318,16 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
   }
 }
 
-bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N,
-                                           bool Negated) const {
+bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
   if (N->isUndef())
     return true;
 
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
-  if (Negated) {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
-      return TII->isInlineConstant(-C->getAPIntValue());
+  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
+    return TII->isInlineConstant(C->getAPIntValue());
 
-    if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-      return TII->isInlineConstant(-C->getValueAPF().bitcastToAPInt());
-
-  } else {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
-      return TII->isInlineConstant(C->getAPIntValue());
-
-    if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
-      return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
-  }
+  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
+    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
 
   return false;
 }
@@ -382,7 +373,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
         Subtarget->getRegisterInfo()->getRegClass(RCID);
 
     SDValue SubRegOp = N->getOperand(OpNo + 1);
-    unsigned SubRegIdx = cast<ConstantSDNode>(SubRegOp)->getZExtValue();
+    unsigned SubRegIdx = SubRegOp->getAsZExtVal();
     return Subtarget->getRegisterInfo()->getSubClassWithSubReg(SuperRC,
                                                               SubRegIdx);
   }
@@ -1588,13 +1579,9 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
 
 bool AMDGPUDAGToDAGISel::SelectBUFSOffset(SDValue ByteOffsetNode,
                                           SDValue &SOffset) const {
-  if (Subtarget->hasRestrictedSOffset()) {
-    if (auto SOffsetConst = dyn_cast<ConstantSDNode>(ByteOffsetNode)) {
-      if (SOffsetConst->isZero()) {
-        SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
-        return true;
-      }
-    }
+  if (Subtarget->hasRestrictedSOffset() && isNullConstant(ByteOffsetNode)) {
+    SOffset = CurDAG->getRegister(AMDGPU::SGPR_NULL, MVT::i32);
+    return true;
   }
 
   SOffset = ByteOffsetNode;
@@ -2492,7 +2479,7 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
     SDValue PtrBase = Ptr.getOperand(0);
     SDValue PtrOffset = Ptr.getOperand(1);
 
-    const APInt &OffsetVal = cast<ConstantSDNode>(PtrOffset)->getAPIntValue();
+    const APInt &OffsetVal = PtrOffset->getAsAPIntVal();
     if (isDSOffsetLegal(PtrBase, OffsetVal.getZExtValue())) {
       N = glueCopyToM0(N, PtrBase);
       Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i32);
@@ -3022,7 +3009,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
-bool AMDGPUDAGToDAGISel::SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const {
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
   // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
   // 1 promotes packed values to signed, 0 treats them as unsigned.
