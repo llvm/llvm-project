@@ -267,3 +267,38 @@ entry:
 end:
   ret void
 }
+
+define void @self-reference(i1 %c) {
+; CHECK-LABEL: @self-reference(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[DOTSPLIT_PREHEADER:%.*]], label [[DOTSPLIT_PREHEADER]]
+; CHECK:       .split.preheader:
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[DOTSPLIT_PREHEADER]] ]
+; CHECK-NEXT:    switch i32 [[TMP0]], label [[END:%.*]] [
+; CHECK-NEXT:      i32 -1, label [[END]]
+; CHECK-NEXT:      i32 0, label [[DOTSPLIT_JT4294967295:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       .split.jt4294967295:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ -1, [[DOTSPLIT]] ]
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %.split.preheader, label %.split.preheader
+
+.split.preheader:
+  br label %.split
+
+.split:
+  %0 = phi i32 [ 0, %.split.preheader ], [ -1, %.split ]
+  switch i32 %0, label %end [
+  i32 -1, label %end
+  i32 0, label %.split
+  ]
+
+end:
+  ret void
+}
