@@ -155,18 +155,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     IRBuilder<> IRB(Info.AI->getNextNode());
     Type *Int32Type = IRB.getInt32Ty();
     Type *Int64Type = IRB.getInt64Ty();
-    Function *HintTagDecl = Intrinsic::getDeclaration(
-        F->getParent(), Intrinsic::wasm_memory_hinttag, {Int64Type});
     Function *StoreTagDecl = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::wasm_memory_storetag, {Int64Type});
-    Instruction *TagPCall =
-        IRB.CreateCall(HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI,
-                                     Base, ConstantInt::get(Int64Type, Tag)});
-    if (Info.AI->hasName())
-      TagPCall->setName(Info.AI->getName() + ".tag");
-    Info.AI->replaceAllUsesWith(TagPCall);
-    TagPCall->setOperand(1, Info.AI);
-
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
@@ -177,6 +167,15 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
+      auto *HintTagDecl = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::wasm_memory_hinttag, {Int64Type});
+      auto *TagPCall =
+          IRB.CreateCall(HintTagDecl, {ConstantInt::get(Int32Type, 0), Info.AI,
+                                       Base, ConstantInt::get(Int64Type, Tag)});
+      if (Info.AI->hasName())
+        TagPCall->setName(Info.AI->getName() + ".tag");
+      Info.AI->replaceAllUsesWith(TagPCall);
+      TagPCall->setOperand(1, Info.AI);
       IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size =
           cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
@@ -197,9 +196,16 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
-      Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
-      IRB.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), Ptr,
-                                    ConstantInt::get(Int64Type, Size)});
+      auto *HintStoreTagDecl = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::wasm_memory_hintstoretag, {Int64Type});
+      auto *TagPCall = IRB.CreateCall(HintStoreTagDecl,
+                                      {ConstantInt::get(Int32Type, 0), Info.AI,
+                                       ConstantInt::get(Int64Type, Size), Base,
+                                       ConstantInt::get(Int64Type, Tag)});
+      if (Info.AI->hasName())
+        TagPCall->setName(Info.AI->getName() + ".tag");
+      Info.AI->replaceAllUsesWith(TagPCall);
+      TagPCall->setOperand(1, Info.AI);
       for (auto *RI : SInfo.RetVec) {
         untagAlloca(AI, RI, Size, StoreTagDecl, Int64Type);
       }
