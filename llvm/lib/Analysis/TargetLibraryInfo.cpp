@@ -562,12 +562,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // or we have a reasonable detection strategy, we cannot use exp10 reliably
     // on Linux.
     //
-    // Fall through to disable all of them.
-    [[fallthrough]];
-  default:
-    TLI.setUnavailable(LibFunc_exp10);
-    TLI.setUnavailable(LibFunc_exp10f);
-    TLI.setUnavailable(LibFunc_exp10l);
+    TLI.setAvailableWithName(LibFunc_exp10, "__exp10");
+    TLI.setAvailableWithName(LibFunc_exp10f, "__exp10f");
+    break;
   }
 
   // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, and
@@ -834,6 +831,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_strndup);
     TLI.setUnavailable(LibFunc_strnlen);
     TLI.setUnavailable(LibFunc_toascii);
+    TLI.setUnavailable(LibFunc_exp10);
+    TLI.setUnavailable(LibFunc_exp10f);
+    TLI.setUnavailable(LibFunc_exp10l);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to
