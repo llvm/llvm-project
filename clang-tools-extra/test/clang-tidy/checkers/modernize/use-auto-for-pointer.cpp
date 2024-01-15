@@ -16,3 +16,14 @@ void pointerToArray() {
   // CHECK-FIXES-REMOVE: auto a1 =
   // CHECK-FIXES: auto *a1 =
 }
+
+void memberFunctionPointer() {
+  class A {
+    void f();
+  };
+  void(A::* a1)() = static_cast<void(A::*)()>(nullptr);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing
+  // CHECK-FIXES-REMOVE: auto a1 =
+  // CHECK-FIXES: auto *a1 =
+}
+
