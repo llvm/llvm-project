@@ -803,13 +803,15 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 }
 
 void Environment::setValue(const Expr &E, Value &Val) {
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
+
   if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
-    assert(isOriginalRecordConstructor(E) ||
-           &RecordVal->getLoc() == &getResultObjectLocation(E));
+    assert(isOriginalRecordConstructor(CanonE) ||
+           &RecordVal->getLoc() == &getResultObjectLocation(CanonE));
   }
 
-  assert(E.isPRValue());
-  ExprToVal[&E] = &Val;
+  assert(CanonE.isPRValue());
+  ExprToVal[&CanonE] = &Val;
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
