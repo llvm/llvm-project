@@ -2782,15 +2782,19 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
-  }
 
-  if (!IsKernel) {
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
-    if (!IsGraphics && !Subtarget->enableFlatScratch()) {
+    if (!Subtarget->enableFlatScratch()) {
+      // FIXME: Sink this into allocateSpecialInputSGPRs
       CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
                                                   AMDGPU::SGPR2, AMDGPU::SGPR3},
                               4);
     }
+
+    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
+  }
+
+  if (!IsKernel) {
+    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
 
@@ -2990,13 +2994,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   }
 
   // Start adding system SGPRs.
-  if (IsEntryFunc) {
+  if (IsEntryFunc)
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
-  } else {
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
-  }
 
   auto &ArgUsageInfo =
     DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
