@@ -7,7 +7,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] --test
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -15,6 +15,7 @@ echo --help: display this help
 echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
+echo --test: use local git checkout instead of downloading src.zip
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -30,6 +31,7 @@ set help=
 set x86=
 set x64=
 set arm64=
+set test=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -106,8 +108,8 @@ echo Using VS devcmd: %vsdevcmd%
 :: start echoing what we do
 @echo on
 
-set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
-set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
+set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
+set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
 set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
 set revision=llvmorg-%version%
@@ -126,16 +128,23 @@ if exist %build_dir% (
 mkdir %build_dir%
 cd %build_dir% || exit /b 1
 
-echo Checking out %revision%
-curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
-7z x src.zip || exit /b 1
-mv llvm-project-* llvm-project || exit /b 1
+if "%test%" == "true" (
+  echo Using local source
+  set llvm_src=%~dp0..\..\..
+) else (
+  echo Checking out %revision%
+  curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
+  7z x src.zip || exit /b 1
+  mv llvm-project-* llvm-project || exit /b 1
+  set llvm_src=%build_dir%\llvm-project
+)
 
 curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
 tar zxf libxml2-v2.9.12.tar.gz
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
+set common_compiler_flags=-DLIBXML_STATIC
 set common_cmake_flags=^
   -DCMAKE_BUILD_TYPE=Release ^
   -DLLVM_ENABLE_ASSERTIONS=OFF ^
@@ -150,8 +159,8 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DLLDB_ENABLE_LIBXML2=OFF ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
-  -DCMAKE_C_FLAGS="-DLIBXML_STATIC" ^
-  -DCMAKE_CXX_FLAGS="-DLIBXML_STATIC" ^
+  -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
 set cmake_profile_flag=""
@@ -186,7 +195,7 @@ set cmake_flags=^
   -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -208,7 +217,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build32
 cd build32
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -242,7 +251,7 @@ set cmake_flags=^
   -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -267,7 +276,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build64
 cd build64
 call :do_generate_profile || exit /b 1
-cmake -GNinja %cmake_flags% %cmake_profile_flag% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %cmake_profile_flag% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -307,7 +316,7 @@ REM We need to build stage0 compiler-rt with clang-cl (msvc lacks some builtins)
 cmake -GNinja %cmake_flags% ^
   -DCMAKE_C_COMPILER=clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=clang-cl.exe ^
-  ..\llvm-project\llvm || exit /b 1
+  %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
 ::ninja check-llvm || exit /b 1
 ::ninja check-clang || exit /b 1
@@ -332,7 +341,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_arm64
 cd build_arm64
-cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
 REM Check but do not fail on errors.
 ninja check-lldb
@@ -402,7 +411,7 @@ REM Build Clang with instrumentation.
 mkdir instrument
 cd instrument
 cmake -GNinja %cmake_flags% -DLLVM_TARGETS_TO_BUILD=Native ^
-  -DLLVM_BUILD_INSTRUMENTED=IR ..\..\llvm-project\llvm || exit /b 1
+  -DLLVM_BUILD_INSTRUMENTED=IR %llvm_src%\llvm || exit /b 1
 ninja clang || ninja clang || ninja clang || exit /b 1
 set instrumented_clang=%cd:\=/%/bin/clang-cl.exe
 cd ..
@@ -414,14 +423,17 @@ cmake -GNinja %cmake_flags% ^
   -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
   -DLLVM_ENABLE_PROJECTS=clang ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
-  ..\..\llvm-project\llvm || exit /b 1
+  %llvm_src%\llvm || exit /b 1
 REM Drop profiles generated from running cmake; those are not representative.
 del ..\instrument\profiles\*.profraw
 ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
 cd ..
 set profile=%cd:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% instrument\profiles\*.profraw || exit /b 1
-set cmake_profile_flag=-DLLVM_PROFDATA_FILE=%profile%
+set common_compiler_flags=%common_compiler_flags% -Wno-backend-plugin
+set cmake_profile_flag=-DLLVM_PROFDATA_FILE=%profile% ^
+  -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
 exit /b 0
 
 ::=============================================================================
