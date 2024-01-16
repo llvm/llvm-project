@@ -83,8 +83,14 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  if (getCodeModel() == CodeModel::Medium ||
-      getCodeModel() == CodeModel::Large) {
+  // Respect large data threshold for medium and large code models.
+  // ... But only for globals without an explicit section. If multiple globals
+  // are placed in an explicit section, there's a good chance that the data
+  // threshold will cause the different globals to be inconsistent in whether
+  // they're large or small. Mixing large section flags can cause undesirable
+  // issues like increased relocation pressure.
+  if (!GV->hasSection() && (getCodeModel() == CodeModel::Medium ||
+                            getCodeModel() == CodeModel::Large)) {
     if (!GV->getValueType()->isSized())
       return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
