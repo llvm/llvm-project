@@ -1,20 +1,20 @@
 # RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
 # RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
 
-# ATT:   cmpaxadd	%ecx, %edx, 123(%rax,%rbx,4)
-# INTEL: cmpaxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# ATT:   cmpnbexadd	%ecx, %edx, 123(%rax,%rbx,4)
+# INTEL: cmpnbexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 0x62,0xf2,0x75,0x08,0xe7,0x54,0x98,0x7b
 
-# ATT:   cmpaxadd	%r9, %r15, 123(%rax,%rbx,4)
-# INTEL: cmpaxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# ATT:   cmpnbexadd	%r9, %r15, 123(%rax,%rbx,4)
+# INTEL: cmpnbexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 0x62,0x72,0xb5,0x08,0xe7,0x7c,0x98,0x7b
 
-# ATT:   cmpaxadd	%r18d, %r22d, 291(%r28,%r29,4)
-# INTEL: cmpaxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# ATT:   cmpnbexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# INTEL: cmpnbexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 0x62,0x8a,0x69,0x00,0xe7,0xb4,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpaxadd	%r19, %r23, 291(%r28,%r29,4)
-# INTEL: cmpaxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# ATT:   cmpnbexadd	%r19, %r23, 291(%r28,%r29,4)
+# INTEL: cmpnbexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xe7,0xbc,0xac,0x23,0x01,0x00,0x00
 
 # ATT:   cmpbexadd	%ecx, %edx, 123(%rax,%rbx,4)
@@ -49,52 +49,52 @@
 # INTEL: cmpbxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xe2,0xbc,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpexadd	%ecx, %edx, 123(%rax,%rbx,4)
-# INTEL: cmpexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# ATT:   cmpzxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# INTEL: cmpzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 0x62,0xf2,0x75,0x08,0xe4,0x54,0x98,0x7b
 
-# ATT:   cmpexadd	%r9, %r15, 123(%rax,%rbx,4)
-# INTEL: cmpexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# ATT:   cmpzxadd	%r9, %r15, 123(%rax,%rbx,4)
+# INTEL: cmpzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 0x62,0x72,0xb5,0x08,0xe4,0x7c,0x98,0x7b
 
-# ATT:   cmpexadd	%r18d, %r22d, 291(%r28,%r29,4)
-# INTEL: cmpexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# ATT:   cmpzxadd	%r18d, %r22d, 291(%r28,%r29,4)
+# INTEL: cmpzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 0x62,0x8a,0x69,0x00,0xe4,0xb4,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpexadd	%r19, %r23, 291(%r28,%r29,4)
-# INTEL: cmpexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# ATT:   cmpzxadd	%r19, %r23, 291(%r28,%r29,4)
+# INTEL: cmpzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xe4,0xbc,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpgexadd	%ecx, %edx, 123(%rax,%rbx,4)
-# INTEL: cmpgexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# ATT:   cmpnlxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# INTEL: cmpnlxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 0x62,0xf2,0x75,0x08,0xed,0x54,0x98,0x7b
 
-# ATT:   cmpgexadd	%r9, %r15, 123(%rax,%rbx,4)
-# INTEL: cmpgexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# ATT:   cmpnlxadd	%r9, %r15, 123(%rax,%rbx,4)
+# INTEL: cmpnlxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 0x62,0x72,0xb5,0x08,0xed,0x7c,0x98,0x7b
 
-# ATT:   cmpgexadd	%r18d, %r22d, 291(%r28,%r29,4)
-# INTEL: cmpgexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# ATT:   cmpnlxadd	%r18d, %r22d, 291(%r28,%r29,4)
+# INTEL: cmpnlxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 0x62,0x8a,0x69,0x00,0xed,0xb4,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpgexadd	%r19, %r23, 291(%r28,%r29,4)
-# INTEL: cmpgexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# ATT:   cmpnlxadd	%r19, %r23, 291(%r28,%r29,4)
+# INTEL: cmpnlxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xed,0xbc,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpgxadd	%ecx, %edx, 123(%rax,%rbx,4)
-# INTEL: cmpgxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# ATT:   cmpnlexadd	%ecx, %edx, 123(%rax,%rbx,4)
+# INTEL: cmpnlexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 0x62,0xf2,0x75,0x08,0xef,0x54,0x98,0x7b
 
-# ATT:   cmpgxadd	%r9, %r15, 123(%rax,%rbx,4)
-# INTEL: cmpgxadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# ATT:   cmpnlexadd	%r9, %r15, 123(%rax,%rbx,4)
+# INTEL: cmpnlexadd	qword ptr [rax + 4*rbx + 123], r15, r9
 0x62,0x72,0xb5,0x08,0xef,0x7c,0x98,0x7b
 
-# ATT:   cmpgxadd	%r18d, %r22d, 291(%r28,%r29,4)
-# INTEL: cmpgxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# ATT:   cmpnlexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# INTEL: cmpnlexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 0x62,0x8a,0x69,0x00,0xef,0xb4,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpgxadd	%r19, %r23, 291(%r28,%r29,4)
-# INTEL: cmpgxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# ATT:   cmpnlexadd	%r19, %r23, 291(%r28,%r29,4)
+# INTEL: cmpnlexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xef,0xbc,0xac,0x23,0x01,0x00,0x00
 
 # ATT:   cmplexadd	%ecx, %edx, 123(%rax,%rbx,4)
@@ -129,20 +129,20 @@
 # INTEL: cmplxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xec,0xbc,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpnexadd	%ecx, %edx, 123(%rax,%rbx,4)
-# INTEL: cmpnexadd	dword ptr [rax + 4*rbx + 123], edx, ecx
+# ATT:   cmpnzxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# INTEL: cmpnzxadd	dword ptr [rax + 4*rbx + 123], edx, ecx
 0x62,0xf2,0x75,0x08,0xe5,0x54,0x98,0x7b
 
-# ATT:   cmpnexadd	%r9, %r15, 123(%rax,%rbx,4)
-# INTEL: cmpnexadd	qword ptr [rax + 4*rbx + 123], r15, r9
+# ATT:   cmpnzxadd	%r9, %r15, 123(%rax,%rbx,4)
+# INTEL: cmpnzxadd	qword ptr [rax + 4*rbx + 123], r15, r9
 0x62,0x72,0xb5,0x08,0xe5,0x7c,0x98,0x7b
 
-# ATT:   cmpnexadd	%r18d, %r22d, 291(%r28,%r29,4)
-# INTEL: cmpnexadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
+# ATT:   cmpnzxadd	%r18d, %r22d, 291(%r28,%r29,4)
+# INTEL: cmpnzxadd	dword ptr [r28 + 4*r29 + 291], r22d, r18d
 0x62,0x8a,0x69,0x00,0xe5,0xb4,0xac,0x23,0x01,0x00,0x00
 
-# ATT:   cmpnexadd	%r19, %r23, 291(%r28,%r29,4)
-# INTEL: cmpnexadd	qword ptr [r28 + 4*r29 + 291], r23, r19
+# ATT:   cmpnzxadd	%r19, %r23, 291(%r28,%r29,4)
+# INTEL: cmpnzxadd	qword ptr [r28 + 4*r29 + 291], r23, r19
 0x62,0x8a,0xe1,0x00,0xe5,0xbc,0xac,0x23,0x01,0x00,0x00
 
 # ATT:   cmpnoxadd	%ecx, %edx, 123(%rax,%rbx,4)
