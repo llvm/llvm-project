@@ -2161,6 +2161,15 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
+  Check(
+      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
+       Attrs.hasFnAttr("aarch64_inout_zt0") +
+       Attrs.hasFnAttr("aarch64_out_zt0") +
+       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
+      V);
+
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Check(GV->hasGlobalUnnamedAddr(),
