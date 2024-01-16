@@ -4119,7 +4119,6 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
       Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
     }
   }
-#undef GET_EGPR_IF_ENABLED
 
   MachineSDNode *NewNode;
   SDValue Input = N0->getOperand(0);
@@ -5487,7 +5486,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     bool UseMULXHi = UseMULX && SDValue(Node, 0).use_empty();
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
-#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
     case MVT::i32:
       Opc = UseMULXHi  ? X86::MULX32Hrr
             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rr)

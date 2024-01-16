@@ -348,6 +348,7 @@ multiclass ShiftX_Pats<SDNode op> {
   //
   // This priority is enforced by IsProfitableToFoldLoad.
   def : Pat<(op (loadi32 addr:$src1), GR8:$src2),
+<<<<<<< HEAD
              (!cast<Instruction>(NAME#"32rm") addr:$src1,
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
@@ -358,7 +359,6 @@ multiclass ShiftX_Pats<SDNode op> {
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
              (!cast<Instruction>(NAME#"64rm") addr:$src1,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
 
 let Predicates = [HasBMI2] in {
@@ -367,3 +367,14 @@ let Predicates = [HasBMI2] in {
   defm SHRX : ShiftX_Pats<srl>;
   defm SHLX : ShiftX_Pats<shl>;
 }
+=======
+            (!cast<Instruction>(NAME#"32rm"#suffix) addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
+            (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+}
+
+multiclass RORX_Pats<string suffix> {
