@@ -864,6 +864,12 @@ def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
 >;
 
+def FeaturePrngInst : SubtargetFeature<"prng-inst",
+  "HasPrngInst",
+  "true",
+  "Has v_prng_b32 instruction"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1357,7 +1363,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureKernargPreload]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840])>;
+  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840, FeaturePrngInst])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -2098,6 +2104,9 @@ def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts(
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
+def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
+  AssemblerPredicate<(all_of FeaturePrngInst)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

@@ -566,6 +566,10 @@ def int_amdgcn_ds_fadd : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
+def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
+>, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics

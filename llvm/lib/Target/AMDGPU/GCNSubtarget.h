@@ -206,7 +206,7 @@ protected:
   bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
-
+  bool HasPrngInst = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
@@ -1218,6 +1218,8 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
