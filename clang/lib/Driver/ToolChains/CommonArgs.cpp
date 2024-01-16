@@ -1200,16 +1200,17 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   // TODO: Find an equivalent of `--whole-archive` for Darwin and AIX.
   if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
       !TC.getTriple().isOSAIX()) {
+    const char *LinkFlag = "-lFortran_main";
     // Adding -lFortran_main with --whole-archive will create an error if the
     // user specifies -lFortran_main explicitly. Remove the user's
     // -lFortran_main arguments to avoid this (making sure -lFortran_main
     // behaves the same as -lFortranRuntime)
-    llvm::erase_if(CmdArgs, [](const char *arg) {
-      return strcmp(arg, "-lFortran_main") == 0;
+    llvm::erase_if(CmdArgs, [LinkFlag](const char *arg) {
+      return strncmp(arg, LinkFlag, strlen(LinkFlag)) == 0;
     });
 
     CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back(LinkFlag);
     CmdArgs.push_back("--no-whole-archive");
     return;
   }
