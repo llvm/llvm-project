@@ -112,14 +112,14 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
           unless(hasCastKind(CK_UserDefinedConversion)),
           unless(cxxFunctionalCastExpr(hasDestinationType(unless(SimpleType)))),
 
-          hasDestinationType(qualType().bind("type2")),
+          hasDestinationType(qualType().bind("dstType")),
           hasSourceExpression(anyOf(
               expr(unless(initListExpr()), unless(BitfieldMemberExpr),
-                   hasType(qualType().bind("type1")))
+                   hasType(qualType().bind("srcType")))
                   .bind("source"),
               initListExpr(unless(hasInit(1, expr())),
                            hasInit(0, expr(unless(BitfieldMemberExpr),
-                                           hasType(qualType().bind("type1")))
+                                           hasType(qualType().bind("srcType")))
                                           .bind("source"))))))
           .bind("cast"),
       this);
@@ -127,14 +127,14 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *SourceExpr = Result.Nodes.getNodeAs<Expr>("source");
-  auto TypeD = *Result.Nodes.getNodeAs<QualType>("type2");
+  auto TypeD = *Result.Nodes.getNodeAs<QualType>("dstType");
 
   if (SourceExpr->getValueKind() == VK_LValue &&
       TypeD.getCanonicalType()->isRValueReferenceType())
     return;
 
   const auto TypeS =
-      Result.Nodes.getNodeAs<QualType>("type1")->getNonReferenceType();
+      Result.Nodes.getNodeAs<QualType>("srcType")->getNonReferenceType();
   TypeD = TypeD.getNonReferenceType();
 
   if (!areTypesEquals(TypeS, TypeD, IgnoreTypeAliases))
