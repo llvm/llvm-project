@@ -28,6 +28,7 @@ def ThreadIdClass : dxil_class<"ThreadId">;
 def GroupIdClass : dxil_class<"GroupId">;
 
 def binary_uint : dxil_category<"Binary uint">;
+def binary_int : dxil_category<"Binary int">;
 def unary_float : dxil_category<"Unary float">;
 def ComputeID : dxil_category<"Compute/Mesh/Amplification shader">;
 
@@ -86,31 +87,78 @@ class dxil_op<string name, int code_id, dxil_class code_class, dxil_category op_
   let stats_group = _stats_group;
 }
 
-// The intrinsic which map directly to this dxil op.
+// Intrinsic that maps directly to this dxil op.
 class dxil_map_intrinsic<Intrinsic llvm_intrinsic_> { Intrinsic llvm_intrinsic = llvm_intrinsic_; }
 
-def Sin : dxil_op<"Sin", 13, Unary, unary_float, "returns sine(theta) for theta in radians.",
-  "half;float;", "rn",
-  [
-    dxil_param<0, "$o", "", "operation result">,
-    dxil_param<1, "i32", "opcode", "DXIL opcode">,
-    dxil_param<2, "$o", "value", "input value">
-  ],
-  ["floats"]>,
-  dxil_map_intrinsic<int_sin>;
+def Fabs : dxil_op<"Fabs", 6, Unary, unary_float,
+                              "returns the absolute value of the input value.", 
+                              "half;float;double;", "rn",
+                              [
+                               dxil_param<0, "$o", "", "operation result">,
+                               dxil_param<1, "i32", "opcode", "DXIL opcode">,
+                               dxil_param<2, "$o", "value", "input value">
+                              ], ["floats"]>,
+                              dxil_map_intrinsic<int_fabs>;
+def Cos : dxil_op<"Cos", 12, Unary, unary_float,
+                              "returns cosine(theta) for theta in radians.", 
+                              "half;float;double;", "rn",
+                              [
+                               dxil_param<0, "$o", "", "operation result">,
+                               dxil_param<1, "i32", "opcode", "DXIL opcode">,
+                               dxil_param<2, "$o", "value", "input value">
+                              ], ["floats"]>,
+                              dxil_map_intrinsic<int_cos>;
+def Sin : dxil_op<"Sin", 13, Unary, unary_float,
+                              "returns sine(theta) for theta in radians.", 
+                              "half;float;double;", "rn",
+                              [
+                               dxil_param<0, "$o", "", "operation result">,
+                               dxil_param<1, "i32", "opcode", "DXIL opcode">,
+                               dxil_param<2, "$o", "value", "input value">
+                              ], ["floats"]>,
+                              dxil_map_intrinsic<int_sin>;
 
-def UMax :dxil_op< "UMax", 39,  Binary,  binary_uint, "unsigned integer maximum. UMax(a,b) = a > b ? a : b",
-    "i16;i32;i64;",  "rn",
-  [
-    dxil_param<0,  "$o",  "",  "operation result">,
-    dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
-    dxil_param<2,  "$o",  "a",  "input value">,
-    dxil_param<3,  "$o",  "b",  "input value">
-  ],
-  ["uints"]>,
-  dxil_map_intrinsic<int_umax>;
+def Round_ni : dxil_op<"Round_ni", 27, Unary, unary_float,
+                         "rounds towards -INF, commonly known as floor()", "float;double;",
+                         "rn",
+                         [
+                           dxil_param<0, "$o", "", "operation result">,
+                           dxil_param<1, "i32", "opcode", "DXIL opcode">,
+                           dxil_param<2, "$o", "value", "input value">
+                         ], ["floats"]>,
+                         dxil_map_intrinsic<int_floor>;
 
-def ThreadId :dxil_op< "ThreadId", 93,  ThreadIdClass, ComputeID, "reads the thread ID", "i32;",  "rn",
+def Round_pi : dxil_op<"Round_pi", 28, Unary, unary_float,
+                         "return natural log (log base e)", "float;double;", "rn",
+                         [
+                          dxil_param<0, "$o", "", "operation result">,
+                          dxil_param<1, "i32", "opcode", "DXIL opcode">,
+                          dxil_param<2, "$o", "value", "input value">
+                         ], ["floats"]>,
+                         dxil_map_intrinsic<int_ceil>;
+
+def IMax : dxil_op<"IMax", 37, Binary, binary_int,
+                               "IMax(a,b) returns a if a > b, else b", "i32;i64;", "rn",
+                                [
+                                  dxil_param<0,  "$o",  "",  "operation result">,
+                                  dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
+                                  dxil_param<2,  "$o",  "a",  "input value">,
+                                  dxil_param<3,  "$o",  "b",  "input value">
+                                ], ["ints"]>,
+                                dxil_map_intrinsic<int_smax>;
+
+def UMax : dxil_op<"UMax", 39, Binary, binary_uint,
+                               "unsigned integer maximum. UMax(a,b) = a > b ? a : b", "i32;i64;", "rn",
+                               [
+                                  dxil_param<0,  "$o",  "",  "operation result">,
+                                  dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
+                                  dxil_param<2,  "$o",  "a",  "input value">,
+                                  dxil_param<3,  "$o",  "b",  "input value">
+                                ], ["uints"]>,
+                               dxil_map_intrinsic<int_umax>;
+
+// ThreadID and GroupId
+def ThreadId : dxil_op< "ThreadId", 93,  ThreadIdClass, ComputeID, "reads the thread ID", "i32;",  "rn",
   [
     dxil_param<0,  "i32",  "",  "thread ID component">,
     dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,

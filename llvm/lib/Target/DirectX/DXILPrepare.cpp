@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file contains pases and utilities to convert a modern LLVM
+/// \file This file contains passes and utilities to convert a modern LLVM
 /// module into a module compatible with the LLVM 3.7-based DirectX Intermediate
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
@@ -119,17 +119,8 @@ public:
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
-            continue;
-          }
-
-          // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
-          // unmodified as it reserves instruction IDs during contruction.
+          // Emitting NoOp bitcast instructions allows the ValueEnumerator to be
+          // unmodified as it reserves instruction IDs during construction.
           if (auto LI = dyn_cast<LoadInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, LI->getPointerOperand(),

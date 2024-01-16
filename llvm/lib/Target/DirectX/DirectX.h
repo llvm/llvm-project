@@ -28,6 +28,12 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
 
+/// Initializer for DXIL strength reduce
+void initializeDXILStrengthReducePass(PassRegistry &);
+
+/// Pass to reduce strength during lowering into DXIL-compatable modules
+ModulePass *createDXILStrengthReducePass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
