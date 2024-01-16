@@ -3476,8 +3476,10 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
     int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
     if (MemRefIdx >= 0)
       return MemRefIdx + X86II::getOperandBias(Desc);
+#ifdef EXPENSIVE_CHECKS
     assert(none_of(Desc.operands(), isMemOp) &&
            "Got false negative from X86II::getMemoryOperandNo()!");
+#endif
     return -1;
   }
 
@@ -3485,8 +3487,10 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // operands (slow case). An instruction cannot have a memory reference if it
   // has fewer than AddrNumOperands (= 5) explicit operands.
   if (Desc.getNumOperands() < X86::AddrNumOperands) {
+#ifdef EXPENSIVE_CHECKS
     assert(none_of(Desc.operands(), isMemOp) &&
            "Expected no operands to have OPERAND_MEMORY type!");
+#endif
     return -1;
   }
 
@@ -3495,11 +3499,13 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // OPERAND_MEMORY type.
   for (unsigned i = 0; i <= Desc.getNumOperands() - X86::AddrNumOperands; ++i) {
     if (Desc.operands()[i].OperandType == MCOI::OPERAND_MEMORY) {
+#ifdef EXPENSIVE_CHECKS
       assert(std::all_of(Desc.operands().begin() + i,
                          Desc.operands().begin() + i + X86::AddrNumOperands,
                          isMemOp) &&
              "Expected all five operands in the memory reference to have "
              "OPERAND_MEMORY type!");
+#endif
       return i;
     }
   }
