@@ -1060,6 +1060,8 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+- CodeGen of RV32E/RV64E was supported experimentally.
+- CodeGen of ilp32e/lp64e was supported experimentally.
 
 - Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
   for RV64.
@@ -1121,6 +1123,9 @@ AST Matchers
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
 - Add ``macroQualifiedType``.
+- Add ``CXXFoldExpr`` related matchers: ``cxxFoldExpr``, ``callee``,
+  ``hasInit``, ``hasPattern``, ``isRightFold``, ``isLeftFold``,
+  ``isUnaryFold``, ``isBinaryFold``, ``hasOperator``, ``hasLHS``, ``hasRHS``, ``hasEitherOperand``.
 
 clang-format
 ------------

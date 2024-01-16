@@ -2045,13 +2045,13 @@ let TargetGuard = "sve2p1|sme2" in {
   defm STNT1 : MultiVecStore<"stnt1">;
 }
 
-let TargetGuard = "sve2p1" in {
-def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [], []>;
-def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [], []>;
-def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [], []>;
-def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
-def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
-def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [], [ImmCheck<3, ImmCheck0_3>]>;
+let TargetGuard = "sve2p1|sme2" in {
+def SVDOT_X2_S : SInst<"svdot[_{d}_{2}]", "ddhh", "i",  MergeNone, "aarch64_sve_sdot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_X2_U : SInst<"svdot[_{d}_{2}]", "ddhh", "Ui", MergeNone, "aarch64_sve_udot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_X2_F : SInst<"svdot[_{d}_{2}]", "ddhh", "f",  MergeNone, "aarch64_sve_fdot_x2", [IsStreamingOrSVE2p1], []>;
+def SVDOT_LANE_X2_S : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "i",  MergeNone, "aarch64_sve_sdot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_U : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "Ui", MergeNone, "aarch64_sve_udot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
+def SVDOT_LANE_X2_F : SInst<"svdot_lane[_{d}_{2}]", "ddhhi", "f",  MergeNone, "aarch64_sve_fdot_lane_x2", [IsStreamingOrSVE2p1], [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
