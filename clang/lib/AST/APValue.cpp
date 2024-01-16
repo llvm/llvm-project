@@ -70,11 +70,13 @@ QualType APValue::LValueBase::getType() const {
     // constexpr int *p = &arr[1]; // valid?
     //
     // For now, we take the most complete type we can find.
-    for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl()); Redecl;
+    for (auto *Redecl = cast<ValueDecl>(D->getMostRecentDecl());
+         Redecl && !Redecl->isInvalidDecl();
          Redecl = cast_or_null<ValueDecl>(Redecl->getPreviousDecl())) {
       QualType T = Redecl->getType();
       if (!T->isIncompleteArrayType())
         return T;
+      D = Redecl;
     }
     return D->getType();
   }
