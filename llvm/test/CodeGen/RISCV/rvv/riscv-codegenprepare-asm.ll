@@ -44,21 +44,21 @@ define float @reduce_fadd(ptr nocapture noundef readonly %f, i32 noundef signext
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    and a2, a2, s3
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    slli a3, s1, 1
-; CHECK-NEXT:    fmv.w.x fa0, zero
-; CHECK-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    mv a4, s2
 ; CHECK-NEXT:    mv a5, a2
 ; CHECK-NEXT:  .LBB0_5: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v8, (a4)
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    vfredosum.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vl2re32.v v10, (a4)
+; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfredosum.vs v8, v10, v8
 ; CHECK-NEXT:    sub a5, a5, s0
 ; CHECK-NEXT:    add a4, a4, a3
 ; CHECK-NEXT:    bnez a5, .LBB0_5
 ; CHECK-NEXT:  # %bb.6: # %middle.block
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    beq a2, a1, .LBB0_9
 ; CHECK-NEXT:  .LBB0_7: # %for.body.preheader7
 ; CHECK-NEXT:    slli a2, a2, 2
