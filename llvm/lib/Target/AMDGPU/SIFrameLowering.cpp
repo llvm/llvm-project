@@ -773,7 +773,8 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
           .addImm(21)
           .addReg(Rsrc03);
     }
-  } else if (ST.isMesaGfxShader(Fn) || !PreloadedScratchRsrcReg) {
+  } else if (ST.isMesaGfxShader(Fn) ||
+             (!HasFlatScratchInit && !PreloadedScratchRsrcReg)) {
     assert(!ST.isAmdHsaOrMesa(Fn));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
