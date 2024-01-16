@@ -2792,18 +2792,21 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(2))));
 
     // DIR *opendir(const char *name);
-    // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "opendir", Signature(ArgTypes{ConstCharPtrTy}, RetType{DirPtrTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     // DIR *fdopendir(int fd);
-    // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap("fdopendir",
-                            Signature(ArgTypes{IntTy}, RetType{DirPtrTy}),
-                            Summary(NoEvalCall)
-                                .ArgConstraint(ArgumentCondition(
-                                    0, WithinRange, Range(0, IntMax))));
+    addToFunctionSummaryMap(
+        "fdopendir", Signature(ArgTypes{IntTy}, RetType{DirPtrTy}),
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(
+                ArgumentCondition(0, WithinRange, Range(0, IntMax))));
 
     // int isatty(int fildes);
     addToFunctionSummaryMap(
