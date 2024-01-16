@@ -152,6 +152,9 @@ class Directive<string d> {
   // List of clauses that are required.
   list<VersionedClause> requiredClauses = [];
 
+  // List of names of leaf constituent directives.
+  list<string> leafs = [];
+
   // Set directive used by default when unknown.
   bit isDefault = false;
 }
