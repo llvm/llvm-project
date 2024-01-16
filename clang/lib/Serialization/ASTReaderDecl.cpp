@@ -910,7 +910,7 @@ void ASTDeclReader::VisitEnumConstantDecl(EnumConstantDecl *ECD) {
   VisitValueDecl(ECD);
   if (Record.readInt())
     ECD->setInitExpr(Record.readExpr());
-  ECD->setInitVal(Record.readAPSInt());
+  ECD->setInitVal(Reader.getContext(), Record.readAPSInt());
   mergeMergeable(ECD);
 }
 
