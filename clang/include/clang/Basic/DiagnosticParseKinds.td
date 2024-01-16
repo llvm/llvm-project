@@ -1368,6 +1368,12 @@ def err_acc_invalid_default_clause_kind
     : Error<"invalid value for 'default' clause; expected 'present' or 'none'">;
 def err_acc_invalid_tag_kind
     : Error<"invalid tag %0 on '%1' %select{directive|clause}2">;
+def err_acc_expected_reduction_operator
+    : Error<"missing reduction operator, expected '+', '*', 'max', 'min', '&', "
+            "'|', '^', '&&', or '||', follwed by a ':'">;
+def err_acc_invalid_reduction_operator
+    : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
+            "'&', '|', '^', '&&', or '||'">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
