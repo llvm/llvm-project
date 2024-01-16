@@ -2,9 +2,9 @@
 ## and SymbolType.  If either SymbolAlignment or SymbolType are specified
 ## along with SymbolAligmentAndType, report an error.
 
-# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01DF -DSectionOrLength=SectionOrLength -o %t32
+# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01DF -o %t32
 # RUN: obj2yaml %t32 | FileCheck %s --check-prefix=CHECK
-# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01F7 -DSectionOrLength=SectionOrLengthLo -o %t64
+# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01F7 -o %t64
 # RUN: obj2yaml %t64 | FileCheck %s --check-prefix=CHECK
 
 # CHECK:        --- !XCOFF
@@ -34,43 +34,30 @@
 FileHeader:
   MagicNumber: [[MAGIC]]
 Symbols:
-  - StorageClass: C_FILE
-    AuxEntries:
-      - Type: AUX_FILE
-        FileNameOrString: FileName
-        FileStringType:   XFT_CD
   - StorageClass: C_EXT
     Name: .fcn1
     AuxEntries:
       - Type: AUX_CSECT
         SymbolAlignment: 4
-        [[SectionOrLength]]: 4
   - StorageClass: C_EXT
     Name: .fcn2
     AuxEntries:
       - Type: AUX_CSECT
         SymbolAlignment: 2
         SymbolType: XTY_SD
-        [[SectionOrLength]]: 4
   - StorageClass:    C_EXT
     Name: .fcn3
     AuxEntries:
       - Type: AUX_CSECT
         SymbolType: XTY_SD
-        [[SectionOrLength]]: 4
 
 ## Ensure that SymbolAlignment is in range.
 # RUN: not yaml2obj %s --docnum=2 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR1
-# ERROR1: Symbol alignment must be less than 32
+# ERROR1: symbol alignment must be less than 32
 --- !XCOFF
 FileHeader:
   MagicNumber:     0x1F7
 Symbols:
-  - StorageClass:    C_FILE
-    AuxEntries:
-      - Type:             AUX_FILE
-        FileNameOrString: FileName
-        FileStringType:   XFT_CD
   - StorageClass:    C_EXT
     Name:               .fcn1
     AuxEntries:
@@ -87,11 +74,6 @@ Symbols:
 FileHeader:
   MagicNumber: 0x1DF
 Symbols:
-  - StorageClass: C_FILE
-    AuxEntries:
-      - Type: AUX_FILE
-        FileNameOrString: FileName
-        FileStringType:   XFT_CD
   - StorageClass: C_EXT
     Name: .fcn1
     AuxEntries:
@@ -105,11 +87,6 @@ Symbols:
 FileHeader:
   MagicNumber: 0x1DF
 Symbols:
-  - StorageClass: C_FILE
-    AuxEntries:
-      - Type: AUX_FILE
-        FileNameOrString: FileName
-        FileStringType:   XFT_CD
   - StorageClass: C_EXT
     Name: .fcn1
     AuxEntries:
@@ -124,11 +101,6 @@ Symbols:
 FileHeader:
   MagicNumber: 0x1F7
 Symbols:
-  - StorageClass: C_FILE
-    AuxEntries:
-      - Type: AUX_FILE
-        FileNameOrString: FileName
-        FileStringType:   XFT_CD
   - StorageClass: C_EXT
   - StorageClass: C_EXT
     Name: .fcn2
