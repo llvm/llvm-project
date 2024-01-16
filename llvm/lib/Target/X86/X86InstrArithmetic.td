@@ -1322,12 +1322,12 @@ multiclass AndN<X86TypeInfo t, SDPatternOperator node, string suffix = ""> {
   def rr#suffix : ITy<0xF2, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.RegClass:$src2), "andn",
                       binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>,
-                     T8;
+                  T8, NoCD8;
   def rm#suffix : ITy<0xF2, MRMSrcMem, t, (outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2), "andn",
                        binop_ndd_args, andn_rm_p>, VVVV,
                        Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>,
-                       T8;
+                  T8, NoCD8;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
