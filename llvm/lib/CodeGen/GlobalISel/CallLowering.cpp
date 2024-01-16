@@ -485,8 +485,6 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     if (NumElts == Regs.size())
       BuildVec = B.buildBuildVector(BVType, Regs).getReg(0);
     else {
-      SmallVector<Register, 0> BVRegs(NumElts);
-
       // Vector elements are packed in the inputs.
       // e.g. we have a <4 x s16> but 2 x s32 in regs.
       assert(NumElts > Regs.size());
@@ -500,6 +498,8 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       unsigned EltPerReg =
           (SrcEltTy.getSizeInBits() / OriginalEltTy.getSizeInBits());
 
+      SmallVector<Register, 0> BVRegs;
+      BVRegs.reserve(Regs.size() * EltPerReg);
       for (Register R : Regs) {
         auto Unmerge = B.buildUnmerge(OriginalEltTy, R);
         for (unsigned K = 0; K < EltPerReg; ++K)
