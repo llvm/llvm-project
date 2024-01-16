@@ -3464,11 +3464,9 @@ bool X86::isX87Instruction(MachineInstr &MI) {
 }
 
 int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
-#ifdef EXPENSIVE_CHECKS
-  const auto isMemOp = [](const MCOperandInfo &OpInfo) -> bool {
+  auto IsMemOp = [](const MCOperandInfo &OpInfo) {
     return OpInfo.OperandType == MCOI::OPERAND_MEMORY;
   };
-#endif
 
   const MCInstrDesc &Desc = MI.getDesc();
 
@@ -3479,7 +3477,7 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
     if (MemRefIdx >= 0)
       return MemRefIdx + X86II::getOperandBias(Desc);
 #ifdef EXPENSIVE_CHECKS
-    assert(none_of(Desc.operands(), isMemOp) &&
+    assert(none_of(Desc.operands(), IsMemOp) &&
            "Got false negative from X86II::getMemoryOperandNo()!");
 #endif
     return -1;
@@ -3488,9 +3486,10 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // Otherwise, handle pseudo instructions by examining the type of their
   // operands (slow case). An instruction cannot have a memory reference if it
   // has fewer than AddrNumOperands (= 5) explicit operands.
-  if (Desc.getNumOperands() < X86::AddrNumOperands) {
+  unsigned NumOps = Desc.getNumOperands();
+  if (NumOps < X86::AddrNumOperands) {
 #ifdef EXPENSIVE_CHECKS
-    assert(none_of(Desc.operands(), isMemOp) &&
+    assert(none_of(Desc.operands(), IsMemOp) &&
            "Expected no operands to have OPERAND_MEMORY type!");
 #endif
     return -1;
@@ -3499,16 +3498,16 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // The first operand with type OPERAND_MEMORY indicates the start of a memory
   // reference. We expect the following AddrNumOperand-1 operands to also have
   // OPERAND_MEMORY type.
-  for (unsigned i = 0; i <= Desc.getNumOperands() - X86::AddrNumOperands; ++i) {
-    if (Desc.operands()[i].OperandType == MCOI::OPERAND_MEMORY) {
+  for (unsigned I = 0, E = NumOps - X86::AddrNumOperands; I != E; ++I) {
+    if (IsMemOp(Desc.operands()[I])) {
 #ifdef EXPENSIVE_CHECKS
-      assert(std::all_of(Desc.operands().begin() + i,
-                         Desc.operands().begin() + i + X86::AddrNumOperands,
-                         isMemOp) &&
+      assert(std::all_of(Desc.operands().begin() + I,
+                         Desc.operands().begin() + I + X86::AddrNumOperands,
+                         IsMemOp) &&
              "Expected all five operands in the memory reference to have "
              "OPERAND_MEMORY type!");
 #endif
-      return i;
+      return I;
     }
   }
 
