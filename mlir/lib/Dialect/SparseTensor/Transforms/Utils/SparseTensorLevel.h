@@ -114,11 +114,12 @@ public:
   virtual Value upperBound(OpBuilder &b, Location l) const = 0;
 
   // Serialize and deserialize the current status to/from a set of values. The
-  // ValueRange should contain values that specifies the postion and loop bound.
+  // ValueRange should contain values that specifies the current postion and
+  // loop bound.
   //
   // Not every type of iterator supports the operations, e.g., non-empty
   // subsection iterator does not because the the number of non-empty
-  // subsections can not be determined in advance.
+  // subsections can not be determined easily.
   //
   // NOTE: All the values should have index type.
   virtual SmallVector<Value> serialize() const {

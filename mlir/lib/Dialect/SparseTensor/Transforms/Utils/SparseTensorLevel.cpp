@@ -394,6 +394,10 @@ public:
   const SparseTensorLevel &stl;
 };
 
+//
+// A filter iterator wrapped from another iterator. The filter iterator update
+// the wrapped iterator *in-place*.
+//
 class FilterIterator : public SparseIterator {
   // Coorindate translation between crd loaded from the wrap iterator and the
   // filter iterator.
@@ -411,6 +415,8 @@ class FilterIterator : public SparseIterator {
   Value genShouldFilter(OpBuilder &b, Location l);
 
 public:
+  // TODO: avoid unnessary check when offset == 0 and/or when stride == 1 and/or
+  // when crd always < size.
   FilterIterator(std::unique_ptr<SparseIterator> &&wrap, Value offset,
                  Value stride, Value size)
       : SparseIterator(IterKind::kFilter, *wrap), offset(offset),
@@ -548,9 +554,10 @@ public:
     return !parent || !llvm::isa<NonEmptySubSectIterator>(parent);
   }
 
-  ValueRange genSubSectTraverseTillRoot(OpBuilder &b, Location l,
-                                        ValueRange reduc,
-                                        TraverseBuilder builder) const;
+  // Generate code that inflate the current subsection tree till the current
+  // level such that every leaf node is visited.
+  ValueRange inflateSubSectTree(OpBuilder &b, Location l, ValueRange reduc,
+                                TraverseBuilder builder) const;
 
   bool randomAccessible() const override {
     return delegate->randomAccessible();
@@ -861,24 +868,35 @@ ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
   assert(!randomAccessible());
   // Generates
   //
-  // wrap ++;
-  // while !it.end() && !legit(*it)
+  // bool isFirst = true;
+  // while !it.end() && (!legit(*it) || isFirst)
   //   wrap ++;
-  wrap->forward(b, l);
+  //   isFirst = false;
+  //
+  // We do not hoist the first `wrap++` outside the loop but use a `isFirst`
+  // flag here because `wrap++` might have a complex implementation (e.g., to
+  // forward a subsection).
+  Value isFirst = constantI1(b, l, true);
+
+  SmallVector<Value> whileArgs(getItVals().begin(), getItVals().end());
+  whileArgs.push_back(isFirst);
+
   auto whileOp = b.create<scf::WhileOp>(
-      l, getItVals().getTypes(), getItVals(),
+      l, ValueRange(whileArgs).getTypes(), whileArgs,
       /*beforeBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
-        linkNewScope(ivs);
+        ValueRange isFirst = linkNewScope(ivs);
+        assert(isFirst.size() == 1);
         ValueRange cont =
             genWhenInBound(b, l, *wrap, C_FALSE,
-                           [this](OpBuilder &b, Location l,
-                                  Value wrapCrd) -> scf::ValueVector {
+                           [this, isFirst](OpBuilder &b, Location l,
+                                           Value wrapCrd) -> scf::ValueVector {
                              // crd < size && !legit();
                              Value notLegit =
                                  genCrdNotLegitPredicate(b, l, wrapCrd);
                              Value crd = fromWrapCrd(b, l, wrapCrd);
                              Value ret = ANDI(CMPI(ult, crd, size), notLegit);
+                             ret = ORI(ret, isFirst.front());
                              return {ret};
                            });
         b.create<scf::ConditionOp>(l, cont.front(), ivs);
@@ -887,7 +905,9 @@ ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         linkNewScope(ivs);
         wrap->forward(b, l);
-        YIELD(getItVals());
+        SmallVector<Value> yieldVals(getItVals().begin(), getItVals().end());
+        yieldVals.push_back(constantI1(b, l, false));
+        YIELD(yieldVals);
       });
 
   b.setInsertionPointAfter(whileOp);
@@ -935,7 +955,7 @@ ValueRange SubSectIterHelper::forward(OpBuilder &b, Location l) {
   return wrap.forward(b, l);
 }
 
-ValueRange NonEmptySubSectIterator::genSubSectTraverseTillRoot(
+ValueRange NonEmptySubSectIterator::inflateSubSectTree(
     OpBuilder &b, Location l, ValueRange reduc, TraverseBuilder builder) const {
   // Set up the helper to help traverse a sparse subsection.
   SubSectIterHelper helper(*this);
@@ -1009,7 +1029,7 @@ ValueRange NonEmptySubSectIterator::genSubSectTraverseTillRoot(
   // Else, this is not the root, recurse until root.
   auto *p = llvm::cast<NonEmptySubSectIterator>(parent);
   assert(p->lvl + 1 == lvl);
-  return p->genSubSectTraverseTillRoot(b, l, reduc, visitDenseSubSect);
+  return p->inflateSubSectTree(b, l, reduc, visitDenseSubSect);
 }
 
 void NonEmptySubSectIterator::genInit(OpBuilder &b, Location l,
@@ -1017,21 +1037,22 @@ void NonEmptySubSectIterator::genInit(OpBuilder &b, Location l,
   Value c0 = C_IDX(0);
   if (!isSubSectRoot()) {
     assert(parent->lvl + 1 == lvl);
-    // We can not call wrap->genInit() here to initialize the wrapped iterator,
-    // because the parent of the curent iterator is still unresolved.
     if (randomAccessible()) {
+      // We can not call wrap->genInit() here to initialize the wrapped
+      // iterator, because the parent of the curent iterator is still
+      // unresolved.
       seek({/*minCrd=*/c0, /*offset=*/c0, /*notEnd=*/C_TRUE});
       return;
     }
 
     auto *p = cast<NonEmptySubSectIterator>(parent);
-
     SmallVector<Value, 3> reduc = {
         C_IDX(-1), // minCrd (max signless integer)
         c0,        // tupleId
     };
 
-    ValueRange result = p->genSubSectTraverseTillRoot(
+    // Expand the subsection tree from the parent level to the current level.
+    ValueRange result = p->inflateSubSectTree(
         b, l, reduc,
         [this](OpBuilder &b, Location l, const SparseIterator *parent,
                ValueRange reduc) -> scf::ValueVector {
@@ -1071,6 +1092,8 @@ void NonEmptySubSectIterator::genInit(OpBuilder &b, Location l,
   // to one node.
   assert(isSubSectRoot());
 
+  // Initialize the position, the position marks the *lower bound* of the
+  // subRange. The higher bound is determined by the size of the subsection.
   delegate->genInit(b, l, parent);
   if (randomAccessible()) {
     seek({/*minCrd=*/c0, /*offset=*/c0, /*notEnd=*/C_TRUE});
@@ -1251,19 +1274,45 @@ sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
   return std::make_unique<FilterIterator>(std::move(sit), offset, stride, size);
 }
 
+template <typename IterType>
+static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
+  auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
+  if (filter && llvm::isa<IterType>(filter->wrap.get())) {
+    return filter->wrap.get();
+  }
+  return it;
+}
+template <typename IterType>
+static const IterType *unwrapFilter(const SparseIterator *it) {
+  auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
+  if (filter) {
+    return llvm::cast<IterType>(filter->wrap.get());
+  }
+  return llvm::cast<IterType>(it);
+}
+
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
     OpBuilder &b, Location l, const SparseIterator *parent,
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
-  return std::make_unique<NonEmptySubSectIterator>(
-      b, l, parent, std::move(delegate), size, stride);
+
+  // Try unwrap the NonEmptySubSectIterator from a filter parent.
+  parent = tryUnwrapFilter<NonEmptySubSectIterator>(parent);
+  auto it = std::make_unique<NonEmptySubSectIterator>(
+      b, l, parent, std::move(delegate), size, 1);
+
+  if (stride != 1)
+    return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
+                                            C_IDX(stride), /*size=*/C_IDX(-1));
+  return it;
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeTraverseSubSectIterator(
-    const SparseIterator &subsectIter, const SparseIterator &parent,
+    const SparseIterator &subSectIter, const SparseIterator &parent,
     std::unique_ptr<SparseIterator> &&wrap, Value size, unsigned stride) {
-  return std::make_unique<SubSectIterator>(
-      llvm::cast<NonEmptySubSectIterator>(subsectIter), parent, std::move(wrap),
-      size, stride);
+  // This must be a subsection iterator or a filtered subsection iterator.
+  auto &subSect = *unwrapFilter<NonEmptySubSectIterator>(&subSectIter);
+  return std::make_unique<SubSectIterator>(subSect, parent, std::move(wrap),
+                                           size, stride);
 }
 
 #undef CMPI
