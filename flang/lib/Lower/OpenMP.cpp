@@ -110,6 +110,33 @@ static void gatherFuncAndVarSyms(
   }
 }
 
+static Fortran::lower::pft::Evaluation *
+getCollapsedLoopEval(Fortran::lower::pft::Evaluation &eval, int collapseValue) {
+  // Return the Evaluation of the innermost collapsed loop.
+  if (collapseValue == 0)
+    return &eval;
+
+  Fortran::lower::pft::Evaluation *curEval = &eval.getFirstNestedEvaluation();
+  for (int i = 1; i < collapseValue; i++) {
+    // The nested evaluations should be DoConstructs (i.e. they should form
+    // a loop nest). Each DoConstruct is a tuple <NonLabelDoStmt, Block,
+    // EndDoStmt>.
+    assert(curEval->isA<Fortran::parser::DoConstruct>());
+    curEval = &*std::next(curEval->getNestedEvaluations().begin());
+  }
+  return curEval;
+}
+
+static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
+                                 Fortran::lower::pft::Evaluation &eval,
+                                 int collapseValue = 0) {
+  Fortran::lower::pft::Evaluation *curEval =
+      collapseValue == 0 ? &eval : getCollapsedLoopEval(eval, collapseValue);
+
+  for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+    converter.genEval(e);
+}
+
 //===----------------------------------------------------------------------===//
 // DataSharingProcessor
 //===----------------------------------------------------------------------===//
@@ -2353,6 +2380,18 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
       procBindKindAttr);
 }
 
+static mlir::omp::SectionOp
+genSectionOp(Fortran::lower::AbstractConverter &converter,
+             Fortran::lower::pft::Evaluation &eval,
+             mlir::Location currentLocation,
+             const Fortran::parser::OmpClauseList &sectionsClauseList) {
+  // Currently only private/firstprivate clause is handled, and
+  // all privatization is done within `omp.section` operations.
+  return genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
+                                             /*outerCombined=*/false,
+                                             &sectionsClauseList);
+}
+
 static mlir::omp::SingleOp
 genSingleOp(Fortran::lower::AbstractConverter &converter,
             Fortran::lower::pft::Evaluation &eval,
@@ -2944,8 +2983,9 @@ genOmpFlush(Fortran::lower::AbstractConverter &converter,
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::pft::Evaluation &eval,
+       Fortran::lower::SymMap &symTable,
        Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPStandaloneConstruct &standaloneConstruct) {
   std::visit(
       Fortran::common::visitors{
@@ -3034,6 +3074,9 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   createBodyOfOp<mlir::omp::SimdLoopOp>(simdLoopOp, converter, loc, eval,
                                         &loopOpClauseList, iv,
                                         /*outer=*/false, &dsp);
+
+  genNestedEvaluations(converter, eval,
+                       Fortran::lower::getCollapseValue(loopOpClauseList));
 }
 
 static void createWsLoop(Fortran::lower::AbstractConverter &converter,
@@ -3107,11 +3150,15 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   createBodyOfOp<mlir::omp::WsLoopOp>(wsLoopOp, converter, loc, eval,
                                       &beginClauseList, iv,
                                       /*outer=*/false, &dsp);
+
+  genNestedEvaluations(converter, eval,
+                       Fortran::lower::getCollapseValue(beginClauseList));
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::pft::Evaluation &eval,
+                   Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   const auto &beginLoopDirective =
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
@@ -3179,12 +3226,15 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     createWsLoop(converter, eval, ompDirective, loopOpClauseList, endClauseList,
                  currentLocation);
   }
+
+  genOpenMPReduction(converter, loopOpClauseList);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::pft::Evaluation &eval,
+       Fortran::lower::SymMap &symTable,
        Fortran::semantics::SemanticsContext &semanticsContext,
+       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
   const auto &beginBlockDirective =
       std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t);
@@ -3298,10 +3348,15 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     break;
   }
   }
+
+  genNestedEvaluations(converter, eval);
+  genOpenMPReduction(converter, beginClauseList);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPCriticalConstruct &criticalConstruct) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -3336,36 +3391,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }();
   createBodyOfOp<mlir::omp::CriticalOp>(criticalOp, converter, currentLocation,
                                         eval);
+  genNestedEvaluations(converter, eval);
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
-       Fortran::lower::pft::Evaluation &eval,
-       const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-  mlir::Location currentLocation = converter.getCurrentLocation();
-  const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
-      eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
-  assert(parentOmpConstruct &&
-         "No enclosing parent OpenMPConstruct on SECTION construct");
-  const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
-      std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
-          &parentOmpConstruct->u);
-  assert(sectionsConstruct && "SECTION construct must have parent"
-                              "SECTIONS construct");
-  const Fortran::parser::OmpClauseList &sectionsClauseList =
-      std::get<Fortran::parser::OmpClauseList>(
-          std::get<Fortran::parser::OmpBeginSectionsDirective>(
-              sectionsConstruct->t)
-              .t);
-  // Currently only private/firstprivate clause is handled, and
-  // all privatization is done within `omp.section` operations.
-  genOpWithBody<mlir::omp::SectionOp>(converter, eval, currentLocation,
-                                      /*outerCombined=*/false,
-                                      &sectionsClauseList);
-}
-
-static void
-genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionsConstruct &sectionsConstruct) {
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -3406,10 +3438,25 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                                        /*reduction_vars=*/mlir::ValueRange(),
                                        /*reductions=*/nullptr, allocateOperands,
                                        allocatorOperands, nowaitClauseOperand);
+
+  const auto &sectionBlocks =
+      std::get<Fortran::parser::OmpSectionBlocks>(sectionsConstruct.t);
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto ip = firOpBuilder.saveInsertionPoint();
+  for (const auto &[nblock, neval] :
+       llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
+    symTable.pushScope();
+    genSectionOp(converter, neval, currentLocation, sectionsClauseList);
+    genNestedEvaluations(converter, neval);
+    symTable.popScope();
+    firOpBuilder.restoreInsertionPoint(ip);
+  }
 }
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
   std::visit(
@@ -3453,6 +3500,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
+                   Fortran::semantics::SemanticsContext &semanticsContext,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPDeclareTargetConstruct
                        &declareTargetConstruct) {
@@ -3504,6 +3553,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,
+                   Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semanticsContext,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPConstruct &ompConstruct) {
@@ -3511,17 +3561,20 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       Fortran::common::visitors{
           [&](const Fortran::parser::OpenMPStandaloneConstruct
                   &standaloneConstruct) {
-            genOMP(converter, eval, semanticsContext, standaloneConstruct);
+            genOMP(converter, symTable, semanticsContext, eval,
+                   standaloneConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionsConstruct
                   &sectionsConstruct) {
-            genOMP(converter, eval, sectionsConstruct);
+            genOMP(converter, symTable, semanticsContext, eval,
+                   sectionsConstruct);
           },
           [&](const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
-            genOMP(converter, eval, sectionConstruct);
+            // SECTION constructs are handled as a part of SECTIONS.
+            llvm_unreachable("Unexpected standalone OMP SECTION");
           },
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
-            genOMP(converter, eval, semanticsContext, loopConstruct);
+            genOMP(converter, symTable, semanticsContext, eval, loopConstruct);
           },
           [&](const Fortran::parser::OpenMPDeclarativeAllocate
                   &execAllocConstruct) {
@@ -3536,14 +3589,16 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
             TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
           },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-            genOMP(converter, eval, semanticsContext, blockConstruct);
+            genOMP(converter, symTable, semanticsContext, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
-            genOMP(converter, eval, atomicConstruct);
+            genOMP(converter, symTable, semanticsContext, eval,
+                   atomicConstruct);
           },
           [&](const Fortran::parser::OpenMPCriticalConstruct
                   &criticalConstruct) {
-            genOMP(converter, eval, criticalConstruct);
+            genOMP(converter, symTable, semanticsContext, eval,
+                   criticalConstruct);
           },
       },
       ompConstruct.u);
@@ -3551,6 +3606,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::SymMap &symTable,
+       Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
   std::visit(
@@ -3570,7 +3627,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
           },
           [&](const Fortran::parser::OpenMPDeclareTargetConstruct
                   &declareTargetConstruct) {
-            genOMP(converter, eval, declareTargetConstruct);
+            genOMP(converter, symTable, semanticsContext, eval,
+                   declareTargetConstruct);
           },
           [&](const Fortran::parser::OpenMPRequiresConstruct
                   &requiresConstruct) {
@@ -3607,57 +3665,19 @@ void Fortran::lower::genOpenMPConstruct(
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPConstruct &omp) {
-
   symTable.pushScope();
-  genOMP(converter, semanticsContext, eval, omp);
-
-  const Fortran::parser::OpenMPLoopConstruct *ompLoop =
-      std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
-  const Fortran::parser::OpenMPBlockConstruct *ompBlock =
-      std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
-
-  // If loop is part of an OpenMP Construct then the OpenMP dialect
-  // workshare loop operation has already been created. Only the
-  // body needs to be created here and the do_loop can be skipped.
-  // Skip the number of collapsed loops, which is 1 when there is a
-  // no collapse requested.
-
-  Fortran::lower::pft::Evaluation *curEval = &eval;
-  const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
-  if (ompLoop) {
-    loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
-        std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
-    int64_t collapseValue = Fortran::lower::getCollapseValue(*loopOpClauseList);
-
-    curEval = &curEval->getFirstNestedEvaluation();
-    for (int64_t i = 1; i < collapseValue; i++) {
-      curEval = &*std::next(curEval->getNestedEvaluations().begin());
-    }
-  }
-
-  for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-    converter.genEval(e);
-
-  if (ompLoop) {
-    genOpenMPReduction(converter, *loopOpClauseList);
-  } else if (ompBlock) {
-    const auto &blockStart =
-        std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
-    const auto &blockClauses =
-        std::get<Fortran::parser::OmpClauseList>(blockStart.t);
-    genOpenMPReduction(converter, blockClauses);
-  }
-
+  genOMP(converter, symTable, semanticsContext, eval, omp);
   symTable.popScope();
 }
 
 void Fortran::lower::genOpenMPDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::SymMap &symTable,
+    Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenMPDeclarativeConstruct &omp) {
-  genOMP(converter, eval, omp);
-  for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations())
-    converter.genEval(e);
+  genOMP(converter, symTable, semanticsContext, eval, omp);
+  genNestedEvaluations(converter, eval);
 }
 
 void Fortran::lower::genOpenMPSymbolProperties(

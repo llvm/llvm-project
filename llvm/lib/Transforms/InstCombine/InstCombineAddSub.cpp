@@ -1683,6 +1683,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     }
   }
 
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
+    return R;
+
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
   // computeKnownBits.
@@ -2444,6 +2447,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
           Builder.CreateAnd(Op1, Builder.CreateNot(C)));
     }
   }
+
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
+    return R;
 
   if (Instruction *R = foldSubOfMinMax(I, Builder))
     return R;

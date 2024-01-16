@@ -2380,8 +2380,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (D->hasAttr<ArmLocallyStreamingAttr>())
     B.addAttribute("aarch64_pstate_sm_body");
 
-  if (D->hasAttr<ArmNewZAAttr>())
-    B.addAttribute("aarch64_pstate_za_new");
+  if (auto *Attr = D->getAttr<ArmNewAttr>()) {
+    if (Attr->isNewZA())
+      B.addAttribute("aarch64_pstate_za_new");
+  }
 
   // Track whether we need to add the optnone LLVM attribute,
   // starting with the default for this optimization level.

@@ -799,6 +799,7 @@ def AArch64uminv    : SDNode<"AArch64ISD::UMINV", SDT_AArch64UnaryVec>;
 def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
+def AArch64saddlv   : SDNode<"AArch64ISD::SADDLV", SDT_AArch64uaddlp>;
 
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abdu node:$lhs, node:$rhs),
@@ -6680,17 +6681,25 @@ def : Pat<(v4i32 (AArch64uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op))))),
 def : Pat<(v4i32 (AArch64uaddlv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v8i8 V64:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$Rn), hsub))>;
+multiclass SIMDAcrossLaneLongReductionIntrinsic<string Opc, SDPatternOperator addlv> {
+  def : Pat<(v4i32 (addlv (v8i8 V64:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v4i16 V64:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv4i16v V64:$Rn), ssub))>;
+  def : Pat<(v4i32 (addlv (v4i16 V64:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v16i8 V128:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$Rn), hsub))>;
+  def : Pat<(v4i32 (addlv (v16i8 V128:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v8i16 V128:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$Rn), ssub))>;
+  def : Pat<(v4i32 (addlv (v8i16 V128:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+
+  def : Pat<(v2i64 (addlv (v4i32 V128:$Rn))),
+            (v2i64 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v4i32v") V128:$Rn), dsub))>;
+}
+
+defm : SIMDAcrossLaneLongReductionIntrinsic<"UADDLV", AArch64uaddlv>;
+defm : SIMDAcrossLaneLongReductionIntrinsic<"SADDLV", AArch64saddlv>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.

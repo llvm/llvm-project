@@ -12,7 +12,6 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
-; GCN-NEXT:    .p2align 6
 ; GCN-NEXT:  .LBB0_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
