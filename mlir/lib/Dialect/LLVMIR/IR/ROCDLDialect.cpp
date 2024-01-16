@@ -295,6 +295,14 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+StringRef ROCDLTargetAttr::getTargetTriple() const { return getTriple(); }
+
+StringRef ROCDLTargetAttr::getTargetChip() const { return getChip(); }
+
+std::string ROCDLTargetAttr::getTargetFeatures() const {
+  return getFeatures().str();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
 
