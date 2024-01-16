@@ -102,6 +102,17 @@ end
   in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
   compiler properly scopes these names, violations of these restrictions
   elicit only portability warnings by default.
+* The standard defines the intrinsic functions `MOD` and `MODULO`
+  for real arguments using expressions in terms of `AINT` and `FLOOR`.
+  These definitions yield fairly poor results due to floating-point
+  cancellation, and every Fortran compiler (including this one)
+  uses better algorithms.
+* When an index variable of a `FORALL` or `DO CONCURRENT` is present
+  in the enclosing scope, and the construct does not have an explicit
+  type specification for its index variables, some weird restrictions
+  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
+  compiler properly scopes these names, violations of these restrictions
+  elicit only portability warnings by default.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -460,6 +471,9 @@ end
 * A `SEQUENCE` derived type is required (F'2023 C745) to have
   at least one component.  No compiler enforces this constraint;
   this compiler emits a warning.
+* Many compilers disallow a `VALUE` assumed-length character dummy
+  argument, which has been standard since F'2008.
+  We accept this usage with an optional portability warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
