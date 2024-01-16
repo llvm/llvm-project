@@ -2500,9 +2500,7 @@ def int_amdgcn_flat_atomic_fmax_num   : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmin_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
-def int_amdgcn_flat_atomic_cond_sub_u32   : AMDGPUAtomicRtn<llvm_i32_ty>;
-def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty>;
-def int_amdgcn_ds_cond_sub_u32            : AMDGPUAtomicRtn<llvm_i32_ty>;
+def int_amdgcn_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
