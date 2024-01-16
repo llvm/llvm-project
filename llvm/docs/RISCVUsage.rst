@@ -88,6 +88,7 @@ on support follow.
      ``C``            Supported
      ``D``            Supported
      ``F``            Supported
+     ``E``            Supported (`See note <#riscv-rve-note>`__)
      ``H``            Assembly Support
      ``M``            Supported
      ``Smaia``        Supported
@@ -178,6 +179,11 @@ Assembly Support
 
 Supported
   Fully supported by the compiler.  This includes everything in Assembly Support, along with - if relevant - C language intrinsics for the instructions and pattern matching by the compiler to recognize idiomatic patterns which can be lowered to the associated instructions.
+
+.. _riscv-rve-note:
+
+``E``
+  Support of RV32E/RV64E and ilp32e/lp64e ABIs are experimental. To be compatible with the implementation of ilp32e in GCC, we don't use aligned registers to pass variadic arguments. Furthermore, we set the stack alignment to 4 bytes for types with length of 2*XLEN.
 
 .. _riscv-scalar-crypto-note1:
 

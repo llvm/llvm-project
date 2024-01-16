@@ -27,6 +27,21 @@
 
 using namespace llvm;
 
+static Align getABIStackAlignment(RISCVABI::ABI ABI) {
+  if (ABI == RISCVABI::ABI_ILP32E)
+    return Align(4);
+  if (ABI == RISCVABI::ABI_LP64E)
+    return Align(8);
+  return Align(16);
+}
+
+RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
+    : TargetFrameLowering(StackGrowsDown,
+                          getABIStackAlignment(STI.getTargetABI()),
+                          /*LocalAreaOffset=*/0,
+                          /*TransientStackAlignment=*/Align(16)),
+      STI(STI) {}
+
 static const Register AllPopRegs[] = {
     RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
     RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
@@ -497,9 +512,11 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // The following calculates the correct offset knowing the number of callee
   // saved registers spilt by the two methods.
   if (int LibCallRegs = getLibCallID(MF, MFI.getCalleeSavedInfo()) + 1) {
-    // Calculate the size of the frame managed by the libcall. The libcalls are
-    // implemented such that the stack will always be 16 byte aligned.
-    unsigned LibCallFrameSize = alignTo((STI.getXLen() / 8) * LibCallRegs, 16);
+    // Calculate the size of the frame managed by the libcall. The stack
+    // alignment of these libcalls should be the same as how we set it in
+    // getABIStackAlignment.
+    unsigned LibCallFrameSize =
+        alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     RVFI->setLibCallStackSize(LibCallFrameSize);
   }
 
@@ -974,6 +991,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // unconditionally save all Caller-saved registers and
   // all FP registers, regardless whether they are used.
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   if (MF.getFunction().hasFnAttribute("interrupt") && MFI.hasCalls()) {
 
@@ -985,9 +1003,20 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     };
 
     for (auto Reg : CSRegs)
-      SavedRegs.set(Reg);
+      // Only save x0-x15 for RVE.
+      if (Reg < RISCV::X16 || !Subtarget.isRVE())
+        SavedRegs.set(Reg);
 
-    if (MF.getSubtarget<RISCVSubtarget>().hasStdExtF()) {
+    // According to psABI, if ilp32e/lp64e ABIs are used with an ISA that
+    // has any of the registers x16-x31 and f0-f31, then these registers are
+    // considered temporaries, so we should also save x16-x31 here.
+    if (STI.getTargetABI() == RISCVABI::ABI_ILP32E ||
+        STI.getTargetABI() == RISCVABI::ABI_LP64E) {
+      for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
+        SavedRegs.set(Reg);
+    }
+
+    if (Subtarget.hasStdExtF()) {
 
       // If interrupt is enabled, this list contains all FP registers.
       const MCPhysReg * Regs = MF.getRegInfo().getCalleeSavedRegs();
