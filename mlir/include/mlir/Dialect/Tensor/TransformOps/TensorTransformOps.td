@@ -169,4 +169,17 @@ def MakeLoopIndependentOp
   }];
 }
 
+def TypeConversionCastOp : Op<Transform_Dialect,
+    "type_conversion.tensor.cast",
+    [DeclareOpInterfaceMethods<TypeConversionOpInterface>]> {
+  let description = [{
+    Indicates that tensor ops (such as tensor.generate) should be replaced with
+    constants (arith.constant) when possible.
+  }];
+  let arguments = (ins UnitAttr:$ignore_dynamic_info);
+
+  let assemblyFormat =
+      "(`ignore_dynamic_info` $ignore_dynamic_info^)? attr-dict";
+}
+
 #endif // TENSOR_TRANSFORM_OPS

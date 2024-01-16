@@ -280,6 +280,28 @@ def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   ];
 }
 
+def TypeConversionOpInterface : OpInterface<"TypeConversionOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that populate type casting
+    of a `transform.cast_and_inline` op. It provides a method to populate a
+    type converter with source/target materialization patterns.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate the given type converter with source/target materialization
+        functions.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populateTypeMaterializations",
+      /*arguments=*/(ins "::mlir::TypeConverter &":$converter)
+    >
+  ];
+}
+
 def TypeConverterBuilderOpInterface
     : OpInterface<"TypeConverterBuilderOpInterface"> {
   let description = [{

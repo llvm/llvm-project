@@ -12,6 +12,8 @@
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/OpBase.td"
 
 def ApplyFuncToLLVMConversionPatternsOp : Op<Transform_Dialect,
@@ -24,6 +26,69 @@ def ApplyFuncToLLVMConversionPatternsOp : Op<Transform_Dialect,
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def CastAndCallOp : Op<Transform_Dialect,
+    "func.cast_and_call",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     AttrSizedOperandSegments,
+     ReportTrackingListenerFailuresOpTrait]
+        # GraphRegionNoTerminator.traits> {
+  let summary = "Casts values to the signature of a function and replaces them "
+                "with a call";
+  let description = [{
+    This transform takes a set of |input| and |output| value handles and
+    attempts to cast them to the function signature of the attached function
+    op, then builds a call to the function and replaces the users of the
+    outputs. It is the responsibility of the user to ensure that the slice of
+    the program replaced by this operation makes sense, i.e. there is no
+    verification that the inputs to this operation have any relation to the
+    outputs outside of basic dominance requirements needed for the replacement.
+
+    The casting materialization functions are specified in the graph region of
+    this op. They must implement the `TypeConversionOpInterface`. The order of
+    ops within the region is irrelevant.
+
+    The target function can be specified by a symbol name or by a handle to the
+    operation.
+
+    This transform only reads the target handles and only replaces the users of
+    the outputs with the results of the call. No handles are consumed and no
+    operations are removed. Users are expected to run cleanup separately if
+    desired.
+
+    This transform will emit a silenceable failure if:
+     - The set of outputs isn't unique
+     - The handle for the insertion point does not include exactly one operation
+     - The insertion point op does not dominate any of the output users
+     - The insertion point op is not dominated by any of the inputs
+     - The function signature does not match the number of inputs/outputs
+     - Any of the input conversions fail to be materialized
+
+    This transform will emit a definite failure if it fails to resolve the
+    target function, or if it fails to materialize the conversion from the call
+    results to the output types.
+  }];
+
+  let arguments = (ins
+    TransformHandleTypeInterface:$insertion_point,
+    UnitAttr:$insert_after,
+    Optional<TransformValueHandleTypeInterface>:$inputs,
+    Optional<TransformValueHandleTypeInterface>:$outputs,
+    OptionalAttr<SymbolRefAttr>:$function_name,
+    Optional<TransformHandleTypeInterface>:$function);
+  let results = (outs TransformHandleTypeInterface:$result);
+  let regions = (region MaxSizedRegion<1>:$conversions);
+
+  let assemblyFormat = [{
+    ($function_name^)? ($function^)?
+    ( `(` $inputs^ `)` )?
+    ( `->` $outputs^ )?
+    (`after` $insert_after^):(`before`)? $insertion_point
+    ($conversions^)? attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // FUNC_TRANSFORM_OPS
