@@ -583,6 +583,11 @@ public:
     return create<mlir::cir::ConditionOp>(condition.getLoc(), condition);
   }
 
+  /// Create a break operation.
+  mlir::cir::BreakOp createBreak(mlir::Location loc) {
+    return create<mlir::cir::BreakOp>(loc);
+  }
+
   /// Create a continue operation.
   mlir::cir::ContinueOp createContinue(mlir::Location loc) {
     return create<mlir::cir::ContinueOp>(loc);

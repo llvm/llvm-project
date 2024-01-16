@@ -22,10 +22,10 @@ void sw1(int a) {
 // CHECK-NEXT:   %5 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
 // CHECK-NEXT:   cir.store %6, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 1)  {
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 2)  {
 // CHECK-NEXT:   cir.scope {
@@ -36,7 +36,7 @@ void sw1(int a) {
 // CHECK-NEXT:       cir.store %7, %1 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:       %8 = cir.const(#cir.int<100> : !s32i) : !s32i
 // CHECK-NEXT:       cir.store %8, %4 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield fallthrough
 // CHECK-NEXT:   }
@@ -72,7 +72,7 @@ void sw3(int a) {
 // CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:   cir.switch (%1 : !s32i) [
 // CHECK-NEXT:   case (default)  {
-// CHECK-NEXT:     cir.yield break
+// CHECK-NEXT:     cir.break
 // CHECK-NEXT:   }
 // CHECK-NEXT:   ]
 
@@ -133,10 +133,10 @@ void sw6(int a) {
 // CHECK: cir.func @_Z3sw6i
 // CHECK: cir.switch (%1 : !s32i) [
 // CHECK-NEXT: case (anyof, [0, 1, 2] : !s32i)  {
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (anyof, [3, 4, 5] : !s32i)  {
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: }
 
 void sw7(int a) {
@@ -157,7 +157,7 @@ void sw7(int a) {
 // CHECK-NEXT:   cir.yield fallthrough
 // CHECK-NEXT: },
 // CHECK-NEXT: case (anyof, [3, 4, 5] : !s32i)  {
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: }
 
 void sw8(int a) {
@@ -173,13 +173,13 @@ void sw8(int a) {
 
 //CHECK:    cir.func @_Z3sw8i
 //CHECK:      case (equal, 3)
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: },
 //CHECK-NEXT: case (equal, 4) {
 //CHECK-NEXT:   cir.yield fallthrough
 //CHECK-NEXT: }
 //CHECK-NEXT: case (default) {
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: }  
 
 void sw9(int a) {
@@ -195,13 +195,13 @@ void sw9(int a) {
 
 //CHECK:    cir.func @_Z3sw9i
 //CHECK:      case (equal, 3) {
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: }
 //CHECK-NEXT: case (default) {
 //CHECK-NEXT:   cir.yield fallthrough
 //CHECK-NEXT: }
 //CHECK:      case (equal, 4)
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: }
 
 void sw10(int a) {
@@ -218,7 +218,7 @@ void sw10(int a) {
 
 //CHECK:    cir.func @_Z4sw10i
 //CHECK:      case (equal, 3)
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: },
 //CHECK-NEXT: case (equal, 4) {
 //CHECK-NEXT:   cir.yield fallthrough
@@ -227,7 +227,7 @@ void sw10(int a) {
 //CHECK-NEXT:   cir.yield fallthrough
 //CHECK-NEXT: }
 //CHECK-NEXT: case (equal, 5) {
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: }
 
 void sw11(int a) {
@@ -246,7 +246,7 @@ void sw11(int a) {
 
 //CHECK:    cir.func @_Z4sw11i
 //CHECK:      case (equal, 3)
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: },
 //CHECK-NEXT: case (anyof, [4, 5] : !s32i) {
 //CHECK-NEXT:   cir.yield fallthrough
@@ -255,7 +255,7 @@ void sw11(int a) {
 //CHECK-NEXT:   cir.yield fallthrough
 //CHECK-NEXT: }
 //CHECK-NEXT: case (anyof, [6, 7] : !s32i)  {
-//CHECK-NEXT:   cir.yield break
+//CHECK-NEXT:   cir.break
 //CHECK-NEXT: }
 
 void sw12(int a) {
@@ -272,5 +272,5 @@ void sw12(int a) {
 // CHECK-NEXT:     case (equal, 3) {
 // CHECK-NEXT:       cir.return
 // CHECK-NEXT:     ^bb1:  // no predecessors
-// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }

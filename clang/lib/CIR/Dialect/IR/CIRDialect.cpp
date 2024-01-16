@@ -227,6 +227,17 @@ void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
 }
 
 //===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult BreakOp::verify() {
+  if (!getOperation()->getParentOfType<LoopOp>() &&
+      !getOperation()->getParentOfType<SwitchOp>())
+    return emitOpError("must be within a loop or switch");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===-----------------------------------------------------------------------===//
 
@@ -775,17 +786,6 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  auto isDominatedByLoopOrSwitch = [&](Operation *parentOp) {
-    while (!llvm::isa<cir::FuncOp>(parentOp)) {
-      if (llvm::isa<cir::SwitchOp, cir::LoopOp>(parentOp))
-        return true;
-      parentOp = parentOp->getParentOp();
-    }
-
-    emitOpError() << "shall be dominated by 'cir.loop' or 'cir.switch'";
-    return false;
-  };
-
   auto isDominatedByProperAwaitRegion = [&](Operation *parentOp,
                                             mlir::Region *currRegion) {
     while (!llvm::isa<cir::FuncOp>(parentOp)) {
@@ -810,12 +810,6 @@ mlir::LogicalResult YieldOp::verify() {
   if (isNoSuspend()) {
     if (!isDominatedByProperAwaitRegion(getOperation()->getParentOp(),
                                         getOperation()->getParentRegion()))
-      return mlir::failure();
-    return mlir::success();
-  }
-
-  if (isBreak()) {
-    if (!isDominatedByLoopOrSwitch(getOperation()->getParentOp()))
       return mlir::failure();
     return mlir::success();
   }

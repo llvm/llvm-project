@@ -67,7 +67,7 @@ cir.func @yieldfallthrough() {
 cir.func @yieldbreak() {
   %0 = cir.const(#true) : !cir.bool
   cir.if %0 {
-    cir.yield break // expected-error {{shall be dominated by 'cir.loop' or 'cir.switch'}}
+    cir.break // expected-error {{op must be within a loop or switch}}
   }
   cir.return
 }

@@ -605,14 +605,13 @@ def ConditionOp : CIR_Op<"condition", [
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-def YieldOpKind_BK : I32EnumAttrCase<"Break", 1, "break">;
 def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
 def YieldOpKind_NS : I32EnumAttrCase<"NoSuspend", 4, "nosuspend">;
 
 def YieldOpKind : I32EnumAttr<
     "YieldOpKind",
     "yield kind",
-    [YieldOpKind_BK, YieldOpKind_FT, YieldOpKind_NS]> {
+    [YieldOpKind_FT, YieldOpKind_NS]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -629,8 +628,6 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     defined by the parent operation.
 
     Optionally, `cir.yield` can be annotated with extra kind specifiers:
-    - `break`: breaking out of the innermost `cir.switch` / `cir.loop` semantics,
-    cannot be used if not dominated by these parent operations.
     - `fallthrough`: execution falls to the next region in `cir.switch` case list.
     Only available inside `cir.switch` regions.
     - `nosuspend`: specific to the `ready` region inside `cir.await` op, it makes
@@ -707,14 +704,26 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     bool isFallthrough() {
       return !isPlain() && *getKind() == YieldOpKind::Fallthrough;
     }
-    bool isBreak() {
-      return !isPlain() && *getKind() == YieldOpKind::Break;
-    }
     bool isNoSuspend() {
       return !isPlain() && *getKind() == YieldOpKind::NoSuspend;
     }
   }];
 
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : CIR_Op<"break", [Terminator]> {
+  let summary = "C/C++ `break` statement equivalent";
+  let description = [{
+    The `cir.break` operation is used to cease the control flow to the parent
+    operation, exiting its region's control flow. It is only allowed if it is
+    within a breakable operation (loops and `switch`).
+  }];
+  let assemblyFormat = "attr-dict";
   let hasVerifier = 1;
 }
 

@@ -37,7 +37,7 @@ module  {
               cir.return
             }
           }
-          cir.yield break
+          cir.break
         }
         cir.yield fallthrough
       },
@@ -95,7 +95,7 @@ module  {
 // CHECK-NEXT:           cir.return
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
-// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield fallthrough
 // CHECK-NEXT:   },

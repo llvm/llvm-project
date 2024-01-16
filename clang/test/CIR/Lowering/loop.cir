@@ -83,7 +83,7 @@ module {
     }, step : { // Droped when lowering while statements.
       cir.yield
     }) {
-      cir.yield break
+      cir.break
     }
     cir.return
   }
@@ -109,7 +109,7 @@ module {
         cir.yield
       }) {
         cir.scope { // FIXME(cir): Redundant scope emitted during C codegen.
-          cir.yield break
+          cir.break
         }
         cir.yield
       }
