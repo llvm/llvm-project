@@ -1103,7 +1103,7 @@ static void genConstantDenseAddressFromLevel(CodegenEnv &env,
     for (Level l = startLvl; l < lvlRank; l++) {
       AffineExpr lvlExpr = lvlExprs[l];
       if (enc.isDenseLvl(l) && isa<AffineConstantExpr>(lvlExpr))
-        env.emitter().genDenseAffineAddress(
+        env.emitter().locateLvlAtAffineAddress(
             builder, loc, env.makeTensorLevel(tid, l), lvlExpr);
       else
         return; // break on first non-dense non-constant level
@@ -1152,7 +1152,7 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
   Operation *loop = genLoop(env, builder, curr, needsUniv, tidLvls);
   Location loc = env.op().getLoc();
   for (auto [tidLvl, exp] : affineTidLvls) {
-    env.emitter().genDenseAffineAddress(builder, loc, tidLvl, exp);
+    env.emitter().locateLvlAtAffineAddress(builder, loc, tidLvl, exp);
   }
 
   // Until now, we have entered every <tid, lvl> pair in {cond, extra,

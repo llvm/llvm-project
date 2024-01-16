@@ -126,8 +126,8 @@ public:
 
   /// Emits the address for a dense level based on the value evaluated by the
   /// provided affine expression.
-  void genDenseAffineAddress(OpBuilder &builder, Location loc,
-                             TensorLevel tidLvl, AffineExpr lvlExpr);
+  void locateLvlAtAffineAddress(OpBuilder &builder, Location loc,
+                                TensorLevel tidLvl, AffineExpr lvlExpr);
 
   // TODO: Get rid of `lvls` in the argument list? Track the level we
   // are currently at internally. Then it would be enterNextLvlForTensor.
