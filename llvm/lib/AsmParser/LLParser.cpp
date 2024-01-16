@@ -13,8 +13,8 @@
 #include "llvm/AsmParser/LLParser.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/AsmParser/LLToken.h"
 #include "llvm/AsmParser/SlotMapping.h"
@@ -33,6 +33,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -53,6 +54,12 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool> AllowIncompleteIR(
+    "allow-incomplete-ir", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Allow incomplete IR on a best effort basis (references to unknown "
+        "metadata will be dropped)"));
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -121,6 +128,57 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
   for (const auto &I : Slots->Types)
     NumberedTypes.insert(
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
+}
+
+void LLParser::dropUnknownMetadataReferences() {
+  auto Pred = [](unsigned MDKind, MDNode *Node) { return Node->isTemporary(); };
+  for (Function &F : *M) {
+    F.eraseMetadataIf(Pred);
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : make_early_inc_range(BB)) {
+        I.eraseMetadataIf(Pred);
+
+        if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+          // If this is a white-listed intrinsic with an unknown metadata
+          // operand, drop it.
+          if (isa<DbgInfoIntrinsic>(II) ||
+              II->getIntrinsicID() ==
+                  Intrinsic::experimental_noalias_scope_decl) {
+            SmallVector<MetadataAsValue *> MVs;
+            for (Value *V : II->args()) {
+              if (auto *MV = dyn_cast<MetadataAsValue>(V))
+                if (auto *MD = dyn_cast<MDNode>(MV->getMetadata()))
+                  if (MD->isTemporary())
+                    MVs.push_back(MV);
+            }
+
+            if (!MVs.empty()) {
+              assert(II->use_empty() && "Cannot have uses");
+              II->eraseFromParent();
+
+              // Also remove no longer used MetadataAsValue wrappers.
+              for (MetadataAsValue *MV : MVs) {
+                if (MV->use_empty())
+                  delete MV;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (GlobalVariable &GV : M->globals())
+    GV.eraseMetadataIf(Pred);
+
+  for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
+    // Check whether there is only a single use left, which would be in our
+    // own NumberedMetadata.
+    if (Info.first->getNumTemporaryUses() == 1) {
+      NumberedMetadata.erase(ID);
+      ForwardRefMDNodes.erase(ID);
+    }
+  }
 }
 
 /// validateEndOfModule - Do final validity and basic correctness checks at the
@@ -284,6 +342,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
 
+  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
+    dropUnknownMetadataReferences();
+
   if (!ForwardRefMDNodes.empty())
     return error(ForwardRefMDNodes.begin()->second.second,
                  "use of undefined metadata '!" +
@@ -297,10 +358,14 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    auto *UpgradedMD = UpgradeTBAANode(*MD);
-    if (MD != UpgradedMD)
-      Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
+    // With incomplete IR, the tbaa metadata may have been dropped.
+    if (!AllowIncompleteIR)
+      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
+    if (MD) {
+      auto *UpgradedMD = UpgradeTBAANode(*MD);
+      if (MD != UpgradedMD)
+        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
+    }
   }
 
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
