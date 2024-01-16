@@ -208,6 +208,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   int64_t StackProbeSize = 0;
 
+  // Holds a register containing pstate.sm. This is set
+  // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
 public:

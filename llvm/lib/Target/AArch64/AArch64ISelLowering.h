@@ -1289,8 +1289,8 @@ private:
   // This function does not handle predicate bitcasts.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
 
-  // Returns the runtime value for PSTATE.SM. When the function is streaming-
-  // compatible, this generates a call to __arm_sme_state.
+  // Returns the runtime value for PSTATE.SM by generating a call to
+  // __arm_sme_state.
   SDValue getRuntimePStateSM(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
                              EVT VT) const;
 
