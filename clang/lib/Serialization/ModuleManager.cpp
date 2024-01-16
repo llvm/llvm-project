@@ -449,7 +449,7 @@ bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
     // On Linux ext4 FileManager's inode caching system does not
     // provide us correct behaviour for ModuleCache directories.
     // inode can be reused after PCM delete resulting in cache misleading.
-    File = FileMgr.getBypassFile(*FileOrErr);
+    File = FileMgr.getBypassFile(*File);
   }
 #endif
 
