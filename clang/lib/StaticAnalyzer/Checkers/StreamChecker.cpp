@@ -1003,6 +1003,14 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   SValBuilder &SVB = C.getSValBuilder();
   ASTContext &ACtx = C.getASTContext();
 
+  // Add the success state.
+  // In this context "success" means there is not an EOF or other read error
+  // before any item is matched in 'fscanf'. But there may be match failure,
+  // therefore return value can be 0 or greater.
+  // It is not specified what happens if some items (not all) are matched and
+  // then EOF or read error happens. Now this case is handled like a "success"
+  // case, and no error flags are set on the stream. This is probably not
+  // accurate, and the POSIX documentation does not tell more.
   if (OldSS->ErrorState != ErrorFEof) {
     NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
