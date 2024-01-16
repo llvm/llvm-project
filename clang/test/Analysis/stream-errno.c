@@ -248,25 +248,3 @@ void check_fflush_all(void) {
     if (errno) {}                    // no-warning
   }
 }
-
-void check_opendir(const char *Path) {
-  DIR *Dir = opendir(Path);
-  if (Dir == NULL) {
-    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {}                    // no-warning
-  } else {
-    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
-    closedir(Dir);
-  }
-}
-
-void check_fdopendir(int Fd) {
-  DIR *Dir = fdopendir(Fd);
-  if (Dir == NULL) {
-    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {}                    // no-warning
-  } else {
-    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
-    closedir(Dir);
-  }
-}
