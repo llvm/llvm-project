@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static bool areTypesEquals(QualType S, QualType D) {
+static bool areTypesEqual(QualType S, QualType D) {
   if (S == D)
     return true;
 
@@ -29,7 +29,7 @@ static bool areTypesEquals(QualType S, QualType D) {
   QualType PtrD = D->getPointeeType();
 
   if (!PtrS.isNull() && !PtrD.isNull())
-    return areTypesEquals(PtrS, PtrD);
+    return areTypesEqual(PtrS, PtrD);
 
   const DeducedType *DT = S->getContainedDeducedType();
   if (DT && DT->isDeduced())
@@ -38,15 +38,15 @@ static bool areTypesEquals(QualType S, QualType D) {
   return false;
 }
 
-static bool areTypesEquals(QualType TypeS, QualType TypeD,
-                           bool IgnoreTypeAliases) {
+static bool areTypesEqual(QualType TypeS, QualType TypeD,
+                          bool IgnoreTypeAliases) {
   const QualType CTypeS = TypeS.getCanonicalType();
   const QualType CTypeD = TypeD.getCanonicalType();
   if (CTypeS != CTypeD)
     return false;
 
-  return IgnoreTypeAliases || areTypesEquals(TypeS.getLocalUnqualifiedType(),
-                                             TypeD.getLocalUnqualifiedType());
+  return IgnoreTypeAliases || areTypesEqual(TypeS.getLocalUnqualifiedType(),
+                                            TypeD.getLocalUnqualifiedType());
 }
 
 static bool areBinaryOperatorOperandsTypesEqual(const Expr *E,
@@ -64,13 +64,13 @@ static bool areBinaryOperatorOperandsTypesEqual(const Expr *E,
     const QualType NonReferenceType = Type.getNonReferenceType();
     const QualType LHSType = B->getLHS()->IgnoreImplicit()->getType();
     if (!LHSType.isNull() &&
-        !areTypesEquals(LHSType.getNonReferenceType(), NonReferenceType,
-                        IgnoreTypeAliases))
+        !areTypesEqual(LHSType.getNonReferenceType(), NonReferenceType,
+                       IgnoreTypeAliases))
       return true;
     const QualType RHSType = B->getRHS()->IgnoreImplicit()->getType();
     if (!RHSType.isNull() &&
-        !areTypesEquals(RHSType.getNonReferenceType(), NonReferenceType,
-                        IgnoreTypeAliases))
+        !areTypesEqual(RHSType.getNonReferenceType(), NonReferenceType,
+                       IgnoreTypeAliases))
       return true;
   }
   return false;
@@ -142,7 +142,7 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<QualType>("srcType")->getNonReferenceType();
   TypeD = TypeD.getNonReferenceType();
 
-  if (!areTypesEquals(TypeS, TypeD, IgnoreTypeAliases))
+  if (!areTypesEqual(TypeS, TypeD, IgnoreTypeAliases))
     return;
 
   if (areBinaryOperatorOperandsTypesEqual(SourceExpr, IgnoreTypeAliases))
@@ -179,7 +179,6 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (utils::fixit::areParensNeededForStatement(*SourceExpr)) {
-
       Diag << FixItHint::CreateInsertion(SourceExprBegin, "(")
            << FixItHint::CreateInsertion(NextToken, ")");
     }
