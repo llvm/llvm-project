@@ -352,6 +352,7 @@ struct ExtensionDependency {
   ArchExtKind Later;
 };
 
+// clang-format off
 inline constexpr ExtensionDependency ExtensionDependencies[] = {
   {AEK_FP, AEK_FP16},
   {AEK_FP, AEK_SIMD},
@@ -397,6 +398,7 @@ inline constexpr ExtensionDependency ExtensionDependencies[] = {
   {AEK_RAS, AEK_RASv2},
   {AEK_RCPC, AEK_RCPC3},
 };
+// clang-format on
 
 enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 

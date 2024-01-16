@@ -203,9 +203,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   if (!WaMArch.empty())
     success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_march_EQ)))
-    success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
+    success =
+        getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success =
+        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
