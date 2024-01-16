@@ -52,18 +52,6 @@ cir.func @yield0() {
 
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
-cir.func @yieldfallthrough() {
-  %0 = cir.const(#true) : !cir.bool
-  cir.if %0 {
-    cir.yield fallthrough // expected-error {{'cir.yield' op fallthrough only expected within 'cir.switch'}}
-  }
-  cir.return
-}
-
-// -----
-
-#false = #cir.bool<false> : !cir.bool
-#true = #cir.bool<true> : !cir.bool
 cir.func @yieldbreak() {
   %0 = cir.const(#true) : !cir.bool
   cir.if %0 {

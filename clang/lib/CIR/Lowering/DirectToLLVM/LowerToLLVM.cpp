@@ -1381,18 +1381,8 @@ public:
           continue;
 
         // Handle switch-case yields.
-        auto *terminator = blk.getTerminator();
-        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(terminator)) {
-          // TODO(cir): Ensure every yield instead of dealing with optional
-          // values.
-          assert(yieldOp.getKind().has_value() && "switch yield has no kind");
-          switch (yieldOp.getKind().value()) {
-          // Fallthrough to next case: track it for the next case to handle.
-          case mlir::cir::YieldOpKind::Fallthrough:
-            fallthroughYieldOp = yieldOp;
-            break;
-          }
-        }
+        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator()))
+          fallthroughYieldOp = yieldOp;
       }
 
       // Handle break statements.

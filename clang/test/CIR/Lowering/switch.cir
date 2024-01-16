@@ -68,7 +68,7 @@ module {
       // CHECK:   2: ^bb[[#CASE2:]]
       // CHECK: ]
       case (equal, 1 : !s64i) { // case 1 has its own region
-        cir.yield fallthrough // fallthrough to case 2
+        cir.yield // fallthrough to case 2
       },
       // CHECK: ^bb[[#CASE1]]:
       // CHECK:   llvm.br ^bb[[#CASE2]]
@@ -89,7 +89,7 @@ module {
       // CHECK:   1: ^bb[[#CASE1:]]
       // CHECK: ]
       case (equal, 1 : !s64i) {
-        cir.yield fallthrough // fallthrough to exit
+        cir.yield // fallthrough to exit
       }
       // CHECK: ^bb[[#CASE1]]:
       // CHECK:   llvm.br ^bb[[#EXIT]]

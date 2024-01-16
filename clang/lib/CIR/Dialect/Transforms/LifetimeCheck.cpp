@@ -820,9 +820,7 @@ void LifetimeCheckPass::checkSwitch(SwitchOp switchOp) {
     YieldOp y = dyn_cast<YieldOp>(block.back());
     if (!y)
       return false;
-    if (y.isFallthrough())
-      return true;
-    return false;
+    return true;
   };
 
   auto regions = switchOp.getRegions();
