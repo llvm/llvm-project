@@ -1443,8 +1443,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // Detect and convert memcmp like idioms to the call then expand them if profitable
   OptimizePM.addPass(MergeICmpsPass());
-  OptimizePM.addPass(ExpandMemCmpPass(TM));
-  
+  OptimizePM.addPass(ExpandMemCmpPass());
+
   // Try to annotate calls that were created during optimization.
   OptimizePM.addPass(TailCallElimPass());
 
@@ -1969,7 +1969,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Detect and convert memcmp like idioms to the call then expand them if profitable
   OptimizePM.addPass(MergeICmpsPass());
-  OptimizePM.addPass(ExpandMemCmpPass(TM));
+  OptimizePM.addPass(ExpandMemCmpPass());
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(
