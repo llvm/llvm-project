@@ -7251,6 +7251,40 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       MI.getOpcode() != X86::ADD64rr)
     return nullptr;
 
+  // MI_ND Instructions with 32 bit imm would exceed maximum code length if they
+  // need segment register prefix.
+  if (MOs.size() == X86::AddrNumOperands &&
+      (MOs[4].getReg() == X86::GS || MOs[4].getReg() == X86::FS))
+    switch (MI.getOpcode()) {
+    default:
+      break;
+    case X86::ADD32ri_ND:
+    case X86::ADD64ri32_ND:
+    case X86::ADD32ri_NF_ND:
+    case X86::ADD64ri32_NF_ND:
+    case X86::SUB32ri_ND:
+    case X86::SUB64ri32_ND:
+    case X86::SUB32ri_NF_ND:
+    case X86::SUB64ri32_NF_ND:
+    case X86::AND32ri_ND:
+    case X86::AND64ri32_ND:
+    case X86::AND32ri_NF_ND:
+    case X86::AND64ri32_NF_ND:
+    case X86::XOR32ri_ND:
+    case X86::XOR64ri32_ND:
+    case X86::XOR32ri_NF_ND:
+    case X86::XOR64ri32_NF_ND:
+    case X86::OR32ri_ND:
+    case X86::OR64ri32_ND:
+    case X86::OR32ri_NF_ND:
+    case X86::OR64ri32_NF_ND:
+    case X86::ADC32ri_ND:
+    case X86::ADC64ri32_ND:
+    case X86::SBB32ri_ND:
+    case X86::SBB64ri32_ND:
+      return nullptr;
+    }
+
   // Don't fold loads into indirect calls that need a KCFI check as we'll
   // have to unfold these in X86TargetLowering::EmitKCFICheck anyway.
   if (MI.isCall() && MI.getCFIType())

@@ -755,8 +755,8 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
     def 64mi8_ND  : BinOpMI8_RF<mnemonic, Xi64, MemMRM>;
     def 8mi_ND    : BinOpMI_RF<0x80, mnemonic, Xi8 , opnode, MemMRM>;
     def 16mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
-    def 32mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
-    def 64mi32_ND : BinOpMI_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 32mi_ND   : BinOpMI_RF<0x81, mnemonic, Xi32, opnode, MemMRM, nosegaddr>;
+    def 64mi32_ND : BinOpMI_RF<0x81, mnemonic, Xi64, opnode, MemMRM, nosegaddr>;
     def 16mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi16, MemMRM>, NF, PD;
     def 32mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi32, MemMRM>, NF;
     def 64mi8_NF_ND  : BinOpMI8_R<mnemonic, Xi64, MemMRM>, NF;
@@ -940,8 +940,8 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
     def 32mi8_ND  : BinOpMI8F_RF<mnemonic, Xi32, MemMRM>;
     def 64mi8_ND  : BinOpMI8F_RF<mnemonic, Xi64, MemMRM>;
     def 16mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi16, opnode, MemMRM>, PD;
-    def 32mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi32, opnode, MemMRM>;
-    def 64mi32_ND : BinOpMIF_RF<0x81, mnemonic, Xi64, opnode, MemMRM>;
+    def 32mi_ND   : BinOpMIF_RF<0x81, mnemonic, Xi32, opnode, MemMRM, nosegaddr>;
+    def 64mi32_ND : BinOpMIF_RF<0x81, mnemonic, Xi64, opnode, MemMRM, nosegaddr>;
   }
   let Predicates = [In64BitMode] in {
     def 8mi_EVEX    : BinOpMIF_MF<0x80, mnemonic, Xi8 , opnode, MemMRM>, PL;

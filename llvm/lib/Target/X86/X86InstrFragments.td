@@ -362,6 +362,9 @@ def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
 def tls64baseaddr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
+def nosegaddr : ComplexPattern<i64, 5, "selectNoSegADDRAddr",
+                               [], [SDNPWantParent]>;
+
 def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]>;
 
 // A relocatable immediate is an operand that can be relocated by the linker to

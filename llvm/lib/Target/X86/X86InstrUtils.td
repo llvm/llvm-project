@@ -1182,7 +1182,7 @@ class BinOpMI_R<bits<8> o, string m, X86TypeInfo t, Format f>
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, NDD<1>;
 // BinOpMI_R - Instructions that read "[mem], imm" and write "reg", EFLAGS.
 class BinOpMI_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
-                Format f>
+                Format f, ComplexPattern addr = addr>
   : BinOpMI<o, m, binop_ndd_args, t, f, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode addr:$src1), t.ImmOperator:$src2))]>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
@@ -1201,14 +1201,14 @@ class BinOpMI_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, For
 }
 // BinOpMIF_RF - Instructions that read "[mem], imm", write "reg" and
 // read/write EFLAGS.
-class BinOpMIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
+class BinOpMIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f, ComplexPattern addr = addr>
   : BinOpMI<o, m, binop_ndd_args, t, f, (outs t.RegClass:$dst),
             [(set t.RegClass:$dst, EFLAGS, (node (t.VT (load addr:$src1)),
              t.ImmOperator:$src2, EFLAGS))]>,
     Sched<[WriteADC.Folded, WriteADC.ReadAfterFold]>, DefEFLAGS, UseEFLAGS, NDD<1>;
 // BinOpMIF_MF - Instructions that read "[mem], imm", write "[mem]" and
 // read/write EFLAGS.
-class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
+class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, Format f>
   : BinOpMI<o, m, binop_args, t, f, (outs),
             [(store (node (t.VT (load addr:$src1)),
              t.ImmOperator:$src2, EFLAGS), addr:$src1), (implicit EFLAGS)]>,

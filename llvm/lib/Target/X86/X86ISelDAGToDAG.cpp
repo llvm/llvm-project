@@ -222,6 +222,9 @@ namespace {
     bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
                     SDValue &Scale, SDValue &Index, SDValue &Disp,
                     SDValue &Segment);
+    bool selectNoSegADDRAddr(SDNode *Parent, SDValue N, SDValue &Base,
+                             SDValue &Scale, SDValue &Index, SDValue &Disp,
+                             SDValue &Segment);
     bool selectVectorAddr(MemSDNode *Parent, SDValue BasePtr, SDValue IndexOp,
                           SDValue ScaleOp, SDValue &Base, SDValue &Scale,
                           SDValue &Index, SDValue &Disp, SDValue &Segment);
@@ -2908,8 +2911,10 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
       AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
     if (AddrSpace == X86AS::FS)
       AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
-    if (AddrSpace == X86AS::SS)
+    if (AddrSpace == X86AS::SS){
+      llvm_unreachable("debug");
       AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
+    }
   }
 
   // Save the DL and VT before calling matchAddress, it can invalidate N.
@@ -2917,6 +2922,38 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   MVT VT = N.getSimpleValueType();
 
   if (matchAddress(N, AM))
+    return false;
+
+  getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
+  return true;
+}
+
+/// Returns true if it is able to pattern match an addressing mode with no
+/// segment reg prefix. It returns the operands which make up the maximal
+/// addressing mode it can match by reference.
+bool X86DAGToDAGISel::selectNoSegADDRAddr(SDNode *Parent, SDValue N,
+                                          SDValue &Base, SDValue &Scale,
+                                          SDValue &Index, SDValue &Disp,
+                                          SDValue &Segment) {
+  X86ISelAddressMode AM;
+
+  if (Parent) {
+    unsigned AddrSpace =
+        cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
+    if (AddrSpace == X86AS::GS || AddrSpace == X86AS::FS ||
+        AddrSpace == X86AS::SS)
+      return false;
+  }
+
+  // Save the DL and VT before calling matchAddress, it can invalidate N.
+  SDLoc DL(N);
+  MVT VT = N.getSimpleValueType();
+
+  if (matchAddress(N, AM))
+    return false;
+
+  // FS prefix.
+  if (AM.SymbolFlags == 13)
     return false;
 
   getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
