@@ -441,8 +441,8 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 // size memory for null-terminator if necessary. Returns the original or a newly
 // allocated null-terminated string (responsibility for deallocation is on the
 // caller).
-RT_API_ATTRS const char *EnsureNullTerminated(
-    const char *str, std::size_t length, Terminator &terminator);
+RT_API_ATTRS char *EnsureNullTerminated(
+    char *str, std::size_t length, Terminator &terminator);
 
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
 

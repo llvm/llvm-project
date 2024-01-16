@@ -332,10 +332,6 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 LogicalResult ForOp::verify() {
-  IntegerAttr step;
-  if (matchPattern(getStep(), m_Constant(&step)) && step.getInt() <= 0)
-    return emitOpError("constant step operand must be positive");
-
   // Check that the number of init args and op results is the same.
   if (getInitArgs().size() != getNumResults())
     return emitOpError(

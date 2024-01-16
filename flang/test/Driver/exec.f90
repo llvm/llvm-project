@@ -1,7 +1,8 @@
+! UNSUPPORTED: system-windows
 ! Verify that flang can correctly build executables.
 
 ! RUN: %flang %s -o %t
-! RUN: %t | FileCheck %s
+! RUN: LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%llvmshlibdir" %t | FileCheck %s
 ! RUN: rm -f %t
 
 ! CHECK: Hello, World!

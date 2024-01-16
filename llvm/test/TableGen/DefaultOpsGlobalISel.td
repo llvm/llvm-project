@@ -53,8 +53,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(1), /*SubOperand*/1, // mods1
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(1), /*SubOperand*/0, // src1
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 3,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 0: @79
@@ -73,8 +73,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/2, // clamp
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // omod
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 2,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 1: @139
@@ -95,8 +95,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // mods
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 8,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 2: @207
@@ -115,8 +115,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // omod
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 5,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 3: @265
@@ -141,8 +141,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // clamp
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 7,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 4: @345
@@ -160,8 +160,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // clamp
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 0,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 5: @400
@@ -180,8 +180,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/93,
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // clamp
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 6,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 6: @458
@@ -198,8 +198,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 1,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 7: @503
@@ -216,8 +216,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // CHECK-NEXT:       GIR_AddImm8, /*InsnID*/0, /*Imm*/0,
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       // GIR_Coverage, 4,
 // CHECK-NEXT:       GIR_Done,
 // CHECK-NEXT:     // Label 8: @548

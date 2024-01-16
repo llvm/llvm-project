@@ -5,19 +5,14 @@ define void @t(i64 %v) {
 ; CHECK-LABEL: define void @t(
 ; CHECK-SAME: i64 [[V:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV12_1_I:%.*]] = trunc i64 [[V]] to i32
-; CHECK-NEXT:    [[MUL_I_1_I:%.*]] = mul i32 [[CONV12_1_I]], 2
-; CHECK-NEXT:    [[CONV12_I:%.*]] = trunc i64 [[V]] to i32
-; CHECK-NEXT:    [[MUL_I_I:%.*]] = mul i32 [[CONV12_I]], 3
-; CHECK-NEXT:    [[CONV14104_I:%.*]] = or i32 [[MUL_I_1_I]], [[MUL_I_I]]
-; CHECK-NEXT:    [[CONV12_1_I_1:%.*]] = trunc i64 [[V]] to i32
-; CHECK-NEXT:    [[MUL_I_1_I_1:%.*]] = mul i32 [[CONV12_1_I_1]], 6
-; CHECK-NEXT:    [[CONV12_I_1:%.*]] = trunc i64 [[V]] to i32
-; CHECK-NEXT:    [[MUL_I_I_1:%.*]] = mul i32 [[CONV12_I_1]], 5
-; CHECK-NEXT:    [[CONV14104_I_1:%.*]] = or i32 [[MUL_I_1_I_1]], [[MUL_I_I_1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[CONV14104_I]], [[CONV14104_I_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 65535
-; CHECK-NEXT:    store i32 [[TMP1]], ptr null, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i16> [[TMP2]], <i16 5, i16 6, i16 3, i16 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 65535
+; CHECK-NEXT:    store i32 [[TMP6]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -207,7 +207,7 @@ define i16 @or16mi8(ptr %a) {
 ; CHECK-LABEL: or16mi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    orl $123, %eax, %eax
+; CHECK-NEXT:    orl $123, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
@@ -253,7 +253,7 @@ define i16 @or16mi(ptr %a) {
 ; CHECK-LABEL: or16mi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    orl $1234, %eax, %eax # imm = 0x4D2
+; CHECK-NEXT:    orl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:
