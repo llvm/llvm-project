@@ -1321,33 +1321,6 @@ static bool diagReturnOnAllocFailure(Sema &S, Expr *E,
   return false;
 }
 
-// Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
-// attributes to the function `get_return_object` if its return type is marked
-// with `[[clang::coro_return_type]]` to avoid false-positive diagnostic for
-// `get_return_object`.
-static void handleGetReturnObject(Sema &S, Expr *E) {
-  if (auto *TE = dyn_cast<CXXBindTemporaryExpr>(E))
-    E = TE->getSubExpr();
-  auto *CE = cast<CallExpr>(E);
-  auto *MD = CE->getDirectCallee();
-  if (!MD)
-    return;
-  // This analysis is done only for types marked with
-  // [[clang::coro_return_type]].
-  auto *RetType = MD->getReturnType()->getAsRecordDecl();
-  if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
-    return;
-  // `get_return_object` should be allowed to return coro_return_type.
-  if (!MD->hasAttr<CoroWrapperAttr>())
-    MD->addAttr(
-        CoroWrapperAttr::CreateImplicit(S.getASTContext(), MD->getLocation()));
-  // Object arg of `__promise.get_return_object()` is not lifetimebound.
-  if (RetType->hasAttr<CoroLifetimeBoundAttr>() &&
-      !MD->hasAttr<CoroDisableLifetimeBoundAttr>())
-    MD->addAttr(CoroDisableLifetimeBoundAttr::CreateImplicit(
-        S.getASTContext(), MD->getLocation()));
-}
-
 bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
   assert(!IsPromiseDependentType &&
          "cannot make statement while the promise type is dependent");
@@ -1381,7 +1354,6 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
   if (ReturnObjectOnAllocationFailure.isInvalid())
     return false;
 
-  handleGetReturnObject(S, ReturnObjectOnAllocationFailure.get());
   StmtResult ReturnStmt =
       S.BuildReturnStmt(Loc, ReturnObjectOnAllocationFailure.get());
   if (ReturnStmt.isInvalid()) {
@@ -1823,6 +1795,33 @@ bool CoroutineStmtBuilder::makeOnException() {
 
   this->OnException = UnhandledException.get();
   return true;
+}
+
+// Adds [[clang::coro_wrapper]] and [[clang::coro_disable_lifetimebound]]
+// attributes to the function `get_return_object` if its return type is marked
+// with `[[clang::coro_return_type]]` to avoid false-positive diagnostic for
+// `get_return_object`.
+static void handleGetReturnObject(Sema &S, Expr *E) {
+  if (auto *TE = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = TE->getSubExpr();
+  auto *CE = cast<CallExpr>(E);
+  auto *MD = CE->getDirectCallee();
+  if (!MD)
+    return;
+  // This analysis is done only for types marked with
+  // [[clang::coro_return_type]].
+  auto *RetType = MD->getReturnType()->getAsRecordDecl();
+  if (!RetType || !RetType->hasAttr<CoroReturnTypeAttr>())
+    return;
+  // `get_return_object` should be allowed to return coro_return_type.
+  if (!MD->hasAttr<CoroWrapperAttr>())
+    MD->addAttr(
+        CoroWrapperAttr::CreateImplicit(S.getASTContext(), MD->getLocation()));
+  // Object arg of `__promise.get_return_object()` is not lifetimebound.
+  if (RetType->hasAttr<CoroLifetimeBoundAttr>() &&
+      !MD->hasAttr<CoroDisableLifetimeBoundAttr>())
+    MD->addAttr(CoroDisableLifetimeBoundAttr::CreateImplicit(
+        S.getASTContext(), MD->getLocation()));
 }
 
 bool CoroutineStmtBuilder::makeReturnObject() {
