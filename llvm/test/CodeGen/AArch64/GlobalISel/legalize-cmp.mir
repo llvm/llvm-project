@@ -56,7 +56,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %0:_(s128) = G_IMPLICIT_DEF
@@ -93,7 +95,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s128) = G_IMPLICIT_DEF
@@ -132,7 +136,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s88) = G_IMPLICIT_DEF
@@ -171,7 +177,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s88) = G_IMPLICIT_DEF
@@ -210,7 +218,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s96) = G_IMPLICIT_DEF
@@ -272,7 +282,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s318) = G_IMPLICIT_DEF
@@ -318,7 +330,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s158) = G_IMPLICIT_DEF
@@ -329,4 +343,30 @@ body:             |
   bb.2:
     successors:
   bb.3:
+    RET_ReallyLR
+...
+---
+name:            test_3xs32_eq_pr_78181
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_3xs32_eq_pr_78181
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %const:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32), %const(s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32), %const(s32)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[BUILD_VECTOR]](<4 x s32>), [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[ICMP]](<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[EVEC]](s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %const:_(s32) = G_IMPLICIT_DEF
+    %rhs:_(<3 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32)
+    %lhs:_(<3 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32)
+    %cmp:_(<3 x s32>) = G_ICMP intpred(eq), %lhs(<3 x s32>), %rhs
+    %1:_(s32) = G_CONSTANT i32 1
+    %2:_(s32) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s32>), %1(s32)
+    $w0 = COPY %2(s32)
     RET_ReallyLR

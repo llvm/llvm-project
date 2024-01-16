@@ -524,7 +524,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
-      .clampNumElements(0, v2s32, v4s32);
+      .moreElementsToNextPow2(0)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, s32, 4)
+      .clampMaxNumElements(0, s16, 8)
+      .clampMaxNumElements(0, s8, 16);
 
   getActionDefinitionsBuilder(G_FCMP)
       // If we don't have full FP16 support, then scalarize the elements of
@@ -863,6 +867,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           },
           0, s8)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
+      .moreElementsToNextPow2(1)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
