@@ -1968,8 +1968,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LateFPM.addPass(DivRemPairsPass());
 
   // Detect and convert memcmp like idioms to the call then expand them if profitable
-  OptimizePM.addPass(MergeICmpsPass());
-  OptimizePM.addPass(ExpandMemCmpPass());
+  LateFPM.addPass(MergeICmpsPass());
+  LateFPM.addPass(ExpandMemCmpPass());
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(
