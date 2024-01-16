@@ -20,10 +20,9 @@ TEST(ResourceSegmentsDeath, FullOverwrite) {
   EXPECT_DEATH(X.add({15, 18}), "A resource is being overwritten");
 }
 
-TEST(ResourceSegmentsDeath, ZeroSizeCuttoffAllowed) {
+TEST(ResourceSegmentsDeath, ZeroSizeIntervalsNotAllowed) {
   auto X = ResourceSegments({{10, 20}});
-  X.add({20, 30}, 0);
-  EXPECT_EQ(X, ResourceSegments({{10, 20}}));
+  EXPECT_DEATH(X.add({20, 30}, 0), "0-size interval history has no use.");
 }
 #endif // NDEBUG
 
