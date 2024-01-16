@@ -301,9 +301,6 @@ bool CodeGenAction::beginSourceFileAction() {
           Fortran::common::LanguageFeature::OpenMP)) {
     setOffloadModuleInterfaceAttributes(*mlirModule,
                                         ci.getInvocation().getLangOpts());
-    setOffloadModuleInterfaceTargetAttribute(
-        *mlirModule, targetMachine.getTargetCPU(),
-        targetMachine.getTargetFeatureString());
     setOpenMPVersionAttribute(*mlirModule,
                               ci.getInvocation().getLangOpts().OpenMPVersion);
   }
