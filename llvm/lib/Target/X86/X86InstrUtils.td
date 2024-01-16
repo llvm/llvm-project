@@ -1208,7 +1208,7 @@ class BinOpMIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f, Com
     Sched<[WriteADC.Folded, WriteADC.ReadAfterFold]>, DefEFLAGS, UseEFLAGS, NDD<1>;
 // BinOpMIF_MF - Instructions that read "[mem], imm", write "[mem]" and
 // read/write EFLAGS.
-class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, Format f>
+class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
   : BinOpMI<o, m, binop_args, t, f, (outs),
             [(store (node (t.VT (load addr:$src1)),
              t.ImmOperator:$src2, EFLAGS), addr:$src1), (implicit EFLAGS)]>,
