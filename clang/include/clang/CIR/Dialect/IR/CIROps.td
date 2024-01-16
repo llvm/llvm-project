@@ -1923,13 +1923,14 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp and TryCallOp
+// CallOp
 //===----------------------------------------------------------------------===//
 
-class CIR_CallOp<string mnemonic> :
+class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     Op<CIR_Dialect, mnemonic,
-       [DeclareOpInterfaceMethods<CIRCallOpInterface>,
-        DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+       !listconcat(extra_traits,
+                   [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+                    DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   let extraClassDeclaration = [{
     /// Get the argument operands to the called function.
     OperandRange getArgOperands() {
@@ -2013,7 +2014,13 @@ def CallOp : CIR_CallOp<"call"> {
     }]>];
 }
 
-def TryCallOp : CIR_CallOp<"try_call"> {
+//===----------------------------------------------------------------------===//
+// TryCallOp
+//===----------------------------------------------------------------------===//
+
+def TryCallOp : CIR_CallOp<"try_call",
+      [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+       Terminator]> {
   let summary = "try call operation";
   let description = [{
     Works very similar to `cir.call` but passes down an exception object
@@ -2036,8 +2043,13 @@ def TryCallOp : CIR_CallOp<"try_call"> {
   }];
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-                       Variadic<CIR_AnyType>:$operands,
+                       ExceptionInfoPtr:$exceptionInfo,
+                       Variadic<CIR_AnyType>:$destContOps,
+                       Variadic<CIR_AnyType>:$destAbortOps,
+                       Variadic<CIR_AnyType>:$callOps,
                        OptionalAttr<ASTCallExprInterface>:$ast);
+  let successors = (successor AnySuccessor:$destContinue,
+                              AnySuccessor:$destAbort);
   let results = (outs Variadic<CIR_AnyType>);
 
   let builders = [
