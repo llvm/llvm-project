@@ -127,7 +127,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       unsigned CopyToBits = 32;
 
       // When function return type is i1, it may be in a 64b register.
-      if (VA.getLocVT().getSizeInBits() == 1) {
+      if (VA.getLocVT() == MVT::i1) {
         if (MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64)
           CopyToBits = 64;
       }
@@ -241,15 +241,14 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
-    Register ExtReg;
 
-    if (VA.getLocVT().getSizeInBits() == 1 &&
+    if (VA.getLocVT() == MVT::i1 &&
         MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64) {
-      ExtReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ValVReg).getReg(0);
-    } else {
-      ExtReg = extendRegisterMin32(*this, ValVReg, VA);
+      MIRBuilder.buildCopy(PhysReg, ValVReg);
+      return;
     }
 
+    Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
