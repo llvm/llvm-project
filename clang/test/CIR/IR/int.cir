@@ -8,10 +8,10 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 
-!u8i = !cir.int<s, 8>
-!u16i = !cir.int<s, 16>
-!u32i = !cir.int<s, 32>
-!u64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
 
 cir.func @validIntTypesAndAttributes() -> () {
 
