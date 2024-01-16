@@ -1,0 +1,27 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @div(%x : !s32i, %y : !s32i) -> !s32i {
+    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    cir.return %3 : !s32i
+  }
+
+  cir.func @foo(%x : !s32i, %y : !s32i) {
+    cir.scope {
+      %10 = cir.scope {
+        %0 = cir.alloca !cir.eh.info, cir.ptr <!cir.eh.info>, ["exception_info"] {alignment = 16 : i64}
+        %d = cir.try_call @div(%x, %y) : (!s32i, !s32i) -> !s32i, ^continue_A, ^abort, %0
+        // CHECK: cir.try_call @div(%1, %arg0, %arg1) {operandSegmentSizes = array<i32: 1, 0, 0, 2>} : (!cir.ptr<!cir.eh.info>, !s32i, !s32i) -> !s32i
+        ^continue_A:
+        cir.br ^abort
+        ^abort:
+        %1 = cir.load %0 : cir.ptr <!cir.eh.info>, !cir.eh.info
+        cir.yield %1 : !cir.eh.info
+      } : !cir.eh.info
+      cir.yield
+    }
+    cir.return
+  }
+}

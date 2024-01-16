@@ -227,6 +227,26 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Exception info type
+//
+// By introducing an exception info type, exception related operations can be
+// more descriptive.
+//
+// This basically wraps a uint8_t* and a uint32_t
+//
+//===----------------------------------------------------------------------===//
+
+def CIR_ExceptionInfo : CIR_Type<"ExceptionInfo", "eh.info"> {
+  let summary = "CIR exception info";
+  let description = [{
+    Represents the content necessary for a `cir.call` to pass back an exception
+    object pointer + some extra selector information. This type is required for
+    some exception related operations, like `cir.catch`, `cir.eh.selector_slot`
+    and `cir.eh.slot`.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Void type
 //===----------------------------------------------------------------------===//
 
@@ -254,37 +274,32 @@ def VoidPtr : Type<
       "mlir::cir::VoidType::get($_builder.getContext()))"> {
 }
 
+// Pointer to exception info
+def ExceptionInfoPtr : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::PointerType>()">,
+      CPred<"$_self.cast<::mlir::cir::PointerType>()"
+            ".getPointee().isa<::mlir::cir::ExceptionInfoType>()">,
+    ]>, "void*">,
+    BuildableType<
+      "mlir::cir::PointerType::get($_builder.getContext(),"
+      "mlir::cir::ExceptionInfo::get($_builder.getContext()))"> {
+}
+
 //===----------------------------------------------------------------------===//
-// Global type constraints
+// StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//
 
 def CIR_StructType : Type<CPred<"$_self.isa<::mlir::cir::StructType>()">,
                           "CIR struct type">;
 
+//===----------------------------------------------------------------------===//
+// Global type constraints
+//===----------------------------------------------------------------------===//
+
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_BoolType, CIR_ArrayType, CIR_VectorType,
-  CIR_FuncType, CIR_VoidType, CIR_StructType, AnyFloat,
+  CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo, AnyFloat,
 ]>;
-
-
-//===----------------------------------------------------------------------===//
-// Exception info type
-//
-// By introducing an exception info type, exception related operations can be
-// more descriptive.
-//
-// This basically wraps a uint8_t* and a uint32_t
-//
-//===----------------------------------------------------------------------===//
-
-def CIR_ExceptionInfo : CIR_Type<"ExceptionInfo", "eh.info"> {
-  let summary = "CIR exception info";
-  let description = [{
-    Represents the content necessary for a `cir.call` to pass back an exception
-    object pointer + some extra selector information. This type is required for
-    some exception related operations, like `cir.catch`, `cir.eh.selector_slot`
-    and `cir.eh.slot`.
-  }];
-}
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

@@ -1949,19 +1949,24 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
   if (!fn)
     return op->emitOpError() << "'" << fnAttr.getValue()
                              << "' does not reference a valid function";
+  auto callIf = dyn_cast<mlir::cir::CIRCallOpInterface>(op);
+  assert(callIf && "expected CIR call interface to be always available");
 
   // Verify that the operand and result types match the callee. Note that
   // argument-checking is disabled for functions without a prototype.
   auto fnType = fn.getFunctionType();
   if (!fn.getNoProto()) {
-    if (!fnType.isVarArg() && op->getNumOperands() != fnType.getNumInputs())
+    unsigned numCallOperands = callIf.getNumArgOperands();
+    unsigned numFnOpOperands = fnType.getNumInputs();
+
+    if (!fnType.isVarArg() && numCallOperands != numFnOpOperands)
       return op->emitOpError("incorrect number of operands for callee");
 
-    if (fnType.isVarArg() && op->getNumOperands() < fnType.getNumInputs())
+    if (fnType.isVarArg() && numCallOperands < numFnOpOperands)
       return op->emitOpError("too few operands for callee");
 
-    for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-      if (op->getOperand(i).getType() != fnType.getInput(i))
+    for (unsigned i = 0, e = numFnOpOperands; i != e; ++i)
+      if (callIf.getArgOperand(i).getType() != fnType.getInput(i))
         return op->emitOpError("operand type mismatch: expected operand type ")
                << fnType.getInput(i) << ", but provided "
                << op->getOperand(i).getType() << " for operand number " << i;
@@ -1986,8 +1991,13 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
   return success();
 }
 
-static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
-                                           ::mlir::OperationState &result) {
+static ::mlir::ParseResult parseCallCommon(
+    ::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
+    llvm::function_ref<::mlir::ParseResult(::mlir::OpAsmParser &,
+                                           ::mlir::OperationState &, int32_t)>
+        customOpHandler = [](::mlir::OpAsmParser &parser,
+                             ::mlir::OperationState &result,
+                             int32_t numCallArgs) { return mlir::success(); }) {
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
@@ -2024,13 +2034,18 @@ static ::mlir::ParseResult parseCallCommon(::mlir::OpAsmParser &parser,
   operandsTypes = opsFnTy.getInputs();
   allResultTypes = opsFnTy.getResults();
   result.addTypes(allResultTypes);
+
+  if (customOpHandler(parser, result, operandsTypes.size()).failed())
+    return ::mlir::failure();
+
   if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
     return ::mlir::failure();
   return ::mlir::success();
 }
 
-void printCallCommon(Operation *op, mlir::FlatSymbolRefAttr flatSym,
-                     ::mlir::OpAsmPrinter &state) {
+void printCallCommon(
+    Operation *op, mlir::FlatSymbolRefAttr flatSym, ::mlir::OpAsmPrinter &state,
+    llvm::function_ref<void()> customOpHandler = []() {}) {
   state << ' ';
   auto ops = op->getOperands();
 
@@ -2074,7 +2089,12 @@ mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_begin() {
   auto arg_begin = operand_begin();
   if (!getCallee())
     arg_begin++;
-  return arg_begin;
+  // First operand is the exception pointer, skip it.
+  //
+  // FIXME(cir): for this and all the other calculations in the other methods:
+  // we currently have no basic block arguments on cir.try_call, but if it gets
+  // to that, this needs further adjustment.
+  return arg_begin++;
 }
 mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_end() {
   return operand_end();
@@ -2084,13 +2104,17 @@ mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_end() {
 Value cir::TryCallOp::getArgOperand(unsigned i) {
   if (!getCallee())
     i++;
-  return getOperand(i);
+  // First operand is the exception pointer, skip it.
+  return getOperand(i + 1);
 }
 /// Return the number of operands, , accounts for indirect call.
 unsigned cir::TryCallOp::getNumArgOperands() {
+  unsigned numOperands = this->getOperation()->getNumOperands();
   if (!getCallee())
-    return this->getOperation()->getNumOperands() - 1;
-  return this->getOperation()->getNumOperands();
+    numOperands--;
+  // First operand is the exception pointer, skip it.
+  numOperands--;
+  return numOperands;
 }
 
 LogicalResult
@@ -2100,11 +2124,124 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
-  return parseCallCommon(parser, result);
+  return parseCallCommon(
+      parser, result,
+      [](::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
+         int32_t numCallArgs) -> ::mlir::ParseResult {
+        ::mlir::OpAsmParser::UnresolvedOperand exceptionRawOperands[1];
+        ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand>
+            exceptionOperands(exceptionRawOperands);
+        ::llvm::SMLoc exceptionOperandsLoc;
+        (void)exceptionOperandsLoc;
+
+        ::mlir::Block *destContinueSuccessor = nullptr;
+        ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4>
+            destOperandsContinue;
+        ::llvm::SMLoc destOperandsContinueLoc;
+        (void)destOperandsContinueLoc;
+        ::llvm::SmallVector<::mlir::Type, 1> destOperandsContinueTypes;
+        ::mlir::Block *destAbortSuccessor = nullptr;
+        ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4>
+            destOperandsAbort;
+        ::llvm::SMLoc destOperandsAbortLoc;
+        (void)destOperandsAbortLoc;
+        ::llvm::SmallVector<::mlir::Type, 1> destOperandsAbortTypes;
+
+        // So far we have 4: exception ptr, variadic continue, variadic abort
+        // and variadic call args.
+        enum {
+          Segment_Exception_Idx,
+          Segment_Continue_Idx,
+          Segment_Abort_Idx,
+          Segment_CallArgs_Idx,
+        };
+        ::llvm::SmallVector<int32_t, 4> operandSegmentSizes = {0, 0, 0, 0};
+
+        if (parser.parseComma())
+          return ::mlir::failure();
+
+        // Handle continue destination and potential bb operands.
+        if (parser.parseSuccessor(destContinueSuccessor))
+          return ::mlir::failure();
+        if (::mlir::succeeded(parser.parseOptionalLParen())) {
+
+          destOperandsContinueLoc = parser.getCurrentLocation();
+          if (parser.parseOperandList(destOperandsContinue))
+            return ::mlir::failure();
+          if (parser.parseColon())
+            return ::mlir::failure();
+
+          if (parser.parseTypeList(destOperandsContinueTypes))
+            return ::mlir::failure();
+          if (parser.parseRParen())
+            return ::mlir::failure();
+        }
+        if (parser.parseComma())
+          return ::mlir::failure();
+
+        // Handle abort destination and potential bb operands.
+        if (parser.parseSuccessor(destAbortSuccessor))
+          return ::mlir::failure();
+        if (::mlir::succeeded(parser.parseOptionalLParen())) {
+          destOperandsAbortLoc = parser.getCurrentLocation();
+          if (parser.parseOperandList(destOperandsAbort))
+            return ::mlir::failure();
+          if (parser.parseColon())
+            return ::mlir::failure();
+
+          if (parser.parseTypeList(destOperandsAbortTypes))
+            return ::mlir::failure();
+          if (parser.parseRParen())
+            return ::mlir::failure();
+        }
+
+        if (parser.parseComma())
+          return ::mlir::failure();
+        exceptionOperandsLoc = parser.getCurrentLocation();
+        if (parser.parseOperand(exceptionRawOperands[0]))
+          return ::mlir::failure();
+
+        auto exceptionPtrTy = cir::PointerType::get(
+            parser.getBuilder().getContext(),
+            parser.getBuilder().getType<::mlir::cir::ExceptionInfoType>());
+        if (parser.resolveOperands(exceptionOperands, exceptionPtrTy,
+                                   exceptionOperandsLoc, result.operands))
+          return ::mlir::failure();
+
+        // Add information to the builders.
+        result.addSuccessors(destContinueSuccessor);
+        result.addSuccessors(destAbortSuccessor);
+
+        if (parser.resolveOperands(destOperandsContinue,
+                                   destOperandsContinueTypes,
+                                   destOperandsContinueLoc, result.operands))
+          return ::mlir::failure();
+        if (parser.resolveOperands(destOperandsAbort, destOperandsAbortTypes,
+                                   destOperandsAbortLoc, result.operands))
+          return ::mlir::failure();
+
+        // Required to always be there.
+        operandSegmentSizes[Segment_Exception_Idx] = 1;
+        operandSegmentSizes[Segment_Continue_Idx] =
+            destOperandsContinueTypes.size();
+        operandSegmentSizes[Segment_Abort_Idx] = destOperandsAbortTypes.size();
+        operandSegmentSizes[Segment_CallArgs_Idx] = numCallArgs;
+        result.addAttribute(
+            "operandSegmentSizes",
+            parser.getBuilder().getDenseI32ArrayAttr(operandSegmentSizes));
+
+        return ::mlir::success();
+      });
 }
 
 void TryCallOp::print(::mlir::OpAsmPrinter &state) {
   printCallCommon(*this, getCalleeAttr(), state);
+}
+
+mlir::SuccessorOperands TryCallOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDestContOpsMutable()
+                                      : getDestAbortOpsMutable());
 }
 
 //===----------------------------------------------------------------------===//
