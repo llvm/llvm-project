@@ -54,19 +54,19 @@ TEST(SMEAttributes, Constructors) {
                       ->getFunction("foo"))
                   .preservesZA());
 
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_in_zt0\"")
-                      ->getFunction("foo"))
-                  .isInZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_out_zt0\"")
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_in_zt0\"")->getFunction("foo"))
+          .isInZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_out_zt0\"")
                       ->getFunction("foo"))
                   .isOutZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_inout_zt0\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_inout_zt0\"")
                       ->getFunction("foo"))
                   .isInOutZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_preserved_zt0\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_preserves_zt0\"")
                       ->getFunction("foo"))
                   .isPreservesZT0());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_sme_new_zt0\"")
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_new_zt0\"")
                       ->getFunction("foo"))
                   .isNewZT0());
 
@@ -106,12 +106,16 @@ TEST(SMEAttributes, Basics) {
   ASSERT_TRUE(SA(SA::ZA_Shared).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_Shared).preservesZA());
   ASSERT_TRUE(SA(SA::ZA_Shared | SA::ZA_Preserved).preservesZA());
+  ASSERT_FALSE(SA(SA::ZA_Shared).sharesZT0());
+  ASSERT_FALSE(SA(SA::ZA_Shared).hasZT0State());
 
   ASSERT_TRUE(SA(SA::ZA_New).hasPrivateZAInterface());
   ASSERT_FALSE(SA(SA::ZA_New).hasSharedZAInterface());
   ASSERT_TRUE(SA(SA::ZA_New).hasNewZABody());
   ASSERT_TRUE(SA(SA::ZA_New).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_New).preservesZA());
+  ASSERT_FALSE(SA(SA::ZA_New).sharesZT0());
+  ASSERT_FALSE(SA(SA::ZA_New).hasZT0State());
 
   ASSERT_TRUE(SA(SA::Normal).hasPrivateZAInterface());
   ASSERT_FALSE(SA(SA::Normal).hasSharedZAInterface());

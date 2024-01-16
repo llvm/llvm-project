@@ -28,11 +28,11 @@ class SMEAttrs {
 public:
   enum class StateValue {
     None = 0,
-    In = 1,        // aarch64_sme_in_zt0
-    Out = 2,       // aarch64_sme_out_zt0
-    InOut = 3,     // aarch64_sme_inout_zt0
-    Preserved = 4, // aarch64_sme_preserved_zt0
-    New = 5        // aarch64_sme_new_zt0
+    In = 1,        // aarch64_in_zt0
+    Out = 2,       // aarch64_out_zt0
+    InOut = 3,     // aarch64_inout_zt0
+    Preserved = 4, // aarch64_preserves_zt0
+    New = 5        // aarch64_new_zt0
   };
 
   // Enum with bitmasks for each individual SME feature.
