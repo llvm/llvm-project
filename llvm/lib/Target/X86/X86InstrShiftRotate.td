@@ -330,6 +330,12 @@ multiclass ShiftX_Pats<SDNode op> {
    def : Pat<(op GR64:$src1, GR8:$src2),
               (!cast<Instruction>(NAME#"64rr") GR64:$src1,
                (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR32:$src1, (shiftMask32 GR8:$src2)),
+              (!cast<Instruction>(NAME#"32rr") GR32:$src1,
+               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR64:$src1, (shiftMask64 GR8:$src2)),
+              (!cast<Instruction>(NAME#"64rr") GR64:$src1,
+               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
   // We prefer to use
   //  mov (%ecx), %esi
@@ -345,6 +351,12 @@ multiclass ShiftX_Pats<SDNode op> {
              (!cast<Instruction>(NAME#"32rm") addr:$src1,
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
+             (!cast<Instruction>(NAME#"64rm") addr:$src1,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
+             (!cast<Instruction>(NAME#"32rm") addr:$src1,
+              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
              (!cast<Instruction>(NAME#"64rm") addr:$src1,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
