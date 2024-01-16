@@ -37,12 +37,12 @@ for.end:
 ; Check for crash exposed by D76992.
 ; CHECK-LABEL: 'test'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: Live-in ir<14> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<[[VFxUF:%.+]]> = compute-VFxUF
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {

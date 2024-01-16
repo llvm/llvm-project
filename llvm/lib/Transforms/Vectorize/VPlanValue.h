@@ -346,6 +346,7 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPComputeVFxUFSC,
     VPInstructionSC,
     VPInterleaveSC,
     VPReductionSC,

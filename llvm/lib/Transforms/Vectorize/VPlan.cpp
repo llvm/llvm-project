@@ -742,12 +742,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  // FIXME: Model VF * UF computation completely in VPlan.
-  State.set(&VFxUF,
-            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
-            0);
-
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -852,12 +846,6 @@ void VPlan::execute(VPTransformState *State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
-
-  if (VFxUF.getNumUsers() > 0) {
-    O << "\nLive-in ";
-    VFxUF.printAsOperand(O, SlotTracker);
-    O << " = VF * UF";
-  }
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -1258,8 +1246,6 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
-  if (Plan.VFxUF.getNumUsers() > 0)
-    assignSlot(&Plan.VFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);

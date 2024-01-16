@@ -1620,6 +1620,20 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPComputeVFxUFRecipe::execute(VPTransformState &State) {
+  Value *VFxUF = createStepForVF(State.Builder, ResultTy, State.VF, State.UF);
+  State.set(this, VFxUF, 0);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPComputeVFxUFRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  O << " = compute-VFxUF";
+}
+#endif
+
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
   const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();

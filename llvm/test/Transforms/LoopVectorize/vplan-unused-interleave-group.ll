@@ -9,18 +9,18 @@
 define void @test_unused_interleave(ptr %src, i32 %length) {
 ; CHECK-LABEL: Checking a loop in 'test_unused_interleave'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%length> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   EMIT vp<%1> = compute-VFxUF
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%3>
-; CHECK-NEXT:     EMIT vp<%3> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%3>, vp<%1>
+; CHECK-NEXT:     EMIT vp<%3> = add nuw vp<%2>, vp<%1>
+; CHECK-NEXT:     EMIT branch-on-count vp<%3>, vp<%0>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 entry:

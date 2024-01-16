@@ -201,8 +201,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn())
+  if (V->isLiveIn()) {
+    assert(V->getLiveInIRValue() && "LiveIn doesn't have underlying value");
     return V->getLiveInIRValue()->getType();
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
@@ -229,8 +231,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPWidenCastRecipe>(
-              [](const VPWidenCastRecipe *R) { return R->getResultType(); });
+          .Case<VPWidenCastRecipe, VPComputeVFxUFRecipe>(
+              [](const auto *R) { return R->getResultType(); });
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
   return ResultTy;

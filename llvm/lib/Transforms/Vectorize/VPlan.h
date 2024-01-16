@@ -2118,6 +2118,29 @@ public:
   Instruction &getIngredient() const { return Ingredient; }
 };
 
+/// Recipe to expand a VFxUF expression.
+class VPComputeVFxUFRecipe : public VPRecipeBase, public VPValue {
+  // Result type for the expression
+  Type *ResultTy;
+
+public:
+  VPComputeVFxUFRecipe(Type *ResultTy)
+      : VPRecipeBase(VPDef::VPComputeVFxUFSC, {}), VPValue(this),
+        ResultTy(ResultTy) {}
+
+  ~VPComputeVFxUFRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPComputeVFxUFSC)
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+  Type *getResultType() const { return ResultTy; }
+};
+
 /// Recipe to expand a SCEV expression.
 class VPExpandSCEVRecipe : public VPRecipeBase, public VPValue {
   const SCEV *Expr;
@@ -2609,7 +2632,7 @@ class VPlan {
   VPValue VectorTripCount;
 
   /// Represents the loop-invariant VF * UF of the vector loop region.
-  VPValue VFxUF;
+  VPValue *VFxUF;
 
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
@@ -2691,7 +2714,8 @@ public:
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns VF * UF of the vector loop region.
-  VPValue &getVFxUF() { return VFxUF; }
+  VPValue *getVFxUF() { return VFxUF; }
+  void setVFxUF(VPValue *VP) { VFxUF = VP; }
 
   /// Mark the plan to indicate that using Value2VPValue is not safe any
   /// longer, because it may be stale.
