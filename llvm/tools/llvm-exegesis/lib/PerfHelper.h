@@ -77,6 +77,29 @@ private:
   void initRealEvent(StringRef PfmEventString);
 };
 
+// Represents a single event that has been configured in the Linux perf
+// subsystem.
+class ConfiguredEvent {
+public:
+  ConfiguredEvent(PerfEvent &&EventToConfigure);
+
+  void initRealEvent(const pid_t ProcessID);
+  Expected<SmallVector<int64_t>> readOrError(StringRef FunctionBytes) const;
+  int getFileDescriptor() const { return FileDescriptor; }
+  bool isDummyEvent() const {
+    return Event.name() == PerfEvent::DummyEventString;
+  }
+
+  ConfiguredEvent(const ConfiguredEvent &) = delete;
+  ConfiguredEvent(ConfiguredEvent &&other) = default;
+
+  ~ConfiguredEvent();
+
+private:
+  PerfEvent Event;
+  int FileDescriptor = -1;
+};
+
 // Consists of a counter measuring a specific event and associated validation
 // counters measuring execution conditions. All counters in a group are part
 // of a single event group and are thus scheduled on and off the CPU as a single
@@ -89,7 +112,7 @@ public:
   CounterGroup(const CounterGroup &) = delete;
   CounterGroup(CounterGroup &&other) = default;
 
-  virtual ~CounterGroup();
+  virtual ~CounterGroup() = default;
 
   /// Starts the measurement of the event.
   virtual void start();
@@ -108,15 +131,14 @@ public:
 
   virtual int numValues() const;
 
-  int getFileDescriptor() const { return FileDescriptor; }
+  int getFileDescriptor() const { return EventCounter.getFileDescriptor(); }
 
 protected:
-  PerfEvent Event;
-  int FileDescriptor = -1;
+  ConfiguredEvent EventCounter;
   bool IsDummyEvent;
 
 private:
-  void initRealEvent(const PerfEvent &E, pid_t ProcessID);
+  void initRealEvent(pid_t ProcessID);
 };
 
 } // namespace pfm
