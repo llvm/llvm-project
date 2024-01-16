@@ -77,17 +77,19 @@ private:
   void initRealEvent(StringRef PfmEventString);
 };
 
-// Uses a valid PerfEvent to configure the Kernel so we can measure the
-// underlying event.
-class Counter {
+// Consists of a counter measuring a specific event and associated validation
+// counters measuring execution conditions. All counters in a group are part
+// of a single event group and are thus scheduled on and off the CPU as a single
+// unit.
+class CounterGroup {
 public:
   // event: the PerfEvent to measure.
-  explicit Counter(PerfEvent &&event, pid_t ProcessID = 0);
+  explicit CounterGroup(PerfEvent &&event, pid_t ProcessID = 0);
 
-  Counter(const Counter &) = delete;
-  Counter(Counter &&other) = default;
+  CounterGroup(const CounterGroup &) = delete;
+  CounterGroup(CounterGroup &&other) = default;
 
-  virtual ~Counter();
+  virtual ~CounterGroup();
 
   /// Starts the measurement of the event.
   virtual void start();
