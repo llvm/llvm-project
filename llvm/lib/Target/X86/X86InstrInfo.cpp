@@ -4382,7 +4382,10 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
     assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
-    return Load ? X86::TILELOADD : X86::TILESTORED;
+#define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
+    return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
+                : GET_EGPR_IF_ENABLED(X86::TILESTORED);
+#undef GET_EGPR_IF_ENABLED
   }
 }
 
@@ -4575,6 +4578,8 @@ static bool isAMXOpcode(unsigned Opc) {
     return false;
   case X86::TILELOADD:
   case X86::TILESTORED:
+  case X86::TILELOADD_EVEX:
+  case X86::TILESTORED_EVEX:
     return true;
   }
 }
@@ -4586,7 +4591,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   switch (Opc) {
   default:
     llvm_unreachable("Unexpected special opcode!");
-  case X86::TILESTORED: {
+  case X86::TILESTORED:
+  case X86::TILESTORED_EVEX: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4599,7 +4605,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     MO.setIsKill(true);
     break;
   }
-  case X86::TILELOADD: {
+  case X86::TILELOADD:
+  case X86::TILELOADD_EVEX: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
