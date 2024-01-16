@@ -6357,6 +6357,78 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
        (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
     return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
 
+  // Try to "strengthen" the RHS of compare based on known bits.
+  // For example, replace `icmp ugt %x, 14` with `icmp ugt %x, 15` when
+  // it is known that the two least significant bits of `%x` is zero.
+  if (Op1Known.isConstant() && Op0Known.Zero.isMask()) {
+    APInt RHSConst = Op1Known.getConstant();
+    ConstantRange Op0PredRange =
+        ConstantRange::makeExactICmpRegion(Pred, RHSConst);
+    int KnownZeroMaskLength = BitWidth - Op0Known.Zero.countLeadingZeros();
+    if (KnownZeroMaskLength > 0) {
+      APInt PowOf2(BitWidth, 1 << KnownZeroMaskLength);
+      APInt Op0PredMin(BitWidth, 0);
+      APInt Op0PredMax(BitWidth, 0);
+      APInt Op0MinRefinedByKnownBits(BitWidth, 0);
+      APInt Op0MaxRefinedByKnownBits(BitWidth, 0);
+      APInt NewLower(BitWidth, 0);
+      APInt NewUpper(BitWidth, 0);
+      bool ImprovedLower = false;
+      bool ImprovedUpper = false;
+      if (I.isSigned()) {
+        Op0PredMin = Op0PredRange.getSignedMin();
+        Op0PredMax = Op0PredRange.getSignedMax();
+        // Compute the smallest number satisfying the known-bits constrained
+        // which is at greater or equal Op0PredMin.
+        Op0MinRefinedByKnownBits =
+            PowOf2 *
+            APIntOps::RoundingSDiv(Op0PredMin, PowOf2, APInt::Rounding::UP);
+        // Compute the largest number satisfying the known-bits constrained
+        // which is at less or equal Op0PredMax.
+        Op0MaxRefinedByKnownBits =
+            PowOf2 *
+            APIntOps::RoundingSDiv(Op0PredMax, PowOf2, APInt::Rounding::DOWN);
+        NewLower = APIntOps::smax(Op0MinRefinedByKnownBits, Op0PredMin);
+        NewUpper = APIntOps::smin(Op0MaxRefinedByKnownBits, Op0PredMax);
+        ImprovedLower = NewLower.sgt(Op0PredMin);
+        ImprovedUpper = NewUpper.slt(Op0PredMax);
+      } else {
+        Op0PredMin = Op0PredRange.getUnsignedMin();
+        Op0PredMax = Op0PredRange.getUnsignedMax();
+        Op0MinRefinedByKnownBits =
+            PowOf2 *
+            APIntOps::RoundingUDiv(Op0PredMin, PowOf2, APInt::Rounding::UP);
+        Op0MaxRefinedByKnownBits =
+            PowOf2 *
+            APIntOps::RoundingUDiv(Op0PredMax, PowOf2, APInt::Rounding::DOWN);
+        NewLower = APIntOps::umax(Op0MinRefinedByKnownBits, Op0PredMin);
+        NewUpper = APIntOps::umin(Op0MaxRefinedByKnownBits, Op0PredMax);
+        ImprovedLower = NewLower.ugt(Op0PredMin);
+        ImprovedUpper = NewUpper.ult(Op0PredMax);
+      }
+
+      // Non-strict inequalities should have been canonicalized to strict ones
+      // by now.
+      switch (Pred) {
+      default:
+        break;
+      case ICmpInst::ICMP_ULT:
+      case ICmpInst::ICMP_SLT: {
+        if (ImprovedUpper)
+          return new ICmpInst(Pred, Op0,
+                              ConstantInt::get(Op1->getType(), NewUpper + 1));
+        break;
+      }
+      case ICmpInst::ICMP_UGT:
+      case ICmpInst::ICMP_SGT: {
+        if (ImprovedLower)
+          return new ICmpInst(Pred, Op0,
+                              ConstantInt::get(Op1->getType(), NewLower - 1));
+        break;
+      }
+      }
+    }
+  }
   return nullptr;
 }
 
