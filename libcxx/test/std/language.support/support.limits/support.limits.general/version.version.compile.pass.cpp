@@ -4318,17 +4318,11 @@
 #   error "__cpp_lib_as_const should have the value 201510L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_associative_heterogeneous_erasure
-#     error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++23"
-#   endif
-#   if __cpp_lib_associative_heterogeneous_erasure != 202110L
-#     error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_associative_heterogeneous_erasure
-#     error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_associative_heterogeneous_erasure
+#   error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++23"
+# endif
+# if __cpp_lib_associative_heterogeneous_erasure != 202110L
+#   error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++23"
 # endif
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
@@ -5885,17 +5879,11 @@
 #   error "__cpp_lib_as_const should have the value 201510L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_associative_heterogeneous_erasure
-#     error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++26"
-#   endif
-#   if __cpp_lib_associative_heterogeneous_erasure != 202110L
-#     error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_associative_heterogeneous_erasure
-#     error "__cpp_lib_associative_heterogeneous_erasure should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_associative_heterogeneous_erasure
+#   error "__cpp_lib_associative_heterogeneous_erasure should be defined in c++26"
+# endif
+# if __cpp_lib_associative_heterogeneous_erasure != 202110L
+#   error "__cpp_lib_associative_heterogeneous_erasure should have the value 202110L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
