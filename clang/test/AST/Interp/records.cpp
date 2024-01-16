@@ -1191,5 +1191,17 @@ namespace IndirectFieldInit {
   };
   constexpr Nested4 N4{};
   static_assert(N4.first == 123, "");
+
+  struct S {
+    struct {
+      int x, y;
+    };
+
+    constexpr S(int x_, int y_) : x(x_), y(y_) {}
+  };
+
+  constexpr S s(1, 2);
+  static_assert(s.x == 1 && s.y == 2);
+
 #endif
 }
