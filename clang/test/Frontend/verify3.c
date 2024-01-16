@@ -28,7 +28,7 @@
 #ifdef TEST3
 // no directives
 
-//      CHECK3: error: no expected directives found: consider use of 'expected-no-diagnostics'
+//      CHECK3: error: no expected directives found: consider use of {{.*}}-no-diagnostics
 // CHECK3-NEXT: 1 error generated.
 #endif
 
@@ -37,5 +37,5 @@
 #warning X
 // expected-warning@-1 {{X}}
 
-// CHECK4-NOT: error: no expected directives found: consider use of 'expected-no-diagnostics'
+// CHECK4-NOT: error: no expected directives found: consider use of {{.*}}-no-diagnostics
 #endif

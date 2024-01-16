@@ -1404,7 +1404,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     getTranslationUnitDecl()->addDecl(MSGuidTagDecl);
   }
 }
-
+// maybe change here also. 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
   return SourceMgr.getDiagnostics();
 }

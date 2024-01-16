@@ -9,7 +9,9 @@
 /// \file
 /// Defines the Diagnostic-related interfaces.
 //
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//]
+
+// look into this file as well
 
 #ifndef LLVM_CLANG_BASIC_DIAGNOSTIC_H
 #define LLVM_CLANG_BASIC_DIAGNOSTIC_H
