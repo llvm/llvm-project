@@ -494,27 +494,12 @@ cir.func coroutine @bad_task() { // expected-error {{coroutine body must use at 
 
 // -----
 
-cir.func coroutine @bad_yield() {
+cir.func coroutine @missing_condition() {
   cir.scope {
-    cir.await(user, ready : {
+    cir.await(user, ready : { // expected-error {{ready region must end with cir.condition}}
       cir.yield
     }, suspend : {
       cir.yield
-    }, resume : {
-      cir.yield nosuspend // expected-error {{kind 'nosuspend' can only be used in 'ready' and 'suspend' regions}}
-    },)
-  }
-  cir.return
-}
-
-// -----
-
-cir.func coroutine @good_yield() {
-  cir.scope {
-    cir.await(user, ready : {
-      cir.yield nosuspend
-    }, suspend : {
-      cir.yield nosuspend
     }, resume : {
       cir.yield
     },)

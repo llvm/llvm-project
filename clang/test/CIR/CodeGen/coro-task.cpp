@@ -206,10 +206,7 @@ VoidTask silly_task() {
 // CHECK:       %[[#TmpCallRes:]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[#SuspendAlwaysAddr]])
 // CHECK:       cir.yield %[[#TmpCallRes]] : !cir.bool
 // CHECK:     }
-// CHECK:     cir.if %[[#ReadyVeto]] {
-// CHECK:       cir.yield nosuspend
-// CHECK:     }
-// CHECK:     cir.yield
+// CHECK:     cir.condition(%[[#ReadyVeto]])
 
 // Second region `suspend` contains the actual suspend logic.
 //
