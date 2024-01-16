@@ -8963,8 +8963,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
       } else {
-        if (PhiR->isInLoop() && isa<VPBlendRecipe>(CurrentLink))
+        auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink);
+        if (PhiR->isInLoop() && Blend) {
+          assert(Blend->getNumIncomingValues() == 2);
+          assert(any_of(Blend->operands(),
+                        [PhiR](VPValue *Op) { return Op == PhiR; }));
+          if (Blend->getIncomingValue(0) == PhiR)
+            Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
+          else
+            Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
           continue;
+        }
 
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
           if (isa<VPWidenRecipe>(CurrentLink)) {
