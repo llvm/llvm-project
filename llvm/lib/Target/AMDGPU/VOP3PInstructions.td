@@ -985,7 +985,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   let IsWMMA = !not(_IsSWMMAC);
   let IsSWMMAC = _IsSWMMAC;
 
-  bit IsAB_F16 = !and(IsF16BF16, isFloatType<ArgTy[1]>.ret);
+  bit IsAB_F16 = !and(IsF16BF16, ArgTy[1].isFP);
   bit IsAB_BF16 = !and(IsF16BF16, isIntType<ArgTy[1]>.ret);
   bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32));
   bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16));

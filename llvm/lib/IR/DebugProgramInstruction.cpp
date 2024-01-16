@@ -41,6 +41,34 @@ DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
 
 void DPValue::deleteInstr() { delete this; }
 
+DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
+                     LocationType::Value);
+}
+
+DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI,
+                                DPValue &InsertBefore) {
+  auto *NewDPValue = createDPValue(Location, DV, Expr, DI);
+  NewDPValue->insertBefore(&InsertBefore);
+  return NewDPValue;
+}
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Address), DV, Expr, DI,
+                     LocationType::Declare);
+}
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore) {
+  auto *NewDPVDeclare = createDPVDeclare(Address, DV, Expr, DI);
+  NewDPVDeclare->insertBefore(&InsertBefore);
+  return NewDPVDeclare;
+}
+
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   auto *MD = getRawLocation();
   // If a Value has been deleted, the "location" for this DPValue will be
@@ -249,6 +277,35 @@ const LLVMContext &DPValue::getContext() const {
   return getBlock()->getContext();
 }
 
+void DPValue::insertBefore(DPValue *InsertBefore) {
+  assert(!getMarker() &&
+         "Cannot insert a DPValue that is already has a DPMarker!");
+  assert(InsertBefore->getMarker() &&
+         "Cannot insert a DPValue before a DPValue that does not have a "
+         "DPMarker!");
+  InsertBefore->getMarker()->insertDPValue(this, InsertBefore);
+}
+void DPValue::insertAfter(DPValue *InsertAfter) {
+  assert(!getMarker() &&
+         "Cannot insert a DPValue that is already has a DPMarker!");
+  assert(InsertAfter->getMarker() &&
+         "Cannot insert a DPValue after a DPValue that does not have a "
+         "DPMarker!");
+  InsertAfter->getMarker()->insertDPValueAfter(this, InsertAfter);
+}
+void DPValue::moveBefore(DPValue *MoveBefore) {
+  assert(getMarker() &&
+         "Canot move a DPValue that does not currently have a DPMarker!");
+  removeFromParent();
+  insertBefore(MoveBefore);
+}
+void DPValue::moveAfter(DPValue *MoveAfter) {
+  assert(getMarker() &&
+         "Canot move a DPValue that does not currently have a DPMarker!");
+  removeFromParent();
+  insertAfter(MoveAfter);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // An empty, global, DPMarker for the purpose of describing empty ranges of
@@ -313,9 +370,14 @@ void DPMarker::eraseFromParent() {
 iterator_range<DPValue::self_iterator> DPMarker::getDbgValueRange() {
   return make_range(StoredDPValues.begin(), StoredDPValues.end());
 }
+iterator_range<DPValue::const_self_iterator>
+DPMarker::getDbgValueRange() const {
+  return make_range(StoredDPValues.begin(), StoredDPValues.end());
+}
 
 void DPValue::removeFromParent() {
   getMarker()->StoredDPValues.erase(getIterator());
+  Marker = nullptr;
 }
 
 void DPValue::eraseFromParent() {
@@ -326,6 +388,18 @@ void DPValue::eraseFromParent() {
 void DPMarker::insertDPValue(DPValue *New, bool InsertAtHead) {
   auto It = InsertAtHead ? StoredDPValues.begin() : StoredDPValues.end();
   StoredDPValues.insert(It, *New);
+  New->setMarker(this);
+}
+void DPMarker::insertDPValue(DPValue *New, DPValue *InsertBefore) {
+  assert(InsertBefore->getMarker() == this &&
+         "DPValue 'InsertBefore' must be contained in this DPMarker!");
+  StoredDPValues.insert(InsertBefore->getIterator(), *New);
+  New->setMarker(this);
+}
+void DPMarker::insertDPValueAfter(DPValue *New, DPValue *InsertAfter) {
+  assert(InsertAfter->getMarker() == this &&
+         "DPValue 'InsertAfter' must be contained in this DPMarker!");
+  StoredDPValues.insert(++(InsertAfter->getIterator()), *New);
   New->setMarker(this);
 }
 

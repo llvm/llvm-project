@@ -15732,6 +15732,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case RISCVISD::VMV_X_S: {
+    SDValue Vec = N->getOperand(0);
+    MVT VecVT = N->getOperand(0).getSimpleValueType();
+    const MVT M1VT = getLMUL1VT(VecVT);
+    if (M1VT.bitsLT(VecVT)) {
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, Vec,
+                        DAG.getVectorIdxConstant(0, DL));
+      return DAG.getNode(RISCVISD::VMV_X_S, DL, N->getSimpleValueType(0), Vec);
+    }
+    break;
+  }
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN: {
