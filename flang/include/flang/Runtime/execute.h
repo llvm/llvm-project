@@ -24,10 +24,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait = true,
     const Descriptor *cmdmsg = nullptr, const char *sourceFile = nullptr,
     int line = 0);
 
-// Calls std::system()
-void RTNAME(System)(const Descriptor &command,
-    const Descriptor *exitstat = nullptr, const char *sourceFile = nullptr,
-    int line = 0);
 }
 } // namespace Fortran::runtime
 

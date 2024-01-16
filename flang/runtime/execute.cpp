@@ -25,6 +25,8 @@
 #include <unistd.h>
 #endif
 
+#include <stdio.h>
+
 namespace Fortran::runtime {
 
 // cmdstat specified in 16.9.73
@@ -126,6 +128,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
   if (cmdstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
+    printf("cmdstat found. \n");
     // Assigned 0 as specifed in standard, if error then overwrite
     StoreIntToDescriptor(cmdstat, CMD_EXECUTED, terminator);
   }

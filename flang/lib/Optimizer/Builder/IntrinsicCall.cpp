@@ -5923,7 +5923,7 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 
 // SYSTEM
 void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() >= 1);
+  assert(args.size() >= 1 && args.size()<=2);
   mlir::Value command = fir::getBase(args[0]);
   const fir::ExtendedValue &exitstat = args[1];
 
@@ -5932,13 +5932,23 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
 
+  mlir::Value waitBool = builder.createBool(loc, true);
   mlir::Value exitstatBox =
       isStaticallyPresent(exitstat)
           ? fir::getBase(exitstat)
           : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
 
-  fir::runtime::genSystem(builder, loc, command, exitstatBox);
+  // Create a dummmy cmdstat to prevent EXECUTE_COMMAND_LINE terminate itself
+  // when cmdstat is assigned with a non-zero value but not present 
+  mlir::Value cmdstatBox = builder.createBox(loc, builder.createIntegerConstant(loc, builder.getIndexType(), 0));
+
+  mlir::Value cmdmsgBox =
+      builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+
+  fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
+                                      exitstatBox, cmdstatBox, cmdmsgBox);
 }
+
 // SYSTEM_CLOCK
 void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
