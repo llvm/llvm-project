@@ -126,19 +126,12 @@ public:
 
 private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
-    // The terminator sub-expression might not be evaluated.
-    if (Env.getValue(Cond) == nullptr)
-      transfer(StmtToEnv, Cond, Env);
-
     auto *Val = Env.get<BoolValue>(Cond);
-    // Value merging depends on flow conditions from different environments
-    // being mutually exclusive -- that is, they cannot both be true in their
-    // entirety (even if they may share some clauses). So, we need *some* value
-    // for the condition expression, even if just an atom.
-    if (Val == nullptr) {
-      Val = &Env.makeAtomicBoolValue();
-      Env.setValue(Cond, *Val);
-    }
+    // In transferCFGBlock(), we ensure that we always have a `Value` for the
+    // terminator condition, so assert this.
+    // We consciously assert ourselves instead of asserting via `cast()` so
+    // that we get a more meaningful line number if the assertion fails.
+    assert(Val != nullptr);
 
     bool ConditionValue = true;
     // The condition must be inverted for the successor that encompasses the
@@ -489,6 +482,31 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     }
     AC.Log.recordState(State);
   }
+
+  // If we have a terminator, evaluate its condition.
+  // This `Expr` may not appear as a `CFGElement` anywhere else, and it's
+  // important that we evaluate it here (rather than while processing the
+  // terminator) so that we put the corresponding value in the right
+  // environment.
+  if (const Expr *TerminatorCond =
+          dyn_cast_or_null<Expr>(Block.getTerminatorCondition())) {
+    if (State.Env.getValue(*TerminatorCond) == nullptr)
+      // FIXME: This only runs the builtin transfer, not the analysis-specific
+      // transfer. Fixing this isn't trivial, as the analysis-specific transfer
+      // takes a `CFGElement` as input, but some expressions only show up as a
+      // terminator condition, but not as a `CFGElement`. The condition of an if
+      // statement is one such example.
+      transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates), *TerminatorCond,
+               State.Env);
+
+    // If the transfer function didn't produce a value, create an atom so that
+    // we have *some* value for the condition expression. This ensures that
+    // when we extend the flow condition, it actually changes.
+    if (State.Env.getValue(*TerminatorCond) == nullptr)
+      State.Env.setValue(*TerminatorCond, State.Env.makeAtomicBoolValue());
+    AC.Log.recordState(State);
+  }
+
   return State;
 }
 
