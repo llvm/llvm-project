@@ -57,15 +57,20 @@ static bool areBinaryOperatorOperandsTypesEqual(const Expr *E,
   if (!WithoutImplicitAndParen)
     return false;
   if (const auto *B = dyn_cast<BinaryOperator>(WithoutImplicitAndParen)) {
-    const QualType NonReferenceType =
-        WithoutImplicitAndParen->getType().getNonReferenceType();
-    if (!areTypesEquals(
-            B->getLHS()->IgnoreImplicit()->getType().getNonReferenceType(),
-            NonReferenceType, IgnoreTypeAliases))
+    const QualType Type = WithoutImplicitAndParen->getType();
+    if (Type.isNull())
+      return false;
+
+    const QualType NonReferenceType = Type.getNonReferenceType();
+    const QualType LHSType = B->getLHS()->IgnoreImplicit()->getType();
+    if (!LHSType.isNull() &&
+        !areTypesEquals(LHSType.getNonReferenceType(), NonReferenceType,
+                        IgnoreTypeAliases))
       return true;
-    if (!areTypesEquals(
-            B->getRHS()->IgnoreImplicit()->getType().getNonReferenceType(),
-            NonReferenceType, IgnoreTypeAliases))
+    const QualType RHSType = B->getRHS()->IgnoreImplicit()->getType();
+    if (!RHSType.isNull() &&
+        !areTypesEquals(RHSType.getNonReferenceType(), NonReferenceType,
+                        IgnoreTypeAliases))
       return true;
   }
   return false;
