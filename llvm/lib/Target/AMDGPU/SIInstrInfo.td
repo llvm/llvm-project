@@ -281,55 +281,9 @@ def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
 // ValueType helpers
 //===----------------------------------------------------------------------===//
 
-// Returns 1 if the source arguments have modifiers, 0 if they do not.
-class isFloatType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, f16.Value),
-                !eq(SrcVT.Value, bf16.Value),
-                !eq(SrcVT.Value, f32.Value),
-                !eq(SrcVT.Value, f64.Value),
-                !eq(SrcVT.Value, v2f16.Value),
-                !eq(SrcVT.Value, v2bf16.Value),
-                !eq(SrcVT.Value, v4f16.Value),
-                !eq(SrcVT.Value, v4bf16.Value),
-                !eq(SrcVT.Value, v8f16.Value),
-                !eq(SrcVT.Value, v8bf16.Value),
-                !eq(SrcVT.Value, v16f16.Value),
-                !eq(SrcVT.Value, v16bf16.Value),
-                !eq(SrcVT.Value, v2f32.Value),
-                !eq(SrcVT.Value, v4f32.Value),
-                !eq(SrcVT.Value, v8f32.Value),
-                !eq(SrcVT.Value, v2f64.Value),
-                !eq(SrcVT.Value, v4f64.Value));
-}
-
-// XXX - do v2i16 instructions?
 class isIntType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, i8.Value),
-                !eq(SrcVT.Value, i16.Value),
-                !eq(SrcVT.Value, i32.Value),
-                !eq(SrcVT.Value, i64.Value),
-                !eq(SrcVT.Value, v4i16.Value),
-                !eq(SrcVT.Value, v8i16.Value),
-                !eq(SrcVT.Value, v16i16.Value),
-                !eq(SrcVT.Value, v2i32.Value),
-                !eq(SrcVT.Value, v4i32.Value),
-                !eq(SrcVT.Value, v8i32.Value));
+  bit ret = !and(SrcVT.isInteger, !ne(SrcVT.Value, i1.Value));
 }
-
-class isPackedType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, v2i16.Value),
-                !eq(SrcVT.Value, v2f16.Value),
-                !eq(SrcVT.Value, v2bf16.Value),
-                !eq(SrcVT.Value, v4f16.Value),
-                !eq(SrcVT.Value, v4bf16.Value),
-                !eq(SrcVT.Value, v2i32.Value),
-                !eq(SrcVT.Value, v2f32.Value),
-                !eq(SrcVT.Value, v4i32.Value),
-                !eq(SrcVT.Value, v4f32.Value),
-                !eq(SrcVT.Value, v8i32.Value),
-                !eq(SrcVT.Value, v8f32.Value));
-}
-
 
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
@@ -1003,7 +957,7 @@ def ExpSrc3 : RegisterOperand<VGPR_32> {
 
 class SDWASrc<ValueType vt> : RegisterOperand<VS_32> {
   let OperandNamespace = "AMDGPU";
-  string Type = !if(isFloatType<vt>.ret, "FP", "INT");
+  string Type = !if(vt.isFP, "FP", "INT");
   let OperandType = "OPERAND_REG_INLINE_C_"#Type#vt.Size;
   let DecoderMethod = "decodeSDWASrc"#vt.Size;
   let EncoderMethod = "getSDWASrcEncoding";
@@ -1499,10 +1453,8 @@ class getSDWADstForVT<ValueType VT> {
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
 class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
-  bit isFP = isFloatType<VT>.ret;
-
   RegisterOperand ret =
-    !if(isFP,
+    !if(VT.isFP,
       !if(!eq(VT.Size, 64),
          VSrc_f64,
          !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
@@ -1562,21 +1514,19 @@ class getVregSrcForVT_t16<ValueType VT, bit IsFake16 = 1> {
 }
 
 class getSDWASrcForVT <ValueType VT> {
-  bit isFP = isFloatType<VT>.ret;
   RegisterOperand retFlt = !if(!eq(VT.Size, 16), SDWASrc_f16, SDWASrc_f32);
   RegisterOperand retInt = !if(!eq(VT.Size, 16), SDWASrc_i16, SDWASrc_i32);
-  RegisterOperand ret = !if(isFP, retFlt, retInt);
+  RegisterOperand ret = !if(VT.isFP, retFlt, retInt);
 }
 
 // Returns the register class to use for sources of VOP3 instructions for the
 // given VT.
 class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
-  bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
      VRegSrc_128,
      !if(!eq(VT.Size, 64),
-        !if(isFP,
+        !if(VT.isFP,
            !if(!eq(VT.Value, v2f32.Value),
                VSrc_v2f32,
                VSrc_f64),
@@ -1585,7 +1535,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
            VSrc_b64)),
         !if(!eq(VT.Value, i1.Value),
            SSrc_i1,
-           !if(isFP,
+           !if(VT.isFP,
               !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
                  !if(IsTrue16, VSrcT_f16, VSrc_f16),
                  !if(!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)),
@@ -1611,10 +1561,9 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
-  bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
       !if (!eq(VT.Value, i1.Value), SSrc_i1,
-           !if (isFP,
+           !if (VT.isFP,
                 !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)), VCSrc_f16,
                      !if (!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)), VCSrc_v2f16, VCSrc_f32)),
                 !if (!eq(VT.Value, i16.Value), VCSrc_b16,
@@ -1650,14 +1599,12 @@ class isModifierType<ValueType SrcVT> {
 
 // Return type of input modifiers operand for specified input operand
 class getSrcMod <ValueType VT, bit IsTrue16 = 0> {
-  bit isFP = isFloatType<VT>.ret;
-  bit isPacked = isPackedType<VT>.ret;
   Operand ret =  !if(!eq(VT.Size, 64),
-                     !if(isFP, FP64InputMods, Int64InputMods),
+                     !if(VT.isFP, FP64InputMods, Int64InputMods),
                      !if(!eq(VT.Size, 16),
-                         !if(isFP, !if(IsTrue16, FPT16InputMods, FP16InputMods),
-                                   !if(IsTrue16, IntT16InputMods, IntOpSelMods)),
-                         !if(isFP, FP32InputMods, Int32InputMods)));
+                         !if(VT.isFP, !if(IsTrue16, FPT16InputMods, FP16InputMods),
+                                      !if(IsTrue16, IntT16InputMods, IntOpSelMods)),
+                         !if(VT.isFP, FP32InputMods, Int32InputMods)));
 }
 
 class getOpSelMod <ValueType VT> {
@@ -1667,14 +1614,12 @@ class getOpSelMod <ValueType VT> {
 
 // Return type of input modifiers operand specified input operand for DPP
 class getSrcModDPP <ValueType VT> {
-  bit isFP = isFloatType<VT>.ret;
-  Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
+  Operand ret = !if(VT.isFP, FPVRegInputMods, IntVRegInputMods);
 }
 
 class getSrcModDPP_t16 <ValueType VT> {
-  bit isFP = isFloatType<VT>.ret;
   Operand ret =
-      !if (isFP,
+      !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
                 FPT16VRegInputMods, FPVRegInputMods),
            !if (!eq(VT.Value, i16.Value), IntT16VRegInputMods,
@@ -1683,10 +1628,8 @@ class getSrcModDPP_t16 <ValueType VT> {
 
 // Return type of input modifiers operand for specified input operand for DPP
 class getSrcModVOP3DPP <ValueType VT> {
-  bit isFP = isFloatType<VT>.ret;
-  bit isPacked = isPackedType<VT>.ret;
   Operand ret =
-      !if (isFP,
+      !if (VT.isFP,
            !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
                 FP16VCSrcInputMods, FP32VCSrcInputMods),
            Int32VCSrcInputMods);
@@ -2330,9 +2273,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasSrc1 = !ne(Src1VT.Value, untyped.Value);
   field bit HasSrc2 = !ne(Src2VT.Value, untyped.Value);
 
-  field bit HasSrc0FloatMods = isFloatType<Src0VT>.ret;
-  field bit HasSrc1FloatMods = isFloatType<Src1VT>.ret;
-  field bit HasSrc2FloatMods = isFloatType<Src2VT>.ret;
+  field bit HasSrc0FloatMods = Src0VT.isFP;
+  field bit HasSrc1FloatMods = Src1VT.isFP;
+  field bit HasSrc2FloatMods = Src2VT.isFP;
 
   field bit HasSrc0IntMods = isIntType<Src0VT>.ret;
   field bit HasSrc1IntMods = isIntType<Src1VT>.ret;
@@ -2340,16 +2283,16 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit HasClamp = !or(isModifierType<Src0VT>.ret, EnableClamp);
   field bit HasSDWAClamp = EmitDst;
-  field bit HasFPClamp = !and(isFloatType<DstVT>.ret, HasClamp);
-  field bit HasIntClamp = !if(isFloatType<DstVT>.ret, 0, HasClamp);
+  field bit HasFPClamp = !and(DstVT.isFP, HasClamp);
+  field bit HasIntClamp = !if(DstVT.isFP, 0, HasClamp);
   field bit HasClampLo = HasClamp;
-  field bit HasClampHi = !and(isPackedType<DstVT>.ret, HasClamp);
+  field bit HasClampHi = !and(DstVT.isVector, HasClamp);
   field bit HasHigh = 0;
 
-  field bit IsPacked = isPackedType<Src0VT>.ret;
+  field bit IsPacked = Src0VT.isVector;
   field bit HasOpSel = IsPacked;
-  field bit HasOMod = !if(IsVOP3P, 0, isFloatType<DstVT>.ret);
-  field bit HasSDWAOMod = isFloatType<DstVT>.ret;
+  field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
+  field bit HasSDWAOMod = DstVT.isFP;
 
   field bit HasModifiers = !or(isModifierType<Src0VT>.ret,
                                isModifierType<Src1VT>.ret,
