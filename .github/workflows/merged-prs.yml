@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: llvm/utils/git/
+          ref: main
 
       - name: Setup Automation Script
         working-directory: ./llvm/utils/git/
