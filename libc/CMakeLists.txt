@@ -34,6 +34,10 @@ if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
     add_subdirectory(utils/HdrGen)
+    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+    # PARENT_SCOPE which get lost until saved in the cache.
+    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
   else()
     message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()

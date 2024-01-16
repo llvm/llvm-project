@@ -131,7 +131,7 @@ LIBC_INLINE long double sqrt(long double x) {
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
-    return out;
+    return out.get_val();
   }
 }
 #endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
