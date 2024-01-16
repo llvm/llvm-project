@@ -120,18 +120,16 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // vectorize any scalar phis that feed into a fadd reduction:
 //
 // loop:
-// %phi = phi <float> [ ..., %entry ], [ %acc, %loop]
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x
-// float> %vec)
+// %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
 //
 // ->
 //
 // loop:
-// %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop]
+// %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
 // %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
-// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x
-// float> %vec) %acc.vec = insertelement <vscale x 2 x float> poison, float
-// %acc.next, i64 0
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
 //
 // Which eliminates the scalar -> vector -> scalar crossing during instruction
 // selection.
@@ -140,7 +138,7 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
     return false;
 
   auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
-  if (!PHI || !llvm::is_contained(PHI->incoming_values(), &I))
+  if (!PHI)
     return false;
 
   Type *VecTy = I.getOperand(1)->getType();
@@ -156,6 +154,9 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
   Builder.SetInsertPoint(&I);
   I.setOperand(0, Builder.CreateExtractElement(VecPHI, (uint64_t)0));
+
+  if (PHI->hasNUses(0))
+    PHI->eraseFromParent();
 
   return true;
 }

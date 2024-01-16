@@ -26,11 +26,10 @@ define float @reduce_fadd(ptr nocapture noundef readonly %f, i32 noundef signext
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> poison, float 0.000000e+00, i64 0), [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[F]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP8]] = tail call float @llvm.vector.reduce.fadd.nxv4f32(float [[TMP7]], <vscale x 4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call float @llvm.vector.reduce.fadd.nxv4f32(float [[TMP7]], <vscale x 4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP10]] = insertelement <vscale x 4 x float> poison, float [[TMP8]], i64 0
