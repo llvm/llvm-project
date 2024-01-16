@@ -354,7 +354,7 @@ static Value genSubscript(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   const auto stt = getSparseTensorType(t->get());
   if (stt.hasEncoding()) {
     // For sparse tensors we only push the last-level's position onto `args`.
-    const auto pos = env.emitter().getPosits()[tid].back();
+    const auto pos = env.emitter().getValPosits(tid);
     assert(pos);
     args.push_back(pos);
   } else {
@@ -893,7 +893,7 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId curr,
         if (isCompressedLT(lt) || isSingletonLT(lt) ||
             isLooseCompressedLT(lt) || is2OutOf4LT(lt)) {
           assert(lvl.has_value());
-          const Value crd = env.emitter().getCoords()[tid][*lvl];
+          const Value crd = env.emitter().getCoord(tid, *lvl);
           const Value lvar = env.getLoopVar(curr);
           clause = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                  crd, lvar);
