@@ -76,7 +76,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -96,9 +95,6 @@
 #define DEBUG_TYPE "irtranslator"
 
 using namespace llvm;
-
-DEBUG_COUNTER(GlobalISelCounter, "globalisel",
-              "Controls whether to select function with GlobalISel");
 
 static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
@@ -3704,12 +3700,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));
-
-  if (!DebugCounter::shouldExecute(GlobalISelCounter)) {
-    dbgs() << "Falling back for function " << CurMF.getName() << "\n";
-    CurMF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
-    return false;
-  }
 
   if (CLI->fallBackToDAGISel(*MF)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
