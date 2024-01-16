@@ -204,7 +204,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         unsigned NestedFieldOffset = 0;
         const Record::Field *NestedField = nullptr;
         for (const NamedDecl *ND : IFD->chain()) {
-          const FieldDecl *FD = cast<FieldDecl>(ND);
+          const auto *FD = cast<FieldDecl>(ND);
           const Record *FieldRecord =
               this->P.getOrCreateRecord(FD->getParent());
           assert(FieldRecord);
