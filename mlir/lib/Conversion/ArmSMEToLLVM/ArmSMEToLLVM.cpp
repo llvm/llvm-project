@@ -731,10 +731,8 @@ struct OuterProductOpConversion
 
       unsigned minNumElts = arm_sme::MinStreamingVectorLengthInBits /
                             vectorType.getElementTypeBitWidth();
-      if (vectorType.getShape() != ArrayRef<int64_t>({minNumElts, minNumElts}))
-        return false;
-
-      return true;
+      return vectorType.getShape() ==
+             ArrayRef<int64_t>({minNumElts, minNumElts});
     };
 
     // TODO: Support CombiningKind::Sub for outer products.
