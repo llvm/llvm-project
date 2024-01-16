@@ -306,6 +306,11 @@ void SyncClause() {
 #pragma acc serial self(i > j, seq
   for(;;){}
 
+  // expected-warning@+2{{left operand of comma operator has no effect}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(i, j)
+  for(;;){}
+
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial self(i > j)
   for(;;){}
@@ -322,6 +327,25 @@ struct Members {
 struct HasMembersArray {
   struct Members MemArr[4];
 };
+
+// On 'update', self behaves differently and requires parens, plus takes a var-list instead.
+void SelfUpdate() {
+  struct Members s;
+
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self
+  for(;;){}
+
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self(zero : s.array[s.value : 5], s.value), seq
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self(s.array[s.value : 5], s.value), seq
+  for(;;){}
+}
 
 void VarListClauses() {
   // expected-error@+2{{expected '('}}
