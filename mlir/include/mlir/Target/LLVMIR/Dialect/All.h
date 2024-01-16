@@ -65,12 +65,15 @@ registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
   registerBuiltinDialectTranslation(registry);
   registerGPUDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerOpenMPDialectTranslation(registry);
   registerNVVMDialectTranslation(registry);
   registerROCDLDialectTranslation(registry);
   registerSPIRVDialectTranslation(registry);
 
   // Extension required for translating GPU offloading Ops.
   gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+  // Extensions required for translating the OpenMP dialect.
+  omp::registerAllExternalModels(registry);
 }
 
 /// Registers all dialects that can be translated from LLVM IR and the
