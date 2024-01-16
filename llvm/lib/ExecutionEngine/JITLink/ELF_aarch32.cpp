@@ -216,12 +216,12 @@ public:
         ArmCfg(std::move(ArmCfg)) {}
 };
 
-template <aarch32::StubsFlavor Flavor>
+template <typename StubsManagerType>
 Error buildTables_ELF_aarch32(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch32::StubsManager<Flavor> PLT;
-  visitExistingEdges(G, PLT);
+  StubsManagerType StubsManager;
+  visitExistingEdges(G, StubsManager);
   return Error::success();
 }
 
@@ -311,7 +311,7 @@ void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
     switch (ArmCfg.Stubs) {
     case aarch32::StubsFlavor::v7:
       PassCfg.PostPrunePasses.push_back(
-          buildTables_ELF_aarch32<aarch32::StubsFlavor::v7>);
+          buildTables_ELF_aarch32<aarch32::StubsManager_v7>);
       break;
     case aarch32::StubsFlavor::Unsupported:
       llvm_unreachable("Check before building graph");
