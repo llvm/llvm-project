@@ -1168,13 +1168,13 @@ def MOVBE64rr_EVEX : RI<0x61, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
 
 def MOVBE16rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                             "movbe{w}\t{$src, $dst|$dst, $src}", []>,
-                          EVEX, NoCD8, T_MAP4, PD;
+                          EVEX, NoCD8, T_MAP4, PD, DisassembleOnly;
 def MOVBE32rr_EVEX_REV : I<0x60, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                             "movbe{l}\t{$src, $dst|$dst, $src}", []>,
-                          EVEX, NoCD8, T_MAP4;
+                          EVEX, NoCD8, T_MAP4, DisassembleOnly;
 def MOVBE64rr_EVEX_REV : RI<0x60, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                             "movbe{q}\t{$src, $dst|$dst, $src}", []>,
-                          EVEX, NoCD8, T_MAP4;
+                          EVEX, NoCD8, T_MAP4, DisassembleOnly;
 }
 
 //===----------------------------------------------------------------------===//
