@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
@@ -143,6 +144,8 @@ void ShapeDialect::initialize() {
   // still evolving it makes it simple to start with an unregistered ops and
   // try different variants before actually defining the op.
   allowUnknownOperations();
+  declarePromisedInterface<AssumingOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<AssumingYieldOp, bufferization::BufferizableOpInterface>();
 }
 
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,

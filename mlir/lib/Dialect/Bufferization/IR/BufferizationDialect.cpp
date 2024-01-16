@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -63,6 +64,9 @@ void mlir::bufferization::BufferizationDialect::initialize() {
 #include "mlir/Dialect/Bufferization/IR/BufferizationOps.cpp.inc"
       >();
   addInterfaces<BufferizationInlinerInterface>();
+  declarePromisedInterface<func::CallOp, BufferizableOpInterface>();
+  declarePromisedInterface<func::FuncOp, BufferizableOpInterface>();
+  declarePromisedInterface<func::ReturnOp, BufferizableOpInterface>();
 }
 
 LogicalResult BufferizationDialect::verifyRegionArgAttribute(

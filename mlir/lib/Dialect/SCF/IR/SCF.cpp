@@ -9,10 +9,13 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -71,6 +74,18 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterface<InParallelOp, bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<ReduceReturnOp, bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<ConditionOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ExecuteRegionOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ForOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<IfOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<IndexSwitchOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ForallOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<InParallelOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<WhileOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<YieldOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
 }
 
 /// Default callback for IfOp builders. Inserts a yield without arguments.

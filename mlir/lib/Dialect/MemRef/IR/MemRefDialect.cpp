@@ -8,8 +8,13 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <optional>
 
@@ -43,6 +48,23 @@ void mlir::memref::MemRefDialect::initialize() {
       >();
   addInterfaces<MemRefInlinerInterface>();
   declarePromisedInterface<MemRefDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<AllocOp, bufferization::AllocationOpInterface>();
+  declarePromisedInterface<AllocaOp, bufferization::AllocationOpInterface>();
+  declarePromisedInterface<ReallocOp, bufferization::AllocationOpInterface>();
+  declarePromisedInterface<CastOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<ExpandShapeOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<LoadOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<ReinterpretCastOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<StoreOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<SubViewOp, RuntimeVerifiableOpInterface>();
+  declarePromisedInterface<AllocOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<AllocaOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<CastOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<DimOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<GetGlobalOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<RankOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<SubViewOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<MemRefType, DestructurableTypeInterface>();
 }
 
 /// Finds the unique dealloc operation (if one exists) for `allocValue`.
