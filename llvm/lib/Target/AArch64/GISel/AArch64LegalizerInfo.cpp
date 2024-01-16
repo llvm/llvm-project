@@ -525,10 +525,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
       .moreElementsToNextPow2(0)
-      .clampMaxNumElements(0, s64, 2)
-      .clampMaxNumElements(0, s32, 4)
-      .clampMaxNumElements(0, s16, 8)
-      .clampMaxNumElements(0, s8, 16);
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_FCMP)
       // If we don't have full FP16 support, then scalarize the elements of
