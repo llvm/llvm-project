@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
 using namespace llvm;
@@ -27,6 +28,7 @@ namespace {
 class AMDGPUMarkLastScratchLoad : public MachineFunctionPass {
 private:
   LiveStacks *LS = nullptr;
+  LiveIntervals *LIS = nullptr;
   SlotIndexes *SI = nullptr;
   const SIInstrInfo *SII = nullptr;
 
@@ -41,6 +43,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexes>();
+    AU.addRequired<LiveIntervals>();
     AU.addRequired<LiveStacks>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -62,8 +65,10 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   LS = &getAnalysis<LiveStacks>();
+  LIS = &getAnalysis<LiveIntervals>();
   SI = &getAnalysis<SlotIndexes>();
   SII = ST.getInstrInfo();
+  SlotIndexes &Slots = *LIS->getSlotIndexes();
 
   const unsigned NumSlots = LS->getNumIntervals();
   if (NumSlots == 0) {
@@ -87,12 +92,14 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *LastLoad = nullptr;
 
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
+
+      // If there is no instruction at this slot because it was deleted take the
+      // instruction from the next slot.
       if (!MISegmentEnd) {
-        // FIXME: The start and end can refer to deleted instructions. We should
-        // be able to handle this more gracefully by finding the closest real
-        // instructions.
-        continue;
+        SlotIndex NextSlot = Slots.getNextNonNullIndex(Segment.end);
+        MISegmentEnd = SI->getInstructionFromIndex(NextSlot);
       }
+
       MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineBasicBlock *BB = MISegmentEnd->getParent();
 
