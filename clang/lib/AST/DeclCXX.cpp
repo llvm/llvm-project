@@ -1389,7 +1389,11 @@ bool CXXRecordDecl::isLiteral() const {
                              : hasTrivialDestructor()))
     return false;
 
-  if (isLambda() && !LangOpts.CPlusPlus17)
+  // Lambdas are literal types since C++17.
+  if (!isAggregate()
+      // Lambdas are literal types since C++17.
+      && !(LangOpts.CPlusPlus17 && isLambda()) &&
+      !hasConstexprNonCopyMoveConstructor() && !hasTrivialDefaultConstructor())
     return false;
 
   if (hasNonLiteralTypeFieldsOrBases()) {
@@ -1407,8 +1411,7 @@ bool CXXRecordDecl::isLiteral() const {
       return false;
   }
 
-  return isAggregate() || isLambda() || hasConstexprNonCopyMoveConstructor() ||
-         hasTrivialDefaultConstructor();
+  return true;
 }
 
 void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
