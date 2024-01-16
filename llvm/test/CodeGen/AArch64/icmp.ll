@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-eabi -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:  warning: Instruction selection used fallback path for v3i32_i32
+
 define i64 @i64_i64(i64 %a, i64 %b, i64 %d, i64 %e) {
 ; CHECK-LABEL: i64_i64:
 ; CHECK:       // %bb.0: // %entry
