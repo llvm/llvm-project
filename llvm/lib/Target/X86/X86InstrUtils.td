@@ -100,15 +100,17 @@ defvar unaryop_ndd_args = "{$src1, $dst|$dst, $src1}";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
 defvar binop_cl_args = "{%cl, $src1|$src1, cl}";
+defvar triop_args = "{$src3, $src2, $src1|$src1, $src2, $src3}";
+defvar triop_cl_args = "{%cl, $src2, $src1|$src1, $src2, cl}";
 defvar tie_dst_src1 = "$src1 = $dst";
 
 // NDD - Helper for new data destination instructions
-class NDD<bit ndd> {
+class NDD<bit ndd, Map map = OB> {
   string Constraints = !if(!eq(ndd, 0), tie_dst_src1, "");
   Encoding OpEnc = !if(!eq(ndd, 0), EncNormal, EncEVEX);
   bit hasEVEX_B = ndd;
   bit hasVEX_4V = ndd;
-  Map OpMap = !if(!eq(ndd, 0), OB, T_MAP4);
+  Map OpMap = !if(!eq(ndd, 0), map, T_MAP4);
 }
 // NF - Helper for NF (no flags update) instructions
 class NF: T_MAP4, EVEX, EVEX_NF, NoCD8;

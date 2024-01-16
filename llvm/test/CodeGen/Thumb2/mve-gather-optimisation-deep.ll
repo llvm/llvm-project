@@ -62,11 +62,11 @@ end:
   ret void;
 }
 
-define arm_aapcs_vfpcc void @push_out_add_sub_block_c(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
-; CHECK-LABEL: @push_out_add_sub_block_c(
+define arm_aapcs_vfpcc void @push_out_add_sub_block_commutedphi(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+; CHECK-LABEL: @push_out_add_sub_block_commutedphi(
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
