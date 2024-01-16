@@ -324,7 +324,7 @@ void __unw_add_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
   CFI_Parser<LocalAddressSpace>::CIE_Info cieInfo;
   CFI_Parser<LocalAddressSpace>::FDE_Info fdeInfo;
   auto p = (LocalAddressSpace::pint_t)eh_frame_start;
-  while (true) {
+  while (LocalAddressSpace::sThisAddressSpace.get32(p)) {
     if (CFI_Parser<LocalAddressSpace>::decodeFDE(
             LocalAddressSpace::sThisAddressSpace, p, &fdeInfo, &cieInfo,
             true) == NULL) {
