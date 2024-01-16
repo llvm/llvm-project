@@ -6,6 +6,8 @@
 ; RUN: llc < %s -mtriple powerpc64le-unknown-linux -debug-only=machine-scheduler \
 ; RUN:   2>&1 | FileCheck %s --check-prefix=LOG
 
+; REQUIRES: asserts
+
 define dso_local void @test_builtin_ppc_fence() {
 ; CHECK-LABEL: test_builtin_ppc_fence:
 ; CHECK:       # %bb.0: # %entry

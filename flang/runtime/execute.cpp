@@ -151,19 +151,19 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
     // add "cmd.exe /c " to the beginning of command
     const char *prefix{"cmd.exe /c "};
-    char *newCmdWin{(char *)AllocateMemoryOrCrash(
-        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1)};
+    char *newCmdWin{static_cast<char *>(AllocateMemoryOrCrash(
+        terminator, std::strlen(prefix) + std::strlen(newCmd) + 1))};
     std::strcpy(newCmdWin, prefix);
     std::strcat(newCmdWin, newCmd);
 
     // Convert the char to wide char
     const size_t sizeNeeded{mbstowcs(NULL, newCmdWin, 0) + 1};
-    wchar_t *wcmd{(wchar_t *)AllocateMemoryOrCrash(
-        terminator, sizeNeeded * sizeof(wchar_t))};
+    wchar_t *wcmd{static_cast<wchar_t *>(
+        AllocateMemoryOrCrash(terminator, sizeNeeded * sizeof(wchar_t)))};
     if (std::mbstowcs(wcmd, newCmdWin, sizeNeeded) == static_cast<size_t>(-1)) {
       terminator.Crash("Char to wide char failed for newCmd");
     }
-    FreeMemory((void *)newCmdWin);
+    FreeMemory(newCmdWin);
 
     if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
@@ -179,7 +179,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
         CheckAndCopyCharsToDescriptor(cmdmsg, "CreateProcess failed.");
       }
     }
-    FreeMemory((void *)wcmd);
+    FreeMemory(wcmd);
 #else
     // terminated children do not become zombies
     signal(SIGCHLD, SIG_IGN);
@@ -200,7 +200,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   }
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
-    FreeMemory((void *)newCmd);
+    FreeMemory(newCmd);
   }
 }
 
