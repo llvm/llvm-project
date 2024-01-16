@@ -491,7 +491,7 @@ TEST(CopyCountAttr, PrintStripped) {
   // given proximity.
   test::CopyCount::counter = 0;
   test::CopyCount copyCount("hello");
-  auto res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
 
   std::string str;
   llvm::raw_string_ostream os(str);
