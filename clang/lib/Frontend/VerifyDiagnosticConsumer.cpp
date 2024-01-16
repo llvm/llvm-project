@@ -1099,7 +1099,8 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // source file(s) processed.
     if (Status == HasNoDirectives) {
       // change here
-      std::string directives = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+      std::string directives =
+          *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
       Diags.Report(diag::err_verify_no_directives).setForceEmit() << directives;
       ++NumErrors;
       Status = HasNoDirectivesReported;
