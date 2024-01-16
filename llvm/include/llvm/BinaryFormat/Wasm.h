@@ -95,7 +95,6 @@ enum : unsigned {
   WASM_OPCODE_REF_NULL = 0xd0,
 };
 
-
 // Opcodes used in synthetic functions.
 enum : unsigned {
   WASM_OPCODE_BLOCK = 0x02,
@@ -275,7 +274,6 @@ struct WasmLimits {
   uint64_t Minimum;
   uint64_t Maximum;
 };
-
 
 struct WasmTableType {
   ValType ElemType;
