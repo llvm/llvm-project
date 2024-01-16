@@ -17,10 +17,7 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
-
-namespace {
-
-bool isExprAComparisonOperator(const Expr *E) {
+static bool isExprAComparisonOperator(const Expr *E) {
   if (const auto *Op = dyn_cast_or_null<BinaryOperator>(E->IgnoreImplicit()))
     return Op->isComparisonOp();
   if (const auto *Op =
@@ -29,6 +26,7 @@ bool isExprAComparisonOperator(const Expr *E) {
   return false;
 }
 
+namespace {
 AST_MATCHER(BinaryOperator,
             hasBinaryOperatorAChildComparisonOperatorWithoutParen) {
   return isExprAComparisonOperator(Node.getLHS()) ||
@@ -41,87 +39,77 @@ AST_MATCHER(CXXOperatorCallExpr,
                      isExprAComparisonOperator);
 }
 
-constexpr std::array<llvm::StringRef, 26U> Letters = {
-    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-    "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"};
-
 struct ChainedComparisonData {
   llvm::SmallString<256U> Name;
-  llvm::SmallVector<const Expr *, 26U> Operands;
-  bool Full = false;
+  llvm::SmallVector<const Expr *, 32U> Operands;
 
-  void Add(const Expr *Operand) {
-    if (Full)
-      return;
-    if (!Name.empty())
-      Name += ' ';
-    Name += Letters[Operands.size()];
-    Operands.push_back(Operand);
+  explicit ChainedComparisonData(const Expr *Op) { extract(Op); }
 
-    if (Operands.size() == Letters.size()) {
-      Name += " ...";
-      Full = true;
-    }
-  }
-
-  void Add(llvm::StringRef Opcode) {
-    if (Full)
-      return;
-
-    Name += ' ';
-    Name += Opcode.str();
-  }
+private:
+  void add(const Expr *Operand);
+  void add(llvm::StringRef Opcode);
+  void extract(const Expr *Op);
+  bool extract(const BinaryOperator *Op);
+  bool extract(const CXXOperatorCallExpr *Op);
 };
 
-} // namespace
+void ChainedComparisonData::add(const Expr *Operand) {
+  if (!Name.empty())
+    Name += ' ';
+  Name += 'v';
+  Name += std::to_string(Operands.size());
+  Operands.push_back(Operand);
+}
 
-static void extractData(const Expr *Op, ChainedComparisonData &Output);
+void ChainedComparisonData::add(llvm::StringRef Opcode) {
+  Name += ' ';
+  Name += Opcode.str();
+}
 
-inline bool extractData(const BinaryOperator *Op,
-                        ChainedComparisonData &Output) {
+bool ChainedComparisonData::extract(const BinaryOperator *Op) {
   if (!Op)
     return false;
 
   if (isExprAComparisonOperator(Op->getLHS()))
-    extractData(Op->getLHS()->IgnoreImplicit(), Output);
+    extract(Op->getLHS()->IgnoreImplicit());
   else
-    Output.Add(Op->getLHS()->IgnoreUnlessSpelledInSource());
+    add(Op->getLHS()->IgnoreUnlessSpelledInSource());
 
-  Output.Add(Op->getOpcodeStr());
+  add(Op->getOpcodeStr());
 
   if (isExprAComparisonOperator(Op->getRHS()))
-    extractData(Op->getRHS()->IgnoreImplicit(), Output);
+    extract(Op->getRHS()->IgnoreImplicit());
   else
-    Output.Add(Op->getRHS()->IgnoreUnlessSpelledInSource());
+    add(Op->getRHS()->IgnoreUnlessSpelledInSource());
   return true;
 }
 
-inline bool extractData(const CXXOperatorCallExpr *Op,
-                        ChainedComparisonData &Output) {
+bool ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
   if (!Op || Op->getNumArgs() != 2U)
     return false;
 
   const Expr *FirstArg = Op->getArg(0U)->IgnoreImplicit();
   if (isExprAComparisonOperator(FirstArg))
-    extractData(FirstArg, Output);
+    extract(FirstArg);
   else
-    Output.Add(FirstArg->IgnoreUnlessSpelledInSource());
+    add(FirstArg->IgnoreUnlessSpelledInSource());
 
-  Output.Add(getOperatorSpelling(Op->getOperator()));
+  add(getOperatorSpelling(Op->getOperator()));
 
   const Expr *SecondArg = Op->getArg(1U)->IgnoreImplicit();
   if (isExprAComparisonOperator(SecondArg))
-    extractData(SecondArg, Output);
+    extract(SecondArg);
   else
-    Output.Add(SecondArg->IgnoreUnlessSpelledInSource());
+    add(SecondArg->IgnoreUnlessSpelledInSource());
   return true;
 }
 
-static void extractData(const Expr *OpExpr, ChainedComparisonData &Output) {
-  OpExpr->dump();
-  extractData(dyn_cast_or_null<BinaryOperator>(OpExpr), Output) ||
-      extractData(dyn_cast_or_null<CXXOperatorCallExpr>(OpExpr), Output);
+void ChainedComparisonData::extract(const Expr *Op) {
+  extract(dyn_cast_or_null<BinaryOperator>(Op)) ||
+      extract(dyn_cast_or_null<CXXOperatorCallExpr>(Op));
 }
+
+} // namespace
 
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(
@@ -139,9 +127,7 @@ void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
 void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedOperator = Result.Nodes.getNodeAs<Expr>("op");
 
-  ChainedComparisonData Data;
-  extractData(MatchedOperator, Data);
-
+  ChainedComparisonData Data(MatchedOperator);
   if (Data.Operands.empty())
     return;
 
@@ -152,9 +138,9 @@ void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
       << llvm::StringRef(Data.Name).trim();
 
   for (std::size_t Index = 0U; Index < Data.Operands.size(); ++Index) {
-    diag(Data.Operands[Index]->getBeginLoc(), "operand '%0' is here",
+    diag(Data.Operands[Index]->getBeginLoc(), "operand 'v%0' is here",
          DiagnosticIDs::Note)
-        << Letters[Index];
+        << Index;
   }
 }
 
