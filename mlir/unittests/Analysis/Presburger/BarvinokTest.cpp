@@ -125,11 +125,13 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
 
-// The following test is taken from
-/// Verdoolaege, Sven, et al. "Counting integer points in parametric
-/// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
-/// 37-66.
 TEST(BarvinokTest, computeNumTerms) {
+  // The following test is taken from
+  // Verdoolaege, Sven, et al. "Counting integer points in parametric
+  // polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+  // 37-66.
+  // It represents a right-angled triangle with right angle at the origin,
+  // with height and base lengths (p/2).
   GeneratingFunction gf(
       1, {1, 1, 1},
       {makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
@@ -137,7 +139,7 @@ TEST(BarvinokTest, computeNumTerms) {
        makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
       {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}});
 
-  QuasiPolynomial numPoints = computeNumTerms(gf);
+  QuasiPolynomial numPoints = computeNumTerms(gf).collectTerms();
 
   // First, we make sure that all the affine functions are of the form ⌊p/2⌋.
   for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine()) {
@@ -165,4 +167,96 @@ TEST(BarvinokTest, computeNumTerms) {
   EXPECT_EQ(pSquaredCoeff, Fraction(1, 2));
   EXPECT_EQ(pCoeff, Fraction(3, 2));
   EXPECT_EQ(numPoints.getConstantTerm(), Fraction(1, 1));
+
+  // The following generating function corresponds to a cuboid
+  // with length (x-axis) M, width (y-axis) N, and height (z-axis)
+  // P.
+  // There are eight terms.
+  gf = GeneratingFunction(
+      3, {1, 1, 1, 1, 1, 1, 1, 1},
+      {makeFracMatrix(4, 3, {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}})},
+      {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+       {{-1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+       {{1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
+       {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+       {{-1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
+       {{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+       {{1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+       {{-1, 0, 0}, {0, -1, 0}, {0, 0, -1}}});
+
+  numPoints = computeNumTerms(gf);
+  numPoints = numPoints.collectTerms().simplify();
+
+  // First, we make sure all the affine functions are either
+  // ⌊M⌋, ⌊N⌋, or ⌊P⌋.
+  for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine())
+    for (const SmallVector<Fraction> &aff : term)
+      EXPECT_EQ(aff[0] + aff[1] + aff[2] + aff[3], 1);
+
+  Fraction m = 0, n = 0, p = 0, mn = 0, np = 0, pm = 0, mnp = 0;
+
+  for (unsigned i = 0, e = numPoints.getAffine().size(); i < e; i++) {
+    if (numPoints.getAffine()[i].size() == 1u) {
+      if (numPoints.getAffine()[i][0][0] == 1)
+        m += numPoints.getCoefficients()[i];
+      if (numPoints.getAffine()[i][0][1] == 1)
+        n += numPoints.getCoefficients()[i];
+      if (numPoints.getAffine()[i][0][2] == 1)
+        p += numPoints.getCoefficients()[i];
+    } else if (numPoints.getAffine()[i].size() == 2u) {
+      if ((numPoints.getAffine()[i][0][0] == 1 &&
+           numPoints.getAffine()[i][1][1] == 1) ||
+          (numPoints.getAffine()[i][0][1] == 1 &&
+           numPoints.getAffine()[i][1][0] == 1))
+        mn += numPoints.getCoefficients()[i];
+      if ((numPoints.getAffine()[i][0][1] == 1 &&
+           numPoints.getAffine()[i][1][2] == 1) ||
+          (numPoints.getAffine()[i][0][2] == 1 &&
+           numPoints.getAffine()[i][1][1] == 1))
+        np += numPoints.getCoefficients()[i];
+      if ((numPoints.getAffine()[i][0][2] == 1 &&
+           numPoints.getAffine()[i][1][0] == 1) ||
+          (numPoints.getAffine()[i][0][0] == 1 &&
+           numPoints.getAffine()[i][1][2] == 1))
+        pm += numPoints.getCoefficients()[i];
+    } else if (numPoints.getAffine()[i].size() == 3u) {
+      if ((numPoints.getAffine()[i][0][0] == 1 &&
+           numPoints.getAffine()[i][1][1] == 1 &&
+           numPoints.getAffine()[i][2][2] == 1) ||
+          (numPoints.getAffine()[i][0][0] == 1 &&
+           numPoints.getAffine()[i][1][2] == 1 &&
+           numPoints.getAffine()[i][2][1] == 1) ||
+          (numPoints.getAffine()[i][0][1] == 1 &&
+           numPoints.getAffine()[i][1][0] == 1 &&
+           numPoints.getAffine()[i][2][2] == 1) ||
+          (numPoints.getAffine()[i][0][1] == 1 &&
+           numPoints.getAffine()[i][1][2] == 1 &&
+           numPoints.getAffine()[i][2][0] == 1) ||
+          (numPoints.getAffine()[i][0][2] == 1 &&
+           numPoints.getAffine()[i][1][1] == 1 &&
+           numPoints.getAffine()[i][2][0] == 1) ||
+          (numPoints.getAffine()[i][0][2] == 1 &&
+           numPoints.getAffine()[i][1][0] == 1 &&
+           numPoints.getAffine()[i][2][1] == 1))
+        mnp += numPoints.getCoefficients()[i];
+    }
+  }
+
+  // We expect the answer to be
+  // (⌊M⌋ + 1)(⌊N⌋ + 1)(⌊P⌋ + 1) =
+  // ⌊M⌋⌊N⌋⌊P⌋ + ⌊M⌋⌊N⌋ + ⌊N⌋⌊P⌋ + ⌊M⌋⌊P⌋ + ⌊M⌋ + ⌊N⌋ + ⌊P⌋ + 1.
+  EXPECT_EQ(mn, 1);
+  EXPECT_EQ(np, 1);
+  EXPECT_EQ(pm, 1);
+  EXPECT_EQ(m, 1);
+  EXPECT_EQ(n, 1);
+  EXPECT_EQ(p, 1);
+  EXPECT_EQ(numPoints.getConstantTerm(), 1);
 }
