@@ -643,9 +643,12 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
                               MemoryEffects<[MemWrite]>]> {
   let summary = "distribute construct";
   let description = [{
-    The distribute construct specifies that the iterations of one or more loop
-    will be executed by the initial teams in the context of their implicit
-    tasks. The iterations are distributed across the initial threads of all
+    The distribute construct specifies that the iterations of one or more loops
+    (optionally specified using collapse clause) will be executed by the
+    initial teams in the context of their implicit tasks. The loops that the
+    distribute op is associated with starts with the outermost loop enclosed by
+    the distribute op region and going down the loop nest toward the innermost
+    loop. The iterations are distributed across the initial threads of all
     initial teams that execute the teams region to which the distribute region
     binds.
 
