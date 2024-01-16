@@ -2315,6 +2315,12 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       }
       ShadowingDecls.erase(ShadowI);
     }
+
+    if (!getLangOpts().CPlusPlus && S->isClassScope()) {
+      if (auto *FD = dyn_cast<FieldDecl>(TmpD);
+          FD && FD->hasAttr<CountedByAttr>())
+        CheckCountedByAttr(S, FD);
+    }
   }
 
   llvm::sort(DeclDiags,
@@ -20214,7 +20220,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     // Adjust the APSInt value.
     InitVal = InitVal.extOrTrunc(NewWidth);
     InitVal.setIsSigned(NewSign);
-    ECD->setInitVal(InitVal);
+    ECD->setInitVal(Context, InitVal);
 
     // Adjust the Expr initializer and type.
     if (ECD->getInitExpr() &&
