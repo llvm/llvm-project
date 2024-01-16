@@ -604,6 +604,11 @@ bool TargetTransformInfo::enableSelectOptimize() const {
   return TTIImpl->enableSelectOptimize();
 }
 
+bool TargetTransformInfo::shouldTreatInstructionLikeSelect(
+    Instruction *I) const {
+  return TTIImpl->shouldTreatInstructionLikeSelect(I);
+}
+
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
 }
