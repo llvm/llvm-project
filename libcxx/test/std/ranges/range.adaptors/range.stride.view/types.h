@@ -209,4 +209,25 @@ private:
   decltype(base(std::declval<Sent>())) sent_;
 };
 
+// Ranges
+template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>, bool IsSized = false>
+  requires((!IsSized) || (IsSized && IterDifferable<Iter>))
+struct BasicTestRange {
+  Iter begin_{};
+  Iter end_{};
+
+  constexpr BasicTestRange(Iter b, Iter e) : begin_(b), end_(e) {}
+
+  constexpr Iter begin() { return begin_; }
+  constexpr Iter begin() const { return begin_; }
+  constexpr Sent end() { return Sent{end_}; }
+  constexpr Sent end() const { return Sent{end_}; }
+
+  constexpr auto size() const
+    requires IsSized
+  {
+    return begin_ - end_;
+  }
+};
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
