@@ -242,6 +242,14 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
          DiagnosticIDs::Note);
     return;
   }
+
+  if (const auto *D = dyn_cast<NonTypeTemplateParmDecl>(SourceExprDecl)) {
+    diag(D->getLocation(),
+         "source type originates from referencing this non-type template "
+         "parameter",
+         DiagnosticIDs::Note);
+    return;
+  }
 }
 
 } // namespace clang::tidy::readability

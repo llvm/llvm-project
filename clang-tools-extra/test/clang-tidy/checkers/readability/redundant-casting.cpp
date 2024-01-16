@@ -198,3 +198,24 @@ void testRValueCast(int&& a) {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant explicit casting to the same type 'int' as the sub-expression, remove this casting [readability-redundant-casting]
   // CHECK-FIXES: {{^}}  int&& c = 10;
 }
+
+template <int V>
+void testRedundantNTTPCasting() {
+  int a = static_cast<int>(V);
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant explicit casting to the same type 'int' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-4]]:15: note: source type originates from referencing this non-type template parameter
+  // CHECK-FIXES: {{^}}  int a = V;
+}
+
+template <typename T, T V>
+void testValidNTTPCasting() {
+  int a = static_cast<int>(V);
+}
+
+template <typename T, T V>
+void testRedundantDependentNTTPCasting() {
+  T a = static_cast<T>(V);
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant explicit casting to the same type 'T' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-4]]:25: note: source type originates from referencing this non-type template parameter
+  // CHECK-FIXES: {{^}}  T a = V;
+}
