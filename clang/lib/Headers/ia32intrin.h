@@ -188,7 +188,7 @@ __popcntq(unsigned long long __A)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PUSHFQ + \c POPQ instruction sequence.
+/// This intrinsic corresponds to the \c PUSHFQ + \c POP instruction sequence.
 ///
 /// \returns The 64-bit value of the RFLAGS register.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
@@ -202,7 +202,7 @@ __readeflags(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PUSHQ + \c POPFQ instruction sequence.
+/// This intrinsic corresponds to the \c PUSH + \c POPFQ instruction sequence.
 ///
 /// \param __f
 ///    The 64-bit value to write to \c RFLAGS.
@@ -218,7 +218,7 @@ __writeeflags(unsigned long long __f)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PUSHFD + \c POPD instruction sequence.
+/// This intrinsic corresponds to the \c PUSHFD + \c POP instruction sequence.
 ///
 /// \returns The 32-bit value of the EFLAGS register.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
@@ -232,7 +232,7 @@ __readeflags(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c PUSHD + \c POPFD instruction sequence.
+/// This intrinsic corresponds to the \c PUSH + \c POPFD instruction sequence.
 ///
 /// \param __f
 ///    The 32-bit value to write to \c EFLAGS.
@@ -431,7 +431,7 @@ _wbinvd(void) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ROLB instruction.
+/// This intrinsic corresponds to the \c ROL instruction.
 ///
 /// \param __X
 ///    The unsigned 8-bit value to be rotated.
@@ -449,7 +449,7 @@ __rolb(unsigned char __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c RORB instruction.
+/// This intrinsic corresponds to the \c ROR instruction.
 ///
 /// \param __X
 ///    The unsigned 8-bit value to be rotated.
@@ -467,7 +467,7 @@ __rorb(unsigned char __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ROLW instruction.
+/// This intrinsic corresponds to the \c ROL instruction.
 ///
 /// \param __X
 ///    The unsigned 16-bit value to be rotated.
@@ -485,7 +485,7 @@ __rolw(unsigned short __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c RORW instruction.
+/// This intrinsic corresponds to the \c ROR instruction.
 ///
 /// \param __X
 ///    The unsigned 16-bit value to be rotated.
@@ -503,7 +503,7 @@ __rorw(unsigned short __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ROLD instruction.
+/// This intrinsic corresponds to the \c ROL instruction.
 ///
 /// \param __X
 ///    The unsigned 32-bit value to be rotated.
@@ -521,7 +521,7 @@ __rold(unsigned int __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c RORD instruction.
+/// This intrinsic corresponds to the \c ROR instruction.
 ///
 /// \param __X
 ///    The unsigned 32-bit value to be rotated.
@@ -540,7 +540,7 @@ __rord(unsigned int __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c ROLQ instruction.
+/// This intrinsic corresponds to the \c ROL instruction.
 ///
 /// \param __X
 ///    The unsigned 64-bit value to be rotated.
@@ -558,7 +558,7 @@ __rolq(unsigned long long __X, int __C) {
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the \c RORQ instruction.
+/// This intrinsic corresponds to the \c ROR instruction.
 ///
 /// \param __X
 ///    The unsigned 64-bit value to be rotated.
