@@ -292,7 +292,7 @@ If you do not receive any reports of problems, no action is required from you.
 Your changes are working as expected, well done!
 
 If your change causes an ongoing issue, it may be reverted. This is a [normal part of LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy)
-and is not a comment on yourself as an author.The revert commit (or a comment on this PR)
+and is not a comment on yourself as an author. The revert commit (or a comment on this PR)
 should explain why it was reverted, how to fix your changes and merge them again.
 
 If you are unsure how to fix a problem, you can send questions in a reply
