@@ -434,7 +434,6 @@ public:
     setType(T);
   }
   bool isTypeFinalized() const { return TypeIsFinalized; }
-  void setTypeIsFinalized() { TypeIsFinalized = true; }
 
   /// Used to set an operator precedence explicitly.
   prec::Level ForcedPrecedence = prec::Unknown;

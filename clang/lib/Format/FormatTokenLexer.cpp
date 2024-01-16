@@ -277,8 +277,8 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   // TableGen's Multi line string starts with [{
   if (Style.isTableGen() && tryMergeTokens({tok::l_square, tok::l_brace},
                                            TT_TableGenMultiLineString)) {
-    // This must never be annotated as other types.
-    Tokens.back()->setTypeIsFinalized();
+    // Set again with finalizing. This must never be annotated as other types.
+    Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
     Tokens.back()->Tok.setKind(tok::string_literal);
     return;
   }
