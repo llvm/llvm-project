@@ -14,6 +14,9 @@
 #ifndef LLVM_CLANG_BASIC_OPENACCKINDS_H
 #define LLVM_CLANG_BASIC_OPENACCKINDS_H
 
+#include "clang/Basic/Diagnostic.h"
+#include "llvm/Support/ErrorHandling.h"
+
 namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
@@ -61,6 +64,75 @@ enum class OpenACCDirectiveKind {
   // Invalid.
   Invalid,
 };
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDirectiveKind K) {
+  switch (K) {
+  case OpenACCDirectiveKind::Parallel:
+    return Out << "parallel";
+
+  case OpenACCDirectiveKind::Serial:
+    return Out << "serial";
+
+  case OpenACCDirectiveKind::Kernels:
+    return Out << "kernels";
+
+  case OpenACCDirectiveKind::Data:
+    return Out << "data";
+
+  case OpenACCDirectiveKind::EnterData:
+    return Out << "enter data";
+
+  case OpenACCDirectiveKind::ExitData:
+    return Out << "exit data";
+
+  case OpenACCDirectiveKind::HostData:
+    return Out << "host_data";
+
+  case OpenACCDirectiveKind::Loop:
+    return Out << "loop";
+
+  case OpenACCDirectiveKind::Cache:
+    return Out << "cache";
+
+  case OpenACCDirectiveKind::ParallelLoop:
+    return Out << "parallel loop";
+
+  case OpenACCDirectiveKind::SerialLoop:
+    return Out << "serial loop";
+
+  case OpenACCDirectiveKind::KernelsLoop:
+    return Out << "kernels loop";
+
+  case OpenACCDirectiveKind::Atomic:
+    return Out << "atomic";
+
+  case OpenACCDirectiveKind::Declare:
+    return Out << "declare";
+
+  case OpenACCDirectiveKind::Init:
+    return Out << "init";
+
+  case OpenACCDirectiveKind::Shutdown:
+    return Out << "shutdown";
+
+  case OpenACCDirectiveKind::Set:
+    return Out << "set";
+
+  case OpenACCDirectiveKind::Update:
+    return Out << "update";
+
+  case OpenACCDirectiveKind::Wait:
+    return Out << "wait";
+
+  case OpenACCDirectiveKind::Routine:
+    return Out << "routine";
+
+  case OpenACCDirectiveKind::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Uncovered directive kind");
+}
 
 enum class OpenACCAtomicKind {
   Read,
@@ -138,6 +210,89 @@ enum class OpenACCClauseKind {
   Invalid,
 };
 
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCClauseKind K) {
+  switch (K) {
+  case OpenACCClauseKind::Finalize:
+    return Out << "finalize";
+
+  case OpenACCClauseKind::IfPresent:
+    return Out << "if_present";
+
+  case OpenACCClauseKind::Seq:
+    return Out << "seq";
+
+  case OpenACCClauseKind::Independent:
+    return Out << "independent";
+
+  case OpenACCClauseKind::Auto:
+    return Out << "auto";
+
+  case OpenACCClauseKind::Worker:
+    return Out << "worker";
+
+  case OpenACCClauseKind::Vector:
+    return Out << "vector";
+
+  case OpenACCClauseKind::NoHost:
+    return Out << "nohost";
+
+  case OpenACCClauseKind::Default:
+    return Out << "default";
+
+  case OpenACCClauseKind::If:
+    return Out << "if";
+
+  case OpenACCClauseKind::Self:
+    return Out << "self";
+
+  case OpenACCClauseKind::Copy:
+    return Out << "copy";
+
+  case OpenACCClauseKind::UseDevice:
+    return Out << "use_device";
+
+  case OpenACCClauseKind::Attach:
+    return Out << "attach";
+
+  case OpenACCClauseKind::Delete:
+    return Out << "delete";
+
+  case OpenACCClauseKind::Detach:
+    return Out << "detach";
+
+  case OpenACCClauseKind::Device:
+    return Out << "device";
+
+  case OpenACCClauseKind::DevicePtr:
+    return Out << "deviceptr";
+
+  case OpenACCClauseKind::DeviceResident:
+    return Out << "device_resident";
+
+  case OpenACCClauseKind::FirstPrivate:
+    return Out << "firstprivate";
+
+  case OpenACCClauseKind::Host:
+    return Out << "host";
+
+  case OpenACCClauseKind::Link:
+    return Out << "link";
+
+  case OpenACCClauseKind::NoCreate:
+    return Out << "no_create";
+
+  case OpenACCClauseKind::Present:
+    return Out << "present";
+
+  case OpenACCClauseKind::Private:
+    return Out << "private";
+
+  case OpenACCClauseKind::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Uncovered clause kind");
+}
 enum class OpenACCDefaultClauseKind {
   /// 'none' option.
   None,
