@@ -63,6 +63,9 @@ public:
   // which are constant from the expression.
   QuasiPolynomial simplify();
 
+  // Group together like terms in the expression.
+  QuasiPolynomial collectTerms();
+
   Fraction getConstantTerm();
 
 private:

@@ -144,6 +144,27 @@ QuasiPolynomial QuasiPolynomial::simplify() {
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
 }
 
+QuasiPolynomial QuasiPolynomial::collectTerms() {
+  SmallVector<Fraction> newCoeffs({});
+  std::vector<std::vector<SmallVector<Fraction>>> newAffine({});
+
+  for (unsigned i = 0, e = affine.size(); i < e; i++) {
+    bool alreadyPresent = false;
+    for (unsigned j = 0, f = newAffine.size(); j < f; j++) {
+      if (affine[i] == newAffine[j]) {
+        newCoeffs[j] += coefficients[i];
+        alreadyPresent = true;
+      }
+    }
+    if (alreadyPresent)
+      continue;
+    newCoeffs.push_back(coefficients[i]);
+    newAffine.push_back(affine[i]);
+  }
+
+  return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
+}
+
 Fraction QuasiPolynomial::getConstantTerm() {
   Fraction constTerm = 0;
   for (unsigned i = 0, e = coefficients.size(); i < e; ++i)
