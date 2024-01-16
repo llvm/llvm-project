@@ -3279,6 +3279,7 @@ def int_amdgcn_mfma_f32_32x32x16_f16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_
 
 def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
 def int_amdgcn_mfma_f32_16x16x128_f8f6f4_scaled : AMDGPUMfmaIntrinsicScaled<llvm_v4f32_ty, llvm_v8i32_ty>;
+def int_amdgcn_mfma_f32_32x32x64_f8f6f4_scaled : AMDGPUMfmaIntrinsicScaled<llvm_v16f32_ty, llvm_v8i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

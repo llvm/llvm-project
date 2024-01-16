@@ -1212,6 +1212,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                      2-bit byte index to use for each lane for matrix B
                                                      Matrix B scale values
 
+   llvm.amdgcn.mfma.f32.32x32x64.f8f6f4.scaled     Emit `v_mfma_f32_32x32x64_f8f6f4`, bundled with a `v_mfma_ld_scale_b32`
+                                                   to set the scale.
+
   ==============================================   ==========================================================
 
 .. TODO::

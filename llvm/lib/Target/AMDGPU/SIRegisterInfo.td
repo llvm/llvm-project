@@ -1379,6 +1379,11 @@ def AVSrc_256 : RegisterOperand<AV_256> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
+def AVSrc_512 : RegisterOperand<AV_512> {
+  let DecoderMethod = "decodeOperand_AV_512";
+  let EncoderMethod = "getAVOperandEncoding";
+}
+
 def AVDst_128 : RegisterOperand<AV_128> {
   let DecoderMethod = "DecodeAVDst_128RegisterClass";
   let EncoderMethod = "getAVOperandEncoding";

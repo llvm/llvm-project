@@ -641,6 +641,10 @@ def VOPProfileMAI_F32_V8BF16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V1
 def VOPProfileMAI_F32_V8I32_X128     : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    AISrc_128_f32,  ADst_128, AVSrc_256>;
 def VOPProfileMAI_F32_V8I32_X128_VCD : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    VISrc_128_f32,  VDst_128, AVSrc_256>;
 
+// For f32_32x32x64_f8f6f4
+def VOPProfileMAI_F32_V8I32_X512     : VOPProfileMAI<VOP_V16F32_V8I32_V8I32_V16F32,    AISrc_512_f32,  ADst_512, AVSrc_256>;
+def VOPProfileMAI_F32_V8I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V8I32_V8I32_V16F32,    VISrc_512_f32,  VDst_512, AVSrc_256>;
+
 class MFMATable <bit is_mac, string Name> {
   bit IsMac = is_mac;
   string FMAOp = Name;
@@ -819,6 +823,9 @@ defm V_MFMA_F32_32X32X16_BF16  : MAIInst<"v_mfma_f32_32x32x16bf16",   "F32_V8BF1
 
 defm V_MFMA_F32_16X16X128_F8F6F4  : MAIInst<"v_mfma_f32_16x16x128f8f6f4", "F32_V8I32_X128">;
 defm V_MFMA_F32_16X16X128_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_16X16X128_F8F6F4", int_amdgcn_mfma_f32_16x16x128_f8f6f4_scaled>;
+
+defm V_MFMA_F32_32X32X64_F8F6F4  : MAIInst<"v_mfma_f32_32x32x64f8f6f4", "F32_V8I32_X512">;
+defm V_MFMA_F32_32X32X64_F8F6F4  : ScaledMAIInst_mc<"V_MFMA_F32_32X32X64_F8F6F4", int_amdgcn_mfma_f32_32x32x64_f8f6f4_scaled>;
 }
 
 let SubtargetPredicate = HasGFX950Insts in {
@@ -1875,6 +1882,7 @@ defm V_MFMA_F32_32X32X16_F16     : VOP3P_Real_MFMA_gfx950 <0x55, "v_mfma_f32_32x
 defm V_MFMA_F32_32X32X16_BF16    : VOP3P_Real_MFMA_gfx950 <0x37, "v_mfma_f32_32x32x16_bf16">;
 
 defm V_MFMA_F32_16X16X128_F8F6F4 : VOP3P_Real_MFMA_gfx950 <0x2d, "v_mfma_f32_16x16x128_f8f6f4">;
+defm V_MFMA_F32_32X32X64_F8F6F4  : VOP3P_Real_MFMA_gfx950 <0x2e, "v_mfma_f32_32x32x64_f8f6f4">;
 
 let SubtargetPredicate = HasGFX950Insts in {
 defm V_MFMA_LD_SCALE_B32 : VOP3P_Real_vi <0x2c>;
