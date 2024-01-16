@@ -4842,7 +4842,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
-    if (!Right.isOneOf(tok::r_paren, tok::l_paren, tok::exclaim)) {
+    if (Right.isOneOf(tok::identifier, tok::numeric_constant)) {
       // The alternative operators for ~ and ! are "compl" and "not".
       // If they are used instead, we do not want to combine them with
       // the token to the right, unless that is a left paren.
@@ -4850,11 +4850,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         return true;
       if (Left.is(tok::tilde) && Left.TokenText == "compl")
         return true;
-      // Lambda captures allow for a lone &, so "&]" needs to be properly
-      // handled.
-      if (Left.is(tok::amp) && Right.is(tok::r_square))
-        return Style.SpacesInSquareBrackets;
     }
+    // Lambda captures allow for a lone &, so "&]" needs to be properly
+    // handled.
+    if (Left.is(tok::amp) && Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
     return (Style.SpaceAfterLogicalNot && Left.is(tok::exclaim)) ||
            Right.is(TT_BinaryOperator);
   }

@@ -24159,8 +24159,14 @@ TEST_F(FormatTest, AlternativeOperators) {
 
   verifyFormat("int a compl(5);");
   verifyFormat("int a not(5);");
+
   verifyFormat("v(not)");
   verifyFormat("v(not!)");
+  verifyFormat("Symbol(not, None)");
+  verifyFormat("Symbol(not!, None)");
+
+  verifyFormat("assert(!\"fail\")");
+  verifyFormat("assert(not\"fail\")");
 
   /* FIXME handle alternate tokens
    * https://en.cppreference.com/w/cpp/language/operator_alternative
