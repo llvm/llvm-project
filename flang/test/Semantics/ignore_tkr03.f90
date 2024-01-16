@@ -10,9 +10,12 @@ end module
 module user
   use library
 contains
-  subroutine sub(var)
+  subroutine sub(var, ptr)
     real :: var(:,:,:)
+    real, pointer :: ptr(:)
 ! CHECK: CALL lib_sub
     call lib_sub(var(1, 2, 3))
+! CHECK: CALL lib_sub
+    call lib_sub(ptr(1))
   end subroutine
 end module

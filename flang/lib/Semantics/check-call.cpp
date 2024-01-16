@@ -529,7 +529,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               dummyName);
         }
         if (actualIsArrayElement && actualLastSymbol &&
-            !evaluate::IsContiguous(*actualLastSymbol, foldingContext)) {
+            !evaluate::IsContiguous(*actualLastSymbol, foldingContext) &&
+            !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
           if (IsPointer(*actualLastSymbol)) {
             basicError = true;
             messages.Say(
