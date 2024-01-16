@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/DXILOperationCommon.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -102,6 +102,24 @@ struct DXILOperationData {
   }
 };
 } // end anonymous namespace
+
+static ParameterKind parameterTypeNameToKind(StringRef Name) {
+  return StringSwitch<ParameterKind>(Name)
+      .Case("void", ParameterKind::VOID)
+      .Case("half", ParameterKind::HALF)
+      .Case("float", ParameterKind::FLOAT)
+      .Case("double", ParameterKind::DOUBLE)
+      .Case("i1", ParameterKind::I1)
+      .Case("i8", ParameterKind::I8)
+      .Case("i16", ParameterKind::I16)
+      .Case("i32", ParameterKind::I32)
+      .Case("i64", ParameterKind::I64)
+      .Case("$o", ParameterKind::OVERLOAD)
+      .Case("dx.types.Handle", ParameterKind::DXIL_HANDLE)
+      .Case("dx.types.CBufRet", ParameterKind::CBUFFER_RET)
+      .Case("dx.types.ResRet", ParameterKind::RESOURCE_RET)
+      .Default(ParameterKind::INVALID);
+}
 
 DXILParam::DXILParam(const Record *R) {
   Name = R->getValueAsString("name");
