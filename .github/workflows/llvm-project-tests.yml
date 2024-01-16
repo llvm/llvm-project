@@ -14,7 +14,7 @@ on:
         required: false
       os_list:
         required: false
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["arc-google-linux", "windows-2019", "macOS-11"]'
   workflow_call:
     inputs:
       build_target:
@@ -36,7 +36,7 @@ on:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
         # We're using a specific version of macOS due to:
         # https://github.com/actions/virtual-environments/issues/5900
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["arc-google-linux", "windows-2019", "macOS-11"]'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -54,6 +54,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(inputs.os_list) }}
+    container:
+      image:  ${{ (contains(matrix.os, 'linux') && format('ghcr.io/{0}/ci-ubuntu-22.04:latest', github.repository_owner)) || null }}
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')

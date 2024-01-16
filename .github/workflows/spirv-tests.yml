@@ -26,4 +26,4 @@ jobs:
       build_target: check-llvm-codegen-spirv
       projects:
       extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV"'
-      os_list: '["ubuntu-latest"]'
+      os_list: '["arc-google-linux"]'
