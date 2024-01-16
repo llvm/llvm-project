@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.7.0" LANGUAGES C CXX)
+file(READ "VERSION.txt" comgr_ver_file)
+
+string(REGEX MATCH "#COMGR_VERSION_MAJOR\n([0-9]*)" _ ${comgr_ver_file})
+set (ver_major ${CMAKE_MATCH_1})
+string(REGEX MATCH "#COMGR_VERSION_MINOR\n([0-9]*)" _ ${comgr_ver_file})
+set (ver_minor ${CMAKE_MATCH_1})
+
+message("Comgr Version: ${ver_major}.${ver_minor}.0")
+
+project(amd_comgr VERSION "${ver_major}.${ver_minor}.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 # Get git branch and commit hash to add to log for easier debugging.
