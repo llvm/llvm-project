@@ -5,7 +5,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
   <vscale x 1 x float>,
   <vscale x 1 x float>,
   <vscale x 1 x float>,
-  i64, i64);
+  i64, i64)
 
 ; Test only save/restore frm once.
 define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
@@ -56,8 +56,8 @@ entry:
   ret <vscale x 1 x float> %b
 }
 
-; Test restoring frm before function call and doing nothing with folling dynamic
-; rounding mode operations.
+; Test restoring frm before function call and doing nothing with following
+; dynamic rounding mode operations.
 declare void @foo()
 define <vscale x 1 x float> @test3(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test3:
@@ -102,7 +102,7 @@ entry:
   ret <vscale x 1 x float> %b
 }
 
-; Test restoring frm before inline asm and doing nothing with folling dynamic
+; Test restoring frm before inline asm and doing nothing with following dynamic
 ; rounding mode operations.
 define <vscale x 1 x float> @test4(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test4:
@@ -131,8 +131,8 @@ entry:
   ret <vscale x 1 x float> %b
 }
 
-; Test restoring frm before reading frmm and doing nothing with folling dynamic
-; rounding mode operations.
+; Test restoring frm before reading frm and doing nothing with following
+; dynamic rounding mode operations.
 declare i32 @llvm.get.rounding()
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:

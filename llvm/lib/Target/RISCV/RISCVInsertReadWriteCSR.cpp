@@ -102,8 +102,6 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
       if (!MI.hasRegisterImplicitUseOperand(RISCV::FRM))
         return std::nullopt;
 
-      // FIXME: Return nullopt if the rounding mode of MI is not DYN, like
-      // FADD_S with RTZ.
       return RISCVFPRndMode::DYN;
     };
 
