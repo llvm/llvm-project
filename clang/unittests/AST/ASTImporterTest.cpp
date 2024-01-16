@@ -5219,6 +5219,59 @@ TEST_P(ImportFriendClasses, RecordVarTemplateDecl) {
   EXPECT_EQ(ToTUX, ToX);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateDeclConflict) {
+  getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = 1;
+      )",
+      Lang_CXX14);
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = 2;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX11);
+  // FIXME: This import should fail.
+  EXPECT_TRUE(ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateStaticDefinition) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      struct A {
+        template <class U>
+        static int X;
+      };
+      )",
+      Lang_CXX14);
+  auto *ToX = FirstDeclMatcher<VarTemplateDecl>().match(
+      ToTU, varTemplateDecl(hasName("X")));
+  ASSERT_FALSE(ToX->isThisDeclarationADefinition());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        template <class U>
+        static int X;
+      };
+      template <class U>
+      int A::X = 2;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromXDef = LastDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  ASSERT_TRUE(FromXDef->isThisDeclarationADefinition());
+  auto *ToXDef = Import(FromXDef, Lang_CXX14);
+  EXPECT_TRUE(ToXDef);
+  EXPECT_TRUE(ToXDef->isThisDeclarationADefinition());
+  EXPECT_EQ(ToXDef->getPreviousDecl(), ToX);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateParameterDeclContext) {
   constexpr auto Code =
       R"(

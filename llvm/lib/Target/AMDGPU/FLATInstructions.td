@@ -2769,7 +2769,6 @@ defm GLOBAL_ATOMIC_PK_ADD_F16      : VGLOBAL_Real_Atomics_gfx12<0x059>;
 defm GLOBAL_ATOMIC_PK_ADD_BF16     : VGLOBAL_Real_Atomics_gfx12<0x05a>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64 : VGLOBAL_Real_Atomics_gfx12<0x073>;
 
-
 defm GLOBAL_INV                    : VFLAT_Real_Base_gfx12<0x02b>;
 defm GLOBAL_WB                     : VFLAT_Real_Base_gfx12<0x02c>;
 defm GLOBAL_WBINV                  : VFLAT_Real_Base_gfx12<0x04f>;
