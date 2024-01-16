@@ -33,24 +33,19 @@ class TestTrimmedProgressReporting(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipUnlessDarwin
     @skipIfEditlineSupportMissing
     def test_trimmed_progress_message(self):
-        self.do_test(
-            19, ["Locating externa...", "Loading Apple DW...", "Parsing symbol t..."]
-        )
+        self.do_test(19, ["Locating e...", "Parsing sy..."])
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipUnlessDarwin
     @skipIfEditlineSupportMissing
     def test_long_progress_message(self):
         self.do_test(
             80,
             [
-                "Locating external symbol file for a.out...",
-                "Loading Apple DWARF index for a.out...",
-                "Parsing symbol table for dyld...",
+                "Locating external symbol file",
+                "Parsing symbol table",
             ],
         )
