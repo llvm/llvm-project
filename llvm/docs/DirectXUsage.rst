@@ -13,9 +13,10 @@ User Guide for the DirectX Target
 .. toctree::
    :hidden:
 
-   DirectX/DXILArchitecture
    DirectX/DXContainer
+   DirectX/DXILArchitecture
    DirectX/DXILOpTableGenDesign
+   DirectX/DXILResources
 
 Introduction
 ============

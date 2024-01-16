@@ -29,6 +29,7 @@ pointer of the template parameter type. The pointer is populated from a call to
 data through until lowering in the backend.
 
 Resource types are annotated with the ``HLSLResource`` attribute, which drives
-code generation for resource binding metadata. The ``hlsl`` metadata nodes are
-transformed in the backend to the binding information expected by the target
-runtime.
+code generation into target extension types in IR. These types are target
+specific and differ between DXIL and SPIR-V generation, providing the necessary
+information for the targets to generate binding metadata for their respective
+target runtimes.
