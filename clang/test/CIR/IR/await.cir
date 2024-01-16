@@ -1,0 +1,22 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
+  cir.await(user, ready : {
+    cir.condition(%arg0)
+  }, suspend : {
+    cir.yield
+  }, resume : {
+    cir.yield
+  },)
+  cir.return
+}
+
+// CHECK:  cir.func coroutine @checkPrintParse
+// CHECK:  cir.await(user, ready : {
+// CHECK:    cir.condition(%arg0)
+// CHECK:  }, suspend : {
+// CHECK:    cir.yield
+// CHECK:  }, resume : {
+// CHECK:    cir.yield
+// CHECK:  },)

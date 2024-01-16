@@ -14,6 +14,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -246,19 +247,31 @@ LogicalResult BreakOp::verify() {
 
 void ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  auto loopOp = cast<LoopOp>(getOperation()->getParentOp());
-
   // TODO(cir): The condition value may be folded to a constant, narrowing
   // down its list of possible successors.
-  // Condition may branch to the body or to the parent op.
-  regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
-  regions.emplace_back(loopOp->getResults());
+
+  // Parent is a loop: condition may branch to the body or to the parent op.
+  if (auto loopOp = dyn_cast<LoopOp>(getOperation()->getParentOp())) {
+    regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
+    regions.emplace_back(loopOp->getResults());
+  }
+
+  // Parent is an await: condition may branch to resume or suspend regions.
+  auto await = cast<AwaitOp>(getOperation()->getParentOp());
+  regions.emplace_back(&await.getResume(), await.getResume().getArguments());
+  regions.emplace_back(&await.getSuspend(), await.getSuspend().getArguments());
 }
 
 MutableOperandRange
 ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
   // No values are yielded to the successor region.
   return MutableOperandRange(getOperation(), 0, 0);
+}
+
+LogicalResult ConditionOp::verify() {
+  if (!isa<LoopOp, AwaitOp>(getOperation()->getParentOp()))
+    return emitOpError("condition must be within a conditional region");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -786,34 +799,6 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  auto isDominatedByProperAwaitRegion = [&](Operation *parentOp,
-                                            mlir::Region *currRegion) {
-    while (!llvm::isa<cir::FuncOp>(parentOp)) {
-      auto awaitOp = dyn_cast<cir::AwaitOp>(parentOp);
-      if (awaitOp) {
-        if (currRegion && currRegion == &awaitOp.getResume()) {
-          emitOpError() << "kind 'nosuspend' can only be used in 'ready' and "
-                           "'suspend' regions";
-          return false;
-        }
-        return true;
-      }
-
-      currRegion = parentOp->getParentRegion();
-      parentOp = parentOp->getParentOp();
-    }
-
-    emitOpError() << "shall be dominated by 'cir.await'";
-    return false;
-  };
-
-  if (isNoSuspend()) {
-    if (!isDominatedByProperAwaitRegion(getOperation()->getParentOp(),
-                                        getOperation()->getParentRegion()))
-      return mlir::failure();
-    return mlir::success();
-  }
-
   if (isFallthrough()) {
     if (!llvm::isa<SwitchOp>(getOperation()->getParentOp()))
       return emitOpError() << "fallthrough only expected within 'cir.switch'";
@@ -2223,7 +2208,11 @@ void AwaitOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&this->getResume()));
 }
 
-LogicalResult AwaitOp::verify() { return success(); }
+LogicalResult AwaitOp::verify() {
+  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
+    return emitOpError("ready region must end with cir.condition");
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // CIR defined traits

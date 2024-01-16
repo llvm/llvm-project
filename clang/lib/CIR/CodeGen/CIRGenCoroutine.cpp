@@ -428,28 +428,8 @@ buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
       CGF.getLoc(S.getSourceRange()), Kind,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto *cond = S.getReadyExpr();
-        cond = cond->IgnoreParens();
-        mlir::Value condV = CGF.evaluateExprAsBool(cond);
-
-        builder.create<mlir::cir::IfOp>(
-            loc, condV, /*withElseRegion=*/false,
-            /*thenBuilder=*/
-            [&](mlir::OpBuilder &b, mlir::Location loc) {
-              // If expression is ready, no need to suspend,
-              // `YieldOpKind::NoSuspend` tells control flow to return to
-              // parent, no more regions to be executed.
-              builder.create<mlir::cir::YieldOp>(
-                  loc, mlir::cir::YieldOpKind::NoSuspend);
-            });
-
-        if (!condV) {
-          awaitBuild = mlir::failure();
-          return;
-        }
-
-        // Signals the parent that execution flows to next region.
-        builder.create<mlir::cir::YieldOp>(loc);
+        Expr *condExpr = S.getReadyExpr()->IgnoreParens();
+        builder.createCondition(CGF.evaluateExprAsBool(condExpr));
       },
       /*suspendBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
