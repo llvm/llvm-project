@@ -1125,6 +1125,11 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- [HIP Only] add experimental support for offloading select C++ Algorithms,
+  which can be toggled via the ``--hipstdpar`` flag. This is available only for
+  the AMDGPU target at the moment. See the dedicated entry in the `HIP Language
+  support document for details <https://clang.llvm.org/docs/HIPSupport.html>`_
+
 CUDA Support
 ^^^^^^^^^^^^
 
