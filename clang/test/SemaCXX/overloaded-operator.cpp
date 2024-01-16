@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
+
 class X { };
 
 X operator+(X, X);
@@ -597,4 +599,28 @@ namespace B {
   struct X {};
 }
 void g(B::X x) { A::f(x); }
+}
+
+namespace static_operator {
+#if __cplusplus >= 201703L
+struct X {
+  static constexpr int operator()() { return 0; }
+  // expected-warning@-1 {{declaring overloaded 'operator()' as 'static' is a C++23 extension}}
+  static constexpr int operator[](int) { return 0; }
+  // expected-warning@-1 {{declaring overloaded 'operator[]' as 'static' is a C++23 extension}}
+};
+
+constexpr int f(int x) {
+  return (++x, X())(), (++x, X())[1], x;
+}
+
+static_assert(f(0) == 2, "");
+
+constexpr int g(int x) {
+  return (++x, []() static { return 0; })(), x;
+  // expected-warning@-1 {{static lambdas are a C++23 extension}}
+}
+
+static_assert(g(0) == 1, "");
+#endif
 }

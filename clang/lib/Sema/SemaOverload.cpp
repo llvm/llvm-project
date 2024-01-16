@@ -15089,10 +15089,20 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
           TheCall = CXXOperatorCallExpr::Create(
               Context, OO_Subscript, FnExpr.get(), MethodArgs, ResultTy, VK,
               RLoc, CurFPFeatureOverrides());
-        else
-          TheCall =
-              CallExpr::Create(Context, FnExpr.get(), MethodArgs, ResultTy, VK,
-                               RLoc, CurFPFeatureOverrides());
+        else {
+          if (Base->isPRValue())
+            Base = CreateMaterializeTemporaryExpr(
+                Base->getType().getNonReferenceType(), Base,
+                /*BoundToLvalueReference=*/false);
+          ExprResult OperatorAccess = MemberExpr::Create(
+              Context, Base, /*IsArrow=*/false, LLoc, NestedNameSpecifierLoc(),
+              SourceLocation(), FnDecl, Best->FoundDecl, OpLocInfo, nullptr,
+              FnDecl->getType(), ExprValueKind::VK_LValue,
+              ExprObjectKind::OK_Ordinary, NonOdrUseReason::NOUR_None);
+          TheCall = CallExpr::Create(
+              Context, CallExprUnaryConversions(OperatorAccess.get()).get(),
+              MethodArgs, ResultTy, VK, RLoc, CurFPFeatureOverrides());
+        }
 
         if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall, FnDecl))
           return ExprError();
@@ -15767,9 +15777,21 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     TheCall = CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(),
                                           MethodArgs, ResultTy, VK, RParenLoc,
                                           CurFPFeatureOverrides());
-  else
-    TheCall = CallExpr::Create(Context, NewFn.get(), MethodArgs, ResultTy, VK,
-                               RParenLoc, CurFPFeatureOverrides());
+  else {
+    Expr *Base = Object.get();
+    if (Base->isPRValue())
+      Base = CreateMaterializeTemporaryExpr(
+          Base->getType().getNonReferenceType(), Base,
+          /*BoundToLvalueReference=*/false);
+    ExprResult OperatorAccess = MemberExpr::Create(
+        Context, Base, /*IsArrow=*/false, LParenLoc, NestedNameSpecifierLoc(),
+        SourceLocation(), Method, Best->FoundDecl, OpLocInfo, nullptr,
+        Method->getType(), ExprValueKind::VK_LValue,
+        ExprObjectKind::OK_Ordinary, NonOdrUseReason::NOUR_None);
+    TheCall = CallExpr::Create(
+        Context, CallExprUnaryConversions(OperatorAccess.get()).get(),
+        MethodArgs, ResultTy, VK, RParenLoc, CurFPFeatureOverrides());
+  }
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;
