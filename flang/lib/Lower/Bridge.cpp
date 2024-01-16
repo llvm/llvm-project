@@ -64,6 +64,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -5092,7 +5093,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::DataLayout *dataLayout)
+    const llvm::TargetMachine &targetMachine)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -5148,6 +5149,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
-  if (dataLayout)
-    fir::support::setMLIRDataLayout(*module.get(), *dataLayout);
+  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
+  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module.get(),
+                                  targetMachine.createDataLayout());
 }
