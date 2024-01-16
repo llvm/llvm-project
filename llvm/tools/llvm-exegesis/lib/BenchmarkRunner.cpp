@@ -128,7 +128,7 @@ private:
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
     Scratch->clear();
     {
       auto PS = ET.withSavedState();
@@ -311,7 +311,7 @@ private:
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
 
     close(PipeFiles[0]);
 

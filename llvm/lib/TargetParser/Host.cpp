@@ -310,6 +310,13 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x6d") { // Microsoft Corporation.
+    // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
+    return StringSwitch<const char *>(Part)
+        .Case("0xd49", "neoverse-n2")
+        .Default("generic");
+  }
+
   if (Implementer == "0xc0") { // Ampere Computing
     return StringSwitch<const char *>(Part)
         .Case("0xac3", "ampere1")
