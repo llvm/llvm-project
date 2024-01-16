@@ -1338,12 +1338,11 @@ struct RewritePhi {
   const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
-  BasicBlock *ExitBlock;       // Exit block for PHI node.
 
   RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
-             bool H, BasicBlock *Exit)
+             bool H)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
-        HighCost(H), ExitBlock(Exit) {}
+        HighCost(H) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
@@ -1594,8 +1593,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
-                                   ExitBB);
+        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
 
         // Add debug values if the PN is a induction variable.
         PHINode *IndVar = L->getInductionVariable(*SE);
@@ -1661,19 +1659,19 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
-      addDebugValuesToLoopVariable(Phi.ExitBlock, ExitVal, PN);
+      addDebugValuesToLoopVariable(PN->getParent(), ExitVal, PN);
       PN->replaceAllUsesWith(ExitVal);
       PN->eraseFromParent();
     }
   }
 
   // If there are no PHIs to be rewritten then there are no loop live-out
-  // values, try to rewrite variables corresponding to the induction variable
-  // with their constant exit-values if we computed any. Otherwise debug-info
-  // will completely forget that this loop happened.
+  // values, try to rewrite debug variables corresponding to the induction
+  // variable with their constant exit-values if we computed any. Otherwise
+  // debug-info will completely forget that this loop happened.
   if (RewritePhiSet.empty()) {
     // The loop exit value has been updated; insert the debug location
-    // for the given the induction variable with its final value.
+    // for the given induction variable with its final value.
     addDebugValuesToLoopVariable(L, SE, L->getInductionVariable(*SE));
   }
 
