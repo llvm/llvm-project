@@ -386,7 +386,7 @@ void Environment::initialize() {
     return;
 
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
-    assert(FuncDecl->getBody() != nullptr);
+    assert(FuncDecl->doesThisDeclarationHaveABody());
 
     initFieldsGlobalsAndFuncs(FuncDecl);
 
@@ -426,7 +426,7 @@ void Environment::initialize() {
 // FIXME: Add support for resetting globals after function calls to enable
 // the implementation of sound analyses.
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
-  assert(FuncDecl->getBody() != nullptr);
+  assert(FuncDecl->doesThisDeclarationHaveABody());
 
   FieldSet Fields;
   llvm::DenseSet<const VarDecl *> Vars;
