@@ -2461,10 +2461,13 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   // Determine whether the entry is going to be handled by
   // `OffloadEntriesInfoManager` or by this method. If `entryArraySection` is
   // null then it's handled by `OffloadEntriesInfoManager`
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   omp::TargetRegionEntryInfoAttr regionInfoAttr =
       targetOp.getTargetRegionEntryInfoAttr();
   FlatSymbolRefAttr entryArraySection =
-      regionInfoAttr ? regionInfoAttr.getSection() : FlatSymbolRefAttr();
+      (regionInfoAttr && !ompBuilder->Config.isTargetDevice())
+          ? regionInfoAttr.getSection()
+          : FlatSymbolRefAttr();
 
   // Create the target region
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
@@ -2479,7 +2482,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Return early if the target op it's being emitted for a device or if the
   // entry is handled by `OffloadEntriesInfoManager`
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   if (ompBuilder->Config.isTargetDevice() || !entryArraySection)
     return bodyGenStatus;
 

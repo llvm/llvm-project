@@ -23,3 +23,5 @@ mlir_tablegen(OpenMPTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(OpenMPTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIROpenMPTypeInterfacesIncGen)
 add_dependencies(mlir-generic-headers MLIROpenMPTypeInterfacesIncGen)
+
+add_subdirectory(Transforms)

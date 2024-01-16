@@ -73,3 +73,23 @@ add_mlir_dialect_library(MLIROpenMPLLVMExternalModels
   MLIROpenMPDialect
   MLIRLLVMDialect
 )
+
+add_mlir_dialect_library(MLIROpenMPTransforms
+  Transforms/TargetOutlining.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenMP
+
+  LINK_COMPONENTS
+  Support
+
+  DEPENDS
+  MLIROMPPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIROpenMPDialect
+  MLIRGPUDialect
+  MLIRFuncDialect
+  MLIRPass
+  MLIRTransformUtils
+  )
