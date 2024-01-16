@@ -1722,8 +1722,7 @@ SpellingNamesAreCommon(const std::vector<FlattenedSpelling>& Spellings) {
   assert(!Spellings.empty() && "An empty list of spellings was provided");
   std::string FirstName =
       std::string(NormalizeNameForSpellingComparison(Spellings.front().name()));
-  for (const auto &Spelling :
-       llvm::make_range(std::next(Spellings.begin()), Spellings.end())) {
+  for (const auto &Spelling : llvm::drop_begin(Spellings)) {
     std::string Name =
         std::string(NormalizeNameForSpellingComparison(Spelling.name()));
     if (Name != FirstName)

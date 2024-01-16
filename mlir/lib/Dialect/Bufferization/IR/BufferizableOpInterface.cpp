@@ -689,6 +689,12 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
                        *options.defaultMemorySpace);
 }
 
+bool bufferization::hasTensorSemantics(Operation *op) {
+  if (auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op))
+    return bufferizableOp.hasTensorSemantics();
+  return detail::defaultHasTensorSemantics(op);
+}
+
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
                                                   Operation *op,
                                                   ValueRange values) {
@@ -988,4 +994,21 @@ bufferization::detail::unknownGetAliasingValues(OpOperand &opOperand) {
         if (bbArg.getType().isa<TensorType>())
           r.addAlias({bbArg, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
+}
+
+bool bufferization::detail::defaultHasTensorSemantics(Operation *op) {
+  auto isaTensor = [](Type t) { return isa<TensorType>(t); };
+  bool hasTensorBlockArgument = any_of(op->getRegions(), [&](Region &r) {
+    return any_of(r.getBlocks(), [&](Block &b) {
+      return any_of(b.getArguments(), [&](BlockArgument bbArg) {
+        return isaTensor(bbArg.getType());
+      });
+    });
+  });
+  if (hasTensorBlockArgument)
+    return true;
+
+  if (any_of(op->getResultTypes(), isaTensor))
+    return true;
+  return any_of(op->getOperandTypes(), isaTensor);
 }

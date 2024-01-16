@@ -348,7 +348,8 @@ public:
     ScheduleDAGMILive *DAG = nullptr;
     if (EnableMISchedLoadClustering) {
       DAG = createGenericSchedLive(C);
-      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
     if (ST.hasMacroFusion()) {
       DAG = DAG ? DAG : createGenericSchedLive(C);
