@@ -14794,8 +14794,17 @@ public:
             LocalExternallyUsedValues[RdxVal];
         // Update LocalExternallyUsedValues for the scalar, replaced by
         // extractelement instructions.
+        DenseMap<Value *, Value *> ReplacementToExternal;
+        for (const std::pair<Value *, Value *> &Pair : ReplacedExternals)
+          ReplacementToExternal.try_emplace(Pair.second, Pair.first);
         for (const std::pair<Value *, Value *> &Pair : ReplacedExternals) {
-          auto *It = ExternallyUsedValues.find(Pair.first);
+          Value *Ext = Pair.first;
+          auto RIt = ReplacementToExternal.find(Ext);
+          while (RIt != ReplacementToExternal.end()) {
+            Ext = RIt->second;
+            RIt = ReplacementToExternal.find(Ext);
+          }
+          auto *It = ExternallyUsedValues.find(Ext);
           if (It == ExternallyUsedValues.end())
             continue;
           LocalExternallyUsedValues[Pair.second].append(It->second);
