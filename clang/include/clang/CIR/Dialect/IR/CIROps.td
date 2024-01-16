@@ -2621,6 +2621,55 @@ def StackRestoreOp : CIR_Op<"stack_restore"> {
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
+def AsmATT : I32EnumAttrCase<"x86_att", 0>;
+def AsmIntel : I32EnumAttrCase<"x86_intel", 1>;
+
+def AsmFlavor : I32EnumAttr<
+  "AsmFlavor",
+  "ATT or Intel",
+  [AsmATT, AsmIntel]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
+  let description = [{
+    The `cir.asm` operation represents C/C++ asm inline.
+
+    CIR constraints strings follow barelly the same rules that are established 
+    for the C level assembler constraints with several differences caused by 
+    clang::AsmStmt processing. 
+
+    Thus, numbers that appears in the constraint string may also refer to:
+    - the output variable index referenced by the input operands.
+    - the index of early-clobber operand
+
+    Example:
+    ```C++
+    __asm__("foo" : : : );
+    __asm__("bar $42 %[val]" : [val] "=r" (x), "+&r"(x));
+    __asm__("baz $42 %[val]" : [val] "=r" (x), "+&r"(x) : "[val]"(y));
+    ```
+    
+    ```mlir
+    cir.asm(x86_att, {"foo" ""})
+    cir.asm(x86_att, {"bar $$42 $0" "=r,=&r,1"}) 
+    cir.asm(x86_att, {"baz $$42 $0" "=r,=&r,0,1"}) 
+    ```
+  }];
+
+  let results = (outs Optional<CIR_AnyType>:$res);
+
+  let arguments = (
+    ins StrAttr:$asm_string,
+        StrAttr:$constraints,
+        AsmFlavor:$asm_flavor);  
+
+  let assemblyFormat = [{
+    `(`$asm_flavor`,` `{` $asm_string $constraints `}` `)` attr-dict 
+    `:` type($res)
+   }];  
+}
+
 //===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
@@ -2637,42 +2686,6 @@ def ZeroInitConstOp : CIR_Op<"llvmir.zeroinit", [Pure]>,
   }];
   let assemblyFormat = "attr-dict `:` type($result)";
   let hasVerifier = 0;
-}
-
-def AsmATT : I32EnumAttrCase<"x86_att", 0>;
-def AsmIntel : I32EnumAttrCase<"x86_intel", 1>;
-
-def AsmFlavor : I32EnumAttr<
-  "AsmDialect",
-  "ATT or Intel",
-  [AsmATT, AsmIntel]> {
-  let cppNamespace = "::mlir::cir";
-}
-
-def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
-  let description = [{
-    The `cir.asm` operation represents C/C++ asm inline.
-
-    Example:
-    ```C++
-    __asm__ volatile("xyz" : : : );
-    ```
-
-    ```
-    ```mlir
-    cir.asm(x86_att, {"xyz"}) -> !void
-    ```
-  }];
-
-  let results = (outs Optional<CIR_AnyType>:$res);
-
-  let arguments = (
-    ins StrAttr:$asm_string,
-        AsmFlavor:$asm_flavor);
-
-  let assemblyFormat = [{
-    `(`$asm_flavor`,` `{` $asm_string `}` `)` attr-dict `:` type($res)
-   }];
 }
 
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS
