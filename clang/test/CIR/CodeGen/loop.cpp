@@ -180,7 +180,7 @@ void l4() {
 // CHECK-NEXT:     %11 = cir.const(#cir.int<10> : !s32i) : !s32i
 // CHECK-NEXT:     %12 = cir.cmp(lt, %10, %11) : !s32i, !cir.bool
 // CHECK-NEXT:     cir.if %12 {
-// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:       cir.continue
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 

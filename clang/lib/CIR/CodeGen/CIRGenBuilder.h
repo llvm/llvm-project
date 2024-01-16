@@ -583,6 +583,11 @@ public:
     return create<mlir::cir::ConditionOp>(condition.getLoc(), condition);
   }
 
+  /// Create a continue operation.
+  mlir::cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<mlir::cir::ContinueOp>(loc);
+  }
+
   mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                                    mlir::Value src, mlir::Value len) {
     return create<mlir::cir::MemCpyOp>(loc, dst, src, len);

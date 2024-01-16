@@ -337,6 +337,16 @@ static void printConstantValue(OpAsmPrinter &p, cir::ConstantOp op,
 OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ContinueOp::verify() {
+  if (!this->getOperation()->getParentOfType<LoopOp>())
+    return emitOpError("must be within a loop");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -797,15 +807,6 @@ mlir::LogicalResult YieldOp::verify() {
     return false;
   };
 
-  auto isDominatedByLoop = [](Operation *parentOp) {
-    while (!llvm::isa<cir::FuncOp>(parentOp)) {
-      if (llvm::isa<cir::LoopOp>(parentOp))
-        return true;
-      parentOp = parentOp->getParentOp();
-    }
-    return false;
-  };
-
   if (isNoSuspend()) {
     if (!isDominatedByProperAwaitRegion(getOperation()->getParentOp(),
                                         getOperation()->getParentRegion()))
@@ -816,12 +817,6 @@ mlir::LogicalResult YieldOp::verify() {
   if (isBreak()) {
     if (!isDominatedByLoopOrSwitch(getOperation()->getParentOp()))
       return mlir::failure();
-    return mlir::success();
-  }
-
-  if (isContinue()) {
-    if (!isDominatedByLoop(getOperation()->getParentOp()))
-      return emitOpError() << "shall be dominated by 'cir.loop'";
     return mlir::success();
   }
 
