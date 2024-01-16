@@ -3077,7 +3077,7 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   auto Arg = Op.getOperand(0u);
   auto ResultVT = Op.getValueType();
 
-  if (!(ResultVT == MVT::i8 || ResultVT == MVT::i16))
+  if (ResultVT != MVT::i8 && ResultVT != MVT::i16))
     return {};
 
   assert(isCtlzOpc(Op.getOpcode()));
