@@ -7254,7 +7254,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // MI_ND Instructions with 32 bit imm would exceed maximum code length if they
   // need segment register prefix.
   if (MOs.size() == X86::AddrNumOperands &&
-      (MOs[4].getReg() == X86::GS || MOs[4].getReg() == X86::FS))
+      (MOs[4].getReg() == X86::GS || MOs[4].getReg() == X86::FS ||
+       MOs[4].getReg() == X86::SS))
     switch (MI.getOpcode()) {
     default:
       break;

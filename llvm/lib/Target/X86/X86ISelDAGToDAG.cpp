@@ -2950,8 +2950,8 @@ bool X86DAGToDAGISel::selectNoSegADDRAddr(SDNode *Parent, SDValue N,
   if (matchAddress(N, AM))
     return false;
 
-  // FS prefix.
-  if (AM.SymbolFlags == 13)
+  // TLS variable using FS prefix in linux.
+  if (AM.SymbolFlags == X86II::MO_TPOFF)
     return false;
 
   getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
