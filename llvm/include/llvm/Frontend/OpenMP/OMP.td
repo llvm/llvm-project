@@ -771,6 +771,7 @@ def OMP_TargetParallel : Directive<"target parallel"> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
+  let leafs = [OMP_Target, OMP_Parallel];
 }
 def OMP_TargetParallelFor : Directive<"target parallel for"> {
   let allowedClauses = [
@@ -803,6 +804,7 @@ def OMP_TargetParallelFor : Directive<"target parallel for"> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
+  let leafs = [OMP_Target, OMP_Parallel, OMP_For];
 }
 def OMP_TargetParallelDo : Directive<"target parallel do"> {
   let allowedClauses = [
@@ -833,6 +835,7 @@ def OMP_TargetParallelDo : Directive<"target parallel do"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Target, OMP_Parallel, OMP_Do];
 }
 def OMP_TargetUpdate : Directive<"target update"> {
   let allowedClauses = [
@@ -844,6 +847,11 @@ def OMP_TargetUpdate : Directive<"target update"> {
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_masked : Directive<"masked"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Filter>
   ];
 }
 def OMP_ParallelFor : Directive<"parallel for"> {
@@ -866,6 +874,7 @@ def OMP_ParallelFor : Directive<"parallel for"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_For];
 }
 def OMP_ParallelDo : Directive<"parallel do"> {
   let allowedClauses = [
@@ -887,6 +896,7 @@ def OMP_ParallelDo : Directive<"parallel do"> {
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Parallel, OMP_Do];
 }
 def OMP_ParallelForSimd : Directive<"parallel for simd"> {
   let allowedClauses = [
@@ -912,6 +922,7 @@ def OMP_ParallelForSimd : Directive<"parallel for simd"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_For, OMP_Simd];
 }
 def OMP_ParallelDoSimd : Directive<"parallel do simd"> {
   let allowedClauses = [
@@ -938,6 +949,7 @@ def OMP_ParallelDoSimd : Directive<"parallel do simd"> {
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Parallel, OMP_Do, OMP_Simd];
 }
 def OMP_ParallelMaster : Directive<"parallel master"> {
   let allowedClauses = [
@@ -953,6 +965,7 @@ def OMP_ParallelMaster : Directive<"parallel master"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_Master];
 }
 def OMP_ParallelMasked : Directive<"parallel masked"> {
   let allowedClauses = [
@@ -969,6 +982,7 @@ def OMP_ParallelMasked : Directive<"parallel masked"> {
     VersionedClause<OMPC_Filter>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_masked];
 }
 def OMP_ParallelSections : Directive<"parallel sections"> {
   let allowedClauses = [
@@ -987,6 +1001,7 @@ def OMP_ParallelSections : Directive<"parallel sections"> {
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NumThreads>
   ];
+  let leafs = [OMP_Parallel, OMP_Sections];
 }
 def OMP_ForSimd : Directive<"for simd"> {
   let allowedClauses = [
@@ -1007,6 +1022,7 @@ def OMP_ForSimd : Directive<"for simd"> {
     VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_For, OMP_Simd];
 }
 def OMP_DoSimd : Directive<"do simd"> {
   let allowedClauses = [
@@ -1027,6 +1043,7 @@ def OMP_DoSimd : Directive<"do simd"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Do, OMP_Simd];
 }
 def OMP_CancellationPoint : Directive<"cancellation point"> {}
 def OMP_DeclareReduction : Directive<"declare reduction"> {}
@@ -1104,6 +1121,7 @@ def OMP_TaskLoopSimd : Directive<"taskloop simd"> {
     VersionedClause<OMPC_GrainSize>,
     VersionedClause<OMPC_NumTasks>
   ];
+  let leafs = [OMP_TaskLoop, OMP_Simd];
 }
 def OMP_Distribute : Directive<"distribute"> {
   let allowedClauses = [
@@ -1156,6 +1174,7 @@ def OMP_DistributeParallelFor : Directive<"distribute parallel for"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Distribute, OMP_Parallel, OMP_For];
 }
 def OMP_DistributeParallelDo : Directive<"distribute parallel do"> {
   let allowedClauses = [
@@ -1179,6 +1198,7 @@ def OMP_DistributeParallelDo : Directive<"distribute parallel do"> {
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Distribute, OMP_Parallel, OMP_Do];
 }
 def OMP_DistributeParallelForSimd : Directive<"distribute parallel for simd"> {
   let allowedClauses = [
@@ -1204,6 +1224,7 @@ def OMP_DistributeParallelForSimd : Directive<"distribute parallel for simd"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
 }
 def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
   let allowedClauses = [
@@ -1228,6 +1249,7 @@ def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
     VersionedClause<OMPC_NonTemporal>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
 }
 def OMP_DistributeSimd : Directive<"distribute simd"> {
   let allowedClauses = [
@@ -1254,6 +1276,7 @@ def OMP_DistributeSimd : Directive<"distribute simd"> {
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Distribute, OMP_Simd];
 }
 
 def OMP_TargetParallelForSimd : Directive<"target parallel for simd"> {
@@ -1291,6 +1314,7 @@ def OMP_TargetParallelForSimd : Directive<"target parallel for simd"> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
+  let leafs = [OMP_Target, OMP_Parallel, OMP_For, OMP_Simd];
 }
 def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
   let allowedClauses = [
@@ -1322,6 +1346,7 @@ def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_UsesAllocators>
   ];
+  let leafs = [OMP_Target, OMP_Parallel, OMP_Do, OMP_Simd];
 }
 def OMP_TargetSimd : Directive<"target simd"> {
   let allowedClauses = [
@@ -1356,6 +1381,7 @@ def OMP_TargetSimd : Directive<"target simd"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
+  let leafs = [OMP_Target, OMP_Simd];
 }
 def OMP_TeamsDistribute : Directive<"teams distribute"> {
   let allowedClauses = [
@@ -1375,6 +1401,7 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>
   ];
+  let leafs = [OMP_Teams, OMP_Distribute];
 }
 def OMP_TeamsDistributeSimd : Directive<"teams distribute simd"> {
   let allowedClauses = [
@@ -1400,6 +1427,7 @@ def OMP_TeamsDistributeSimd : Directive<"teams distribute simd"> {
     VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Teams, OMP_Distribute, OMP_Simd];
 }
 
 def OMP_TeamsDistributeParallelForSimd :
@@ -1428,6 +1456,7 @@ def OMP_TeamsDistributeParallelForSimd :
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
 }
 def OMP_TeamsDistributeParallelDoSimd :
     Directive<"teams distribute parallel do simd"> {
@@ -1456,6 +1485,7 @@ def OMP_TeamsDistributeParallelDoSimd :
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
 }
 def OMP_TeamsDistributeParallelFor :
     Directive<"teams distribute parallel for"> {
@@ -1479,6 +1509,7 @@ def OMP_TeamsDistributeParallelFor :
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For];
 }
 def OMP_TeamsDistributeParallelDo :
     Directive<"teams distribute parallel do"> {
@@ -1505,6 +1536,7 @@ let allowedOnceClauses = [
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do];
 }
 def OMP_TargetTeams : Directive<"target teams"> {
   let allowedClauses = [
@@ -1532,6 +1564,7 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_OMX_Bare>,
   ];
+  let leafs = [OMP_Target, OMP_Teams];
 }
 def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
   let allowedClauses = [
@@ -1560,6 +1593,7 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_DistSchedule>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute];
 }
 
 def OMP_TargetTeamsDistributeParallelFor :
@@ -1594,6 +1628,7 @@ def OMP_TargetTeamsDistributeParallelFor :
   let allowedOnceClauses = [
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For];
 }
 def OMP_TargetTeamsDistributeParallelDo :
     Directive<"target teams distribute parallel do"> {
@@ -1628,6 +1663,7 @@ def OMP_TargetTeamsDistributeParallelDo :
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do];
 }
 def OMP_TargetTeamsDistributeParallelForSimd :
     Directive<"target teams distribute parallel for simd"> {
@@ -1666,6 +1702,7 @@ def OMP_TargetTeamsDistributeParallelForSimd :
   let allowedOnceClauses = [
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
 }
 def OMP_TargetTeamsDistributeParallelDoSimd :
     Directive<"target teams distribute parallel do simd"> {
@@ -1704,6 +1741,7 @@ def OMP_TargetTeamsDistributeParallelDoSimd :
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
 }
 def OMP_TargetTeamsDistributeSimd :
     Directive<"target teams distribute simd"> {
@@ -1738,6 +1776,7 @@ def OMP_TargetTeamsDistributeSimd :
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Simd];
 }
 def OMP_Allocate : Directive<"allocate"> {
   let allowedOnceClauses = [
@@ -1779,6 +1818,7 @@ def OMP_MasterTaskloop : Directive<"master taskloop"> {
     VersionedClause<OMPC_InReduction>,
     VersionedClause<OMPC_Allocate>
   ];
+  let leafs = [OMP_Master, OMP_TaskLoop];
 }
 def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
   let allowedClauses = [
@@ -1801,6 +1841,7 @@ def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Filter>
   ];
+  let leafs = [OMP_masked, OMP_TaskLoop];
 }
 def OMP_ParallelMasterTaskloop :
     Directive<"parallel master taskloop"> {
@@ -1826,6 +1867,7 @@ def OMP_ParallelMasterTaskloop :
     VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_Master, OMP_TaskLoop];
 }
 def OMP_ParallelMaskedTaskloop :
     Directive<"parallel masked taskloop"> {
@@ -1852,6 +1894,7 @@ def OMP_ParallelMaskedTaskloop :
     VersionedClause<OMPC_Filter>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_masked, OMP_TaskLoop];
 }
 def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
   let allowedClauses = [
@@ -1879,6 +1922,7 @@ def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
     VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Order, 50>
   ];
+  let leafs = [OMP_Master, OMP_TaskLoop, OMP_Simd];
 }
 def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
   let allowedClauses = [
@@ -1907,6 +1951,7 @@ def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Filter>
   ];
+  let leafs = [OMP_masked, OMP_TaskLoop, OMP_Simd];
 }
 def OMP_ParallelMasterTaskloopSimd :
     Directive<"parallel master taskloop simd"> {
@@ -1938,6 +1983,7 @@ def OMP_ParallelMasterTaskloopSimd :
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_Master, OMP_TaskLoop, OMP_Simd];
 }
 def OMP_ParallelMaskedTaskloopSimd :
     Directive<"parallel masked taskloop simd"> {
@@ -1970,6 +2016,7 @@ def OMP_ParallelMaskedTaskloopSimd :
     VersionedClause<OMPC_Filter>,
     VersionedClause<OMPC_OMPX_Attribute>,
   ];
+  let leafs = [OMP_Parallel, OMP_masked, OMP_TaskLoop, OMP_Simd];
 }
 def OMP_Depobj : Directive<"depobj"> {
   let allowedClauses = [
@@ -2001,6 +2048,7 @@ def OMP_scope : Directive<"scope"> {
     VersionedClause<OMPC_NoWait, 51>
   ];
 }
+def OMP_Workshare : Directive<"workshare"> {}
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
@@ -2016,8 +2064,8 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_ProcBind>
   ];
+  let leafs = [OMP_Parallel, OMP_Workshare];
 }
-def OMP_Workshare : Directive<"workshare"> {}
 def OMP_EndDo : Directive<"end do"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>
@@ -2067,11 +2115,6 @@ def OMP_dispatch : Directive<"dispatch"> {
     VersionedClause<OMPC_Nocontext>
   ];
 }
-def OMP_masked : Directive<"masked"> {
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Filter>
-  ];
-}
 def OMP_loop : Directive<"loop"> {
   let allowedClauses = [
     VersionedClause<OMPC_LastPrivate>,
@@ -2102,6 +2145,7 @@ def OMP_teams_loop : Directive<"teams loop"> {
     VersionedClause<OMPC_Order>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
+  let leafs = [OMP_Teams, OMP_loop];
 }
 def OMP_target_teams_loop : Directive<"target teams loop"> {
   let allowedClauses = [
@@ -2131,6 +2175,7 @@ def OMP_target_teams_loop : Directive<"target teams loop"> {
     VersionedClause<OMPC_ThreadLimit>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
+  let leafs = [OMP_Target, OMP_Teams, OMP_loop];
 }
 def OMP_parallel_loop : Directive<"parallel loop"> {
   let allowedClauses = [
@@ -2152,6 +2197,7 @@ def OMP_parallel_loop : Directive<"parallel loop"> {
     VersionedClause<OMPC_Order>,
     VersionedClause<OMPC_ProcBind>,
   ];
+  let leafs = [OMP_Parallel, OMP_loop];
 }
 def OMP_target_parallel_loop : Directive<"target parallel loop"> {
   let allowedClauses = [
@@ -2183,11 +2229,13 @@ def OMP_target_parallel_loop : Directive<"target parallel loop"> {
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
+  let leafs = [OMP_Target, OMP_Parallel, OMP_loop];
 }
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [VersionedClause<OMPC_When>];
   let allowedOnceClauses = [VersionedClause<OMPC_Default>];
 }
+
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
 }
