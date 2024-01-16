@@ -215,13 +215,13 @@ void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
   if (exitstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
 #ifdef _WIN32
-    StoreLengthToDescriptor(exitstat, status, terminator);
+    StoreIntToDescriptor(exitstat, status, terminator);
 #else
     int exitstatVal{WEXITSTATUS(status)};
     StoreIntToDescriptor(exitstat, exitstatVal, terminator);
 #endif
   }
-  // Deallocate memory if EnsureNullTerminated dynamically allocate a memory
+  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (newCmd != command.OffsetElement()) {
     FreeMemory(static_cast<char *>(newCmd));
   }
