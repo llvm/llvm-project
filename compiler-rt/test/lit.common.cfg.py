@@ -454,8 +454,8 @@ if not getattr(config, "sanitizer_uses_static_unwind", False):
 if config.has_lld:
     config.available_features.add("lld-available")
 
-if config.sme:
-    config.available_features.add("sme-available")
+if config.aarch64_sme:
+    config.available_features.add("aarch64-sme-available")
 
 if config.use_lld:
     config.available_features.add("lld")

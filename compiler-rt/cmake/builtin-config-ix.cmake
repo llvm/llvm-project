@@ -41,6 +41,12 @@ asm(\".arch armv9-a+sme\");
 asm(\"smstart\");
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
+"
+void foo(int a)  __arm_streaming_compatible {
+}
+")
+
 if(ANDROID)
   set(OS_NAME "Android")
 else()
