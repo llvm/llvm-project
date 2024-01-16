@@ -2455,7 +2455,6 @@ cc_binary(
     name = "clang-linker-wrapper",
     srcs = [
         "tools/clang-linker-wrapper/ClangLinkerWrapper.cpp",
-        "tools/clang-linker-wrapper/OffloadWrapper.cpp",
     ],
     copts = [
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",
