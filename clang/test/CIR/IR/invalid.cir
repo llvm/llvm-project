@@ -781,3 +781,12 @@ module {
   }
 }
 
+// -----
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+cir.func @const_type_mismatch() -> () {
+    // expected-error@+1 {{'cir.const' op result type ('!cir.int<u, 8>') does not match value type ('!cir.int<s, 8>')}}
+    %2 = cir.const(#cir.int<0> : !s8i) : !u8i
+    cir.return
+}
