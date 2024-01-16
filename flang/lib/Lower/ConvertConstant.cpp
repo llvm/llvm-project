@@ -364,7 +364,9 @@ static mlir::Value genStructureComponentInit(
       /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
   if (Fortran::semantics::IsAllocatable(sym)) {
-    if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr)) {
+    if (!Fortran::evaluate::IsNullPointer(expr)) {
+      fir::emitFatalError(loc, "constant structure constructor with an allocatable component value that is not NULL");
+    } else {
       // Handle NULL() initialization
       mlir::Value componentValue{fir::factory::createUnallocatedBox(
           builder, loc, componentTy, std::nullopt)};

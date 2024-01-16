@@ -46,7 +46,7 @@ contains
 ! HLFIR:    return
 ! HLFIR:  }
   end subroutine
-  
+
   subroutine test_alloc2(y, b)
     real :: y
     integer :: b(5)
@@ -103,18 +103,50 @@ contains
 ! HLFIR:    %[[VAL_4:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
 ! HLFIR:    %c7 = arith.constant 7 : index
 ! HLFIR:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %c7 {{.*}}"_QMm_struct_ctorE.n.t_alloc"
-! HLFIR:    %[[VAL_6:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc) 
+! HLFIR:    %[[VAL_6:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
 ! HLFIR:    %c0 = arith.constant 0 : index
 ! HLFIR:    %c2 = arith.constant 2 : index
 ! HLFIR:    %[[VAL_7:.*]] = fir.shape_shift %c0, %c2 : (index, index) -> !fir.shapeshift<1>
 ! HLFIR:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
-! HLFIR:    %[[VAL_9:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc) 
+! HLFIR:    %[[VAL_9:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
 ! HLFIR:    %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
 ! HLFIR:    %[[VAL_11:.*]] = fir.address_of(@_QMm_struct_ctorFtest_alloc3Et1) : !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-! HLFIR:    {{.*}}:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QMm_struct_ctorFtest_alloc3Et1"} 
+! HLFIR:    {{.*}}:2 = hlfir.declare %[[VAL_11]] {uniq_name = "_QMm_struct_ctorFtest_alloc3Et1"}
 ! HLFIR:    return
 ! HLFIR:  }
+  end subroutine
 
+  subroutine test_alloc4()
+    integer, pointer :: p(:)
+    type(t_alloc) :: t1 = t_alloc(x=5, a=null(p))
+! HLFIR-LABEL:  func.func @_QMm_struct_ctorPtest_alloc4() {
+! HLFIR:    %[[VAL_0:.*]] = fir.address_of(@_QMm_struct_ctorE.n.x) : !fir.ref<!fir.char<1>>
+! HLFIR:    %[[CONS_1:.*]] = arith.constant 1 : index
+! HLFIR:    %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[CONS_1]] {{.*}}"_QMm_struct_ctorE.n.x"
+! HLFIR:    %[[VAL_2:.*]] = fir.address_of(@_QMm_struct_ctorE.n.a) : !fir.ref<!fir.char<1>>
+! HLFIR:    %[[CONS_2:.*]] = arith.constant 1 : index
+! HLFIR:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[CONS_2]] {{.*}}"_QMm_struct_ctorE.n.a"
+! HLFIR:    %[[VAL_4:.*]] = fir.address_of(@_QMm_struct_ctorE.n.t_alloc) : !fir.ref<!fir.char<1,7>>
+! HLFIR:    %[[CONS_3:.*]] = arith.constant 7 : index
+! HLFIR:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] typeparams %[[CONS_3]] {{.*}}"_QMm_struct_ctorE.n.t_alloc"
+! HLFIR:    %[[VAL_6:.*]] = fir.address_of(@_QMm_struct_ctorE.c.t_alloc)
+! HLFIR:    %[[CONS_4:.*]] = arith.constant 0 : index
+! HLFIR:    %[[CONS_5:.*]] = arith.constant 2 : index
+! HLFIR:    %[[VAL_7:.*]] = fir.shape_shift %[[CONS_4]], %[[CONS_5]] : (index, index) -> !fir.shapeshift<1>
+! HLFIR:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_7]]) {{.*}}"_QMm_struct_ctorE.c.t_alloc"
+! HLFIR:    %[[VAL_9:.*]] = fir.address_of(@_QMm_struct_ctorE.dt.t_alloc)
+! HLFIR:    %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {{.*}}"_QMm_struct_ctorE.dt.t_alloc"
+! HLFIR:    %[[VAL_11:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p", uniq_name = "_QMm_struct_ctorFtest_alloc4Ep"}
+! HLFIR:    %[[VAL_12:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+! HLFIR:    %[[CONS_6:.*]] = arith.constant 0 : index
+! HLFIR:    %[[VAL_13:.*]] = fir.shape %[[CONS_6]] : (index) -> !fir.shape<1>
+! HLFIR:    %[[VAL_14:.*]] = fir.embox %[[VAL_12]](%[[VAL_13]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! HLFIR:    fir.store %[[VAL_14]] to %[[VAL_11]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! HLFIR:    %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_11]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMm_struct_ctorFtest_alloc4Ep"}
+! HLFIR:    %[[VAL_16:.*]] = fir.address_of(@_QMm_struct_ctorFtest_alloc4Et1) : !fir.ref<!fir.type<_QMm_struct_ctorTt_alloc{x:f32,a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! HLFIR:    %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QMm_struct_ctorFtest_alloc4Et1"}
+! HLFIR:    return
+! HLFIR:  }
   end subroutine
 
 end module m_struct_ctor
