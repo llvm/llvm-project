@@ -598,3 +598,30 @@ namespace B {
 }
 void g(B::X x) { A::f(x); }
 }
+
+namespace GH78314 {
+
+class a {
+public:
+  void operator--() = delete; // expected-note {{candidate function has been explicitly deleted}} \
+                              // expected-note {{candidate function not viable: requires 0 arguments, but 1 was provided}}
+  void operator--(int) = delete; // expected-note {{candidate function has been explicitly deleted}} \
+                                 // expected-note {{candidate function not viable: requires 1 argument, but 0 were provided}}
+};
+
+void foo() {
+  a aa;
+  --aa; // expected-error {{overload resolution selected deleted operator '--'}}
+  aa--; // expected-error {{overload resolution selected deleted operator '--'}}
+}
+
+class b {
+  void operator++() = delete; // expected-note {{candidate function has been explicitly deleted}}
+  template <class> void operator++(int) { // expected-note {{function template not viable: requires 1 argument, but 0 were provided}}
+    b bb;
+    ++bb; // expected-error {{overload resolution selected deleted operator '++'}}
+  }
+};
+
+
+}

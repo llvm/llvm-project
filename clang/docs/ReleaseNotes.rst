@@ -750,6 +750,8 @@ Bug Fixes in This Version
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 - Fix an issue where CTAD fails for function-type/array-type arguments.
   Fixes (`#51710 <https://github.com/llvm/llvm-project/issues/51710>`_)
+- Fixed assertion failure with deleted overloaded unary operators.
+  Fixes (`#78314 <https://github.com/llvm/llvm-project/issues/78314>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
