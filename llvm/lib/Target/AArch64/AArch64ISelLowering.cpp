@@ -16561,11 +16561,14 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                      VecReudceAdd8);
 }
 
-// Given an (integer) vecreduce, we know the order of the inputs does not
-// matter. We can convert UADDV(add(zext(extract_lo(x)), zext(extract_hi(x))))
-// into UADDV(UADDLP(x)). This can also happen through an extra add, where we
-// transform UADDV(add(y, add(zext(extract_lo(x)), zext(extract_hi(x))))).
+// Turn UADDV(add(zext(extract_lo(x)), zext(extract_hi(x)))) into
+// UADDV(UADDLP(x)). If that fails, then convert UADDV(add(zext(64-bit source),
+// zext(64-bit source))) into UADDLV(concat).
 static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
+  // Given an (integer) vecreduce, we know the order of the inputs does not
+  // matter. We can convert UADDV(add(zext(extract_lo(x)), zext(extract_hi(x))))
+  // into UADDV(UADDLP(x)). This can also happen through an extra add, where we
+  // transform UADDV(add(y, add(zext(extract_lo(x)), zext(extract_hi(x))))).
   auto DetectAddExtract = [&](SDValue A) {
     // Look for add(zext(extract_lo(x)), zext(extract_hi(x))), returning
     // UADDLP(x) if found.
@@ -16599,6 +16602,34 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     return DAG.getNode(Opcode, SDLoc(A), VT, Ext0.getOperand(0));
   };
 
+  // We can convert a UADDV(add(zext(64-bit source), zext(64-bit source))) into
+  // UADDLV(concat), where the concat represents the 64-bit zext sources.
+  auto DetectZextConcat = [&](SDValue A, SelectionDAG &DAG) {
+    // Look for add(zext(64-bit source), zext(64-bit source)), returning
+    // UADDLV(concat(zext, zext)) if found.
+    if (A.getOpcode() != ISD::ADD)
+      return SDValue();
+    EVT VT = A.getValueType();
+    if (VT != MVT::v4i32)
+      return SDValue();
+    SDValue Op0 = A.getOperand(0);
+    SDValue Op1 = A.getOperand(1);
+    if (Op0.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+    SDValue Ext0 = Op0.getOperand(0);
+    SDValue Ext1 = Op1.getOperand(0);
+    EVT ExtVT0 = Ext0.getValueType();
+    EVT ExtVT1 = Ext1.getValueType();
+    // Check zext VTs are the same and 64-bit length.
+    if (ExtVT0 != ExtVT1 || !(ExtVT0 == MVT::v8i8 || ExtVT0 == MVT::v4i16))
+      return SDValue();
+    // Get VT for concat of zext sources.
+    EVT PairVT = ExtVT0.getDoubleNumVectorElementsVT(*DAG.getContext());
+    SDValue Concat =
+        DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(A), PairVT, Ext0, Ext1);
+    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+  };
+
   if (SDValue R = DetectAddExtract(A))
     return R;
 
@@ -16610,6 +16641,10 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
     if (SDValue R = performUADDVAddCombine(A.getOperand(1), DAG))
       return DAG.getNode(ISD::ADD, SDLoc(A), A.getValueType(), R,
                          A.getOperand(0));
+
+  if (SDValue R = DetectZextConcat(A, DAG))
+    return R;
+
   return SDValue();
 }
 
@@ -16617,7 +16652,9 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue A = N->getOperand(0);
   if (A.getOpcode() == ISD::ADD)
     if (SDValue R = performUADDVAddCombine(A, DAG))
-      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), R);
+      return R.getOpcode() == AArch64ISD::UADDLV
+                 ? R
+                 : DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), R);
   return SDValue();
 }
 
