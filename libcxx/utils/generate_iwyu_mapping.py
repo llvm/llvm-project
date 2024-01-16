@@ -58,14 +58,16 @@ def main():
 
     # Validate that we only have valid public header names -- otherwise the mapping above
     # needs to be updated.
-    for (header, public) in mappings:
+    for header, public in mappings:
         if public not in libcxx.header_information.public_headers:
             raise RuntimeError(f"{header}: Header {public} is not a valid header")
 
     with open(libcxx.header_information.include / "libcxx.imp", "w") as f:
         f.write("[\n")
-        for (header, public) in sorted(mappings):
-            f.write(f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n')
+        for header, public in sorted(mappings):
+            f.write(
+                f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n'
+            )
         f.write("]\n")
 
 if __name__ == "__main__":
