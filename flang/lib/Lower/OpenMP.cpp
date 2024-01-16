@@ -31,6 +31,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/CommandLine.h"
@@ -47,6 +48,29 @@ using DeclareTargetCapturePair =
 //===----------------------------------------------------------------------===//
 // Common helper functions
 //===----------------------------------------------------------------------===//
+
+static llvm::ArrayRef<llvm::omp::Directive> getWorksharing() {
+  static llvm::omp::Directive worksharing[] = {
+      llvm::omp::Directive::OMPD_do,     llvm::omp::Directive::OMPD_for,
+      llvm::omp::Directive::OMPD_scope,  llvm::omp::Directive::OMPD_sections,
+      llvm::omp::Directive::OMPD_single, llvm::omp::Directive::OMPD_workshare,
+  };
+  return worksharing;
+}
+
+static llvm::ArrayRef<llvm::omp::Directive> getWorksharingLoop() {
+  static llvm::omp::Directive worksharingLoop[] = {
+      llvm::omp::Directive::OMPD_do,
+      llvm::omp::Directive::OMPD_for,
+  };
+  return worksharingLoop;
+}
+
+static uint32_t getOpenMPVersion(const mlir::ModuleOp &mod) {
+  if (mlir::Attribute verAttr = mod->getAttr("omp.version"))
+    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+  llvm_unreachable("Exoecting OpenMP version attribute in module");
+}
 
 static Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
@@ -166,6 +190,15 @@ struct SymDsgExtractor {
     return t;
   }
 
+  static semantics::Symbol *symbol_addr(const evaluate::SymbolRef &ref) {
+    // Symbols cannot be created after semantic checks, so all symbol
+    // pointers that are non-null must point to one of those pre-existing
+    // objects. Throughout the code, symbols are often pointed to by
+    // non-const pointers, so there is no harm in casting the constness
+    // away.
+    return const_cast<semantics::Symbol *>(&ref.get());
+  }
+
   template <typename T> //
   static SymDsg visit(T &&) {
     // Use this to see missing overloads:
@@ -175,19 +208,12 @@ struct SymDsgExtractor {
 
   template <typename T> //
   static SymDsg visit(const evaluate::Designator<T> &e) {
-    // Symbols cannot be created after semantic checks, so all symbol
-    // pointers that are non-null must point to one of those pre-existing
-    // objects. Throughout the code, symbols are often pointed to by
-    // non-const pointers, so there is no harm in casting the constness
-    // away.
-    return std::make_tuple(const_cast<semantics::Symbol *>(e.GetLastSymbol()),
+    return std::make_tuple(symbol_addr(*e.GetLastSymbol()),
                            evaluate::AsGenericExpr(AsRvalueRef(e)));
   }
 
   static SymDsg visit(const evaluate::ProcedureDesignator &e) {
-    // See comment above regarding const_cast.
-    return std::make_tuple(const_cast<semantics::Symbol *>(e.GetSymbol()),
-                           std::nullopt);
+    return std::make_tuple(symbol_addr(*e.GetSymbol()), std::nullopt);
   }
 
   template <typename T> //
@@ -311,6 +337,42 @@ std::optional<U> maybeApply(F &&func, const std::optional<T> &inp) {
   if (!inp)
     return std::nullopt;
   return std::move(func(*inp));
+}
+
+std::optional<Object>
+getBaseObject(const Object &object,
+              Fortran::semantics::SemanticsContext &semaCtx) {
+  // If it's just the symbol, then there is no base.
+  if (!object.dsg)
+    return std::nullopt;
+
+  auto maybeRef = evaluate::ExtractDataRef(*object.dsg);
+  if (!maybeRef)
+    return std::nullopt;
+
+  evaluate::DataRef ref = *maybeRef;
+
+  if (std::get_if<evaluate::SymbolRef>(&ref.u)) {
+    return std::nullopt;
+  } else if (auto *comp = std::get_if<evaluate::Component>(&ref.u)) {
+    const evaluate::DataRef &base = comp->base();
+    return Object{SymDsgExtractor::symbol_addr(base.GetLastSymbol()),
+                  evaluate::AsGenericExpr(SymDsgExtractor::AsRvalueRef(base))};
+  } else if (auto *arr = std::get_if<evaluate::ArrayRef>(&ref.u)) {
+    const evaluate::NamedEntity &base = arr->base();
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto *comp = base.UnwrapComponent()) {
+      return Object{
+          SymDsgExtractor::symbol_addr(comp->symbol()),
+          ea.Designate(evaluate::DataRef{SymDsgExtractor::AsRvalueRef(*comp)})};
+    } else if (base.UnwrapSymbolRef()) {
+      return std::nullopt;
+    }
+  } else {
+    assert(std::holds_alternative<evaluate::CoarrayRef>(ref.u));
+    llvm_unreachable("Coarray reference not supported at the moment");
+  }
+  return std::nullopt;
 }
 
 namespace clause {
@@ -1220,11 +1282,18 @@ struct Clause {
   clause::UnionOfAllClauses u;
 };
 
+template <typename Specific>
+Clause makeClause(llvm::omp::Clause id, Specific &&specific,
+                  parser::CharBlock source = {}) {
+  return Clause{source, id, specific};
+}
+
 Clause makeClause(const Fortran::parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return std::visit(
       [&](auto &&s) {
-        return Clause{cls.source, getClauseId(cls), clause::make(s, semaCtx)};
+        return makeClause(getClauseId(cls), clause::make(s, semaCtx),
+                          cls.source);
       },
       cls.u);
 }
@@ -1261,6 +1330,957 @@ static void gatherFuncAndVarSyms(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
   for (const omp::Object &object : objects)
     symbolAndClause.emplace_back(clause, *object.sym);
+}
+
+//===----------------------------------------------------------------------===//
+// Directive decomposition
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct DirectiveInfo {
+  llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown;
+  llvm::SmallVector<const omp::Clause *> clauses;
+};
+
+struct CompositeInfo {
+  CompositeInfo(const mlir::ModuleOp &modOp,
+                Fortran::semantics::SemanticsContext &semaCtx,
+                Fortran::lower::pft::Evaluation &ev,
+                llvm::omp::Directive compDir,
+                const Fortran::parser::OmpClauseList &clauseList);
+  using ClauseSet = std::set<const omp::Clause *>;
+
+  bool split();
+  void addClauseSymbols(const omp::Clause &clause);
+
+  DirectiveInfo *findDirective(llvm::omp::Directive dirId) {
+    for (DirectiveInfo &dir : leafs) {
+      if (dir.id == dirId)
+        return &dir;
+    }
+    return nullptr;
+  }
+  ClauseSet *findClauses(const omp::Object &object) {
+    if (auto found = syms.find(object.sym); found != syms.end())
+      return &found->second;
+    return nullptr;
+  }
+
+  Fortran::semantics::SemanticsContext &semaCtx;
+  const mlir::ModuleOp &mod;
+  Fortran::lower::pft::Evaluation &eval;
+
+  llvm::SmallVector<DirectiveInfo> leafs; // Ordered outer to inner.
+  omp::List<omp::Clause> clauses;
+  llvm::DenseMap<const Fortran::semantics::Symbol *, ClauseSet> syms;
+  llvm::DenseSet<const Fortran::semantics::Symbol *> mapBases;
+  // Storage for newly created clauses. Beware of invalidating addresses.
+  std::list<omp::Clause> extras;
+
+private:
+  void addClauseSymsToMap(const omp::Object &object, const omp::Clause *);
+  void addClauseSymsToMap(const omp::ObjectList &objects, const omp::Clause *);
+  void addClauseSymsToMap(const omp::SomeExpr &item, const omp::Clause *);
+  void addClauseSymsToMap(const omp::clause::Map &item, const omp::Clause *);
+
+  template <typename T>
+  void addClauseSymsToMap(const std::optional<T> &item, const omp::Clause *);
+  template <typename T>
+  void addClauseSymsToMap(const omp::List<T> &item, const omp::Clause *);
+  template <typename... T, size_t... Is>
+  void addClauseSymsToMap(const std::tuple<T...> &item, const omp::Clause *,
+                          std::index_sequence<Is...> = {});
+  template <typename T,
+            std::enable_if_t<std::is_enum_v<llvm::remove_cvref_t<T>>, int> = 0>
+  void addClauseSymsToMap(T &&item, const omp::Clause *);
+  template <
+      typename T,
+      std::enable_if_t<llvm::remove_cvref_t<T>::EmptyTrait::value, int> = 0>
+  void addClauseSymsToMap(T &&item, const omp::Clause *);
+  template <
+      typename T,
+      std::enable_if_t<llvm::remove_cvref_t<T>::WrapperTrait::value, int> = 0>
+  void addClauseSymsToMap(T &&item, const omp::Clause *);
+  template <
+      typename T,
+      std::enable_if_t<llvm::remove_cvref_t<T>::TupleTrait::value, int> = 0>
+  void addClauseSymsToMap(T &&item, const omp::Clause *);
+  template <
+      typename T,
+      std::enable_if_t<llvm::remove_cvref_t<T>::UnionTrait::value, int> = 0>
+  void addClauseSymsToMap(T &&item, const omp::Clause *);
+
+  // Apply a clause to the only directive that allows it. If there are no
+  // directives that allow it, or if there is more that one, do not apply
+  // anything and return false, otherwise return true.
+  bool applyToUnique(const omp::Clause *node);
+
+  // Apply a clause to the first directive in given range that allows it.
+  // If such a directive does not exist, return false, otherwise return true.
+  template <typename Iterator>
+  bool applyToFirst(const omp::Clause *node, const mlir::ModuleOp &mod,
+                    llvm::iterator_range<Iterator> range);
+
+  // Apply a clause to the innermost directive that allows it. If such a
+  // directive does not exist, return false, otherwise return true.
+  bool applyToInnermost(const omp::Clause *node);
+
+  // Apply a clause to the outermost directive that allows it. If such a
+  // directive does not exist, return false, otherwise return true.
+  bool applyToOutermost(const omp::Clause *node);
+
+  template <typename Predicate>
+  bool applyIf(const omp::Clause *node, Predicate shouldApply);
+
+  bool applyToAll(const omp::Clause *node);
+
+  template <typename Clause>
+  bool applyClause(Clause &&clause, const omp::Clause *node);
+
+  bool applyClause(const omp::clause::Collapse &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Private &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Firstprivate &clause,
+                   const omp::Clause *);
+  bool applyClause(const omp::clause::Lastprivate &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Shared &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Default &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::ThreadLimit &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Order &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Allocate &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Reduction &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::If &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Linear &clause, const omp::Clause *);
+  bool applyClause(const omp::clause::Nowait &clause, const omp::Clause *);
+};
+} // namespace
+
+CompositeInfo::CompositeInfo(const mlir::ModuleOp &modOp,
+                             Fortran::semantics::SemanticsContext &semaCtx,
+                             Fortran::lower::pft::Evaluation &ev,
+                             llvm::omp::Directive compDir,
+                             const Fortran::parser::OmpClauseList &clauseList)
+    : semaCtx(semaCtx), mod(modOp), eval(ev),
+      clauses(omp::makeList(clauseList, semaCtx)) {
+  for (llvm::omp::Directive dir : llvm::omp::getLeafConstructs(compDir))
+    leafs.push_back(DirectiveInfo{dir});
+
+  for (const omp::Clause &clause : clauses)
+    addClauseSymsToMap(clause, &clause);
+}
+
+[[maybe_unused]] static llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const DirectiveInfo &dirInfo) {
+  os << llvm::omp::getOpenMPDirectiveName(dirInfo.id);
+  for (auto [index, clause] : llvm::enumerate(dirInfo.clauses)) {
+    os << (index == 0 ? '\t' : ' ');
+    os << llvm::omp::getOpenMPClauseName(clause->id);
+  }
+  return os;
+}
+
+[[maybe_unused]] static llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os, const CompositeInfo &compInfo) {
+  for (const auto &[index, dirInfo] : llvm::enumerate(compInfo.leafs))
+    os << "leaf[" << index << "]: " << dirInfo << '\n';
+
+  os << "syms:\n";
+  for (const auto &[sym, clauses] : compInfo.syms) {
+    os << *sym << " -> {";
+    for (const auto *clause : clauses)
+      os << ' ' << llvm::omp::getOpenMPClauseName(clause->id);
+    os << " }\n";
+  }
+  os << "mapBases: {";
+  for (const auto &sym : compInfo.mapBases)
+    os << ' ' << *sym;
+  os << " }\n";
+  return os;
+}
+
+namespace detail {
+template <typename Container, typename Predicate>
+typename std::remove_reference_t<Container>::iterator
+find_unique(Container &&container, Predicate &&pred) {
+  auto first = std::find_if(container.begin(), container.end(), pred);
+  if (first == container.end())
+    return first;
+  auto second = std::find_if(std::next(first), container.end(), pred);
+  if (second == container.end())
+    return first;
+  return container.end();
+}
+} // namespace detail
+
+static Fortran::semantics::Symbol *
+getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval) {
+  return eval.visit(Fortran::common::visitors{
+      [&](const Fortran::parser::DoConstruct &doLoop) {
+        if (const auto &maybeCtrl = doLoop.GetLoopControl()) {
+          using LoopControl = Fortran::parser::LoopControl;
+          if (auto *bounds = std::get_if<LoopControl::Bounds>(&maybeCtrl->u)) {
+            static_assert(
+                std::is_same_v<decltype(bounds->name),
+                               Fortran::parser::Scalar<Fortran::parser::Name>>);
+            return bounds->name.thing.symbol;
+          }
+        }
+        return static_cast<Fortran::semantics::Symbol *>(nullptr);
+      },
+      [](auto &&) {
+        return static_cast<Fortran::semantics::Symbol *>(nullptr);
+      },
+  });
+}
+
+void CompositeInfo::addClauseSymsToMap(const omp::Object &object,
+                                       const omp::Clause *node) {
+  syms[object.sym].insert(node);
+}
+
+void CompositeInfo::addClauseSymsToMap(const omp::ObjectList &objects,
+                                       const omp::Clause *node) {
+  for (auto &object : objects)
+    syms[object.sym].insert(node);
+}
+
+void CompositeInfo::addClauseSymsToMap(const omp::SomeExpr &expr,
+                                       const omp::Clause *node) {
+  // Nothing to do for expressions.
+}
+
+void CompositeInfo::addClauseSymsToMap(const omp::clause::Map &item,
+                                       const omp::Clause *node) {
+  auto &objects = std::get<omp::ObjectList>(item.t);
+  addClauseSymsToMap(objects, node);
+  for (auto &object : objects) {
+    if (auto base = omp::getBaseObject(object, semaCtx))
+      mapBases.insert(base->sym);
+  }
+}
+
+template <typename T>
+void CompositeInfo::addClauseSymsToMap(const std::optional<T> &item,
+                                       const omp::Clause *node) {
+  if (item)
+    addClauseSymsToMap(*item, node);
+}
+
+template <typename T>
+void CompositeInfo::addClauseSymsToMap(const omp::List<T> &item,
+                                       const omp::Clause *node) {
+  for (auto &s : item)
+    addClauseSymsToMap(s, node);
+}
+
+template <typename... T, size_t... Is>
+void CompositeInfo::addClauseSymsToMap(const std::tuple<T...> &item,
+                                       const omp::Clause *node,
+                                       std::index_sequence<Is...>) {
+  (void)node; // Silence strange warning from GCC.
+  (addClauseSymsToMap(std::get<Is>(item), node), ...);
+}
+
+template <typename T,
+          std::enable_if_t<std::is_enum_v<llvm::remove_cvref_t<T>>, int> = 0>
+void CompositeInfo::addClauseSymsToMap(T &&item, const omp::Clause *node) {
+  // Nothing to do for enums.
+}
+
+template <typename T,
+          std::enable_if_t<llvm::remove_cvref_t<T>::EmptyTrait::value, int> = 0>
+void CompositeInfo::addClauseSymsToMap(T &&item, const omp::Clause *node) {
+  // Nothing to do for an empty class.
+}
+
+template <
+    typename T,
+    std::enable_if_t<llvm::remove_cvref_t<T>::WrapperTrait::value, int> = 0>
+void CompositeInfo::addClauseSymsToMap(T &&item, const omp::Clause *node) {
+  addClauseSymsToMap(item.v, node);
+}
+
+template <typename T,
+          std::enable_if_t<llvm::remove_cvref_t<T>::TupleTrait::value, int> = 0>
+void CompositeInfo::addClauseSymsToMap(T &&item, const omp::Clause *node) {
+  constexpr size_t tuple_size =
+      std::tuple_size_v<llvm::remove_cvref_t<decltype(item.t)>>;
+  addClauseSymsToMap(item.t, node, std::make_index_sequence<tuple_size>{});
+}
+
+template <typename T,
+          std::enable_if_t<llvm::remove_cvref_t<T>::UnionTrait::value, int> = 0>
+void CompositeInfo::addClauseSymsToMap(T &&item, const omp::Clause *node) {
+  std::visit([&](auto &&s) { addClauseSymsToMap(s, node); }, item.u);
+}
+
+#if 1
+// Apply a clause to the only directive that allows it. If there are no
+// directives that allow it, or if there is more that one, do not apply
+// anything and return false, otherwise return true.
+bool CompositeInfo::applyToUnique(const omp::Clause *node) {
+  uint32_t version = getOpenMPVersion(mod);
+  auto unique = detail::find_unique(leafs, [=](const auto &dirInfo) {
+    return llvm::omp::isAllowedClauseForDirective(dirInfo.id, node->id,
+                                                  version);
+  });
+
+  if (unique != leafs.end()) {
+    unique->clauses.push_back(node);
+    return true;
+  }
+  return false;
+}
+
+// Apply a clause to the first directive in given range that allows it.
+// If such a directive does not exist, return false, otherwise return true.
+template <typename Iterator>
+bool CompositeInfo::applyToFirst(const omp::Clause *node,
+                                 const mlir::ModuleOp &mod,
+                                 llvm::iterator_range<Iterator> range) {
+  if (range.empty())
+    return false;
+
+  uint32_t version = getOpenMPVersion(mod);
+  for (DirectiveInfo &dir : range) {
+    if (!llvm::omp::isAllowedClauseForDirective(dir.id, node->id, version))
+      continue;
+    dir.clauses.push_back(node);
+    return true;
+  }
+  return false;
+}
+
+// Apply a clause to the innermost directive that allows it. If such a
+// directive does not exist, return false, otherwise return true.
+bool CompositeInfo::applyToInnermost(const omp::Clause *node) {
+  return applyToFirst(node, mod, llvm::reverse(leafs));
+}
+
+// Apply a clause to the outermost directive that allows it. If such a
+// directive does not exist, return false, otherwise return true.
+bool CompositeInfo::applyToOutermost(const omp::Clause *node) {
+  return applyToFirst(node, mod, llvm::iterator_range(leafs));
+}
+
+template <typename Predicate>
+bool CompositeInfo::applyIf(const omp::Clause *node, Predicate shouldApply) {
+  bool applied = false;
+  uint32_t version = getOpenMPVersion(mod);
+  for (DirectiveInfo &dir : leafs) {
+    if (!llvm::omp::isAllowedClauseForDirective(dir.id, node->id, version))
+      continue;
+    if (!shouldApply(dir))
+      continue;
+    dir.clauses.push_back(node);
+    applied = true;
+  }
+
+  return applied;
+}
+
+bool CompositeInfo::applyToAll(const omp::Clause *node) {
+  return applyIf(node, [](auto) { return true; });
+}
+
+template <typename Clause>
+bool CompositeInfo::applyClause(Clause &&clause, const omp::Clause *node) {
+  // The default behavior is to find the unique directive to which the
+  // given clause may be applied. If there are no such directives, or
+  // if there are multiple ones, flag an error.
+  // From "OpenMP Application Programming Interface", Version 5.2:
+  // S Some clauses are permitted only on a single leaf construct of the
+  // S combined or composite construct, in which case the effect is as if
+  // S the clause is applied to that specific construct. (p339, 31-33)
+  if (applyToUnique(node))
+    return true;
+
+  return false;
+}
+
+// COLLAPSE
+bool CompositeInfo::applyClause(const omp::clause::Collapse &clause,
+                                const omp::Clause *node) {
+  // Apply COLLAPSE to the innermost directive. If it's not one that
+  // allows it flag an error.
+  if (!leafs.empty()) {
+    DirectiveInfo &last = leafs.back();
+    uint32_t version = getOpenMPVersion(mod);
+
+    if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
+      last.clauses.push_back(node);
+      return true;
+    }
+  }
+
+  llvm::errs() << "Cannot apply COLLAPSE\n";
+  return false;
+}
+
+// PRIVATE
+bool CompositeInfo::applyClause(const omp::clause::Private &clause,
+                                const omp::Clause *node) {
+  if (applyToInnermost(node))
+    return true;
+  llvm::errs() << "Cannot apply PRIVATE\n";
+  return false;
+}
+
+// FIRSTPRIVATE
+bool CompositeInfo::applyClause(const omp::clause::Firstprivate &clause,
+                                const omp::Clause *node) {
+  bool applied = false;
+
+  // S Section 17.2
+  // S The effect of the firstprivate clause is as if it is applied to one
+  // S or more leaf constructs as follows:
+
+  // S - To the distribute construct if it is among the constituent constructs;
+  // S - To the teams construct if it is among the constituent constructs and
+  // S   the distribute construct is not;
+  auto hasDistribute = findDirective(llvm::omp::OMPD_distribute);
+  auto hasTeams = findDirective(llvm::omp::OMPD_teams);
+  if (hasDistribute != nullptr) {
+    hasDistribute->clauses.push_back(node);
+    applied = true;
+    // S If the teams construct is among the constituent constructs and the
+    // S effect is not as if the firstprivate clause is applied to it by the
+    // S above rules, then the effect is as if the shared clause with the
+    // S same list item is applied to the teams construct.
+    if (hasTeams != nullptr) {
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{clause.v});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasTeams->clauses.push_back(&n);
+    }
+  } else if (hasTeams != nullptr) {
+    hasTeams->clauses.push_back(node);
+    applied = true;
+  }
+
+  // S - To a worksharing construct that accepts the clause if one is among
+  // S   the constituent constructs;
+  auto findWorksharing = [&]() {
+    auto worksharing = getWorksharing();
+    for (DirectiveInfo &dir : leafs) {
+      auto found = llvm::find(worksharing, dir.id);
+      if (found != std::end(worksharing))
+        return &dir;
+    }
+    return static_cast<DirectiveInfo *>(nullptr);
+  };
+
+  auto hasWorksharing = findWorksharing();
+  if (hasWorksharing != nullptr) {
+    hasWorksharing->clauses.push_back(node);
+    applied = true;
+  }
+
+  // S - To the taskloop construct if it is among the constituent constructs;
+  auto hasTaskloop = findDirective(llvm::omp::OMPD_taskloop);
+  if (hasTaskloop != nullptr) {
+    hasTaskloop->clauses.push_back(node);
+    applied = true;
+  }
+
+  // S - To the parallel construct if it is among the constituent constructs
+  // S   and neither a taskloop construct nor a worksharing construct that
+  // S   accepts the clause is among them;
+  auto hasParallel = findDirective(llvm::omp::OMPD_parallel);
+  if (hasParallel != nullptr) {
+    if (hasTaskloop == nullptr && hasWorksharing == nullptr) {
+      hasParallel->clauses.push_back(node);
+      applied = true;
+    } else {
+      // S If the parallel construct is among the constituent constructs and
+      // S the effect is not as if the firstprivate clause is applied to it by
+      // S the above rules, then the effect is as if the shared clause with
+      // S the same list item is applied to the parallel construct.
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{clause.v});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasParallel->clauses.push_back(&n);
+    }
+  }
+
+  // S - To the target construct if it is among the constituent constructs
+  // S   and the same list item neither appears in a lastprivate clause nor
+  // S   is the base variable or base pointer of a list item that appears in
+  // S   a map clause.
+  auto inLastprivate = [&](const omp::Object &object) {
+    if (ClauseSet *set = findClauses(object)) {
+      return llvm::find_if(*set, [](const omp::Clause *c) {
+               return c->id == llvm::omp::Clause::OMPC_lastprivate;
+             }) != set->end();
+    }
+    return false;
+  };
+
+  auto hasTarget = findDirective(llvm::omp::OMPD_target);
+  if (hasTarget != nullptr) {
+    omp::ObjectList objects;
+    llvm::copy_if(
+        clause.v, std::back_inserter(objects), [&](const omp::Object &object) {
+          return !inLastprivate(object) && !mapBases.contains(object.sym);
+        });
+    if (!objects.empty()) {
+      auto firstp = omp::makeClause(llvm::omp::Clause::OMPC_firstprivate,
+                                    omp::clause::Firstprivate{objects});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(firstp));
+      hasTarget->clauses.push_back(&n);
+      applied = true;
+    }
+  }
+
+  return applied;
+}
+
+// LASTPRIVATE
+bool CompositeInfo::applyClause(const omp::clause::Lastprivate &clause,
+                                const omp::Clause *node) {
+  bool applied = false;
+
+  // S The effect of the lastprivate clause is as if it is applied to all leaf
+  // S constructs that permit the clause.
+  if (!applyToAll(node)) {
+    llvm::errs() << "Cannot apply LASTPRIVATE\n";
+    return false;
+  }
+
+  auto inFirstprivate = [&](const omp::Object &object) {
+    if (ClauseSet *set = findClauses(object)) {
+      return llvm::find_if(*set, [](const omp::Clause *c) {
+               return c->id == llvm::omp::Clause::OMPC_firstprivate;
+             }) != set->end();
+    }
+    return false;
+  };
+
+  // Prepare list of objects that could end up in a SHARED clause.
+  omp::ObjectList sharedObjects;
+  llvm::copy_if(
+      clause.v, std::back_inserter(sharedObjects),
+      [&](const omp::Object &object) { return !inFirstprivate(object); });
+
+  if (!sharedObjects.empty()) {
+    // S If the parallel construct is among the constituent constructs and the
+    // S list item is not also specified in the firstprivate clause, then the
+    // S effect of the lastprivate clause is as if the shared clause with the
+    // S same list item is applied to the parallel construct.
+    if (auto hasParallel = findDirective(llvm::omp::OMPD_parallel)) {
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{sharedObjects});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasParallel->clauses.push_back(&n);
+      applied = true;
+    }
+
+    // S If the teams construct is among the constituent constructs and the
+    // S list item is not also specified in the firstprivate clause, then the
+    // S effect of the lastprivate clause is as if the shared clause with the
+    // S same list item is applied to the teams construct.
+    if (auto hasTeams = findDirective(llvm::omp::OMPD_teams)) {
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{sharedObjects});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasTeams->clauses.push_back(&n);
+      applied = true;
+    }
+  }
+
+  // S If the target construct is among the constituent constructs and the
+  // S list item is not the base variable or base pointer of a list item that
+  // S appears in a map clause, the effect of the lastprivate clause is as if
+  // S the same list item appears in a map clause with a map-type of tofrom.
+  if (auto hasTarget = findDirective(llvm::omp::OMPD_target)) {
+    omp::ObjectList tofrom;
+    llvm::copy_if(clause.v, std::back_inserter(tofrom),
+                  [&](const omp::Object &object) {
+                    return !mapBases.contains(object.sym);
+                  });
+
+    if (!tofrom.empty()) {
+      auto mapType = omp::clause::Map::MapType{
+          {std::nullopt, omp::clause::Map::MapType::Type::Tofrom}};
+      auto map =
+          omp::makeClause(llvm::omp::Clause::OMPC_map,
+                          omp::clause::Map{{mapType, std::move(tofrom)}});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(map));
+      hasTarget->clauses.push_back(&n);
+      applied = true;
+    }
+  }
+
+  return applied;
+}
+
+// SHARED
+bool CompositeInfo::applyClause(const omp::clause::Shared &clause,
+                                const omp::Clause *node) {
+  // Apply SHARED to the all leafs that allow it.
+  if (applyToAll(node))
+    return true;
+  llvm::errs() << "Cannot apply SHARED\n";
+  return false;
+}
+
+// DEFAULT
+bool CompositeInfo::applyClause(const omp::clause::Default &clause,
+                                const omp::Clause *node) {
+  // Apply DEFAULT to the all leafs that allow it.
+  if (applyToAll(node))
+    return true;
+  llvm::errs() << "Cannot apply DEFAULT\n";
+  return false;
+}
+
+// THREAD_LIMIT
+bool CompositeInfo::applyClause(const omp::clause::ThreadLimit &clause,
+                                const omp::Clause *node) {
+  // Apply THREAD_LIMIT to the all leafs that allow it.
+  if (applyToAll(node))
+    return true;
+  llvm::errs() << "Cannot apply THREAD_LIMIT\n";
+  return false;
+}
+
+// ORDER
+bool CompositeInfo::applyClause(const omp::clause::Order &clause,
+                                const omp::Clause *node) {
+  // Apply ORDER to the all leafs that allow it.
+  if (applyToAll(node))
+    return true;
+  llvm::errs() << "Cannot apply ORDER\n";
+  return false;
+}
+
+// ALLOCATE
+bool CompositeInfo::applyClause(const omp::clause::Allocate &clause,
+                                const omp::Clause *node) {
+  // This one needs to be applied at the end, once we know which clauses are
+  // assigned to which leaf constructs.
+
+  // S The effect of the allocate clause is as if it is applied to all leaf
+  // S constructs that permit the clause and to which a data-sharing attribute
+  // S clause that may create a private copy of the same list item is applied.
+
+  auto canMakePrivateCopy = [](llvm::omp::Clause id) {
+    switch (id) {
+    case llvm::omp::Clause::OMPC_firstprivate:
+    case llvm::omp::Clause::OMPC_lastprivate:
+    case llvm::omp::Clause::OMPC_private:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  bool applied = applyIf(node, [&](const DirectiveInfo &dir) {
+    return llvm::any_of(dir.clauses, [&](const omp::Clause *n) {
+      return canMakePrivateCopy(n->id);
+    });
+  });
+
+  return applied;
+}
+
+// REDUCTION
+bool CompositeInfo::applyClause(const omp::clause::Reduction &clause,
+                                const omp::Clause *node) {
+  // S The effect of the reduction clause is as if it is applied to all leaf
+  // S constructs that permit the clause, except for the following constructs:
+  // S - The parallel construct, when combined with the sections, worksharing-
+  // S   loop, loop, or taskloop construct; and
+  // S - The teams construct, when combined with the loop construct.
+  bool applyToParallel = true, applyToTeams = true;
+
+  auto hasParallel = findDirective(llvm::omp::Directive::OMPD_parallel);
+  if (hasParallel) {
+    auto exclusions = llvm::concat<const llvm::omp::Directive>(
+        getWorksharingLoop(), llvm::ArrayRef{
+                                  llvm::omp::Directive::OMPD_loop,
+                                  llvm::omp::Directive::OMPD_sections,
+                                  llvm::omp::Directive::OMPD_taskloop,
+                              });
+    auto present = [&](llvm::omp::Directive id) {
+      return findDirective(id) != nullptr;
+    };
+
+    if (llvm::any_of(exclusions, present))
+      applyToParallel = false;
+  }
+
+  auto hasTeams = findDirective(llvm::omp::Directive::OMPD_teams);
+  if (hasTeams) {
+    // The only exclusion is OMPD_loop.
+    if (findDirective(llvm::omp::Directive::OMPD_loop))
+      applyToTeams = false;
+  }
+
+  auto &objects = std::get<omp::ObjectList>(clause.t);
+
+  omp::ObjectList sharedObjects;
+  llvm::transform(objects, std::back_inserter(sharedObjects),
+                  [&](const omp::Object &object) {
+                    auto maybeBase = getBaseObject(object, semaCtx);
+                    return maybeBase ? *maybeBase : object;
+                  });
+
+  // S For the parallel and teams constructs above, the effect of the
+  // S reduction clause instead is as if each list item or, for any list
+  // S item that is an array item, its corresponding base array or base
+  // S pointer appears in a shared clause for the construct.
+  if (!sharedObjects.empty()) {
+    if (hasParallel && !applyToParallel) {
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{sharedObjects});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasParallel->clauses.push_back(&n);
+    }
+    if (hasTeams && !applyToTeams) {
+      auto shared = omp::makeClause(llvm::omp::Clause::OMPC_shared,
+                                    omp::clause::Shared{sharedObjects});
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(shared));
+      hasTeams->clauses.push_back(&n);
+    }
+  }
+
+  // TODO(not implemented in parser yet): Apply the following.
+  // S If the task reduction-modifier is specified, the effect is as if
+  // S it only modifies the behavior of the reduction clause on the innermost
+  // S leaf construct that accepts the modifier (see Section 5.5.8). If the
+  // S inscan reduction-modifier is specified, the effect is as if it modifies
+  // S the behavior of the reduction clause on all constructs of the combined
+  // S construct to which the clause is applied and that accept the modifier.
+
+  bool applied = applyIf(node, [&](DirectiveInfo &dir) {
+    if (!applyToParallel && &dir == hasParallel)
+      return false;
+    if (!applyToTeams && &dir == hasTeams)
+      return false;
+    return true;
+  });
+
+  // S If a list item in a reduction clause on a combined target construct
+  // S does not have the same base variable or base pointer as a list item
+  // S in a map clause on the construct, then the effect is as if the list
+  // S item in the reduction clause appears as a list item in a map clause
+  // S with a map-type of tofrom.
+  auto hasTarget = findDirective(llvm::omp::Directive::OMPD_target);
+  if (hasTarget && leafs.size() > 1) {
+    omp::ObjectList tofrom;
+    llvm::copy_if(objects, std::back_inserter(tofrom),
+                  [&](const omp::Object &object) {
+                    if (auto maybeBase = getBaseObject(object, semaCtx))
+                      return !mapBases.contains(maybeBase->sym);
+                    return !mapBases.contains(object.sym); // XXX is this ok?
+                  });
+    if (!tofrom.empty()) {
+      auto mapType = omp::clause::Map::MapType{
+          {std::nullopt, omp::clause::Map::MapType::Type::Tofrom}};
+      auto map =
+          omp::makeClause(llvm::omp::Clause::OMPC_map,
+                          omp::clause::Map{{mapType, std::move(tofrom)}});
+
+      const omp::Clause &n = *extras.insert(extras.end(), std::move(map));
+      hasTarget->clauses.push_back(&n);
+      applied = true;
+    }
+  }
+
+  return applied;
+}
+
+// IF
+bool CompositeInfo::applyClause(const omp::clause::If &clause,
+                                const omp::Clause *node) {
+  using DirectiveNameModifier = omp::clause::If::DirectiveNameModifier;
+  auto &modifier = std::get<std::optional<DirectiveNameModifier>>(clause.t);
+
+  if (modifier) {
+    llvm::omp::Directive dirId = llvm::omp::Directive::OMPD_unknown;
+
+    switch (*modifier) {
+    case DirectiveNameModifier::Parallel:
+      dirId = llvm::omp::Directive::OMPD_parallel;
+      break;
+    case DirectiveNameModifier::Simd:
+      dirId = llvm::omp::Directive::OMPD_simd;
+      break;
+    case DirectiveNameModifier::Target:
+      dirId = llvm::omp::Directive::OMPD_target;
+      break;
+    case DirectiveNameModifier::Task:
+      dirId = llvm::omp::Directive::OMPD_task;
+      break;
+    case DirectiveNameModifier::Taskloop:
+      dirId = llvm::omp::Directive::OMPD_taskloop;
+      break;
+    case DirectiveNameModifier::Teams:
+      dirId = llvm::omp::Directive::OMPD_teams;
+      break;
+
+    case DirectiveNameModifier::TargetData:
+    case DirectiveNameModifier::TargetEnterData:
+    case DirectiveNameModifier::TargetExitData:
+    case DirectiveNameModifier::TargetUpdate:
+    default:
+      llvm::errs() << "Invalid modifier in IF clause\n";
+      return false;
+    }
+
+    if (auto *hasDir = findDirective(dirId)) {
+      hasDir->clauses.push_back(node);
+      return true;
+    }
+    llvm::errs() << "Directive from modifier not found\n";
+    return false;
+  }
+
+  if (applyToAll(node))
+    return true;
+
+  llvm::errs() << "Cannot apply IF\n";
+  return false;
+}
+
+// LINEAR
+bool CompositeInfo::applyClause(const omp::clause::Linear &clause,
+                                const omp::Clause *node) {
+  // S The effect of the linear clause is as if it is applied to the innermost
+  // S leaf construct.
+  if (applyToInnermost(node)) {
+    llvm::errs() << "Cannot apply LINEAR\n";
+    return false;
+  }
+
+  // The rest is about SIMD.
+  if (!findDirective(llvm::omp::OMPD_simd))
+    return true;
+
+  // S Additionally, if the list item is not the iteration variable of a
+  // S simd or worksharing-loop SIMD construct, the effect on the outer leaf
+  // S constructs is as if the list item was specified in firstprivate and
+  // S lastprivate clauses on the combined or composite construct, [...]
+  //
+  // S If a list item of the linear clause is the iteration variable of a
+  // S simd or worksharing-loop SIMD construct and it is not declared in
+  // S the construct, the effect on the outer leaf constructs is as if the
+  // S list item was specified in a lastprivate clause on the combined or
+  // S composite construct [...]
+
+  // It's not clear how an object can be listed in a clause AND be the
+  // iteration variable of a construct in which is it declared. If an
+  // object is declared in the construct, then the declaration is located
+  // after the clause listing it.
+
+  Fortran::semantics::Symbol *iterVarSym = getIterationVariableSymbol(eval);
+  const auto &objects = std::get<omp::ObjectList>(clause.t);
+
+  // Lists of objects that will be used to construct FIRSTPRIVATE and
+  // LASTPRIVATE clauses.
+  omp::ObjectList first, last;
+
+  for (const omp::Object &object : objects) {
+    last.push_back(object);
+    if (object.sym != iterVarSym)
+      first.push_back(object);
+  }
+
+  if (!first.empty()) {
+    auto firstp = omp::makeClause(llvm::omp::Clause::OMPC_firstprivate,
+                                  omp::clause::Firstprivate{first});
+    clauses.push_back(std::move(firstp)); // Appending to the main clause list.
+  }
+  if (!last.empty()) {
+    auto lastp = omp::makeClause(llvm::omp::Clause::OMPC_lastprivate,
+                                 omp::clause::Lastprivate{last});
+    clauses.push_back(std::move(lastp)); // Appending to the main clause list.
+  }
+  return true;
+}
+
+// NOWAIT
+bool CompositeInfo::applyClause(const omp::clause::Nowait &clause,
+                                const omp::Clause *node) {
+  if (applyToOutermost(node))
+    return true;
+  llvm::errs() << "Cannot apply NOWAIT\n";
+  return false;
+}
+
+bool CompositeInfo::split() {
+  bool success = true;
+
+  // First we need to apply LINEAR, because it can generate additional
+  // FIRSTPRIVATE and LASTPRIVATE clauses that apply to the combined/
+  // composite construct.
+  // Collect them separately, because they may modify the clause list.
+  llvm::SmallVector<const omp::Clause *> linears;
+  for (const omp::Clause &node : clauses) {
+    if (node.id == llvm::omp::Clause::OMPC_linear)
+      linears.push_back(&node);
+  }
+  for (const auto *node : linears) {
+    success =
+        success && applyClause(std::get<omp::clause::Linear>(node->u), node);
+  }
+
+  // ALLOCATE clauses need to be applied last since they need to see
+  // which directives have data-privatizing clauses.
+  auto skip = [](const omp::Clause *node) {
+    switch (node->id) {
+    case llvm::omp::Clause::OMPC_allocate:
+    case llvm::omp::Clause::OMPC_linear:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // Apply (almost) all clauses.
+  for (const omp::Clause &node : clauses) {
+    if (skip(&node))
+      continue;
+    success =
+        success &&
+        std::visit([&](auto &&s) { return applyClause(s, &node); }, node.u);
+  }
+
+  // Apply ALLOCATE.
+  for (const omp::Clause &node : clauses) {
+    if (node.id != llvm::omp::Clause::OMPC_allocate)
+      continue;
+    success =
+        success &&
+        std::visit([&](auto &&s) { return applyClause(s, &node); }, node.u);
+  }
+
+  return success;
+}
+#endif
+
+static void splitCompositeConstruct(
+    const mlir::ModuleOp &modOp, Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive compDir,
+    const Fortran::parser::OmpClauseList &clauseList) {
+  //  llvm::errs() << "composite name:"
+  //               << llvm::omp::getOpenMPDirectiveName(compDir) << '\n';
+  //  llvm::errs() << "clause list:";
+  for (auto &clause : clauseList.v) {
+    //    std::visit([&](auto &&s) { omp::clause::make(s, semaCtx); },
+    //    clause.u); llvm::errs() << ' ' <<
+    //    llvm::omp::getOpenMPClauseName(getClauseId(clause));
+  }
+  //  llvm::errs() << '\n';
+
+  CompositeInfo compInfo(modOp, semaCtx, eval, compDir, clauseList);
+  //  llvm::errs() << "compInfo.1\n" << compInfo << '\n';
+
+  bool success = compInfo.split();
+
+  // Dump
+  //  llvm::errs() << "success:" << success << '\n';
+  //  llvm::errs() << "compInfo.2\n" << compInfo << '\n';
 }
 
 //===----------------------------------------------------------------------===//
@@ -4548,6 +5568,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
   const auto &beginLoopDirective =
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
+  // Test call
+  splitCompositeConstruct(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, std::get<0>(beginLoopDirective.t).v,
+                          std::get<1>(beginLoopDirective.t));
   const auto &loopOpClauseList =
       std::get<Fortran::parser::OmpClauseList>(beginLoopDirective.t);
   mlir::Location currentLocation =

@@ -121,6 +121,10 @@ public:
   std::vector<Record *> getRequiredClauses() const {
     return Def->getValueAsListOfDefs("requiredClauses");
   }
+
+  std::vector<Record *> getLeafConstructs() const {
+    return Def->getValueAsListOfDefs("leafs");
+  }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td

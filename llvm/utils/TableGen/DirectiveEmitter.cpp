@@ -186,6 +186,7 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "\n#include \"llvm/ADT/BitmaskEnum.h\"\n";
+  OS << "#include \"llvm/ADT/SmallVector.h\"\n";
 
   OS << "\n";
   OS << "namespace llvm {\n";
@@ -231,6 +232,7 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
   OS << "\n";
+  OS << "const llvm::SmallVector<Directive> &getLeafConstructs(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
     OS << "\n";
@@ -433,6 +435,78 @@ static void GenerateIsAllowedClause(const DirectiveLanguage &DirLang,
   OS << "  llvm_unreachable(\"Invalid " << DirLang.getName()
      << " Directive kind\");\n";
   OS << "}\n"; // End of function isAllowedClauseForDirective
+}
+
+// Generate the getLeafConstructs function implementation.
+static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
+                                      raw_ostream &OS) {
+  auto getQualifiedName = [&](StringRef Formatted) -> std::string {
+    return (llvm::Twine("llvm::") + DirLang.getCppNamespace() +
+            "::Directive::" + DirLang.getDirectivePrefix() + Formatted)
+        .str();
+  };
+
+  // For each list of leafs, generate a static local object, then
+  // return a reference to that object for a given directive, e.g.
+  //
+  //   static ListTy leafConstructs_A_B = { A, B };
+  //   static ListTy leafConstructs_C_D_E = { C, D, E };
+  //   switch (Dir) {
+  //     case A_B:
+  //       return leafConstructs_A_B;
+  //     case C_D_E:
+  //       return leafConstructs_C_D_E;
+
+  // Map from a record that defines a directive to the name of the
+  // local object with the list of its leafs.
+  DenseMap<Record *, std::string> ListNames;
+
+  std::string DirectiveTypeName =
+      std::string("llvm::") + DirLang.getCppNamespace().str() + "::Directive";
+  std::string DirectiveListTypeName =
+      std::string("llvm::SmallVector<") + DirectiveTypeName + ">";
+
+  // const Container &llvm::<ns>::GetLeafConstructs(llvm::<ns>::Directive Dir)
+  OS << "const " << DirectiveListTypeName
+     << " &llvm::" << DirLang.getCppNamespace() << "::getLeafConstructs("
+     << DirectiveTypeName << " Dir) ";
+  OS << "{\n";
+
+  // Generate the locals.
+  for (Record *R : DirLang.getDirectives()) {
+    Directive Dir{R};
+
+    std::vector<Record *> LeafConstructs = Dir.getLeafConstructs();
+    if (LeafConstructs.empty())
+      continue;
+
+    std::string ListName = "leafConstructs_" + Dir.getFormattedName();
+    OS << "  static " << DirectiveListTypeName << ' ' << ListName << " {\n";
+    for (Record *L : LeafConstructs) {
+      Directive LeafDir{L};
+      OS << "    " << getQualifiedName(LeafDir.getFormattedName()) << ",\n";
+    }
+    OS << "  };\n";
+    ListNames.insert(std::make_pair(R, std::move(ListName)));
+  }
+
+  OS << "  static " << DirectiveListTypeName << " nothing {};\n";
+
+  OS << '\n';
+  OS << "  switch (Dir) {\n";
+  for (Record *R : DirLang.getDirectives()) {
+    auto F = ListNames.find(R);
+    if (F == ListNames.end())
+      continue;
+
+    Directive Dir{R};
+    OS << "  case " << getQualifiedName(Dir.getFormattedName()) << ":\n";
+    OS << "    return " << F->second << ";\n";
+  }
+  OS << "  default:\n";
+  OS << "    return nothing;\n";
+  OS << "  } // switch (Dir)\n";
+  OS << "}\n";
 }
 
 // Generate a simple enum set with the give clauses.
@@ -876,6 +950,9 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
+
+  // getLeafConstructs(Directive D)
+  GenerateGetLeafConstructs(DirLang, OS);
 }
 
 // Generate the implemenation section for the enumeration in the directive
