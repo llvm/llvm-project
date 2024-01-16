@@ -447,6 +447,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
 
+- Improved :doc:`performance-for-range-copy
+  <clang-tidy/checks/performance/for-range-copy>` check to handle cases where
+  the loop variable is a structured binding.
+
 - Improved :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
   conditional ``noexcept`` expressions, eliminating false-positives.
