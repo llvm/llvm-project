@@ -31,6 +31,40 @@ enum class FPType {
   X86_Binary80,
 };
 
+// The classes hierarchy are as follows:
+//
+//             ┌───────────────────┐
+//             │ FPLayout<FPType>  │
+//             └─────────▲─────────┘
+//                       │
+//             ┌─────────┴─────────┐
+//             │ FPRepBase<FPType> │
+//             └─────────▲─────────┘
+//                       │
+//          ┌────────────┴─────────────┐
+//          │                          │
+// ┌────────┴──────┐     ┌─────────────┴──────────────┐
+// │ FPRep<FPType> │     │ FPRep<FPType::X86_Binary80 │
+// └────────▲──────┘     └─────────────▲──────────────┘
+//          │                          │
+//          └────────────┬─────────────┘
+//                       │
+//                 ┌─────┴─────┐
+//                 │ FPBits<T> │
+//                 └───────────┘
+//
+// - 'FPLayout' defines only a few constants, namely the 'StorageType' and the
+// length of the sign, the exponent and significand parts.
+// - 'FPRepBase' builds more constants on top of those from 'FPLayout' like
+// exponent bias, shifts and masks. It also defines tools to assemble or test
+// these parts.
+// - 'FPRep' defines functions to interact with the floating point
+// representation. The default implementation is the one for 'IEEE754', a
+// specialization is provided for X86 Extended Precision that has a different
+// encoding.
+// - 'FPBits' is templated on the platform floating point types. Contrary to
+// 'FPRep' that is platform agnostic 'FPBits' is architecture dependent.
+
 namespace internal {
 
 // Defines the layout (sign, exponent, significand) of a floating point type in
