@@ -275,6 +275,8 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++17. The effect
   is equivalent to manually defining each macro listed below.
+  This macro is deprecated and will be removed in LLVM-19. Use the
+  individual macros listed below.
 
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
   This macro is used to re-enable `auto_ptr`.
@@ -303,6 +305,8 @@ C++20 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.
+  This macro is deprecated and will be removed in LLVM-19. Use the
+  individual macros listed below.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS**:
   This macro is used to re-enable redundant members of `allocator<T>`,
