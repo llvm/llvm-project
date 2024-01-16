@@ -40,6 +40,8 @@ public:
   bool writeXCOFF();
 
 private:
+  void ErrOverwrite(uint64_t currentOffset, uint64_t specifiedOffset,
+                    const Twine &fieldName);
   bool nameShouldBeInStringTable(StringRef SymbolName);
   bool initFileHeader(uint64_t CurrentOffset);
   void initAuxFileHeader();
@@ -90,6 +92,13 @@ static void writeName(StringRef StrName, support::endian::Writer W) {
   W.write(NameRef);
 }
 
+void XCOFFWriter::ErrOverwrite(uint64_t CurrentOffset, uint64_t specifiedOffset,
+                               const Twine &fieldName) {
+  ErrHandler("current file offset (" + Twine(CurrentOffset) +
+             ") is bigger than the specified " + fieldName + " (" +
+             Twine(specifiedOffset) + ") ");
+}
+
 bool XCOFFWriter::nameShouldBeInStringTable(StringRef SymbolName) {
   // For XCOFF64: The symbol name is always in the string table.
   return (SymbolName.size() > XCOFF::NameSize) || Is64Bit;
@@ -100,18 +109,19 @@ bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
     if (!InitSection.Relocations.empty()) {
       uint64_t RelSize = Is64Bit ? XCOFF::RelocationSerializationSize64
                                  : XCOFF::RelocationSerializationSize32;
-      const uint64_t UsedSize = RelSize * InitSection.Relocations.size();
+      uint64_t UsedSize = RelSize * InitSection.Relocations.size();
 
       // If NumberOfRelocations was specified, we use it, even if it's
-      // not consistent with the number of provided relocations
+      // not consistent with the number of provided relocations.
       if (!InitSection.NumberOfRelocations)
         InitSection.NumberOfRelocations = InitSection.Relocations.size();
 
       // If the YAML file specified an offset to relocations, we use it.
       if (InitSection.FileOffsetToRelocations) {
         if (CurrentOffset > InitSection.FileOffsetToRelocations) {
-          ErrHandler("Specified FileOffsetToRelocations will overwrite"
-                     "existing data");
+          ErrOverwrite(CurrentOffset, InitSection.FileOffsetToRelocations,
+                       "FileOffsetToRelocations for the " +
+                           InitSection.SectionName + " section");
           return false;
         }
         CurrentOffset = InitSection.FileOffsetToRelocations;
@@ -119,8 +129,9 @@ bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
         InitSection.FileOffsetToRelocations = CurrentOffset;
       CurrentOffset += UsedSize;
       if (CurrentOffset > MaxRawDataSize) {
-        ErrHandler("maximum object size of" + Twine(MaxRawDataSize) +
-                   "exceeded when writing relocation data");
+        ErrHandler("maximum object size (" + Twine(MaxRawDataSize) +
+                   ") exceeded when writing relocation data for section " +
+                   Twine(InitSection.SectionName));
         return false;
       }
     }
@@ -129,8 +140,8 @@ bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
 }
 
 bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
-  uint64_t CurrentDataAddr = 0;
-  uint64_t CurrentTDataAddr = 0;
+  uint64_t CurrentEndDataAddr = 0;
+  uint64_t CurrentEndTDataAddr = 0;
   for (uint16_t I = 0, E = InitSections.size(); I < E; ++I) {
     // Assign indices for sections.
     if (InitSections[I].SectionName.size() &&
@@ -147,22 +158,31 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
     if (!InitSections[I].Size)
       InitSections[I].Size = InitSections[I].SectionData.binary_size();
 
-    // We cannot compute section addresses in general. We only enforce
-    // the rule .data and .bss are consecutive, as are .tdata and .tbss.
+    // Section data addresses (physical/virtual) are related to symbol
+    // addresses and alignments. Furthermore, it is possible to specify the
+    // same starting addresses for the .text, .data, and .tdata sections.
+    // Without examining all the symbols and their addreses and alignments,
+    // it is not possible to compute valid section addresses. The only
+    // condition required by XCOFF is that the .bss section immediately
+    // follows the .data section, and the .tbss section immediately follows
+    // the .tdata section. Therefore, we only assign addresses to the .bss
+    // and .tbss sections if they do not already have non-zero addresses.
+    // (If the YAML file is being used to generate a valid object file, we
+    // expect all section addresses to be specified explicitly.)
     switch (InitSections[I].Flags) {
     case XCOFF::STYP_DATA:
-      CurrentDataAddr = InitSections[I].Address + InitSections[I].Size;
+      CurrentEndDataAddr = InitSections[I].Address + InitSections[I].Size;
       break;
     case XCOFF::STYP_BSS:
       if (!InitSections[I].Address)
-        InitSections[I].Address = CurrentDataAddr;
+        InitSections[I].Address = CurrentEndDataAddr;
       break;
     case XCOFF::STYP_TDATA:
-      CurrentTDataAddr = InitSections[I].Address + InitSections[I].Size;
+      CurrentEndTDataAddr = InitSections[I].Address + InitSections[I].Size;
       break;
     case XCOFF::STYP_TBSS:
       if (!InitSections[I].Address)
-        InitSections[I].Address = CurrentTDataAddr;
+        InitSections[I].Address = CurrentEndTDataAddr;
       break;
     }
 
@@ -170,7 +190,9 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
       if (InitSections[I].FileOffsetToData) {
         // Use the providedFileOffsetToData.
         if (CurrentOffset > InitSections[I].FileOffsetToData) {
-          ErrHandler("Specified FileOffsetToData will overwrite existing data");
+          ErrOverwrite(CurrentOffset, InitSections[I].FileOffsetToData,
+                       "FileOffsetToData for the " +
+                           InitSections[I].SectionName + " section");
           return false;
         }
         CurrentOffset = InitSections[I].FileOffsetToData;
@@ -180,8 +202,9 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
       }
       CurrentOffset += InitSections[I].SectionData.binary_size();
       if (CurrentOffset > MaxRawDataSize) {
-        ErrHandler("maximum object size of" + Twine(MaxRawDataSize) +
-                   "exceeded when writing section data");
+        ErrHandler("maximum object size (" + Twine(MaxRawDataSize) +
+                   ") exceeded when writing data for section " + Twine(I + 1) +
+                   " (" + Twine(InitSections[I].SectionName) + ")");
         return false;
       }
     }
@@ -289,7 +312,8 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
   if (InitFileHdr.NumberOfSymTableEntries) {
     if (Obj.Header.SymbolTableOffset) {
       if (CurrentOffset > Obj.Header.SymbolTableOffset) {
-        ErrHandler("symbol table offset overlaps existing data");
+        ErrOverwrite(CurrentOffset, Obj.Header.SymbolTableOffset,
+                     "SymbolTableOffset");
         return false;
       }
       CurrentOffset = Obj.Header.SymbolTableOffset;
@@ -298,8 +322,8 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
     CurrentOffset +=
         InitFileHdr.NumberOfSymTableEntries * XCOFF::SymbolTableEntrySize;
     if (CurrentOffset > MaxRawDataSize) {
-      ErrHandler("maximum object size of" + Twine(MaxRawDataSize) +
-                 "exceeded when writing symbols");
+      ErrHandler("maximum object size of " + Twine(MaxRawDataSize) +
+                 " exceeded when writing symbols");
       return false;
     }
   }
@@ -361,17 +385,19 @@ void XCOFFWriter::initAuxFileHeader() {
 }
 
 bool XCOFFWriter::assignAddressesAndIndices() {
-  const uint64_t FileHdrSize =
+  uint64_t FileHdrSize =
       Is64Bit ? XCOFF::FileHeaderSize64 : XCOFF::FileHeaderSize32;
 
   // If AuxHeaderSize is specified in the YAML file, we construct
   // an auxiliary header.
-  const uint64_t AuxFileHdrSize =
-      Obj.Header.AuxHeaderSize ? *Obj.Header.AuxHeaderSize
-      : !Obj.AuxHeader
-          ? 0
-          : (Is64Bit ? XCOFF::AuxFileHeaderSize64 : XCOFF::AuxFileHeaderSize32);
-  const uint64_t SecHdrSize =
+  uint64_t AuxFileHdrSize = 0;
+
+  if (Obj.Header.AuxHeaderSize)
+    AuxFileHdrSize = *Obj.Header.AuxHeaderSize;
+  else if (Obj.AuxHeader)
+    AuxFileHdrSize =
+        (Is64Bit ? XCOFF::AuxFileHeaderSize64 : XCOFF::AuxFileHeaderSize32);
+  uint64_t SecHdrSize =
       Is64Bit ? XCOFF::SectionHeaderSize64 : XCOFF::SectionHeaderSize32;
   uint64_t CurrentOffset =
       FileHdrSize + AuxFileHdrSize + InitSections.size() * SecHdrSize;
@@ -495,7 +521,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint64_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint32_t>(DerivedSec.NumberOfRelocations);
       W.write<uint32_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(YamlSec.Flags);
+      W.write<int32_t>(DerivedSec.Flags);
       W.OS.write_zeros(4);
     } else {
       // Virtual address is the same as physical address.
@@ -507,7 +533,7 @@ void XCOFFWriter::writeSectionHeaders() {
       W.write<uint32_t>(DerivedSec.FileOffsetToLineNumbers);
       W.write<uint16_t>(DerivedSec.NumberOfRelocations);
       W.write<uint16_t>(DerivedSec.NumberOfLineNumbers);
-      W.write<int32_t>(YamlSec.Flags);
+      W.write<int32_t>(DerivedSec.Flags);
     }
   }
 }
@@ -517,10 +543,10 @@ bool XCOFFWriter::writeSectionData() {
     XCOFFYAML::Section YamlSec = Obj.Sections[I];
     if (YamlSec.SectionData.binary_size()) {
       // Fill the padding size with zeros.
-      int64_t PaddingSize =
-          InitSections[I].FileOffsetToData - (W.OS.tell() - StartOffset);
+      int64_t PaddingSize = (uint64_t)InitSections[I].FileOffsetToData -
+                            (W.OS.tell() - StartOffset);
       if (PaddingSize < 0) {
-        ErrHandler("redundant data was written before section data");
+        ErrHandler("unexpected data was written before section data");
         return false;
       }
       W.OS.write_zeros(PaddingSize);
@@ -537,7 +563,7 @@ bool XCOFFWriter::writeRelocations() {
       int64_t PaddingSize =
           InitSections[I].FileOffsetToRelocations - (W.OS.tell() - StartOffset);
       if (PaddingSize < 0) {
-        ErrHandler("redundant data was written before relocations");
+        ErrHandler("unexpected data was written before relocations");
         return false;
       }
       W.OS.write_zeros(PaddingSize);
@@ -678,7 +704,7 @@ bool XCOFFWriter::writeSymbols() {
   int64_t PaddingSize =
       InitFileHdr.SymbolTableOffset - (W.OS.tell() - StartOffset);
   if (PaddingSize < 0) {
-    ErrHandler("redundant data was written before symbols");
+    ErrHandler("unexpected data was written before symbols");
     return false;
   }
   W.OS.write_zeros(PaddingSize);
