@@ -3220,6 +3220,58 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _EmptyLinesAfterIncludes:
+
+**EmptyLinesAfterIncludes** (``Unsigned``) :versionbadge:`clang-format 1` :ref:`¶ <EmptyLinesAfterIncludes>`
+  Number of lines after includes.
+  If set, determines the number of lines to insert after includes.
+  Limited by MaxEmptyLinesToKeep.
+  Example:
+  EmptyLinesAfterIncludes = 1
+
+  .. code-block:: c++
+
+     #include <string>
+     #include <map>
+
+     class Test {};
+
+  vs EmptyLinesAfterIncludes = 2
+
+  .. code-block:: c++
+
+     #include <string>
+     #include <map>
+
+
+     class Test {};
+
+.. _EmptyLinesAfterTopLevelComment:
+
+**EmptyLinesAfterTopLevelComment** (``Unsigned``) :versionbadge:`clang-format 1` :ref:`¶ <EmptyLinesAfterTopLevelComment>`
+  Number of empty lines after top level comment.
+  If set, determines the number of empty lines to insert/keep after the top
+  level comment. Limited by MaxEmptyLinesToKeep.
+  Example:
+  EmptyLinesAfterTopLevelComment = 1
+
+  .. code-block:: c++
+
+     /* LICENSE TEXT */
+
+     #include <string>
+     class Test {};
+
+  vs EmptyLinesAfterTopLevelComment = 2
+
+  .. code-block:: c++
+
+     /* License Text */
+
+
+     #include <string>
+     class Test {};
+
 .. _ExperimentalAutoDetectBinPacking:
 
 **ExperimentalAutoDetectBinPacking** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ExperimentalAutoDetectBinPacking>`

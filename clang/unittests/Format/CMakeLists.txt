@@ -36,6 +36,7 @@ add_clang_unittest(FormatTests
   SortIncludesTest.cpp
   UsingDeclarationsSorterTest.cpp
   TokenAnnotatorTest.cpp
+  TopLevelCommentSeparatorTest.cpp
   )
 
 clang_target_link_libraries(FormatTests

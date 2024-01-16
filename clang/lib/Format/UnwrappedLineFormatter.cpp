@@ -1535,6 +1535,12 @@ static auto computeNewlines(const AnnotatedLine &Line,
     }
   }
 
+  if (Style.EmptyLinesAfterIncludes.has_value() && !Line.InMacroBody &&
+      PreviousLine && PreviousLine->isInclude() && !Line.isInclude()) {
+    Newlines =
+        1 + std::min(Style.MaxEmptyLinesToKeep, *Style.EmptyLinesAfterIncludes);
+  }
+
   return Newlines;
 }
 

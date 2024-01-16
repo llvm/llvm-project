@@ -2459,6 +2459,52 @@ struct FormatStyle {
   /// \version 12
   EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
 
+  /// \brief Number of lines after includes.
+  /// If set, determines the number of lines to insert after includes.
+  /// Limited by MaxEmptyLinesToKeep.
+  /// Example:
+  /// EmptyLinesAfterIncludes = 1
+  /// \code
+  ///    #include <string>
+  ///    #include <map>
+  ///
+  ///    class Test {};
+  ///
+  /// \endcode
+  /// vs EmptyLinesAfterIncludes = 2
+  /// \code
+  ///    #include <string>
+  ///    #include <map>
+  ///
+  ///
+  ///    class Test {};
+  /// \endcode
+  /// \version 1
+  std::optional<unsigned> EmptyLinesAfterIncludes;
+
+  /// \brief Number of empty lines after top level comment.
+  /// If set, determines the number of empty lines to insert/keep after the top
+  /// level comment. Limited by MaxEmptyLinesToKeep.
+  /// Example:
+  /// EmptyLinesAfterTopLevelComment = 1
+  /// \code
+  ///    /* LICENSE TEXT */
+  ///
+  ///    #include <string>
+  ///    class Test {};
+  ///
+  /// \endcode
+  /// vs EmptyLinesAfterTopLevelComment = 2
+  /// \code
+  ///    /* License Text */
+  ///
+  ///
+  ///    #include <string>
+  ///    class Test {};
+  /// \endcode
+  /// \version 1
+  std::optional<unsigned> EmptyLinesAfterTopLevelComment;
+
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
@@ -4827,6 +4873,8 @@ struct FormatStyle {
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
            EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
+           EmptyLinesAfterIncludes == R.EmptyLinesAfterIncludes &&
+           EmptyLinesAfterTopLevelComment == R.EmptyLinesAfterTopLevelComment &&
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&

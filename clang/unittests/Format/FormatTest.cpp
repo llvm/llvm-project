@@ -26846,6 +26846,26 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
 }
+
+TEST_F(FormatTest, EmptyLinesAfterInclude) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 2;
+  verifyFormat("#include <string>\n\n\n"
+               "class Test {};",
+               Style);
+
+  Style.EmptyLinesAfterIncludes = 1;
+  verifyFormat("#include <string>\n\n"
+               "class Test {};",
+               Style);
+
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 1;
+  verifyFormat("#include <string>\n\n"
+               "class Test {};",
+               Style);
+}
 } // namespace
 } // namespace test
 } // namespace format

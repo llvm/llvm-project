@@ -18,6 +18,7 @@ add_clang_library(clangFormat
   SortJavaScriptImports.cpp
   TokenAnalyzer.cpp
   TokenAnnotator.cpp
+  TopLevelCommentSeparator.cpp
   UnwrappedLineFormatter.cpp
   UnwrappedLineParser.cpp
   UsingDeclarationsSorter.cpp

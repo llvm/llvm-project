@@ -27,6 +27,7 @@
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
 #include "TokenAnnotator.h"
+#include "TopLevelCommentSeparator.h"
 #include "UnwrappedLineFormatter.h"
 #include "UnwrappedLineParser.h"
 #include "UsingDeclarationsSorter.h"
@@ -995,6 +996,9 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("DisableFormat", Style.DisableFormat);
     IO.mapOptional("EmptyLineAfterAccessModifier",
                    Style.EmptyLineAfterAccessModifier);
+    IO.mapOptional("EmptyLinesAfterIncludes", Style.EmptyLinesAfterIncludes);
+    IO.mapOptional("EmptyLinesAfterTopLevelComment",
+                   Style.EmptyLinesAfterTopLevelComment);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
                    Style.EmptyLineBeforeAccessModifier);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
@@ -1035,6 +1039,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
+    IO.mapOptional("EmptyLinesAfterTopLevelComment",
+                   Style.EmptyLinesAfterTopLevelComment);
     IO.mapOptional("ObjCBinPackProtocolList", Style.ObjCBinPackProtocolList);
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCBreakBeforeNestedBlockParam",
@@ -1501,6 +1507,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.DerivePointerAlignment = false;
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
+  LLVMStyle.EmptyLinesAfterIncludes = std::nullopt;
+  LLVMStyle.EmptyLinesAfterTopLevelComment = std::nullopt;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
   LLVMStyle.FixNamespaceComments = true;
@@ -3710,6 +3718,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
     Passes.emplace_back([&](const Environment &Env) {
       return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
+
+  if (Style.EmptyLinesAfterTopLevelComment.has_value()) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return TopLevelCommentSeparator(Env, Expanded).process();
     });
   }
 
