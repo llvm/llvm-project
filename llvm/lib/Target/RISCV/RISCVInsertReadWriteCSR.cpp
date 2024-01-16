@@ -23,9 +23,10 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-insert-read-write-csr"
 #define RISCV_INSERT_READ_WRITE_CSR_NAME "RISC-V Insert Read/Write CSR Pass"
 
-static cl::opt<bool> DisableFRMInsertOpt(
-    "riscv-disable-frm-insert-opt", cl::init(false), cl::Hidden,
-    cl::desc("Disable optimized frm insertion."));
+static cl::opt<bool>
+    DisableFRMInsertOpt("riscv-disable-frm-insert-opt", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Disable optimized frm insertion."));
 
 namespace {
 
@@ -69,7 +70,7 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : MBB) {
     if (MI.getOpcode() == RISCV::SwapFRMImm ||
-        MI.getOpcode() == RISCV::WriteFRMImm ) {
+        MI.getOpcode() == RISCV::WriteFRMImm) {
       CurrentRM = MI.getOperand(0).getImm();
       SavedFRM = std::nullopt;
       continue;
@@ -85,7 +86,7 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
       // Restore FRM before unknown operations.
       if (SavedFRM.has_value())
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
-          .addReg(*SavedFRM);
+            .addReg(*SavedFRM);
       CurrentRM = RISCVFPRndMode::DYN;
       SavedFRM = std::nullopt;
       continue;
@@ -125,9 +126,10 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
     if (InstrRM == RISCVFPRndMode::DYN) {
       if (!SavedFRM.has_value())
         continue;
-      // SavedFRM not having a value means current FRM has correct rounding mode.
+      // SavedFRM not having a value means current FRM has correct rounding
+      // mode.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
-        .addReg(*SavedFRM);
+          .addReg(*SavedFRM);
       SavedFRM = std::nullopt;
       CurrentRM = RISCVFPRndMode::DYN;
       continue;
@@ -137,13 +139,12 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
       // Save current FRM value to SavedFRM.
       MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
       SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm),
-              *SavedFRM)
-       .addImm(*InstrRM);
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm), *SavedFRM)
+          .addImm(*InstrRM);
     } else {
       // Don't need to save current FRM when CurrentRM != DYN.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRMImm))
-        .addImm(*InstrRM);
+          .addImm(*InstrRM);
     }
     CurrentRM = InstrRM;
     Changed = true;
