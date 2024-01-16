@@ -393,10 +393,8 @@ static LinearExpression GetLinearExpression(
         // further.
         return Val;
       case Instruction::Or:
-        // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
-        // analyze it.
-        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(),
-                               SimplifyQuery(DL, DT, AC, BOp)))
+        // X|C == X+C if it is disjoint.  Otherwise we can't analyze it.
+        if (!cast<PossiblyDisjointInst>(BOp)->isDisjoint())
           return Val;
 
         [[fallthrough]];

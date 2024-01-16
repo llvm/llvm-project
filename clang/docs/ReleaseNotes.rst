@@ -748,6 +748,8 @@ Bug Fixes in This Version
 - Fix an issue where clang cannot find conversion function with template
   parameter when instantiation of template class.
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
+- Fix an issue where CTAD fails for function-type/array-type arguments.
+  Fixes (`#51710 <https://github.com/llvm/llvm-project/issues/51710>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
