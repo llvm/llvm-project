@@ -526,22 +526,29 @@ bool XCOFFWriter::writeRelocations() {
 }
 
 bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
-  uint8_t SymAlignAndType = AuxSym.SymbolAlignmentAndType.value_or(0);
-  if (AuxSym.SymbolType)
-    SymAlignAndType = (SymAlignAndType & ~XCOFFCsectAuxRef::SymbolTypeMask) |
-                      *AuxSym.SymbolType;
-  if (AuxSym.SymbolAlignment) {
-    const uint8_t ShiftedSymbolAlignmentMask =
-        XCOFFCsectAuxRef::SymbolAlignmentMask >>
-        XCOFFCsectAuxRef::SymbolAlignmentBitOffset;
-
-    if (*AuxSym.SymbolAlignment & ~ShiftedSymbolAlignmentMask) {
-      ErrHandler("Symbol alignment must be less than " +
-                 Twine(1 + ShiftedSymbolAlignmentMask));
+  uint8_t SymAlignAndType = 0;
+  if (AuxSym.SymbolAlignmentAndType) {
+    if (AuxSym.SymbolType || AuxSym.SymbolAlignment) {
+      ErrHandler("cannot specify SymbolType or SymbolAlignment if "
+                 "SymbolAlignmentAndType is specified");
       return false;
     }
-    SymAlignAndType =
-        (SymAlignAndType & ~XCOFFCsectAuxRef::SymbolAlignmentMask) |
+    SymAlignAndType = *AuxSym.SymbolAlignmentAndType;
+  } else {
+    if (AuxSym.SymbolType)
+      SymAlignAndType = *AuxSym.SymbolType;
+    if (AuxSym.SymbolAlignment) {
+      const uint8_t ShiftedSymbolAlignmentMask =
+          XCOFFCsectAuxRef::SymbolAlignmentMask >>
+          XCOFFCsectAuxRef::SymbolAlignmentBitOffset;
+
+      if (*AuxSym.SymbolAlignment & ~ShiftedSymbolAlignmentMask) {
+        ErrHandler("symbol alignment must be less than " +
+                   Twine(1 + ShiftedSymbolAlignmentMask));
+        return false;
+      }
+    }
+    SymAlignAndType |=
         (*AuxSym.SymbolAlignment << XCOFFCsectAuxRef::SymbolAlignmentBitOffset);
   }
   if (Is64Bit) {
