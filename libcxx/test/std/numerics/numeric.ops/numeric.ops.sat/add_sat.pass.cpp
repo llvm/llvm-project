@@ -25,7 +25,7 @@ constexpr bool test_signed() {
 
   static_assert(noexcept(std::div_sat(minVal, maxVal)));
 
-  // No saturation - (-1, 0, 1)
+  // No saturation (-1, 0, 1)
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{0}, IntegerT{0});
     assert(sum == IntegerT{0});
@@ -71,7 +71,7 @@ constexpr bool test_signed() {
     assert(sum == IntegerT{-2});
   }
 
-  // No saturation - (any value)
+  // No saturation (any value)
 
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{27}, IntegerT{28});
@@ -83,7 +83,7 @@ constexpr bool test_signed() {
     assert(sum == IntegerT{1});
   }
 
-  // No saturation - (min, -1, 0, 1, max)
+  // No saturation (min, -1, 0, 1, max)
 
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(minVal, IntegerT{0});
@@ -117,6 +117,11 @@ constexpr bool test_signed() {
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
 
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(x, y);
+    assert(sum == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, maxVal);
     assert(sum == maxVal);
   }
 
@@ -161,6 +166,11 @@ constexpr bool test_unsigned() {
     assert(sum == IntegerT{1});
   }
 
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(minVal, minVal);
+    assert(sum == minVal);
+  }
+
   // Saturation - max only
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, IntegerT{27});
@@ -172,6 +182,11 @@ constexpr bool test_unsigned() {
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
 
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(x, y);
+    assert(sum == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, maxVal);
     assert(sum == maxVal);
   }
 

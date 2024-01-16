@@ -18,8 +18,6 @@
 #include <limits>
 #include <numeric>
 
-#include "check_constexpr.h"
-
 template <typename IntegerT>
 constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
@@ -73,12 +71,6 @@ constexpr bool test_unsigned() {
   // Unsigned integer devision never overflow
 
   return true;
-}
-
-template <typename IntegerT>
-void test_constexpr() {
-  TEST_EXPRESSION_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{84}));
-  TEST_EXPRESSION_NOT_CONSTEXPR(std::div_sat(IntegerT{90}, IntegerT{0}));
 }
 
 constexpr bool test() {
