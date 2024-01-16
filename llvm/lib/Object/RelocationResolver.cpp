@@ -885,11 +885,11 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
 
       if (GetRelSectionType() == ELF::SHT_RELA) {
         Addend = getELFAddend(R);
-        // RISCV, LoongArch relocations use both LocData and Addend.
-        if (Obj->getArch() != Triple::riscv32 &&
-            Obj->getArch() != Triple::riscv64 &&
-            Obj->getArch() != Triple::loongarch32 &&
-            Obj->getArch() != Triple::loongarch64)
+        // LoongArch and RISCV relocations use both LocData and Addend.
+        if (Obj->getArch() != Triple::loongarch32 &&
+            Obj->getArch() != Triple::loongarch64 &&
+            Obj->getArch() != Triple::riscv32 &&
+            Obj->getArch() != Triple::riscv64)
           LocData = 0;
       }
     }

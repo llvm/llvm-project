@@ -1,12 +1,12 @@
 ; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=-relax %s -o %t.o
-; RUN: llvm-readobj -r %t.o | FileCheck -check-prefixes=RELOCS-BOTH,RELOCS-NORL %s
+; RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS-BOTH,RELOCS-NORL %s
 ; RUN: llvm-objdump --source %t.o | FileCheck --check-prefix=SOURCE %s
-; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | FileCheck -check-prefix=DWARF %s
+; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | FileCheck --check-prefix=DWARF %s
 
 ; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=+relax %s -o %t.r.o
-; RUN: llvm-readobj -r %t.r.o | FileCheck -check-prefixes=RELOCS-BOTH,RELOCS-ENRL %s
+; RUN: llvm-readobj -r %t.r.o | FileCheck --check-prefixes=RELOCS-BOTH,RELOCS-ENRL %s
 ; RUN: llvm-objdump --source %t.r.o | FileCheck --check-prefix=SOURCE %s
-; RUN: llvm-dwarfdump --debug-info --debug-line %t.r.o | FileCheck -check-prefix=DWARF %s
+; RUN: llvm-dwarfdump --debug-info --debug-line %t.r.o | FileCheck --check-prefix=DWARF %s
 
 ; RELOCS-BOTH:       Relocations [
 ; RELOCS-BOTH-NEXT:    Section ({{.*}}) .rela.text {
