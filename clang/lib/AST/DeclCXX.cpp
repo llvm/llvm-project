@@ -1389,13 +1389,6 @@ bool CXXRecordDecl::isLiteral() const {
                              : hasTrivialDestructor()))
     return false;
 
-  // Lambdas are literal types since C++17.
-  if (!isAggregate()
-      // Lambdas are literal types since C++17.
-      && !(LangOpts.CPlusPlus17 && isLambda()) &&
-      !hasConstexprNonCopyMoveConstructor() && !hasTrivialDefaultConstructor())
-    return false;
-
   if (hasNonLiteralTypeFieldsOrBases()) {
     // CWG2598
     // is an aggregate union type that has either no variant
@@ -1411,7 +1404,8 @@ bool CXXRecordDecl::isLiteral() const {
       return false;
   }
 
-  return true;
+  return isAggregate() || (isLambda() && LangOpts.CPlusPlus17) ||
+         hasConstexprNonCopyMoveConstructor() || hasTrivialDefaultConstructor();
 }
 
 void CXXRecordDecl::addedSelectedDestructor(CXXDestructorDecl *DD) {
