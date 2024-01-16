@@ -3234,5 +3234,3 @@ define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
 }
 
 attributes #0 = { nounwind }
-
-
