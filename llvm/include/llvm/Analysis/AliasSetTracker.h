@@ -19,7 +19,6 @@
 #define LLVM_ANALYSIS_ALIASSETTRACKER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -28,8 +27,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cassert>
-#include <cstddef>
-#include <iterator>
 #include <vector>
 
 namespace llvm {
