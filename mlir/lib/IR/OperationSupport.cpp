@@ -928,9 +928,10 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     //   - Blocks in Regions
     for (Region &region : op->getRegions()) {
       for (Block &block : region) {
-        addDataToHash(hasher, &block);
-        for (BlockArgument arg : block.getArguments())
+        for (BlockArgument arg : block.getArguments()) {
           addDataToHash(hasher, arg);
+          addDataToHash(hasher, arg.getLoc().getAsOpaquePointer());
+        }
       }
     }
     //   - Location
