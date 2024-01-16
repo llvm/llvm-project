@@ -16,6 +16,9 @@
 ! UNSUPPORTED: system-windows
 ! RUN: %flang -lFortran_main -lFortranRuntime -lFortranDecimal %S/Inputs/hello.f90 -o %s.out
 
+! Verify that -fno-fortran-main -lFortran_main does link Fortran_main
+! RUN: %flang -### -fno-fortran-main -lFortran_main --target=aarch64-unknown-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MANUAL_MAIN
+
 ! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
 !       but it is not needed when compiling Fortran code and they might bring in
 !       additional dependencies. Make sure its not added.
@@ -57,3 +60,5 @@
 ! MSVC-LABEL: link
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"
+
+! MANUAL_MAIN: -lFortran_main
