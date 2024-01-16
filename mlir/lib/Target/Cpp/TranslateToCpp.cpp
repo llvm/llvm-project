@@ -745,6 +745,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   CppEmitter::Scope scope(emitter);
   raw_indented_ostream &os = emitter.ostream();
+  if (functionOp.isPrivate()) {
+    os << "static ";
+  }
   if (failed(emitter.emitTypes(functionOp.getLoc(),
                                functionOp.getFunctionType().getResults())))
     return failure();
