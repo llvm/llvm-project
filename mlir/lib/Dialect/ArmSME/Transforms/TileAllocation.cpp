@@ -272,9 +272,8 @@ struct AssignTileIDsPattern
     // Rewrite IR.
     if (!tileIsInMemory)
       setDiscardableIntAttr(kTilesInUseAttr, tilesInUse);
-    else {
+    else
       setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
-    }
     rewriter.updateRootInPlace(tileOp, [&] { tileOp.setTileId(tileIDAttr); });
     for (auto *op : dependantOps) {
       if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
