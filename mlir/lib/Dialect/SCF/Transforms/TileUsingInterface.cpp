@@ -451,12 +451,6 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
       tilingInterfaceOp.getLoopIteratorTypes();
 
   SmallVector<int> reductionDims;
-  int64_t numReductionDims = llvm::count(
-      tilingInterfaceOp.getLoopIteratorTypes(), utils::IteratorType::reduction);
-  if (numReductionDims != 1)
-    return b.notifyMatchFailure(
-        op, "only support ops with one reduction dimension.");
-  int reductionDim;
   for (auto [idx, iteratorType] :
        llvm::enumerate(tilingInterfaceOp.getLoopIteratorTypes())) {
     if (iteratorType == utils::IteratorType::reduction)
