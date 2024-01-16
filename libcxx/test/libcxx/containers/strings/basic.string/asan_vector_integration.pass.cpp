@@ -21,13 +21,10 @@
 // object memory inside is not annotated, so we check everything in a more careful way.
 
 template <typename D>
-bool verify_inside(D const& d) {
+void verify_inside(D const& d) {
   for (size_t i = 0; i < d.size(); ++i) {
-    if (!is_string_asan_correct(d[i]))
-      return false;
+    assert(is_string_asan_correct(d[i]));
   }
-
-  return true;
 }
 
 template <typename S, size_t N>
@@ -45,33 +42,33 @@ void test_string() {
 
   {
     C d1a(1), d1b(N), d1c(N + 1), d1d(32 * N);
-    assert(verify_inside(d1a));
-    assert(verify_inside(d1b));
-    assert(verify_inside(d1c));
-    assert(verify_inside(d1d));
+    verify_inside(d1a);
+    verify_inside(d1b);
+    verify_inside(d1c);
+    verify_inside(d1d);
   }
   {
     C d2;
     for (size_t i = 0; i < 16 * N; ++i) {
       d2.push_back(get_s<S, 1>(i % 10 + 'a'));
-      assert(verify_inside(d2));
+      verify_inside(d2);
       d2.push_back(get_s<S, 222>(i % 10 + 'b'));
-      assert(verify_inside(d2));
+      verify_inside(d2);
 
       d2.erase(d2.cbegin());
-      assert(verify_inside(d2));
+      verify_inside(d2);
     }
   }
   {
     C d3;
     for (size_t i = 0; i < 16 * N; ++i) {
       d3.push_back(get_s<S, 1>(i % 10 + 'a'));
-      assert(verify_inside(d3));
+      verify_inside(d3);
       d3.push_back(get_s<S, 222>(i % 10 + 'b'));
-      assert(verify_inside(d3));
+      verify_inside(d3);
 
       d3.pop_back();
-      assert(verify_inside(d3));
+      verify_inside(d3);
     }
   }
   {
@@ -80,10 +77,10 @@ void test_string() {
       // When there is no SSO, all elements inside should not be poisoned,
       // so we can verify vector poisoning.
       d4.push_back(get_s<S, 333>(i % 10 + 'a'));
-      assert(verify_inside(d4));
+      verify_inside(d4);
       assert(is_contiguous_container_asan_correct(d4));
       d4.push_back(get_s<S, 222>(i % 10 + 'b'));
-      assert(verify_inside(d4));
+      verify_inside(d4);
       assert(is_contiguous_container_asan_correct(d4));
     }
   }
@@ -94,22 +91,22 @@ void test_string() {
       // Here we start with SSO, so part of the inside of the container,
       // will be poisoned.
       d5.push_back(S());
-      assert(verify_inside(d5));
+      verify_inside(d5);
     }
     for (size_t i = 0; i < d5.size(); ++i) {
       // We change the size to have long string.
       // Memory owne by vector should not be poisoned by string.
       d5[i].resize(1000);
-      assert(verify_inside(d5));
+      verify_inside(d5);
     }
 
     assert(is_contiguous_container_asan_correct(d5));
 
     d5.erase(d5.begin() + 2);
-    assert(verify_inside(d5));
+    verify_inside(d5);
 
     d5.erase(d5.end() - 2);
-    assert(verify_inside(d5));
+    verify_inside(d5);
 
     assert(is_contiguous_container_asan_correct(d5));
   }
@@ -134,29 +131,29 @@ void test_string() {
     C d7(9 * N + 2);
 
     d7.insert(d7.begin() + 1, S());
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.insert(d7.end() - 3, S());
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.insert(d7.begin() + 2 * N, get_s<S, 1>('a'));
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.insert(d7.end() - 2 * N, get_s<S, 1>('b'));
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.insert(d7.begin() + 2 * N, 3 * N, get_s<S, 1>('c'));
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     // It may not be short for big element types, but it will be checked correctly:
     d7.insert(d7.end() - 2 * N, 3 * N, get_s<S, 2>('d'));
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.erase(d7.begin() + 2);
-    assert(verify_inside(d7));
+    verify_inside(d7);
 
     d7.erase(d7.end() - 2);
-    assert(verify_inside(d7));
+    verify_inside(d7);
   }
 }
 
