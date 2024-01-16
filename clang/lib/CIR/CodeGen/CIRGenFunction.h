@@ -992,8 +992,6 @@ public:
   const CaseStmt *foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
                                SmallVector<mlir::Attribute, 4> &caseAttrs);
 
-  void insertFallthrough(const clang::Stmt &S);
-
   template <typename T>
   mlir::LogicalResult
   buildCaseDefaultCascade(const T *stmt, mlir::Type condType,

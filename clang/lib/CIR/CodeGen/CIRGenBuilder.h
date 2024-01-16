@@ -588,6 +588,12 @@ public:
     return create<mlir::cir::BreakOp>(loc);
   }
 
+  /// Create a yield operation.
+  mlir::cir::YieldOp createYield(mlir::Location loc,
+                                 mlir::ValueRange value = {}) {
+    return create<mlir::cir::YieldOp>(loc, value);
+  }
+
   /// Create a continue operation.
   mlir::cir::ContinueOp createContinue(mlir::Location loc) {
     return create<mlir::cir::ContinueOp>(loc);

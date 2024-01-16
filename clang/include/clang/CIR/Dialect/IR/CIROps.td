@@ -631,30 +631,21 @@ def ConditionOp : CIR_Op<"condition", [
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-def YieldOpKind_FT : I32EnumAttrCase<"Fallthrough", 2, "fallthrough">;
-
-def YieldOpKind : I32EnumAttr<
-    "YieldOpKind",
-    "yield kind",
-    [YieldOpKind_FT]> {
-  let cppNamespace = "::mlir::cir";
-}
-
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "LoopOp", "AwaitOp",
                  "TernaryOp", "GlobalOp"]>]> {
-  let summary = "Terminate CIR regions";
+  let summary = "Represents the default branching behaviour of a region";
   let description = [{
-    The `cir.yield` operation terminates regions on different CIR operations:
-    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop`, `cir.await`, `cir.ternary`
-    and `cir.global`.
+    The `cir.yield` operation terminates regions on different CIR operations,
+    and it is used to represent the default branching behaviour of a region.
+    Said branching behaviour is determinted by the parent operation. For
+    example, a yield in a `switch-case` region implies a fallthrough, while
+    a yield in a `cir.if` region implies a branch to the exit block, and so
+    on.
 
-    Might yield an SSA value and the semantics of how the values are yielded is
-    defined by the parent operation.
-
-    Optionally, `cir.yield` can be annotated with extra kind specifiers:
-    - `fallthrough`: execution falls to the next region in `cir.switch` case list.
-    Only available inside `cir.switch` regions.
+    In some cases, it might yield an SSA value and the semantics of how the
+    values are yielded is defined by the parent operation. For example, a
+    `cir.ternary` operation yields a value from one of its regions.
 
     As a general rule, `cir.yield` must be explicitly used whenever a region has
     more than one block and no terminator, or within `cir.switch` regions not
@@ -670,7 +661,7 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     cir.switch (%5) [
       case (equal, 3) {
         ...
-        cir.yield fallthrough
+        cir.yield
       }, ...
     ]
 
@@ -691,35 +682,11 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ```
   }];
 
-  let arguments = (ins OptionalAttr<YieldOpKind>:$kind,
-                       Variadic<CIR_AnyType>:$args);
+  let arguments = (ins Variadic<CIR_AnyType>:$args);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
-    OpBuilder<(ins "YieldOpKind":$kind), [{
-      mlir::cir::YieldOpKindAttr kattr = mlir::cir::YieldOpKindAttr::get(
-        $_builder.getContext(), kind);
-      $_state.addAttribute(getKindAttrName($_state.name), kattr);
-    }]>,
-    OpBuilder<(ins "ValueRange":$results), [{
-      $_state.addOperands(results);
-    }]>
   ];
-
-  let assemblyFormat = [{
-    ($kind^)? ($args^ `:` type($args))? attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    // None of the below
-    bool isPlain() {
-      return !getKind();
-    }
-    bool isFallthrough() {
-      return !isPlain() && *getKind() == YieldOpKind::Fallthrough;
-    }
-  }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

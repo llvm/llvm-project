@@ -39,7 +39,7 @@ module  {
           }
           cir.break
         }
-        cir.yield fallthrough
+        cir.yield
       },
       case (equal, 2 : !s32i)  {
         cir.scope {
@@ -54,7 +54,7 @@ module  {
         ^bb1:  // pred: ^bb0
           cir.return
         }
-        cir.yield fallthrough
+        cir.yield
       }
       ]
     }
@@ -97,7 +97,7 @@ module  {
 // CHECK-NEXT:       }
 // CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
-// CHECK-NEXT:     cir.yield fallthrough
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   },
 // CHECK-NEXT:   case (equal, 2)  {
 // CHECK-NEXT:     cir.scope {
@@ -110,7 +110,7 @@ module  {
 // CHECK-NEXT:       cir.store %9, %5 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:       cir.return
 // CHECK-NEXT:     }
-// CHECK-NEXT:     cir.yield fallthrough
+// CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
