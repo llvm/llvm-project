@@ -1,0 +1,36 @@
+name: "Add buildbot information to first PRs from new contributors"
+
+permissions:
+  contents: read
+
+on:
+  # It's safe to use pull_request_target here, because we aren't checking out
+  # code from the pull request branch.
+  # See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  buildbot_comment:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.pull_request.merged == true)
+    steps:
+      - name: Setup Automation Script
+        run: |
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
+          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
+          chmod a+x github-automation.py
+          pip install -r requirements.txt
+
+      - name: Add Buildbot information comment
+        run: |
+          ./github-automation.py \
+            --token '${{ secrets.GITHUB_TOKEN }}' \
+            pr-buildbot-information \
+            --issue-number "${{ github.event.pull_request.number }}" \
+            --author "${{ github.event.pull_request.user.login }}"
