@@ -1330,8 +1330,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // Compare storage class and initializer only if none or both are a
   // definition. Like a forward-declaration matches a class definition, variable
   // declarations that are not definitions should match with the definitions.
-  if (D1->isThisDeclarationADefinition() !=
-      D2->isThisDeclarationADefinition())
+  if (D1->isThisDeclarationADefinition() != D2->isThisDeclarationADefinition())
     return true;
 
   if (D1->getStorageClass() != D2->getStorageClass())
