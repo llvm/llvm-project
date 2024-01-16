@@ -15,8 +15,8 @@
 namespace clang {
 class ASTContext;
 
-/// Used by IntegerLiteral/FloatingLiteral to store the numeric without
-/// leaking memory.
+/// Used by IntegerLiteral/FloatingLiteral/EnumConstantDecl to store the
+/// numeric without leaking memory.
 ///
 /// For large floats/integers, APFloat/APInt will allocate memory from the heap
 /// to represent these numbers.  Unfortunately, when we use a BumpPtrAllocator
