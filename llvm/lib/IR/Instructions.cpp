@@ -3203,8 +3203,8 @@ unsigned CastInst::isEliminableCastPair(
       return 0;
     case 4:
       // No-op cast in second op implies firstOp as long as the DestTy
-      // is floating point.
-      if (DstTy->isFloatingPointTy())
+      // matches MidTy.
+      if (DstTy == MidTy)
         return firstOp;
       return 0;
     case 5:
