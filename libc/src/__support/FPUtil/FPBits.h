@@ -167,25 +167,33 @@ public:
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
 protected:
-  enum class Exp : int32_t {
-    ZERO = 0,
+  LIBC_INLINE static constexpr StorageType bit_at(int position) {
+    return StorageType(1) << position;
+  }
+
+  // An opaque type to store a floating point biased exponent.
+  // We define special values but it is valid to create arbitrary values as long
+  // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
+  // Values greater than BITS_ALL_ONES are truncated.
+  enum class BiasedExponent : uint32_t {
     // The exponent value for denormal numbers.
-    SUBNORMAL = -EXP_BIAS,
-    // The minimum exponent value for normal numbers.
-    MIN = SUBNORMAL + 1,
-    // The maximum exponent value for normal numbers.
-    MAX = EXP_BIAS,
-    // Special value all ones.
-    INF = MAX + 1,
-    // Aliases
-    BITS_ALL_ZEROES = SUBNORMAL,
-    BITS_ALL_ONES = INF,
+    BITS_ALL_ZEROES = 0,
+    NORMAL_MIN = 1,
+    NORMAL_ZERO = EXP_BIAS,
+    NORMAL_MAX = 2 * EXP_BIAS,
+    // The exponent value for infinity.
+    BITS_ALL_ONES = NORMAL_MAX + 1,
   };
 
-  enum class Sig : StorageType {
+  // An opaque type to store a floating point significand.
+  // We define special values but it is valid to create arbitrary values as long
+  // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
+  // Note that the semantics of the Significand are implementation dependent.
+  // Values greater than BITS_ALL_ONES are truncated.
+  enum class Significand : StorageType {
     ZERO = 0,
-    ONE = 1,
-    MSB = StorageType(1) << (SIG_LEN - 1),
+    LSB = 1,
+    MSB = bit_at(SIG_LEN - 1),
     // Aliases
     BITS_ALL_ZEROES = ZERO,
     BITS_ALL_ONES = SIG_MASK,
@@ -196,29 +204,34 @@ protected:
     return static_cast<StorageType>(value);
   }
 
-  LIBC_INLINE friend constexpr Sig operator|(const Sig a, const Sig b) {
-    return Sig{storage_cast(storage_cast(a) | storage_cast(b))};
+  LIBC_INLINE friend constexpr Significand operator|(const Significand a,
+                                                     const Significand b) {
+    return Significand{storage_cast(storage_cast(a) | storage_cast(b))};
   }
-  LIBC_INLINE friend constexpr Sig operator^(const Sig a, const Sig b) {
-    return Sig{storage_cast(storage_cast(a) ^ storage_cast(b))};
+  LIBC_INLINE friend constexpr Significand operator^(const Significand a,
+                                                     const Significand b) {
+    return Significand{storage_cast(storage_cast(a) ^ storage_cast(b))};
   }
-  LIBC_INLINE friend constexpr Sig operator>>(const Sig a, int shift) {
-    return Sig{storage_cast(storage_cast(a) >> shift)};
+  LIBC_INLINE friend constexpr Significand operator>>(const Significand a,
+                                                      int shift) {
+    return Significand{storage_cast(storage_cast(a) >> shift)};
   }
 
-  LIBC_INLINE static constexpr StorageType encode(Exp exp) {
-    return storage_cast(static_cast<int32_t>(exp) + EXP_BIAS) << SIG_LEN;
+  LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp) {
+    return (storage_cast(exp) << SIG_LEN) & EXP_MASK;
   }
 
-  LIBC_INLINE static constexpr StorageType encode(Sig value) {
+  LIBC_INLINE static constexpr StorageType encode(Significand value) {
     return storage_cast(value) & SIG_MASK;
   }
 
-  LIBC_INLINE static constexpr StorageType encode(Exp exp, Sig sig) {
+  LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp,
+                                                  Significand sig) {
     return encode(exp) | encode(sig);
   }
 
-  LIBC_INLINE static constexpr StorageType encode(bool sign, Exp exp, Sig sig) {
+  LIBC_INLINE static constexpr StorageType encode(bool sign, BiasedExponent exp,
+                                                  Significand sig) {
     if (sign)
       return SIGN_MASK | encode(exp, sig);
     return encode(exp, sig);
@@ -231,10 +244,6 @@ protected:
   }
 
 private:
-  LIBC_INLINE static constexpr StorageType bit_at(int position) {
-    return StorageType(1) << position;
-  }
-
   // Merge bits from 'a' and 'b' values according to 'mask'.
   // Use 'a' bits when corresponding 'mask' bits are zeroes and 'b' bits when
   // corresponding bits are ones.
@@ -304,8 +313,8 @@ public:
   }
 
   LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
-  LIBC_INLINE constexpr StorageType set_uintval(StorageType value) {
-    return bits = (value & FP_MASK);
+  LIBC_INLINE constexpr void set_uintval(StorageType value) {
+    bits = (value & FP_MASK);
   }
 
   LIBC_INLINE constexpr bool is_zero() const {
@@ -330,8 +339,8 @@ template <FPType fp_type> struct FPRep : public FPRepBase<fp_type> {
   using UP::MANTISSA_PRECISION;
 
 protected:
-  using typename UP::Exp;
-  using typename UP::Sig;
+  using typename UP::BiasedExponent;
+  using typename UP::Significand;
   using UP::encode;
   using UP::exp_bits;
   using UP::exp_sig_bits;
@@ -339,59 +348,66 @@ protected:
 
 public:
   LIBC_INLINE constexpr bool is_nan() const {
-    return exp_sig_bits() > encode(Exp::BITS_ALL_ONES, Sig::BITS_ALL_ZEROES);
+    return exp_sig_bits() >
+           encode(BiasedExponent::BITS_ALL_ONES, Significand::ZERO);
   }
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return exp_sig_bits() >= encode(Exp::BITS_ALL_ONES, Sig::MSB);
+    return exp_sig_bits() >=
+           encode(BiasedExponent::BITS_ALL_ONES, Significand::MSB);
   }
   LIBC_INLINE constexpr bool is_signaling_nan() const {
     return is_nan() && !is_quiet_nan();
   }
   LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() == encode(Exp::BITS_ALL_ONES, Sig::BITS_ALL_ZEROES);
+    return exp_sig_bits() ==
+           encode(BiasedExponent::BITS_ALL_ONES, Significand::ZERO);
   }
   LIBC_INLINE constexpr bool is_zero() const {
-    return exp_sig_bits() == encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+    return exp_sig_bits() ==
+           encode(BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE constexpr bool is_finite() const {
-    return exp_bits() != encode(Exp::BITS_ALL_ONES);
+    return exp_bits() != encode(BiasedExponent::BITS_ALL_ONES);
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_bits() == encode(Exp::BITS_ALL_ZEROES);
+    return exp_bits() == encode(BiasedExponent::BITS_ALL_ZEROES);
   }
   LIBC_INLINE constexpr bool is_normal() const {
     return is_finite() && !is_subnormal();
   }
 
   LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType one(bool sign = false) {
-    return encode(sign, Exp::ZERO, Sig::BITS_ALL_ZEROES);
+    return encode(sign, BiasedExponent::NORMAL_ZERO, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::ONE);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::LSB);
   }
   LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ONES);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES,
+                  Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
-    return encode(sign, Exp::MIN, Sig::BITS_ALL_ZEROES);
+    return encode(sign, BiasedExponent::NORMAL_MIN, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
-    return encode(sign, Exp::MAX, Sig::BITS_ALL_ONES);
+    return encode(sign, BiasedExponent::NORMAL_MAX, Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ONES, Sig::BITS_ALL_ZEROES);
+    return encode(sign, BiasedExponent::BITS_ALL_ONES, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
                                                      StorageType v = 0) {
-    return encode(sign, Exp::BITS_ALL_ONES, (v ? Sig{v} : (Sig::MSB >> 1)));
+    return encode(sign, BiasedExponent::BITS_ALL_ONES,
+                  (v ? Significand{v} : (Significand::MSB >> 1)));
   }
   LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
                                                            StorageType v = 0) {
-    return encode(sign, Exp::BITS_ALL_ONES, Sig::MSB | Sig{v});
+    return encode(sign, BiasedExponent::BITS_ALL_ONES,
+                  Significand::MSB | Significand{v});
   }
 
   // The function return mantissa with the implicit bit set iff the current
@@ -413,8 +429,8 @@ struct FPRep<FPType::X86_Binary80> : public FPRepBase<FPType::X86_Binary80> {
   using UP::MANTISSA_PRECISION;
 
 protected:
-  using typename UP::Exp;
-  using typename UP::Sig;
+  using typename UP::BiasedExponent;
+  using typename UP::Significand;
   using UP::encode;
 
 public:
@@ -441,70 +457,75 @@ public:
     // - Quiet Not a Number
     // - Unnormal
     // This can be reduced to the following logic:
-    if (exp_bits() == encode(Exp::BITS_ALL_ONES))
+    if (exp_bits() == encode(BiasedExponent::BITS_ALL_ONES))
       return !is_inf();
-    if (exp_bits() != encode(Exp::BITS_ALL_ZEROES))
-      return (sig_bits() & encode(Sig::MSB)) == 0;
+    if (exp_bits() != encode(BiasedExponent::BITS_ALL_ZEROES))
+      return (sig_bits() & encode(Significand::MSB)) == 0;
     return false;
   }
   LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return exp_sig_bits() >=
-           encode(Exp::BITS_ALL_ONES, Sig::MSB | (Sig::MSB >> 1));
+    return exp_sig_bits() >= encode(BiasedExponent::BITS_ALL_ONES,
+                                    Significand::MSB | (Significand::MSB >> 1));
   }
   LIBC_INLINE constexpr bool is_signaling_nan() const {
     return is_nan() && !is_quiet_nan();
   }
   LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() == encode(Exp::BITS_ALL_ONES, Sig::MSB);
+    return exp_sig_bits() ==
+           encode(BiasedExponent::BITS_ALL_ONES, Significand::MSB);
   }
   LIBC_INLINE constexpr bool is_zero() const {
-    return exp_sig_bits() == encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+    return exp_sig_bits() ==
+           encode(BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE constexpr bool is_finite() const {
     return !is_inf() && !is_nan();
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_sig_bits() > encode(Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+    return exp_sig_bits() >
+           encode(BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE constexpr bool is_normal() const {
     const auto exp = exp_bits();
-    if (exp == encode(Exp::BITS_ALL_ZEROES) ||
-        exp == encode(Exp::BITS_ALL_ONES))
+    if (exp == encode(BiasedExponent::BITS_ALL_ZEROES) ||
+        exp == encode(BiasedExponent::BITS_ALL_ONES))
       return false;
     return get_implicit_bit();
   }
 
   LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ZEROES);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType one(bool sign = false) {
-    return encode(sign, Exp::ZERO, Sig::MSB);
+    return encode(sign, BiasedExponent::NORMAL_ZERO, Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::ONE);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::LSB);
   }
   LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ZEROES, Sig::BITS_ALL_ONES ^ Sig::MSB);
+    return encode(sign, BiasedExponent::BITS_ALL_ZEROES,
+                  Significand::BITS_ALL_ONES ^ Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
-    return encode(sign, Exp::MIN, Sig::MSB);
+    return encode(sign, BiasedExponent::NORMAL_MIN, Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
-    return encode(sign, Exp::MAX, Sig::BITS_ALL_ONES);
+    return encode(sign, BiasedExponent::NORMAL_MAX, Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
-    return encode(sign, Exp::BITS_ALL_ONES, Sig::MSB);
+    return encode(sign, BiasedExponent::BITS_ALL_ONES, Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
                                                      StorageType v = 0) {
-    return encode(sign, Exp::BITS_ALL_ONES,
-                  Sig::MSB | (v ? Sig{v} : (Sig::MSB >> 2)));
+    return encode(sign, BiasedExponent::BITS_ALL_ONES,
+                  Significand::MSB |
+                      (v ? Significand{v} : (Significand::MSB >> 2)));
   }
   LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
                                                            StorageType v = 0) {
-    return encode(sign, Exp::BITS_ALL_ONES,
-                  Sig::MSB | (Sig::MSB >> 1) | Sig{v});
+    return encode(sign, BiasedExponent::BITS_ALL_ONES,
+                  Significand::MSB | (Significand::MSB >> 1) | Significand{v});
   }
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
@@ -648,8 +669,8 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
   create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
     static_assert(get_fp_type<T>() != FPType::X86_Binary80,
                   "This function is not tested for X86 Extended Precision");
-    return FPBits(UP::encode(sign, typename UP::Exp(biased_exp - UP::EXP_BIAS),
-                             typename UP::Sig(mantissa)));
+    return FPBits(UP::encode(sign, typename UP::BiasedExponent(biased_exp),
+                             typename UP::Significand(mantissa)));
   }
 
   // The function convert integer number and unbiased exponent to proper float
