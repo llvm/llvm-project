@@ -93,7 +93,7 @@ def ArithIntegerOverflowFlagsInterface : OpInterface<"ArithIntegerOverflowFlagsI
       }]
       >,
     StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the IntegerOveflowFlagsAttr attribute
+      /*desc=*/        [{Returns the name of the IntegerOverflowFlagsAttr attribute
                          for the operation}],
       /*returnType=*/  "StringRef",
       /*methodName=*/  "getIntegerOverflowAttrName",

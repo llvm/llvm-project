@@ -2308,7 +2308,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
       LeftSquare->isCppStructuredBinding(Style)) {
     return false;
   }
-  if (FormatTok->is(tok::l_square))
+  if (FormatTok->is(tok::l_square) || tok::isLiteral(FormatTok->Tok.getKind()))
     return false;
   if (FormatTok->is(tok::r_square)) {
     const FormatToken *Next = Tokens->peekNextToken(/*SkipComment=*/true);

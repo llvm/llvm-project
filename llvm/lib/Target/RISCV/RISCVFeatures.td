@@ -736,6 +736,7 @@ def FeatureStdExtZacas
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                                AssemblerPredicate<(all_of FeatureStdExtZacas),
                                "'Zacas' (Atomic Compare-And-Swap Instructions)">;
+def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

@@ -282,7 +282,7 @@ namespace dr410 { // dr410: no
   // expected-note@#dr410-z {{declared private here}}
 }
 
-// dr412 is in its own file.
+// dr412 is in dr412.cpp
 
 namespace dr413 { // dr413: yes
   struct S {

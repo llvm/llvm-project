@@ -73,8 +73,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
     Func = (void (*)())Global.getPtr();
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /* Unknown */ 2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /* Unknown */ 2;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
 
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;

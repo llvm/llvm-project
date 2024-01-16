@@ -82,11 +82,16 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
   target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
                              ${LIBOMPTARGET_INCLUDE_DIR})
 
-  list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.${tmachine_libname}")
-  set(LIBOMPTARGET_TESTED_PLUGINS
-      "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
-  set(LIBOMPTARGET_SYSTEM_TARGETS 
-      "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} ${tmachine_triple}-LTO" PARENT_SCOPE)
+  if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
+    list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.${tmachine_libname}")
+    set(LIBOMPTARGET_TESTED_PLUGINS
+        "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
+    set(LIBOMPTARGET_SYSTEM_TARGETS
+        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple}
+        ${tmachine_triple}-LTO" PARENT_SCOPE)
+  else()
+    libomptarget_say("Not generating ${tmachine_name} tests. LibFFI not found.")
+  endif()
 else()
   libomptarget_say("Not building ${tmachine_name} NextGen offloading plugin: machine not found in the system.")
 endif()

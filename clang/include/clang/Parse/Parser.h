@@ -234,6 +234,26 @@ class Parser : public CodeCompletionHandler {
   /// Parsing OpenACC directive mode.
   bool OpenACCDirectiveParsing = false;
 
+  /// Currently parsing a situation where an OpenACC array section could be
+  /// legal, such as a 'var-list'.
+  bool AllowOpenACCArraySections = false;
+
+  /// RAII object to set reset OpenACC parsing a context where Array Sections
+  /// are allowed.
+  class OpenACCArraySectionRAII {
+    Parser &P;
+
+  public:
+    OpenACCArraySectionRAII(Parser &P) : P(P) {
+      assert(!P.AllowOpenACCArraySections);
+      P.AllowOpenACCArraySections = true;
+    }
+    ~OpenACCArraySectionRAII() {
+      assert(P.AllowOpenACCArraySections);
+      P.AllowOpenACCArraySections = false;
+    }
+  };
+
   /// When true, we are directly inside an Objective-C message
   /// send expression.
   ///
@@ -3546,8 +3566,8 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   void ParseOpenACCCacheVarList();
-  /// Parses a single variable in a variable list for the 'cache' construct.
-  bool ParseOpenACCCacheVar();
+  /// Parses a single variable in a variable list for OpenACC.
+  bool ParseOpenACCVar();
   bool ParseOpenACCWaitArgument();
 
 private:

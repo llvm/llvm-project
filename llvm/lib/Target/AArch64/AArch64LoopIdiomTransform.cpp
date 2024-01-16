@@ -53,7 +53,7 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "aarch64-loop-idiom-transform"
 
 static cl::opt<bool>
-    DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(true),
+    DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(false),
                cl::desc("Disable AArch64 Loop Idiom Transform Pass."));
 
 static cl::opt<bool> DisableByteCmp(
