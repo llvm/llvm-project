@@ -31,7 +31,7 @@ enum class FPType {
   X86_Binary80,
 };
 
-// The classes hierarchy are as follows:
+// The classes hierarchy is as follows:
 //
 //             ┌───────────────────┐
 //             │ FPLayout<FPType>  │
