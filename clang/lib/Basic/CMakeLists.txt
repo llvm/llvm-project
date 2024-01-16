@@ -134,5 +134,6 @@ add_clang_library(clangBasic
 
 target_link_libraries(clangBasic
   PRIVATE
+  clangAST
   ${LLVM_ATOMIC_LIB}
 )
