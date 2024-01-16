@@ -2710,10 +2710,10 @@ class AMDGPU8bitFloatDot4Intrinsic :
     [IntrNoMem, IntrSpeculatable]
   >;
 
-def int_amdgcn_fdot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
 
 //===----------------------------------------------------------------------===//
 // gfx908 intrinsics
