@@ -79,7 +79,7 @@ cir.func @yieldbreak() {
 cir.func @yieldcontinue() {
   %0 = cir.const(#true) : !cir.bool
   cir.if %0 {
-    cir.yield continue // expected-error {{shall be dominated by 'cir.loop'}}
+    cir.continue // expected-error {{op must be within a loop}}
   }
   cir.return
 }

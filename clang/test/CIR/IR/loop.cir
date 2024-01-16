@@ -52,7 +52,7 @@ cir.func @l0() {
       cir.store %6, %0 : !u32i, cir.ptr <!u32i>
       %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
-        cir.yield continue
+        cir.continue
       }
       cir.yield
     }
@@ -118,7 +118,7 @@ cir.func @l0() {
 // CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
-// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:       cir.continue
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }

@@ -29,10 +29,12 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -64,6 +66,36 @@ using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+//===----------------------------------------------------------------------===//
+// Helper Methods
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Lowers operations with the terminator trait that have a single successor.
+void lowerTerminator(mlir::Operation *op, mlir::Block *dest,
+                     mlir::ConversionPatternRewriter &rewriter) {
+  assert(op->hasTrait<mlir::OpTrait::IsTerminator>() && "not a terminator");
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
+  rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(op, dest);
+}
+
+/// Walks a region while skipping operations of type `Ops`. This ensures the
+/// callback is not applied to said operations and its children.
+template <typename... Ops>
+void walkRegionSkipping(mlir::Region &region,
+                        mlir::function_ref<void(mlir::Operation *)> callback) {
+  region.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+    if (isa<Ops...>(op))
+      return mlir::WalkResult::skip();
+    callback(op);
+    return mlir::WalkResult::advance();
+  });
+}
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Visitors for Lowering CIR Const Attributes
@@ -441,8 +473,15 @@ public:
 
     lowerNestedYield(mlir::cir::YieldOpKind::Break, rewriter, bodyRegion,
                      continueBlock);
-    lowerNestedYield(mlir::cir::YieldOpKind::Continue, rewriter, bodyRegion,
-                     &stepBlock);
+
+    // Lower continue statements.
+    mlir::Block &dest =
+        (kind != LoopKind::For ? condFrontBlock : stepFrontBlock);
+    walkRegionSkipping<mlir::cir::LoopOp>(
+        loopOp.getBody(), [&](mlir::Operation *op) {
+          if (isa<mlir::cir::ContinueOp>(op))
+            lowerTerminator(op, &dest, rewriter);
+        });
 
     // Move loop op region contents to current CFG.
     rewriter.inlineRegionBefore(condRegion, continueBlock);
@@ -672,9 +711,8 @@ public:
   }
 };
 
-static bool isBreakOrContinue(mlir::cir::YieldOp &op) {
-  return op.getKind() == mlir::cir::YieldOpKind::Break ||
-         op.getKind() == mlir::cir::YieldOpKind::Continue;
+static bool isBreak(mlir::cir::YieldOp &op) {
+  return op.getKind() == mlir::cir::YieldOpKind::Break;
 }
 
 class CIRIfLowering : public mlir::OpConversionPattern<mlir::cir::IfOp> {
@@ -705,12 +743,10 @@ public:
     rewriter.setInsertionPointToEnd(thenAfterBody);
     if (auto thenYieldOp =
             dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
-      if (!isBreakOrContinue(thenYieldOp)) // lowering of parent loop yields is
-                                           // deferred to loop lowering
+      if (!isBreak(thenYieldOp)) // lowering of parent loop yields is
+                                 // deferred to loop lowering
         rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
             thenYieldOp, thenYieldOp.getArgs(), continueBlock);
-    } else if (!dyn_cast<mlir::cir::ReturnOp>(thenAfterBody->getTerminator())) {
-      llvm_unreachable("what are we terminating with?");
     }
 
     rewriter.setInsertionPointToEnd(continueBlock);
@@ -736,13 +772,10 @@ public:
       rewriter.setInsertionPointToEnd(elseAfterBody);
       if (auto elseYieldOp =
               dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
-        if (!isBreakOrContinue(elseYieldOp)) // lowering of parent loop yields
-                                             // is deferred to loop lowering
+        if (!isBreak(elseYieldOp)) // lowering of parent loop yields
+                                   // is deferred to loop lowering
           rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
               elseYieldOp, elseYieldOp.getArgs(), continueBlock);
-      } else if (!dyn_cast<mlir::cir::ReturnOp>(
-                     elseAfterBody->getTerminator())) {
-        llvm_unreachable("what are we terminating with?");
       }
     }
 
@@ -798,7 +831,7 @@ public:
     rewriter.setInsertionPointToEnd(afterBody);
     auto yieldOp = dyn_cast<mlir::cir::YieldOp>(afterBody->getTerminator());
 
-    if (yieldOp && !isBreakOrContinue(yieldOp)) {
+    if (yieldOp && !isBreak(yieldOp)) {
       auto branchOp = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
           yieldOp, yieldOp.getArgs(), continueBlock);
 
@@ -1399,9 +1432,6 @@ public:
           // Break out of switch: branch to exit block.
           case mlir::cir::YieldOpKind::Break:
             rewriteYieldOp(rewriter, yieldOp, exitBlock);
-            break;
-          case mlir::cir::YieldOpKind::Continue: // Continue is handled only in
-                                                 // loop lowering
             break;
           default:
             return op->emitError("invalid yield kind in case statement");
