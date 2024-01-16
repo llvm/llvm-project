@@ -207,6 +207,7 @@ private:
   unsigned Alignment;
   mlir::Value V;
   mlir::Type ElementType;
+  mlir::Value VectorIdx; // Index for vector subscript
   LValueBaseInfo BaseInfo;
   const CIRGenBitFieldInfo *BitFieldInfo{0};
 
@@ -300,6 +301,31 @@ public:
 
   const clang::Qualifiers &getQuals() const { return Quals; }
   clang::Qualifiers &getQuals() { return Quals; }
+
+  // vector element lvalue
+  Address getVectorAddress() const {
+    return Address(getVectorPointer(), ElementType, getAlignment());
+  }
+  mlir::Value getVectorPointer() const {
+    assert(isVectorElt());
+    return V;
+  }
+  mlir::Value getVectorIdx() const {
+    assert(isVectorElt());
+    return VectorIdx;
+  }
+
+  static LValue MakeVectorElt(Address vecAddress, mlir::Value Index,
+                              clang::QualType type, LValueBaseInfo BaseInfo) {
+    LValue R;
+    R.LVType = VectorElt;
+    R.V = vecAddress.getPointer();
+    R.ElementType = vecAddress.getElementType();
+    R.VectorIdx = Index;
+    R.Initialize(type, type.getQualifiers(), vecAddress.getAlignment(),
+                 BaseInfo);
+    return R;
+  }
 
   // bitfield lvalue
   Address getBitFieldAddress() const {

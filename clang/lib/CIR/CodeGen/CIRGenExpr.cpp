@@ -553,6 +553,11 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
     llvm_unreachable("NYI");
   }
 
+  if (const auto *ClangVecTy = Ty->getAs<clang::VectorType>()) {
+    // TODO(CIR): this has fallen out of date with codegen
+    llvm_unreachable("NYI: Special treatment of 3-element vector store");
+  }
+
   // Update the alloca with more info on initialization.
   assert(Addr.getPointer() && "expected pointer to exist");
   auto SrcAlloca =
@@ -620,6 +625,18 @@ RValue CIRGenFunction::buildLoadOfBitfieldLValue(LValue LV,
 }
 
 void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
+  if (!Dst.isSimple()) {
+    if (Dst.isVectorElt()) {
+      // Read/modify/write the vector, inserting the new element
+      mlir::Location loc = Dst.getVectorPointer().getLoc();
+      mlir::Value Vector = builder.createLoad(loc, Dst.getVectorAddress());
+      Vector = builder.create<mlir::cir::VecInsertOp>(
+          loc, Vector, Src.getScalarVal(), Dst.getVectorIdx());
+      builder.createStore(loc, Vector, Dst.getVectorAddress());
+      return;
+    }
+    llvm_unreachable("NYI: non-simple store through lvalue");
+  }
   assert(Dst.isSimple() && "only implemented simple");
 
   // There's special magic for assigning into an ARC-qualified l-value.
@@ -1385,7 +1402,10 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
   // with this subscript.
   if (E->getBase()->getType()->isVectorType() &&
       !isa<ExtVectorElementExpr>(E->getBase())) {
-    llvm_unreachable("vector subscript is NYI");
+    LValue LHS = buildLValue(E->getBase());
+    auto Index = EmitIdxAfterBase(/*Promote=*/false);
+    return LValue::MakeVectorElt(LHS.getAddress(), Index,
+                                 E->getBase()->getType(), LHS.getBaseInfo());
   }
 
   // All the other cases basically behave like simple offsetting.
@@ -2375,6 +2395,11 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
   LValue AtomicLValue = LValue::makeAddr(Addr, Ty, getContext(), BaseInfo);
   if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
     llvm_unreachable("NYI");
+  }
+
+  if (const auto *ClangVecTy = Ty->getAs<clang::VectorType>()) {
+    // TODO(CIR): this has fallen out of sync with codegen
+    llvm_unreachable("NYI: Special treatment of 3-element vector load");
   }
 
   mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
