@@ -1692,6 +1692,27 @@ llvm::DIType *CGDebugInfo::createFieldType(
                                    offsetInBits, flags, debugType, Annotations);
 }
 
+llvm::DISubprogram *
+CGDebugInfo::getFakeFuncSubprogram(const std::string &FakeFuncName) {
+  llvm::DISubprogram *&SP = FakeFuncMap[FakeFuncName];
+
+  if (!SP) {
+    auto FileScope = TheCU->getFile();
+    llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
+    // Note: We use `FileScope` rather than `TheCU` as the scope because that's
+    // what LLVM's inliner seems to do.
+    SP = DBuilder.createFunction(
+        /*Scope=*/FileScope, /*Name=*/FakeFuncName, /*LinkageName=*/StringRef(),
+        /*File=*/FileScope, /*LineNo=*/0, /*Ty=*/DIFnTy,
+        /*ScopeLine=*/0,
+        /*Flags=*/llvm::DINode::FlagArtificial,
+        /*SPFlags=*/llvm::DISubprogram::SPFlagDefinition,
+        /*TParams=*/nullptr, /*ThrownTypes=*/nullptr, /*Annotations=*/nullptr);
+  }
+
+  return SP;
+}
+
 void CGDebugInfo::CollectRecordLambdaFields(
     const CXXRecordDecl *CXXDecl, SmallVectorImpl<llvm::Metadata *> &elements,
     llvm::DIType *RecordTy) {
@@ -3486,6 +3507,27 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   llvm::DIFile *FName = getOrCreateFile(FileLoc);
   unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
   return DBuilder.createTempMacroFile(Parent, Line, FName);
+}
+
+llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
+    llvm::DebugLoc TrapLocation, StringRef Prefix, StringRef FailureMsg) {
+  // Create debug info that describes a fake function whose name is the failure
+  // message.
+  std::string FuncName(Prefix);
+  if (!FailureMsg.empty()) {
+    // A space in the function name identifies this as not being a real function
+    // because it's not a valid symbol name.
+    FuncName += ": ";
+    FuncName += FailureMsg;
+  }
+
+  assert(FuncName.size() > 0);
+  assert(FuncName.find(' ') != std::string::npos &&
+         "Fake function name must contain a space");
+
+  llvm::DISubprogram *TrapSP = getFakeFuncSubprogram(FuncName);
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {

@@ -3467,6 +3467,54 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
 
+``__builtin_verbose_trap``
+--------------------------
+
+``__builtin_verbose_trap`` causes the program to stop its execution abnormally
+and shows a human-readable description of the reason for the termination when a
+debugger is attached or in a symbolicated crash log.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_verbose_trap(const char *reason)
+
+**Description**
+
+``__builtin_verbose_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
+Additionally, clang emits debug metadata that represents an artificial inline
+frame whose name encodes the string passed to the builtin, prefixed by a "magic"
+prefix.
+
+For example, consider the following code:
+
+.. code-block:: c++
+
+    void foo(int* p) {
+      if (p == nullptr)
+        __builtin_verbose_trap("Argument_must_not_be_null");
+    }
+
+The debug metadata would look as if it were produced for the following code:
+
+.. code-block:: c++
+
+    __attribute__((always_inline))
+    inline void "__llvm_verbose_trap: Argument_must_not_be_null"() {
+      __builtin_trap();
+    }
+
+    void foo(int* p) {
+      if (p == nullptr)
+        "__llvm_verbose_trap: Argument_must_not_be_null"();
+    }
+
+However, the LLVM IR would not actually contain a call to the artificial
+function — it only exists in the debug metadata.
+
+Query for this feature with ``__has_builtin(__builtin_verbose_trap)``.
+
 ``__builtin_allow_runtime_check``
 ---------------------------------
 
@@ -3514,7 +3562,6 @@ guarded check. It's unused now. It will enable kind-specific lowering in future.
 E.g. a higher hotness cutoff can be used for more expensive kind of check.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
-
 ``__builtin_nondeterministic_value``
 ------------------------------------
 

@@ -346,6 +346,14 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
+  // A cache that maps fake function names used for __builtin_verbose_trap to
+  // subprograms.
+  std::map<std::string, llvm::DISubprogram *> FakeFuncMap;
+
+  // A function that returns the subprogram corresponding to the fake function
+  // name.
+  llvm::DISubprogram *getFakeFuncSubprogram(const std::string &FakeFuncName);
+
   /// Helpers for collecting fields of a record.
   /// @{
   void CollectRecordLambdaFields(const CXXRecordDecl *CXXDecl,
@@ -601,6 +609,18 @@ public:
   ParamDecl2StmtTy &getCoroutineParameterMappings() {
     return CoroutineParameterMappings;
   }
+
+  // Create a debug location from `TrapLocation` that adds a fake
+  // inline frame where the frame name is
+  //
+  // * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
+  // * `<Prefix>` if `<FailureMsg>` is empty. Note `<Prefix>` must
+  //   contain a space.
+  //
+  // This is used to store failure reasons for traps.
+  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Prefix,
+                                                StringRef FailureMsg);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
