@@ -59,7 +59,8 @@ public:
   QuasiPolynomial operator*(const QuasiPolynomial &x) const;
   QuasiPolynomial operator/(const Fraction x) const;
 
-  // Removes terms which evaluate to zero from the expression.
+  // Removes terms which evaluate to zero and affine functions
+  // which are constant from the expression.
   QuasiPolynomial simplify();
 
   Fraction getConstantTerm();
