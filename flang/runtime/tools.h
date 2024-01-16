@@ -481,6 +481,5 @@ RT_API_ATTRS void CopyAndPad(
   }
 }
 
-
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

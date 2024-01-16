@@ -1389,7 +1389,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
-            {"exitstat", AnyInt, Rank::scalar, Optionality::optional,
+            {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
