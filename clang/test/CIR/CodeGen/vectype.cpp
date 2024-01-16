@@ -1,40 +1,89 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
 
-typedef int int4 __attribute__((vector_size(16)));
-int test_vector_basic(int x, int y, int z) {
-  int4 a = { 1, 2, 3, 4 };
-  int4 b = { x, y, z, x + y + z };
-  int4 c = a + b;
-  return c[1];
+typedef int vi4 __attribute__((vector_size(16)));
+typedef double vd2 __attribute__((vector_size(16)));
+
+void vector_int_test(int x) {
+
+  // Vector constant. Not yet implemented. Expected results will change from
+  // cir.vec.create to cir.const.
+  vi4 a = { 1, 2, 3, 4 };
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
+
+  // Non-const vector initialization.
+  vi4 b = { x, 5, 6, x + 1 };
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
+
+  // Extract element
+  int c = a[x];
+  // CHECK: %{{[0-9]+}} = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : <!s32i x 4>
+
+  // Insert element
+  a[x] = x;
+  // CHECK: %[[#LOADEDVI:]] = cir.load %[[#STORAGEVI:]] : cir.ptr <!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
+  // CHECK: %[[#UPDATEDVI:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVI]][%{{[0-9]+}} : !s32i] : <!s32i x 4>
+  // CHECK: cir.store %[[#UPDATEDVI]], %[[#STORAGEVI]] : !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>
+
+  // Binary arithmetic operations
+  vi4 d = a + b;
+  // CHECK: %{{[0-9]+}} = cir.binop(add, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 e = a - b;
+  // CHECK: %{{[0-9]+}} = cir.binop(sub, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 f = a * b;
+  // CHECK: %{{[0-9]+}} = cir.binop(mul, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 g = a / b;
+  // CHECK: %{{[0-9]+}} = cir.binop(div, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 h = a % b;
+  // CHECK: %{{[0-9]+}} = cir.binop(rem, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 i = a & b;
+  // CHECK: %{{[0-9]+}} = cir.binop(and, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 j = a | b;
+  // CHECK: %{{[0-9]+}} = cir.binop(or, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+  vi4 k = a ^ b;
+  // CHECK: %{{[0-9]+}} = cir.binop(xor, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>
+
+  // Unary arithmetic operations
+  vi4 l = +a;
+  // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+  vi4 m = -a;
+  // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+  vi4 n = ~a;
+  // CHECK: %{{[0-9]+}} = cir.unary(not, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
 }
 
-// CHECK:    %4 = cir.alloca !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>, ["a", init] {alignment = 16 : i64}
-// CHECK:    %5 = cir.alloca !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>, ["b", init] {alignment = 16 : i64}
-// CHECK:    %6 = cir.alloca !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>, ["c", init] {alignment = 16 : i64}
+void vector_double_test(int x, double y) {
+  // Vector constant. Not yet implemented. Expected results will change from
+  // cir.vec.create to cir.const.
+  vd2 a = { 1.5, 2.5 };
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : f64, f64) : <f64 x 2>
 
-// CHECK:    %7 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:    %8 = cir.const(#cir.int<2> : !s32i) : !s32i
-// CHECK:    %9 = cir.const(#cir.int<3> : !s32i) : !s32i
-// CHECK:    %10 = cir.const(#cir.int<4> : !s32i) : !s32i
-// CHECK:    %11 = cir.vec.create(%7, %8, %9, %10 : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
-// CHECK:    cir.store %11, %4 : !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>
-// CHECK:    %12 = cir.load %0 : cir.ptr <!s32i>, !s32i
-// CHECK:    %13 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK:    %14 = cir.load %2 : cir.ptr <!s32i>, !s32i
-// CHECK:    %15 = cir.load %0 : cir.ptr <!s32i>, !s32i
-// CHECK:    %16 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK:    %17 = cir.binop(add, %15, %16) : !s32i
-// CHECK:    %18 = cir.load %2 : cir.ptr <!s32i>, !s32i
-// CHECK:    %19 = cir.binop(add, %17, %18) : !s32i
-// CHECK:    %20 = cir.vec.create(%12, %13, %14, %19 : !s32i, !s32i, !s32i, !s32i) : <!s32i x 4>
-// CHECK:    cir.store %20, %5 : !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>
-// CHECK:    %21 = cir.load %4 : cir.ptr <!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
-// CHECK:    %22 = cir.load %5 : cir.ptr <!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
-// CHECK:    %23 = cir.binop(add, %21, %22) : !cir.vector<!s32i x 4>
-// CHECK:    cir.store %23, %6 : !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>
-// CHECK:    %24 = cir.load %6 : cir.ptr <!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
-// CHECK:    %25 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:    %26 = cir.vec.extract %24[%25 : !s32i] <!s32i x 4> -> !s32i
-// CHECK:    cir.store %26, %3 : !s32i, cir.ptr <!s32i>
-// CHECK:    %27 = cir.load %3 : cir.ptr <!s32i>, !s32i
-// CHECK:    cir.return %27 : !s32i
+  // Non-const vector initialization.
+  vd2 b = { y, y + 1.0 };
+  // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}} : f64, f64) : <f64 x 2>
+
+  // Extract element
+  double c = a[x];
+  // CHECK: %{{[0-9]+}} = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : <f64 x 2>
+
+  // Insert element
+  a[x] = y;
+  // CHECK: %[[#LOADEDVF:]] = cir.load %[[#STORAGEVF:]] : cir.ptr <!cir.vector<f64 x 2>>, !cir.vector<f64 x 2>
+  // CHECK: %[[#UPDATEDVF:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVF]][%{{[0-9]+}} : !s32i] : <f64 x 2>
+  // CHECK: cir.store %[[#UPDATEDVF]], %[[#STORAGEVF]] : !cir.vector<f64 x 2>, cir.ptr <!cir.vector<f64 x 2>>
+
+  // Binary arithmetic operations
+  vd2 d = a + b;
+  // CHECK: %{{[0-9]+}} = cir.binop(add, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  vd2 e = a - b;
+  // CHECK: %{{[0-9]+}} = cir.binop(sub, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  vd2 f = a * b;
+  // CHECK: %{{[0-9]+}} = cir.binop(mul, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+  vd2 g = a / b;
+  // CHECK: %{{[0-9]+}} = cir.binop(div, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<f64 x 2>
+
+  // Unary arithmetic operations
+  vd2 l = +a;
+  // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
+  vd2 m = -a;
+  // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
+}

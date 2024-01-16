@@ -37,8 +37,7 @@ module {
     %3 = cir.load %0 : cir.ptr <f64>, f64
     %4 = cir.unary(minus, %3) : f64, f64
     // MLIR: %[[#F_MINUS:]] = llvm.load %{{[0-9]}} : !llvm.ptr -> f64
-    // MLIR: %[[#F_NEG_ONE:]] = llvm.mlir.constant(-1.000000e+00 : f64) : f64
-    // MLIR: %5 = llvm.fmul %[[#F_NEG_ONE]], %[[#F_MINUS]]  : f64
+    // MLIR: %{{[0-9]}} = llvm.fneg %[[#F_MINUS]] : f64
     cir.return
   }
 }

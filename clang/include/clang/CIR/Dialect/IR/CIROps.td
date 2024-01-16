@@ -1673,13 +1673,38 @@ def GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecInsertOp
+//===----------------------------------------------------------------------===//
+
+def VecInsertOp : CIR_Op<"vec.insert", [Pure,
+  TypesMatchWith<"argument type matches vector element type", "vec", "value",
+                 "$_self.cast<VectorType>().getEltType()">,
+  AllTypesMatch<["result", "vec"]>]> {
+
+  let summary = "Insert one element into a vector object";
+  let description = [{
+    The `cir.vec.insert` operation replaces the element of the given vector at
+    the given index with the given value.  The new vector with the inserted
+    element is returned.
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, AnyType:$value, CIR_IntType:$index);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:` type($vec)
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // VecExtractOp
 //===----------------------------------------------------------------------===//
 
 def VecExtractOp : CIR_Op<"vec.extract", [Pure,
-  TypesMatchWith<"type of 'result' matches element type of 'vec'",
-                 "vec", "result",
-                 "$_self.cast<VectorType>().getEltType()">]> {
+  TypesMatchWith<"type of 'result' matches element type of 'vec'", "vec",
+                 "result", "$_self.cast<VectorType>().getEltType()">]> {
 
   let summary = "Extract one element from a vector object";
   let description = [{
@@ -1691,7 +1716,7 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    $vec `[` $index `:` type($index) `]` type($vec) `->` type($result) attr-dict
+    $vec `[` $index `:` type($index) `]` attr-dict `:` type($vec)
   }];
 
   let hasVerifier = 0;

@@ -1105,12 +1105,12 @@ public:
     // Start with an 'undef' value for the vector.  Then 'insertelement' for
     // each of the vector elements.
     auto vecTy = op.getType().dyn_cast<mlir::cir::VectorType>();
-    assert(vecTy && "result type of cir.vec op is not VectorType");
+    assert(vecTy && "result type of cir.vec.create op is not VectorType");
     auto llvmTy = typeConverter->convertType(vecTy);
     auto loc = op.getLoc();
     mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
     assert(vecTy.getSize() == op.getElements().size() &&
-           "cir.vec operands count doesn't match vector type elements count");
+           "cir.vec.create op count doesn't match vector type elements count");
     for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
       mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
           loc, rewriter.getI64Type(), i);
@@ -1118,6 +1118,20 @@ public:
           loc, result, adaptor.getElements()[i], indexValue);
     }
     rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
+class CIRVectorInsertLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecInsertOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecInsertOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecInsertOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+        op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
     return mlir::success();
   }
 };
@@ -1536,24 +1550,33 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::UnaryOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Type type = op.getInput().getType();
+    assert(op.getType() == op.getInput().getType() &&
+           "Unary operation's operand type and result type are different");
+    mlir::Type type = op.getType();
+    mlir::Type elementType = type;
+    bool IsVector = false;
+    if (auto VecType = type.dyn_cast<mlir::cir::VectorType>()) {
+      IsVector = true;
+      elementType = VecType.getEltType();
+    }
+    auto llvmType = getTypeConverter()->convertType(type);
+    auto loc = op.getLoc();
 
-    auto llvmInType = adaptor.getInput().getType();
-    auto llvmType = getTypeConverter()->convertType(op.getType());
-
-    // Integer unary operations.
-    if (type.isa<mlir::cir::IntType>()) {
+    // Integer unary operations: + - ~ ++ --
+    if (elementType.isa<mlir::cir::IntType>()) {
       switch (op.getKind()) {
       case mlir::cir::UnaryOpKind::Inc: {
+        assert(!IsVector && "++ not allowed on vector types");
         auto One = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, 1));
         rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmType,
                                                        adaptor.getInput(), One);
         return mlir::success();
       }
       case mlir::cir::UnaryOpKind::Dec: {
+        assert(!IsVector && "-- not allowed on vector types");
         auto One = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 1));
+            loc, llvmType, mlir::IntegerAttr::get(llvmType, 1));
         rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType,
                                                        adaptor.getInput(), One);
         return mlir::success();
@@ -1563,15 +1586,39 @@ public:
         return mlir::success();
       }
       case mlir::cir::UnaryOpKind::Minus: {
-        auto Zero = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, mlir::IntegerAttr::get(llvmInType, 0));
+        mlir::Value Zero;
+        if (IsVector)
+          Zero = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmType);
+        else
+          Zero = rewriter.create<mlir::LLVM::ConstantOp>(
+              loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
         rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmType, Zero,
                                                        adaptor.getInput());
         return mlir::success();
       }
       case mlir::cir::UnaryOpKind::Not: {
-        auto MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmType, mlir::IntegerAttr::get(llvmType, -1));
+        // bit-wise compliment operator, implemented as an XOR with -1.
+        mlir::Value MinusOne;
+        if (IsVector) {
+          // Creating a vector object with all -1 values is easier said than
+          // done. It requires a series of insertelement ops.
+          mlir::Type llvmElementType =
+              getTypeConverter()->convertType(elementType);
+          auto MinusOneInt = rewriter.create<mlir::LLVM::ConstantOp>(
+              loc, llvmElementType,
+              mlir::IntegerAttr::get(llvmElementType, -1));
+          MinusOne = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmType);
+          auto NumElements = type.dyn_cast<mlir::cir::VectorType>().getSize();
+          for (uint64_t i = 0; i < NumElements; ++i) {
+            mlir::Value indexValue = rewriter.create<mlir::LLVM::ConstantOp>(
+                loc, rewriter.getI64Type(), i);
+            MinusOne = rewriter.create<mlir::LLVM::InsertElementOp>(
+                loc, MinusOne, MinusOneInt, indexValue);
+          }
+        } else {
+          MinusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+              loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
+        }
         rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmType, MinusOne,
                                                        adaptor.getInput());
         return mlir::success();
@@ -1579,21 +1626,23 @@ public:
       }
     }
 
-    // Floating point unary operations.
-    if (type.isa<mlir::FloatType>()) {
+    // Floating point unary operations: + - ++ --
+    if (elementType.isa<mlir::FloatType>()) {
       switch (op.getKind()) {
       case mlir::cir::UnaryOpKind::Inc: {
-        auto oneAttr = rewriter.getFloatAttr(llvmInType, 1.0);
-        auto oneConst = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, oneAttr);
+        assert(!IsVector && "++ not allowed on vector types");
+        auto oneAttr = rewriter.getFloatAttr(llvmType, 1.0);
+        auto oneConst =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, oneAttr);
         rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, llvmType, oneConst,
                                                         adaptor.getInput());
         return mlir::success();
       }
       case mlir::cir::UnaryOpKind::Dec: {
-        auto negOneAttr = rewriter.getFloatAttr(llvmInType, -1.0);
-        auto negOneConst = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, negOneAttr);
+        assert(!IsVector && "-- not allowed on vector types");
+        auto negOneAttr = rewriter.getFloatAttr(llvmType, -1.0);
+        auto negOneConst =
+            rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, negOneAttr);
         rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(
             op, llvmType, negOneConst, adaptor.getInput());
         return mlir::success();
@@ -1602,35 +1651,48 @@ public:
         rewriter.replaceOp(op, adaptor.getInput());
         return mlir::success();
       case mlir::cir::UnaryOpKind::Minus: {
-        auto negOneAttr = mlir::FloatAttr::get(llvmInType, -1.0);
-        auto negOneConst = rewriter.create<mlir::LLVM::ConstantOp>(
-            op.getLoc(), llvmInType, negOneAttr);
-        rewriter.replaceOpWithNewOp<mlir::LLVM::FMulOp>(
-            op, llvmType, negOneConst, adaptor.getInput());
+        rewriter.replaceOpWithNewOp<mlir::LLVM::FNegOp>(op, llvmType,
+                                                        adaptor.getInput());
         return mlir::success();
       }
       default:
-        op.emitError() << "Floating point unary lowering ot implemented";
-        return mlir::failure();
+        return op.emitError()
+               << "Unknown floating-point unary operation during CIR lowering";
       }
     }
 
-    // Boolean unary operations.
-    if (type.isa<mlir::cir::BoolType>()) {
+    // Boolean unary operations: ! only. (For all others, the operand has
+    // already been promoted to int.)
+    if (elementType.isa<mlir::cir::BoolType>()) {
       switch (op.getKind()) {
       case mlir::cir::UnaryOpKind::Not:
+        assert(!IsVector && "NYI: op! on vector mask");
         rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
             op, llvmType, adaptor.getInput(),
             rewriter.create<mlir::LLVM::ConstantOp>(
-                op.getLoc(), llvmType, mlir::IntegerAttr::get(llvmType, 1)));
+                loc, llvmType, mlir::IntegerAttr::get(llvmType, 1)));
         return mlir::success();
       default:
-        op.emitError() << "Unary operator not implemented for bool type";
+        return op.emitError()
+               << "Unknown boolean unary operation during CIR lowering";
+      }
+    }
+
+    // Pointer unary operations: + only.  (++ and -- of pointers are implemented
+    // with cir.ptr_stride, not cir.unary.)
+    if (elementType.isa<mlir::cir::PointerType>()) {
+      switch (op.getKind()) {
+      case mlir::cir::UnaryOpKind::Plus:
+        rewriter.replaceOp(op, adaptor.getInput());
+        return mlir::success();
+      default:
+        op.emitError() << "Unknown pointer unary operation during CIR lowering";
         return mlir::failure();
       }
     }
 
-    return op.emitError() << "Unary operation has unsupported type: " << type;
+    return op.emitError() << "Unary operation has unsupported type: "
+                          << elementType;
   }
 };
 
@@ -2061,8 +2123,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRTernaryOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
-      CIRVectorExtractLowering, CIRStackSaveLowering, CIRStackRestoreLowering>(
-      converter, patterns.getContext());
+      CIRVectorInsertLowering, CIRVectorExtractLowering, CIRStackSaveLowering,
+      CIRStackRestoreLowering>(converter, patterns.getContext());
 }
 
 namespace {
