@@ -536,7 +536,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                 "Element of pointer array may not be associated with a %s array"_err_en_US,
                 dummyName);
           } else if (IsAssumedShape(*actualLastSymbol) &&
-              !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+              !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
             basicError = true;
             messages.Say(
                 "Element of assumed-shape array may not be associated with a %s array"_err_en_US,

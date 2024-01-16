@@ -2,7 +2,7 @@
 module library
 contains
   subroutine lib_sub(buf)
-!dir$ ignore_tkr(r) buf
+!dir$ ignore_tkr(c) buf
     real :: buf(1:*)
   end subroutine
 end module
