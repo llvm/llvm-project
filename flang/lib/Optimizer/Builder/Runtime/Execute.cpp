@@ -42,3 +42,16 @@ void fir::runtime::genExecuteCommandLine(fir::FirOpBuilder &builder,
       sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, runtimeFunc, args);
 }
+
+void fir::runtime::genSystem(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value command, mlir::Value exitstat) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(System)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(3));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, command, exitstat, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+}

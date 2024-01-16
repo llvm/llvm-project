@@ -204,4 +204,27 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
   }
 }
 
+void RTNAME(System)(const Descriptor &command, const Descriptor *exitstat,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  char *newCmd{EnsureNullTerminated(
+      command.OffsetElement(), command.ElementBytes(), terminator)};
+  int status{std::system(newCmd)};
+
+  if (exitstat) {
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
+#ifdef _WIN32
+    StoreLengthToDescriptor(exitstat, status, terminator);
+#else
+    int exitstatVal{WEXITSTATUS(status)};
+    StoreIntToDescriptor(exitstat, exitstatVal, terminator);
+#endif
+  }
+  // Deallocate memory if EnsureNullTerminated dynamically allocate a memory
+  if (newCmd != command.OffsetElement()) {
+    FreeMemory(static_cast<char *>(newCmd));
+  }
+}
+
 } // namespace Fortran::runtime

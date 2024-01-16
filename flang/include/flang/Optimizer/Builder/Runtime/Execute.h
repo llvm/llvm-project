@@ -31,5 +31,10 @@ void genExecuteCommandLine(fir::FirOpBuilder &, mlir::Location,
                            mlir::Value exitstat, mlir::Value cmdstat,
                            mlir::Value cmdmsg);
 
+/// Generate a call to System runtime function which implements
+/// the non-standard System GNU extension.
+void genSystem(fir::FirOpBuilder &, mlir::Location, mlir::Value command,
+               mlir::Value exitstat);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_EXECUTE_H
