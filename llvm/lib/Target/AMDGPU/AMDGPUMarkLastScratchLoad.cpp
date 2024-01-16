@@ -9,6 +9,8 @@
 // Mark scratch load/spill instructions which are guaranteed to be the last time
 // this scratch slot is used so it can be evicted from caches.
 //
+// TODO: Handle general stack accesses not just spilling.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -52,11 +54,6 @@ public:
 } // end anonymous namespace
 
 bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG({
-    dbgs() << "********** Mark Last Scratch Load **********\n"
-           << "********** Function: " << MF.getName() << '\n';
-  });
-
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -101,7 +98,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
 
       // Start iteration backwards from segment end until the start of basic
       // block or start of segment if it is in the same basic block.
-      auto End = BB->instr_rend();
+      auto End = BB->rend();
       if (MISegmentStart && MISegmentStart->getParent() == BB)
         End = MISegmentStart->getReverseIterator();
 
@@ -118,7 +115,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
         MachineMemOperand *MMO = *LastLoad->memoperands_begin();
         MMO->setFlags(MOLastUse);
         Changed = true;
-        LLVM_DEBUG(dbgs() << "  Found last load: " << *LastLoad;);
+        LLVM_DEBUG(dbgs() << "  Found last load: " << *LastLoad);
       }
     }
   }
