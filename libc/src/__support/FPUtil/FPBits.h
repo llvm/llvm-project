@@ -171,6 +171,15 @@ protected:
     return StorageType(1) << position;
   }
 
+  // An opaque type to store a floating point exponent.
+  // We define special values but it is valid to create arbitrary values as long
+  // as they are in the range [MIN, MAX].
+  enum class Exponent : int32_t {
+    MIN = 1 - EXP_BIAS,
+    ZERO = 0,
+    MAX = EXP_BIAS,
+  };
+
   // An opaque type to store a floating point biased exponent.
   // We define special values but it is valid to create arbitrary values as long
   // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
@@ -178,12 +187,13 @@ protected:
   enum class BiasedExponent : uint32_t {
     // The exponent value for denormal numbers.
     BITS_ALL_ZEROES = 0,
-    NORMAL_MIN = 1,
-    NORMAL_ZERO = EXP_BIAS,
-    NORMAL_MAX = 2 * EXP_BIAS,
     // The exponent value for infinity.
-    BITS_ALL_ONES = NORMAL_MAX + 1,
+    BITS_ALL_ONES = 2 * EXP_BIAS + 1,
   };
+
+  LIBC_INLINE static constexpr BiasedExponent biased(Exponent value) {
+    return static_cast<BiasedExponent>(static_cast<int32_t>(value) + EXP_BIAS);
+  }
 
   // An opaque type to store a floating point significand.
   // We define special values but it is valid to create arbitrary values as long
@@ -340,11 +350,13 @@ template <FPType fp_type> struct FPRep : public FPRepBase<fp_type> {
 
 protected:
   using typename UP::BiasedExponent;
+  using typename UP::Exponent;
   using typename UP::Significand;
   using UP::encode;
   using UP::exp_bits;
   using UP::exp_sig_bits;
   using UP::sig_bits;
+  using UP::biased;
 
 public:
   LIBC_INLINE constexpr bool is_nan() const {
@@ -381,7 +393,7 @@ public:
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType one(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_ZERO, Significand::ZERO);
+    return encode(sign, biased(Exponent::ZERO), Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::LSB);
@@ -391,10 +403,10 @@ public:
                   Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_MIN, Significand::ZERO);
+    return encode(sign, biased(Exponent::MIN), Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_MAX, Significand::BITS_ALL_ONES);
+    return encode(sign, biased(Exponent::MAX), Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES, Significand::ZERO);
@@ -498,7 +510,7 @@ public:
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::ZERO);
   }
   LIBC_INLINE static constexpr StorageType one(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_ZERO, Significand::MSB);
+    return encode(sign, biased(Exponent::ZERO), Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES, Significand::LSB);
@@ -508,10 +520,10 @@ public:
                   Significand::BITS_ALL_ONES ^ Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_MIN, Significand::MSB);
+    return encode(sign, biased(Exponent::MIN), Significand::MSB);
   }
   LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
-    return encode(sign, BiasedExponent::NORMAL_MAX, Significand::BITS_ALL_ONES);
+    return encode(sign, biased(Exponent::MAX), Significand::BITS_ALL_ONES);
   }
   LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES, Significand::MSB);
