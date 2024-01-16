@@ -519,11 +519,10 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   %ext:_(s64) = G_PHI [[ANYEXT]](s64), %bb.1, [[ANYEXT1]](s64), %bb.2
+  ; CHECK-NEXT:   %ext:_(s64) = G_PHI [[ANYEXT]](s64), %bb.1, [[C]](s64), %bb.2
   ; CHECK-NEXT:   $x0 = COPY %ext(s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   bb.1.entry:
