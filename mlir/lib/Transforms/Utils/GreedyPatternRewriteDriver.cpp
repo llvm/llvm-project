@@ -373,6 +373,9 @@ private:
   /// Notify the driver that the given block was created.
   void notifyBlockCreated(Block *block) override;
 
+  /// Notify the driver that the given block is about to be removed.
+  void notifyBlockRemoved(Block *block) override;
+
   /// For debugging only: Notify the driver of a pattern match failure.
   LogicalResult
   notifyMatchFailure(Location loc,
@@ -631,6 +634,11 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
 void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
   if (config.listener)
     config.listener->notifyBlockCreated(block);
+}
+
+void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
+  if (config.listener)
+    config.listener->notifyBlockRemoved(block);
 }
 
 void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
