@@ -42,6 +42,19 @@ static RValue buildLibraryCall(CIRGenFunction &CGF, const FunctionDecl *FD,
   return CGF.buildCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 }
 
+template <class Operation>
+static RValue buildUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
+  auto Arg = CGF.buildScalarExpr(E.getArg(0));
+
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, &E);
+  if (CGF.getBuilder().getIsFPConstrained())
+    llvm_unreachable("constraint FP operations are NYI");
+
+  auto Call =
+      CGF.getBuilder().create<Operation>(Arg.getLoc(), Arg.getType(), Arg);
+  return RValue::get(Call->getResult(0));
+}
+
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -98,7 +111,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_ceilf16:
     case Builtin::BI__builtin_ceill:
     case Builtin::BI__builtin_ceilf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::CeilOp>(*this, *E);
 
     case Builtin::BIcopysign:
     case Builtin::BIcopysignf:
@@ -118,7 +131,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosf16:
     case Builtin::BI__builtin_cosl:
     case Builtin::BI__builtin_cosf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::CosOp>(*this, *E);
 
     case Builtin::BIexp:
     case Builtin::BIexpf:
@@ -128,7 +141,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_expf16:
     case Builtin::BI__builtin_expl:
     case Builtin::BI__builtin_expf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::ExpOp>(*this, *E);
 
     case Builtin::BIexp2:
     case Builtin::BIexp2f:
@@ -138,7 +151,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2f16:
     case Builtin::BI__builtin_exp2l:
     case Builtin::BI__builtin_exp2f128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::Exp2Op>(*this, *E);
 
     case Builtin::BIfabs:
     case Builtin::BIfabsf:
@@ -147,13 +160,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fabsf:
     case Builtin::BI__builtin_fabsf16:
     case Builtin::BI__builtin_fabsl:
-    case Builtin::BI__builtin_fabsf128: {
-      mlir::Value Src0 = buildScalarExpr(E->getArg(0));
-      auto SrcType = Src0.getType();
-      auto Call =
-          builder.create<mlir::cir::FAbsOp>(Src0.getLoc(), SrcType, Src0);
-      return RValue::get(Call->getResult(0));
-    }
+    case Builtin::BI__builtin_fabsf128:
+      return buildUnaryFPBuiltin<mlir::cir::FAbsOp>(*this, *E);
 
     case Builtin::BIfloor:
     case Builtin::BIfloorf:
@@ -163,7 +171,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_floorf16:
     case Builtin::BI__builtin_floorl:
     case Builtin::BI__builtin_floorf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::FloorOp>(*this, *E);
 
     case Builtin::BIfma:
     case Builtin::BIfmaf:
@@ -216,7 +224,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_logf16:
     case Builtin::BI__builtin_logl:
     case Builtin::BI__builtin_logf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::LogOp>(*this, *E);
 
     case Builtin::BIlog10:
     case Builtin::BIlog10f:
@@ -226,7 +234,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log10f16:
     case Builtin::BI__builtin_log10l:
     case Builtin::BI__builtin_log10f128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::Log10Op>(*this, *E);
 
     case Builtin::BIlog2:
     case Builtin::BIlog2f:
@@ -236,7 +244,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log2f16:
     case Builtin::BI__builtin_log2l:
     case Builtin::BI__builtin_log2f128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::Log2Op>(*this, *E);
 
     case Builtin::BInearbyint:
     case Builtin::BInearbyintf:
@@ -245,7 +253,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_nearbyintf:
     case Builtin::BI__builtin_nearbyintl:
     case Builtin::BI__builtin_nearbyintf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::NearbyintOp>(*this, *E);
 
     case Builtin::BIpow:
     case Builtin::BIpowf:
@@ -265,7 +273,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_rintf16:
     case Builtin::BI__builtin_rintl:
     case Builtin::BI__builtin_rintf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::RintOp>(*this, *E);
 
     case Builtin::BIround:
     case Builtin::BIroundf:
@@ -275,7 +283,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_roundf16:
     case Builtin::BI__builtin_roundl:
     case Builtin::BI__builtin_roundf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::RoundOp>(*this, *E);
 
     case Builtin::BIsin:
     case Builtin::BIsinf:
@@ -285,7 +293,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sinf16:
     case Builtin::BI__builtin_sinl:
     case Builtin::BI__builtin_sinf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::SinOp>(*this, *E);
 
     case Builtin::BIsqrt:
     case Builtin::BIsqrtf:
@@ -295,7 +303,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtf16:
     case Builtin::BI__builtin_sqrtl:
     case Builtin::BI__builtin_sqrtf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::SqrtOp>(*this, *E);
 
     case Builtin::BItrunc:
     case Builtin::BItruncf:
@@ -305,7 +313,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_truncf16:
     case Builtin::BI__builtin_truncl:
     case Builtin::BI__builtin_truncf128:
-      llvm_unreachable("NYI");
+      return buildUnaryFPBuiltin<mlir::cir::TruncOp>(*this, *E);
 
     case Builtin::BIlround:
     case Builtin::BIlroundf:
