@@ -3,7 +3,7 @@
 "`3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","Varna June 2023","","","|flat_containers|"
 "`3885 <https://wg21.link/LWG3885>`__","``op`` should be in [zombie.names]","Varna June 2023","|Nothing To Do|","",""
 "`3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","Varna June 2023","","",""
-"`3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","Varna June 2023","","",""
+"`3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","Varna June 2023","|Complete|","18.0",""
 "`3894 <https://wg21.link/LWG3894>`__","``generator::promise_type::yield_value(ranges::elements_of<Rng, Alloc>)`` should not be ``noexcept``","Varna June 2023","","",""
 "`3903 <https://wg21.link/LWG3903>`__","span destructor is redundantly noexcept","Varna June 2023","|Complete|","7.0",""
 "`3904 <https://wg21.link/LWG3904>`__","``lazy_split_view::outer-iterator``'s const-converting constructor isn't setting ``trailing_empty_``","Varna June 2023","","","|ranges|"

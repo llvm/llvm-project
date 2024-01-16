@@ -249,6 +249,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) noexcept { return fetch_sub(__op) - __op; }
 };
 
+template <class _Tp>
+class shared_ptr;
+template <class _Tp>
+class weak_ptr;
+
+template <class _Tp>
+struct atomic<shared_ptr<_Tp>>;
+template <class _Tp>
+struct atomic<weak_ptr<_Tp>>;
+
 #endif // _LIBCPP_STD_VER >= 20
 
 // atomic_is_lock_free

@@ -1508,6 +1508,7 @@ module std_private_memory_allocator_arg_t                 [system] { header "__m
 module std_private_memory_allocator_destructor            [system] { header "__memory/allocator_destructor.h" }
 module std_private_memory_allocator_traits                [system] { header "__memory/allocator_traits.h" }
 module std_private_memory_assume_aligned                  [system] { header "__memory/assume_aligned.h" }
+module std_private_memory_atomic_shared_ptr               [system] { header "__memory/atomic_shared_ptr.h" }
 module std_private_memory_auto_ptr                        [system] { header "__memory/auto_ptr.h" }
 module std_private_memory_builtin_new_allocator           [system] {
   header "__memory/builtin_new_allocator.h"

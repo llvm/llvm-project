@@ -190,6 +190,9 @@ export namespace std {
   //  using std::inout_ptr;
 
 #ifndef _LIBCPP_HAS_NO_THREADS
+  // [util.smartptr.atomic]
+  using std::atomic;
+
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;
 

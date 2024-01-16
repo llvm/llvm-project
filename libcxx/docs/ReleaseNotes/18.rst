@@ -60,6 +60,7 @@ Implemented Papers
 - P0521R0 - Proposed Resolution for CA 14 (``shared_ptr`` ``use_count/unique``)
 - P1759R6 - Native handles and file streams
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
+- P0718R2 -  Revising ``atomic_shared_ptr`` for C++20
 
 
 Improvements and New Features

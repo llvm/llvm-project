@@ -831,29 +831,29 @@ public:
 };
 
 template<class T>
-    bool atomic_is_lock_free(const shared_ptr<T>* p);
+    bool atomic_is_lock_free(const shared_ptr<T>* p);                                      // Deprecated in C++20
 template<class T>
-    shared_ptr<T> atomic_load(const shared_ptr<T>* p);
+    shared_ptr<T> atomic_load(const shared_ptr<T>* p);                                     // Deprecated in C++20
 template<class T>
-    shared_ptr<T> atomic_load_explicit(const shared_ptr<T>* p, memory_order mo);
+    shared_ptr<T> atomic_load_explicit(const shared_ptr<T>* p, memory_order mo);           // Deprecated in C++20
 template<class T>
-    void atomic_store(shared_ptr<T>* p, shared_ptr<T> r);
+    void atomic_store(shared_ptr<T>* p, shared_ptr<T> r);                                  // Deprecated in C++20
 template<class T>
-    void atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);
+    void atomic_store_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);        // Deprecated in C++20
 template<class T>
-    shared_ptr<T> atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r);
+    shared_ptr<T> atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r);                      // Deprecated in C++20
 template<class T>
     shared_ptr<T>
-    atomic_exchange_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);
+    atomic_exchange_explicit(shared_ptr<T>* p, shared_ptr<T> r, memory_order mo);          // Deprecated in C++20
 template<class T>
     bool
-    atomic_compare_exchange_weak(shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);
+    atomic_compare_exchange_weak(shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);     // Deprecated in C++20
 template<class T>
     bool
-    atomic_compare_exchange_strong( shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);
+    atomic_compare_exchange_strong( shared_ptr<T>* p, shared_ptr<T>* v, shared_ptr<T> w);  // Deprecated in C++20
 template<class T>
     bool
-    atomic_compare_exchange_weak_explicit(shared_ptr<T>* p, shared_ptr<T>* v,
+    atomic_compare_exchange_weak_explicit(shared_ptr<T>* p, shared_ptr<T>* v,              // Deprecated in C++20
                                           shared_ptr<T> w, memory_order success,
                                           memory_order failure);
 template<class T>
@@ -912,6 +912,78 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 template<size_t N, class T>
 [[nodiscard]] constexpr T* assume_aligned(T* ptr); // since C++20
 
+// [util.smartptr.atomic], atomic smart pointers
+template<class T> struct atomic;  // since C++20
+template<class T>  // since C++20
+struct atomic<shared_ptr<T>>
+{
+   using value_type = shared_ptr<T>;
+
+    static constexpr bool is_always_lock_free = implementation-defined;
+    bool is_lock_free() const noexcept;
+
+    constexpr atomic() noexcept;
+    constexpr atomic(nullptr_t) noexcept : atomic() { }
+    atomic(shared_ptr<T> desired) noexcept;
+    atomic(const atomic&) = delete;
+    void operator=(const atomic&) = delete;
+
+    shared_ptr<T> load(memory_order order = memory_order::seq_cst) const noexcept;
+    operator shared_ptr<T>() const noexcept;
+    void store(shared_ptr<T> desired, memory_order order = memory_order::seq_cst) noexcept;
+    void operator=(shared_ptr<T> desired) noexcept;
+    void operator=(nullptr_t) noexcept;
+
+    shared_ptr<T> exchange(shared_ptr<T> desired,
+                           memory_order order = memory_order::seq_cst) noexcept;
+    bool compare_exchange_weak(shared_ptr<T>& expected, shared_ptr<T> desired,
+                               memory_order success, memory_order failure) noexcept;
+    bool compare_exchange_strong(shared_ptr<T>& expected, shared_ptr<T> desired,
+                                 memory_order success, memory_order failure) noexcept;
+    bool compare_exchange_weak(shared_ptr<T>& expected, shared_ptr<T> desired,
+                               memory_order order = memory_order::seq_cst) noexcept;
+    bool compare_exchange_strong(shared_ptr<T>& expected, shared_ptr<T> desired,
+                                 memory_order order = memory_order::seq_cst) noexcept;
+
+    void wait(shared_ptr<T> old, memory_order order = memory_order::seq_cst) const noexcept;
+    void notify_one() noexcept;
+    void notify_all() noexcept;
+};
+template<class T>  // since C++20
+struct atomic<weak_ptr<T>>
+{
+
+    using value_type = weak_ptr<T>;
+
+    static constexpr bool is_always_lock_free = implementation-defined;
+    bool is_lock_free() const noexcept;
+
+    constexpr atomic() noexcept;
+    atomic(weak_ptr<T> desired) noexcept;
+    atomic(const atomic&) = delete;
+    void operator=(const atomic&) = delete;
+
+    weak_ptr<T> load(memory_order order = memory_order::seq_cst) const noexcept;
+    operator weak_ptr<T>() const noexcept;
+    void store(weak_ptr<T> desired, memory_order order = memory_order::seq_cst) noexcept;
+    void operator=(weak_ptr<T> desired) noexcept;
+
+    weak_ptr<T> exchange(weak_ptr<T> desired,
+                         memory_order order = memory_order::seq_cst) noexcept;
+    bool compare_exchange_weak(weak_ptr<T>& expected, weak_ptr<T> desired,
+                               memory_order success, memory_order failure) noexcept;
+    bool compare_exchange_strong(weak_ptr<T>& expected, weak_ptr<T> desired,
+                                 memory_order success, memory_order failure) noexcept;
+    bool compare_exchange_weak(weak_ptr<T>& expected, weak_ptr<T> desired,
+                               memory_order order = memory_order::seq_cst) noexcept;
+    bool compare_exchange_strong(weak_ptr<T>& expected, weak_ptr<T> desired,
+                                 memory_order order = memory_order::seq_cst) noexcept;
+
+    void wait(weak_ptr<T> old, memory_order order = memory_order::seq_cst) const noexcept;
+    void notify_one() noexcept;
+    void notify_all() noexcept;
+};
+
 }  // std
 
 */
@@ -928,6 +1000,7 @@ template<size_t N, class T>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/assume_aligned.h>
+#include <__memory/atomic_shared_ptr.h>
 #include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/concepts.h>

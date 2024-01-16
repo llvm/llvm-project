@@ -526,6 +526,7 @@ set(files
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
   __memory/assume_aligned.h
+  __memory/atomic_shared_ptr.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
   __memory/compressed_pair.h

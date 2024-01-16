@@ -181,9 +181,8 @@ int main(int, char**)
     test<std::atomic_unsigned_lock_free::value_type>();
     static_assert(std::is_unsigned_v<std::atomic_unsigned_lock_free::value_type>);
     static_assert(std::is_integral_v<std::atomic_unsigned_lock_free::value_type>);
-/*
     test<std::shared_ptr<int>>();
-*/
+    test<std::weak_ptr<int>>();
 #endif
 
     return 0;
