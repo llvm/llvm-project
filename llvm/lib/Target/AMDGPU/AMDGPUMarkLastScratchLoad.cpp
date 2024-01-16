@@ -15,8 +15,8 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
 using namespace llvm;
