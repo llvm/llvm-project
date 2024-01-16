@@ -996,6 +996,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BBNSS_OnlyWithParen);
   CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Never",
               AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+  CHECK_PARSE("SeparateDefinitionBlocks: Always", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Always);
+  CHECK_PARSE("SeparateDefinitionBlocks: Leave", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Leave);
+  CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

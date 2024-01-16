@@ -7,7 +7,7 @@
 @ RUN: llvm-mc -filetype=obj -o %t %s -triple=thumbv8.2a-eabi
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELOC
 @ RUN: llvm-objdump -d --triple=thumbv8.2a-eabi    --mattr=+fullfp16 %t | FileCheck %s --check-prefix=THUMB_OFFSET
-@ RUN: llvm-mc -filetype=obj -o %y %s -triple=thumbebv8.2a-eabi
+@ RUN: llvm-mc -filetype=obj -o %t %s -triple=thumbebv8.2a-eabi
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELOC
 @ RUN: llvm-objdump -d --triple=thumbebv8.2a-eabi  --mattr=+fullfp16 %t | FileCheck %s --check-prefix=THUMB_OFFSET
 

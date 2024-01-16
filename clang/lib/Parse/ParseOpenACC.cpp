@@ -112,6 +112,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("nohost", OpenACCClauseKind::NoHost)
       .Case("present", OpenACCClauseKind::Present)
       .Case("private", OpenACCClauseKind::Private)
+      .Case("reduction", OpenACCClauseKind::Reduction)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
@@ -258,6 +259,47 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
     return false;
   }
   llvm_unreachable("Unknown 'Kind' Passed");
+}
+
+OpenACCReductionOperator ParseReductionOperator(Parser &P) {
+  // If there is no colon, treat as if the reduction operator was missing, else
+  // we probably will not recover from it in the case where an expression starts
+  // with one of the operator tokens.
+  if (P.NextToken().isNot(tok::colon)) {
+    P.Diag(P.getCurToken(), diag::err_acc_expected_reduction_operator);
+    return OpenACCReductionOperator::Invalid;
+  }
+  Token ReductionKindTok = P.getCurToken();
+  // Consume both the kind and the colon.
+  P.ConsumeToken();
+  P.ConsumeToken();
+
+  switch (ReductionKindTok.getKind()) {
+  case tok::plus:
+    return OpenACCReductionOperator::Addition;
+  case tok::star:
+    return OpenACCReductionOperator::Multiplication;
+  case tok::amp:
+    return OpenACCReductionOperator::BitwiseAnd;
+  case tok::pipe:
+    return OpenACCReductionOperator::BitwiseOr;
+  case tok::caret:
+    return OpenACCReductionOperator::BitwiseXOr;
+  case tok::ampamp:
+    return OpenACCReductionOperator::And;
+  case tok::pipepipe:
+    return OpenACCReductionOperator::Or;
+  case tok::identifier:
+    if (ReductionKindTok.getIdentifierInfo()->isStr("max"))
+      return OpenACCReductionOperator::Max;
+    if (ReductionKindTok.getIdentifierInfo()->isStr("min"))
+      return OpenACCReductionOperator::Min;
+    LLVM_FALLTHROUGH;
+  default:
+    P.Diag(ReductionKindTok, diag::err_acc_invalid_reduction_operator);
+    return OpenACCReductionOperator::Invalid;
+  }
+  llvm_unreachable("Reduction op token kind not caught by 'default'?");
 }
 
 /// Used for cases where we expect an identifier-like token, but don't want to
@@ -419,6 +461,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Host:
+  case OpenACCClauseKind::Reduction:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -578,6 +621,13 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     case OpenACCClauseKind::CopyOut:
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Zero,
                                          Kind);
+      if (ParseOpenACCClauseVarList(Kind))
+        return true;
+      break;
+    case OpenACCClauseKind::Reduction:
+      // If we're missing a clause-kind (or it is invalid), see if we can parse
+      // the var-list anyway.
+      ParseReductionOperator(*this);
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
