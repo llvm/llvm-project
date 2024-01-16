@@ -8,7 +8,6 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -986,12 +985,14 @@ bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
   if (strides.empty())
     return true;
 
-  // Strides of a contiguous memref have to match the flattened
-  // dims.
-  strides = strides.drop_back(1);
+  // Check whether strides match "flattened" dims.
   SmallVector<int64_t> flattenedDims;
-  for (size_t i = 1; i < memrefShape.size(); i++)
-    flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
+  auto dimProduct = 1;
+  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
+    dimProduct *= dim;
+    flattenedDims.push_back(dimProduct);
+  }
 
+  strides = strides.drop_back(1);
   return llvm::equal(strides, llvm::reverse(flattenedDims));
 }
