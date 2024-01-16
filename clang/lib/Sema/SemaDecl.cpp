@@ -20214,7 +20214,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     // Adjust the APSInt value.
     InitVal = InitVal.extOrTrunc(NewWidth);
     InitVal.setIsSigned(NewSign);
-    ECD->setInitVal(Context, InitVal);
+    ECD->setInitVal(InitVal);
 
     // Adjust the Expr initializer and type.
     if (ECD->getInitExpr() &&
