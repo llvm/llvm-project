@@ -645,7 +645,7 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.find(Ty) != ForwardPointerTypes.end())
+  if (ForwardPointerTypes.contains(Ty))
     return ForwardPointerTypes[Ty];
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
@@ -712,14 +712,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     // Null pointer means we have a loop in type definitions, make and
     // return corresponding OpTypeForwardPointer.
     if (SpvElementType == nullptr) {
-      if (ForwardPointerTypes.find(Ty) == ForwardPointerTypes.end())
+      if (!ForwardPointerTypes.contains(Ty))
         ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
       return ForwardPointerTypes[PType];
     }
     Register Reg(0);
     // If we have forward pointer associated with this type, use its register
     // operand to create OpTypePointer.
-    if (ForwardPointerTypes.find(PType) != ForwardPointerTypes.end())
+    if (ForwardPointerTypes.contains(PType))
       Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
 
     return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
@@ -959,8 +959,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // N is the number of elements of the vector.
   Type *Ty;
 
-  if (TypeStr.starts_with("atomic_"))
-    TypeStr = TypeStr.substr(strlen("atomic_"));
+  TypeStr.consume_front("atomic_");
 
   if (TypeStr.starts_with("void")) {
     Ty = Type::getVoidTy(Ctx);
@@ -1007,8 +1006,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
   // Handle "typeN*" or  "type vector[N]*".
   bool IsPtrToVec = TypeStr.consume_back("*");
 
-  if (TypeStr.starts_with(" vector[")) {
-    TypeStr = TypeStr.substr(strlen(" vector["));
+  if (TypeStr.consume_front(" vector[")) {
     TypeStr = TypeStr.substr(0, TypeStr.find(']'));
   }
   TypeStr.getAsInteger(10, VecElts);

@@ -570,7 +570,6 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -875,7 +874,6 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_quoted_string_io",
@@ -1084,6 +1082,11 @@ feature_test_macros = [
                 # "c++26": 202311,  # P2821R5 span.at()
                 #          202311   # P2833R2 Freestanding Library: inout expected span
             },
+            "headers": ["span"],
+        },
+        {
+            "name": "__cpp_lib_span_at",
+            "values": {"c++26": 202311},  # P2821R3 span.at()
             "headers": ["span"],
         },
         {

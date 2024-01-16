@@ -118,7 +118,6 @@ disabled_user_sgpr:
   .amdhsa_workgroup_processor_mode 1
   .amdhsa_memory_ordered 1
   .amdhsa_forward_progress 1
-  .amdhsa_shared_vgpr_count 0
   .amdhsa_round_robin_scheduling 1
   .amdhsa_exception_fp_ieee_invalid_op 1
   .amdhsa_exception_fp_denorm_src 1
@@ -157,7 +156,6 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_workgroup_processor_mode 1
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
-// ASM-NEXT: .amdhsa_shared_vgpr_count 0
 // ASM-NEXT: .amdhsa_round_robin_scheduling 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1

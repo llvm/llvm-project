@@ -40,7 +40,7 @@ subroutine acc_kernels
 
 ! CHECK:      acc.kernels  {
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncAttr}
+! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
 
   !$acc kernels async(1)
   !$acc end kernels
@@ -63,13 +63,13 @@ subroutine acc_kernels
 
 ! CHECK:      acc.kernels  {
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {waitAttr}
+! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
 
   !$acc kernels wait(1)
   !$acc end kernels
 
 ! CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.kernels  wait([[WAIT1]] : i32) {
+! CHECK:      acc.kernels  wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -78,7 +78,7 @@ subroutine acc_kernels
 
 ! CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 ! CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.kernels  wait([[WAIT2]], [[WAIT3]] : i32, i32) {
+! CHECK:      acc.kernels  wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -87,7 +87,7 @@ subroutine acc_kernels
 
 ! CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.kernels  wait([[WAIT4]], [[WAIT5]] : i32, i32) {
+! CHECK:      acc.kernels  wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -95,7 +95,7 @@ subroutine acc_kernels
   !$acc end kernels
 
 ! CHECK:      [[NUMGANGS1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.kernels  num_gangs([[NUMGANGS1]] : i32) {
+! CHECK:      acc.kernels  num_gangs({[[NUMGANGS1]] : i32}) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
@@ -103,7 +103,7 @@ subroutine acc_kernels
   !$acc end kernels
 
 ! CHECK:      [[NUMGANGS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.kernels  num_gangs([[NUMGANGS2]] : i32) {
+! CHECK:      acc.kernels  num_gangs({[[NUMGANGS2]] : i32}) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 

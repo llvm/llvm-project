@@ -1368,7 +1368,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
     if (immCodeUsesAPFloat())
       Result += "cast<ConstantFPSDNode>(Node)->getValueAPF();\n";
     else if (immCodeUsesAPInt())
-      Result += "cast<ConstantSDNode>(Node)->getAPIntValue();\n";
+      Result += "Node->getAsAPIntVal();\n";
     else
       Result += "cast<ConstantSDNode>(Node)->getSExtValue();\n";
     return Result + ImmCode;

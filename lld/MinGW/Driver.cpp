@@ -46,10 +46,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace lld;
 using namespace llvm::opt;
 using namespace llvm;
@@ -274,8 +270,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lldmap:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_reproduce))
     add("-reproduce:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
-    add("-lldltocache:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_file_alignment))
     add("-filealign:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_section_alignment))
@@ -444,8 +438,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
-  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
-    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_lto_O))
     add("-opt:lldlto=" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_lto_CGO))
@@ -456,6 +448,23 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lto-cs-profile-generate");
   if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
     add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
+    add("-lldltocache:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_policy))
+    add("-lldltocachepolicy:" + StringRef(a->getValue()));
+  if (args.hasArg(OPT_thinlto_emit_imports_files))
+    add("-thinlto-emit-imports-files");
+  if (args.hasArg(OPT_thinlto_index_only))
+    add("-thinlto-index-only");
+  if (auto *arg = args.getLastArg(OPT_thinlto_index_only_eq))
+    add("-thinlto-index-only:" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_object_suffix_replace_eq))
+    add("-thinlto-object-suffix-replace:" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_prefix_replace_eq))
+    add("-thinlto-prefix-replace:" + StringRef(arg->getValue()));
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));

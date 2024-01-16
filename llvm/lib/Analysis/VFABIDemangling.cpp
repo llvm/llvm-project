@@ -126,7 +126,7 @@ static ParseRet tryParseLinearTokenWithRuntimeStep(StringRef &ParseString,
   return ParseRet::None;
 }
 
-/// The function looks for the following stringt at the beginning of
+/// The function looks for the following string at the beginning of
 /// the input string `ParseString`:
 ///
 ///  <token> <number>
@@ -326,10 +326,6 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
     // Only vector parameters are used when determining the VF; uniform or
     // linear are left as scalars, so do not affect VF.
     if (Param.ParamKind == VFParamKind::Vector) {
-      // If the scalar function doesn't actually have a corresponding argument,
-      // reject the mapping.
-      if (Param.ParamPos >= Signature->getNumParams())
-        return std::nullopt;
       Type *PTy = Signature->getParamType(Param.ParamPos);
 
       std::optional<ElementCount> EC = getElementCountForTy(ISA, PTy);
@@ -425,6 +421,11 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // A valid MangledName must have at least one valid entry in the
   // <parameters>.
   if (Parameters.empty())
+    return std::nullopt;
+
+  // If the number of arguments of the scalar function does not match the
+  // vector variant we have just demangled then reject the mapping.
+  if (Parameters.size() != FTy->getNumParams())
     return std::nullopt;
 
   // Figure out the number of lanes in vectors for this function variant. This

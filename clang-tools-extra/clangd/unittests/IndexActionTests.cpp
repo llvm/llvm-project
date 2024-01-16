@@ -341,6 +341,36 @@ TEST_F(IndexActionTest, SymbolFromCC) {
                   hasName("foo"),
                   includeHeader(URI::create(testPath("main.h")).toString()))));
 }
+
+TEST_F(IndexActionTest, IncludeHeaderForwardDecls) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+#include "fwd.h"
+#include "full.h"
+ )cpp");
+  addFile(testPath("fwd.h"), R"cpp(
+#ifndef _FWD_H_
+#define _FWD_H_
+struct Foo;
+#endif
+ )cpp");
+  addFile(testPath("full.h"), R"cpp(
+#ifndef _FULL_H_
+#define _FULL_H_
+struct Foo {};
+
+// This decl is important, as otherwise we detect control macro for the file,
+// before handling definition of Foo.
+void other();
+#endif
+ )cpp");
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath);
+  EXPECT_THAT(*IndexFile.Symbols,
+              testing::Contains(AllOf(
+                  hasName("Foo"),
+                  includeHeader(URI::create(testPath("full.h")).toString()))))
+      << *IndexFile.Symbols->begin();
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

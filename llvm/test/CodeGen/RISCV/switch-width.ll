@@ -314,4 +314,3 @@ return:
   %retval = phi i32 [ -1, %sw.default ], [ 0, %sw.bb0 ], [ 1, %sw.bb1 ]
   ret i32 %retval
 }
-

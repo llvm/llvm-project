@@ -154,7 +154,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__riscv_float_abi_soft");
 
-  if (ABIName == "ilp32e")
+  if (ABIName == "ilp32e" || ABIName == "lp64e")
     Builder.defineMacro("__riscv_abi_rve");
 
   Builder.defineMacro("__riscv_arch_test");
@@ -163,9 +163,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     auto ExtName = Extension.first;
     auto ExtInfo = Extension.second;
 
-    Builder.defineMacro(
-        Twine("__riscv_", ExtName),
-        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
+    Builder.defineMacro(Twine("__riscv_", ExtName),
+                        Twine(getVersionValue(ExtInfo.Major, ExtInfo.Minor)));
   }
 
   if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
@@ -215,6 +214,13 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_misaligned_fast");
   else
     Builder.defineMacro("__riscv_misaligned_avoid");
+
+  if (ISAInfo->hasExtension("e")) {
+    if (Is64Bit)
+      Builder.defineMacro("__riscv_64e");
+    else
+      Builder.defineMacro("__riscv_32e");
+  }
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
@@ -237,22 +243,15 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
 
 static std::vector<std::string>
 collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
-  auto ParseResult =
-      llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
-
-  if (!ParseResult) {
-    consumeError(ParseResult.takeError());
-    return std::vector<std::string>();
-  }
-
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
-
   std::vector<std::string> NonISAExtFeatureVec;
 
+  auto IsNonISAExtFeature = [](const std::string &Feature) {
+    assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
+    StringRef Ext = StringRef(Feature).drop_front(); // drop the +/-
+    return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
+  };
   llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
-                [&](const std::string &Feat) {
-                  return !llvm::is_contained(ImpliedFeatures, Feat);
-                });
+                IsNonISAExtFeature);
 
   return NonISAExtFeatureVec;
 }
@@ -303,7 +302,7 @@ bool RISCVTargetInfo::initFeatureMap(
   }
 
   // RISCVISAInfo makes implications for ISA features
-  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
+  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatures();
 
   // parseFeatures normalizes the feature set by dropping any explicit
   // negatives, and non-extension features.  We need to preserve the later
@@ -386,6 +385,11 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (llvm::is_contained(Features, "+experimental"))
     HasExperimental = true;
 
+  if (ABI == "ilp32e" && ISAInfo->hasExtension("d")) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << "ILP32E cannot be used with the D ISA extension";
+    return false;
+  }
   return true;
 }
 
@@ -416,12 +420,11 @@ static void handleFullArchString(StringRef FullArchStr,
   Features.push_back("__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
-  if (!RII) {
-    consumeError(RII.takeError());
+  if (llvm::errorToBool(RII.takeError())) {
     // Forward the invalid FullArchStr.
     Features.push_back("+" + FullArchStr.str());
   } else {
-    std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
+    std::vector<std::string> FeatStrings = (*RII)->toFeatures();
     Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }

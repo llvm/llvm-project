@@ -42,6 +42,14 @@ def CustomStringLiteralC : TestFormat_Op<[{
   custom<Foo>("$_builder.getStringAttr(\"foo\")") attr-dict
 }]>;
 
+// CHECK-LABEL: CustomStringLiteralD::parse
+// CHECK: parseFoo({{.*}}, result)
+// CHECK-LABEL: CustomStringLiteralD::print
+// CHECK: printFoo({{.*}}, getProperties())
+def CustomStringLiteralD : TestFormat_Op<[{
+  custom<Foo>(prop-dict) attr-dict
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//

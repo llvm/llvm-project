@@ -21,15 +21,15 @@ private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T max_normal = T(FPBits(FPBits::MAX_NORMAL));
-  const T min_normal = T(FPBits(FPBits::MIN_NORMAL));
-  const T max_subnormal = T(FPBits(FPBits::MAX_SUBNORMAL));
-  const T min_subnormal = T(FPBits(FPBits::MIN_SUBNORMAL));
+  const T nan = FPBits::build_quiet_nan(1);
+  const T inf = FPBits::inf();
+  const T neg_inf = FPBits::neg_inf();
+  const T zero = FPBits::zero();
+  const T neg_zero = FPBits::neg_zero();
+  const T max_normal = FPBits::max_normal();
+  const T min_normal = FPBits::min_normal();
+  const T max_subnormal = FPBits::max_denormal();
+  const T min_subnormal = FPBits::min_denormal();
 
 public:
   void test_special_numbers(Func func) {

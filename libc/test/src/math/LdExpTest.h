@@ -58,7 +58,8 @@ public:
   }
 
   void testOverflow(LdExpFunc func) {
-    NormalFloat x(FPBits::MAX_EXPONENT - 10, NormalFloat::ONE + 0xF00BA, 0);
+    NormalFloat x(FPBits::MAX_BIASED_EXPONENT - 10, NormalFloat::ONE + 0xF00BA,
+                  0);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));
@@ -125,7 +126,7 @@ public:
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.
     x = NormalFloat(FPBits::EXP_BIAS, NormalFloat::ONE, 0);
-    int exp = -FPBits::MAX_EXPONENT - 5;
+    int exp = -FPBits::MAX_BIASED_EXPONENT - 5;
     T result = func(x, exp);
     FPBits result_bits(result);
     ASSERT_FALSE(result_bits.is_zero());
@@ -133,17 +134,17 @@ public:
     ASSERT_EQ(result_bits.get_biased_exponent(), uint16_t(0));
     // But if the exp is so less that normalization leads to zero, then
     // the result should be zero.
-    result = func(x, -FPBits::MAX_EXPONENT - FPBits::FRACTION_LEN - 5);
+    result = func(x, -FPBits::MAX_BIASED_EXPONENT - FPBits::FRACTION_LEN - 5);
     ASSERT_TRUE(FPBits(result).is_zero());
 
     // Start with a subnormal number but pass a very high number for exponent.
     // The result should not be infinity.
     x = NormalFloat(-FPBits::EXP_BIAS + 1, NormalFloat::ONE >> 10, 0);
-    exp = FPBits::MAX_EXPONENT + 5;
+    exp = FPBits::MAX_BIASED_EXPONENT + 5;
     ASSERT_FALSE(FPBits(func(x, exp)).is_inf());
     // But if the exp is large enough to oversome than the normalization shift,
     // then it should result in infinity.
-    exp = FPBits::MAX_EXPONENT + 15;
+    exp = FPBits::MAX_BIASED_EXPONENT + 15;
     ASSERT_FP_EQ(func(x, exp), inf);
   }
 };

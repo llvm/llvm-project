@@ -64,7 +64,7 @@ private:
   void *suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
     void *Addr =
-        Device->allocate(1024, /* HstPtr */ nullptr, TARGET_ALLOC_DEFAULT);
+        Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
     Device->free(Addr);
     // Align Address to MaxMemoryAllocation
     Addr = (void *)alignPtr((Addr), MaxMemoryAllocation);
@@ -104,8 +104,8 @@ private:
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      MemoryStart = Device->allocate(TotalSize, /* HstPtr */ nullptr,
-                                     TARGET_ALLOC_DEFAULT);
+      MemoryStart =
+          Device->allocate(TotalSize, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
       if (MemoryStart)
         break;
     }
@@ -214,8 +214,8 @@ public:
     for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
       if (!OffloadEntry.size)
         continue;
-      Size += std::strlen(OffloadEntry.name) + /* '\0' */ 1 +
-              /* OffloadEntry.size value */ sizeof(uint32_t) +
+      // Get the total size of the string and entry including the null byte.
+      Size += std::strlen(OffloadEntry.name) + 1 + sizeof(uint32_t) +
               OffloadEntry.size;
     }
 
@@ -735,13 +735,12 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (ompt::Initialized) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize,
-                          /* device_num */ DeviceId +
-                              Plugin.getDeviceIdStartIndex(),
-                          /* type */ getComputeUnitKind().c_str(),
-                          /* device */ reinterpret_cast<ompt_device_t *>(this),
-                          /* lookup */ ompt::lookupCallbackByName,
-                          /* documentation */ nullptr);
+      performOmptCallback(device_initialize, /*device_num=*/DeviceId +
+                                                 Plugin.getDeviceIdStartIndex(),
+                          /*type=*/getComputeUnitKind().c_str(),
+                          /*device=*/reinterpret_cast<ompt_device_t *>(this),
+                          /*lookup=*/ompt::lookupCallbackByName,
+                          /*documentation=*/nullptr);
   }
 #endif
 
@@ -835,7 +834,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
       performOmptCallback(device_finalize,
-                          /* device_num */ DeviceId +
+                          /*device_num=*/DeviceId +
                               Plugin.getDeviceIdStartIndex());
   }
 #endif
@@ -897,16 +896,11 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (ompt::Initialized) {
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-    performOmptCallback(device_load,
-                        /* device_num */ DeviceId +
-                            Plugin.getDeviceIdStartIndex(),
-                        /* FileName */ nullptr,
-                        /* File Offset */ 0,
-                        /* VmaInFile */ nullptr,
-                        /* ImgSize */ Bytes,
-                        /* HostAddr */ InputTgtImage->ImageStart,
-                        /* DeviceAddr */ nullptr,
-                        /* FIXME: ModuleId */ 0);
+    performOmptCallback(
+        device_load, /*device_num=*/DeviceId + Plugin.getDeviceIdStartIndex(),
+        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+        /*ImgSize=*/Bytes, /*HostAddr=*/InputTgtImage->ImageStart,
+        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
 
@@ -1293,7 +1287,7 @@ Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
   // If pinned, just insert the entry representing the whole pinned buffer.
   if (*IsPinnedOrErr)
     return insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                       /* Externally locked */ true);
+                       /*Externallylocked=*/true);
 
   // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
   if (!LockMappedBuffers)
@@ -1398,6 +1392,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
       Alloc = MemoryManager->allocate(Size, HostPtr);
@@ -1632,6 +1627,23 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
   return Plugin::success();
 }
 
+Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
+  // First check if this image is a regular ELF file.
+  if (!utils::elf::isELF(Image))
+    return false;
+
+  // Check if this image is an ELF with a matching machine value.
+  auto MachineOrErr = utils::elf::checkMachine(Image, getMagicElfBits());
+  if (!MachineOrErr)
+    return MachineOrErr.takeError();
+
+  if (!*MachineOrErr)
+    return false;
+
+  // Perform plugin-dependent checks for the specific architecture if needed.
+  return isELFCompatible(Image);
+}
+
 const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
   return true;
@@ -1650,53 +1662,46 @@ extern "C" {
 int32_t __tgt_rtl_init_plugin() {
   auto Err = Plugin::initIfNeeded();
   if (Err) {
-    REPORT("Failure to initialize plugin " GETNAME(TARGET_NAME) ": %s\n",
-           toString(std::move(Err)).data());
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to init plugin: %s", ErrStr.c_str());
     return OFFLOAD_FAIL;
   }
 
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
+int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   if (!Plugin::isActive())
     return false;
 
-  if (utils::elf::checkMachine(TgtImage, Plugin::get().getMagicElfBits()))
-    return true;
+  StringRef Buffer(reinterpret_cast<const char *>(Image->ImageStart),
+                   target::getPtrDiff(Image->ImageEnd, Image->ImageStart));
 
-  return Plugin::get().getJIT().checkBitcodeImage(*TgtImage);
-}
-
-int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
-                                       __tgt_image_info *Info) {
-  if (!Plugin::isActive())
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure to check validity of image %p: %s", Image, ErrStr.c_str());
     return false;
-
-  if (!__tgt_rtl_is_valid_binary(TgtImage))
-    return false;
-
-  // A subarchitecture was not specified. Assume it is compatible.
-  if (!Info->Arch)
-    return true;
-
-  // Check the compatibility with all the available devices. Notice the
-  // devices may not be initialized yet.
-  auto CompatibleOrErr = Plugin::get().isImageCompatible(Info);
-  if (!CompatibleOrErr) {
-    // This error should not abort the execution, so we just inform the user
-    // through the debug system.
-    std::string ErrString = toString(CompatibleOrErr.takeError());
-    DP("Failure to check whether image %p is valid: %s\n", TgtImage,
-       ErrString.data());
+  };
+  switch (identify_magic(Buffer)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = Plugin::get().checkELFImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = Plugin::get().getJIT().checkBitcodeImage(Buffer);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
     return false;
   }
-
-  bool Compatible = *CompatibleOrErr;
-  DP("Image is %scompatible with current environment: %s\n",
-     (Compatible) ? "" : "not", Info->Arch);
-
-  return Compatible;
 }
 
 int32_t __tgt_rtl_supports_empty_images() {
@@ -1852,7 +1857,7 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
 int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                               int64_t Size) {
   return __tgt_rtl_data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                                     /* AsyncInfoPtr */ nullptr);
+                                     /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
@@ -1874,7 +1879,7 @@ int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
 int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
@@ -1898,7 +1903,7 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
                                        Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,

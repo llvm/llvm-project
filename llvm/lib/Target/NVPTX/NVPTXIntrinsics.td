@@ -132,6 +132,7 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
         NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
@@ -144,6 +145,15 @@ def barrier_cluster_arrive_relaxed:
         int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
 def barrier_cluster_wait:
         INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
+
+// 'aligned' versions of the cluster barrier intrinsics
+def barrier_cluster_arrive_aligned:
+        INT_BARRIER_CLUSTER<"arrive.aligned", int_nvvm_barrier_cluster_arrive_aligned>;
+def barrier_cluster_arrive_relaxed_aligned:
+        INT_BARRIER_CLUSTER<"arrive.relaxed.aligned",
+        int_nvvm_barrier_cluster_arrive_relaxed_aligned, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait_aligned:
+        INT_BARRIER_CLUSTER<"wait.aligned", int_nvvm_barrier_cluster_wait_aligned>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -6727,3 +6737,16 @@ def is_explicit_cluster: NVPTXInst<(outs Int1Regs:$d), (ins),
               "mov.pred\t$d, %is_explicit_cluster;",
               [(set Int1Regs:$d, (int_nvvm_is_explicit_cluster))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
+
+// setmaxnreg inc/dec intrinsics
+let isConvergent = true in {
+multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
+  def : NVPTXInst<(outs), (ins i32imm:$reg_count),
+          "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
+          [(Intr timm:$reg_count)]>,
+    Requires<[hasSM90a, hasPTX<80>]>;
+}
+
+defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
+defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_aligned_u32>;
+} // isConvergent

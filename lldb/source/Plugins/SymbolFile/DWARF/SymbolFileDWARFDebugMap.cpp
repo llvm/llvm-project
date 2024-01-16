@@ -725,8 +725,8 @@ bool SymbolFileDWARFDebugMap::ForEachExternalModule(
   return false;
 }
 
-bool SymbolFileDWARFDebugMap::ParseSupportFiles(CompileUnit &comp_unit,
-                                                FileSpecList &support_files) {
+bool SymbolFileDWARFDebugMap::ParseSupportFiles(
+    CompileUnit &comp_unit, SupportFileList &support_files) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)

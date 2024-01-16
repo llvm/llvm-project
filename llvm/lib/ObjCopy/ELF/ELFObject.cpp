@@ -2638,7 +2638,7 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 Error BinaryWriter::write() {
   SmallVector<const SectionBase *, 30> SectionsToWrite;
   for (const SectionBase &Sec : Obj.allocSections()) {
-    if (Sec.Type != SHT_NOBITS)
+    if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
       SectionsToWrite.push_back(&Sec);
   }
 

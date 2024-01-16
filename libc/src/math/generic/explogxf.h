@@ -162,7 +162,7 @@ template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   // hi = floor(kd * 2^(-MID_BITS))
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi = static_cast<int64_t>((k >> Base::MID_BITS))
-                   << fputil::FloatProperties<double>::FRACTION_LEN;
+                   << fputil::FPBits<double>::FRACTION_LEN;
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
   int64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
@@ -235,9 +235,9 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   // hi = floor(kf * 2^(-5))
   // exp_hi = shift hi to the exponent field of double precision.
   int64_t exp_hi_p = static_cast<int64_t>((k_p >> ExpBase::MID_BITS))
-                     << fputil::FloatProperties<double>::FRACTION_LEN;
+                     << fputil::FPBits<double>::FRACTION_LEN;
   int64_t exp_hi_m = static_cast<int64_t>((k_m >> ExpBase::MID_BITS))
-                     << fputil::FloatProperties<double>::FRACTION_LEN;
+                     << fputil::FPBits<double>::FRACTION_LEN;
   // mh_p = 2^(hi + mid)
   // mh_m = 2^(-(hi + mid))
   // mh_bits_* = bit field of mh_*
@@ -342,10 +342,10 @@ LIBC_INLINE static double log_eval(double x) {
 //   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
 LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
                                                   double err) {
-  using FloatProp = typename fputil::FloatProperties<double>;
+  using FPBits = typename fputil::FPBits<double>;
 
   // Scaling factor = 1/(min normal number) = 2^1022
-  int64_t exp_hi = static_cast<int64_t>(hi + 1022) << FloatProp::FRACTION_LEN;
+  int64_t exp_hi = static_cast<int64_t>(hi + 1022) << FPBits::FRACTION_LEN;
   double mid_hi = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(mid));
   double lo_scaled =
       (lo != 0.0) ? cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(lo))

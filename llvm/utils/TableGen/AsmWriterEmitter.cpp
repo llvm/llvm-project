@@ -438,6 +438,10 @@ void AsmWriterEmitter::EmitGetMnemonic(
   O << "  // Emit the opcode for the instruction.\n";
   O << BitsString;
 
+  // Make sure we don't return an invalid pointer if bits is 0
+  O << "  if (Bits == 0)\n"
+       "    return {nullptr, Bits};\n";
+
   // Return mnemonic string and bits.
   O << "  return {AsmStrs+(Bits & " << (1 << AsmStrBits) - 1
     << ")-1, Bits};\n\n";

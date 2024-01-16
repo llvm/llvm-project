@@ -111,6 +111,10 @@ Triple ObjectFile::makeTriple() const {
   auto Arch = getArch();
   TheTriple.setArch(Triple::ArchType(Arch));
 
+  auto OS = getOS();
+  if (OS != Triple::UnknownOS)
+    TheTriple.setOS(OS);
+
   // For ARM targets, try to use the build attributes to build determine
   // the build target. Target features are also added, but later during
   // disassembly.
@@ -129,10 +133,13 @@ Triple ObjectFile::makeTriple() const {
     // XCOFF implies AIX.
     TheTriple.setOS(Triple::AIX);
     TheTriple.setObjectFormat(Triple::XCOFF);
-  }
-  else if (isGOFF()) {
+  } else if (isGOFF()) {
     TheTriple.setOS(Triple::ZOS);
     TheTriple.setObjectFormat(Triple::GOFF);
+  } else if (TheTriple.isAMDGPU()) {
+    TheTriple.setVendor(Triple::AMD);
+  } else if (TheTriple.isNVPTX()) {
+    TheTriple.setVendor(Triple::NVIDIA);
   }
 
   return TheTriple;

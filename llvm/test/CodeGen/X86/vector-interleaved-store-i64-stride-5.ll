@@ -164,11 +164,11 @@ define void @store_i64_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vbroadcastsd 8(%rsi), %ymm6
 ; AVX1-ONLY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm6[2],ymm0[3]
 ; AVX1-ONLY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3]
-; AVX1-ONLY-NEXT:    vmovaps (%rdi), %xmm1
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm5[0],mem[0]
+; AVX1-ONLY-NEXT:    vmovaps (%rdi), %xmm5
 ; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm5 = xmm5[0],mem[0]
-; AVX1-ONLY-NEXT:    vmovaps %xmm5, 16(%r9)
-; AVX1-ONLY-NEXT:    vmovaps %xmm1, (%r9)
+; AVX1-ONLY-NEXT:    vmovaps %xmm5, (%r9)
+; AVX1-ONLY-NEXT:    vmovaps %xmm1, 16(%r9)
 ; AVX1-ONLY-NEXT:    vmovapd %ymm4, 64(%r9)
 ; AVX1-ONLY-NEXT:    vmovapd %ymm0, 32(%r9)
 ; AVX1-ONLY-NEXT:    vmovapd %ymm2, 96(%r9)
@@ -378,10 +378,10 @@ define void @store_i64_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX1-ONLY-NEXT:    vmovaps (%rdi), %xmm7
 ; AVX1-ONLY-NEXT:    vmovaps 32(%rdi), %xmm10
 ; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm10 = xmm10[0],mem[0]
-; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm7[0],mem[0]
 ; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm4 = xmm4[0],mem[0]
-; AVX1-ONLY-NEXT:    vmovaps %xmm4, 16(%r9)
+; AVX1-ONLY-NEXT:    vunpcklpd {{.*#+}} xmm7 = xmm7[0],mem[0]
 ; AVX1-ONLY-NEXT:    vmovaps %xmm7, (%r9)
+; AVX1-ONLY-NEXT:    vmovaps %xmm4, 16(%r9)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm10, 160(%r9)
 ; AVX1-ONLY-NEXT:    vmovaps %xmm3, 176(%r9)
 ; AVX1-ONLY-NEXT:    vmovaps %ymm12, 64(%r9)

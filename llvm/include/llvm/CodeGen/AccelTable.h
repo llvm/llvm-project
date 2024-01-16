@@ -143,6 +143,15 @@ public:
     std::vector<AccelTableData *> Values;
     MCSymbol *Sym;
 
+    /// Get all AccelTableData cast as a `T`.
+    template <typename T = AccelTableData *> auto getValues() const {
+      static_assert(std::is_pointer<T>());
+      static_assert(
+          std::is_base_of<AccelTableData, std::remove_pointer_t<T>>());
+      return map_range(
+          Values, [](AccelTableData *Data) { return static_cast<T>(Data); });
+    }
+
 #ifndef NDEBUG
     void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
@@ -270,16 +279,14 @@ public:
 #endif
 
   uint64_t getDieOffset() const {
-    assert(std::holds_alternative<uint64_t>(OffsetVal) &&
-           "Accessing DIE Offset before normalizing.");
+    assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
   unsigned getDieTag() const { return DieTag; }
   unsigned getUnitID() const { return UnitID; }
   bool isTU() const { return IsTU; }
   void normalizeDIEToOffset() {
-    assert(std::holds_alternative<const DIE *>(OffsetVal) &&
-           "Accessing offset after normalizing.");
+    assert(!isNormalized() && "Accessing offset after normalizing.");
     OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
   }
   bool isNormalized() const {
@@ -309,7 +316,7 @@ class DWARF5AccelTable : public AccelTable<DWARF5AccelTableData> {
 public:
   struct UnitIndexAndEncoding {
     unsigned Index;
-    DWARF5AccelTableData::AttributeEncoding Endoding;
+    DWARF5AccelTableData::AttributeEncoding Encoding;
   };
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
@@ -321,8 +328,7 @@ public:
   /// Needs to be called after DIE offsets are computed.
   void convertDieToOffset() {
     for (auto &Entry : Entries) {
-      for (AccelTableData *Value : Entry.second.Values) {
-        DWARF5AccelTableData *Data = static_cast<DWARF5AccelTableData *>(Value);
+      for (auto *Data : Entry.second.getValues<DWARF5AccelTableData *>()) {
         // For TU we normalize as each Unit is emitted.
         // So when this is invoked after CU construction we will be in mixed
         // state.
@@ -334,8 +340,7 @@ public:
 
   void addTypeEntries(DWARF5AccelTable &Table) {
     for (auto &Entry : Table.getEntries()) {
-      for (AccelTableData *Value : Entry.second.Values) {
-        DWARF5AccelTableData *Data = static_cast<DWARF5AccelTableData *>(Value);
+      for (auto *Data : Entry.second.getValues<DWARF5AccelTableData *>()) {
         addName(Entry.second.Name, Data->getDieOffset(), Data->getDieTag(),
                 Data->getUnitID(), true);
       }

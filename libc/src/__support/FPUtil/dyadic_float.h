@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
 #include "FPBits.h"
-#include "FloatProperties.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt.h"
@@ -42,10 +41,10 @@ template <size_t Bits> struct DyadicFloat {
 
   template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
   DyadicFloat(T x) {
-    static_assert(FloatProperties<T>::FRACTION_LEN < Bits);
+    static_assert(FPBits<T>::FRACTION_LEN < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.get_sign();
-    exponent = x_bits.get_exponent() - FloatProperties<T>::FRACTION_LEN;
+    exponent = x_bits.get_exponent() - FPBits<T>::FRACTION_LEN;
     mantissa = MantissaType(x_bits.get_explicit_mantissa());
     normalize();
   }
@@ -84,21 +83,20 @@ template <size_t Bits> struct DyadicFloat {
   // Output is rounded correctly with respect to the current rounding mode.
   // TODO(lntue): Add support for underflow.
   // TODO(lntue): Test or add specialization for x86 long double.
-  template <typename T, typename = cpp::enable_if_t<
-                            cpp::is_floating_point_v<T> &&
-                                (FloatProperties<T>::FRACTION_LEN < Bits),
-                            void>>
+  template <typename T,
+            typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                                            (FPBits<T>::FRACTION_LEN < Bits),
+                                        void>>
   explicit operator T() const {
     // TODO(lntue): Do we need to treat signed zeros properly?
     if (mantissa.is_zero())
       return 0.0;
 
     // Assume that it is normalized, and output is also normal.
-    constexpr uint32_t PRECISION = FloatProperties<T>::MANTISSA_PRECISION;
+    constexpr uint32_t PRECISION = FPBits<T>::MANTISSA_PRECISION;
     using output_bits_t = typename FPBits<T>::StorageType;
 
-    int exp_hi =
-        exponent + static_cast<int>((Bits - 1) + FloatProperties<T>::EXP_BIAS);
+    int exp_hi = exponent + static_cast<int>((Bits - 1) + FPBits<T>::EXP_BIAS);
 
     bool denorm = false;
     uint32_t shift = Bits - PRECISION;
@@ -107,7 +105,7 @@ template <size_t Bits> struct DyadicFloat {
       denorm = true;
       shift = (Bits - PRECISION) + static_cast<uint32_t>(1 - exp_hi);
 
-      exp_hi = FloatProperties<T>::EXP_BIAS;
+      exp_hi = FPBits<T>::EXP_BIAS;
     }
 
     int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
@@ -116,7 +114,7 @@ template <size_t Bits> struct DyadicFloat {
 
     T d_hi = FPBits<T>::create_value(sign, exp_hi,
                                      static_cast<output_bits_t>(m_hi) &
-                                         FloatProperties<T>::FRACTION_MASK)
+                                         FPBits<T>::FRACTION_MASK)
                  .get_val();
 
     const MantissaType round_mask = MantissaType(1) << (shift - 1);
@@ -130,15 +128,13 @@ template <size_t Bits> struct DyadicFloat {
     if (LIBC_UNLIKELY(exp_lo <= 0)) {
       // d_lo is denormal, but the output is normal.
       int scale_up_exponent = 2 * PRECISION;
-      T scale_up_factor = FPBits<T>::create_value(sign,
-                                                  FloatProperties<T>::EXP_BIAS +
-                                                      scale_up_exponent,
-                                                  output_bits_t(0))
-                              .get_val();
+      T scale_up_factor =
+          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS + scale_up_exponent,
+                                  output_bits_t(0))
+              .get_val();
       T scale_down_factor =
-          FPBits<T>::create_value(
-              sign, FloatProperties<T>::EXP_BIAS - scale_up_exponent,
-              output_bits_t(0))
+          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS - scale_up_exponent,
+                                  output_bits_t(0))
               .get_val();
 
       d_lo = FPBits<T>::create_value(sign, exp_lo + scale_up_exponent,
@@ -157,7 +153,7 @@ template <size_t Bits> struct DyadicFloat {
     if (LIBC_UNLIKELY(denorm)) {
       // Output is denormal, simply clear the exponent field.
       output_bits_t clear_exp = output_bits_t(exp_hi)
-                                << FloatProperties<T>::FRACTION_LEN;
+                                << FPBits<T>::FRACTION_LEN;
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
       return FPBits<T>(r_bits).get_val();
     }

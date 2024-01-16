@@ -103,21 +103,23 @@ define void @test_supernode_addsub_alt(ptr %Aarray, ptr %Barray, ptr %Carray, pt
 ; ENABLED-LABEL: @test_supernode_addsub_alt(
 ; ENABLED-NEXT:  entry:
 ; ENABLED-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[AARRAY:%.*]], i64 1
-; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[BARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds double, ptr [[CARRAY:%.*]], i64 1
-; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[SARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, ptr [[AARRAY]], align 8
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
-; ENABLED-NEXT:    [[B0:%.*]] = load double, ptr [[BARRAY]], align 8
-; ENABLED-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
 ; ENABLED-NEXT:    [[C0:%.*]] = load double, ptr [[CARRAY]], align 8
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, ptr [[IDXC1]], align 8
-; ENABLED-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
-; ENABLED-NEXT:    [[ADDB1C1:%.*]] = fadd fast double [[B1]], [[C1]]
-; ENABLED-NEXT:    [[SUB0:%.*]] = fsub fast double [[SUBA0B0]], [[C0]]
-; ENABLED-NEXT:    [[ADD1:%.*]] = fadd fast double [[ADDB1C1]], [[A1]]
-; ENABLED-NEXT:    store double [[SUB0]], ptr [[SARRAY]], align 8
-; ENABLED-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C1]], i32 1
+; ENABLED-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP2]], [[TMP0]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP0]]
+; ENABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
+; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[A1]], i32 1
+; ENABLED-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP7]]
+; ENABLED-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP7]]
+; ENABLED-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    store <2 x double> [[TMP10]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:

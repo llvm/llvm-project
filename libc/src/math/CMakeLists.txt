@@ -105,6 +105,7 @@ add_math_entrypoint_object(expm1f)
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
+add_math_entrypoint_object(fabsf128)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)
@@ -178,6 +179,10 @@ add_math_entrypoint_object(lroundl)
 add_math_entrypoint_object(modf)
 add_math_entrypoint_object(modff)
 add_math_entrypoint_object(modfl)
+
+add_math_entrypoint_object(nan)
+add_math_entrypoint_object(nanf)
+add_math_entrypoint_object(nanl)
 
 add_math_entrypoint_object(nearbyint)
 add_math_entrypoint_object(nearbyintf)

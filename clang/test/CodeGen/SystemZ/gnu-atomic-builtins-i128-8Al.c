@@ -20,10 +20,7 @@ __int128 Des;
 
 // CHECK-LABEL: @f1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i128, align 8
-// CHECK-NEXT:    call void @__atomic_load(i64 noundef 16, ptr noundef nonnull @Ptr, ptr noundef nonnull [[ATOMIC_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr [[ATOMIC_TEMP]], align 8, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    tail call void @__atomic_load(i64 noundef 16, ptr noundef nonnull @Ptr, ptr noundef nonnull [[AGG_RESULT:%.*]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f1() {
@@ -33,7 +30,7 @@ __int128 f1() {
 // CHECK-LABEL: @f2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @__atomic_load(i64 noundef 16, ptr noundef nonnull @Ptr, ptr noundef nonnull @Ret, i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Ret, align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Ret, align 8, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
@@ -66,12 +63,9 @@ void f4() {
 // CHECK-LABEL: @f5(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i128, align 8
-// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[DOTATOMICTMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_exchange(i64 noundef 16, ptr noundef nonnull @Ptr, ptr noundef nonnull [[DOTATOMICTMP]], ptr noundef nonnull [[ATOMIC_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[ATOMIC_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_exchange(i64 noundef 16, ptr noundef nonnull @Ptr, ptr noundef nonnull [[DOTATOMICTMP]], ptr noundef nonnull [[AGG_RESULT:%.*]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f5() {
@@ -119,7 +113,7 @@ _Bool f8() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_add_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_add_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = add i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
@@ -135,7 +129,7 @@ __int128 f9() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_sub_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_sub_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = sub i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
@@ -151,7 +145,7 @@ __int128 f10() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_and_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_and_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = and i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
@@ -167,7 +161,7 @@ __int128 f11() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_xor_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_xor_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = xor i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
@@ -183,7 +177,7 @@ __int128 f12() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_or_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_or_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = or i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    store i128 [[TMP2]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
@@ -199,7 +193,7 @@ __int128 f13() {
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_nand_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
+// CHECK-NEXT:    call void @__atomic_fetch_nand_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = and i128 [[TMP1]], [[TMP0]]
 // CHECK-NEXT:    [[TMP3:%.*]] = xor i128 [[TMP2]], -1
@@ -212,13 +206,10 @@ __int128 f14() {
 
 // CHECK-LABEL: @f15(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_add_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_add_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f15() {
@@ -227,13 +218,10 @@ __int128 f15() {
 
 // CHECK-LABEL: @f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_sub_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_sub_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f16() {
@@ -242,13 +230,10 @@ __int128 f16() {
 
 // CHECK-LABEL: @f17(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_and_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_and_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f17() {
@@ -257,13 +242,10 @@ __int128 f17() {
 
 // CHECK-LABEL: @f18(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_xor_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_xor_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f18() {
@@ -272,13 +254,10 @@ __int128 f18() {
 
 // CHECK-LABEL: @f19(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_or_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_or_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f19() {
@@ -287,13 +266,10 @@ __int128 f19() {
 
 // CHECK-LABEL: @f20(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i128, ptr @Val, align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    store i128 [[TMP0]], ptr [[INDIRECT_ARG_TEMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    call void @__atomic_fetch_nand_16(ptr nonnull sret(i128) align 8 [[TMP]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
-// CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[TMP]], align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store i128 [[TMP1]], ptr [[AGG_RESULT:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    call void @__atomic_fetch_nand_16(ptr dead_on_unwind nonnull writable sret(i128) align 8 [[AGG_RESULT:%.*]], ptr noundef nonnull @Ptr, ptr noundef nonnull [[INDIRECT_ARG_TEMP]], i32 noundef signext 5)
 // CHECK-NEXT:    ret void
 //
 __int128 f20() {

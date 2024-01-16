@@ -315,7 +315,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
     else
       llvm_unreachable("XLEN should be 32 or 64.");
 
-    Features.addFeaturesVector(ISAInfo->toFeatureVector());
+    Features.addFeaturesVector(ISAInfo->toFeatures());
   }
 
   return Features;
@@ -358,6 +358,8 @@ std::optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
   switch (getEMachine()) {
   case ELF::EM_AMDGPU:
     return getAMDGPUCPUName();
+  case ELF::EM_CUDA:
+    return getNVPTXCPUName();
   case ELF::EM_PPC:
   case ELF::EM_PPC64:
     return StringRef("future");
@@ -514,6 +516,73 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1201";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
+  }
+}
+
+StringRef ELFObjectFileBase::getNVPTXCPUName() const {
+  assert(getEMachine() == ELF::EM_CUDA);
+  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+
+  switch (SM) {
+  // Fermi architecture.
+  case ELF::EF_CUDA_SM20:
+    return "sm_20";
+  case ELF::EF_CUDA_SM21:
+    return "sm_21";
+
+  // Kepler architecture.
+  case ELF::EF_CUDA_SM30:
+    return "sm_30";
+  case ELF::EF_CUDA_SM32:
+    return "sm_32";
+  case ELF::EF_CUDA_SM35:
+    return "sm_35";
+  case ELF::EF_CUDA_SM37:
+    return "sm_37";
+
+  // Maxwell architecture.
+  case ELF::EF_CUDA_SM50:
+    return "sm_50";
+  case ELF::EF_CUDA_SM52:
+    return "sm_52";
+  case ELF::EF_CUDA_SM53:
+    return "sm_53";
+
+  // Pascal architecture.
+  case ELF::EF_CUDA_SM60:
+    return "sm_60";
+  case ELF::EF_CUDA_SM61:
+    return "sm_61";
+  case ELF::EF_CUDA_SM62:
+    return "sm_62";
+
+  // Volta architecture.
+  case ELF::EF_CUDA_SM70:
+    return "sm_70";
+  case ELF::EF_CUDA_SM72:
+    return "sm_72";
+
+  // Turing architecture.
+  case ELF::EF_CUDA_SM75:
+    return "sm_75";
+
+  // Ampere architecture.
+  case ELF::EF_CUDA_SM80:
+    return "sm_80";
+  case ELF::EF_CUDA_SM86:
+    return "sm_86";
+  case ELF::EF_CUDA_SM87:
+    return "sm_87";
+
+  // Ada architecture.
+  case ELF::EF_CUDA_SM89:
+    return "sm_89";
+
+  // Hopper architecture.
+  case ELF::EF_CUDA_SM90:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+  default:
+    llvm_unreachable("Unknown EF_CUDA_SM value");
   }
 }
 

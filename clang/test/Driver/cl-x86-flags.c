@@ -69,7 +69,10 @@
 // RUN: %clang_cl -m32 -arch:avx2 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx2 %s
 // avx2: invalid /arch: argument
 
-// RUN: %clang_cl -m32 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_32_ARCH_AVX512F -- %s
+// RUN: %clang_cl -m32 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify=KNL1 -DTEST_32_ARCH_AVX512F -- %s
+// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// KNL1-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
 #if defined(TEST_32_ARCH_AVX512F)
 #if _M_IX86_FP != 2 || !__AVX__ || !__AVX2__ || !__AVX512F__  || __AVX512BW__
 #error fail
@@ -109,7 +112,10 @@
 // RUN: %clang_cl -m64 -arch:avx2 --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx264 %s
 // avx264: invalid /arch: argument
 
-// RUN: %clang_cl -m64 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify -DTEST_64_ARCH_AVX512F -- %s
+// RUN: %clang_cl -m64 -arch:AVX512F --target=i386-pc-windows /c /Fo%t.obj -Xclang -verify=KNL2 -DTEST_64_ARCH_AVX512F -- %s
+// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
+// KNL2-warning@*:* {{KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.}}
 #if defined(TEST_64_ARCH_AVX512F)
 #if _M_IX86_FP || !__AVX__ || !__AVX2__ || !__AVX512F__  || __AVX512BW__
 #error fail

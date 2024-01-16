@@ -1631,8 +1631,10 @@ public:
                               SourceLocation RB);
 
   // Build an empty compound statement with a location.
-  explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
+  explicit CompoundStmt(SourceLocation Loc) : CompoundStmt(Loc, Loc) {}
+
+  CompoundStmt(SourceLocation Loc, SourceLocation EndLoc)
+      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(EndLoc) {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
   }
