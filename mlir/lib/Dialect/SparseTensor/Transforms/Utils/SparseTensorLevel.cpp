@@ -574,11 +574,11 @@ public:
 
   void locate(OpBuilder &b, Location l, Value crd) override {
     Value absOff = crd;
-    auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
+
     if (isSubSectRoot())
       delegate->locate(b, l, absOff);
     else
-      assert(p->lvl + 1 == lvl);
+      assert(parent->lvl + 1 == lvl);
 
     seek(ValueRange{absOff, absOff, C_TRUE});
     updateCrd(crd);
