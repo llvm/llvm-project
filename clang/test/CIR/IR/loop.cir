@@ -29,7 +29,7 @@ cir.func @l0() {
       cir.store %6, %0 : !u32i, cir.ptr <!u32i>
       %7 = cir.const(#true) : !cir.bool
       cir.if %7 {
-        cir.yield break
+        cir.break
       }
       cir.yield
     }
@@ -99,7 +99,7 @@ cir.func @l0() {
 // CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     %7 = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.if %7 {
-// CHECK-NEXT:       cir.yield break
+// CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT: }

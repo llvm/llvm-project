@@ -27,7 +27,7 @@ module {
             %4 = cir.cmp(eq, %2, %3) : !s32i, !s32i
             %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
             cir.if %5 {
-              cir.yield break
+              cir.break
             }
           }
         }
@@ -106,7 +106,7 @@ module {
                   %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
                   %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
                   cir.if %7 {
-                    cir.yield break
+                    cir.break
                   }
                 }
               }
@@ -189,7 +189,7 @@ module {
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
           cir.if %7 {
-            cir.yield break
+            cir.break
           }
         }
         cir.yield
@@ -246,7 +246,7 @@ cir.func @testDoWhile() {
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
           cir.if %7 {
-            cir.yield break
+            cir.break
           }
         }
         cir.yield

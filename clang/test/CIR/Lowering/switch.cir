@@ -12,12 +12,12 @@ module {
     // CHECK:   1: ^bb[[#CASE1:]]
     // CHECK: ]
     case (equal, 1) {
-      cir.yield break
+      cir.break
     },
     // CHECK: ^bb[[#CASE1]]:
     // CHECK:   llvm.br ^bb[[#EXIT:]]
     case (default) {
-      cir.yield break
+      cir.break
     }
     // CHECK: ^bb[[#DEFAULT]]:
     // CHECK:   llvm.br ^bb[[#EXIT]]
@@ -34,7 +34,7 @@ module {
     // CHECK:   1: ^bb[[#CASE1:]]
     // CHECK: ]
     case (equal, 1) {
-      cir.yield break
+      cir.break
     }
     // CHECK: ^bb[[#CASE1]]:
     // CHECK:   llvm.br ^bb[[#EXIT]]
@@ -51,7 +51,7 @@ module {
     // CHECK:   2: ^bb[[#CASE1N2]]
     // CHECK: ]
     case (anyof, [1, 2] : !s64i) { // case 1 and 2 use same region
-      cir.yield break
+      cir.break
     }
     // CHECK: ^bb[[#CASE1N2]]:
     // CHECK:   llvm.br ^bb[[#EXIT]]
@@ -73,7 +73,7 @@ module {
       // CHECK: ^bb[[#CASE1]]:
       // CHECK:   llvm.br ^bb[[#CASE2]]
       case (equal, 2 : !s64i) {
-        cir.yield break
+        cir.break
       }
       // CHECK: ^bb[[#CASE2]]:
       // CHECK:   llvm.br ^bb[[#EXIT]]
@@ -115,7 +115,7 @@ module {
       case (equal, 3) {
         cir.return
       ^bb1:  // no predecessors
-        cir.yield break
+        cir.break
       }
       ] 
     }
@@ -152,10 +152,10 @@ module {
           %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
           %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
           cir.if %9 {
-            cir.yield break
+            cir.break
           }
         }
-        cir.yield break
+        cir.break
       }
       ] 
     } 

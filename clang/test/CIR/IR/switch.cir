@@ -11,7 +11,7 @@ cir.func @s0() {
       cir.yield fallthrough
     },
     case (anyof, [6, 7, 8] : !s32i) {
-      cir.yield break
+      cir.break
     },
     case (equal, 5 : !s32i) {
       cir.yield
@@ -28,7 +28,7 @@ cir.func @s0() {
 // CHECK-NEXT:   cir.yield fallthrough
 // CHECK-NEXT: },
 // CHECK-NEXT: case (anyof, [6, 7, 8] : !s32i) {
-// CHECK-NEXT:   cir.yield break
+// CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 5)  {
 // CHECK-NEXT:   cir.yield
