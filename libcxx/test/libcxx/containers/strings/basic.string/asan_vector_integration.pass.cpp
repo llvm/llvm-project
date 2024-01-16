@@ -10,9 +10,11 @@
 // UNSUPPORTED: c++03
 
 #include <cassert>
+#include <string>
+#include <vector>
 #include <array>
 #include "test_macros.h"
-#include "asan_testing.h" // includes vector and string - don't do it before
+#include "asan_testing.h"
 #include "min_allocator.h"
 
 // This tests exists to check if strings work well with vector, as those
