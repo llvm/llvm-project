@@ -43,4 +43,7 @@ add_flang_library(FIRTransforms
   MLIROpenACCDialect
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
+  MLIROpenMPBuiltinExternalModels
+  MLIROpenMPFuncExternalModels
+  MLIROpenMPLLVMExternalModels
 )
