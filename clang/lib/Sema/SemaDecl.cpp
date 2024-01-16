@@ -15841,13 +15841,13 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
-static bool IsGetReturnType(FunctionDecl* FD) {
+static bool IsGetReturnType(FunctionDecl *FD) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
          FD->getDeclName().isIdentifier() &&
          FD->getName().equals("get_return_object");
 }
 
-static bool IsGetReturnTypeOnAllocFailure(FunctionDecl* FD) {
+static bool IsGetReturnTypeOnAllocFailure(FunctionDecl *FD) {
   return FD->isStatic() && FD->param_empty() &&
          FD->getDeclName().isIdentifier() &&
          FD->getName().equals("get_return_object_on_allocation_failure");
