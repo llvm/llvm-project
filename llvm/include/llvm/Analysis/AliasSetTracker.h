@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines two classes: AliasSetTracker and AliasSet. These interfaces
-// are used to classify a collection of pointer references into a maximal number
+// are used to classify a collection of memory locations into a maximal number
 // of disjoint sets. Each AliasSet object constructed by the AliasSetTracker
 // object refers to memory disjoint from the other sets.
 //
@@ -138,15 +138,15 @@ private:
 
   void removeFromTracker(AliasSetTracker &AST);
 
-  void addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
-                  bool KnownMustAlias = false);
+  void addMemoryLocation(AliasSetTracker &AST, const MemoryLocation &MemLoc,
+                         bool KnownMustAlias = false);
   void addUnknownInst(Instruction *I, BatchAAResults &AA);
 
 public:
-  /// If the specified pointer "may" (or must) alias one of the members in the
-  /// set return the appropriate AliasResult. Otherwise return NoAlias.
-  AliasResult aliasesPointer(const MemoryLocation &MemLoc,
-                             BatchAAResults &AA) const;
+  /// If the specified memory location "may" (or must) alias one of the members
+  /// in the set return the appropriate AliasResult. Otherwise return NoAlias.
+  AliasResult aliasesMemoryLocation(const MemoryLocation &MemLoc,
+                                    BatchAAResults &AA) const;
 
   ModRefInfo aliasesUnknownInst(const Instruction *Inst,
                                 BatchAAResults &AA) const;
@@ -163,7 +163,8 @@ class AliasSetTracker {
 
   using PointerMapType = DenseMap<AssertingVH<const Value>, AliasSet *>;
 
-  // Map from pointers to their node
+  // Map from pointer values to the alias set holding one or more memory
+  // locations with that pointer value.
   PointerMapType PointerMap;
 
 public:
@@ -180,9 +181,6 @@ public:
   ///   2. If the instruction aliases exactly one set, add it to the set
   ///   3. If the instruction aliases multiple sets, merge the sets, and add
   ///      the instruction to the result.
-  ///
-  /// These methods return true if inserting the instruction resulted in the
-  /// addition of a new alias set (i.e., the pointer did not alias anything).
   ///
   void add(const MemoryLocation &Loc);
   void add(LoadInst *LI);
@@ -224,11 +222,11 @@ public:
 private:
   friend class AliasSet;
 
-  // The total number of pointers contained in all "may" alias sets.
+  // The total number of memory locations contained in all alias sets.
   unsigned TotalAliasSetSize = 0;
 
   // A non-null value signifies this AST is saturated. A saturated AST lumps
-  // all pointers into a single "May" set.
+  // all elements into a single "May" set.
   AliasSet *AliasAnyAS = nullptr;
 
   void removeAliasSet(AliasSet *AS);
@@ -250,12 +248,13 @@ private:
     }
   }
 
-  AliasSet &addPointer(MemoryLocation Loc, AliasSet::AccessLattice E);
-  AliasSet *mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
-                                     AliasSet *PtrAS, bool &MustAliasAll);
+  AliasSet &addMemoryLocation(MemoryLocation Loc, AliasSet::AccessLattice E);
+  AliasSet *mergeAliasSetsForMemoryLocation(const MemoryLocation &MemLoc,
+                                            AliasSet *PtrAS,
+                                            bool &MustAliasAll);
 
-  /// Merge all alias sets into a single set that is considered to alias any
-  /// pointer.
+  /// Merge all alias sets into a single set that is considered to alias
+  /// any memory location or instruction.
   AliasSet &mergeAllAliasSets();
 
   AliasSet *findAliasSetForUnknownInst(Instruction *Inst);

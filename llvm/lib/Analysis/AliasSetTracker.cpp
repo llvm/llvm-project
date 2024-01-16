@@ -35,11 +35,10 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned>
-    SaturationThreshold("alias-set-saturation-threshold", cl::Hidden,
-                        cl::init(250),
-                        cl::desc("The maximum number of pointers may-alias "
-                                 "sets may contain before degradation"));
+static cl::opt<unsigned> SaturationThreshold(
+    "alias-set-saturation-threshold", cl::Hidden, cl::init(250),
+    cl::desc("The maximum total number of memory locations alias "
+             "sets may contain before degradation"));
 
 /// mergeSetIn - Merge the specified alias set into this alias set.
 void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
@@ -62,7 +61,7 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST,
       Alias = SetMayAlias;
   }
 
-  // Merge the list of constituent pointers...
+  // Merge the list of constituent memory locations...
   if (MemoryLocs.empty()) {
     std::swap(MemoryLocs, AS.MemoryLocs);
   } else {
@@ -109,8 +108,9 @@ void AliasSet::removeFromTracker(AliasSetTracker &AST) {
   AST.removeAliasSet(this);
 }
 
-void AliasSet::addPointer(AliasSetTracker &AST, const MemoryLocation &MemLoc,
-                          bool KnownMustAlias) {
+void AliasSet::addMemoryLocation(AliasSetTracker &AST,
+                                 const MemoryLocation &MemLoc,
+                                 bool KnownMustAlias) {
   if (isMustAlias() && !KnownMustAlias) {
     // If we cannot find a must-alias with any of the existing MemoryLocs, we
     // must downgrade to may-alias.
@@ -147,16 +147,16 @@ void AliasSet::addUnknownInst(Instruction *I, BatchAAResults &AA) {
   Access = ModRefAccess;
 }
 
-/// aliasesPointer - If the specified pointer "may" (or must) alias one of the
-/// members in the set return the appropriate AliasResult. Otherwise return
-/// NoAlias.
+/// aliasesMemoryLocation - If the specified memory location "may" (or must)
+/// alias one of the members in the set return the appropriate AliasResult.
+/// Otherwise return NoAlias.
 ///
-AliasResult AliasSet::aliasesPointer(const MemoryLocation &MemLoc,
-                                     BatchAAResults &AA) const {
+AliasResult AliasSet::aliasesMemoryLocation(const MemoryLocation &MemLoc,
+                                            BatchAAResults &AA) const {
   if (AliasAny)
     return AliasResult::MayAlias;
 
-  // Check all of the pointers in the set...
+  // Check all of the memory locations in the set...
   for (const auto &ASMemLoc : MemoryLocs) {
     AliasResult AR = AA.alias(MemLoc, ASMemLoc);
     if (AR != AliasResult::NoAlias)
@@ -212,15 +212,14 @@ void AliasSetTracker::clear() {
   AliasSets.clear();
 }
 
-/// mergeAliasSetsForPointer - Given a pointer, merge all alias sets that may
-/// alias the pointer. Return the unified set, or nullptr if no set that aliases
-/// the pointer was found. A known existing alias set for the pointer value of
-/// the memory location can be passed in (or nullptr if not available).
-/// MustAliasAll is updated to true/false if the pointer is found to MustAlias
-/// all the sets it merged.
-AliasSet *
-AliasSetTracker::mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
-                                          AliasSet *PtrAS, bool &MustAliasAll) {
+/// mergeAliasSetsForMemoryLocation - Given a memory location, merge all alias
+/// sets that may alias it. Return the unified set, or nullptr if no aliasing
+/// set was found. A known existing alias set for the pointer value of the
+/// memory location can be passed in (or nullptr if not available). MustAliasAll
+/// is updated to true/false if the memory location is found to MustAlias all
+/// the sets it merged.
+AliasSet *AliasSetTracker::mergeAliasSetsForMemoryLocation(
+    const MemoryLocation &MemLoc, AliasSet *PtrAS, bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
   MustAliasAll = true;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
@@ -234,7 +233,7 @@ AliasSetTracker::mergeAliasSetsForPointer(const MemoryLocation &MemLoc,
     // a known exception are undef pointer values, where alias(undef, undef) is
     // NoAlias, while we treat it as MustAlias.
     if (&AS != PtrAS) {
-      AliasResult AR = AS.aliasesPointer(MemLoc, AA);
+      AliasResult AR = AS.aliasesMemoryLocation(MemLoc, AA);
       if (AR == AliasResult::NoAlias)
         continue;
 
@@ -286,22 +285,22 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
   if (AliasAnyAS) {
     // At this point, the AST is saturated, so we only have one active alias
     // set. That means we already know which alias set we want to return, and
-    // just need to add the pointer to that set to keep the data structure
-    // consistent.
+    // just need to add the memory location to that set to keep the data
+    // structure consistent.
     // This, of course, means that we will never need a merge here.
     AS = AliasAnyAS;
-  } else if (AliasSet *AliasAS =
-                 mergeAliasSetsForPointer(MemLoc, MapEntry, MustAliasAll)) {
+  } else if (AliasSet *AliasAS = mergeAliasSetsForMemoryLocation(
+                 MemLoc, MapEntry, MustAliasAll)) {
     // Add it to the alias set it aliases.
     AS = AliasAS;
   } else {
-    // Otherwise create a new alias set to hold the loaded pointer.
+    // Otherwise create a new alias set to hold the new memory location.
     AliasSets.push_back(AS = new AliasSet());
     MustAliasAll = true;
   }
 
-  // Register MemLoc in selected alias set.
-  AS->addPointer(*this, MemLoc, MustAliasAll);
+  // Register memory location in selected alias set.
+  AS->addMemoryLocation(*this, MemLoc, MustAliasAll);
   // Register selected alias set in pointer map (or ensure it is consistent with
   // earlier map entry after taking into account new merging).
   if (MapEntry) {
@@ -316,32 +315,32 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
 }
 
 void AliasSetTracker::add(const MemoryLocation &Loc) {
-  addPointer(Loc, AliasSet::NoAccess);
+  addMemoryLocation(Loc, AliasSet::NoAccess);
 }
 
 void AliasSetTracker::add(LoadInst *LI) {
   if (isStrongerThanMonotonic(LI->getOrdering()))
     return addUnknown(LI);
-  addPointer(MemoryLocation::get(LI), AliasSet::RefAccess);
+  addMemoryLocation(MemoryLocation::get(LI), AliasSet::RefAccess);
 }
 
 void AliasSetTracker::add(StoreInst *SI) {
   if (isStrongerThanMonotonic(SI->getOrdering()))
     return addUnknown(SI);
-  addPointer(MemoryLocation::get(SI), AliasSet::ModAccess);
+  addMemoryLocation(MemoryLocation::get(SI), AliasSet::ModAccess);
 }
 
 void AliasSetTracker::add(VAArgInst *VAAI) {
-  addPointer(MemoryLocation::get(VAAI), AliasSet::ModRefAccess);
+  addMemoryLocation(MemoryLocation::get(VAAI), AliasSet::ModRefAccess);
 }
 
 void AliasSetTracker::add(AnyMemSetInst *MSI) {
-  addPointer(MemoryLocation::getForDest(MSI), AliasSet::ModAccess);
+  addMemoryLocation(MemoryLocation::getForDest(MSI), AliasSet::ModAccess);
 }
 
 void AliasSetTracker::add(AnyMemTransferInst *MTI) {
-  addPointer(MemoryLocation::getForDest(MTI), AliasSet::ModAccess);
-  addPointer(MemoryLocation::getForSource(MTI), AliasSet::RefAccess);
+  addMemoryLocation(MemoryLocation::getForDest(MTI), AliasSet::ModAccess);
+  addMemoryLocation(MemoryLocation::getForSource(MTI), AliasSet::RefAccess);
 }
 
 void AliasSetTracker::addUnknown(Instruction *Inst) {
@@ -420,7 +419,7 @@ void AliasSetTracker::add(Instruction *I) {
         ModRefInfo ArgMask = AA.getArgModRefInfo(Call, ArgIdx);
         ArgMask &= CallMask;
         if (!isNoModRef(ArgMask))
-          addPointer(ArgLoc, getAccessFromModRef(ArgMask));
+          addMemoryLocation(ArgLoc, getAccessFromModRef(ArgMask));
       }
       return;
     }
@@ -437,7 +436,7 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
   assert(&AA == &AST.AA &&
          "Merging AliasSetTracker objects with different Alias Analyses!");
 
-  // Loop over all of the alias sets in AST, adding the pointers contained
+  // Loop over all of the alias sets in AST, adding the members contained
   // therein into the current alias sets.  This can cause alias sets to be
   // merged together in the current AST.
   for (const AliasSet &AS : AST) {
@@ -448,9 +447,9 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
     for (Instruction *Inst : AS.UnknownInsts)
       add(Inst);
 
-    // Loop over all of the pointers in this alias set.
+    // Loop over all of the memory locations in this alias set.
     for (const MemoryLocation &ASMemLoc : AS.MemoryLocs)
-      addPointer(ASMemLoc, (AliasSet::AccessLattice)AS.Access);
+      addMemoryLocation(ASMemLoc, (AliasSet::AccessLattice)AS.Access);
   }
 }
 
@@ -466,8 +465,8 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   for (AliasSet &AS : *this)
     ASVector.push_back(&AS);
 
-  // Copy all instructions and pointers into a new set, and forward all other
-  // sets to it.
+  // Copy all instructions and memory locations into a new set, and forward all
+  // other sets to it.
   AliasSets.push_back(new AliasSet());
   AliasAnyAS = &AliasSets.back();
   AliasAnyAS->Alias = AliasSet::SetMayAlias;
@@ -491,14 +490,14 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   return *AliasAnyAS;
 }
 
-AliasSet &AliasSetTracker::addPointer(MemoryLocation Loc,
-                                      AliasSet::AccessLattice E) {
+AliasSet &AliasSetTracker::addMemoryLocation(MemoryLocation Loc,
+                                             AliasSet::AccessLattice E) {
   AliasSet &AS = getAliasSetFor(Loc);
   AS.Access |= E;
 
   if (!AliasAnyAS && (TotalAliasSetSize > SaturationThreshold)) {
     // The AST is now saturated. From here on, we conservatively consider all
-    // pointers to alias each-other.
+    // elements to alias each-other.
     return mergeAllAliasSets();
   }
 
@@ -524,7 +523,7 @@ void AliasSet::print(raw_ostream &OS) const {
 
   if (!MemoryLocs.empty()) {
     ListSeparator LS;
-    OS << "Pointers: ";
+    OS << "Pointers: "; // FIXME: update output together with tests
     for (const MemoryLocation &MemLoc : MemoryLocs) {
       OS << LS;
       MemLoc.Ptr->printAsOperand(OS << "(");
