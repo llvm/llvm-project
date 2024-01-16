@@ -4852,16 +4852,9 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, Reinterpret, Mask);
 }
 
-SDValue AArch64TargetLowering::getPStateSM(
-    SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs, SDLoc DL, EVT VT,
-    bool AllowStreamingCompatibleInterface) const {
-  if (Attrs.hasStreamingInterfaceOrBody() && !AllowStreamingCompatibleInterface)
-    return DAG.getConstant(1, DL, VT);
-
-  if (Attrs.hasNonStreamingInterfaceAndBody() &&
-      !AllowStreamingCompatibleInterface)
-    return DAG.getConstant(0, DL, VT);
-
+SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
+                                                  SDValue Chain, SDLoc DL,
+                                                  EVT VT) const {
   SDValue Callee = DAG.getExternalSymbol("__arm_sme_state",
                                          getPointerTy(DAG.getDataLayout()));
   Type *Int64Ty = Type::getInt64Ty(*DAG.getContext());
@@ -6889,7 +6882,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (IsLocallyStreaming) {
     SDValue PStateSM;
     if (Attrs.hasStreamingCompatibleInterface()) {
-      PStateSM = getPStateSM(DAG, Chain, Attrs, DL, MVT::i64, true);
+      PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
       Register Reg = MF.getRegInfo().createVirtualRegister(
           getRegClassFor(PStateSM.getValueType().getSimpleVT()));
       FuncInfo->setPStateSMReg(Reg);
@@ -7656,7 +7649,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   std::optional<bool> RequiresSMChange =
       CallerAttrs.requiresSMChange(CalleeAttrs);
   if (RequiresSMChange) {
-    PStateSM = getPStateSM(DAG, Chain, CallerAttrs, DL, MVT::i64);
+    if (CallerAttrs.hasStreamingInterfaceOrBody())
+      PStateSM = DAG.getConstant(1, DL, MVT::i64);
+    else if (CallerAttrs.hasNonStreamingInterface())
+      PStateSM = DAG.getConstant(0, DL, MVT::i64);
+    else
+      PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
     OptimizationRemarkEmitter ORE(&MF.getFunction());
     ORE.emit([&]() {
       auto R = CLI.CB ? OptimizationRemarkAnalysis("sme", "SMETransition",

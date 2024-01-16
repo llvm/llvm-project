@@ -5,7 +5,7 @@ declare void @normal_callee();
 declare void @streaming_callee() "aarch64_pstate_sm_enabled";
 declare void @streaming_compatible_callee() "aarch64_pstate_sm_compatible";
 
-define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: sm_body_sm_compatible_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
@@ -13,16 +13,6 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset b8, -24
-; CHECK-NEXT:    .cfi_offset b9, -32
-; CHECK-NEXT:    .cfi_offset b10, -40
-; CHECK-NEXT:    .cfi_offset b11, -48
-; CHECK-NEXT:    .cfi_offset b12, -56
-; CHECK-NEXT:    .cfi_offset b13, -64
-; CHECK-NEXT:    .cfi_offset b14, -72
-; CHECK-NEXT:    .cfi_offset b15, -80
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x8, x0, #0x1
 ; CHECK-NEXT:    tbnz w8, #0, .LBB0_2
@@ -43,7 +33,7 @@ define float @sm_body_sm_compatible_simple() "aarch64_pstate_sm_compatible" "aar
   ret float zeroinitializer
 }
 
-define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: sm_body_caller_sm_compatible_caller_normal_callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
@@ -51,17 +41,6 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset b8, -24
-; CHECK-NEXT:    .cfi_offset b9, -32
-; CHECK-NEXT:    .cfi_offset b10, -40
-; CHECK-NEXT:    .cfi_offset b11, -48
-; CHECK-NEXT:    .cfi_offset b12, -56
-; CHECK-NEXT:    .cfi_offset b13, -64
-; CHECK-NEXT:    .cfi_offset b14, -72
-; CHECK-NEXT:    .cfi_offset b15, -80
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB1_2
@@ -86,26 +65,15 @@ define void @sm_body_caller_sm_compatible_caller_normal_callee() "aarch64_pstate
 }
 
 ; Function Attrs: nounwind uwtable vscale_range(1,16)
-define void @streaming_body_and_streaming_compatible_interface_multi_basic_block(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define void @streaming_body_and_streaming_compatible_interface_multi_basic_block(i32 noundef %x) "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" nounwind {
 ; CHECK-LABEL: streaming_body_and_streaming_compatible_interface_multi_basic_block:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset b8, -24
-; CHECK-NEXT:    .cfi_offset b9, -32
-; CHECK-NEXT:    .cfi_offset b10, -40
-; CHECK-NEXT:    .cfi_offset b11, -48
-; CHECK-NEXT:    .cfi_offset b12, -56
-; CHECK-NEXT:    .cfi_offset b13, -64
-; CHECK-NEXT:    .cfi_offset b14, -72
-; CHECK-NEXT:    .cfi_offset b15, -80
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB2_2

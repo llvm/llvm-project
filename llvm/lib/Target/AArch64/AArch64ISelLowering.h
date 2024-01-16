@@ -1291,9 +1291,8 @@ private:
 
   // Returns the runtime value for PSTATE.SM. When the function is streaming-
   // compatible, this generates a call to __arm_sme_state.
-  SDValue getPStateSM(SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs,
-                      SDLoc DL, EVT VT,
-                      bool AllowStreamingCompatibleInterface = false) const;
+  SDValue getRuntimePStateSM(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
+                             EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
