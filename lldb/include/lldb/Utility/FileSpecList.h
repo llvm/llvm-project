@@ -9,41 +9,14 @@
 #ifndef LLDB_CORE_FILESPECLIST_H
 #define LLDB_CORE_FILESPECLIST_H
 
-#include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/SupportFile.h"
 
 #include <cstddef>
 #include <vector>
 
 namespace lldb_private {
 class Stream;
-
-/// Wraps either a FileSpec that represents a local file or a source
-/// file whose contents is known (for example because it can be
-/// reconstructed from debug info), but that hasn't been written to a
-/// file yet.
-class SupportFile {
-protected:
-  FileSpec m_file_spec;
-  Checksum m_checksum;
-
-public:
-  SupportFile(const FileSpec &spec) : m_file_spec(spec), m_checksum() {}
-  SupportFile(const FileSpec &spec, const Checksum &checksum)
-      : m_file_spec(spec), m_checksum(checksum) {}
-  SupportFile(const SupportFile &other) = delete;
-  SupportFile(SupportFile &&other) = default;
-  virtual ~SupportFile() = default;
-  bool operator==(const SupportFile &other) {
-    return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
-  }
-  /// Return the file name only. Useful for resolving breakpoints by file name.
-  const FileSpec &GetSpecOnly() const { return m_file_spec; };
-  /// Return the checksum or all zeros if there is none.
-  const Checksum &GetChecksum() const { return m_checksum; };
-  /// Materialize the file to disk and return the path to that temporary file.
-  virtual const FileSpec &Materialize() { return m_file_spec; }
-};
 
 /// A list of support files for a CompileUnit.
 class SupportFileList {
