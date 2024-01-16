@@ -352,11 +352,11 @@ protected:
   using typename UP::BiasedExponent;
   using typename UP::Exponent;
   using typename UP::Significand;
+  using UP::biased;
   using UP::encode;
   using UP::exp_bits;
   using UP::exp_sig_bits;
   using UP::sig_bits;
-  using UP::biased;
 
 public:
   LIBC_INLINE constexpr bool is_nan() const {
@@ -544,7 +544,7 @@ public:
     return sig_bits();
   }
 
-  // The following functions are specific to this implementation.
+  // The following functions are specific to FPRep<FPType::X86_Binary80>.
   // TODO: Remove if possible.
   LIBC_INLINE constexpr bool get_implicit_bit() const {
     return bits & EXPLICIT_BIT_MASK;
