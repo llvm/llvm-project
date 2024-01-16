@@ -609,7 +609,7 @@ static void initSymbolAnchors() {
 }
 
 static bool relaxTableJump(const InputSection &sec, size_t i, uint64_t loc,
-                      Relocation &r, uint32_t &remove) {
+                           Relocation &r, uint32_t &remove) {
   if (!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
     return false;
 
