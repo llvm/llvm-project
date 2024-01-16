@@ -1432,19 +1432,19 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // result too early.
   OptimizePM.addPass(LoopSinkPass());
 
-  // Detect anc convert memcpm like idioms to the call, and expand when
-  // profitable
-  OptimizePM.addPass(MergeICmpsPass());
-  OptimizePM.addPass(ExpandMemCmpPass(TM));
-
   // And finally clean up LCSSA form before generating code.
   OptimizePM.addPass(InstSimplifyPass());
+
 
   // This hoists/decomposes div/rem ops. It should run after other sink/hoist
   // passes to avoid re-sinking, but before SimplifyCFG because it can allow
   // flattening of blocks.
   OptimizePM.addPass(DivRemPairsPass());
 
+  // Detect and convert memcmp like idioms to the call then expand them if profitable
+  OptimizePM.addPass(MergeICmpsPass());
+  OptimizePM.addPass(ExpandMemCmpPass(TM));
+  
   // Try to annotate calls that were created during optimization.
   OptimizePM.addPass(TailCallElimPass());
 
@@ -1966,6 +1966,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // passes to avoid re-sinking, but before SimplifyCFG because it can allow
   // flattening of blocks.
   LateFPM.addPass(DivRemPairsPass());
+
+  // Detect and convert memcmp like idioms to the call then expand them if profitable
+  OptimizePM.addPass(MergeICmpsPass());
+  OptimizePM.addPass(ExpandMemCmpPass(TM));
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(
