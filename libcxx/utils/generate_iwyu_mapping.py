@@ -40,15 +40,17 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["utility"]
     elif header == "__fwd/subrange.h":
         return ["ranges"]
-    elif re.match("__fwd/(.+)[.]h", header): # Handle remaining forward declaration headers
+    # Handle remaining forward declaration headers
+    elif re.match("__fwd/(.+)[.]h", header):
         return [re.match("__fwd/(.+)[.]h", header).group(1)]
-    elif re.match("__(.+?)/.+", header): # Handle detail headers for things like <__algorithm/foo.h>
+    # Handle detail headers for things like <__algorithm/foo.h>
+    elif re.match("__(.+?)/.+", header):
         return [re.match("__(.+?)/.+", header).group(1)]
     else:
         return None
 
 def main():
-    mappings = [] # Pairs of (header, public_header)
+    mappings = []  # Pairs of (header, public_header)
     for header in libcxx.header_information.all_headers:
         public_headers = IWYU_mapping(header)
         if public_headers is not None:
@@ -57,12 +59,13 @@ def main():
     # Validate that we only have valid public header names -- otherwise the mapping above
     # needs to be updated.
     for (header, public) in mappings:
-        assert public in libcxx.header_information.public_headers, f"{header}: Header {public} is not a valid header"
+        if public not in libcxx.header_information.public_headers:
+            raise RuntimeError(f"{header}: Header {public} is not a valid header")
 
     with open(libcxx.header_information.include / "libcxx.imp", "w") as f:
         f.write("[\n")
         for (header, public) in sorted(mappings):
-            f.write("""  {{ include: [ "<{}>", "private", "<{}>", "public" ] }},\n""".format(header, public))
+            f.write(f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n')
         f.write("]\n")
 
 if __name__ == "__main__":
