@@ -386,7 +386,7 @@ define <4 x float> @llvm_trunc_f32(<4 x float> %in) {
 
 define <2 x double> @frem_f64(<2 x double> %in) {
 ; CHECK-LABEL: @frem_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_ZGVnN2vv_fmod(<2 x double> [[IN:%.*]], <2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <2 x double> [[IN:%.*]], [[IN]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1= frem <2 x double> %in, %in
