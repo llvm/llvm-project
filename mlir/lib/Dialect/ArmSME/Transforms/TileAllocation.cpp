@@ -278,7 +278,7 @@ struct AssignTileIDsPattern
     for (auto *op : dependantOps) {
       if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
         rewriter.updateRootInPlace(
-            dependantTileOp, [&]() { dependantTileOp.setTileId(tileIDAttr); });
+            dependantTileOp, [&] { dependantTileOp.setTileId(tileIDAttr); });
       }
     }
 
