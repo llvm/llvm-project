@@ -176,6 +176,8 @@ enum ArchExtKind : unsigned {
   AEK_CPA =           72, // FEAT_CPA
   AEK_PAUTHLR =       73, // FEAT_PAuth_LR
   AEK_TLBIW =         74, // FEAT_TLBIW
+  AEK_JSCVT =         75, // FEAT_JSCVT
+  AEK_FCMA =          76, // FEAT_FCMA
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -221,7 +223,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"ebf16", AArch64::AEK_NONE, {}, {}, FEAT_EBF16, "+bf16", 290},
     {"f32mm", AArch64::AEK_F32MM, "+f32mm", "-f32mm", FEAT_SVE_F32MM, "+sve,+f32mm,+fullfp16,+fp-armv8,+neon", 350},
     {"f64mm", AArch64::AEK_F64MM, "+f64mm", "-f64mm", FEAT_SVE_F64MM, "+sve,+f64mm,+fullfp16,+fp-armv8,+neon", 360},
-    {"fcma", AArch64::AEK_NONE, {}, {}, FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
+    {"fcma", AArch64::AEK_FCMA, "+complxnum", "-complxnum", FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
     {"flagm", AArch64::AEK_FLAGM, "+flagm", "-flagm", FEAT_FLAGM, "+flagm", 20},
     {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
     {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
@@ -231,7 +233,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_INIT, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
     {"ite", AArch64::AEK_ITE, "+ite", "-ite", FEAT_INIT, "", 0},
-    {"jscvt", AArch64::AEK_NONE, {}, {}, FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
+    {"jscvt", AArch64::AEK_JSCVT, "+jsconv", "-jsconv", FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
     {"ls64_accdata", AArch64::AEK_NONE, {}, {}, FEAT_LS64_ACCDATA, "+ls64", 540},
     {"ls64_v", AArch64::AEK_NONE, {}, {}, FEAT_LS64_V, "", 530},
     {"ls64", AArch64::AEK_LS64, "+ls64", "-ls64", FEAT_LS64, "", 520},
@@ -364,7 +366,7 @@ inline constexpr ArchInfo ARMV8_1A  = { VersionTuple{8, 1}, AProfile, "armv8.1-a
 inline constexpr ArchInfo ARMV8_2A  = { VersionTuple{8, 2}, AProfile, "armv8.2-a", "+v8.2a", (ARMV8_1A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_RAS}))};
 inline constexpr ArchInfo ARMV8_3A  = { VersionTuple{8, 3}, AProfile, "armv8.3-a", "+v8.3a", (ARMV8_2A.DefaultExts |
-                                        AArch64::ExtensionBitset({AArch64::AEK_RCPC}))};
+                                        AArch64::ExtensionBitset({AArch64::AEK_RCPC, AArch64::AEK_JSCVT, AArch64::AEK_FCMA}))};
 inline constexpr ArchInfo ARMV8_4A  = { VersionTuple{8, 4}, AProfile, "armv8.4-a", "+v8.4a", (ARMV8_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_DOTPROD}))};
 inline constexpr ArchInfo ARMV8_5A  = { VersionTuple{8, 5}, AProfile, "armv8.5-a", "+v8.5a", (ARMV8_4A.DefaultExts)};
@@ -672,7 +674,8 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"tsv110", ARMV8_2A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_DOTPROD,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PROFILE}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,
+          AArch64::AEK_JSCVT, AArch64::AEK_FCMA}))},
     {"a64fx", ARMV8_2A,
      (AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
                                            AArch64::AEK_FP16,

@@ -780,9 +780,8 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
 
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
                                         RegisterClass vdataClass,
-                                        ValueType vdataType,
-                                        bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in {
+                                        ValueType vdataType> {
+  let FPAtomic = vdataType.isFP in {
     def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
                   MUBUFAddr64Table <0, NAME>;
     def _ADDR64 : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0>,
@@ -804,9 +803,8 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      RegisterClass vdataClass,
                                      ValueType vdataType,
-                                     SDPatternOperator atomic,
-                                     bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in {
+                                     SDPatternOperator atomic> {
+  let FPAtomic = vdataType.isFP in {
     def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
       [(set vdataType:$vdata,
        (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
@@ -1714,7 +1712,7 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_xor", i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_inc", i64, "BUFFER_ATOMIC_INC_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
 
-let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
+let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
