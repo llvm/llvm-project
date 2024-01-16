@@ -33,6 +33,9 @@
 #include "__compare/three_way_comparable.h"
 #include "__concepts/equality_comparable.h"
 #include "__iterator/concepts.h"
+#include "__iterator/default_sentinel.h"
+#include "__iterator/distance.h"
+#include "__ranges/access.h"
 #include "__ranges/concepts.h"
 #include "__ranges/stride_view.h"
 #include "test_iterators.h"
@@ -50,6 +53,16 @@ concept CanMinus =
     requires(T& t) { t - t; };
 
 template <class T>
+concept CanSentinelMinus =
+    // Note: Do *not* use std::iterator_traits here because T may not have
+    // all the required pieces when it is not a forward_range.
+    std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::default_sentinel)> &&
+    std::is_same_v<typename T::difference_type, decltype(std::default_sentinel - std::declval<T>())> && requires(T& t) {
+      t - std::default_sentinel;
+      std::default_sentinel - t;
+    };
+
+template <class T>
 concept CanDifferencePlus = std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) { t + 1; };
 template <class T>
 concept CanDifferenceMinus = std::is_same_v<T, decltype(std::declval<T>() - 1)> && requires(T& t) { t - 1; };
@@ -63,9 +76,9 @@ template <class T>
 concept CanSubscript = requires(T& t) { t[5]; };
 
 // What operators are valid for an iterator derived from a stride view
-// over an input view.
-using StrideViewOverInputViewIterator =
-    std::ranges::iterator_t<std::ranges::stride_view<BasicTestView<cpp17_input_iterator<int*>>>>;
+// over an input view.(sized sentinel)
+using InputView = BasicTestView<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>;
+using StrideViewOverInputViewIterator = std::ranges::iterator_t<std::ranges::stride_view<InputView>>;
 
 static_assert(std::weakly_incrementable<StrideViewOverInputViewIterator>);
 
@@ -76,6 +89,10 @@ static_assert(!CanMinusEqual<StrideViewOverInputViewIterator>);
 static_assert(!CanMinus<StrideViewOverInputViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverInputViewIterator>);
 static_assert(!CanDifferenceMinus<StrideViewOverInputViewIterator>);
+static_assert(CanSentinelMinus<StrideViewOverInputViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverInputViewIterator, std::default_sentinel_t>);
+static_assert(std::invocable<std::equal_to<>, std::default_sentinel_t, StrideViewOverInputViewIterator>);
 
 static_assert(!std::is_invocable_v<std::less<>, StrideViewOverInputViewIterator, StrideViewOverInputViewIterator>);
 static_assert(
@@ -87,8 +104,8 @@ static_assert(
 static_assert(!CanSubscript<StrideViewOverInputViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
-// over a forward view.
-using ForwardView                       = BasicTestView<forward_iterator<int*>>;
+// over a forward view.(sized sentinel)
+using ForwardView                       = BasicTestView<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>;
 using StrideViewOverForwardViewIterator = std::ranges::iterator_t<std::ranges::stride_view<ForwardView>>;
 
 static_assert(std::weakly_incrementable<StrideViewOverForwardViewIterator>);
@@ -100,6 +117,10 @@ static_assert(!CanMinusEqual<StrideViewOverForwardViewIterator>);
 static_assert(!CanMinus<StrideViewOverForwardViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverForwardViewIterator>);
 static_assert(!CanDifferenceMinus<StrideViewOverForwardViewIterator>);
+static_assert(CanSentinelMinus<StrideViewOverForwardViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverForwardViewIterator, std::default_sentinel_t>);
+static_assert(std::invocable<std::equal_to<>, std::default_sentinel_t, StrideViewOverForwardViewIterator>);
 
 static_assert(!std::is_invocable_v<std::less<>, StrideViewOverForwardViewIterator, StrideViewOverForwardViewIterator>);
 static_assert(
@@ -112,11 +133,9 @@ static_assert(
 static_assert(!CanSubscript<StrideViewOverForwardViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
-// over a bidirectional view.
-using BidirectionalView                       = BasicTestView<bidirectional_iterator<int*>>;
+// over a bidirectional view. (sized sentinel)
+using BidirectionalView = BasicTestView<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>;
 using StrideViewOverBidirectionalViewIterator = std::ranges::iterator_t<std::ranges::stride_view<BidirectionalView>>;
-
-static_assert(std::weakly_incrementable<StrideViewOverBidirectionalViewIterator>);
 
 static_assert(CanPostDecrement<StrideViewOverBidirectionalViewIterator>);
 static_assert(CanPreDecrement<StrideViewOverBidirectionalViewIterator>);
@@ -125,6 +144,11 @@ static_assert(!CanMinusEqual<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanMinus<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanDifferencePlus<StrideViewOverBidirectionalViewIterator>);
 static_assert(!CanDifferenceMinus<StrideViewOverBidirectionalViewIterator>);
+static_assert(CanSentinelMinus<StrideViewOverBidirectionalViewIterator>);
+static_assert(
+    std::invocable<std::equal_to<>, StrideViewOverBidirectionalViewIterator, StrideViewOverBidirectionalViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverBidirectionalViewIterator, std::default_sentinel_t>);
+static_assert(std::invocable<std::equal_to<>, std::default_sentinel_t, StrideViewOverBidirectionalViewIterator>);
 
 static_assert(!std::is_invocable_v<std::less<>,
                                    StrideViewOverBidirectionalViewIterator,
@@ -142,7 +166,7 @@ static_assert(!std::is_invocable_v<std::greater_equal<>,
 static_assert(!CanSubscript<StrideViewOverBidirectionalViewIterator>);
 
 // What operators are valid for an iterator derived from a stride view
-// over a random access view.
+// over a random access view. (non sized sentinel)
 using RandomAccessView                       = BasicTestView<random_access_iterator<int*>>;
 using StrideViewOverRandomAccessViewIterator = std::ranges::iterator_t<std::ranges::stride_view<RandomAccessView>>;
 
@@ -155,6 +179,11 @@ static_assert(CanMinusEqual<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanMinus<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanDifferencePlus<StrideViewOverRandomAccessViewIterator>);
 static_assert(CanDifferenceMinus<StrideViewOverRandomAccessViewIterator>);
+static_assert(!CanSentinelMinus<StrideViewOverRandomAccessViewIterator>);
+static_assert(
+    std::invocable<std::equal_to<>, StrideViewOverRandomAccessViewIterator, StrideViewOverRandomAccessViewIterator>);
+static_assert(std::invocable<std::equal_to<>, StrideViewOverRandomAccessViewIterator, std::default_sentinel_t>);
+static_assert(std::invocable<std::equal_to<>, std::default_sentinel_t, StrideViewOverRandomAccessViewIterator>);
 
 static_assert(
     std::is_invocable_v<std::less<>, StrideViewOverRandomAccessViewIterator, StrideViewOverRandomAccessViewIterator>);
@@ -217,11 +246,15 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   static_assert(!CanMinusEqual<StrideViewIterator>);
   static_assert(!CanDifferencePlus<StrideViewIterator>);
   static_assert(!CanDifferenceMinus<StrideViewIterator>);
+  static_assert(CanSentinelMinus<StrideViewIterator>);
 
   static_assert(!std::is_invocable_v<std::less<>, StrideViewIterator, StrideViewIterator>);
   static_assert(!std::is_invocable_v<std::less_equal<>, StrideViewIterator, StrideViewIterator>);
   static_assert(!std::is_invocable_v<std::greater<>, StrideViewIterator, StrideViewIterator>);
   static_assert(!std::is_invocable_v<std::greater_equal<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(std::is_invocable_v<std::equal_to<>, StrideViewIterator, StrideViewIterator>);
+  static_assert(std::is_invocable_v<std::equal_to<>, std::default_sentinel_t, StrideViewIterator>);
+  static_assert(std::is_invocable_v<std::equal_to<>, StrideViewIterator, std::default_sentinel_t>);
   static_assert(!CanSubscript<StrideViewIterator>);
 
   auto base_view_offset_zero             = Base(zero_begin, end);
@@ -263,6 +296,15 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_two == -1);
   assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_five == -2);
 
+  assert(stride_view_over_base_zero_offset.end() == std::default_sentinel);
+  assert(std::default_sentinel == stride_view_over_base_zero_offset.end());
+
+  assert(stride_view_over_base_zero_offset.end() - std::default_sentinel == 0);
+  assert(std::default_sentinel - stride_view_over_base_zero_offset.begin() ==
+         std::ranges::distance(stride_view_over_base_zero_offset));
+  assert(stride_view_over_base_zero_offset.begin() - std::default_sentinel ==
+         -std::ranges::distance(stride_view_over_base_zero_offset));
+
   return true;
 }
 
@@ -278,6 +320,7 @@ constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
 
   static_assert(std::weakly_incrementable<StrideViewIterator>);
   static_assert(CanMinus<StrideViewIterator>);
+  static_assert(CanSentinelMinus<StrideViewIterator>);
 
   auto base_view_offset_zero             = Base(begin, end);
   auto base_view_offset_one              = Base(begin + 1, end);
@@ -318,6 +361,16 @@ constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
   // Check negative __n with non-exact multiple of left's stride.
   assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_two == 0);
   assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_five == -1);
+
+  // Make sure that all sentinel operations work!
+  assert(stride_view_over_base_zero_offset.end() == std::default_sentinel);
+  assert(std::default_sentinel == stride_view_over_base_zero_offset.end());
+
+  assert(stride_view_over_base_zero_offset.end() - std::default_sentinel == 0);
+  assert(std::default_sentinel - stride_view_over_base_zero_offset.begin() ==
+         std::ranges::distance(stride_view_over_base_zero_offset));
+  assert(stride_view_over_base_zero_offset.begin() - std::default_sentinel ==
+         -std::ranges::distance(stride_view_over_base_zero_offset));
   return true;
 }
 
@@ -343,16 +396,22 @@ constexpr bool test_properly_handling_missing() {
   assert(*strider_iter == 8);
 
   // By striding past the end, we are going to generate
-  // another __missing_ != 0 value. Let's make sure
-  // that it gets generated and used.
+  // another __missing_ != 0 value.
   strider_iter++;
   assert(strider_iter == strider.end());
 
-  strider_iter--;
-  assert(*strider_iter == 8);
+  // Make sure that all sentinel operations work!
+  assert(strider.end() == std::default_sentinel);
+  assert(std::default_sentinel == strider.end());
 
-  strider_iter--;
+  assert(strider_iter - std::default_sentinel == 0);
+  assert(std::default_sentinel - strider.end() == 0);
+  assert(std::default_sentinel - strider_iter == 0);
+
+  // Let's make sure that the newly regenerated __missing_ gets used.
+  strider_iter += -2;
   assert(*strider_iter == 1);
+
   return true;
 }
 
