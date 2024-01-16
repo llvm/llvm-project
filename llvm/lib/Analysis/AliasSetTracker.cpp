@@ -523,7 +523,7 @@ void AliasSet::print(raw_ostream &OS) const {
 
   if (!MemoryLocs.empty()) {
     ListSeparator LS;
-    OS << "Pointers: "; // FIXME: update output together with tests
+    OS << "Memory locations: ";
     for (const MemoryLocation &MemLoc : MemoryLocs) {
       OS << LS;
       MemLoc.Ptr->printAsOperand(OS << "(");
