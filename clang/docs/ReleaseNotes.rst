@@ -74,6 +74,10 @@ C/C++ Language Potentially Breaking Changes
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
   Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
 
+- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
+  require all the dependent modules to specified from the command line.
+  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - The name mangling rules for function templates has been changed to take into

@@ -3048,12 +3048,17 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // location info are setup, in ReadAST.
         SourceLocation ImportLoc =
             ReadUntranslatedSourceLocation(Record[Idx++]);
-        off_t StoredSize = (off_t)Record[Idx++];
-        time_t StoredModTime = (time_t)Record[Idx++];
-        auto FirstSignatureByte = Record.begin() + Idx;
-        ASTFileSignature StoredSignature = ASTFileSignature::create(
-            FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
-        Idx += ASTFileSignature::size;
+        off_t StoredSize = !IsImportingStdCXXModule ? (off_t)Record[Idx++] : 0;
+        time_t StoredModTime =
+            !IsImportingStdCXXModule ? (time_t)Record[Idx++] : 0;
+
+        ASTFileSignature StoredSignature;
+        if (!IsImportingStdCXXModule) {
+          auto FirstSignatureByte = Record.begin() + Idx;
+          StoredSignature = ASTFileSignature::create(
+              FirstSignatureByte, FirstSignatureByte + ASTFileSignature::size);
+          Idx += ASTFileSignature::size;
+        }
 
         std::string ImportedName = ReadString(Record, Idx);
         std::string ImportedFile;
@@ -3069,19 +3074,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
               ImportedName, /*FileMapOnly*/ !IsImportingStdCXXModule);
 
-        if (ImportedFile.empty()) {
-          // It is deprecated for C++20 Named modules to use the implicitly
-          // paths.
-          if (IsImportingStdCXXModule)
-            Diag(clang::diag::warn_reading_std_cxx_module_by_implicit_paths)
-                << ImportedName;
-
-          // ModuleCache as when writing.
-          ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
-          ImportedCacheKey = ReadString(Record, Idx);
-        } else {
-          SkipPath(Record, Idx);
-          SkipString(Record, Idx);
+        // For C++20 Modules, we won't record the path to the imported modules
+        // in the BMI
+        if (!IsImportingStdCXXModule) {
+          if (ImportedFile.empty()) {
+            // Use BaseDirectoryAsWritten to ensure we use the same path in the
+            // ModuleCache as when writing.
+            ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
+          } else
+            SkipPath(Record, Idx);
+        } else if (ImportedFile.empty()) {
+          Diag(clang::diag::err_failed_to_find_module_file) << ImportedName;
+          return Missing;
         }
 
         if (!ImportedCacheKey.empty()) {
@@ -5627,8 +5631,23 @@ bool ASTReader::readASTFileControlBlock(
       while (Idx < N) {
         // Read information about the AST file.
 
-        // Kind, StandardCXXModule, ImportLoc, Size, ModTime, Signature
-        Idx += 1 + 1 + 1 + 1 + 1 + ASTFileSignature::size;
+        // Skip Kind
+        Idx++;
+        bool IsStandardCXXModule = Record[Idx++];
+
+        // Skip ImportLoc
+        Idx++;
+
+        // In C++20 Modules, we don't record the path to imported
+        // modules in the BMI files.
+        if (IsStandardCXXModule) {
+          std::string ModuleName = ReadString(Record, Idx);
+          Listener.visitImport(ModuleName, /*Filename=*/"");
+          continue;
+        }
+
+        // Skip Size, ModTime and Signature
+        Idx += 1 + 1 + ASTFileSignature::size;
         std::string ModuleName = ReadString(Record, Idx);
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
