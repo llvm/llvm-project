@@ -2520,16 +2520,22 @@ multiclass VOP2_Real_DOT_ACC_gfx10<bits<6> op> :
   VOP2_Real_dpp_gfx10<op>,
   VOP2_Real_dpp8_gfx10<op>;
 
+multiclass VOP2Only_Real_DOT_ACC_gfx10<bits<6> op> : VOP2_Real_dpp_gfx10<op>,
+                                                     VOP2_Real_dpp8_gfx10<op> {
+  let IsSingle = 1 in
+    defm NAME : VOP2_Real_e32_gfx10<op>;
+}
+
 let SubtargetPredicate = HasDot5Insts in {
   defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx9<0x37>;
   // NB: Opcode conflicts with V_DOT8C_I32_I4
   // This opcode exists in gfx 10.1* only
-  defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx10<0x02>;
+  defm V_DOT2C_F32_F16 : VOP2Only_Real_DOT_ACC_gfx10<0x02>;
 }
 
 let SubtargetPredicate = HasDot6Insts in {
   defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx9<0x39>;
-  defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx10<0x0d>;
+  defm V_DOT4C_I32_I8  : VOP2Only_Real_DOT_ACC_gfx10<0x0d>;
 }
 
 let SubtargetPredicate = HasDot4Insts in {

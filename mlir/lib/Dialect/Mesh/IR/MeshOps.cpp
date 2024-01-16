@@ -201,7 +201,7 @@ LogicalResult ClusterOp::verify() {
   if (rank <= 0)
     return emitOpError("rank of cluster is expected to be a positive integer");
 
-  if (getShape().size() > rank)
+  if (getShape().size() > size_t(rank))
     return emitOpError(
         "rank of shape is not expected to be larger than rank of cluster");
 
