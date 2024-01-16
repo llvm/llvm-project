@@ -8,6 +8,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -966,4 +967,31 @@ bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
   SmallVector<int64_t> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
   return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
+bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
+  if (!isLastMemrefDimUnitStride(type))
+    return false;
+
+  auto memrefShape = type.getShape().take_back(n);
+  int64_t offset;
+  SmallVector<int64_t> stridesFull;
+  if (!succeeded(getStridesAndOffset(type, stridesFull, offset)))
+    return false;
+  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  if (strides.empty())
+    return true;
+
+  // Strides of a contiguous memref have to match the flattened
+  // dims.
+  strides = strides.drop_back(1);
+  SmallVector<int64_t> flattenedDims;
+  for (size_t i = 1; i < memrefShape.size(); i++)
+    flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
+
+  return llvm::equal(strides, llvm::reverse(flattenedDims));
 }
