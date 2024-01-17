@@ -1478,11 +1478,10 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return true;
 
   // enable_if attributes are an order-sensitive part of the signature.
-  for (specific_attr_iterator<EnableIfAttr>
-         NewI = New->specific_attr_begin<EnableIfAttr>(),
-         NewE = New->specific_attr_end<EnableIfAttr>(),
-         OldI = Old->specific_attr_begin<EnableIfAttr>(),
-         OldE = Old->specific_attr_end<EnableIfAttr>();
+  for (auto NewI = New->specific_attr_begin<EnableIfAttr>(),
+            NewE = New->specific_attr_end<EnableIfAttr>(),
+            OldI = Old->specific_attr_begin<EnableIfAttr>(),
+            OldE = Old->specific_attr_end<EnableIfAttr>();
        NewI != NewE || OldI != OldE; ++NewI, ++OldI) {
     if (NewI == NewE || OldI == OldE)
       return true;
