@@ -136,8 +136,6 @@ define fp128 @powl_exp2l_not_fast(fp128 %x, fp128 %y) {
   ret fp128 %pow
 }
 
-; TODO: exp10() is not widely enabled by many targets yet.
-
 define float @powf_exp10f(float %x, float %y) {
 ; CHECK-LABEL: define float @powf_exp10f(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
