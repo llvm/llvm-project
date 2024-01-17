@@ -743,6 +743,13 @@ def FeatureStdExtSmaia
                        "'Smaia' (Advanced Interrupt Architecture Machine "
                        "Level)", []>;
 
+def FeatureStdExtSmepmp
+    : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
+                       "'Smepmp' (Smepmp prevents privileged processes from "
+                       "executing or accessing unprivileged programs and"
+                       "data.)",
+                       []>;
+
 def FeatureStdExtSsaia
     : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
                        "'Ssaia' (Advanced Interrupt Architecture Supervisor "
