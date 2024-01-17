@@ -1649,6 +1649,20 @@ define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
   ret <vscale x 2 x i64> %t3
 }
 
+; fold mul(abs(x),abs(y)) -> abs(mul(x,y))
+define i32 @combine_mul_abs_x_abs_y(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 false)
+  %mul = mul i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
 ;
 ; fold mul(sub(x,y),negpow2) -> shl(sub(y,x),log2(pow2))
 ;
