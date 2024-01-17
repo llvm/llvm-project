@@ -855,7 +855,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
-                      MVT::v2i16, MVT::v2f16, MVT::i128, MVT::i16, MVT::i8},
+                      MVT::v2i16, MVT::v2f16, MVT::i128, MVT::i8},
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
@@ -5991,9 +5991,8 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       // combiner tries to merge the s_buffer_load_u8 with a sext instruction
       // (performSignExtendInRegCombine()) and it replaces s_buffer_load_u8 with
       // s_buffer_load_i8.
-      assert(Subtarget->hasScalarSubwordLoads() &&
-             "s_buffer_load_{u8, i8} are supported "
-             "in GFX12 (or newer) architectures.");
+      if (!Subtarget->hasScalarSubwordLoads())
+        return;
       SDValue Op = SDValue(N, 0);
       SDValue Rsrc = Op.getOperand(1);
       SDValue Offset = Op.getOperand(2);
@@ -10068,6 +10067,8 @@ static SDValue getLoadExtOrTrunc(SelectionDAG &DAG,
   llvm_unreachable("invalid ext type");
 }
 
+// Try to turn 8 and 16-bit scalar loads into SMEM eligible 32-bit loads.
+// TODO: Skip this on GFX12 which does have scalar sub-dword loads.
 SDValue SITargetLowering::widenLoad(LoadSDNode *Ld, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   if (Ld->getAlign() < Align(4) || Ld->isDivergent())
