@@ -351,6 +351,8 @@ entry:
 
 ; SMALL:          .extern .__tls_get_mod[PR]
 ; LARGE:          .extern .__tls_get_mod[PR]
+; SMALL-NOT:      .extern _Renamed..5f24__TLSML[TC]
+; LARGE-NOT:      .extern _Renamed..5f24__TLSML[TC]
 
 ; SMALL:        [[ModuleHandleL]]:
 ; SMALL-NEXT:   .tc _Renamed..5f24__TLSML[TC],_Renamed..5f24__TLSML[TC]@ml
