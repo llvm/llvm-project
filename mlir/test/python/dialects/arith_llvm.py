@@ -4,7 +4,7 @@ from functools import partialmethod
 from mlir.ir import *
 import mlir.dialects.arith as arith
 import mlir.dialects.func as func
-from mlir.dialects import llvm
+import mlir.dialects.llvm as llvm
 
 
 def run(f):
@@ -23,4 +23,3 @@ def testOverflowFlags():
             r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
             # CHECK: arith.addi {{.*}}, {{.*}} overflow<nsw> : i32
             print(r)
-
