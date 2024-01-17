@@ -71,7 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
-void *memcpy(void *dest, const void *src, size_t n);
+void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -1252,7 +1252,7 @@ int strncasecmp_null_argument(char *a, size_t n) {
 // strsep()
 //===----------------------------------------------------------------------===
 
-char *strsep(char **stringp, const char *delim);
+char *strsep(char ** restrict stringp, const char * restrict delim);
 
 void strsep_null_delim(char *s) {
   strsep(&s, NULL); // expected-warning{{Null pointer passed as 2nd argument to strsep()}}
