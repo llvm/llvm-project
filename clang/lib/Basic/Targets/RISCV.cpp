@@ -267,7 +267,7 @@ bool RISCVTargetInfo::initFeatureMap(
   }
 
   // Otherwise, parse the features and add any implied extensions.
-  std::vector AllFeatures = FeaturesVec;
+  std::vector<std::string> AllFeatures = FeaturesVec;
   auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
   if (!ParseResult) {
     std::string Buffer;
