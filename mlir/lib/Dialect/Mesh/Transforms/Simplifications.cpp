@@ -103,13 +103,14 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
     }
 
     // Leave only the dynamic mesh axes to be queried.
-    ClusterShapeOp newShapeOp =
-        builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
-    for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
-      newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
+    if (!newShapeOpMeshAxes.empty()) {
+      ClusterShapeOp newShapeOp =
+          builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
+      for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
+        newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
+      }
     }
-
-    rewriter.replaceAllUsesWith(op.getResults(), newResults);
+    rewriter.replaceOp(op, newResults);
 
     return success();
   }
