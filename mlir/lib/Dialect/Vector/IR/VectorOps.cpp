@@ -381,10 +381,8 @@ void VectorDialect::initialize() {
                            bufferization::BufferizableOpInterface>();
   declarePromisedInterface<TransferWriteOp,
                            bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<GatherOp,
-                           bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<MaskOp,
-                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<GatherOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<MaskOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<YieldOp, bufferization::BufferizableOpInterface>();
 
   declarePromisedInterface<TransferReadOp, SubsetOpInterface>();

@@ -49,18 +49,25 @@ void TensorDialect::initialize() {
       >();
   addInterfaces<TensorInlinerInterface>();
   declarePromisedInterface<CastOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<CollapseShapeOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<CollapseShapeOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<DimOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<EmptyOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExpandShapeOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExtractSliceOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ExpandShapeOp,
+                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ExtractSliceOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<ExtractOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<FromElementsOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<GenerateOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<FromElementsOp,
+                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<GenerateOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<InsertOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InsertSliceOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<InsertSliceOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<PadOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ParallelInsertSliceOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ParallelInsertSliceOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<RankOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<ReshapeOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<SplatOp, bufferization::BufferizableOpInterface>();

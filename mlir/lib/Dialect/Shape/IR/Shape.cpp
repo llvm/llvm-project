@@ -144,8 +144,10 @@ void ShapeDialect::initialize() {
   // still evolving it makes it simple to start with an unregistered ops and
   // try different variants before actually defining the op.
   allowUnknownOperations();
-  declarePromisedInterface<AssumingOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<AssumingYieldOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<AssumingOp,
+                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<AssumingYieldOp,
+                           bufferization::BufferizableOpInterface>();
 }
 
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,

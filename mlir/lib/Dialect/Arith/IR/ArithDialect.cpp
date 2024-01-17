@@ -11,9 +11,9 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -49,7 +49,8 @@ void arith::ArithDialect::initialize() {
       >();
   addInterfaces<ArithInlinerInterface>();
   declarePromisedInterface<ArithDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<SelectOp, bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<SelectOp,
+                           bufferization::BufferDeallocationOpInterface>();
   declarePromisedInterface<ConstantOp,
                            bufferization::BufferizableOpInterface>();
   declarePromisedInterface<IndexCastOp,

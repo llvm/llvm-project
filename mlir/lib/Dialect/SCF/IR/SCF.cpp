@@ -15,12 +15,12 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -74,15 +74,21 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
-  declarePromisedInterface<InParallelOp, bufferization::BufferDeallocationOpInterface>();
-  declarePromisedInterface<ReduceReturnOp, bufferization::BufferDeallocationOpInterface>();
-  declarePromisedInterface<ConditionOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<ExecuteRegionOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<InParallelOp,
+                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<ReduceReturnOp,
+                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<ConditionOp,
+                           bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<ExecuteRegionOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<ForOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<IfOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<IndexSwitchOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<IndexSwitchOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<ForallOp, bufferization::BufferizableOpInterface>();
-  declarePromisedInterface<InParallelOp, bufferization::BufferizableOpInterface>();
+  declarePromisedInterface<InParallelOp,
+                           bufferization::BufferizableOpInterface>();
   declarePromisedInterface<WhileOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<YieldOp, bufferization::BufferizableOpInterface>();
   declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
