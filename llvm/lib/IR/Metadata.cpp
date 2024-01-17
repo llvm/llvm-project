@@ -439,16 +439,22 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getOrCreateReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
@@ -456,7 +462,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved();
+    return !N->isResolved() || N->isAlwaysReplaceable();
   return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
