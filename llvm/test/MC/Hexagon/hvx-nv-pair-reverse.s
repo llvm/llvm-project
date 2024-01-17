@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=hexagon -mv69 -mhvx -filetype=obj %s | \
-# RUN:   llvm-objdump --arch=hexagon --mcpu=hexagonv69 --mattr=+hvx -d - | \
+# RUN: llvm-mc -triple=hexagon -mv69 -mhvx -filetype=obj %s | \
+# RUN:   llvm-objdump --triple=hexagon --mcpu=hexagonv69 --mattr=+hvx -d - | \
 # RUN:   FileCheck %s
 # CHECK: 00000000 <.text>:
 
