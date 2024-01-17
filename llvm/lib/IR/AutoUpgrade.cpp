@@ -4133,8 +4133,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Val = CI->getArgOperand(1);
       Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::SequentiallyConsistent);
-    } else if (IsNVVM && (Name == "max.s" || Name == "max.i" || Name == "max.ll" ||
-                          Name == "max.us" || Name == "max.ui" || Name == "max.ull")) {
+    } else if (IsNVVM &&
+               (Name == "max.s" || Name == "max.i" || Name == "max.ll" ||
+                Name == "max.us" || Name == "max.ui" || Name == "max.ull")) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
       Value *Cmp = Name.starts_with("max.u")
