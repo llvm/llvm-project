@@ -192,9 +192,8 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   return DWARFDIE(); // Not found
 }
 
-llvm::StringRef
-DWARFDebugInfo::PeekDIEName(const DIERef &die_ref) {
-  if(DWARFUnit *cu = GetUnit(die_ref))
+llvm::StringRef DWARFDebugInfo::PeekDIEName(const DIERef &die_ref) {
+  if (DWARFUnit *cu = GetUnit(die_ref))
     return cu->GetNonSkeletonUnit().PeekDIEName(die_ref.die_offset());
   return llvm::StringRef();
 }
