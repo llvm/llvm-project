@@ -2248,7 +2248,9 @@ static ParseResult parseRoutineGangClause(OpAsmParser &parser,
     return failure();
 
   if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(gangDimAttrs.emplace_back()))
+        if (parser.parseKeyword(acc::RoutineOp::getGangDimKeyword()) ||
+            parser.parseColon() ||
+            parser.parseAttribute(gangDimAttrs.emplace_back()))
           return failure();
         if (succeeded(parser.parseOptionalLSquare())) {
           if (parser.parseAttribute(gangDimDeviceTypeAttrs.emplace_back()) ||
@@ -2295,6 +2297,7 @@ void printRoutineGangClause(OpAsmPrinter &p, Operation *op,
   if (hasDeviceTypeValues(gangDimDeviceTypes))
     llvm::interleaveComma(llvm::zip(*gangDim, *gangDimDeviceTypes), p,
                           [&](const auto &pair) {
+                            p << acc::RoutineOp::getGangDimKeyword() << ": ";
                             p << std::get<0>(pair);
                             printSingleDeviceType(p, std::get<1>(pair));
                           });

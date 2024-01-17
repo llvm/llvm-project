@@ -9,7 +9,7 @@
 ! CHECK: acc.routine @acc_routine_9 func(@_QPacc_routine10) seq
 ! CHECK: acc.routine @acc_routine_8 func(@_QPacc_routine9) bind("_QPacc_routine9a")
 ! CHECK: acc.routine @acc_routine_7 func(@_QPacc_routine8) bind("routine8_")
-! CHECK: acc.routine @acc_routine_6 func(@_QPacc_routine7) gang(1 : i64)
+! CHECK: acc.routine @acc_routine_6 func(@_QPacc_routine7) gang(dim: 1 : i64)
 ! CHECK: acc.routine @acc_routine_5 func(@_QPacc_routine6) nohost
 ! CHECK: acc.routine @acc_routine_4 func(@_QPacc_routine5) worker
 ! CHECK: acc.routine @acc_routine_3 func(@_QPacc_routine4) vector
