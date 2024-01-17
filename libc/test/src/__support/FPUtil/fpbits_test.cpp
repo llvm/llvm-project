@@ -85,7 +85,7 @@ static constexpr UInt128 u128(uint64_t hi, uint64_t lo) {
 #if defined(__SIZEOF_INT128__)
   return __uint128_t(hi) << 64 | __uint128_t(lo);
 #else
-  return UInt128({hi, lo});
+  return UInt128({lo, hi});
 #endif
 }
 
