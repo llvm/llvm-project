@@ -548,15 +548,20 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template <typename T>
-  void dropAttr() {
+  template<typename ...Ts>
+  void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
+    llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
+  }
+
+  template <typename T>
+  void dropAttr() {
+    dropAttrs<T>();
   }
 
   template <typename T>
