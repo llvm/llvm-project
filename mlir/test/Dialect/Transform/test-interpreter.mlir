@@ -1483,6 +1483,60 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// expected-remark @below {{addi operand}}
+// expected-note @below {{value handle points to a block argument #0}}
+func.func @get_operand_of_op(%arg0: index, %arg1: index) -> index {
+  %r = arith.addi %arg0, %arg1 : index
+  return %r : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %operand = transform.get_operand %addi[0] : (!transform.any_op) -> !transform.any_value
+    transform.debug.emit_remark_at %operand, "addi operand" : !transform.any_value
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @get_out_of_bounds_operand_of_op(%arg0: index, %arg1: index) -> index {
+  // expected-note @below {{target op}}
+  %r = arith.addi %arg0, %arg1 : index
+  return %r : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{targeted op does not have enough operands}}
+    %operand = transform.get_operand %addi[2] : (!transform.any_op) -> !transform.any_value
+    transform.debug.emit_remark_at %operand, "addi operand" : !transform.any_value
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @get_multiple_operands_of_op(%arg0: index, %arg1: index) -> index {
+  %r = arith.addi %arg0, %arg1 : index
+  return %r : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %addui = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %operands = transform.get_operand %addui : (!transform.any_op) -> !transform.any_value
+    %p = transform.num_associations %operands : (!transform.any_value) -> !transform.param<i64>
+    // expected-remark @below {{2}}
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @get_result_of_op(%arg0: index, %arg1: index) -> index {
   // expected-remark @below {{addi result}}
   // expected-note @below {{value handle points to an op result #0}}
@@ -1531,6 +1585,25 @@ module attributes {transform.with_named_sequence} {
     %result = transform.get_result %addi[0] : (!transform.any_op) -> !transform.any_value
     %op = transform.get_defining_op %result : (!transform.any_value) -> !transform.any_op
     transform.debug.emit_remark_at %op, "matched" : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @get_multiple_result_of_op(%arg0: index, %arg1: index) -> (index, i1) {
+  // expected-remark @below {{matched bool}}
+  %r, %b = arith.addui_extended %arg0, %arg1 : index, i1
+  return %r, %b : index, i1
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %addui = transform.structured.match ops{["arith.addui_extended"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %results = transform.get_result %addui : (!transform.any_op) -> !transform.any_value
+    %adds = transform.get_defining_op %results : (!transform.any_value) -> !transform.any_op
+    %_, %add_again = transform.split_handle %adds : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.debug.emit_remark_at %add_again, "matched bool" : !transform.any_op
     transform.yield
   }
 }

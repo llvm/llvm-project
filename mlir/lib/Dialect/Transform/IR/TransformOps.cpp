@@ -1465,6 +1465,35 @@ transform::GetProducerOfOperand::apply(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// GetOperandOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::GetOperandOp::apply(transform::TransformRewriter &rewriter,
+                               transform::TransformResults &results,
+                               transform::TransformState &state) {
+  std::optional<int64_t> maybeOperandNumber = getOperandNumber();
+  SmallVector<Value> operands;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    if (!maybeOperandNumber) {
+      for (Value operand : target->getOperands())
+        operands.push_back(operand);
+      continue;
+    }
+    int64_t operandNumber = *maybeOperandNumber;
+    if (operandNumber >= target->getNumOperands()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "targeted op does not have enough operands";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    operands.push_back(target->getOperand(operandNumber));
+  }
+  results.setValues(llvm::cast<OpResult>(getResult()), operands);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetResultOp
 //===----------------------------------------------------------------------===//
 
@@ -1472,9 +1501,15 @@ DiagnosedSilenceableFailure
 transform::GetResultOp::apply(transform::TransformRewriter &rewriter,
                               transform::TransformResults &results,
                               transform::TransformState &state) {
-  int64_t resultNumber = getResultNumber();
+  std::optional<int64_t> maybeResultNumber = getResultNumber();
   SmallVector<Value> opResults;
   for (Operation *target : state.getPayloadOps(getTarget())) {
+    if (!maybeResultNumber) {
+      for (Value result : target->getResults())
+        opResults.push_back(result);
+      continue;
+    }
+    int64_t resultNumber = *maybeResultNumber;
     if (resultNumber >= target->getNumResults()) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError() << "targeted op does not have enough results";
