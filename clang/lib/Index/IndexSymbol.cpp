@@ -36,7 +36,7 @@ static bool isUnitTest(const ObjCMethodDecl *D) {
     return false;
   if (!D->getReturnType()->isVoidType())
     return false;
-  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+  if (!D->getSelector().getNameForSlot(0).starts_with("test"))
     return false;
   return isUnitTestCase(D->getClassInterface());
 }

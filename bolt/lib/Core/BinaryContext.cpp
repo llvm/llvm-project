@@ -1086,7 +1086,7 @@ void BinaryContext::generateSymbolHashes() {
   auto isPadding = [](const BinaryData &BD) {
     StringRef Contents = BD.getSection().getContents();
     StringRef SymData = Contents.substr(BD.getOffset(), BD.getSize());
-    return (BD.getName().startswith("HOLEat") ||
+    return (BD.getName().starts_with("HOLEat") ||
             SymData.find_first_not_of(0) == StringRef::npos);
   };
 
@@ -1326,8 +1326,8 @@ void BinaryContext::postProcessSymbolTable() {
   bool Valid = true;
   for (auto &Entry : BinaryDataMap) {
     BinaryData *BD = Entry.second;
-    if ((BD->getName().startswith("SYMBOLat") ||
-         BD->getName().startswith("DATAat")) &&
+    if ((BD->getName().starts_with("SYMBOLat") ||
+         BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
         BD->getSection()) {
       errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD << "\n";
@@ -1410,9 +1410,9 @@ void BinaryContext::fixBinaryDataHoles() {
     auto isNotHole = [&Section](const binary_data_iterator &Itr) {
       BinaryData *BD = Itr->second;
       bool isHole = (!BD->getParent() && !BD->getSize() && BD->isObject() &&
-                     (BD->getName().startswith("SYMBOLat0x") ||
-                      BD->getName().startswith("DATAat0x") ||
-                      BD->getName().startswith("ANONYMOUS")));
+                     (BD->getName().starts_with("SYMBOLat0x") ||
+                      BD->getName().starts_with("DATAat0x") ||
+                      BD->getName().starts_with("ANONYMOUS")));
       return !isHole && BD->getSection() == Section && !BD->getParent();
     };
 
@@ -1818,14 +1818,14 @@ MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
   if (*TypeOrError != SymbolRef::ST_Unknown)
     return MarkerSymType::NONE;
 
-  if (*NameOrError == "$x" || NameOrError->startswith("$x."))
+  if (*NameOrError == "$x" || NameOrError->starts_with("$x."))
     return MarkerSymType::CODE;
 
   // $x<ISA>
-  if (isRISCV() && NameOrError->startswith("$x"))
+  if (isRISCV() && NameOrError->starts_with("$x"))
     return MarkerSymType::CODE;
 
-  if (*NameOrError == "$d" || NameOrError->startswith("$d."))
+  if (*NameOrError == "$d" || NameOrError->starts_with("$d."))
     return MarkerSymType::DATA;
 
   return MarkerSymType::NONE;
@@ -2331,14 +2331,36 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   MCAsmLayout Layout(Assembler);
   Assembler.layout(Layout);
 
+  // Obtain fragment sizes.
+  std::vector<uint64_t> FragmentSizes;
+  // Main fragment size.
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize =
-      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
-                      [&](const uint64_t Accu, const LabelRange &Labels) {
-                        return Accu + Layout.getSymbolOffset(*Labels.second) -
-                               Layout.getSymbolOffset(*Labels.first);
-                      });
+  FragmentSizes.push_back(HotSize);
+  // Split fragment sizes.
+  uint64_t ColdSize = 0;
+  for (const auto &Labels : SplitLabels) {
+    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
+                    Layout.getSymbolOffset(*Labels.first);
+    FragmentSizes.push_back(Size);
+    ColdSize += Size;
+  }
+
+  // Populate new start and end offsets of each basic block.
+  uint64_t FragmentIndex = 0;
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    BinaryBasicBlock *PrevBB = nullptr;
+    for (BinaryBasicBlock *BB : FF) {
+      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      BB->setOutputStartAddress(BBStartOffset);
+      if (PrevBB)
+        PrevBB->setOutputEndAddress(BBStartOffset);
+      PrevBB = BB;
+    }
+    if (PrevBB)
+      PrevBB->setOutputEndAddress(FragmentSizes[FragmentIndex]);
+    FragmentIndex++;
+  }
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {

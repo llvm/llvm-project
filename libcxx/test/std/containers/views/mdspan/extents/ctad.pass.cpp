@@ -24,7 +24,7 @@
 struct NoDefaultCtorIndex {
   size_t value;
   constexpr NoDefaultCtorIndex() = delete;
-  constexpr NoDefaultCtorIndex(size_t val) : value(val){};
+  constexpr NoDefaultCtorIndex(size_t val) : value(val) {}
   constexpr operator size_t() const noexcept { return value; }
 };
 

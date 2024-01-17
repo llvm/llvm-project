@@ -14,7 +14,7 @@ int main() {
 /*
 REQUIRES: system-linux,bolt-runtime
 
-RUN: %clang %cflags %s -o %t.exe -Wl,-q -nopie -fpie
+RUN: %clang %cflags %s -o %t.exe -Wl,-q -no-pie -fpie
 
 RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 RUN:   -o %t.instrumented

@@ -54,8 +54,6 @@ int main(int, char**)
         typedef std::array<T, 10> C;
         static_assert((std::is_same<C::reference, T&>::value), "");
         static_assert((std::is_same<C::const_reference, const T&>::value), "");
-        LIBCPP_STATIC_ASSERT((std::is_same<C::iterator, T*>::value), "");
-        LIBCPP_STATIC_ASSERT((std::is_same<C::const_iterator, const T*>::value), "");
         test_iterators<C>();
         static_assert((std::is_same<C::pointer, T*>::value), "");
         static_assert((std::is_same<C::const_pointer, const T*>::value), "");
@@ -76,8 +74,6 @@ int main(int, char**)
         typedef std::array<T, 0> C;
         static_assert((std::is_same<C::reference, T&>::value), "");
         static_assert((std::is_same<C::const_reference, const T&>::value), "");
-        LIBCPP_STATIC_ASSERT((std::is_same<C::iterator, T*>::value), "");
-        LIBCPP_STATIC_ASSERT((std::is_same<C::const_iterator, const T*>::value), "");
         test_iterators<C>();
         static_assert((std::is_same<C::pointer, T*>::value), "");
         static_assert((std::is_same<C::const_pointer, const T*>::value), "");

@@ -130,22 +130,15 @@ define void @tryset(ptr nocapture %x) {
 ; X86SSE2-LABEL: tryset:
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86SSE2-NEXT:    movl $0, 4(%eax)
-; X86SSE2-NEXT:    movl $0, (%eax)
-; X86SSE2-NEXT:    movl $0, 12(%eax)
-; X86SSE2-NEXT:    movl $0, 8(%eax)
-; X86SSE2-NEXT:    movl $0, 20(%eax)
-; X86SSE2-NEXT:    movl $0, 16(%eax)
-; X86SSE2-NEXT:    movl $0, 28(%eax)
-; X86SSE2-NEXT:    movl $0, 24(%eax)
-; X86SSE2-NEXT:    movl $0, 36(%eax)
-; X86SSE2-NEXT:    movl $0, 32(%eax)
-; X86SSE2-NEXT:    movl $0, 44(%eax)
-; X86SSE2-NEXT:    movl $0, 40(%eax)
-; X86SSE2-NEXT:    movl $0, 52(%eax)
-; X86SSE2-NEXT:    movl $0, 48(%eax)
-; X86SSE2-NEXT:    movl $0, 60(%eax)
-; X86SSE2-NEXT:    movl $0, 56(%eax)
+; X86SSE2-NEXT:    xorps %xmm0, %xmm0
+; X86SSE2-NEXT:    movsd %xmm0, 56(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 48(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 40(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 32(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, 8(%eax)
+; X86SSE2-NEXT:    movsd %xmm0, (%eax)
 ; X86SSE2-NEXT:    retl
 ;
 ; X64AVX-LABEL: tryset:

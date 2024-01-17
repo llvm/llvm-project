@@ -3,7 +3,7 @@
 # Also checks that llvm-bolt disassembler and CFG builder is working properly.
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
-RUN: llvm-bolt %t.exe -o /dev/null --data %p/Inputs/blarge.fdata --print-cfg | FileCheck %s
+RUN: llvm-bolt %t.exe -o %t.null --data %p/Inputs/blarge.fdata --print-cfg | FileCheck %s
 
 CHECK:    Binary Function "usqrt"
 CHECK:      State       : CFG constructed

@@ -87,6 +87,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fabsl_test
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -97,8 +99,22 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.fabsl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsf128_test
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf128_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fabsf128
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1203,6 +1219,54 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  nanf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanf
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nan_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nan
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  nanl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nanl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.include.signal
+    libc.src.math.nanl
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
+)
+
 # FIXME: These tests are currently spurious for NVPTX.
 if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
@@ -1251,8 +1315,8 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-# FIXME: These tests are currently spurious for NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     nexttoward_test
     SUITE

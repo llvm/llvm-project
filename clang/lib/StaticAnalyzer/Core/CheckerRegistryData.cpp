@@ -82,7 +82,7 @@ static constexpr char PackageSeparator = '.';
 
 static bool isInPackage(const CheckerInfo &Checker, StringRef PackageName) {
   // Does the checker's full name have the package as a prefix?
-  if (!Checker.FullName.startswith(PackageName))
+  if (!Checker.FullName.starts_with(PackageName))
     return false;
 
   // Is the package actually just the name of a specific checker?
@@ -158,7 +158,7 @@ void CheckerRegistryData::printCheckerWithDescList(
       continue;
     }
 
-    if (Checker.FullName.startswith("alpha")) {
+    if (Checker.FullName.starts_with("alpha")) {
       if (AnOpts.ShowCheckerHelpAlpha)
         Print(Out, Checker,
               ("(Enable only for development!) " + Checker.Desc).str());
@@ -228,7 +228,7 @@ void CheckerRegistryData::printCheckerOptionList(const AnalyzerOptions &AnOpts,
     }
 
     if (Option.DevelopmentStatus == "alpha" ||
-        Entry.first.startswith("alpha")) {
+        Entry.first.starts_with("alpha")) {
       if (AnOpts.ShowCheckerOptionAlphaList)
         Print(Out, FullOption,
               llvm::Twine("(Enable only for development!) " + Desc).str());

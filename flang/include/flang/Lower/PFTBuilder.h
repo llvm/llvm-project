@@ -100,13 +100,14 @@ using ActionStmts = std::tuple<
     parser::EventPostStmt, parser::EventWaitStmt, parser::ExitStmt,
     parser::FailImageStmt, parser::FlushStmt, parser::FormTeamStmt,
     parser::GotoStmt, parser::IfStmt, parser::InquireStmt, parser::LockStmt,
-    parser::NullifyStmt, parser::OpenStmt, parser::PointerAssignmentStmt,
-    parser::PrintStmt, parser::ReadStmt, parser::ReturnStmt, parser::RewindStmt,
-    parser::StopStmt, parser::SyncAllStmt, parser::SyncImagesStmt,
-    parser::SyncMemoryStmt, parser::SyncTeamStmt, parser::UnlockStmt,
-    parser::WaitStmt, parser::WhereStmt, parser::WriteStmt,
-    parser::ComputedGotoStmt, parser::ForallStmt, parser::ArithmeticIfStmt,
-    parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
+    parser::NotifyWaitStmt, parser::NullifyStmt, parser::OpenStmt,
+    parser::PointerAssignmentStmt, parser::PrintStmt, parser::ReadStmt,
+    parser::ReturnStmt, parser::RewindStmt, parser::StopStmt,
+    parser::SyncAllStmt, parser::SyncImagesStmt, parser::SyncMemoryStmt,
+    parser::SyncTeamStmt, parser::UnlockStmt, parser::WaitStmt,
+    parser::WhereStmt, parser::WriteStmt, parser::ComputedGotoStmt,
+    parser::ForallStmt, parser::ArithmeticIfStmt, parser::AssignStmt,
+    parser::AssignedGotoStmt, parser::PauseStmt>;
 
 using OtherStmts = std::tuple<parser::EntryStmt, parser::FormatStmt>;
 
@@ -708,6 +709,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
+  bool hasIeeeAccess{false};
+  bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};

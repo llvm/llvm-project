@@ -65,6 +65,7 @@ enum Tag : uint16_t;
 }
 
 class DbgVariableIntrinsic;
+class DPValue;
 
 extern cl::opt<bool> EnableFSDiscriminator;
 
@@ -321,6 +322,10 @@ class DIAssignID : public MDNode {
 public:
   // This node has no operands to replace.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
+
+  SmallVector<DPValue *> getAllDPValueUsers() {
+    return Context.getReplaceableUses()->getAllDPValueUsers();
+  }
 
   static DIAssignID *getDistinct(LLVMContext &Context) {
     return getImpl(Context, Distinct);
@@ -3814,6 +3819,7 @@ class DebugVariable {
 
 public:
   DebugVariable(const DbgVariableIntrinsic *DII);
+  DebugVariable(const DPValue *DPV);
 
   DebugVariable(const DILocalVariable *Var,
                 std::optional<FragmentInfo> FragmentInfo,

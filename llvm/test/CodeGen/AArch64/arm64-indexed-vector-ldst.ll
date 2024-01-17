@@ -14659,17 +14659,9 @@ define i8 @load_single_extract_variable_index_i8(ptr %A, i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: load_single_extract_variable_index_i8:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    sub sp, sp, #16
-; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    mov w9, w1
-; CHECK-GISEL-NEXT:    ldr q0, [x0]
-; CHECK-GISEL-NEXT:    mov x8, sp
-; CHECK-GISEL-NEXT:    and x9, x9, #0xf
-; CHECK-GISEL-NEXT:    lsl x10, x9, #1
-; CHECK-GISEL-NEXT:    str q0, [sp]
-; CHECK-GISEL-NEXT:    sub x9, x10, x9
-; CHECK-GISEL-NEXT:    ldrb w0, [x8, x9]
-; CHECK-GISEL-NEXT:    add sp, sp, #16
+; CHECK-GISEL-NEXT:    mov w8, w1
+; CHECK-GISEL-NEXT:    and x8, x8, #0xf
+; CHECK-GISEL-NEXT:    ldrb w0, [x0, x8]
 ; CHECK-GISEL-NEXT:    ret
   %lv = load <16 x i8>, ptr %A
   %e = extractelement <16 x i8> %lv, i32 %idx
@@ -14692,15 +14684,9 @@ define i16 @load_single_extract_variable_index_i16(ptr %A, i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: load_single_extract_variable_index_i16:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    sub sp, sp, #16
-; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    ldr q0, [x0]
-; CHECK-GISEL-NEXT:    mov w9, w1
-; CHECK-GISEL-NEXT:    mov x8, sp
-; CHECK-GISEL-NEXT:    and x9, x9, #0x7
-; CHECK-GISEL-NEXT:    str q0, [sp]
-; CHECK-GISEL-NEXT:    ldrh w0, [x8, x9, lsl #1]
-; CHECK-GISEL-NEXT:    add sp, sp, #16
+; CHECK-GISEL-NEXT:    mov w8, w1
+; CHECK-GISEL-NEXT:    and x8, x8, #0x7
+; CHECK-GISEL-NEXT:    ldrh w0, [x0, x8, lsl #1]
 ; CHECK-GISEL-NEXT:    ret
   %lv = load <8 x i16>, ptr %A
   %e = extractelement <8 x i16> %lv, i32 %idx
@@ -14717,15 +14703,9 @@ define i32 @load_single_extract_variable_index_i32(ptr %A, i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: load_single_extract_variable_index_i32:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    sub sp, sp, #16
-; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    ldr q0, [x0]
-; CHECK-GISEL-NEXT:    mov w9, w1
-; CHECK-GISEL-NEXT:    mov x8, sp
-; CHECK-GISEL-NEXT:    and x9, x9, #0x3
-; CHECK-GISEL-NEXT:    str q0, [sp]
-; CHECK-GISEL-NEXT:    ldr w0, [x8, x9, lsl #2]
-; CHECK-GISEL-NEXT:    add sp, sp, #16
+; CHECK-GISEL-NEXT:    mov w8, w1
+; CHECK-GISEL-NEXT:    and x8, x8, #0x3
+; CHECK-GISEL-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-GISEL-NEXT:    ret
   %lv = load <4 x i32>, ptr %A
   %e = extractelement <4 x i32> %lv, i32 %idx
@@ -14779,14 +14759,8 @@ define i32 @load_single_extract_variable_index_masked_i32(ptr %A, i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: load_single_extract_variable_index_masked_i32:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    sub sp, sp, #16
-; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    ldr q0, [x0]
-; CHECK-GISEL-NEXT:    mov x8, sp
-; CHECK-GISEL-NEXT:    and w9, w1, #0x3
-; CHECK-GISEL-NEXT:    str q0, [sp]
-; CHECK-GISEL-NEXT:    ldr w0, [x8, w9, uxtw #2]
-; CHECK-GISEL-NEXT:    add sp, sp, #16
+; CHECK-GISEL-NEXT:    and w8, w1, #0x3
+; CHECK-GISEL-NEXT:    ldr w0, [x0, w8, uxtw #2]
 ; CHECK-GISEL-NEXT:    ret
   %idx.x = and i32 %idx, 3
   %lv = load <4 x i32>, ptr %A
@@ -14803,14 +14777,8 @@ define i32 @load_single_extract_variable_index_masked2_i32(ptr %A, i32 %idx) {
 ;
 ; CHECK-GISEL-LABEL: load_single_extract_variable_index_masked2_i32:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    sub sp, sp, #16
-; CHECK-GISEL-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GISEL-NEXT:    ldr q0, [x0]
-; CHECK-GISEL-NEXT:    mov x8, sp
-; CHECK-GISEL-NEXT:    and w9, w1, #0x1
-; CHECK-GISEL-NEXT:    str q0, [sp]
-; CHECK-GISEL-NEXT:    ldr w0, [x8, w9, uxtw #2]
-; CHECK-GISEL-NEXT:    add sp, sp, #16
+; CHECK-GISEL-NEXT:    and w8, w1, #0x1
+; CHECK-GISEL-NEXT:    ldr w0, [x0, w8, uxtw #2]
 ; CHECK-GISEL-NEXT:    ret
   %idx.x = and i32 %idx, 1
   %lv = load <4 x i32>, ptr %A

@@ -366,11 +366,11 @@ TypeSize
 SystemZTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(64);
+    return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::Fixed(ST->hasVector() ? 128 : 0);
+    return TypeSize::getFixed(ST->hasVector() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::Scalable(0);
+    return TypeSize::getScalable(0);
   }
 
   llvm_unreachable("Unsupported register kind");
@@ -1236,7 +1236,6 @@ InstructionCost SystemZTTIImpl::getInterleavedMemoryOpCost(
     // dst vector for vperm (S.A.).
     unsigned NumSrcVecs = std::min(NumEltsPerVecReg, Factor);
     unsigned NumDstVecs = NumVectorMemOps;
-    assert (NumSrcVecs > 1 && "Expected at least two source vectors.");
     NumPermutes += (NumDstVecs * NumSrcVecs) - NumDstVecs;
   }
 

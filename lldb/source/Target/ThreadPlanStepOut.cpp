@@ -322,7 +322,7 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
         // important to report the user breakpoint than the step out
         // completion.
 
-        if (site_sp->GetNumberOfOwners() == 1)
+        if (site_sp->GetNumberOfConstituents() == 1)
           return true;
       }
       return false;

@@ -62,7 +62,7 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
     const bool FastUnalignedAccess =
         any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
-          return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
+          return Feature->getValueAsString("Name") == "fast-unaligned-access";
         });
 
     OS << "PROC(" << Rec->getName() << ", "

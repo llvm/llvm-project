@@ -3,36 +3,18 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define double @sin_f64(double %a) {
-; CHECK-SD-LABEL: sin_f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b sin
-;
-; CHECK-GI-LABEL: sin_f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl sin
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sin_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b sin
 entry:
   %c = call double @llvm.sin.f64(double %a)
   ret double %c
 }
 
 define float @sin_f32(float %a) {
-; CHECK-SD-LABEL: sin_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b sinf
-;
-; CHECK-GI-LABEL: sin_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl sinf
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sin_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b sinf
 entry:
   %c = call float @llvm.sin.f32(float %a)
   ret float %c
@@ -713,14 +695,12 @@ define <7 x half> @sin_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #112] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
@@ -963,14 +943,12 @@ define <8 x half> @sin_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #136] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d14, [sp, #112] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #120] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[6], v2.h[0]
@@ -1284,36 +1262,18 @@ entry:
 }
 
 define double @cos_f64(double %a) {
-; CHECK-SD-LABEL: cos_f64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b cos
-;
-; CHECK-GI-LABEL: cos_f64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl cos
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: cos_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b cos
 entry:
   %c = call double @llvm.cos.f64(double %a)
   ret double %c
 }
 
 define float @cos_f32(float %a) {
-; CHECK-SD-LABEL: cos_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    b cosf
-;
-; CHECK-GI-LABEL: cos_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    bl cosf
-; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: cos_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    b cosf
 entry:
   %c = call float @llvm.cos.f32(float %a)
   ret float %c
@@ -1994,14 +1954,12 @@ define <7 x half> @cos_v7f16(<7 x half> %a) {
 ; CHECK-GI-NEXT:    ldr x30, [sp, #144] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #112] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #32] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #96] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[6], v0.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[7], v0.h[0]
@@ -2244,14 +2202,12 @@ define <8 x half> @cos_v8f16(<8 x half> %a) {
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #136] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr d14, [sp, #112] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #120] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[2], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[5], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[6], v2.h[0]
@@ -2563,6 +2519,24 @@ entry:
   %c = call <16 x half> @llvm.cos.v16f16(<16 x half> %a)
   ret <16 x half> %c
 }
+
+; This is testing that we do not produce incorrect tailcall lowerings
+define i64 @donttailcall(double noundef %x, double noundef %y) {
+; CHECK-LABEL: donttailcall:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl sin
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %call = tail call double @llvm.sin.f64(double noundef %x)
+  %0 = bitcast double %call to i64
+  ret i64 %0
+}
+
 
 declare <16 x half> @llvm.cos.v16f16(<16 x half>)
 declare <16 x half> @llvm.sin.v16f16(<16 x half>)

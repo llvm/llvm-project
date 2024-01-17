@@ -212,7 +212,7 @@ static std::optional<TypeSize> getPointerSize(const Value *V,
   Opts.NullIsUnknownSize = NullPointerIsDefined(F);
 
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::Fixed(Size);
+    return TypeSize::getFixed(Size);
   return std::nullopt;
 }
 
@@ -2170,7 +2170,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
           auto *DeadSI = dyn_cast<StoreInst>(DeadI);
           auto *KillingSI = dyn_cast<StoreInst>(KillingI);
           // We are re-using tryToMergePartialOverlappingStores, which requires
-          // DeadSI to dominate DeadSI.
+          // DeadSI to dominate KillingSI.
           // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
           if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
             if (Constant *Merged = tryToMergePartialOverlappingStores(

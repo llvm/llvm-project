@@ -150,6 +150,9 @@ static InstrUID decode(OpcodeType type, InstructionContext insnContext,
     dec =
         &THREEDNOW_MAP_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
+  case MAP4:
+    dec = &MAP4_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    break;
   case MAP5:
     dec = &MAP5_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
@@ -929,6 +932,9 @@ static bool readOpcode(struct InternalInstruction *insn) {
     case VEX_LOB_0F3A:
       insn->opcodeType = THREEBYTE_3A;
       return consume(insn, insn->opcode);
+    case VEX_LOB_MAP4:
+      insn->opcodeType = MAP4;
+      return consume(insn, insn->opcode);
     case VEX_LOB_MAP5:
       insn->opcodeType = MAP5;
       return consume(insn, insn->opcode);
@@ -1100,6 +1106,9 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
   case THREEDNOW_MAP:
     decision = &THREEDNOW_MAP_SYM;
     break;
+  case MAP4:
+    decision = &MAP4_SYM;
+    break;
   case MAP5:
     decision = &MAP5_SYM;
     break;
@@ -1160,7 +1169,11 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
-      if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+      // nf bit is the MSB of aaa
+      if (nfFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
+          insn->opcodeType == MAP4)
+        attrMask |= ATTR_EVEXNF;
+      else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXK;
       if (lFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_VEXL;
@@ -1257,6 +1270,11 @@ static int getInstructionID(struct InternalInstruction *insn,
     attrMask &= ~ATTR_ADSIZE;
   }
 
+  // Absolute jump and pushp/popp need special handling
+  if (insn->rex2ExtensionPrefix[0] == 0xd5 && insn->opcodeType == ONEBYTE &&
+      (insn->opcode == 0xA1 || (insn->opcode & 0xf0) == 0x50))
+    attrMask |= ATTR_REX2;
+
   if (insn->mode == MODE_16BIT) {
     // JCXZ/JECXZ need special handling for 16-bit mode because the meaning
     // of the AdSize prefix is inverted w.r.t. 32-bit mode.
@@ -1316,7 +1334,8 @@ static int getInstructionID(struct InternalInstruction *insn,
   //  any position.
   if ((insn->opcodeType == ONEBYTE && ((insn->opcode & 0xFC) == 0xA0)) ||
       (insn->opcodeType == TWOBYTE && (insn->opcode == 0xAE)) ||
-      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8)) {
+      (insn->opcodeType == THREEBYTE_38 && insn->opcode == 0xF8) ||
+      (insn->opcodeType == MAP4 && insn->opcode == 0xF8)) {
     // Make sure we observed the prefixes in any position.
     if (insn->hasAdSize)
       attrMask |= ATTR_ADSIZE;

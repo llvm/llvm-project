@@ -4,8 +4,8 @@ Test lldb-dap setBreakpoints request
 
 import os
 
-import lldbdap_testcase
 import dap_server
+import lldbdap_testcase
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -39,7 +39,18 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 startswith = actual_value.startswith(verify_value)
                 self.assertTrue(
                     startswith,
-                    ('"%s" value "%s" doesn\'t start with' ' "%s")')
+                    ('"%s" value "%s" doesn\'t start with "%s")')
+                    % (key, actual_value, verify_value),
+                )
+        if "matches" in verify_dict:
+            verify = verify_dict["matches"]
+            for key in verify:
+                verify_value = verify[key]
+                actual_value = actual[key]
+                self.assertRegex(
+                    actual_value,
+                    verify_value,
+                    ('"%s" value "%s" doesn\'t match pattern "%s")')
                     % (key, actual_value, verify_value),
                 )
         if "contains" in verify_dict:
@@ -150,16 +161,32 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         locals = self.dap_server.get_local_variables()
         globals = self.dap_server.get_global_variables()
-        buffer_children = make_buffer_verify_dict(0, 32)
+        buffer_children = make_buffer_verify_dict(0, 16)
         verify_locals = {
-            "argc": {"equals": {"type": "int", "value": "1"}},
+            "argc": {
+                "equals": {
+                    "type": "int",
+                    "value": "1",
+                },
+                "$__lldb_extensions": {
+                    "equals": {
+                        "value": "1",
+                    },
+                    "declaration": {
+                        "equals": {"line": 12, "column": 14},
+                        "contains": {"path": ["lldb-dap", "variables", "main.cpp"]},
+                    },
+                },
+            },
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},
                 "hasVariablesReference": True,
             },
             "pt": {
-                "equals": {"type": "PointType"},
+                "equals": {
+                    "type": "PointType",
+                },
                 "hasVariablesReference": True,
                 "children": {
                     "x": {"equals": {"type": "int", "value": "11"}},
@@ -169,6 +196,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             },
             "x": {"equals": {"type": "int"}},
         }
+        if enableAutoVariableSummaries:
+            verify_locals["pt"]["$__lldb_extensions"] = {
+                "equals": {"autoSummary": "{x:11, y:22}"}
+            }
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
             "::g_global": {"equals": {"type": "int", "value": "123"}},
@@ -223,18 +254,18 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "pt": {
                 "equals": {"type": "PointType"},
                 "startswith": {
-                    "result": "{x:11, y:22}"
+                    "result": "{x:11, y:22, buffer:{...}}"
                     if enableAutoVariableSummaries
                     else "PointType @ 0x"
                 },
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
-                "equals": {"type": "int[32]"},
+                "equals": {"type": "int[16]"},
                 "startswith": {
                     "result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
                     if enableAutoVariableSummaries
-                    else "int[32] @ 0x"
+                    else "int[16] @ 0x"
                 },
                 "hasVariablesReference": True,
             },
@@ -420,7 +451,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     },
                     "buffer": {
                         "children": buffer_children,
-                        "equals": {"indexedVariables": 32},
+                        "equals": {"indexedVariables": 16},
                     },
                 },
             },
@@ -435,15 +466,85 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # the other temporary (from other UI).
         expandable_expression = {
             "name": "pt",
-            "response": {
-                "equals": {"type": "PointType"},
-                "startswith": {
-                    "result": "{x:11, y:22}"
-                    if enableAutoVariableSummaries
-                    else "PointType @ 0x"
+            "context": {
+                "repl": {
+                    "equals": {"type": "PointType"},
+                    "equals": {
+                        "result": """(PointType) $0 = {
+  x = 11
+  y = 22
+  buffer = {
+    [0] = 0
+    [1] = 1
+    [2] = 2
+    [3] = 3
+    [4] = 4
+    [5] = 5
+    [6] = 6
+    [7] = 7
+    [8] = 8
+    [9] = 9
+    [10] = 10
+    [11] = 11
+    [12] = 12
+    [13] = 13
+    [14] = 14
+    [15] = 15
+  }
+}"""
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
                 },
-                "missing": ["indexedVariables"],
-                "hasVariablesReference": True,
+                "hover": {
+                    "equals": {"type": "PointType"},
+                    "equals": {
+                        "result": """(PointType) pt = {
+  x = 11
+  y = 22
+  buffer = {
+    [0] = 0
+    [1] = 1
+    [2] = 2
+    [3] = 3
+    [4] = 4
+    [5] = 5
+    [6] = 6
+    [7] = 7
+    [8] = 8
+    [9] = 9
+    [10] = 10
+    [11] = 11
+    [12] = 12
+    [13] = 13
+    [14] = 14
+    [15] = 15
+  }
+}"""
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
+                "watch": {
+                    "equals": {"type": "PointType"},
+                    "startswith": {
+                        "result": "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
+                "variables": {
+                    "equals": {"type": "PointType"},
+                    "startswith": {
+                        "result": "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
+                    },
+                    "missing": ["indexedVariables"],
+                    "hasVariablesReference": True,
+                },
             },
             "children": {
                 "x": {"equals": {"type": "int", "value": "11"}},
@@ -452,27 +553,21 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             },
         }
 
-        # Evaluate from permanent UI.
-        permanent_expr_varref_dict = {}
-        response = self.dap_server.request_evaluate(
-            expandable_expression["name"], frameIndex=0, threadId=None, context="repl"
-        )
-        self.verify_values(
-            expandable_expression["response"],
-            response["body"],
-            permanent_expr_varref_dict,
-            expandable_expression["name"],
-        )
-
-        # Evaluate from temporary UI.
-        temporary_expr_varref_dict = {}
-        response = self.dap_server.request_evaluate(expandable_expression["name"])
-        self.verify_values(
-            expandable_expression["response"],
-            response["body"],
-            temporary_expr_varref_dict,
-            expandable_expression["name"],
-        )
+        # Evaluate from known contexts.
+        expr_varref_dict = {}
+        for context, verify_dict in expandable_expression["context"].items():
+            response = self.dap_server.request_evaluate(
+                expandable_expression["name"],
+                frameIndex=0,
+                threadId=None,
+                context=context,
+            )
+            self.verify_values(
+                verify_dict,
+                response["body"],
+                expr_varref_dict,
+                expandable_expression["name"],
+            )
 
         # Evaluate locals again.
         locals = self.dap_server.get_local_variables()
@@ -480,7 +575,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify the evaluated expressions before second locals evaluation
         # can be expanded.
-        var_ref = temporary_expr_varref_dict[expandable_expression["name"]]
+        var_ref = expr_varref_dict[expandable_expression["name"]]
         response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
@@ -496,7 +591,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_breakpoints(breakpoint_ids)
 
-        var_ref = permanent_expr_varref_dict[expandable_expression["name"]]
+        var_ref = expr_varref_dict[expandable_expression["name"]]
         response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]

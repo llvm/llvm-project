@@ -209,7 +209,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: not %clang -static-pie -nopie -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -538,6 +538,15 @@
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabihf -rtlib=platform --unwindlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
+//
+// Check that musleabihf is treated as a hardfloat config, with respect to
+// multiarch directories.
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=arm-unknown-linux-musleabihf -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
@@ -1861,3 +1870,7 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
+
+/// -nopie is OpenBSD-specific.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
+// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

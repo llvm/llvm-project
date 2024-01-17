@@ -29,7 +29,6 @@
 namespace llvm {
 class AAResults;
 class Function;
-class FunctionPass;
 
 class AAEvaluator : public PassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;

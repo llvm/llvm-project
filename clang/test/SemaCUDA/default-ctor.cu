@@ -25,7 +25,7 @@ __device__ void fd() {
   InD ind;
   InH inh; // expected-error{{no matching constructor for initialization of 'InH'}}
   InHD inhd;
-  Out out;
+  Out out; // expected-error{{no matching constructor for initialization of 'Out'}}
   OutD outd;
   OutH outh; // expected-error{{no matching constructor for initialization of 'OutH'}}
   OutHD outhd;

@@ -809,15 +809,15 @@ define <8 x i64> @test_abs_le_v8i64_fold(ptr %a.ptr) nounwind {
 ;
 ; AVX1-LABEL: test_abs_le_v8i64_fold:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovupd (%rdi), %ymm0
-; AVX1-NEXT:    vmovupd 32(%rdi), %ymm1
+; AVX1-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqu 32(%rdi), %ymm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq 16(%rdi), %xmm2, %xmm3
-; AVX1-NEXT:    vpsubq (%rdi), %xmm2, %xmm4
+; AVX1-NEXT:    vpsubq %xmm0, %xmm2, %xmm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    vblendvpd %ymm0, %ymm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vpsubq 48(%rdi), %xmm2, %xmm3
-; AVX1-NEXT:    vpsubq 32(%rdi), %xmm2, %xmm2
+; AVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm1, %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq

@@ -708,6 +708,7 @@ variables is defined below.
 
     * ``LIBOMPTARGET_DEBUG=<Num>``
     * ``LIBOMPTARGET_PROFILE=<Filename>``
+    * ``LIBOMPTARGET_PROFILE_GRANULARITY=<Num> (default 500, in us)``
     * ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=<Num>``
     * ``LIBOMPTARGET_INFO=<Num>``
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
@@ -748,6 +749,12 @@ for time trace output. Note that this will turn ``libomp`` into a C++ library.
 .. _`Speedscope App`: https://www.speedscope.app/
 
 .. _`LLVM Support Library`: https://llvm.org/docs/SupportLibrary.html
+
+LIBOMPTARGET_PROFILE_GRANULARITY
+""""""""""""""""""""""""""""""""
+
+``LIBOMPTARGET_PROFILE_GRANULARITY`` allows to change the time profile
+granularity measured in `us`. Default is 500 (`us`).
 
 LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
 """""""""""""""""""""""""""""""""""""
@@ -1016,9 +1023,9 @@ default. The solution is to add an explicit map clause in the target region.
 LIBOMPTARGET_STACK_SIZE
 """""""""""""""""""""""
 
-This environment variable sets the stack size in bytes for the CUDA plugin. This
-can be used to increase or decrease the standard amount of memory reserved for
-each thread's stack.
+This environment variable sets the stack size in bytes for the AMDGPU and CUDA
+plugins. This can be used to increase or decrease the standard amount of memory
+reserved for each thread's stack.
 
 LIBOMPTARGET_HEAP_SIZE
 """""""""""""""""""""""

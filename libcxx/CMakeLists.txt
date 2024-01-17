@@ -117,12 +117,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
 option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
-# TODO MODULES Remove this option and test for the requirements (CMake/Clang) instead.
-option(LIBCXX_ENABLE_STD_MODULES
-   "Whether to enable the building the C++23 `std` module. This feature is
-    experimental and has additional dependencies. Only enable this when
-    interested in testing or developing this module. See
-    https://libcxx.llvm.org/Modules.html for more information." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -251,17 +245,18 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless
-# 'LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY' is on. This option is also
-# disabled when the ABI library is not specified or is specified to be "none".
-set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-      AND NOT LIBCXX_CXX_ABI STREQUAL "none"
-      AND Python3_EXECUTABLE
-      AND LIBCXX_ENABLE_SHARED)
-    set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+# on UNIX platforms other than Apple, and on the Fuchsia platform unless we
+# statically link libc++abi inside libc++.so, we don't build libc++.so at all
+# or we don't have any ABI library.
+if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+    OR NOT LIBCXX_ENABLE_SHARED
+    OR LIBCXX_CXX_ABI STREQUAL "none")
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
+elseif((UNIX OR FUCHSIA) AND NOT APPLE)
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+else()
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 endif()
-
 option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
@@ -273,7 +268,7 @@ option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
    libc++abi. Doing otherwise is an ODR violation." OFF)
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
-option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." ON)
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit multilib libc++. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
@@ -283,7 +278,9 @@ endif()
 
 # Feature options -------------------------------------------------------------
 option(LIBCXX_ENABLE_EXCEPTIONS "Use exceptions." ON)
-option(LIBCXX_ENABLE_RTTI "Use run time type information." ON)
+option(LIBCXX_ENABLE_RTTI
+  "Use runtime type information.
+   This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
 option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
@@ -371,6 +368,13 @@ if (LIBCXX_HAS_PTHREAD_API)
                         " and LIBCXX_HAS_WIN32_THREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+endif()
+
+if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
+  message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
+                      " disabled, since that configuration is broken. See"
+                      " https://github.com/llvm/llvm-project/issues/66117"
+                      " for details.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
@@ -620,10 +624,10 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
         append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
             USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
     elseif (USE_SANITIZER STREQUAL "DataFlow")
@@ -638,6 +642,21 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
 endfunction()
 
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(cxx-sanitizer-flags INTERFACE)
+target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
+
+# _LIBCPP_INSTRUMENTED_WITH_ASAN informs that library was built with ASan.
+# Defining _LIBCPP_INSTRUMENTED_WITH_ASAN while building the library with ASan is required.
+# Normally, the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is used to keep information whether
+# dylibs are built with AddressSanitizer. However, when building libc++,
+# this flag needs to be defined so that the resulting dylib has all ASan functionalities guarded by this flag.
+# If the _LIBCPP_INSTRUMENTED_WITH_ASAN flag is not defined, then parts of the ASan instrumentation code in libc++
+# will not be compiled into it, resulting in false positives.
+# For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
+string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
+if (NOT "${building_with_asan}" STREQUAL "-1")
+  config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
+endif()
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
@@ -652,15 +671,17 @@ function(cxx_link_system_libraries target)
     target_add_link_flags_if_supported(${target} PRIVATE "--unwindlib=none")
   endif()
 
-  if (LIBCXX_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
-    if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+  if (MSVC)
+    if (LIBCXX_USE_COMPILER_RT)
+      find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+      if (LIBCXX_BUILTINS_LIBRARY)
+        target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+      endif()
+    elseif (LIBCXX_HAS_GCC_LIB)
+      target_link_libraries(${target} PRIVATE gcc)
+    elseif (LIBCXX_HAS_GCC_S_LIB)
+      target_link_libraries(${target} PRIVATE gcc_s)
     endif()
-  elseif (LIBCXX_HAS_GCC_LIB)
-    target_link_libraries(${target} PRIVATE gcc)
-  elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PRIVATE gcc_s)
   endif()
 
   if (LIBCXX_HAS_ATOMIC_LIB)
@@ -745,7 +766,6 @@ config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
-config_define_if_not(LIBCXX_ENABLE_STD_MODULES _LIBCPP_HAS_NO_STD_MODULES)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
@@ -820,6 +840,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
+  target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
 endfunction()
 
 #===============================================================================
@@ -828,9 +849,7 @@ endfunction()
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
-if (LIBCXX_ENABLE_STD_MODULES)
-  add_subdirectory(modules)
-endif()
+add_subdirectory(modules)
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
 
@@ -838,9 +857,7 @@ if (LIBCXX_ENABLE_CLANG_TIDY)
   list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
 endif()
 
-if (LIBCXX_ENABLE_STD_MODULES)
-  list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules generate-test-module-std)
-endif()
+list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

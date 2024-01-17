@@ -21,19 +21,13 @@ namespace dataflow {
 
 /// Copies a record (struct, class, or union) from `Src` to `Dst`.
 ///
-/// This performs a deep copy, i.e. it copies every field and recurses on
-/// fields of record type. It also copies properties from the `RecordValue`
-/// associated with `Src` to the `RecordValue` associated with `Dst` (if these
-/// `RecordValue`s exist).
+/// This performs a deep copy, i.e. it copies every field (including synthetic
+/// fields) and recurses on fields of record type.
 ///
 /// If there is a `RecordValue` associated with `Dst` in the environment, this
 /// function creates a new `RecordValue` and associates it with `Dst`; clients
 /// need to be aware of this and must not assume that the `RecordValue`
 /// associated with `Dst` remains the same after the call.
-///
-/// We create a new `RecordValue` rather than modifying properties on the old
-/// `RecordValue` because the old `RecordValue` may be shared with other
-/// `Environment`s, and we don't want changes to properties to be visible there.
 ///
 /// Requirements:
 ///
@@ -47,10 +41,9 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
 /// retrieved from `Env2`. A convenience overload retrieves values for `Loc1`
 /// and `Loc2` from the same environment.
 ///
-/// This performs a deep comparison, i.e. it compares every field and recurses
-/// on fields of record type. Fields of reference type compare equal if they
-/// refer to the same storage location. If `RecordValue`s are associated with
-/// `Loc1` and `Loc2`, it also compares the properties on those `RecordValue`s.
+/// This performs a deep comparison, i.e. it compares every field (including
+/// synthetic fields) and recurses on fields of record type. Fields of reference
+/// type compare equal if they refer to the same storage location.
 ///
 /// Note on how to interpret the result:
 /// - If this returns true, the records are guaranteed to be equal at runtime.

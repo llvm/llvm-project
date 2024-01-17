@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -112,8 +112,10 @@ DATA_ARRAY_TEMPLATE = """
 /// this approach uses less space for the data and is about 4% faster in the
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
+// clang-format off
 inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
+// clang-format on
 
 /// Returns the extended grapheme cluster bondary property of a code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{

@@ -101,7 +101,7 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
     // If there are no args, pass a null pointer and size 0
     llvm::Value *BufferPtr =
         llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(Ctx));
-    return {BufferPtr, llvm::TypeSize::Fixed(0)};
+    return {BufferPtr, llvm::TypeSize::getFixed(0)};
   } else {
     llvm::SmallVector<llvm::Type *, 8> ArgTypes;
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)

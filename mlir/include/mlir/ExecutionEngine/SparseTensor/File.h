@@ -197,7 +197,7 @@ public:
   template <typename P, typename I, typename V>
   SparseTensorStorage<P, I, V> *
   readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
-                   const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                   const LevelType *lvlTypes, const uint64_t *dim2lvl,
                    const uint64_t *lvl2dim) {
     const uint64_t dimRank = getRank();
     MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim);

@@ -55,6 +55,11 @@
 // CHECK: b4 09 00 00 ff ff ff ff      w9 = -1
 // CHECK: c4 0a 00 00 40 00 00 00      w10 s>>= 64
 
+  if w1 & w2 goto Llabel0    // BPF_JSET | BPF_X
+  if w1 & 0xff goto Llabel0  // BPF_JSET | BPF_K
+// CHECK: 4e 21 0d 00 00 00 00 00      if w1 & w2 goto +13
+// CHECK: 46 01 0c 00 ff 00 00 00      if w1 & 255 goto +12
+
   if w0 == w1 goto Llabel0   // BPF_JEQ  | BPF_X
   if w3 != w4 goto Llabel0   // BPF_JNE  | BPF_X
 // CHECK: 1e 10 0b 00 00 00 00 00 	if w0 == w1 goto +11

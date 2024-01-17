@@ -19,7 +19,12 @@ def Arith_Dialect : Dialect {
     The arith dialect is intended to hold basic integer and floating point
     mathematical operations. This includes unary, binary, and ternary arithmetic
     ops, bitwise and shift ops, cast ops, and compare ops. Operations in this
-    dialect also accept vectors and tensors of integers or floats.
+    dialect also accept vectors and tensors of integers or floats. The dialect
+    assumes integers are represented by bitvectors with a two's complement 
+    representation. Unless otherwise stated, the operations within this dialect 
+    propagate poison values, i.e., if any of its inputs are poison, then the 
+    output is poison. Unless otherwise stated, operations applied to `vector` 
+    and `tensor` values propagates poison elementwise.
   }];
 
   let hasConstantMaterializer = 1;
@@ -125,6 +130,29 @@ def FastMathFlags : I32BitEnumAttr<
 
 def Arith_FastMathAttr :
     EnumAttr<Arith_Dialect, FastMathFlags, "fastmath"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// Arith_IntegerOverflowFlags
+//===----------------------------------------------------------------------===//
+
+def Arith_IOFnone : I32BitEnumAttrCaseNone<"none">;
+def Arith_IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def Arith_IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+
+def Arith_IntegerOverflowFlags : I32BitEnumAttr<
+    "IntegerOverflowFlags",
+    "Integer overflow arith flags",
+    [Arith_IOFnone, Arith_IOFnsw, Arith_IOFnuw]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::arith";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def Arith_IntegerOverflowAttr :
+    EnumAttr<Arith_Dialect, Arith_IntegerOverflowFlags, "overflow"> {
   let assemblyFormat = "`<` $value `>`";
 }
 

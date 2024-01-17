@@ -1,9 +1,9 @@
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++98 %s -verify=expected,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -11,36 +11,55 @@ __extension__ typedef __SIZE_TYPE__ size_t;
 namespace std { struct type_info; }
 
 namespace dr400 { // dr400: yes
-  struct A { int a; struct a {}; }; // expected-note 2{{conflicting}} expected-note {{ambiguous}}
-  struct B { int a; struct a {}; }; // expected-note 2{{target}} expected-note {{ambiguous}}
+  struct A { int a; struct a {}; }; // #dr400-A
+  struct B { int a; struct a {}; }; // #dr400-B
   struct C : A, B { using A::a; struct a b; };
-  struct D : A, B { using A::a; using B::a; struct a b; }; // expected-error 2{{conflicts}}
-  struct E : A, B { struct a b; }; // expected-error {{found in multiple base classes}}
+  struct D : A, B { 
+    using A::a;
+    // FIXME: we should issue a single diagnostic
+    using B::a; // #dr400-using-B-a
+    // expected-error@#dr400-using-B-a {{target of using declaration conflicts with declaration already in scope}}
+    //   expected-note@#dr400-B {{target of using declaration}}
+    //   expected-note@#dr400-A {{conflicting declaration}}
+    // expected-error@#dr400-using-B-a {{target of using declaration conflicts with declaration already in scope}}
+    //   expected-note@#dr400-B {{target of using declaration}}
+    //   expected-note@#dr400-A {{conflicting declaration}}
+    struct a b;
+  };
+  struct E : A, B { struct a b; };
+  // expected-error@-1 {{member 'a' found in multiple base classes of different types}}
+  //   expected-note@#dr400-A {{member type 'dr400::A::a' found by ambiguous name lookup}}
+  //   expected-note@#dr400-B {{member type 'dr400::B::a' found by ambiguous name lookup}}
 }
 
-namespace dr401 { // dr401: yes
-  template<class T, class U = typename T::type> class A : public T {}; // expected-error {{protected}} expected-error 2{{private}}
-
+namespace dr401 { // dr401: 2.8
+  template<class T, class U = typename T::type> class A : public T {}; // #dr401-A
+  // expected-error@#dr401-A {{'type' is a private member of 'dr401::C'}}
+  //   expected-note@#dr402-friend-A-C {{in instantiation of default argument for 'A<C>' required here}}
+  //   expected-note@#dr402-C-type {{implicitly declared private here}}
+  // expected-error@#dr401-A {{'type' is a protected member of 'dr401::B'}}
+  //   expected-note@#dr402-b {{in instantiation of default argument for 'A<B>' required here}}
+  //   expected-note@#dr402-B-type {{declared protected here}}
+  // expected-error@#dr401-A {{'type' is a private member of 'dr401::D'}}
+  //   expected-note@#dr402-d {{in instantiation of default argument for 'A<D>' required here}}
+  //   expected-note@#dr402-D-type {{implicitly declared private here}}
   class B {
   protected:
-    typedef int type; // expected-note {{protected}}
-#if __cplusplus == 199711L
-    // expected-note@-2 {{protected}}
-#endif
+    typedef int type; // #dr402-B-type
   };
 
   class C {
-    typedef int type; // expected-note {{private}}
-    friend class A<C>; // expected-note {{default argument}}
+    typedef int type; // #dr402-C-type
+    friend class A<C>; // #dr402-friend-A-C
   };
 
   class D {
-    typedef int type; // expected-note {{private}}
+    typedef int type; // #dr402-D-type
     friend class A<D, int>;
   };
 
-  A<B> *b; // expected-note {{default argument}}
-  A<D> *d; // expected-note {{in instantiation of default argument}}
+  A<B> *b; // #dr402-b
+  A<D> *d; // #dr402-d
 
   struct E {
     template<class T, class U = typename T::type> class A : public T {};
@@ -53,14 +72,15 @@ namespace dr401 { // dr401: yes
 
   // FIXME: Why do we get different diagnostics in C++11 onwards here? We seem
   // to not treat the default template argument as a SFINAE context in C++98.
-  template<class T, class U = typename T::type> void f(T) {}
-  void g(B b) { f(b); }
-#if __cplusplus < 201103L
-  // expected-error@-3 0-1{{extension}} expected-error@-3 {{protected}} expected-note@-3 {{instantiation}}
-  // expected-note@-3 {{substituting}}
-#else
-  // expected-error@-5 {{no matching}} expected-note@-6 {{protected}}
-#endif
+  template<class T, class U = typename T::type> void f(T) {} // #dr402-f
+  // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
+  // cxx98-error@-2 {{'type' is a protected member of 'dr401::B'}}
+  //   cxx98-note@-3 {{in instantiation of default argument for 'f<B>' required here}}
+  //   cxx98-note@#dr402-f-b {{while substituting deduced template arguments into function template 'f' [with T = B, U = (no value)]}}
+  //   cxx98-note@#dr402-B-type {{declared protected here}}
+  void g(B b) { f(b); } // #dr402-f-b
+  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx11-note@#dr402-f {{candidate template ignored: substitution failure [with T = B, U = typename B::type]: 'type' is a protected member of 'dr401::B'}}
 }
 
 namespace dr403 { // dr403: yes
@@ -93,33 +113,45 @@ namespace dr405 { // dr405: yes
 
   struct C {
     int f;
-    void test1(A::S as) { f(as); } // expected-error {{called object type 'int'}}
-    void test2(A::S as) { void f(); f(as); } // expected-error {{too many arguments}} expected-note {{}}
+    void test1(A::S as) { f(as); }
+    // expected-error@-1 {{called object type 'int' is not a function or function pointer}}
+    void test2(A::S as) { void f(); f(as); }
+    // expected-error@-1 {{too many arguments to function call, expected 0, have 1}}
+    //   expected-note@-2 {{'f' declared here}}
     void test3(A::S as) { using A::f; f(as); } // ok
     void test4(A::S as) { using B::f; f(as); } // ok
-    void test5(A::S as) { int f; f(as); } // expected-error {{called object type 'int'}}
-    void test6(A::S as) { struct f {}; (void) f(as); } // expected-error {{no matching conversion}} expected-note +{{}}
+    void test5(A::S as) { int f; f(as); }
+    // expected-error@-1 {{called object type 'int' is not a function or function pointer}}
+    void test6(A::S as) { struct f {}; (void) f(as); }
+    // expected-error@-1 {{no matching conversion for functional-style cast from 'A::S' to 'f'}}
+    //   expected-note@-2 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'A::S' to 'const f' for 1st argument}}
+    //   since-cxx11-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A::S' to 'f' for 1st argument}}
+    //   expected-note@-4 {{candidate constructor (the implicit default constructor) not viable: requires 0 arguments, but 1 was provided}}
   };
 
   namespace D {
     struct S {};
     struct X { void operator()(S); } f;
   }
-  void testD(D::S ds) { f(ds); } // expected-error {{undeclared identifier}}
+  void testD(D::S ds) { f(ds); }
+  // expected-error@-1 {{use of undeclared identifier 'f'}}
 
   namespace E {
     struct S {};
     struct f { f(S); };
   }
-  void testE(E::S es) { f(es); } // expected-error {{undeclared identifier}}
+  void testE(E::S es) { f(es); }
+  // expected-error@-1 {{use of undeclared identifier 'f'}}
 }
 
-namespace dr406 { // dr406: yes
+namespace dr406 { // dr406: 2.9
   typedef struct {
-    static int n; // expected-error {{static data member 'n' not allowed in anonymous struct}}
+    static int n;
+    // expected-error@-1 {{static data member 'n' not allowed in anonymous struct}}
   } A;
   typedef union {
-    static int n; // expected-error {{static data member 'n' not allowed in anonymous union}}
+    static int n;
+    // expected-error@-1 {{static data member 'n' not allowed in anonymous union}}
   } B;
 }
 
@@ -130,23 +162,28 @@ namespace dr407 { // dr407: 3.8
   void f() {
     struct S *p;
     {
-      typedef struct S S; // expected-note {{here}}
-      struct S *p; // expected-error {{typedef 'S' cannot be referenced with a struct specifier}}
+      typedef struct S S; // #dr407-typedef-S
+      struct S *p;
+      // expected-error@-1 {{typedef 'S' cannot be referenced with a struct specifier}}
+      //   expected-note@#dr407-typedef-S {{declared here}}
     }
   }
   struct S {};
 
   namespace UsingDir {
     namespace A {
-      struct S {}; // expected-note {{found}}
+      struct S {}; // #dr407-A-S
     }
     namespace B {
-      typedef int S; // expected-note {{found}}
+      typedef int S; // #dr407-B-S
     }
     namespace C {
       using namespace A;
       using namespace B;
-      struct S s; // expected-error {{ambiguous}}
+      struct S s;
+      // expected-error@-1 {{ambiguous}}
+      //   expected-note@#dr407-A-S {{candidate found by name lookup is 'dr407::UsingDir::A::S'}}
+      //   expected-note@#dr407-B-S {{candidate found by name lookup is 'dr407::UsingDir::B::S'}}
     }
     namespace D {
       using A::S;
@@ -214,9 +251,7 @@ namespace dr409 { // dr409: yes
     A::B b2;
     A<T>::B b3;
     A<T*>::B b4;
-#if __cplusplus <= 201703L
-    // expected-error@-2 {{implicit 'typename' is a C++20 extension}}
-#endif
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::B; implicit 'typename' is a C++20 extension}}
   };
 }
 
@@ -233,7 +268,7 @@ namespace dr410 { // dr410: no
       template<class T> void i(T);
       friend void i<>(int);
     private:
-      static void z(); // expected-note {{private}}
+      static void z(); // #dr410-z
     };
 
     template<> void h(int) { A::z(); }
@@ -242,10 +277,12 @@ namespace dr410 { // dr410: no
     template<> void i(int) { A::z(); }
   }
   template<> void f(int) { M::A::z(); }
-  void g(int) { M::A::z(); } // expected-error {{private}}
+  void g(int) { M::A::z(); }
+  // expected-error@-1 {{'z' is a private member of 'dr410::M::A'}}
+  //   expected-note@#dr410-z {{declared private here}}
 }
 
-// dr412 is in its own file.
+// dr412 is in dr412.cpp
 
 namespace dr413 { // dr413: yes
   struct S {
@@ -253,16 +290,19 @@ namespace dr413 { // dr413: yes
     int : 17;
     int b;
   };
-  S s = { 1, 2, 3 }; // expected-error {{excess elements}}
+  S s = { 1, 2, 3 };
+  // expected-error@-1 {{excess elements in struct initializer}}
 
   struct E {};
-  struct T { // expected-note {{here}}
+  struct T { // #dr413-T
     int a;
     E e;
     int b;
   };
   T t1 = { 1, {}, 2 };
-  T t2 = { 1, 2 }; // expected-error {{aggregate with no elements requires explicit braces}}
+  T t2 = { 1, 2 };
+  // expected-error@-1 {{initializer for aggregate with no elements requires explicit braces}}
+  //   expected-note@#dr413-T {{'dr413::T' declared here}}
 }
 
 namespace dr414 { // dr414: dup 305
@@ -290,10 +330,12 @@ namespace dr416 { // dr416: yes
 
 namespace dr417 { // dr417: no
   struct A;
-  struct dr417::A {}; // expected-warning {{extra qualification}}
+  struct dr417::A {};
+  // expected-warning@-1 {{extra qualification on member 'A'}}
   struct B { struct X; };
   struct C : B {};
-  struct C::X {}; // expected-error {{no struct named 'X' in 'dr417::C'}}
+  struct C::X {};
+  // expected-error@-1 {{no struct named 'X' in 'dr417::C'}}
   struct B::X { struct Y; };
   struct C::X::Y {}; // ok!
   namespace N {
@@ -304,15 +346,20 @@ namespace dr417 { // dr417: no
   }
   // FIXME: This is ill-formed.
   using N::D;
-  struct dr417::D {}; // expected-warning {{extra qualification}}
+  struct dr417::D {};
+  // expected-warning@-1 {{extra qualification on member 'D'}}
   using namespace N;
-  struct dr417::E {}; // expected-warning {{extra qualification}} expected-error {{no struct named 'E'}}
+  struct dr417::E {};
+  // expected-error@-1 {{no struct named 'E' in namespace 'dr417'}}
+  // expected-warning@-2 {{extra qualification on member 'E'}}
   struct N::F {};
   struct G;
   using N::H;
   namespace M {
-    struct dr417::G {}; // expected-error {{namespace 'M' does not enclose}}
-    struct dr417::H {}; // expected-error {{namespace 'M' does not enclose}}
+    struct dr417::G {};
+    // expected-error@-1 {{cannot define or redeclare 'G' here because namespace 'M' does not enclose namespace 'dr417'}}
+    struct dr417::H {};
+    // expected-error@-1 {{cannot define or redeclare 'H' here because namespace 'M' does not enclose namespace 'dr417'}}
   }
 }
 
@@ -326,7 +373,7 @@ void g() { f1(); }
 
 namespace example2 {
 namespace A {
-void f2(int); // #dr418-f2-decl
+void f2(int); // #dr418-f2
 }
 namespace B {
 using A::f2;
@@ -336,8 +383,9 @@ void f2(int = 3);
 }
 void g2() {
   using B::f2;
-  f2(); // expected-error {{no matching function}}
-  // expected-note@#dr418-f2-decl {{requires 1 argument}}
+  f2();
+  // expected-error@-1 {{no matching function for call to 'f2'}}
+  //   expected-note@#dr418-f2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
 }
 } // namespace example2
 
@@ -360,7 +408,7 @@ void use() {
 } // namespace example3
 } // namespace dr418
 
-namespace dr420 { // dr420: yes
+namespace dr420 { // dr420: 9
   template<typename T> struct ptr {
     T *operator->() const;
     T &operator*() const;
@@ -381,7 +429,8 @@ namespace dr420 { // dr420: yes
   void test2(T p) {
     p->template Y<int>::~Y<int>();
     p->~Y<int>();
-    p->template ~Y<int>(); // expected-error {{'template' keyword not permitted in destructor name}}
+    p->template ~Y<int>();
+    // expected-error@-1 {{'template' keyword not permitted in destructor name}}
   }
   template<typename T> struct Y {};
   template void test2(Y<int>*);
@@ -413,17 +462,22 @@ namespace dr420 { // dr420: yes
 
 namespace dr421 { // dr421: yes
   struct X { X(); int n; int &r; };
-  int *p = &X().n; // expected-error-re {{{{taking the address of a temporary|cannot take the address of an rvalue}}}}
+  int *p = &X().n;
+  // cxx98-error@-1 {{taking the address of a temporary object of type 'int'}}
+  // since-cxx11-error@-2 {{cannot take the address of an rvalue of type 'int'}}
   int *q = &X().r;
 }
 
 namespace dr422 { // dr422: yes
   template<typename T, typename U> void f() {
-    typedef T type; // expected-note {{prev}}
-    typedef U type; // expected-error {{redef}}
+    typedef T type; // #dr422-typedef-T
+    typedef U type;
+    // expected-error@-1 {{typedef redefinition with different types ('char' vs 'int')}}
+    //   expected-note@#dr422-f-int-char {{in instantiation of function template specialization 'dr422::f<int, char>' requested here}}
+    //   expected-note@#dr422-typedef-T {{previous definition is here}}
   }
   template void f<int, int>();
-  template void f<int, char>(); // expected-note {{instantiation}}
+  template void f<int, char>(); // #dr422-f-int-char
 }
 
 namespace dr423 { // dr423: yes
@@ -433,37 +487,46 @@ namespace dr423 { // dr423: yes
 
 namespace dr424 { // dr424: yes
   struct A {
-    typedef int N; // expected-note {{previous}}
-    typedef int N; // expected-error {{redefinition}}
+    typedef int N; // #dr424-N
+    typedef int N;
+    // expected-error@-1 {{redefinition of 'N'}}
+    //   expected-note@#dr424-N {{previous definition is here}}
 
     struct X;
-    typedef X X; // expected-note {{previous}}
+    typedef X X; // #dr424-X
     struct X {};
 
     struct X *p;
     struct A::X *q;
     X *r;
 
-    typedef X X; // expected-error {{redefinition}}
+    typedef X X;
+    // expected-error@-1 {{redefinition of 'X'}}
+    //   expected-note@#dr424-X {{previous definition is here}}
   };
   struct B {
-    typedef int N;
+    typedef int M;
   };
   struct C : B {
-    typedef int N; // expected-note {{previous}}
-    typedef int N; // expected-error {{redefinition}}
+    typedef int M; // #dr424-M
+    typedef int M;
+    // expected-error@-1 {{redefinition of 'M'}}
+    //   expected-note@#dr424-M {{previous definition is here}}
   };
 }
 
 namespace dr425 { // dr425: yes
   struct A { template<typename T> operator T() const; } a;
-  float f = 1.0f * a; // expected-error {{ambiguous}} expected-note 5+{{built-in candidate}}
+  float f = 1.0f * a;
+  // expected-error@-1 {{use of overloaded operator '*' is ambiguous (with operand types 'float' and 'struct A')}}
+  //   expected-note@-2 +{{built-in candidate}}
 
   template<typename T> struct is_float;
   template<> struct is_float<float> { typedef void type; };
 
   struct B {
-    template<typename T, typename U = typename is_float<T>::type> operator T() const; // expected-error 0-1{{extension}}
+    template<typename T, typename U = typename is_float<T>::type> operator T() const;
+    // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   } b;
   float g = 1.0f * b; // ok
 }
@@ -471,41 +534,53 @@ namespace dr425 { // dr425: yes
 namespace dr427 { // dr427: yes
   struct B {};
   struct D : public B {
-    D(B &) = delete; // expected-error 0-1{{extension}} expected-note {{deleted}}
+    D(B &) = delete; // #dr427-D
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   };
 
   extern D d1;
   B &b = d1;
   const D &d2 = static_cast<const D&>(b);
   const D &d3 = (const D&)b;
-  const D &d4(b); // expected-error {{deleted}}
+  const D &d4(b);
+  // expected-error@-1 {{conversion function from 'B' to 'const D' invokes a deleted function}}
+  //   expected-note@#dr427-D {{'D' has been explicitly marked deleted here}}
 }
 
 namespace dr428 { // dr428: yes
   template<typename T> T make();
-  extern struct X x; // expected-note 5{{forward declaration}}
+  extern struct X x; // #dr428-X
   void f() {
-    throw void(); // expected-error {{cannot throw}}
+    throw void();
+    // expected-error@-1 {{cannot throw}}
     throw make<void*>();
     throw make<const volatile void*>();
-    throw x; // expected-error {{cannot throw}}
-    throw make<X&>(); // expected-error {{cannot throw}}
-    throw make<X*>(); // expected-error {{cannot throw}}
-    throw make<const volatile X&>(); // expected-error {{cannot throw}}
-    throw make<const volatile X*>(); // expected-error {{cannot throw}}
+    throw x;
+    // expected-error@-1 {{cannot throw}}
+    //   expected-note@#dr428-X {{forward declaration of 'dr428::X'}}
+    throw make<X&>();
+    // expected-error@-1 {{cannot throw}}
+    //   expected-note@#dr428-X {{forward declaration of 'dr428::X'}}
+    throw make<X*>();
+    // expected-error@-1 {{cannot throw}}
+    //   expected-note@#dr428-X {{forward declaration of 'dr428::X'}}
+    throw make<const volatile X&>();
+    // expected-error@-1 {{cannot throw}}
+    //   expected-note@#dr428-X {{forward declaration of 'dr428::X'}}
+    throw make<const volatile X*>();
+    // expected-error@-1 {{cannot throw}}
+    //   expected-note@#dr428-X {{forward declaration of 'dr428::X'}}
   }
 }
 
-namespace dr429 { // dr429: yes c++11
+namespace dr429 { // dr429: 2.8 c++11
   // FIXME: This rule is obviously intended to apply to C++98 as well.
   struct A {
     static void *operator new(size_t, size_t);
-    static void operator delete(void*, size_t);
+    static void operator delete(void*, size_t); // #dr429-delete
   } *a = new (0) A;
-#if __cplusplus >= 201103L
-  // expected-error@-2 {{'new' expression with placement arguments refers to non-placement 'operator delete'}}
-  // expected-note@-4 {{here}}
-#endif
+  // since-cxx11-error@-1 {{'new' expression with placement arguments refers to non-placement 'operator delete'}}
+  //   since-cxx11-note@#dr429-delete {{here}}
   struct B {
     static void *operator new(size_t, size_t);
     static void operator delete(void*);
@@ -518,9 +593,7 @@ namespace dr430 { // dr430: yes c++11
   // FIXME: This should apply in C++98 too.
   void f(int n) {
     int a[] = { n++, n++, n++ };
-#if __cplusplus < 201103L
-    // expected-warning@-2 {{multiple unsequenced modifications to 'n'}}
-#endif
+    // cxx98-warning@-1 {{multiple unsequenced modifications to 'n'}}
   }
 }
 
@@ -535,29 +608,37 @@ namespace dr431 { // dr431: yes
   template<typename T> void f(A a) {
     a.get<A>()->get<T>();
     a.get<T>()
-        ->get<T>(); // expected-error {{use 'template'}}
+        ->get<T>();
+        // expected-error@-1 {{use 'template' keyword to treat 'get' as a dependent template name}}
     a.get<T>()->template get<T>();
     a.A::get<T>();
     A::B<int> *b = a.get<A::B<int> >();
     b->get<int>();
     b->A::B<int>::get<int>();
     b->A::B<int>::get<T>();
-    b->A::B<T>::get<int>(); // expected-error {{use 'template'}}
+    b->A::B<T>::get<int>();
+    // expected-error@-1 {{use 'template' keyword to treat 'get' as a dependent template name}}
     b->A::B<T>::template get<int>();
-    b->A::B<T>::get<T>(); // expected-error {{use 'template'}}
+    b->A::B<T>::get<T>();
+    // expected-error@-1 {{use 'template' keyword to treat 'get' as a dependent template name}}
     b->A::B<T>::template get<T>();
     A::B<T> *c = a.get<A::B<T> >();
-    c->get<int>(); // expected-error {{use 'template'}}
+    c->get<int>();
+    // expected-error@-1 {{use 'template' keyword to treat 'get' as a dependent template name}}
     c->template get<int>();
   }
 }
 
-namespace dr432 { // dr432: yes
+namespace dr432 { // dr432: 3.0
   template<typename T> struct A {};
-  template<typename T> struct B : A<B> {}; // expected-error {{requires template arguments}} expected-note {{declared}}
+  template<typename T> struct B : A<B> {};
+  // expected-error@-1 {{use of class template 'B' requires template arguments}}
+  //   expected-note@-2 {{template is declared here}}
   template<typename T> struct C : A<C<T> > {};
 #if __cplusplus >= 201103L
-  template<typename T> struct D : decltype(A<D>()) {}; // expected-error {{requires template arguments}} expected-note {{declared}}
+  template<typename T> struct D : decltype(A<D>()) {};
+  // since-cxx11-error@-1 {{use of class template 'D' requires template arguments}}
+  //   since-cxx11-note@-2 {{template is declared here}}
 #endif
 }
 
@@ -575,7 +656,8 @@ namespace dr434 { // dr434: sup 2352
   void f() {
     const int ci = 0;
     int *pi = 0;
-    const int *&rpci = pi; // expected-error {{incompatible qualifiers}}
+    const int *&rpci = pi;
+    // expected-error@-1 {{binding reference of type 'const int *' to value of type 'int *' not permitted due to incompatible qualifiers}}
     const int * const &rcpci = pi; // OK
     rpci = &ci;
     *pi = 1;
@@ -591,8 +673,10 @@ namespace dr434 { // dr434: sup 2352
 // dr435: na
 
 namespace dr436 { // dr436: yes
-  enum E { f }; // expected-note {{previous}}
-  void f(); // expected-error {{redefinition}}
+  enum E { f }; // #dr436-f
+  void f();
+  // expected-error@-1 {{redefinition of 'f' as different kind of symbol}}
+  //   expected-note@#dr436-f {{previous definition is here}}
 }
 
 namespace dr437 { // dr437: sup 1308
@@ -601,18 +685,15 @@ namespace dr437 { // dr437: sup 1308
   template<typename U> struct T : U {};
   struct S {
     void f() throw(S);
-#if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
-#endif
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     void g() throw(T<S>);
-#if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
-#endif
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     struct U;
     void h() throw(U);
-#if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
-#endif
+    // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
+    //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
     struct U {};
   };
 }
@@ -625,51 +706,64 @@ namespace dr437 { // dr437: sup 1308
 
 namespace dr444 { // dr444: yes
   struct D;
-  struct B {                    // expected-note {{candidate function (the implicit copy}} expected-note 0-1 {{implicit move}}
-    D &operator=(D &) = delete; // expected-error 0-1{{extension}} expected-note {{deleted}}
+  struct B { // #dr444-B
+    D &operator=(D &) = delete; // #dr444-deleted
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   };
-  struct D : B { // expected-note {{candidate function (the implicit copy}} expected-note 0-1 {{implicit move}}
+  struct D : B { // #dr444-D
     using B::operator=;
   } extern d;
   void f() {
-    d = d; // expected-error {{deleted}}
+    d = d;
+    // expected-error@-1 {{overload resolution selected deleted operator '='}}
+    //   expected-note@#dr444-deleted {{candidate function has been explicitly deleted}}
+    //   expected-note@#dr444-D {{candidate function (the implicit copy assignment operator)}}
+    //   expected-note@#dr444-B {{candidate function (the implicit copy assignment operator)}}
+    //   since-cxx11-note@#dr444-B {{candidate function (the implicit move assignment operator) not viable: expects an rvalue for 1st argument}}
+    //   since-cxx11-note@#dr444-D {{candidate function (the implicit move assignment operator) not viable: expects an rvalue for 1st argument}}
   }
 }
 
-namespace dr445 { // dr445: yes
-  class A { void f(); }; // expected-note {{private}}
+namespace dr445 { // dr445: 3.2
+  class A { void f(); }; // #dr445-f
   struct B {
-    friend void A::f(); // expected-error {{private}}
+    friend void A::f();
+    // expected-error@-1 {{friend function 'f' is a private member of 'dr445::A'}}
+    //   expected-note@#dr445-f {{implicitly declared private here}}
   };
 }
 
-namespace dr446 { // dr446: yes
+namespace dr446 { // dr446: 2.8
   struct C;
   struct A {
     A();
-    A(const A&) = delete; // expected-error 0-1{{extension}} expected-note +{{deleted}}
+    A(const A&) = delete; // #dr446-deleted
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
     A(const C&);
   };
   struct C : A {};
   void f(A a, bool b, C c) {
     void(b ? a : a);
-    b ? A() : a; // expected-error {{deleted}}
-    b ? a : A(); // expected-error {{deleted}}
+    b ? A() : a;
+    // expected-error@-1 {{call to deleted constructor of 'A'}}
+    //   expected-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
+    b ? a : A();
+    // expected-error@-1 {{call to deleted constructor of 'A'}}
+    //   expected-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
     b ? A() : A();
-#if __cplusplus <= 201402L
-    // expected-error@-2 {{deleted}}
-#endif
+    // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
+    //   expected-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
 
     void(b ? a : c);
-    b ? a : C(); // expected-error {{deleted}}
+    b ? a : C();
+    // expected-error@-1 {{call to deleted constructor of 'A'}}
+    //   cxx98-14-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
     b ? c : A();
-#if __cplusplus <= 201402L
-    // expected-error@-2 {{deleted}}
-#endif
+    // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
+    //   cxx98-14-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
     b ? A() : C();
-#if __cplusplus <= 201402L
-    // expected-error@-2 {{deleted}}
-#endif
+    // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
+    //   cxx98-14-note@#dr446-deleted {{'A' has been explicitly marked deleted here}}
   }
 }
 
@@ -686,25 +780,37 @@ namespace dr447 { // dr447: yes
     g(__builtin_offsetof(T, n)).h<int>();
     // value dependent if first argument is a dependent type
     U<__builtin_offsetof(A, n)>::type a;
-    U<__builtin_offsetof(T, n)>::type b; // expected-error +{{}} expected-warning 0+{{}}
+    // FIXME: instead of ";", we should be suggesting "typename"
+    U<__builtin_offsetof(T, n)>::type b;
+    // expected-error@-1 {{expected ';' after expression}}
+    // expected-error@-2 {{use of undeclared identifier 'b'}}
     // as an extension, we allow the member-designator to include array indices
     g(__builtin_offsetof(A, a[0])).h<int>();
     g(__builtin_offsetof(A, a[N])).h<int>();
     U<__builtin_offsetof(A, a[0])>::type c;
-    U<__builtin_offsetof(A, a[N])>::type d; // expected-error +{{}} expected-warning 0+{{}}
+    // FIXME: instead of ";", we should be suggesting "typename"
+    U<__builtin_offsetof(A, a[N])>::type d;
+    // expected-error@-1 {{expected ';' after expression}}
+    // expected-error@-2 {{use of undeclared identifier 'd'}}
   }
 }
 
-namespace dr448 { // dr448: yes
-  template<typename T = int> void f(int); // expected-error 0-1{{extension}} expected-note {{no known conversion}}
+namespace dr448 { // dr448: 2.8
+  template<typename T = int> void f(int); // #dr448-f-int
+  // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   template<typename T> void g(T t) {
-    f<T>(t); // expected-error {{neither visible in the template definition nor found by argument-dependent lookup}}
-    dr448::f(t); // expected-error {{no matching function}}
+    f<T>(t);
+    // expected-error@-1 {{call to function 'f' that is neither visible in the template definition nor found by argument-dependent lookup}}
+    //   expected-note@#dr448-g {{in instantiation of function template specialization 'dr448::g<dr448::HideFromADL::X>' requested here}}
+    //   expected-note@#dr448-f-T {{'f' should be declared prior to the call site or in namespace 'dr448::HideFromADL'}}
+    dr448::f(t);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr448-f-int {{candidate function template not viable: no known conversion from 'dr448::HideFromADL::X' to 'int' for 1st argument}}
   }
-  template<typename T> void f(T); // expected-note {{should be declared prior to the call site}}
+  template<typename T> void f(T); // #dr448-f-T
   namespace HideFromADL { struct X {}; }
   template void g(int); // ok
-  template void g(HideFromADL::X); // expected-note {{instantiation of}}
+  template void g(HideFromADL::X); // #dr448-g
 }
 
 // dr449: na
@@ -712,24 +818,34 @@ namespace dr448 { // dr448: yes
 namespace dr450 { // dr450: yes
   typedef int A[3];
   void f1(const A &);
-  void f2(A &); // expected-note +{{not viable}}
+  void f2(A &); // #dr450-f2
   struct S { A n; };
   void g() {
     f1(S().n);
-    f2(S().n); // expected-error {{no match}}}
+    f2(S().n);
+    // expected-error@-1 {{no matching function for call to 'f2'}}}
+    //   expected-note@#dr450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
   }
 #if __cplusplus >= 201103L
   void h() {
     f1(A{});
-    f2(A{}); // expected-error {{no match}}
+    f2(A{});
+    // expected-error@-1 {{no matching function for call to 'f2'}}}
+    //   expected-note@#dr450-f2 {{candidate function not viable: expects an lvalue for 1st argument}}
   }
 #endif
 }
 
 namespace dr451 { // dr451: yes
-  const int a = 1 / 0; // expected-warning {{undefined}}
-  const int b = 1 / 0; // expected-warning {{undefined}} expected-note {{here}} expected-note 0-1{{division by zero}}
-  int arr[b]; // expected-error +{{variable length arr}} expected-note {{initializer of 'b' is not a constant}}
+  const int a = 1 / 0;
+  // expected-warning@-1 {{division by zero is undefined}}
+  const int b = 1 / 0; // #dr451-b
+  // expected-warning@-1 {{division by zero is undefined}}
+  int arr[b]; // #dr451-arr
+  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  //   expected-note@-2 {{initializer of 'b' is not a constant expression}}
+  //   expected-note@#dr451-b {{declared here}}
+  // expected-error@#dr451-arr {{variable length array declaration not allowed at file scope}}
 }
 
 namespace dr452 { // dr452: yes
@@ -747,30 +863,29 @@ namespace dr456 { // dr456: yes
   // sup 903 c++11
   const int null = 0;
   void *p = null;
-#if __cplusplus >= 201103L
-  // expected-error@-2 {{cannot initialize}}
-#else
-  // expected-warning@-4 {{null}}
-#endif
+  // cxx98-warning@-1 {{expression which evaluates to zero treated as a null pointer constant of type 'void *'}}
+  // since-cxx11-error@-2 {{cannot initialize a variable of type 'void *' with an lvalue of type 'const int'}}
 
   const bool f = false;
   void *q = f;
-#if __cplusplus >= 201103L
-  // expected-error@-2 {{cannot initialize}}
-#else
-  // expected-warning@-4 {{null}}
-#endif
+  // cxx98-warning@-1 {{initialization of pointer of type 'void *' to null from a constant boolean}}
+  // since-cxx11-error@-2 {{cannot initialize a variable of type 'void *' with an lvalue of type 'const bool'}}
 }
 
 namespace dr457 { // dr457: yes
   const int a = 1;
   const volatile int b = 1;
   int ax[a];
-  int bx[b]; // expected-error +{{variable length array}} expected-note {{read of volatile}}
+  int bx[b];
+  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+  // expected-error@-3 {{variable length array declaration not allowed at file scope}}
 
   enum E {
     ea = a,
-    eb = b // expected-error {{constant}} expected-note {{read of volatile-qualified}}
+    eb = b
+    // expected-error@-1 {{expression is not an integral constant expression}}
+    //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
   };
 }
 
@@ -790,31 +905,40 @@ namespace dr458 { // dr458: 11
   int A::f() {
     return T;
   }
-  template<typename T> // expected-note {{declared here}}
+  template<typename T> // #dr458-g-T
   int A::g() {
-    return T; // expected-error {{'T' does not refer to a value}}
+    return T;
+    // expected-error@-1 {{'T' does not refer to a value}}
+    //   expected-note@#dr458-g-T {{declared here}}
   }
 
   template<typename T>
   int B<T>::f() {
     return T;
   }
-  template<typename T> template<typename U>
+  template<typename T>
+  template<typename U>
   int B<T>::g() {
     return T;
   }
-  template<typename U> template<typename T> // expected-note {{declared here}}
+  template<typename U>
+  template<typename T> // #dr458-h-T
   int B<U>::h() {
-    return T; // expected-error {{'T' does not refer to a value}}
+    return T;
+    // expected-error@-1 {{'T' does not refer to a value}}
+    //   expected-note@#dr458-h-T {{declared here}}
   }
 }
 
 namespace dr460 { // dr460: yes
   namespace X { namespace Q { int n; } }
   namespace Y {
-    using X; // expected-error {{requires a qualified name}}
-    using dr460::X; // expected-error {{cannot refer to a namespace}}
-    using X::Q; // expected-error {{cannot refer to a namespace}}
+    using X;
+    // expected-error@-1 {{using declaration requires a qualified name}}
+    using dr460::X;
+    // expected-error@-1 {{using declaration cannot refer to a namespace}}
+    using X::Q;
+    // expected-error@-1 {{using declaration cannot refer to a namespace}}
   }
 }
 
@@ -867,8 +991,10 @@ namespace dr467 { // dr467: yes
     return k;
   }
   int g() {
-    goto later; // expected-error {{cannot jump}}
-    int k = stuff(); // expected-note {{bypasses variable initialization}}
+    goto later;
+    // expected-error@-1 {{cannot jump from this goto statement to its label}}
+    //   expected-note@#dr467-k {{jump bypasses variable initialization}}
+    int k = stuff(); // #dr467-k
   later:
     return k;
   }
@@ -882,15 +1008,16 @@ namespace dr468 { // dr468: yes c++11
     };
   };
   int k = dr468::template A<int>::template B<char>::C;
-#if __cplusplus < 201103L
-  // expected-error@-2 2{{'template' keyword outside of a template}}
-#endif
+  // cxx98-error@-1 {{'template' keyword outside of a template}}
+  // cxx98-error@-2 {{'template' keyword outside of a template}}
 }
 
 namespace dr469 { // dr469: no
-  template<typename T> struct X; // expected-note {{here}}
+  template<typename T> struct X; // #dr469-X
   template<typename T> struct X<const T> {};
-  X<int&> x; // expected-error {{undefined}}
+  X<int&> x;
+  // expected-error@-1 {{implicit instantiation of undefined template 'dr469::X<int &>'}}
+  //   expected-note@#dr469-X {{template is declared here}}
 }
 
 namespace dr470 { // dr470: yes
@@ -900,15 +1027,17 @@ namespace dr470 { // dr470: yes
   template<typename T> struct C {
   };
 
-  template struct A<int>; // expected-note {{previous}}
-  template struct A<int>::B; // expected-error {{duplicate explicit instantiation}}
+  template struct A<int>; // #dr470-A-int
+  template struct A<int>::B;
+  // expected-error@-1 {{duplicate explicit instantiation of 'B'}}
+  //   expected-note@#dr470-A-int {{previous explicit instantiation is here}}
 
   // ok, instantiating C<char> doesn't instantiate base class members.
   template struct A<char>;
   template struct C<char>;
 }
 
-namespace dr471 { // dr471: yes
+namespace dr471 { // dr471: 2.8
   struct A { int n; };
   struct B : private virtual A {};
   struct C : protected virtual A {};
@@ -919,23 +1048,27 @@ namespace dr471 { // dr471: yes
   struct F : E, B { int f() { return n; } };
   struct G : virtual A {
   private:
-    using A::n; // expected-note {{here}}
+    using A::n; // #dr471-G-using
   };
-  struct H : B, G { int f() { return n; } }; // expected-error {{private}}
+  struct H : B, G { int f() { return n; } };
+  // expected-error@-1 {{'n' is a private member of 'dr471::G'}}
+  //   expected-note@#dr471-G-using {{declared private here}}
 }
 
-namespace dr474 { // dr474: yes
+namespace dr474 { // dr474: 3.4
   namespace N {
     struct S {
       void f();
     };
   }
   void N::S::f() {
-    void g(); // expected-note {{previous}}
+    void g(); // #dr474-g
   }
   int g();
   namespace N {
-    int g(); // expected-error {{cannot be overloaded}}
+    int g();
+    // expected-error@-1 {{functions that differ only in their return type cannot be overloaded}}
+    //   expected-note@#dr474-g {{previous declaration is here}}
   }
 }
 
@@ -947,50 +1080,62 @@ namespace dr477 { // dr477: 3.5
     virtual void f();
   };
   struct B {
-    friend explicit A::A(); // expected-error {{'explicit' is invalid in friend declarations}}
-    friend virtual void A::f(); // expected-error {{'virtual' is invalid in friend declarations}}
+    friend explicit A::A();
+    // expected-error@-1 {{'explicit' is invalid in friend declarations}}
+    friend virtual void A::f();
+    // expected-error@-1 {{'virtual' is invalid in friend declarations}}
   };
-  explicit A::A() {} // expected-error {{can only be specified inside the class definition}}
-  virtual void A::f() {} // expected-error {{can only be specified inside the class definition}}
+  explicit A::A() {}
+  // expected-error@-1 {{can only be specified inside the class definition}}
+  virtual void A::f() {}
+  // expected-error@-1 {{can only be specified inside the class definition}}
 }
 
 namespace dr478 { // dr478: yes
-  struct A { virtual void f() = 0; }; // expected-note {{unimplemented}}
+  struct A { virtual void f() = 0; }; // #dr478-f
   void f(A *a);
-  void f(A a[10]); // expected-error {{array of abstract class type}}
+  void f(A a[10]);
+  // expected-error@-1 {{array of abstract class type 'A'}}
+  //   expected-note@#dr478-f {{unimplemented pure virtual method 'f' in 'A'}}
 }
 
-namespace dr479 { // dr479: yes
+namespace dr479 { // dr479: 2.8
   struct S {
     S();
   private:
-    S(const S&); // expected-note +{{here}}
-    ~S(); // expected-note +{{here}}
+    S(const S&); // #dr479-S-copy-ctor
+    ~S(); // #dr479-S-dtor
   };
   void f() {
     throw S();
     // expected-error@-1 {{temporary of type 'S' has private destructor}}
-    // expected-error@-2 {{exception object of type 'S' has private destructor}}
-#if __cplusplus < 201103L
-    // expected-error@-4 {{C++98 requires an accessible copy constructor}}
-#endif
-#if __cplusplus <= 201402L
-    // expected-error@-7 {{calling a private constructor}} (copy ctor)
-#endif
+    //   expected-note@#dr479-S-dtor {{declared private here}}
+    // expected-error@-3 {{exception object of type 'S' has private destructor}}
+    //   expected-note@#dr479-S-dtor {{declared private here}}
+    // cxx98-error@-5 {{C++98 requires an accessible copy constructor for class 'dr479::S' when binding a reference to a temporary; was private}}
+    //   cxx98-note@#dr479-S-copy-ctor {{declared private here}}
+    // cxx98-14-error@-7 {{calling a private constructor of class 'dr479::S'}}
+    //   cxx98-14-note@#dr479-S-copy-ctor {{declared private here}}
   }
   void g() {
-    S s; // expected-error {{private destructor}}}
+    S s;
+    // expected-error@-1 {{variable of type 'S' has private destructor}}
+    //   expected-note@#dr479-S-dtor {{declared private here}}
     throw s;
-    // expected-error@-1 {{calling a private constructor}}
-    // expected-error@-2 {{exception object of type 'S' has private destructor}}
+    // expected-error@-1 {{exception object of type 'S' has private destructor}}
+    //   expected-note@#dr479-S-dtor {{declared private here}}
+    // expected-error@-3 {{calling a private constructor of class 'dr479::S'}}
+    //   expected-note@#dr479-S-copy-ctor {{declared private here}}
   }
   void h() {
     try {
       f();
       g();
     } catch (S s) {
-      // expected-error@-1 {{calling a private constructor}}
-      // expected-error@-2 {{variable of type 'S' has private destructor}}
+      // expected-error@-1 {{calling a private constructor of class 'dr479::S'}}
+      //   expected-note@#dr479-S-copy-ctor {{declared private here}}
+      // expected-error@-3 {{variable of type 'S' has private destructor}}
+      //   expected-note@#dr479-S-dtor {{declared private here}}
     }
   }
 }
@@ -1002,23 +1147,28 @@ namespace dr480 { // dr480: yes
   struct D : C {};
 
   int A::*a = &A::n;
-  int D::*b = a; // expected-error {{virtual base}}
+  int D::*b = a;
+  // expected-error@-1 {{conversion from pointer to member of class 'dr480::A' to pointer to member of class 'dr480::D' via virtual base 'dr480::B' is not allowed}}
 
   extern int D::*c;
-  int A::*d = static_cast<int A::*>(c); // expected-error {{virtual base}}
+  int A::*d = static_cast<int A::*>(c);
+  // expected-error@-1 {{conversion from pointer to member of class 'dr480::D' to pointer to member of class 'dr480::A' via virtual base 'dr480::B' is not allowed}}
 
   D *e;
   A *f = e;
-  D *g = static_cast<D*>(f); // expected-error {{virtual base}}
+  D *g = static_cast<D*>(f);
+  // expected-error@-1 {{cannot cast 'dr480::A *' to 'D *' via virtual base 'dr480::B'}}
 
   extern D &i;
   A &j = i;
-  D &k = static_cast<D&>(j); // expected-error {{virtual base}}
+  D &k = static_cast<D&>(j);
+  // expected-error@-1 {{cannot cast 'A' to 'D &' via virtual base 'dr480::B'}}
 }
 
-namespace dr481 { // dr481: yes
+namespace dr481 { // dr481: 2.8
   template<class T, T U> class A { T *x; };
-  T *x; // expected-error {{unknown type}}
+  T *x;
+  // expected-error@-1 {{unknown type name 'T'}}
 
   template<class T *U> class B { T *x; };
   T *y; // ok
@@ -1030,18 +1180,23 @@ namespace dr481 { // dr481: yes
 
   template<typename A = C, typename C = A> struct E {
     void f() {
-      typedef ::dr481::C c; // expected-note {{previous}}
-      typedef C c; // expected-error {{different type}}
+      typedef ::dr481::C c; // #dr481-c
+      typedef C c;
+      // expected-error@-1 {{typedef redefinition with different types ('int' vs '::dr481::C')}}
+      //   expected-note@#dr481-E-int {{in instantiation of member function 'dr481::E<int>::f' requested here}}
+      //   expected-note@#dr481-c {{previous definition is here}}
     }
   };
   template struct E<>; // ok
-  template struct E<int>; // expected-note {{instantiation of}}
+  template struct E<int>; // #dr481-E-int
 
   template<template<typename U_no_typo_correction> class A,
            A<int> *B,
-           U_no_typo_correction *C> // expected-error {{unknown type}}
+           U_no_typo_correction *C>
+           // expected-error@-1 {{unknown type name 'U_no_typo_correction'}}
   struct F {
-    U_no_typo_correction *x; // expected-error {{unknown type}}
+    U_no_typo_correction *x;
+    // expected-error@-1 {{unknown type name 'U_no_typo_correction'}}
   };
 
   template<template<class H *> class> struct G {
@@ -1059,32 +1214,43 @@ namespace dr482 { // dr482: 3.5
   extern int a;
   void f();
 
-  int dr482::a = 0; // expected-warning {{extra qualification}}
-  void dr482::f() {} // expected-warning {{extra qualification}}
+  int dr482::a = 0;
+  // expected-warning@-1 {{extra qualification on member 'a'}}
+  void dr482::f() {}
+  // expected-warning@-1 {{extra qualification on member 'f'}}
 
-  inline namespace X { // expected-error 0-1{{C++11 feature}}
+  inline namespace X {
+  // cxx98-error@-1 {{inline namespaces are a C++11 feature}}
     extern int b;
     void g();
     struct S;
   }
-  int dr482::b = 0; // expected-warning {{extra qualification}}
-  void dr482::g() {} // expected-warning {{extra qualification}}
-  struct dr482::S {}; // expected-warning {{extra qualification}}
+  int dr482::b = 0;
+  // expected-warning@-1 {{extra qualification on member 'b'}}
+  void dr482::g() {}
+  // expected-warning@-1 {{extra qualification on member 'g'}}
+  struct dr482::S {};
+  // expected-warning@-1 {{extra qualification on member 'S'}}
 
-  void dr482::f(); // expected-warning {{extra qualification}}
-  void dr482::g(); // expected-warning {{extra qualification}}
+  void dr482::f();
+  // expected-warning@-1 {{extra qualification on member 'f'}}
+  void dr482::g();
+  // expected-warning@-1 {{extra qualification on member 'g'}}
 
   // FIXME: The following are valid in DR482's wording, but these are bugs in
   // the wording which we deliberately don't implement.
   namespace N { typedef int type; }
-  typedef int N::type; // expected-error {{typedef declarator cannot be qualified}}
+  typedef int N::type;
+  // expected-error@-1 {{typedef declarator cannot be qualified}}
   struct A {
     struct B;
-    struct A::B {}; // expected-error {{extra qualification}}
+    struct A::B {};
+    // expected-error@-1 {{extra qualification on member 'B'}}
 
 #if __cplusplus >= 201103L
     enum class C;
-    enum class A::C {}; // expected-error {{extra qualification}}
+    enum class A::C {};
+    // expected-error@-1 {{extra qualification on member 'C'}}
 #endif
   };
 }
@@ -1096,9 +1262,8 @@ namespace dr483 { // dr483: yes
     int check3[__INT_MAX__ >= 32767 ? 1 : -1];
     int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
     int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
-#if __cplusplus < 201103L
-    // expected-error@-2 1+{{extension}}
-#endif
+    // cxx98-error@-1 {{'long long' is a C++11 extension}}
+    // cxx98-error@-2 0-1{{'long long' is a C++11 extension}}
   }
   namespace cstdint {
     int check1[__PTRDIFF_WIDTH__ >= 16 ? 1 : -1];
@@ -1128,17 +1293,22 @@ namespace dr484 { // dr484: yes
   };
 
   struct C;
-  typedef C CT; // expected-note {{here}}
-  struct CT {}; // expected-error {{conflicts with typedef}}
+  typedef C CT; // #dr484-typedef-CT
+  struct CT {};
+  // expected-error@-1 {{definition of type 'CT' conflicts with typedef of the same name}}
+  //   expected-note@#dr484-typedef-CT {{'CT' declared here}}
 
   namespace N {
     struct D;
-    typedef D DT; // expected-note {{here}}
+    typedef D DT; // #dr484-typedef-DT
   }
-  struct N::DT {}; // expected-error {{conflicts with typedef}}
+  struct N::DT {};
+  // expected-error@-1 {{definition of type 'DT' conflicts with typedef of the same name}}
+  //   expected-note@#dr484-typedef-DT {{'DT' declared here}}
 
   typedef struct {
-    S(); // expected-error {{a type specifier is required}}
+    S();
+    // expected-error@-1 {{a type specifier is required for all declarations}}
   } S;
 }
 
@@ -1156,7 +1326,7 @@ namespace dr485 { // dr485: yes
 }
 
 namespace dr486 { // dr486: yes
-  template<typename T> T f(T *); // expected-note 2{{substitution failure}}
+  template<typename T> T f(T *); // #dr486-f
   int &f(...);
 
   void g();
@@ -1165,15 +1335,23 @@ namespace dr486 { // dr486: yes
   void h() {
     int &a = f(&g);
     int &b = f(&n);
-    f<void()>(&g); // expected-error {{no match}}
-    f<int[10]>(&n); // expected-error {{no match}}
+    f<void()>(&g);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr486-f {{candidate template ignored: substitution failure [with T = void ()]: function cannot return function type 'void ()'}}
+    f<int[10]>(&n);
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    //   expected-note@#dr486-f {{candidate template ignored: substitution failure [with T = int[10]]: function cannot return array type 'int[10]'}}
   }
 }
 
 namespace dr487 { // dr487: yes
   enum E { e };
-  int operator+(int, E); // expected-note 0-1{{here}}
-  int i[4 + e]; // expected-error 2{{variable length array}} expected-note 0-1{{non-constexpr}}
+  int operator+(int, E); // #dr487-operator-plus
+  int i[4 + e]; // #dr487-i
+  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  //   since-cxx11-note@-2 {{non-constexpr function 'operator+' cannot be used in a constant expression}}
+  //   since-cxx11-note@#dr487-operator-plus {{declared here}}
+  // expected-error@#dr487-i {{variable length array declaration not allowed at file scope}}
 }
 
 namespace dr488 { // dr488: yes c++11
@@ -1186,25 +1364,23 @@ namespace dr488 { // dr488: yes c++11
     // failure.
     enum E { e };
     f(e);
-#if __cplusplus < 201103L
-    // expected-error@-2 {{local type}}
-#endif
+    // cxx98-error@-1 {{template argument uses local type 'E'}}
   }
 }
 
 // dr489: na
 
-namespace dr490 { // dr490: yes
+namespace dr490 { // dr490: 2.8
   template<typename T> struct X {};
 
   struct A {
     typedef int T;
-    struct K {}; // expected-note {{declared}}
+    struct K {}; // #dr490-k
 
     int f(T);
     int g(T);
     int h(X<T>);
-    int X<T>::*i(); // expected-note {{previous}}
+    int X<T>::*i(); // #dr490-i
     int K::*j();
 
     template<typename T> T k();
@@ -1221,8 +1397,12 @@ namespace dr490 { // dr490: yes
 
     // FIXME: Per this DR, these two are valid! That is another defect
     // (no number yet...) which will eventually supersede this one.
-    friend int X<T>::*A::i(); // expected-error {{return type}}
-    friend int K::*A::j(); // expected-error {{undeclared identifier 'K'; did you mean 'A::K'?}}
+    friend int X<T>::*A::i();
+    // expected-error@-1 {{return type of out-of-line definition of 'dr490::A::i' differs from that in the declaration}}
+    //   expected-note@#dr490-i {{previous declaration is here}}
+    friend int K::*A::j();
+    // expected-error@-1 {{use of undeclared identifier 'K'; did you mean 'A::K'?}}
+    //   expected-note@#dr490-k {{'A::K' declared here}}
 
     // ok, lookup finds B::T, not A::T, so return type matches
     friend char A::k<T>();
@@ -1236,7 +1416,8 @@ namespace dr490 { // dr490: yes
 
 namespace dr491 { // dr491: dup 413
   struct A {} a, b[3] = { a, {} };
-  A c[2] = { a, {}, b[1] }; // expected-error {{excess elements}}
+  A c[2] = { a, {}, b[1] };
+  // expected-error@-1 {{excess elements in array initializer}}
 }
 
 // dr492 FIXME write a codegen test
@@ -1301,7 +1482,8 @@ namespace dr497 { // dr497: sup 253
     };
     const S cs;
     int S::*pm = &S::i;
-    cs.*pm = 88; // expected-error {{not assignable}}
+    cs.*pm = 88;
+    // expected-error@-1 {{read-only variable is not assignable}}
   }
 
   void after() {
@@ -1311,7 +1493,8 @@ namespace dr497 { // dr497: sup 253
     };
     const S cs;
     int S::*pm = &S::i;
-    cs.*pm = 88; // expected-error {{not assignable}}
+    cs.*pm = 88;
+    // expected-error@-1 {{read-only variable is not assignable}}
   }
 }
 

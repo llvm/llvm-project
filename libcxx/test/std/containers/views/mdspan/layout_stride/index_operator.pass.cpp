@@ -53,10 +53,10 @@ constexpr void iterate_stride(M m, const std::array<int, M::extents_type::rank()
   constexpr int r = static_cast<int>(M::extents_type::rank()) - 1 - static_cast<int>(sizeof...(Args));
   if constexpr (-1 == r) {
     ASSERT_NOEXCEPT(m(args...));
-    size_t expected_val = [&]<size_t... Pos>(std::index_sequence<Pos...>) {
+    std::size_t expected_val = static_cast<std::size_t>([&]<std::size_t... Pos>(std::index_sequence<Pos...>) {
       return ((args * strides[Pos]) + ... + 0);
-    }(std::make_index_sequence<M::extents_type::rank()>());
-    assert(expected_val == static_cast<size_t>(m(args...)));
+    }(std::make_index_sequence<M::extents_type::rank()>()));
+    assert(expected_val == static_cast<std::size_t>(m(args...)));
   } else {
     for (typename M::index_type i = 0; i < m.extents().extent(r); i++) {
       iterate_stride(m, strides, i, args...);
@@ -73,13 +73,13 @@ constexpr void test_iteration(std::array<int, E::rank()> strides, Args... args) 
 }
 
 constexpr bool test() {
-  constexpr size_t D = std::dynamic_extent;
+  constexpr std::size_t D = std::dynamic_extent;
   test_iteration<std::extents<int>>(std::array<int, 0>{});
   test_iteration<std::extents<unsigned, D>>(std::array<int, 1>{2}, 1);
   test_iteration<std::extents<unsigned, D>>(std::array<int, 1>{3}, 7);
   test_iteration<std::extents<unsigned, 7>>(std::array<int, 1>{4});
   test_iteration<std::extents<unsigned, 7, 8>>(std::array<int, 2>{25, 3});
-  test_iteration<std::extents<char, D, D, D, D>>(std::array<int, 4>{1, 1, 1, 1}, 1, 1, 1, 1);
+  test_iteration<std::extents<signed char, D, D, D, D>>(std::array<int, 4>{1, 1, 1, 1}, 1, 1, 1, 1);
 
   // Check operator constraint for number of arguments
   static_assert(check_operator_constraints(
@@ -102,7 +102,7 @@ constexpr bool test() {
 }
 
 constexpr bool test_large() {
-  constexpr size_t D = std::dynamic_extent;
+  constexpr std::size_t D = std::dynamic_extent;
   test_iteration<std::extents<int64_t, D, 8, D, D>>(std::array<int, 4>{2000, 2, 20, 200}, 7, 9, 10);
   test_iteration<std::extents<int64_t, D, 8, 1, D>>(std::array<int, 4>{2000, 20, 20, 200}, 7, 10);
   return true;

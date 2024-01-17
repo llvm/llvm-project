@@ -44,3 +44,13 @@ namespace Access {
   };
   D z = {Z(), {}};
 }
+
+namespace GH69987 {
+template<class> struct X {};
+template<class = void> struct X;
+X x;
+
+template<class T, class B> struct Y { Y(T); };
+template<class T, class B=void> struct Y ;
+Y y(1);
+};

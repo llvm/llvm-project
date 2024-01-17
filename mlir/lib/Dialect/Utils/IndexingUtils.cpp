@@ -70,7 +70,7 @@ SmallVector<ExprType> delinearizeImpl(ExprType linearIndex,
 //===----------------------------------------------------------------------===//
 
 SmallVector<int64_t> mlir::computeSuffixProduct(ArrayRef<int64_t> sizes) {
-  assert(llvm::all_of(sizes, [](int64_t s) { return s > 0; }) &&
+  assert(llvm::all_of(sizes, [](int64_t s) { return s >= 0; }) &&
          "sizes must be nonnegative");
   int64_t unit = 1;
   return ::computeSuffixProductImpl(sizes, unit);
@@ -211,6 +211,13 @@ mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
     inversion[pos.value()] = pos.index();
   }
   return inversion;
+}
+
+bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
+  for (auto i : llvm::seq<int64_t>(0, permutation.size()))
+    if (permutation[i] != i)
+      return false;
+  return true;
 }
 
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {

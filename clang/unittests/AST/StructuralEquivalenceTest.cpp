@@ -1024,6 +1024,29 @@ TEST_F(StructuralEquivalenceRecordContextTest, TransparentContextInNamespace) {
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
+TEST_F(StructuralEquivalenceRecordContextTest,
+       ClassTemplateSpecializationContext) {
+  std::string Code =
+      R"(
+      template <typename T> struct O {
+        struct M {};
+      };
+      )";
+  auto t = makeDecls<VarDecl>(Code + R"(
+      typedef O<int>::M MT1;
+      MT1 A;
+      )",
+                              Code + R"(
+      namespace {
+        struct I {};
+      } // namespace
+      typedef O<I>::M MT2;
+      MT2 A;
+      )",
+                              Lang_CXX11, varDecl(hasName("A")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceTest, NamespaceOfRecordMember) {
   auto Decls = makeNamedDecls(
       R"(

@@ -54,23 +54,23 @@ void store(const struct foo *input, void *addr)
 // CHECK-NEXT:    [[S_SROA_10_0_INSERT_SHIFT:%.*]] = shl nuw i512 [[S_SROA_10_0_INSERT_EXT]], 448
 // CHECK-NEXT:    [[S_SROA_9_0_INSERT_EXT:%.*]] = zext i64 [[CONV17]] to i512
 // CHECK-NEXT:    [[S_SROA_9_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_9_0_INSERT_EXT]], 384
-// CHECK-NEXT:    [[S_SROA_9_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_10_0_INSERT_SHIFT]], [[S_SROA_9_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_9_0_INSERT_INSERT:%.*]] = or disjoint i512 [[S_SROA_10_0_INSERT_SHIFT]], [[S_SROA_9_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_8_0_INSERT_EXT:%.*]] = zext i64 [[CONV14]] to i512
 // CHECK-NEXT:    [[S_SROA_8_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_8_0_INSERT_EXT]], 320
-// CHECK-NEXT:    [[S_SROA_8_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_9_0_INSERT_INSERT]], [[S_SROA_8_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_8_0_INSERT_INSERT:%.*]] = or disjoint i512 [[S_SROA_9_0_INSERT_INSERT]], [[S_SROA_8_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_7_0_INSERT_EXT:%.*]] = zext i64 [[CONV11]] to i512
 // CHECK-NEXT:    [[S_SROA_7_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_7_0_INSERT_EXT]], 256
-// CHECK-NEXT:    [[S_SROA_7_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_8_0_INSERT_INSERT]], [[S_SROA_7_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_7_0_INSERT_INSERT:%.*]] = or disjoint i512 [[S_SROA_8_0_INSERT_INSERT]], [[S_SROA_7_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_6_0_INSERT_EXT:%.*]] = zext i64 [[CONV8]] to i512
 // CHECK-NEXT:    [[S_SROA_6_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_6_0_INSERT_EXT]], 192
-// CHECK-NEXT:    [[S_SROA_6_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_7_0_INSERT_INSERT]], [[S_SROA_6_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_6_0_INSERT_INSERT:%.*]] = or disjoint i512 [[S_SROA_7_0_INSERT_INSERT]], [[S_SROA_6_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_5_0_INSERT_EXT:%.*]] = zext i64 [[CONV5]] to i512
 // CHECK-NEXT:    [[S_SROA_5_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_5_0_INSERT_EXT]], 128
 // CHECK-NEXT:    [[S_SROA_4_0_INSERT_EXT:%.*]] = zext i64 [[CONV2]] to i512
 // CHECK-NEXT:    [[S_SROA_4_0_INSERT_SHIFT:%.*]] = shl nuw nsw i512 [[S_SROA_4_0_INSERT_EXT]], 64
-// CHECK-NEXT:    [[S_SROA_4_0_INSERT_MASK:%.*]] = or i512 [[S_SROA_6_0_INSERT_INSERT]], [[S_SROA_5_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_4_0_INSERT_MASK:%.*]] = or disjoint i512 [[S_SROA_6_0_INSERT_INSERT]], [[S_SROA_5_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_0_0_INSERT_EXT:%.*]] = zext i64 [[CONV]] to i512
-// CHECK-NEXT:    [[S_SROA_0_0_INSERT_MASK:%.*]] = or i512 [[S_SROA_4_0_INSERT_MASK]], [[S_SROA_4_0_INSERT_SHIFT]]
+// CHECK-NEXT:    [[S_SROA_0_0_INSERT_MASK:%.*]] = or disjoint i512 [[S_SROA_4_0_INSERT_MASK]], [[S_SROA_4_0_INSERT_SHIFT]]
 // CHECK-NEXT:    [[S_SROA_0_0_INSERT_INSERT:%.*]] = or i512 [[S_SROA_0_0_INSERT_MASK]], [[S_SROA_0_0_INSERT_EXT]]
 // CHECK-NEXT:    tail call void asm sideeffect "st64b $0,[$1]", "r,r,~{memory}"(i512 [[S_SROA_0_0_INSERT_INSERT]], ptr [[ADDR:%.*]]) #[[ATTR1]], !srcloc !8
 // CHECK-NEXT:    ret void

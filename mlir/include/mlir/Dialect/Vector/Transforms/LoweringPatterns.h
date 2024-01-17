@@ -254,6 +254,16 @@ void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
 void populateVectorMaskLoweringPatternsForSideEffectingOps(
     RewritePatternSet &patterns);
 
+/// Populate the pattern set with the following patterns:
+///
+/// [VectorMaskedLoadOpConverter]
+/// Turns vector.maskedload to scf.if + memref.load
+///
+/// [VectorMaskedStoreOpConverter]
+/// Turns vector.maskedstore to scf.if + memref.store
+void populateVectorMaskedLoadStoreEmulationPatterns(RewritePatternSet &patterns,
+                                                    PatternBenefit benefit = 1);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H

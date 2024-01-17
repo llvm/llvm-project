@@ -7,13 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // Check that ranges algorithms aren't marked [[nodiscard]] when
-// _LIBCPP_DISBALE_NODISCARD_EXT is defined
+// _LIBCPP_DISABLE_NODISCARD_EXT is defined
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_NODISCARD_EXT
 
 #include <algorithm>
+
+#include "test_macros.h"
 
 void test() {
   int range[1];
@@ -28,6 +30,10 @@ void test() {
   std::ranges::binary_search(range, 1);
   std::ranges::binary_search(iter, iter, 1);
   std::ranges::clamp(1, 2, 3);
+#if TEST_STD_VER >= 23
+  std::ranges::contains(range, 1);
+  std::ranges::contains(iter, iter, 1);
+#endif
   std::ranges::count_if(range, pred);
   std::ranges::count_if(iter, iter, pred);
   std::ranges::count(range, 1);

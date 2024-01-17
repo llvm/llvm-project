@@ -144,27 +144,17 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
       b, loc, producer, getTiledOperands(producer), ivs, tileSizes, sizeBounds,
       /**omitPartialTileCheck=*/false));
 
-  // Iterate over the results in order.
-  // Extract the subtensor type from the linearized range.
-  // Since we do not enforce any canonicalizations on the fly, this is always
-  // fully dynamic at construction time.
+  // Take result types from the tiled init operands.
+  MutableOperandRange producerDpsInits = producer.getDpsInitsMutable();
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
-  for (Value operand : producer.getDpsInits()) {
-    auto tensorType = dyn_cast<RankedTensorType>(operand.getType());
-    if (!tensorType)
-      continue;
-    unsigned rank = tensorType.getRank();
-    SmallVector<int64_t, 4> staticOffsetsVector(
-        rank, ShapedType::kDynamic);
-    SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamic);
-    SmallVector<int64_t, 4> staticStridesVector(
-        rank, ShapedType::kDynamic);
-    resultTypes.push_back(tensor::ExtractSliceOp::inferResultType(
-        tensorType, staticOffsetsVector, staticSizesVector,
-        staticStridesVector));
+  int64_t firstInitOperandIdx =
+      static_cast<OperandRange>(producerDpsInits).getBeginOperandIndex();
+  for (int64_t i = 0, e = producer->getNumResults(); i < e; ++i) {
+    resultTypes.push_back(clonedShapes[firstInitOperandIdx + i].getType());
   }
 
+  // Clone the producer with new operands and result types.
   LinalgOp clonedOp = clone(b, producer, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.

@@ -43,10 +43,10 @@ define void @test_post_ld1_int_fixed(ptr %data, i64 %idx, ptr %addr, ptr %res_pt
 ; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    ptrue p1.d, vl1
 ; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x2]
-; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    ldr x9, [x0, x1, lsl #3]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x2]
+; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    mov z2.d, p2/m, x9
 ; CHECK-NEXT:    mov z0.d, p1/m, x8

@@ -978,8 +978,14 @@ void Editline::DisplayCompletions(
       break;
 
     fprintf(editline.m_output_file, "More (Y/n/a): ");
-    char reply = 'n';
-    int got_char = el_getc(editline.m_editline, &reply);
+    // The type for the output and the type for the parameter are different,
+    // to allow interoperability with older versions of libedit. The container
+    // for the reply must be as wide as what our implementation is using,
+    // but libedit may use a narrower type depending on the build
+    // configuration.
+    EditLineGetCharType reply = L'n';
+    int got_char = el_wgetc(editline.m_editline,
+                            reinterpret_cast<EditLineCharType *>(&reply));
     // Check for a ^C or other interruption.
     if (editline.m_editor_status == EditorStatus::Interrupted) {
       editline.m_editor_status = EditorStatus::Editing;

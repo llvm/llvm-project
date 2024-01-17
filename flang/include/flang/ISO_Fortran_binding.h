@@ -10,7 +10,14 @@
 #ifndef CFI_ISO_FORTRAN_BINDING_H_
 #define CFI_ISO_FORTRAN_BINDING_H_
 
+/* When this header is included into the compiler and runtime implementations,
+ * it does so by means of a wrapper header that establishes namespaces and
+ * a macro for extra function attributes (RT_API_ATTRS).
+ */
+#ifndef FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
 #include <stddef.h>
+#define FORTRAN_ISO_NAMESPACE_
+#endif
 
 /* Standard interface to Fortran from C and C++.
  * These interfaces are named in subclause 18.5 of the Fortran 2018
@@ -20,12 +27,6 @@
 
 #ifndef RT_API_ATTRS
 #define RT_API_ATTRS
-#endif
-
-#ifdef __cplusplus
-namespace Fortran {
-namespace ISO {
-inline namespace Fortran_2018 {
 #endif
 
 /* 18.5.4 */
@@ -169,7 +170,8 @@ template <int r> struct CdescStorage : public CFI_cdesc_t {
 template <> struct CdescStorage<1> : public CFI_cdesc_t {};
 template <> struct CdescStorage<0> : public CFI_cdesc_t {};
 } // namespace cfi_internal
-#define CFI_CDESC_T(rank) ::Fortran::ISO::cfi_internal::CdescStorage<rank>
+#define CFI_CDESC_T(rank) \
+  FORTRAN_ISO_NAMESPACE_::cfi_internal::CdescStorage<rank>
 #else
 #define CFI_CDESC_T(_RANK) \
   struct { \
@@ -187,8 +189,8 @@ RT_API_ATTRS void *CFI_address(
 RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *, const CFI_index_t lower_bounds[],
     const CFI_index_t upper_bounds[], size_t elem_len);
 RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *);
-int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t, CFI_type_t,
-    size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
+RT_API_ATTRS int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t,
+    CFI_type_t, size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *);
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
@@ -199,9 +201,6 @@ RT_API_ATTRS int CFI_setpointer(
     CFI_cdesc_t *, const CFI_cdesc_t *source, const CFI_index_t lower_bounds[]);
 #ifdef __cplusplus
 } // extern "C"
-} // inline namespace Fortran_2018
-} // namespace ISO
-} // namespace Fortran
 #endif
 
 #endif /* CFI_ISO_FORTRAN_BINDING_H_ */

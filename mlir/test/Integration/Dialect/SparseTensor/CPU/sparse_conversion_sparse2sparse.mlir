@@ -72,7 +72,7 @@ module {
   }
 
   //
-  // The first test suite (for non-singleton DimLevelTypes).
+  // The first test suite (for non-singleton LevelTypes).
   //
   func.func @testNonSingleton() {
     //
@@ -125,7 +125,7 @@ module {
   }
 
   //
-  // The second test suite (for singleton DimLevelTypes).
+  // The second test suite (for singleton LevelTypes).
   //
   func.func @testSingleton() {
     //

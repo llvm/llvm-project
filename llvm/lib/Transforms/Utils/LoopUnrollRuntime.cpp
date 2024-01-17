@@ -913,9 +913,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // Rewrite the cloned instruction operands to use the values created when the
   // clone is created.
   for (BasicBlock *BB : NewBlocks) {
+    Module *M = BB->getModule();
     for (Instruction &I : *BB) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDPValueRange(M, I.getDbgValueRange(), VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 

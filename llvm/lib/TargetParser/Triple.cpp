@@ -273,6 +273,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case ZOS: return "zos";
   case ShaderModel: return "shadermodel";
   case LiteOS: return "liteos";
+  case XROS: return "xros";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -477,7 +478,7 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
 
   // Thumb only exists in v4+
   if (ISA == ARM::ISAKind::THUMB &&
-      (ArchName.startswith("v2") || ArchName.startswith("v3")))
+      (ArchName.starts_with("v2") || ArchName.starts_with("v3")))
     return Triple::UnknownArch;
 
   // Thumb only for v6m
@@ -574,10 +575,10 @@ static Triple::ArchType parseArch(StringRef ArchName) {
   // Some architectures require special parsing logic just to compute the
   // ArchType result.
   if (AT == Triple::UnknownArch) {
-    if (ArchName.startswith("arm") || ArchName.startswith("thumb") ||
-        ArchName.startswith("aarch64"))
+    if (ArchName.starts_with("arm") || ArchName.starts_with("thumb") ||
+        ArchName.starts_with("aarch64"))
       return parseARMArch(ArchName);
-    if (ArchName.startswith("bpf"))
+    if (ArchName.starts_with("bpf"))
       return parseBPFArch(ArchName);
   }
 
@@ -634,6 +635,8 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("tvos", Triple::TvOS)
     .StartsWith("watchos", Triple::WatchOS)
     .StartsWith("driverkit", Triple::DriverKit)
+    .StartsWith("xros", Triple::XROS)
+    .StartsWith("visionos", Triple::XROS)
     .StartsWith("mesa3d", Triple::Mesa3D)
     .StartsWith("amdpal", Triple::AMDPAL)
     .StartsWith("hermit", Triple::HermitCore)
@@ -706,8 +709,8 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
 }
 
 static Triple::SubArchType parseSubArch(StringRef SubArchName) {
-  if (SubArchName.startswith("mips") &&
-      (SubArchName.endswith("r6el") || SubArchName.endswith("r6")))
+  if (SubArchName.starts_with("mips") &&
+      (SubArchName.ends_with("r6el") || SubArchName.ends_with("r6")))
     return Triple::MipsSubArch_r6;
 
   if (SubArchName == "powerpcspe")
@@ -719,7 +722,7 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
   if (SubArchName == "arm64ec")
     return Triple::AArch64SubArch_arm64ec;
 
-  if (SubArchName.startswith("spirv"))
+  if (SubArchName.starts_with("spirv"))
     return StringSwitch<Triple::SubArchType>(SubArchName)
         .EndsWith("v1.0", Triple::SPIRVSubArch_v10)
         .EndsWith("v1.1", Triple::SPIRVSubArch_v11)
@@ -819,8 +822,6 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 }
 
 static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
-  if (T.isOSDarwin())
-    return Triple::MachO;
   switch (T.getArch()) {
   case Triple::UnknownArch:
   case Triple::aarch64:
@@ -829,12 +830,13 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::thumb:
   case Triple::x86:
   case Triple::x86_64:
-    if (T.isOSWindows())
+    switch (T.getOS()) {
+    case Triple::Win32:
+    case Triple::UEFI:
       return Triple::COFF;
-    else if (T.isUEFI())
-      return Triple::COFF;
-    return Triple::ELF;
-
+    default:
+      return T.isOSDarwin() ? Triple::MachO : Triple::ELF;
+    }
   case Triple::aarch64_be:
   case Triple::amdgcn:
   case Triple::amdil64:
@@ -887,6 +889,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ppc:
     if (T.isOSAIX())
       return Triple::XCOFF;
+    if (T.isOSDarwin())
+      return Triple::MachO;
     return Triple::ELF;
 
   case Triple::systemz:
@@ -1004,8 +1008,8 @@ std::string Triple::normalize(StringRef Str) {
   OSType OS = UnknownOS;
   if (Components.size() > 2) {
     OS = parseOS(Components[2]);
-    IsCygwin = Components[2].startswith("cygwin");
-    IsMinGW32 = Components[2].startswith("mingw");
+    IsCygwin = Components[2].starts_with("cygwin");
+    IsMinGW32 = Components[2].starts_with("mingw");
   }
   EnvironmentType Environment = UnknownEnvironment;
   if (Components.size() > 3)
@@ -1049,8 +1053,8 @@ std::string Triple::normalize(StringRef Str) {
         break;
       case 2:
         OS = parseOS(Comp);
-        IsCygwin = Comp.startswith("cygwin");
-        IsMinGW32 = Comp.startswith("mingw");
+        IsCygwin = Comp.starts_with("cygwin");
+        IsMinGW32 = Comp.starts_with("mingw");
         Valid = OS != UnknownOS || IsCygwin || IsMinGW32;
         break;
       case 3:
@@ -1127,7 +1131,8 @@ std::string Triple::normalize(StringRef Str) {
   // Special case logic goes here.  At this point Arch, Vendor and OS have the
   // correct values for the computed components.
   std::string NormalizedEnvironment;
-  if (Environment == Triple::Android && Components[3].startswith("androideabi")) {
+  if (Environment == Triple::Android &&
+      Components[3].starts_with("androideabi")) {
     StringRef AndroidVersion = Components[3].drop_front(strlen("androideabi"));
     if (AndroidVersion.empty()) {
       Components[3] = "android";
@@ -1204,22 +1209,26 @@ static VersionTuple parseVersionFromName(StringRef Name) {
 }
 
 VersionTuple Triple::getEnvironmentVersion() const {
+  return parseVersionFromName(getEnvironmentVersionString());
+}
+
+StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentName = getEnvironmentName();
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
-  if (EnvironmentName.startswith(EnvironmentTypeName))
-    EnvironmentName = EnvironmentName.substr(EnvironmentTypeName.size());
-
-  return parseVersionFromName(EnvironmentName);
+  EnvironmentName.consume_front(EnvironmentTypeName);
+  return EnvironmentName;
 }
 
 VersionTuple Triple::getOSVersion() const {
   StringRef OSName = getOSName();
   // Assume that the OS portion of the triple starts with the canonical name.
   StringRef OSTypeName = getOSTypeName(getOS());
-  if (OSName.startswith(OSTypeName))
+  if (OSName.starts_with(OSTypeName))
     OSName = OSName.substr(OSTypeName.size());
   else if (getOS() == MacOSX)
     OSName.consume_front("macos");
+  else if (OSName.starts_with("visionos"))
+    OSName.consume_front("visionos");
 
   return parseVersionFromName(OSName);
 }
@@ -1261,6 +1270,8 @@ bool Triple::getMacOSXVersion(VersionTuple &Version) const {
     // IOS.
     Version = VersionTuple(10, 4);
     break;
+  case XROS:
+    llvm_unreachable("OSX version isn't relevant for xrOS");
   case DriverKit:
     llvm_unreachable("OSX version isn't relevant for DriverKit");
   }
@@ -1284,6 +1295,11 @@ VersionTuple Triple::getiOSVersion() const {
     if (Version.getMajor() == 0)
       return (getArch() == aarch64) ? VersionTuple(7) : VersionTuple(5);
     return Version;
+  }
+  case XROS: {
+    // xrOS 1 is aligned with iOS 17.
+    VersionTuple Version = getOSVersion();
+    return Version.withMajorReplaced(Version.getMajor() + 16);
   }
   case WatchOS:
     llvm_unreachable("conflicting triple info");
@@ -1310,6 +1326,8 @@ VersionTuple Triple::getWatchOSVersion() const {
   }
   case IOS:
     llvm_unreachable("conflicting triple info");
+  case XROS:
+    llvm_unreachable("watchOS version isn't relevant for xrOS");
   case DriverKit:
     llvm_unreachable("DriverKit doesn't have a WatchOS version");
   }
