@@ -330,6 +330,23 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y, *Z;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    // nabs(X) * nabs(Y) -> abs(X * Y)
+    SelectPatternFlavor SPF0 = matchSelectPattern(Op0, X, Z).Flavor;
+    SelectPatternFlavor SPF1 = matchSelectPattern(Op1, Y, Z).Flavor;
+    if ((SPF0 == SPF1) && (SPF0 == SPF_ABS || SPF0 == SPF_NABS))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(
+                 Intrinsic::abs, Builder.CreateMul(X, Y), Builder.getTrue()));
+    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
+        match(Op1, m_Intrinsic<Intrinsic::abs>(m_Value(Y))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(
+                 Intrinsic::abs, Builder.CreateMul(X, Y), Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
