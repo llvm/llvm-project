@@ -386,8 +386,8 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 404);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqInt(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
@@ -400,7 +400,7 @@ TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
       *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
 
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 404);
+  CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
