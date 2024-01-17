@@ -252,13 +252,12 @@ bool RISCVTargetInfo::initFeatureMap(
   // extension target features.
   const auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
   if (I != FeaturesVec.end()) {
-    std::vector<std::string> OverrideFeatures =
-        std::vector(std::next(I), FeaturesVec.end());
+    std::vector<std::string> OverrideFeatures(std::next(I), FeaturesVec.end());
 
     // Add back any non ISA extension features, e.g. +relax.
-    auto IsNonISAExtFeature = [](const std::string &Feature) {
+    auto IsNonISAExtFeature = [](StringRef Feature) {
       assert(Feature.size() > 1 && (Feature[0] == '+' || Feature[0] == '-'));
-      std::string Ext = Feature.substr(1); // drop the +/-
+      StringRef Ext = Feature.substr(1); // drop the +/-
       return !llvm::RISCVISAInfo::isSupportedExtensionFeature(Ext);
     };
     llvm::copy_if(llvm::make_range(FeaturesVec.begin(), I),
