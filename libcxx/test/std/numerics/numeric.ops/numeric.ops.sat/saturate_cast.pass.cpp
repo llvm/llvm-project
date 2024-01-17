@@ -17,7 +17,6 @@
 #include <concepts>
 #include <limits>
 #include <numeric>
-#include <utility>
 
 template <typename IntegerResultT, typename IntegerT>
 constexpr bool test_signed_notsaturated() {

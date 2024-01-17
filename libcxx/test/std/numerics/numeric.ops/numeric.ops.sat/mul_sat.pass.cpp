@@ -27,32 +27,123 @@ constexpr bool test_signed() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{3}, IntegerT{4});
-    assert(prod == IntegerT{12});
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, IntegerT{-1});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, IntegerT{1});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{-1}, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, IntegerT{1});
+    assert(prod == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{27}, IntegerT{2});
+    assert(prod == IntegerT{54});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{2}, IntegerT{28});
+    assert(prod == IntegerT{56});
   }
 
   // Saturation - max - both arguments positive
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{4});
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
+    assert(sum == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{1});
+    assert(prod == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, maxVal);
     assert(prod == maxVal);
   }
 
   // Saturation - max - both arguments negative
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{-4});
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
+    assert(sum == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{-1});
     assert(prod == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(minVal, minVal);
+    assert(sum == maxVal);
   }
 
   // Saturation - min - left positive, right negative
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{-4});
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::mulSat(x, y);
+    assert(sum == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{-1});
     assert(prod == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(maxVal, minVal);
+    assert(sum == minVal);
   }
 
   // Saturation - min - left negative, right positive
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{4});
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
+    assert(sum == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{1});
     assert(prod == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(minVal, maxVal);
+    assert(sum == minVal);
   }
 
   return true;
@@ -67,13 +158,77 @@ constexpr bool test_unsigned() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{3}, IntegerT{4});
-    assert(prod == IntegerT{12});
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, IntegerT{1});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, IntegerT{1});
+    assert(prod == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{28}, IntegerT{2});
+    assert(prod == IntegerT{56});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(Integer{0}, minVal);
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{0});
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, maxVal);
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, maxVal);
+    assert(prod == IntegerT{0});
   }
 
   // Saturation
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{4});
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{1});
+    assert(prod == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, maxVal);
+    assert(prod == maxVal);
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
+    assert(sum == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, maxVal);
     assert(prod == maxVal);
   }
 
