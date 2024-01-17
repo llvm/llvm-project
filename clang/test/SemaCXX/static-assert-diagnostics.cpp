@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple wasm32 %s
-// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple aarch64_be-linux-gnu %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple aarch64_be %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple x86_64 -DTEST_CLIP %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple x86_64 -DTEST_CLIP=SMALL -fconstexpr-print-value-size-limit=60 %s
+// RUN: %clang_cc1 -std=c++2a -verify -fsyntax-only -triple x86_64 -DTEST_CLIP=NO_LIMIT -fconstexpr-print-value-size-limit=0 %s
 
 struct A {
   int a, b[3], c;
@@ -30,14 +33,13 @@ static_assert(_arr{{2, 3, 4}} == (const int[3]){2, 3, 4});
 // expected-note@+1 {{{evaluates to '_arr{{2, 3, 4}} == (const int[3]){0, 3, 4}'}}}
 static_assert(_arr{2, 3, 4} == a0.b); // expected-error {{failed}}
 
-
 struct B {
   int a, c; // named the same just to keep things fresh
   bool operator==(const B&) const = default;
 };
 
 // expected-note@+1 {{evaluates to 'B{7, 6} == B{8, 6}'}}
-static_assert(B{7, 6} == B{8, 6}); // expected-error {{failed}}
+static_assert(B{7, 6} == [] { return B{8, 6}; }()); // expected-error {{failed}}
 
 typedef int v4si __attribute__((__vector_size__(16)));
 
@@ -153,12 +155,14 @@ constexpr bool operator==(const V& lhs, const v4si& rhs) {
   return lhs == V{rhs};
 }
 
+constexpr auto vv = V{1, 2, 3, 4};
+
 static_assert(V{1, 2, 3, 4} == V{1, 2, 3, 4});
 
 // expected-note@+1 {{{evaluates to 'V{{1, 2, 3, 4}} == V{{1, 2, 0, 4}}'}}}
-static_assert(V{1, 2, 3, 4} == V{1, 2, 0, 4}); // expected-error {{failed}}
+static_assert(V{1, 2, 3, 4} == [] { return V{1, 2, 0, 4}; }()); // expected-error {{failed}}
 // expected-note@+1 {{{evaluates to 'V{{1, 2, 3, 4}} == (v4si){1, 2, 0, 4}'}}}
-static_assert(V{1, 2, 3, 4} == (v4si){1, 2, 0, 4}); // expected-error {{failed}}
+static_assert(V{1, 2, 3, 4} == [] { return (v4si){1, 2, 0, 4}; }()); // expected-error {{failed}}
 
 // there appears to be no constexpr-compatible way to write an == for
 // two `bool4`s at this time, since std::bit_cast doesn't support it
@@ -200,6 +204,58 @@ unsigned char a, b, c;
 constexpr bool operator==(const S&, const S&) { return false; }
 
 // the note should clearly implicate the `==` implementation
-// expected-note@+1 {{{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}}
-static_assert(S{1, 2, 3} == std::bit_cast<S>(bits)); // expected-error {{failed}}
+// expected-error@+2 {{static assertion failed due to requirement '(anonymous namespace)::S{1, 2, 3} == std::bit_cast(bits)'}}
+// expected-note@+1 {{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}
+static_assert(S{1, 2, 3} == std::bit_cast<S>(bits));
+
+// but there should be no redundant notes
+// expected-error@+1 {{static assertion failed due to requirement '(anonymous namespace)::S{1, 2, 3} == (anonymous namespace)::S{1, 2, 3}'}}
+static_assert(S{1, 2, 3} == S{1, 2, 3});
+
+// more examples of notes considered "non-redundant"
+// expected-note@+1 {{evaluates to 'S{1, 2, 0} == S{1, 2, 0}'}}
+static_assert(S{1, 2} == S{1, 2}); // expected-error {{failed}}
+// expected-note@+1 {{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}
+static_assert(S{1, 2, 3} == S{1 + 0, 2, 3}); // expected-error {{failed}}
+// expected-note@+1 {{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}
+static_assert(S{1, 2, 3} == S{1 << 0, 2, 3}); // expected-error {{failed}}
+// expected-note@+1 {{evaluates to 'S{1, 2, 3} == S{1, 2, 3}'}}
+static_assert(S{1, 2, 3} == S{~~1, 2, 3}); // expected-error {{failed}}
+
 } // namespace
+
+#ifdef TEST_CLIP
+#define NO_LIMIT 'n'
+#define SMALL 's'
+
+namespace clipping_large_values {
+  constexpr unsigned _BitInt(__BITINT_MAXWIDTH__ >> 12) Z = ~0;
+
+#if TEST_CLIP == NO_LIMIT
+  // expected-note@+6 {{'32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433229604645318478604952148193555853611059596230655 == 1'}}
+#elif TEST_CLIP == SMALL // fixme: see https://github.com/llvm/llvm-project/issues/71675
+  // expected-note@+4 {{'32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433229604645318478604952148193555853611059596230655 == 1'}}
+#else // fixme: as above
+  // expected-note@+2 {{'32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433229604645318478604952148193555853611059596230655 == 1'}}
+#endif
+  static_assert(Z == 1); // expected-error {{failed}}
+
+  constexpr struct {
+    unsigned _BitInt(__BITINT_MAXWIDTH__ >> 12) F;
+
+    constexpr bool operator==(const unsigned int& v) const {
+      return F == v;
+    }
+  } my_god_its_full_of_bits = {(decltype(my_god_its_full_of_bits.F))~0};
+  static_assert((decltype(my_god_its_full_of_bits)){} == 0);
+
+#if TEST_CLIP == NO_LIMIT
+  // expected-note@+6 {{'(decltype(clipping_large_values::my_god_its_full_of_bits)){32317006071311007300714876688669951960444102669715484032130345427524655138867890893197201411522913463688717960921898019494119559150490921095088152386448283120630877367300996091750197750389652106796057638384067568276792218642619756161838094338476170470581645852036305042887575891541065808607552399123930385521914333389668342420684974786564569494856176035326322058077805659331026192708460314150258592864177116725943603718461857357598351152301645904403697613233287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433229604645318478604952148193555853611059596230655} == 1'}}
+#elif TEST_CLIP == SMALL
+  // expected-note@+4 {{'(decltype(clipping_large_values::my_god_its_full_of_bits)){32317006071311007300714876688 ...(+559 bytes)... 52148193555853611059596230655} == 1'}}
+#else
+  // expected-note@+2 {{'(decltype(clipping_large_values::my_god_its_full_of_bits)){323170060713110073007148766886699519604441026697154840321303454275246551388678908931972014115229134636887179609218980194941195591504909210950881523864482831206 ...(+299 bytes)... 287231227125684710820209725157101726931323469678542580656697935045997268352998638215525166389437335543602135433229604645318478604952148193555853611059596230655} == 1'}}
+#endif
+  static_assert(my_god_its_full_of_bits == 1); // expected-error {{failed}}
+}
+#endif

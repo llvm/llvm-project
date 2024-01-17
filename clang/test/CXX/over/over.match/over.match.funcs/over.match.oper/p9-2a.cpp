@@ -33,7 +33,7 @@ struct Y {};
 constexpr bool operator==(X x, Y) { return x.equal; }
 
 static_assert(X{true} == Y{});
-static_assert(X{false} == Y{}); // expected-error {{failed}} expected-note{{'X{false} == Y{}'}}
+static_assert(X{false} == Y{}); // expected-error {{failed}}
 
 // x == y -> y == x
 static_assert(Y{} == X{true});
