@@ -2164,9 +2164,8 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case AArch64ISD::MOVI: {
-    ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(0));
-    Known =
-        KnownBits::makeConstant(APInt(Known.getBitWidth(), CN->getZExtValue()));
+    Known = KnownBits::makeConstant(
+        APInt(Known.getBitWidth(), Op->getConstantOperandVal(0)));
     break;
   }
   case AArch64ISD::LOADgot:
@@ -2183,8 +2182,8 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(1));
-    Intrinsic::ID IntID = static_cast<Intrinsic::ID>(CN->getZExtValue());
+    Intrinsic::ID IntID =
+        static_cast<Intrinsic::ID>(Op->getConstantOperandVal(1));
     switch (IntID) {
     default: return;
     case Intrinsic::aarch64_ldaxr:
@@ -2465,6 +2464,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SADDV)
     MAKE_CASE(AArch64ISD::UADDV)
     MAKE_CASE(AArch64ISD::UADDLV)
+    MAKE_CASE(AArch64ISD::SADDLV)
     MAKE_CASE(AArch64ISD::SDOT)
     MAKE_CASE(AArch64ISD::UDOT)
     MAKE_CASE(AArch64ISD::SMINV)
@@ -22284,8 +22284,8 @@ static SDValue performSETCCCombine(SDNode *N,
       isNullConstant(LHS->getOperand(0)) && isOneConstant(LHS->getOperand(1)) &&
       LHS->hasOneUse()) {
     // Invert CSEL's condition.
-    auto *OpCC = cast<ConstantSDNode>(LHS.getOperand(2));
-    auto OldCond = static_cast<AArch64CC::CondCode>(OpCC->getZExtValue());
+    auto OldCond =
+        static_cast<AArch64CC::CondCode>(LHS.getConstantOperandVal(2));
     auto NewCond = getInvertedCondCode(OldCond);
 
     // csel 0, 1, !cond, X
@@ -24717,8 +24717,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     assert((VT == MVT::i8 || VT == MVT::i16) &&
            "custom lowering for unexpected type");
 
-    ConstantSDNode *CN = cast<ConstantSDNode>(N->getOperand(0));
-    Intrinsic::ID IntID = static_cast<Intrinsic::ID>(CN->getZExtValue());
+    Intrinsic::ID IntID =
+        static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
     switch (IntID) {
     default:
       return;
@@ -25430,7 +25430,7 @@ bool AArch64TargetLowering::shouldLocalize(
     RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);
-    // Don't pass UINT_MAX sentinal value to hasAtMostUserInstrs().
+    // Don't pass UINT_MAX sentinel value to hasAtMostUserInstrs().
     if (MaxUses == std::numeric_limits<unsigned>::max())
       --MaxUses;
     return MRI.hasAtMostUserInstrs(Reg, MaxUses);

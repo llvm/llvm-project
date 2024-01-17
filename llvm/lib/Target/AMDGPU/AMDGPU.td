@@ -722,13 +722,13 @@ def FeatureFlatAtomicFaddF32Inst
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
-  "BUFFER/IMAGE store instructions set unspecified components to zero"
+  "BUFFER/IMAGE store instructions set unspecified components to zero (before GFX12)"
 >;
 
 def FeatureDefaultComponentBroadcast : SubtargetFeature<"default-component-broadcast",
   "HasDefaultComponentBroadcast",
   "true",
-  "BUFFER/IMAGE store instructions set unspecified components to x component"
+  "BUFFER/IMAGE store instructions set unspecified components to x component (GFX12)"
 >;
 
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
@@ -1501,7 +1501,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
-   FeatureMADIntraFwdBug,
    FeatureScalarDwordx3Loads]>;
 
 //===----------------------------------------------------------------------===//

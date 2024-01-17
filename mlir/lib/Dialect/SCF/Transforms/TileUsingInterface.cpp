@@ -692,7 +692,7 @@ void mlir::scf::yieldReplacementForFusedProducer(
             sliceOp.getLoc(), newRegionArg, sliceOp.getMixedOffsets(),
             sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
         unsigned resultNumber = fusableProducer.getResultNumber();
-        rewriter.updateRootInPlace(tiledDestStyleOp, [&]() {
+        rewriter.modifyOpInPlace(tiledDestStyleOp, [&]() {
           tiledDestStyleOp.getDpsInitsMutable()[resultNumber].set(destSlice);
         });
       }

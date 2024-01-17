@@ -1743,11 +1743,14 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   bool IsLoad;
+  bool ReorderWhileClustering;
 
 public:
   BaseMemOpClusterMutation(const TargetInstrInfo *tii,
-                           const TargetRegisterInfo *tri, bool IsLoad)
-      : TII(tii), TRI(tri), IsLoad(IsLoad) {}
+                           const TargetRegisterInfo *tri, bool IsLoad,
+                           bool ReorderWhileClustering)
+      : TII(tii), TRI(tri), IsLoad(IsLoad),
+        ReorderWhileClustering(ReorderWhileClustering) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
@@ -1763,14 +1766,16 @@ protected:
 class StoreClusterMutation : public BaseMemOpClusterMutation {
 public:
   StoreClusterMutation(const TargetInstrInfo *tii,
-                       const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, false) {}
+                       const TargetRegisterInfo *tri,
+                       bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, false, ReorderWhileClustering) {}
 };
 
 class LoadClusterMutation : public BaseMemOpClusterMutation {
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri)
-      : BaseMemOpClusterMutation(tii, tri, true) {}
+  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri,
+                      bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, tri, true, ReorderWhileClustering) {}
 };
 
 } // end anonymous namespace
@@ -1779,15 +1784,19 @@ namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(TII, TRI)
+                             const TargetRegisterInfo *TRI,
+                             bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI) {
-  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(TII, TRI)
+                              const TargetRegisterInfo *TRI,
+                              bool ReorderWhileClustering) {
+  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
+                                  TII, TRI, ReorderWhileClustering)
                             : nullptr;
 }
 
@@ -1840,7 +1849,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
-    if (SUa->NodeNum > SUb->NodeNum)
+    if (!ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum)
       std::swap(SUa, SUb);
 
     // FIXME: Is this check really required?

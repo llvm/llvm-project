@@ -325,6 +325,28 @@ struct FuncOpInterface
 
   static bool supportsUnstructuredControlFlow() { return true; }
 
+  bool hasTensorSemantics(Operation *op) const {
+    auto isaTensor = [](Type type) { return isa<TensorType>(type); };
+
+    // A function has tensor semantics if it has tensor arguments/results.
+    auto funcOp = cast<FuncOp>(op);
+    bool hasTensorArg = any_of(funcOp.getArgumentTypes(), isaTensor);
+    bool hasTensorResult = any_of(funcOp.getResultTypes(), isaTensor);
+    if (hasTensorArg || hasTensorResult)
+      return true;
+
+    // It also has tensor semantics if it has tensor block arguments.
+    // TODO: Decouple bufferization of unstructured control flow from
+    // BufferizableOpInterface implementations. We should only care about
+    // region entry block arguments here (which are already covered by the
+    // argument types of the function).
+    for (Block &block : funcOp.getBody())
+      if (any_of(block.getArgumentTypes(), isaTensor))
+        return true;
+
+    return false;
+  }
+
   AliasingOpOperandList
   getAliasingOpOperands(Operation *op, Value value,
                         const AnalysisState &state) const {

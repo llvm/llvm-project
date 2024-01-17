@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,SICI,SICIVI,PREGFX11,GCN %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=SICI,CIVI,SICIVI,PREGFX11,GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CIVI,SICIVI,GFX8PLUS,PREGFX11,GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9PLUS,GFX8PLUS,PREGFX11,GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX9PLUS,GFX8PLUS,GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,SICI,SICIVI,PREGFX11,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=SICI,CIVI,SICIVI,PREGFX11,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=CIVI,SICIVI,GFX8PLUS,PREGFX11,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9PLUS,GFX8PLUS,PREGFX11,GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11,GFX9PLUS,GFX8PLUS,GCN %s
 
 ; GCN-LABEL: {{^}}lds_atomic_cmpxchg_ret_i32_offset:
 ; GFX9PLUS-NOT: m0
