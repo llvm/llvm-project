@@ -77,7 +77,7 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
-    doublePrecision, defaultCharKind, defaultLogicalKind, greaterAndEqualToKind,
+    doublePrecision, defaultCharKind, defaultLogicalKind, greaterOrEqualToKind,
     any, // matches any kind value; each instance is independent
     // match any kind, but all "same" kinds must be equal. For characters, also
     // implies that lengths must be equal.
@@ -105,7 +105,7 @@ struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
   int kindValue{
-      0}; // for KindCode::exactKind and KindCode::greaterAndEqualToKind
+      0}; // for KindCode::exactKind and KindCode::greaterOrEqualToKind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -1316,10 +1316,9 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
             {"exitstat",
-                TypePattern{IntType, KindCode::greaterAndEqualToKind, 4},
+                TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
                 Rank::scalar, Optionality::optional, common::Intent::InOut},
-            {"cmdstat",
-                TypePattern{IntType, KindCode::greaterAndEqualToKind, 2},
+            {"cmdstat", TypePattern{IntType, KindCode::greaterOrEqualToKind, 2},
                 Rank::scalar, Optionality::optional, common::Intent::Out},
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
@@ -1839,7 +1838,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::exactKind:
       argOk = type->kind() == d.typePattern.kindValue;
       break;
-    case KindCode::greaterAndEqualToKind:
+    case KindCode::greaterOrEqualToKind:
       argOk = type->kind() >= d.typePattern.kindValue;
       break;
     case KindCode::sameAtom:
@@ -2183,7 +2182,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType = DynamicType{
           GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
       break;
-    case KindCode::greaterAndEqualToKind:
+    case KindCode::greaterOrEqualToKind:
     case KindCode::exactKind:
       resultType = DynamicType{*category, result.kindValue};
       break;
