@@ -1187,6 +1187,14 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
          O.map("position", R.position) && O.map("newName", R.newName);
 }
 
+llvm::json::Value toJSON(const RenameParams &R) {
+  return llvm::json::Object{
+      {"textDocument", R.textDocument},
+      {"position", R.position},
+      {"newName", R.newName},
+  };
+}
+
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
   return llvm::json::Object{
       {"range", toJSON(DH.range)},
