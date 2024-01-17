@@ -31,6 +31,7 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-forced-sw-shadow-stack 2>&1 | FileCheck %s -check-prefix=NO-FORCE-SW-SCS
 // FORCE-SW-SCS: "-target-feature" "+forced-sw-shadow-stack"
 // NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
+// DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -munaligned-access 2>&1 | FileCheck %s -check-prefix=FAST-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-unaligned-access 2>&1 | FileCheck %s -check-prefix=NO-FAST-UNALIGNED-ACCESS
