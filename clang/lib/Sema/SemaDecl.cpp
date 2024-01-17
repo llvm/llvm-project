@@ -11811,7 +11811,8 @@ static void CheckFunctionDeclarationAttributesUsage(Sema &S,
     NewFD->dropAttr<PureAttr>();
   }
   if (IsPure || IsConst) {
-    // Constructors and destructors are functions which return void, so are handled here as well.
+    // Constructors and destructors are functions which return void, so are
+    // handled here as well.
     if (NewFD->getReturnType()->isVoidType()) {
       S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
           << IsConst;
