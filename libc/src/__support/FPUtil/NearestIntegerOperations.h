@@ -40,12 +40,8 @@ LIBC_INLINE T trunc(T x) {
     return x;
 
   // If the exponent is such that abs(x) is less than 1, then return 0.
-  if (exponent <= -1) {
-    if (bits.is_neg())
-      return T(-0.0);
-    else
-      return T(0.0);
-  }
+  if (exponent <= -1)
+    return T(FPBits<T>::zero(bits.sign()));
 
   int trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
@@ -109,7 +105,6 @@ LIBC_INLINE T round(T x) {
   if (bits.is_inf_or_nan() || bits.is_zero())
     return x;
 
-  bool is_neg = bits.is_neg();
   int exponent = bits.get_exponent();
 
   // If the exponent is greater than the most negative mantissa
@@ -119,18 +114,12 @@ LIBC_INLINE T round(T x) {
 
   if (exponent == -1) {
     // Absolute value of x is greater than equal to 0.5 but less than 1.
-    if (is_neg)
-      return T(-1.0);
-    else
-      return T(1.0);
+    return T(FPBits<T>::one(bits.sign()));
   }
 
   if (exponent <= -2) {
     // Absolute value of x is less than 0.5.
-    if (is_neg)
-      return T(-0.0);
-    else
-      return T(0.0);
+    return T(FPBits<T>::zero(bits.sign()));
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
@@ -148,7 +137,7 @@ LIBC_INLINE T round(T x) {
     // same as the trunc value.
     return trunc_value;
   } else {
-    return is_neg ? trunc_value - T(1.0) : trunc_value + T(1.0);
+    return bits.is_neg() ? trunc_value - T(1.0) : trunc_value + T(1.0);
   }
 }
 
@@ -256,7 +245,7 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
     set_domain_error_and_raise_invalid();
     return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
   } else if (exponent == EXPONENT_LIMIT) {
-    if (bits.is_neg() == 0 || bits.get_mantissa() != 0) {
+    if (bits.is_pos() || bits.get_mantissa() != 0) {
       set_domain_error_and_raise_invalid();
       return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
     }

@@ -131,11 +131,11 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // calculating the limit.
   int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
-    return bits.is_neg() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
+    return T(FPBits<T>::inf(bits.sign()));
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -exp_limit)
-    return bits.is_neg() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);
