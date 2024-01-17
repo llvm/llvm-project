@@ -30,7 +30,7 @@ private:
   using StorageType = typename FPBits::StorageType;
 
   const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
-  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
+  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero(Sign::NEG));
   const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
   const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
   const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));

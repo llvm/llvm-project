@@ -17,6 +17,7 @@ class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
   using StorageType = typename FPBits::StorageType;
 
   void test_na_n_arg(FuncPtr func) {
@@ -78,7 +79,7 @@ private:
   // static.
   const T nan = T(FPBits::build_quiet_nan(1));
   const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
 };

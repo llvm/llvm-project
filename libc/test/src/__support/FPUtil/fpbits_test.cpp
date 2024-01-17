@@ -11,6 +11,7 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::FPBits;
+using LIBC_NAMESPACE::fputil::Sign;
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
   using LIBC_NAMESPACE::fputil::FPType;
@@ -228,10 +229,12 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
 TEST(LlvmLibcFPBitsTest, FloatType) {
   using FloatBits = FPBits<float>;
 
-  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits(FloatBits::inf())).c_str(),
-               "(+Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits(FloatBits::neg_inf())).c_str(),
-               "(-Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(FloatBits(FloatBits::inf(Sign::POS))).c_str(),
+      "(+Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(FloatBits(FloatBits::inf(Sign::NEG))).c_str(),
+      "(-Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits(FloatBits::build_nan(1))).c_str(),
                "(NaN)");
 
@@ -290,10 +293,12 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
 TEST(LlvmLibcFPBitsTest, DoubleType) {
   using DoubleBits = FPBits<double>;
 
-  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits(DoubleBits::inf())).c_str(),
-               "(+Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits(DoubleBits::neg_inf())).c_str(),
-               "(-Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(DoubleBits(DoubleBits::inf(Sign::POS))).c_str(),
+      "(+Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(DoubleBits(DoubleBits::inf(Sign::NEG))).c_str(),
+      "(-Infinity)");
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(DoubleBits(DoubleBits::build_nan(1))).c_str(),
       "(NaN)");
@@ -358,10 +363,12 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
     return; // The tests for the "double" type cover for this case.
 
   EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf())).c_str(),
+      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf(Sign::POS)))
+          .c_str(),
       "(+Infinity)");
   EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::neg_inf())).c_str(),
+      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf(Sign::NEG)))
+          .c_str(),
       "(-Infinity)");
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::build_nan(1))).c_str(),
@@ -441,10 +448,12 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
   using LongDoubleBits = FPBits<long double>;
 
   EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf())).c_str(),
+      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf(Sign::POS)))
+          .c_str(),
       "(+Infinity)");
   EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::neg_inf())).c_str(),
+      LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::inf(Sign::NEG)))
+          .c_str(),
       "(-Infinity)");
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(LongDoubleBits(LongDoubleBits::build_nan(1))).c_str(),
@@ -517,10 +526,11 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 TEST(LlvmLibcFPBitsTest, Float128Type) {
   using Float128Bits = FPBits<float128>;
 
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits(Float128Bits::inf())).c_str(),
-               "(+Infinity)");
   EXPECT_STREQ(
-      LIBC_NAMESPACE::str(Float128Bits(Float128Bits::neg_inf())).c_str(),
+      LIBC_NAMESPACE::str(Float128Bits(Float128Bits::inf(Sign::POS))).c_str(),
+      "(+Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(Float128Bits(Float128Bits::inf(Sign::NEG))).c_str(),
       "(-Infinity)");
   EXPECT_STREQ(
       LIBC_NAMESPACE::str(Float128Bits(Float128Bits::build_nan(1))).c_str(),
@@ -536,7 +546,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0x00000000000000000000000000000000 = "
                "(S: 0, E: 0x0000, M: 0x00000000000000000000000000000000)");
 
-  Float128Bits negzero(Float128Bits::neg_zero());
+  Float128Bits negzero(Float128Bits::zero(Sign::NEG));
   EXPECT_TRUE(negzero.is_neg());
   EXPECT_EQ(negzero.get_biased_exponent(), static_cast<uint16_t>(0x0000));
   EXPECT_EQ(negzero.get_mantissa(), static_cast<UInt128>(0x0000000000000000)

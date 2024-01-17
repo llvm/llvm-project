@@ -49,13 +49,13 @@ LIBC_INLINE T modf(T x, T &iptr) {
     return x;
   } else if (bits.is_inf()) {
     iptr = x;
-    return bits.is_neg() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.is_neg() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+      return T(FPBits<T>::zero(bits.sign()));
     } else {
       return x - iptr;
     }
@@ -103,12 +103,12 @@ LIBC_INLINE T logb(T x) {
   if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::neg_inf());
+    return T(FPBits<T>::inf(Sign::NEG));
   } else if (bits.is_nan()) {
     return x;
   } else if (bits.is_inf()) {
     // Return positive infinity.
-    return T(FPBits<T>::inf());
+    return T(FPBits<T>::inf(Sign::POS));
   }
 
   NormalFloat<T> normal(bits);

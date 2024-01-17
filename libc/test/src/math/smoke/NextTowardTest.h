@@ -36,13 +36,13 @@ class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using StorageType = typename FPBits::StorageType;
 
   const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
   const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T nan = T(FPBits::build_quiet_nan(1));
 
   const long double to_zero = ToFPBits::zero();
-  const long double to_neg_zero = ToFPBits::neg_zero();
+  const long double to_neg_zero = ToFPBits::zero(Sign::NEG);
   const long double to_nan = ToFPBits::build_quiet_nan(1);
 
   const StorageType min_subnormal = FPBits::MIN_SUBNORMAL;

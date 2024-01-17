@@ -34,9 +34,9 @@ private:
   using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = F(FPBits::zero());
-  const F neg_zero = F(FPBits::neg_zero());
+  const F neg_zero = F(FPBits::zero(Sign::NEG));
   const F inf = F(FPBits::inf());
-  const F neg_inf = F(FPBits::neg_inf());
+  const F neg_inf = F(FPBits::inf(Sign::NEG));
   const F nan = F(FPBits::build_quiet_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);

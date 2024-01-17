@@ -708,7 +708,6 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
 
   // Methods below this are used by tests.
 
-
   LIBC_INLINE static constexpr T one(Sign sign = Sign::POS) {
     return FPBits(UP::one(sign)).get_val();
   }
@@ -717,13 +716,9 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
     return FPBits(UP::zero(sign)).get_val();
   }
 
-  LIBC_INLINE static constexpr T neg_zero() { return zero(Sign::NEG); }
-
   LIBC_INLINE static constexpr T inf(Sign sign = Sign::POS) {
     return FPBits(UP::inf(sign)).get_val();
   }
-
-  LIBC_INLINE static constexpr T neg_inf() { return inf(Sign::NEG); }
 
   LIBC_INLINE static constexpr T min_normal() {
     return FPBits(UP::min_normal(Sign::POS)).get_val();
