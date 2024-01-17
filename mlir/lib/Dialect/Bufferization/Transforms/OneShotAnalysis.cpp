@@ -279,7 +279,7 @@ static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
     worklist.push_back(succ);
   while (!worklist.empty()) {
     Block *next = worklist.pop_back_val();
-    if (llvm::find(except, next) != except.end())
+    if (llvm::is_contained(except, next))
       continue;
     if (next == to)
       return true;
