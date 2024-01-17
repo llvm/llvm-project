@@ -184,6 +184,12 @@ protected:
     T value;
   };
 
+  // Allows explicit casting to a different type.
+  template <typename To, typename T>
+  LIBC_INLINE static constexpr To as(TypedInt<T> typed_int) {
+    return To(static_cast<T>(typed_int));
+  }
+
   // An opaque type to store a floating point exponent.
   // We define special values but it is valid to create arbitrary values as long
   // as they are in the range [MIN, MAX].
@@ -225,6 +231,19 @@ protected:
     using UP = TypedInt<StorageType>;
     using UP::UP;
 
+    LIBC_INLINE friend constexpr Significand operator|(const Significand a,
+                                                       const Significand b) {
+      return Significand(StorageType(as<StorageType>(a) | as<StorageType>(b)));
+    }
+    LIBC_INLINE friend constexpr Significand operator^(const Significand a,
+                                                       const Significand b) {
+      return Significand(StorageType(as<StorageType>(a) ^ as<StorageType>(b)));
+    }
+    LIBC_INLINE friend constexpr Significand operator>>(const Significand a,
+                                                        int shift) {
+      return Significand(StorageType(as<StorageType>(a) >> shift));
+    }
+
     LIBC_INLINE static constexpr auto ZERO() {
       return Significand(StorageType(0));
     }
@@ -240,24 +259,6 @@ protected:
       return Significand(SIG_MASK);
     }
   };
-
-  template <typename To, typename T>
-  LIBC_INLINE static constexpr To as(TypedInt<T> typed_int) {
-    return To(static_cast<T>(typed_int));
-  }
-
-  LIBC_INLINE friend constexpr Significand operator|(const Significand a,
-                                                     const Significand b) {
-    return Significand(StorageType(as<StorageType>(a) | as<StorageType>(b)));
-  }
-  LIBC_INLINE friend constexpr Significand operator^(const Significand a,
-                                                     const Significand b) {
-    return Significand(StorageType(as<StorageType>(a) ^ as<StorageType>(b)));
-  }
-  LIBC_INLINE friend constexpr Significand operator>>(const Significand a,
-                                                      int shift) {
-    return Significand(StorageType(as<StorageType>(a) >> shift));
-  }
 
   LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp) {
     return (as<StorageType>(exp) << SIG_LEN) & EXP_MASK;
