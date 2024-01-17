@@ -556,9 +556,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _ValueType 
 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) _NOEXCEPT {
-#  if _LIBCPP_STD_VER >= 26
   static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-#  endif
   static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
   return std::any_cast<_ValueType>(const_cast<any*>(__any));
 }
@@ -576,9 +574,7 @@ inline _LIBCPP_HIDE_FROM_ABI _RetType __pointer_or_func_cast(void*, /*IsFunction
 template <class _ValueType>
 _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any* __any) _NOEXCEPT {
   using __any_imp::_Action;
-#  if _LIBCPP_STD_VER >= 26
   static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-#  endif
   static_assert(!is_reference<_ValueType>::value, "_ValueType may not be a reference.");
   typedef add_pointer_t<_ValueType> _ReturnType;
   if (__any && __any->__h_) {
