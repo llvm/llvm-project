@@ -49,15 +49,12 @@ std::optional<ArmSMETileType> getSMETileType(VectorType);
 /// Verifies the tile ID (if set) on this tile operation is valid.
 LogicalResult verifyOperationHasValidTileId(Operation *);
 
-using LoopBodyBuilder =
-    std::function<void(OpBuilder &, Location, Value, Value)>;
-
 /// Generates a for loop over ZA tile slices where the induction variable is
 /// the tile slice index and each iteration yields a new tile. Loop body is
-/// built via LoopBodyBuilder, which returns the next tile value.
-scf::ForOp createLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
-                                    Value initTile,
-                                    LoopBodyBuilder bodyBuilder);
+/// built via the callback, which returns the next tile value.
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> callback);
 
 } // namespace mlir::arm_sme
 

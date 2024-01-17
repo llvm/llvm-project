@@ -239,19 +239,17 @@ struct BroadcastOpToArmSMELowering
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
-    arm_sme::LoopBodyBuilder loopBody = [&](OpBuilder &b, Location loc,
-                                            Value tileSliceIndex,
-                                            Value currentTile) {
+    auto callback = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                        Value currentTile) {
       // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
       // to each tile slice.
       auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-      b.create<scf::YieldOp>(loc, nextTile.getResult());
-      return;
+      return nextTile.getResult();
     };
 
     // Create a loop over ZA tile slices.
-    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, loopBody);
+    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, callback);
 
     rewriter.replaceOp(broadcastOp, forOp.getResult(0));
 
@@ -301,18 +299,16 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
-    arm_sme::LoopBodyBuilder loopBody = [&](OpBuilder &b, Location loc,
-                                            Value tileSliceIndex,
-                                            Value currentTile) {
+    auto callback = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                        Value currentTile) {
       auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-      b.create<scf::YieldOp>(loc, nextTile.getResult());
-      return;
+      return nextTile.getResult();
     };
 
     // Next, create a loop over ZA tile slices and "move" the generated 1-d
     // vector to each slice.
-    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, loopBody);
+    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, callback);
 
     rewriter.replaceOp(splatOp, forOp.getResult(0));
 

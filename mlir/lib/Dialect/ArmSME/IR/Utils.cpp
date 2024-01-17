@@ -72,9 +72,9 @@ LogicalResult verifyOperationHasValidTileId(Operation *op) {
   return success();
 }
 
-scf::ForOp createLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
-                                    Value initTile,
-                                    LoopBodyBuilder bodyBuilder) {
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> callback) {
   OpBuilder::InsertionGuard g(rewriter);
   auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
@@ -87,8 +87,10 @@ scf::ForOp createLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
   auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step,
                                            ValueRange{initTile});
   rewriter.setInsertionPointToStart(forOp.getBody());
-  bodyBuilder(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
-              /*currentTile=*/forOp.getRegionIterArg(0));
+  Value nextTile =
+      callback(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
+               /*currentTile=*/forOp.getRegionIterArg(0));
+  rewriter.create<scf::YieldOp>(loc, nextTile);
   return forOp;
 }
 
