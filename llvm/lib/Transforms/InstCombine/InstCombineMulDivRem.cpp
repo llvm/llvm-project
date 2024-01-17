@@ -331,20 +331,15 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   {
-    Value *X, *Y, *Z;
+    Value *X, *Y;
     // abs(X) * abs(Y) -> abs(X * Y)
-    // nabs(X) * nabs(Y) -> abs(X * Y)
-    SelectPatternFlavor SPF0 = matchSelectPattern(Op0, X, Z).Flavor;
-    SelectPatternFlavor SPF1 = matchSelectPattern(Op1, Y, Z).Flavor;
-    if ((SPF0 == SPF1) && (SPF0 == SPF_ABS || SPF0 == SPF_NABS))
+    if (I.hasNoSignedWrap() &&
+        match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X), m_AllOnes())) &&
+        match(Op1, m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_AllOnes())))
       return replaceInstUsesWith(
-          I, Builder.CreateBinaryIntrinsic(
-                 Intrinsic::abs, Builder.CreateMul(X, Y), Builder.getTrue()));
-    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::abs>(m_Value(Y))))
-      return replaceInstUsesWith(
-          I, Builder.CreateBinaryIntrinsic(
-                 Intrinsic::abs, Builder.CreateMul(X, Y), Builder.getTrue()));
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
   }
 
   // -X * C --> X * -C

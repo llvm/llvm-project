@@ -1652,13 +1652,52 @@ define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
 ; fold mul(abs(x),abs(y)) -> abs(mul(x,y))
 define i32 @combine_mul_abs_x_abs_y(i32 %x, i32 %y) {
 ; CHECK-LABEL: @combine_mul_abs_x_abs_y(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_no_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_no_nsw(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_poison_1(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_poison_1(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ABS_X]], [[ABS_Y]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 false)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_x_abs_y_poison_2(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_poison_2(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ABS_X]], [[ABS_Y]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 false)
-  %mul = mul i32 %abs_x, %abs_y
+  %mul = mul nsw i32 %abs_x, %abs_y
   ret i32 %mul
 }
 
