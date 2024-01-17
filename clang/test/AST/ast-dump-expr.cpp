@@ -155,6 +155,12 @@ void UnaryExpressions(int *p) {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:8> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
+  ::_placement_new (p) int;
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:24> 'int *' global builtin placement-new expression
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void *' <BitCast>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
+
   new (p) int{12};
   // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:17> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(std::size_t, void *)'
   // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:14, col:17> 'int'
@@ -162,6 +168,14 @@ void UnaryExpressions(int *p) {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void *' <BitCast>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:8> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
+
+  ::_placement_new (p) int{12};
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:30> 'int *' global builtin placement-new expression
+  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:27, col:30> 'int'
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:28> 'int' 12
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void *' <BitCast>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:21> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
   ::delete p;
   // CHECK: CXXDeleteExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'void' global Function 0x{{[^ ]*}} 'operator delete' 'void (void *) noexcept'

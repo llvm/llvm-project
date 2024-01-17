@@ -58,6 +58,9 @@ void good_news()
   U *pu = new (ps) U;
   V *pv = new (ps) V;
 
+  U *pu2 = ::_placement_new ((S*)0) U;
+  int *pi2 = ::_placement_new ((void*)0) int;
+
   pi = new (S(1.0f, 2)) int;
 
   (void)new int[true];
@@ -87,6 +90,10 @@ void bad_news(int *ip)
   (void)new; // expected-error {{expected a type}}
   (void)new 4; // expected-error {{expected a type}}
   (void)new () int; // expected-error {{expected expression}}
+  (void)::_placement_new () int; // expected-error {{expected expression}}
+  (void)_placement_new (ip) int; // expected-error {{expected expression}}
+  (void)::_placement_new int; // expected-error {{expected '(' after '::_placement_new'}}
+  (void)::_placement_new (ip, ip) int; // expected-error {{expected only one argument in placement params}}
   (void)new int[1.1];
 #if __cplusplus <= 199711L
   // expected-error@-2 {{array size expression must have integral or enumeration type, not 'double'}}

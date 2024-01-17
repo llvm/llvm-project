@@ -219,6 +219,15 @@ namespace test15 {
     new (p, true) A();
   }
 
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test156test0cEPv(
+  // CHECK:      [[P:%.*]] = load ptr, ptr
+  // CHECK-NOT:  icmp eq ptr [[P]], null
+  // CHECK-NOT:  br i1
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev(ptr {{[^,]*}} [[P]])
+  void test0c(void *p) {
+    ::_placement_new (p) A();
+  }
+
   // CHECK-LABEL:    define{{.*}} void @_ZN6test156test1aEPv(
   // CHECK:      [[P:%.*]] = load ptr, ptr
   // CHECK-NOT:  icmp eq ptr [[P]], null
@@ -251,9 +260,24 @@ namespace test15 {
     new (p, true) A[5];
   }
 
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test156test1cEPv(
+  // CHECK:      [[P:%.*]] = load ptr, ptr
+  // CHECK-NOT:  icmp eq ptr [[P]], null
+  // CHECK-NOT:  br i1
+  // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A:.*]], ptr [[P]], i64 5
+  // CHECK-NEXT: br label
+  // CHECK:      [[CUR:%.*]] = phi ptr [ [[P]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev(ptr {{[^,]*}} [[CUR]])
+  // CHECK-NEXT: [[NEXT]] = getelementptr inbounds [[A]], ptr [[CUR]], i64 1
+  // CHECK-NEXT: [[DONE:%.*]] = icmp eq ptr [[NEXT]], [[END]]
+  // CHECK-NEXT: br i1 [[DONE]]
+  void test1c(void *p) {
+    ::_placement_new (p) A[5];
+  }
+
   // TODO: it's okay if all these size calculations get dropped.
   // FIXME: maybe we should try to throw on overflow?
-  // CHECK-LABEL:    define{{.*}} void @_ZN6test155test2EPvi(
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test156test2aEPvi(
   // CHECK:      [[N:%.*]] = load i32, ptr
   // CHECK-NEXT: [[T0:%.*]] = sext i32 [[N]] to i64
   // CHECK-NEXT: [[P:%.*]] = load ptr, ptr
@@ -263,8 +287,24 @@ namespace test15 {
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi ptr [ [[P]],
   // CHECK-NEXT: call void @_ZN6test151AC1Ev(ptr {{[^,]*}} [[CUR]])
-  void test2(void *p, int n) {
+  void test2a(void *p, int n) {
     new (p) A[n];
+  }
+
+  // TODO: it's okay if all these size calculations get dropped.
+  // FIXME: maybe we should try to throw on overflow?
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test156test2bEPvi(
+  // CHECK:      [[N:%.*]] = load i32, ptr
+  // CHECK-NEXT: [[T0:%.*]] = sext i32 [[N]] to i64
+  // CHECK-NEXT: [[P:%.*]] = load ptr, ptr
+  // CHECK-NEXT: [[ISEMPTY:%.*]] = icmp eq i64 [[T0]], 0
+  // CHECK-NEXT: br i1 [[ISEMPTY]],
+  // CHECK:      [[END:%.*]] = getelementptr inbounds [[A]], ptr [[P]], i64 [[T0]]
+  // CHECK-NEXT: br label
+  // CHECK:      [[CUR:%.*]] = phi ptr [ [[P]],
+  // CHECK-NEXT: call void @_ZN6test151AC1Ev(ptr {{[^,]*}} [[CUR]])
+  void test2b(void *p, int n) {
+    ::_placement_new (p) A[n];
   }
 }
 

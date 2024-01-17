@@ -1445,8 +1445,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 
   case tok::coloncolon: {    // ::foo::bar
     const Token &Next = NextToken();
-    if (Next.isOneOf(tok::kw_new,       // ::new
-                     tok::kw_delete))   // ::delete
+    if (Next.isOneOf(tok::kw_new,             // ::new
+                     tok::kw_delete,          // ::delete
+                     tok::kw__placement_new)) // ::_placement_new
       return TPResult::False;
     [[fallthrough]];
   }

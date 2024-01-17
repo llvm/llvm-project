@@ -1903,6 +1903,8 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->doesUsualArrayDeleteWantSize());
   Record.push_back(E->CXXNewExprBits.StoredInitializationStyle);
 
+  Record.push_back(E->isPlacementNewExpr());
+
   Record.AddDeclRef(E->getOperatorNew());
   Record.AddDeclRef(E->getOperatorDelete());
   Record.AddTypeSourceInfo(E->getAllocatedTypeSourceInfo());

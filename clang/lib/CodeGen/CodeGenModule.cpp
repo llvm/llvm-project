@@ -3904,7 +3904,10 @@ namespace {
     }
 
     bool VisitCXXNewExpr(CXXNewExpr *E) {
-      SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
+      if (E->isPlacementNewExpr())
+        SafeToInline = true;
+      else
+        SafeToInline = E->getOperatorNew()->hasAttr<DLLImportAttr>();
       return SafeToInline;
     }
   };

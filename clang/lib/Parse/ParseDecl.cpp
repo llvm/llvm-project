@@ -5455,8 +5455,9 @@ bool Parser::isTypeSpecifierQualifier() {
     return isTypeSpecifierQualifier();
 
   case tok::coloncolon:   // ::foo::bar
-    if (NextToken().is(tok::kw_new) ||    // ::new
-        NextToken().is(tok::kw_delete))   // ::delete
+    if (NextToken().is(tok::kw_new) ||          // ::new
+        NextToken().is(tok::kw_delete) ||       // ::delete
+        NextToken().is(tok::kw__placement_new)) // ::_placement_new
       return false;
 
     if (TryAnnotateTypeOrScopeToken())
@@ -5654,8 +5655,9 @@ bool Parser::isDeclarationSpecifier(
   case tok::coloncolon:   // ::foo::bar
     if (!getLangOpts().CPlusPlus)
       return false;
-    if (NextToken().is(tok::kw_new) ||    // ::new
-        NextToken().is(tok::kw_delete))   // ::delete
+    if (NextToken().is(tok::kw_new) ||          // ::new
+        NextToken().is(tok::kw_delete) ||       // ::delete
+        NextToken().is(tok::kw__placement_new)) // ::_placement_new
       return false;
 
     // Annotate typenames and C++ scope specifiers.  If we get one, just

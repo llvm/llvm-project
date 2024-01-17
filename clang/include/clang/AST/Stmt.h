@@ -878,6 +878,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsParenTypeId : 1;
 
+    /// True is this if the builtin placement-new expression.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsPlacementNewExpr : 1;
+
     /// The number of placement new arguments.
     unsigned NumPlacementArgs;
   };

@@ -1366,6 +1366,8 @@ void TextNodeDumper::VisitCXXNewExpr(const CXXNewExpr *Node) {
     OS << " global";
   if (Node->isArray())
     OS << " array";
+  if (Node->isPlacementNewExpr())
+    OS << " builtin placement-new expression";
   if (Node->getOperatorNew()) {
     OS << ' ';
     dumpBareDeclRef(Node->getOperatorNew());

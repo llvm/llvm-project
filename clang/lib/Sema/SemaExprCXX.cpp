@@ -1876,9 +1876,9 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
 ///   if there is none.
 ExprResult
 Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
-                  SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
-                  SourceLocation PlacementRParen, SourceRange TypeIdParens,
-                  Declarator &D, Expr *Initializer) {
+                  bool IsPlacementNewExpr, SourceLocation PlacementLParen,
+                  MultiExprArg PlacementArgs, SourceLocation PlacementRParen,
+                  SourceRange TypeIdParens, Declarator &D, Expr *Initializer) {
   std::optional<Expr *> ArraySize;
   // If the specified type is an array, unwrap it and save the expression.
   if (D.getNumTypeObjects() > 0 &&
@@ -1941,9 +1941,9 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
     DirectInitRange = List->getSourceRange();
 
   return BuildCXXNew(SourceRange(StartLoc, D.getEndLoc()), UseGlobal,
-                     PlacementLParen, PlacementArgs, PlacementRParen,
-                     TypeIdParens, AllocType, TInfo, ArraySize, DirectInitRange,
-                     Initializer);
+                     IsPlacementNewExpr, PlacementLParen, PlacementArgs,
+                     PlacementRParen, TypeIdParens, AllocType, TInfo, ArraySize,
+                     DirectInitRange, Initializer);
 }
 
 static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
@@ -1997,14 +1997,13 @@ void Sema::diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
   }
 }
 
-ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
-                             SourceLocation PlacementLParen,
-                             MultiExprArg PlacementArgs,
-                             SourceLocation PlacementRParen,
-                             SourceRange TypeIdParens, QualType AllocType,
-                             TypeSourceInfo *AllocTypeInfo,
-                             std::optional<Expr *> ArraySize,
-                             SourceRange DirectInitRange, Expr *Initializer) {
+ExprResult
+Sema::BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
+                  SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
+                  SourceLocation PlacementRParen, SourceRange TypeIdParens,
+                  QualType AllocType, TypeSourceInfo *AllocTypeInfo,
+                  std::optional<Expr *> ArraySize, SourceRange DirectInitRange,
+                  Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
 
@@ -2286,9 +2285,12 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   bool PassAlignment = getLangOpts().AlignedAllocation &&
                        Alignment > NewAlignment;
 
+  bool HaveDependentPlacementTypes =
+      AllocType->isDependentType() ||
+      Expr::hasAnyTypeDependentArguments(PlacementArgs);
+
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
-  if (!AllocType->isDependentType() &&
-      !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
+  if (!HaveDependentPlacementTypes && !IsPlacementNewExpr &&
       FindAllocationFunctions(
           StartLoc, SourceRange(PlacementLParen, PlacementRParen), Scope, Scope,
           AllocType, ArraySize.has_value(), PassAlignment, PlacementArgs,
@@ -2298,12 +2300,28 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // If this is an array allocation, compute whether the usual array
   // deallocation function for the type has a size_t parameter.
   bool UsualArrayDeleteWantsSize = false;
-  if (ArraySize && !AllocType->isDependentType())
+  if (!IsPlacementNewExpr && ArraySize && !AllocType->isDependentType())
     UsualArrayDeleteWantsSize =
         doesUsualArrayDeleteWantSize(*this, StartLoc, AllocType);
 
   SmallVector<Expr *, 8> AllPlaceArgs;
-  if (OperatorNew) {
+  if (IsPlacementNewExpr && !HaveDependentPlacementTypes) {
+    assert(PlacementArgs.size() == 1);
+    assert(UseGlobal);
+    QualType VoidPtr = Context.getPointerType(Context.VoidTy);
+
+    InitializedEntity Entity =
+        InitializedEntity::InitializeParameter(Context, VoidPtr, false);
+    ExprResult ArgE = PerformCopyInitialization(Entity, SourceLocation(),
+                                                PlacementArgs[0], false, false);
+    if (ArgE.isInvalid())
+      return ExprError();
+
+    Expr *Arg = ArgE.getAs<Expr>();
+    CheckArrayAccess(Arg);
+
+    PlacementArgs[0] = Arg;
+  } else if (OperatorNew) {
     auto *Proto = OperatorNew->getType()->castAs<FunctionProtoType>();
     VariadicCallType CallType = Proto->isVariadic() ? VariadicFunction
                                                     : VariadicDoesNotApply;
@@ -2471,21 +2489,28 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   // Mark the new and delete operators as referenced.
   if (OperatorNew) {
+    assert(!IsPlacementNewExpr);
     if (DiagnoseUseOfDecl(OperatorNew, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorNew);
   }
   if (OperatorDelete) {
+    assert(!IsPlacementNewExpr);
     if (DiagnoseUseOfDecl(OperatorDelete, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
-  return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
-                            PassAlignment, UsualArrayDeleteWantsSize,
-                            PlacementArgs, TypeIdParens, ArraySize, InitStyle,
-                            Initializer, ResultType, AllocTypeInfo, Range,
-                            DirectInitRange);
+  if (IsPlacementNewExpr)
+    return CXXNewExpr::CreatePlacementNew(
+        Context, PlacementArgs[0], TypeIdParens, ArraySize, InitStyle,
+        Initializer, ResultType, AllocTypeInfo, Range, DirectInitRange);
+  else
+    return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
+                              PassAlignment, UsualArrayDeleteWantsSize,
+                              PlacementArgs, TypeIdParens, ArraySize, InitStyle,
+                              Initializer, ResultType, AllocTypeInfo, Range,
+                              DirectInitRange);
 }
 
 /// Checks that a type is suitable as the allocated type

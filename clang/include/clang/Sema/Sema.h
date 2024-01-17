@@ -6862,18 +6862,18 @@ public:
                                        bool ListInitialization);
 
   /// ActOnCXXNew - Parsed a C++ 'new' expression.
-  ExprResult ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
-                         SourceLocation PlacementLParen,
-                         MultiExprArg PlacementArgs,
-                         SourceLocation PlacementRParen,
-                         SourceRange TypeIdParens, Declarator &D,
-                         Expr *Initializer);
   ExprResult
-  BuildCXXNew(SourceRange Range, bool UseGlobal, SourceLocation PlacementLParen,
-              MultiExprArg PlacementArgs, SourceLocation PlacementRParen,
-              SourceRange TypeIdParens, QualType AllocType,
-              TypeSourceInfo *AllocTypeInfo, std::optional<Expr *> ArraySize,
-              SourceRange DirectInitRange, Expr *Initializer);
+  ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal, bool IsPlacementNewExpr,
+              SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
+              SourceLocation PlacementRParen, SourceRange TypeIdParens,
+              Declarator &D, Expr *Initializer);
+  ExprResult
+  BuildCXXNew(SourceRange Range, bool UseGlobal, bool IsPlacementNewExpr,
+              SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
+              SourceLocation PlacementRParen, SourceRange TypeIdParens,
+              QualType AllocType, TypeSourceInfo *AllocTypeInfo,
+              std::optional<Expr *> ArraySize, SourceRange DirectInitRange,
+              Expr *Initializer);
 
   /// Determine whether \p FD is an aligned allocation or deallocation
   /// function that is unavailable.

@@ -2098,6 +2098,7 @@ void StmtProfiler::VisitCXXNewExpr(const CXXNewExpr *S) {
   ID.AddInteger(S->getNumPlacementArgs());
   ID.AddBoolean(S->isGlobalNew());
   ID.AddBoolean(S->isParenTypeId());
+  ID.AddBoolean(S->isPlacementNewExpr());
   ID.AddInteger(llvm::to_underlying(S->getInitializationStyle()));
 }
 
