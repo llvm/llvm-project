@@ -278,22 +278,26 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/#/console).
+by our [build bots](https://lab.llvm.org/buildbot/).
 
-If there is a problem with the build, all the change authors will receive an email
+If there is a problem with a build, all the change authors will receive an email
 describing the problem. Please check whether the problem has been caused by your
-change, as the change set may include many authors. If the problem affects many
+change specifically, as the change set may include many authors. If the problem affects many
 configurations, you may get many emails for the same problem.
 
 If you are using a GitHub `noreply` email address, you will not receive these emails.
 Instead, someone will comment on this PR to inform you of the issue.
+
+You can also track the progress of your change using the [build bot console view](https://lab.llvm.org/buildbot/#/console).
+However, this page only shows recent changes. If yours is not listed there, rely on the notifications.
 
 If you do not receive any reports of problems, no action is required from you.
 Your changes are working as expected, well done!
 
 If your change causes an ongoing issue, it may be reverted. This is a [normal part of LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy)
 and is not a comment on yourself as an author. The revert commit (or a comment on this PR)
-should explain why it was reverted, how to fix your changes and merge them again.
+should explain why it was reverted and how to fix your changes. Please open a new
+PR with the fixed changes and describe what was done to fix them.
 
 If you are unsure how to fix a problem, you can send questions in a reply
 to the notification email, add a comment to this PR, or ask on [Discord](https://discord.com/invite/xS7Z362).
