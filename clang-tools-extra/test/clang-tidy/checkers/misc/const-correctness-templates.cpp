@@ -37,13 +37,24 @@ namespace gh70323{
 // operator is type dependent due to the parameter pack.
 
 struct Stream {};
-template <typename T>
-Stream& operator<<(Stream&, T);
 template <typename... Args>
-void concatenate(Args... args)
+void concatenate1(Args... args)
 {
     Stream stream;
     (stream << ... << args);
+}
+
+template <typename... Args>
+void concatenate2(Args... args)
+{
+    Stream stream;
     (args << ... << stream);
+}
+
+template <typename... Args>
+void concatenate3(Args... args)
+{
+    Stream stream;
+    (..., (stream << args));
 }
 } // namespace gh70323
