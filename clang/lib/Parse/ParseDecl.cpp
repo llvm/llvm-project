@@ -79,7 +79,7 @@ TypeResult Parser::ParseTypeName(SourceRange *Range, DeclaratorContext Context,
   if (DeclaratorInfo.isInvalidType())
     return true;
 
-  return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+  return Actions.ActOnTypeName(DeclaratorInfo);
 }
 
 /// Normalizes an attribute name by dropping prefixed and suffixed __.
@@ -5011,7 +5011,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                   DeclSpecContext::DSC_type_specifier);
       Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                                 DeclaratorContext::TypeName);
-      BaseType = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+      BaseType = Actions.ActOnTypeName(DeclaratorInfo);
 
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
