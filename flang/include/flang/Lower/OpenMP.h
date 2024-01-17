@@ -14,6 +14,9 @@
 #define FORTRAN_LOWER_OPENMP_H
 
 #include <cinttypes>
+#include <utility>
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 class Value;
@@ -86,6 +89,20 @@ bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
                                  Fortran::semantics::SemanticsContext &,
                                  Fortran::lower::pft::Evaluation &,
                                  const parser::OpenMPDeclarativeConstruct &);
+void gatherDeferredDeclareTargets(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    Fortran::lower::pft::Evaluation &,
+    const parser::OpenMPDeclarativeConstruct &,
+    llvm::SmallVectorImpl<std::tuple<
+        uint32_t /*mlir::omp::DeclareTargetCaptureClause*/, uint32_t,
+        /*mlir::omp::DeclareTargetDeviceType*/ Fortran::semantics::Symbol>> &);
+bool markDelayedDeclareTargetFunctions(
+    mlir::Operation *,
+    llvm::SmallVectorImpl<
+        std::tuple<uint32_t /*mlir::omp::DeclareTargetCaptureClause*/,
+                   uint32_t, /*mlir::omp::DeclareTargetDeviceType*/
+                   Fortran::semantics::Symbol>> &,
+    AbstractConverter &);
 void genOpenMPRequires(mlir::Operation *, const Fortran::semantics::Symbol *);
 
 } // namespace lower
