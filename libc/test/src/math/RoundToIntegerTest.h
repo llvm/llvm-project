@@ -31,6 +31,7 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = F(FPBits::zero());
   const F neg_zero = F(FPBits::neg_zero());
@@ -127,7 +128,7 @@ public:
     // is set.
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
-    bits.set_sign(1);
+    bits.set_sign(Sign::NEG);
     bits.set_mantissa(0);
 
     F x = F(bits);
@@ -191,7 +192,7 @@ public:
     // is set.
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
-    bits.set_sign(1);
+    bits.set_sign(Sign::NEG);
     bits.set_mantissa(FPBits::FRACTION_MASK);
 
     F x = F(bits);

@@ -39,9 +39,9 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   if (x.is_nan())
     return "(NaN)";
   if (x.is_inf())
-    return x.get_sign() ? "(-Infinity)" : "(+Infinity)";
+    return x.is_neg() ? "(-Infinity)" : "(+Infinity)";
 
-  const auto sign_char = [](bool sign) -> char { return sign ? '1' : '0'; };
+  const auto sign_char = [](bool is_neg) -> char { return is_neg ? '1' : '0'; };
 
   cpp::string s;
 
@@ -49,7 +49,7 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   s += bits.view();
 
   s += " = (S: ";
-  s += sign_char(x.get_sign());
+  s += sign_char(x.is_neg());
 
   s += ", E: ";
   const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_biased_exponent());

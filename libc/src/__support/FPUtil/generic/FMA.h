@@ -64,7 +64,7 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
     if (!t.is_zero() && ((bit_sum.get_mantissa() & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.get_sign() != t.get_sign()) {
+      if (bit_sum.sign() != t.sign()) {
         bit_sum.set_mantissa(bit_sum.get_mantissa() + 1);
       } else if (bit_sum.get_mantissa()) {
         bit_sum.set_mantissa(bit_sum.get_mantissa() - 1);
@@ -118,9 +118,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   }
 
   FPBits x_bits(x), y_bits(y), z_bits(z);
-  bool x_sign = x_bits.get_sign();
-  bool y_sign = y_bits.get_sign();
-  bool z_sign = z_bits.get_sign();
+  bool x_sign = x_bits.is_neg();
+  bool y_sign = y_bits.is_neg();
+  bool z_sign = z_bits.is_neg();
   bool prod_sign = x_sign != y_sign;
   x_exp += x_bits.get_biased_exponent();
   y_exp += y_bits.get_biased_exponent();

@@ -43,13 +43,13 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     return x;
   }
 
-  bool result_sign = (xbits.get_sign() == ybits.get_sign() ? false : true);
+  bool result_sign = (xbits.is_neg() == ybits.is_neg() ? false : true);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
   // is evaluated.
-  xbits.set_sign(0);
-  ybits.set_sign(0);
+  xbits.set_sign(Sign::POS);
+  ybits.set_sign(Sign::POS);
 
   NormalFloat<T> normalx(xbits), normaly(ybits);
   int exp = normalx.exponent - normaly.exponent;

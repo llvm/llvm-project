@@ -74,7 +74,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return static_cast<float>(FPBits::neg_inf());
     }
-    if (xbits.get_sign() && !xbits.is_nan()) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except(FE_INVALID);
       return FPBits::build_quiet_nan(0);
