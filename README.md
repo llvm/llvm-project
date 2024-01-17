@@ -1,6 +1,6 @@
 # AMD Fork of The LLVM Compiler Infrastructure
 
-The AMD fork aims to contain all of [upstream LLVM](https://github.com/llvm/llvm-project), and also includes several AMD-specific additions in the `llvm-project/amd directory`:
+The AMD fork aims to contain all of [upstream LLVM](https://github.com/llvm/llvm-project), and also includes several AMD-specific additions in the `llvm-project/amd` directory:
 
 - **amd/comgr** - The Code Object Manager API, designed to simplify linking, compiling, and inspecting code objects (code owner: [@lamb-j](https://www.github.com/lamb-j))
 - **amd/device-libs** -The sources and CMake build system for a set of AMD-specific device-side language runtime libraries (code owner: [@b-sumner](https://www.github.com/b-sumner))
