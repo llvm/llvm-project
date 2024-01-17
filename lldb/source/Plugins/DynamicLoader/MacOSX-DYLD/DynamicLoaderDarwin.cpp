@@ -1115,8 +1115,9 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   const lldb::addr_t tls_offset = data.GetAddress(&offset);
 
   if (tls_thunk != 0) {
+    const lldb::addr_t fixed_tls_thunk = m_process->FixCodeAddress(tls_thunk);
     Address thunk_load_addr;
-    if (target.ResolveLoadAddress(tls_thunk, thunk_load_addr)) {
+    if (target.ResolveLoadAddress(fixed_tls_thunk, thunk_load_addr)) {
       const lldb::addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
       const lldb::addr_t tls_data = evaluate_tls_address(
           thunk_load_addr, llvm::ArrayRef<lldb::addr_t>(tls_load_addr));
