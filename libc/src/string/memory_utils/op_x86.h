@@ -25,6 +25,11 @@
 #include <immintrin.h>
 #endif
 
+// Disable GCC complaining about missing attributes when using SIMD types in
+// template specializations.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+
 // Define fake functions to prevent the compiler from failing on undefined
 // functions in case the CPU extension is not present.
 #if !defined(__AVX512BW__) && (defined(_MSC_VER) || defined(__SCE__))
@@ -305,6 +310,8 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 #endif // __AVX512BW__
 
 } // namespace LIBC_NAMESPACE::generic
+
+#pragma GCC diagnostic pop
 
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
