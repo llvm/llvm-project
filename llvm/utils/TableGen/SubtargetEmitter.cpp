@@ -134,7 +134,6 @@ class SubtargetEmitter {
 
   void EmitSchedModel(raw_ostream &OS);
   void emitGetMacroFusions(const std::string &ClassName, raw_ostream &OS);
-  void emitEnableMacroFusion(const std::string &ClassName, raw_ostream &OS);
   void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS);
 
@@ -1788,21 +1787,6 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
   OS << "  return 0;\n}\n";
 }
 
-void SubtargetEmitter::emitEnableMacroFusion(const std::string &ClassName,
-                                             raw_ostream &OS) {
-  if (!TGT.hasMacroFusion())
-    return;
-
-  OS << "bool " << ClassName << "::enableMacroFusion() const {\n";
-  for (auto *Fusion : TGT.getMacroFusions())
-    OS.indent(2) << "if (hasFeature(" << Target
-                 << "::" << Fusion->getNameInitAsString()
-                 << ")) return true;\n";
-
-  OS.indent(2) << "return false;\n";
-  OS << "}\n";
-}
-
 void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
                                            raw_ostream &OS) {
   if (!TGT.hasMacroFusion())
@@ -2022,11 +2006,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
-  if (TGT.hasMacroFusion()) {
-    OS << "  bool enableMacroFusion() const override;\n";
+  if (TGT.hasMacroFusion())
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
           "override;\n";
-  }
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
@@ -2084,7 +2066,6 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   EmitSchedModelHelpers(ClassName, OS);
   EmitHwModeCheck(ClassName, OS);
-  emitEnableMacroFusion(ClassName, OS);
   emitGetMacroFusions(ClassName, OS);
 
   OS << "} // end namespace llvm\n\n";

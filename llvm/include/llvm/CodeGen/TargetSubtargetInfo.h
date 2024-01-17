@@ -325,9 +325,6 @@ public:
   /// handling complex eviction chains.
   virtual bool enableSpillageCopyElimination() const { return false; }
 
-  /// Enable macro fusion for this subtarget.
-  virtual bool enableMacroFusion() const { return false; }
-
   /// Get the list of MacroFusion predicates.
   virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
 };

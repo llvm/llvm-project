@@ -101,14 +101,8 @@ def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
 // Check that we have generated target subfeature.
 // CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
 
-// Check that we have generated `enableMacroFusion()` and `getMacroFusions()` function.
-// CHECK-SUBTARGET:      bool enableMacroFusion() const override;
+// Check that we have generated `getMacroFusions()` function.
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
-
-// CHECK-SUBTARGET:      bool TestGenSubtargetInfo::enableMacroFusion() const {
-// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFusion)) return true;
-// CHECK-SUBTARGET-NEXT:   return false;
-// CHECK-SUBTARGET-NEXT: }
 
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
 // CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;
