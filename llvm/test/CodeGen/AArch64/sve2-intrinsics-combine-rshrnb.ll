@@ -184,16 +184,14 @@ define void @wide_add_shift_add_rshrnb_d(ptr %dest, i64 %index, <vscale x 4 x i6
 define void @neg_wide_add_shift_add_rshrnb_d(ptr %dest, i64 %index, <vscale x 4 x i64> %arg1){
 ; CHECK-LABEL: neg_wide_add_shift_add_rshrnb_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #0x800000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEXT:    add z1.d, z1.d, z2.d
-; CHECK-NEXT:    lsr z1.d, z1.d, #48
-; CHECK-NEXT:    lsr z0.d, z0.d, #48
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    urshr z1.d, p0/m, z1.d, #48
+; CHECK-NEXT:    urshr z0.d, p0/m, z0.d, #48
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p1/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x1, lsl #2]
+; CHECK-NEXT:    st1w { z0.s }, p1, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %1 = add <vscale x 4 x i64> %arg1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 140737488355328, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
   %2 = lshr <vscale x 4 x i64> %1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 48, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
@@ -286,8 +284,7 @@ define void @neg_add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
-; CHECK-NEXT:    lsr z0.d, z0.d, #6
+; CHECK-NEXT:    urshr z0.d, p0/m, z0.d, #6
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i64>, ptr %ptr, align 2

@@ -215,7 +215,9 @@ enum NodeType : unsigned {
   UQSHL_I,
   SQSHLU_I,
   SRSHR_I,
+  SRSHR_I_PRED,
   URSHR_I,
+  URSHR_I_PRED,
 
   // Vector narrowing shift by immediate (bottom)
   RSHRNB_I,
