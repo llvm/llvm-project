@@ -157,7 +157,7 @@ void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
   // NOTE: We could inform the "owner" that a value has changed through
   // getOwner, if needed.
   auto OldMD = static_cast<Metadata **>(Old);
-  ptrdiff_t Idx = std::distance(DebugValues.begin(), OldMD);
+  ptrdiff_t Idx = std::distance(&*DebugValues.begin(), OldMD);
   resetDebugValue(Idx, New);
 }
 
