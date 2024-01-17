@@ -65,7 +65,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
                    const InputInfoList &Inputs, VersionTuple Version,
-                   bool LinkerIsLLD) const;
+                   bool LinkerIsLLD, bool UsePlatformVersion) const;
 
 public:
   Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
