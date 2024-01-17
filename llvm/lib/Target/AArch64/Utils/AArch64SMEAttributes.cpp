@@ -49,11 +49,13 @@ SMEAttrs::SMEAttrs(const CallBase &CB) {
 
 SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved |
-                SMEAttrs::ZA_NoLazySave);
+    Bitmask |=
+        (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved |
+         SMEAttrs::ZA_NoLazySave | encodeZT0State(StateValue::Preserved));
   if (FuncName == "__arm_tpidr2_restore")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
-                SMEAttrs::ZA_NoLazySave);
+    Bitmask |=
+        (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
+         SMEAttrs::ZA_NoLazySave | encodeZT0State(StateValue::Preserved));
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
