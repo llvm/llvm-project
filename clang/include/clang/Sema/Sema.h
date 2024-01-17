@@ -2112,6 +2112,10 @@ public:
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
+  /// Check an argument list for placeholders that we won't try to
+  /// handle later.
+  bool CheckArgsForPlaceholders(MultiExprArg args);
+
   /// Build a function type.
   ///
   /// This routine checks the function type according to C++ rules and
