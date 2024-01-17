@@ -77,9 +77,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       StringRef S = Name;
       return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
     };
-    if (IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata"))
-      return true;
-    return false;
+    return IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata");
   }
 
   // Respect large data threshold for medium and large code models.
