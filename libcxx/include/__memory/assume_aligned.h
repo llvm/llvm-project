@@ -29,7 +29,14 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __ass
   if (__libcpp_is_constant_evaluated()) {
     return __ptr;
   } else {
-    _LIBCPP_ASSERT_UNCATEGORIZED(reinterpret_cast<uintptr_t>(__ptr) % _Np == 0, "Alignment assumption is violated");
+    {
+      // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus cannot appear
+      // in an expression passed to a hardening assertion (because that expression might end up being passed to
+      // a printf-style formatting function). As a workaround, wrap the expression in a lambda.
+      auto __is_aligned = [&] { return reinterpret_cast<uintptr_t>(__ptr) % _Np == 0; };
+      (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
+      _LIBCPP_ASSERT_UNCATEGORIZED(__is_aligned(), "Alignment assumption is violated");
+    }
     return static_cast<_Tp*>(__builtin_assume_aligned(__ptr, _Np));
   }
 }

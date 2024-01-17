@@ -289,7 +289,14 @@ to_chars_result _Floating_to_chars_hex_precision(
 
         for (;;) {
             _LIBCPP_ASSERT_INTERNAL(_Number_of_bits_remaining >= 4, "");
-            _LIBCPP_ASSERT_INTERNAL(_Number_of_bits_remaining % 4 == 0, "");
+            {
+              // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus
+              // cannot appear in an expression passed to a hardening assertion (because that expression might end up
+              // being passed to a printf-style formatting function). As a workaround, wrap the expression in a lambda.
+              auto __is_aligned = [&] { return _Number_of_bits_remaining % 4 == 0; };
+              (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
+              _LIBCPP_ASSERT_INTERNAL(__is_aligned(), "");
+            }
             _Number_of_bits_remaining -= 4;
 
             const uint32_t _Nibble = static_cast<uint32_t>(_Adjusted_mantissa >> _Number_of_bits_remaining);
@@ -416,7 +423,14 @@ to_chars_result _Floating_to_chars_hex_shortest(
         // _Number_of_bits_remaining.
         do {
             _LIBCPP_ASSERT_INTERNAL(_Number_of_bits_remaining >= 4, "");
-            _LIBCPP_ASSERT_INTERNAL(_Number_of_bits_remaining % 4 == 0, "");
+            {
+              // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus
+              // cannot appear in an expression passed to a hardening assertion (because that expression might end up
+              // being passed to a printf-style formatting function). As a workaround, wrap the expression in a lambda.
+              auto __is_aligned = [&] { return _Number_of_bits_remaining % 4 == 0; };
+              (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
+              _LIBCPP_ASSERT_INTERNAL(__is_aligned(), "");
+            }
             _Number_of_bits_remaining -= 4;
 
             const uint32_t _Nibble = static_cast<uint32_t>(_Adjusted_mantissa >> _Number_of_bits_remaining);
