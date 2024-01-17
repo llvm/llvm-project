@@ -1554,6 +1554,7 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     Value lane4Id = b.create<LLVM::UDivOp>(i32, laneId, c4);
     Value lane4modId = b.create<LLVM::URemOp>(i32, laneId, c4);
 
+    auto structType = matrixD.getType().cast<LLVM::LLVMStructType>();
     auto makeExtractAndStore = [&](int i, Value wgmmaResult, Value x, Value y,
                                    TypedValue<::mlir::MemRefType> memref) {
       Type it = b.getIndexType();
@@ -1570,11 +1571,11 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     Value ti = makeAdd(lane4Id, makeMul(warpId, c16));
     if (offset)
       ti = makeAdd(ti, makeConst(offset));
-    for (int i = 0; i < 2; ++i) {
+    for (size_t i = 0; i < 2; ++i) {
       Value idx = makeAdd(ti, makeMul(makeConst(i), c8));
-      for (int j = 0; j < 16; ++j) {
+      for (size_t j = 0; j < (structType.getBody().size() / 8); ++j) {
         Value idy = makeAdd(tj, makeMul(makeConst(j), c8));
-        int sIndex = i * 2 + j * 4;
+        size_t sIndex = i * 2 + j * 4;
         makeExtractAndStore(sIndex, matrixD, idx, idy, dstMemref);
       }
     }

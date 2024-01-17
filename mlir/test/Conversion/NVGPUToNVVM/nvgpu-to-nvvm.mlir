@@ -1055,6 +1055,34 @@ func.func @warpgroup_mma_store(
   return 
 }
 
+// CHECK-LABEL: @warpgroup_mma_store_multiplie(  
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>, %[[arg1:[a-zA-Z0-9_]+]]: memref<64x128xf32, 3>, %[[arg2:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x32xf32>>, %[[arg3:[a-zA-Z0-9_]+]]: memref<64x32xf32, 3>, %[[arg4:[a-zA-Z0-9_]+]]: !nvgpu.warpgroup.accumulator<fragmented = vector<64x64xf32>>, %[[arg5:[a-zA-Z0-9_]+]]: memref<64x64xf32, 3>)
+func.func @warpgroup_mma_store_multiplie(
+    %result128 : !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>, 
+    %matrixD128: memref<64x128xf32,3>,
+    %result32 : !nvgpu.warpgroup.accumulator<fragmented = vector<64x32xf32>>, 
+    %matrixD32: memref<64x32xf32,3>,
+    %result64 : !nvgpu.warpgroup.accumulator<fragmented = vector<64x64xf32>>, 
+    %matrixD64: memref<64x64xf32,3>) {
+  
+  // CHECK-COUNT-32:  memref.store %{{.*}}, %[[arg1]][%{{.*}}, %{{.*}}] : memref<64x128xf32, 3>
+  nvgpu.warpgroup.mma.store %result128, %matrixD128 : 
+    !nvgpu.warpgroup.accumulator< fragmented = vector<64x128xf32>> 
+    to memref<64x128xf32,3>
+
+
+  // CHECK-COUNT-8: memref.store %{{.*}}, %[[arg3]][%{{.*}}, %{{.*}}] : memref<64x32xf32, 3>
+  nvgpu.warpgroup.mma.store %result32, %matrixD32 : 
+    !nvgpu.warpgroup.accumulator< fragmented = vector<64x32xf32>> 
+    to memref<64x32xf32,3>
+
+  // CHECK-COUNT-16: memref.store %{{.*}}, %[[arg5]][%{{.*}}, %{{.*}}] : memref<64x64xf32, 3>
+  nvgpu.warpgroup.mma.store %result64, %matrixD64 : 
+    !nvgpu.warpgroup.accumulator< fragmented = vector<64x64xf32>> 
+    to memref<64x64xf32,3>
+  return 
+}
+
 func.func @warpgroup_mma_init() {
   //CHECK: %[[S1:.+]] = llvm.mlir.constant(0.000000e+00 : f32) : f3
   //CHECK: %[[S0:.+]] = llvm.mlir.undef : !llvm.struct<(struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>, struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>)>
