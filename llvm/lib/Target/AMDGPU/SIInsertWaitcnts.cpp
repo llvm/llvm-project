@@ -735,7 +735,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         // original memory object and practically produced in the module LDS
         // lowering pass. If there is no scope available we will not be able
         // to disambiguate LDS aliasing as after the module lowering all LDS
-        // is squashed into a single big object. Do not attemt to use one of
+        // is squashed into a single big object. Do not attempt to use one of
         // the limited LDSDMAStores for something we will not be able to use
         // anyway.
         if (!AAI || !AAI.Scope)
