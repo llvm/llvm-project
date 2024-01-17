@@ -2835,6 +2835,9 @@ public:
     if (Identifier.getIdentifierInfo()->isRestrictExpansion() &&
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
+
+    if (Identifier.getIdentifierInfo()->getName() == "INFINITY")
+      emitRestrictInfNaNWarning(Identifier);
   }
 
   static void processPathForFileMacro(SmallVectorImpl<char> &Path,
@@ -2850,6 +2853,7 @@ private:
   void emitMacroDeprecationWarning(const Token &Identifier) const;
   void emitRestrictExpansionWarning(const Token &Identifier) const;
   void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
+  void emitRestrictInfNaNWarning(const Token &Identifier) const;
 
   /// This boolean state keeps track if the current scanned token (by this PP)
   /// is in an "-Wunsafe-buffer-usage" opt-out region. Assuming PP scans a

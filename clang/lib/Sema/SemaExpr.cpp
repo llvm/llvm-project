@@ -13044,12 +13044,9 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
   if (Type->isAnyComplexType() && BinaryOperator::isRelationalOp(Opc))
     return S.InvalidOperands(Loc, LHS, RHS);
 
-  if (Type->hasFloatingRepresentation()) {
-    // Check for comparisons to NAN or INFINITY in fast math mode.
-    S.CheckInfNaNFloatComparison(Loc, LHS.get(), RHS.get(), Opc);
+  if (Type->hasFloatingRepresentation())
     // Check for comparisons of floating point operands using != and ==.
     S.CheckFloatComparison(Loc, LHS.get(), RHS.get(), Opc);
-  }
 
   // The result of comparisons is 'bool' in C++, 'int' in C.
   return S.Context.getLogicalOperationType();
