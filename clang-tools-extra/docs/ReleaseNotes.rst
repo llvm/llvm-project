@@ -382,8 +382,8 @@ Changes in existing checks
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
   type-dependent binary operator. Improved performance of the check through
-  optimizations. The check no longer emits a diagnostic for
-  variables used as the initializer of C++17 fold expressions.
+  optimizations. The check no longer emits a diagnostic for non-parameter-pack
+  variables in C++17 fold expressions.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
