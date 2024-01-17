@@ -214,3 +214,26 @@ set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+
+# Convenience targets to group related tests.
+
+# Run all ArmSME unit tests.
+add_custom_target(check-mlir-unit-armsme DEPENDS
+  check-mlir-dialect-armsme
+  check-mlir-dialect-llvmir
+  check-mlir-conversion-armsmetollvm
+  check-mlir-conversion-armsmetoscf
+  check-mlir-conversion-vectortoarmsme
+)
+
+# Run all ArmSME integration tests.
+add_custom_target(check-mlir-integration-armsme DEPENDS
+  check-mlir-integration-dialect-linalg-cpu-armsme
+  check-mlir-integration-dialect-vector-cpu-armsme
+)
+
+# Run all ArmSME tests.
+add_custom_target(check-mlir-armsme DEPENDS
+  check-mlir-unit-armsme
+  check-mlir-integration-armsme
+)
