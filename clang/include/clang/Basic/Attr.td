@@ -306,6 +306,9 @@ class VariadicEnumArgument<string name, string type, list<string> values,
   bit IsExternalType = isExternalType;
 }
 
+// Represents an attribute wrapped by another attribute.
+class WrappedAttr<string name, bit opt = 0> : Argument<name, opt>;
+
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety, int version = 1> {
   string Name = name;
@@ -2291,7 +2294,7 @@ def ObjCBridgeRelated : InheritableAttr {
 def NSErrorDomain : InheritableAttr {
   let Spellings = [GNU<"ns_error_domain">];
   let Subjects = SubjectList<[Enum], ErrorDiag>;
-  let Args = [DeclArgument<Var, "ErrorDomain">];
+  let Args = [IdentifierArgument<"ErrorDomain">];
   let Documentation = [NSErrorDomainDocs];
 }
 
@@ -2648,6 +2651,22 @@ def SwiftError : InheritableAttr {
   let Documentation = [SwiftErrorDocs];
 }
 
+def SwiftImportAsNonGeneric : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftImportPropertyAsAccessors : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def SwiftName : InheritableAttr {
   let Spellings = [GNU<"swift_name">];
   let Args = [StringArgument<"Name">];
@@ -2667,6 +2686,31 @@ def SwiftPrivate : InheritableAttr {
   let Spellings = [GNU<"swift_private">];
   let Documentation = [SwiftPrivateDocs];
   let SimpleHandler = 1;
+}
+
+def SwiftVersionedAddition : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
+              BoolArgument<"IsReplacedByActive">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftVersionedRemoval : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
+              BoolArgument<"IsReplacedByActive">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    attr::Kind getAttrKindToRemove() const {
+      return static_cast<attr::Kind>(getRawKind());
+    }
+  }];
 }
 
 def NoDeref : TypeAttr {
