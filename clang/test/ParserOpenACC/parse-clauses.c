@@ -706,3 +706,26 @@ void bar();
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc routine(bar) worker, vector, seq, nohost
+
+
+// Bind Clause Parsing.
+
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine bind
+void BCP1();
+
+  // expected-error@+2{{expected identifier or string literal}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind()
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine bind("ReductionClauseParsing")
+void BCP2();
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind(BCP2)
+
+  // expected-error@+2{{use of undeclared identifier 'unknown_thing'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind(unknown_thing)
