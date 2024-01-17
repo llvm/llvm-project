@@ -39,6 +39,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MemoryModelRelaxationAnnotations
    MemTagSanitizer
    Security
    SecurityTransparencyReports
@@ -193,6 +194,9 @@ Additional Topics
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
+
+:doc:`MemoryModelRelaxationAnnotations`
+  Target-defined relaxation to LLVM's concurrency model.
 
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory

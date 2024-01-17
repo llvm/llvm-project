@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -497,7 +498,8 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
+                         LLVMContext::MD_nonnull, LLVMContext::MD_align,
+                         LLVMContext::MD_mmra};
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
 }
 
