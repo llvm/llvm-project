@@ -232,6 +232,11 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
+  making unions (that have either no members or at least one literal member) literal types.
+  (`#77924: <https://github.com/llvm/llvm-project/issues/77924>`_).
+
+
 C Language Changes
 ------------------
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
@@ -618,6 +623,9 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses the requirement that non-template friend declarations with requires clauses
+  and template friend declarations with a constraint that depends on a template parameter from an
+  enclosing template must be a definition.
 
 
 Improvements to Clang's time-trace
@@ -974,6 +982,9 @@ Bug Fixes to C++ Support
   (`#63808 <https://github.com/llvm/llvm-project/issues/63808>`_)
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
+
+- Fixed a crash where we lost uninstantiated constraints on placeholder NTTP packs. Fixes:
+  (`#63837 <https://github.com/llvm/llvm-project/issues/63837>`_)
 
 - Fixed a regression where clang forgets how to substitute into constraints on template-template
   parameters. Fixes:

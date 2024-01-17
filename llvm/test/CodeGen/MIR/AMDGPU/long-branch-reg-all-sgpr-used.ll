@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=5 -stop-after=branch-relaxation  %s -o - | FileCheck %s
 
 ; Test long branch reserved register pass when all
 ; SGPRs are used

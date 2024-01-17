@@ -1453,10 +1453,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                  isa<DILifetime>(Op) ||
-                     isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
+                  isa<DILifetime>(Op) || isa<DIImportedEntity>(Op) ),
               "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+              "DIImportedEntity",
               &N, Node, Op);
     }
   }

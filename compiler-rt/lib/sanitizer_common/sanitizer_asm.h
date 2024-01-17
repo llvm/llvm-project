@@ -53,6 +53,29 @@
 # define ASM_TAIL_CALL tail
 #endif
 
+// Currently, almost all of the shared libraries rely on the value of
+// $t9 to get the address of current function, instead of PCREL, even
+// on MIPSr6. To be compatiable with them, we have to set $t9 properly.
+// MIPS uses GOT to get the address of preemptible functions.
+#if defined(__mips64)
+#  define C_ASM_TAIL_CALL(t_func, i_func)                       \
+    "lui $t8, %hi(%neg(%gp_rel(" t_func ")))\n"                 \
+    "daddu $t8, $t8, $t9\n"                                     \
+    "daddiu $t8, $t8, %lo(%neg(%gp_rel(" t_func ")))\n"         \
+    "ld $t9, %got_disp(" i_func ")($t8)\n"                      \
+    "jr $t9\n"
+#elif defined(__mips__)
+#  define C_ASM_TAIL_CALL(t_func, i_func)                       \
+    ".set    noreorder\n"                                       \
+    ".cpload $t9\n"                                             \
+    ".set    reorder\n"                                         \
+    "lw $t9, %got(" i_func ")($gp)\n"                           \
+    "jr $t9\n"
+#elif defined(ASM_TAIL_CALL)
+#  define C_ASM_TAIL_CALL(t_func, i_func)                       \
+    SANITIZER_STRINGIFY(ASM_TAIL_CALL) " " i_func
+#endif
+
 #if defined(__ELF__) && defined(__x86_64__) || defined(__i386__) || \
     defined(__riscv)
 # define ASM_PREEMPTIBLE_SYM(sym) sym@plt

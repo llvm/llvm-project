@@ -8,6 +8,14 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: "pip"
+    directory: "/llvm/docs"
+    schedule:
+      interval: "monthly"
+    groups:
+      llvm-docs-requirements:
+        patterns:
+          - "*"
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/amd/hipcc/docs/sphinx" # Location of package manifests
     open-pull-requests-limit: 10

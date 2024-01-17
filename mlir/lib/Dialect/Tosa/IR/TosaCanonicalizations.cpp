@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -25,6 +26,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -1035,4 +1037,22 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
 
   getOperation()->setOperands(concatOperands);
   return getResult();
+}
+
+OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
+  auto input = adaptor.getInput1();
+
+  auto inputAttr = llvm::dyn_cast_if_present<DenseElementsAttr>(input);
+  // Fold splat inputs only.
+  if (!inputAttr || !inputAttr.isSplat())
+    return {};
+
+  auto shapeType = llvm::cast<ShapedType>(getType());
+  if (auto floatType = llvm::dyn_cast<FloatType>(inputAttr.getElementType())) {
+    auto floatVal = inputAttr.getSplatValue<APFloat>();
+    return DenseElementsAttr::get(shapeType,
+                                  ReciprocalOp::calcOneElement(floatVal));
+  }
+
+  return {};
 }
