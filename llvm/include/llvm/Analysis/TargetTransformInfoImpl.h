@@ -378,7 +378,7 @@ public:
 
   bool enableSelectOptimize() const { return true; }
 
-  bool shouldTreatInstructionLikeSelect(Instruction *I) {
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) {
     // If the select is a logical-and/logical-or then it is better treated as a
     // and/or by the backend.
     using namespace llvm::PatternMatch;

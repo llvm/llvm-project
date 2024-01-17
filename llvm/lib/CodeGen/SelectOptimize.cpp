@@ -318,7 +318,8 @@ private:
                         CostInfo *LoopCost);
 
   // Returns a set of all the select instructions in the given select groups.
-  SmallPtrSet<const Instruction *, 2> getSIset(const SelectGroups &SIGroups);
+  SmallDenseMap<const Instruction *, SelectLike, 2>
+  getSImap(const SelectGroups &SIGroups);
 
   // Returns the latency cost of a given instruction.
   std::optional<uint64_t> computeInstCost(const Instruction *I);
@@ -1112,7 +1113,7 @@ bool SelectOptimizeImpl::computeLoopCosts(
     DenseMap<const Instruction *, CostInfo> &InstCostMap, CostInfo *LoopCost) {
   LLVM_DEBUG(dbgs() << "Calculating Latency / IPredCost / INonPredCost of loop "
                     << L->getHeader()->getName() << "\n");
-  const auto &SIset = getSIset(SIGroups);
+  const auto &SImap = getSImap(SIGroups);
   // Compute instruction and loop-critical-path costs across two iterations for
   // both predicated and non-predicated version.
   const unsigned Iterations = 2;
@@ -1120,7 +1121,7 @@ bool SelectOptimizeImpl::computeLoopCosts(
     // Cost of the loop's critical path.
     CostInfo &MaxCost = LoopCost[Iter];
     for (BasicBlock *BB : L->getBlocks()) {
-      for (Instruction &I : *BB) {
+      for (const Instruction &I : *BB) {
         if (I.isDebugOrPseudoInst())
           continue;
         // Compute the predicated and non-predicated cost of the instruction.
@@ -1157,10 +1158,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
         // BranchCost = PredictedPathCost + MispredictCost
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
-        if (SIset.contains(&I)) {
-          auto SI = SelectLike::match(&I);
-          assert(SI && "Expected to match an existing SelectLike");
-
+        if (SImap.contains(&I)) {
+          auto SI = SImap.at(&I);
           Scaled64 TrueOpCost = SI.getTrueOpCost(InstCostMap, TTI);
           Scaled64 FalseOpCost = SI.getFalseOpCost(InstCostMap, TTI);
           Scaled64 PredictedPathCost =
@@ -1189,13 +1188,13 @@ bool SelectOptimizeImpl::computeLoopCosts(
   return true;
 }
 
-SmallPtrSet<const Instruction *, 2>
-SelectOptimizeImpl::getSIset(const SelectGroups &SIGroups) {
-  SmallPtrSet<const Instruction *, 2> SIset;
+SmallDenseMap<const Instruction *, SelectOptimizeImpl::SelectLike, 2>
+SelectOptimizeImpl::getSImap(const SelectGroups &SIGroups) {
+  SmallDenseMap<const Instruction *, SelectLike, 2> SImap;
   for (const SelectGroup &ASI : SIGroups)
     for (SelectLike SI : ASI)
-      SIset.insert(SI.getI());
-  return SIset;
+      SImap.try_emplace(SI.getI(), SI);
+  return SImap;
 }
 
 std::optional<uint64_t>

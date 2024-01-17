@@ -412,17 +412,7 @@ public:
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
-  bool shouldTreatInstructionLikeSelect(Instruction *I) {
-    // For the binary operators (e.g. or) we need to be more careful than
-    // selects, here we only transform them if they are already at a natural
-    // break point in the code - the end of a block with an unconditional
-    // terminator.
-    if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
-      return true;
-    return BaseT::shouldTreatInstructionLikeSelect(I);
-  }
+  bool shouldTreatInstructionLikeSelect(const Instruction *I);
 
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {

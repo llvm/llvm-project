@@ -605,7 +605,7 @@ bool TargetTransformInfo::enableSelectOptimize() const {
 }
 
 bool TargetTransformInfo::shouldTreatInstructionLikeSelect(
-    Instruction *I) const {
+    const Instruction *I) const {
   return TTIImpl->shouldTreatInstructionLikeSelect(I);
 }
 
