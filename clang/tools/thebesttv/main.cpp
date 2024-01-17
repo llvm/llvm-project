@@ -59,24 +59,26 @@ public:
   explicit FindNamedClassVisitor(ASTContext *Context)
     : Context(Context) {}
 
-  bool VisitFunctionDecl(FunctionDecl *Declaration) {
-      FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getBeginLoc());
+  bool VisitFunctionDecl(FunctionDecl *D) {
+      FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
       if (FullLocation.isValid())
-        llvm::outs() << "Found declaration " << Declaration->getQualifiedNameAsString() << " at "
+        llvm::outs() << "Found declaration " << D->getQualifiedNameAsString() << " at "
                      << FullLocation.getSpellingLineNumber() << ":"
                      << FullLocation.getSpellingColumnNumber() << "\n";
-      Declaration->dump();
-      CFG::BuildOptions cfgBuildOptions;
-      auto cfg = CFG::buildCFG(Declaration, Declaration->getBody() , &Declaration->getASTContext(), cfgBuildOptions);
-      cfg->dump(Declaration->getASTContext().getLangOpts(), true);
+      D->dump();
+      if (D->hasBody()) {
+        CFG::BuildOptions cfgBuildOptions;
+        auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), cfgBuildOptions);
+        cfg->dump(D->getASTContext().getLangOpts(), true);
+      }
 
     return true;
   }
 
-  bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
-    FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getBeginLoc());
+  bool VisitCXXRecordDecl(CXXRecordDecl *D) {
+    FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
     if (FullLocation.isValid())
-      llvm::outs() << "Class decl " << Declaration->getQualifiedNameAsString() << " at "
+      llvm::outs() << "Class decl " << D->getQualifiedNameAsString() << " at "
                     << FullLocation.getSpellingLineNumber() << ":"
                     << FullLocation.getSpellingColumnNumber() << "\n";
     return true;
