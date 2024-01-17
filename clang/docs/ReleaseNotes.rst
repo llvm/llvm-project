@@ -914,8 +914,8 @@ Bug Fixes to C++ Support
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
 
 - Fix a bug where clang would produce inconsistent values when
-  std::source_location::current was used in function templates.
-  Fixes  (`#78128 <https://github.com/llvm/llvm-project/issues/78128>`_)
+  ``std::source_location::current()`` was used in a function template.
+  Fixes (`#78128 <https://github.com/llvm/llvm-project/issues/78128>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
