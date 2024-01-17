@@ -708,12 +708,14 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
     return FPBits(UP::build_quiet_nan(false, v)).get_val();
   }
 
+  // TODO: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr FPBits<T>
   create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
     static_assert(get_fp_type<T>() != FPType::X86_Binary80,
                   "This function is not tested for X86 Extended Precision");
-    return FPBits(UP::encode(sign, typename UP::BiasedExponent(biased_exp),
-                             typename UP::Significand(mantissa)));
+    return FPBits(UP::encode(
+        sign, typename UP::BiasedExponent(static_cast<uint32_t>(biased_exp)),
+        typename UP::Significand(mantissa)));
   }
 
   // The function convert integer number and unbiased exponent to proper float
