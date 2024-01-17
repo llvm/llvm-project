@@ -396,19 +396,6 @@ public:
     return getExpression()->getFragmentInfo();
   }
 
-  /// Get the FragmentInfo for the variable if it exists, otherwise return a
-  /// FragmentInfo that covers the entire variable if the variable size is
-  /// known, otherwise return a zero-sized fragment.
-  DIExpression::FragmentInfo getFragmentOrEntireVariable() const {
-    DIExpression::FragmentInfo VariableSlice(0, 0);
-    // Get the fragment or variable size, or zero.
-    if (auto Sz = getFragmentSizeInBits())
-      VariableSlice.SizeInBits = *Sz;
-    if (auto Frag = getExpression()->getFragmentInfo())
-      VariableSlice.OffsetInBits = Frag->OffsetInBits;
-    return VariableSlice;
-  }
-
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {
@@ -546,6 +533,66 @@ public:
   }
   /// @}
 };
+
+/// This set of functions allow us to write type-generic code that operates on
+/// DPValues and DbgVariableIntrinsics, reducing the necessary amount of code
+/// duplication for the temporary period in which we support both debug info
+/// models.
+/// @{
+inline bool IsaDbgValue(DPValue *DPV) { return DPV->isDbgValue(); }
+inline bool IsaDbgDeclare(DPValue *DPV) { return DPV->isDbgDeclare(); }
+inline bool IsaDbgAssign(DPValue *DPV) { return DPV->isDbgAssign(); }
+
+inline bool IsaDbgValue(DbgVariableIntrinsic *DVI) {
+  return isa<DbgValueInst>(DVI);
+}
+inline bool IsaDbgDeclare(DbgVariableIntrinsic *DVI) {
+  return isa<DbgDeclareInst>(DVI);
+}
+inline bool IsaDbgAssign(DbgVariableIntrinsic *DVI) {
+  return isa<DbgAssignIntrinsic>(DVI);
+}
+
+inline DPValue *CastToDbgValue(DPValue *DPV) { return DPV; }
+inline DPValue *CastToDbgDeclare(DPValue *DPV) { return DPV; }
+inline DPValue *CastToDbgAssign(DPValue *DPV) { return DPV; }
+
+inline DbgValueInst *CastToDbgValue(DbgVariableIntrinsic *DVI) {
+  return cast<DbgValueInst>(DVI);
+}
+inline DbgDeclareInst *CastToDbgDeclare(DbgVariableIntrinsic *DVI) {
+  return cast<DbgDeclareInst>(DVI);
+}
+inline DbgAssignIntrinsic *CastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return cast<DbgAssignIntrinsic>(DVI);
+}
+
+inline DPValue *DynCastToDbgValue(DPValue *DPV) {
+  if (!DPV->isDbgValue())
+    return nullptr;
+  return DPV;
+}
+inline DPValue *DynCastToDbgDeclare(DPValue *DPV) {
+  if (!DPV->isDbgDeclare())
+    return nullptr;
+  return DPV;
+}
+inline DPValue *DynCastToDbgAssign(DPValue *DPV) {
+  if (!DPV->isDbgAssign())
+    return nullptr;
+  return DPV;
+}
+
+inline DbgValueInst *DynCastToDbgValue(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgValueInst>(DVI);
+}
+inline DbgDeclareInst *DynCastToDbgDeclare(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgDeclareInst>(DVI);
+}
+inline DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+/// @}
 
 /// This is the common base class for vector predication intrinsics.
 class VPIntrinsic : public IntrinsicInst {

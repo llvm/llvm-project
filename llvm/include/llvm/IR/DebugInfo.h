@@ -58,6 +58,7 @@ DISubprogram *getDISubprogram(const MDNode *Scope);
 /// Produce a DebugLoc to use for each dbg.declare that is promoted to a
 /// dbg.value.
 DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
+DebugLoc getDebugValueLoc(DPValue *DPV);
 
 /// Strip debug info in the module if it exists.
 ///
@@ -190,6 +191,11 @@ AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
 /// instruction (including by deleting or cloning instructions).
 inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
   return getAssignmentInsts(DAI->getAssignID());
+}
+inline AssignmentInstRange getAssignmentInsts(const DPValue *DPV) {
+  assert(DPV->isDbgAssign() &&
+         "Can't get assignment instructions for non-assign DPV!");
+  return getAssignmentInsts(DPV->getAssignID());
 }
 
 //
