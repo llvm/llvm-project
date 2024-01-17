@@ -244,14 +244,14 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI13_0)
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV32-NEXT:    vle16.v v16, (a0)
-; RV32-NEXT:    vmv.v.i v20, 5
+; RV32-NEXT:    vrgatherei16.vv v12, v8, v16
 ; RV32-NEXT:    lui a0, %hi(.LCPI13_1)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI13_1)
-; RV32-NEXT:    vle16.v v17, (a0)
-; RV32-NEXT:    li a0, 115
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    li a0, 140
 ; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    vrgatherei16.vv v12, v20, v16
-; RV32-NEXT:    vrgatherei16.vv v12, v8, v17, v0.t
+; RV32-NEXT:    vmv.v.i v16, 5
+; RV32-NEXT:    vrgatherei16.vv v12, v16, v8, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;

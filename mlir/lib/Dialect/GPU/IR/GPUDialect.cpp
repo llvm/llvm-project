@@ -1724,19 +1724,24 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, ArrayAttr targets) {
+                        StringRef name, ArrayAttr targets,
+                        Attribute offloadingHandler) {
   ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 
+  Properties &props = result.getOrAddProperties<Properties>();
   if (targets)
-    result.getOrAddProperties<Properties>().targets = targets;
+    props.targets = targets;
+  props.offloadingHandler = offloadingHandler;
 }
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, ArrayRef<Attribute> targets) {
+                        StringRef name, ArrayRef<Attribute> targets,
+                        Attribute offloadingHandler) {
   build(builder, result, name,
-        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets));
+        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets),
+        offloadingHandler);
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1747,6 +1752,16 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
                              result.attributes))
     return failure();
 
+  Properties &props = result.getOrAddProperties<Properties>();
+
+  // Parse the optional offloadingHandler
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(props.offloadingHandler))
+      return failure();
+    if (parser.parseGreater())
+      return failure();
+  }
+
   // Parse the optional array of target attributes.
   OptionalParseResult targetsAttrResult =
       parser.parseOptionalAttribute(targetsAttr, Type{});
@@ -1754,7 +1769,7 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
     if (failed(*targetsAttrResult)) {
       return failure();
     }
-    result.getOrAddProperties<Properties>().targets = targetsAttr;
+    props.targets = targetsAttr;
   }
 
   // If module attributes are present, parse them.
@@ -1775,15 +1790,22 @@ void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
 
+  if (Attribute attr = getOffloadingHandlerAttr()) {
+    p << " <";
+    p.printAttribute(attr);
+    p << ">";
+  }
+
   if (Attribute attr = getTargetsAttr()) {
     p << ' ';
     p.printAttribute(attr);
     p << ' ';
   }
 
-  p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(),
-      {mlir::SymbolTable::getSymbolAttrName(), getTargetsAttrName()});
+  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                     {mlir::SymbolTable::getSymbolAttrName(),
+                                      getTargetsAttrName(),
+                                      getOffloadingHandlerAttrName()});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -2008,7 +2030,7 @@ public:
         continue;
       validOperands.push_back(operand);
     }
-    rewriter.updateRootInPlace(op, [&]() { op->setOperands(validOperands); });
+    rewriter.modifyOpInPlace(op, [&]() { op->setOperands(validOperands); });
     return success();
   }
 };

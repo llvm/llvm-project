@@ -1768,10 +1768,10 @@ def : GCNPat<
   (S_SEXT_I32_I16 $src)
 >;
 
-def : GCNPat <
-  (int_amdgcn_s_wait_event_export_ready),
-    (S_WAIT_EVENT (i16 0))
->;
+let SubtargetPredicate = isNotGFX12Plus in
+  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 0))>;
+let SubtargetPredicate = isGFX12Plus in
+  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 1))>;
 
 // The first 10 bits of the mode register are the core FP mode on all
 // subtargets.
