@@ -1,11 +1,7 @@
 BUILD_DIR=$PWD/../build-release
-
 CUR_DIR=$PWD
 
-cd $BUILD_DIR && ninja
-
-cd $CUR_DIR
-
+cd $BUILD_DIR && ninja && cd $CUR_DIR && \
 $BUILD_DIR/bin/clang \
     -cc1 -analyze \
     -analyzer-checker=debug.DumpCallGraph \
