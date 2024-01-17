@@ -57,8 +57,9 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
       for (auto elements{x.Elements()}; elements--;
            x.IncrementSubscripts(xAt), mask->IncrementSubscripts(maskAt)) {
         if (IsLogicalElementTrue(*mask, maskAt)) {
-          if (!accumulator.template AccumulateAt<TYPE>(xAt))
+          if (!accumulator.template AccumulateAt<TYPE>(xAt)) {
             break;
+          }
         }
       }
       return;

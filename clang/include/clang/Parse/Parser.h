@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
@@ -3568,6 +3569,17 @@ private:
   void ParseOpenACCCacheVarList();
   /// Parses a single variable in a variable list for OpenACC.
   bool ParseOpenACCVar();
+  /// Parses the variable list for the variety of clauses that take a var-list,
+  /// including the optional Special Token listed for some,based on clause type.
+  bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
+  /// Parses any parameters for an OpenACC Clause, including required/optional
+  /// parens.
+  bool ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                OpenACCClauseKind Kind);
+  /// Parses a single clause in a clause-list for OpenACC.
+  bool ParseOpenACCClause(OpenACCDirectiveKind DirKind);
+  /// Parses the clause-list for an OpenACC directive.
+  void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
 
 private:
@@ -3643,6 +3655,18 @@ private:
   Decl *
   ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                          SourceLocation &DeclEnd);
+
+  /// Parse the given string as a type.
+  ///
+  /// This is a dangerous utility function currently employed only by API notes.
+  /// It is not a general entry-point for safely parsing types from strings.
+  ///
+  /// \param TypeStr The string to be parsed as a type.
+  /// \param Context The name of the context in which this string is being
+  /// parsed, which will be used in diagnostics.
+  /// \param IncludeLoc The location at which this parse was triggered.
+  TypeResult ParseTypeFromString(StringRef TypeStr, StringRef Context,
+                                 SourceLocation IncludeLoc);
 
   //===--------------------------------------------------------------------===//
   // Modules

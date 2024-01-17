@@ -91,7 +91,7 @@ public:
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DstReg,
                                    Register PrevReg, Register CurReg) = 0;
-  virtual void constrainIncomingRegisterTakenAsIs(Incoming &In) = 0;
+  virtual void constrainAsLaneMask(Incoming &In) = 0;
 };
 
 } // end namespace llvm
