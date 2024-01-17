@@ -138,7 +138,8 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
     return false;
 
   auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
-  if (!PHI)
+  if (!PHI || !PHI->hasOneUse() ||
+      !llvm::is_contained(PHI->incoming_values(), &I))
     return false;
 
   Type *VecTy = I.getOperand(1)->getType();
@@ -155,8 +156,7 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   Builder.SetInsertPoint(&I);
   I.setOperand(0, Builder.CreateExtractElement(VecPHI, (uint64_t)0));
 
-  if (PHI->hasNUses(0))
-    PHI->eraseFromParent();
+  PHI->eraseFromParent();
 
   return true;
 }
