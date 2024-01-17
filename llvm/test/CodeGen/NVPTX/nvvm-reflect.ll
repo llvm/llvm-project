@@ -43,7 +43,7 @@ exit:
 
 declare i32 @llvm.nvvm.reflect.p0(ptr)
 
-; CHECK-LABEL: define i32 @intrinsic
+; CHECK-LABEL: define noundef i32 @intrinsic
 define i32 @intrinsic() {
 ; CHECK-NOT: call i32 @llvm.nvvm.reflect
 ; USE_FTZ_0: ret i32 0

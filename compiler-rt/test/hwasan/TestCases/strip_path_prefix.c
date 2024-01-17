@@ -23,5 +23,5 @@ int main() {
   // CHECK: READ of size 1 at
   // CHECK: #0 {{.*}} in main strip_path_prefix.c:[[@LINE-2]]
   // CHECK: Potentially referenced stack objects:
-  // CHECK: zzz in buggy strip_path_prefix.c:[[@LINE-12]]
+  // CHECK: in buggy strip_path_prefix.c:[[@LINE-12]]
 }

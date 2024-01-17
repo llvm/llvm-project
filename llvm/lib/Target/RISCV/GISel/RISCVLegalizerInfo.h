@@ -21,7 +21,6 @@ class GISelChangeObserver;
 class MachineIRBuilder;
 class RISCVSubtarget;
 
-/// This class provides the information for the target register banks.
 class RISCVLegalizerInfo : public LegalizerInfo {
   const RISCVSubtarget &STI;
   const unsigned XLen;
@@ -30,7 +29,8 @@ class RISCVLegalizerInfo : public LegalizerInfo {
 public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;

@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
@@ -241,8 +240,7 @@ class FloatWriter {
   // -exponent will never overflow because all long double types we support
   // have at most 15 bits of mantissa and the C standard defines an int as
   // being at least 16 bits.
-  static_assert(fputil::FloatProperties<long double>::EXP_LEN <
-                (sizeof(int) * 8));
+  static_assert(fputil::FPBits<long double>::EXP_LEN < (sizeof(int) * 8));
 
 public:
   LIBC_INLINE FloatWriter(Writer *init_writer, bool init_has_decimal_point,
@@ -475,7 +473,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
 
@@ -588,7 +586,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
@@ -751,7 +749,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
   // signed because later we use -FRACTION_LEN
-  constexpr int32_t FRACTION_LEN = fputil::FloatProperties<T>::FRACTION_LEN;
+  constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   bool is_negative = float_bits.get_sign();
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();

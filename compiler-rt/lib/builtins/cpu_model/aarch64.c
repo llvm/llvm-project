@@ -34,6 +34,9 @@ _Bool __aarch64_have_lse_atomics
     __attribute__((visibility("hidden"), nocommon)) = false;
 
 #if defined(__FreeBSD__)
+// clang-format off: should not reorder sys/auxv.h alphabetically
+#include <sys/auxv.h>
+// clang-format on
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/freebsd.inc"
 #elif defined(__Fuchsia__)

@@ -597,18 +597,6 @@ class Priv_rr<string opcodestr, bits<7> funct7>
   let rd = 0;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
-             RISCVOpcode opcode, string opcodestr>
-    : RVInstIMopr<imm7, imm5, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
-                   opcodestr, "$rd, $rs1">;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3,
-             RISCVOpcode opcode, string opcodestr>
-    : RVInstRMoprr<imm4, imm3, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                   opcodestr, "$rd, $rs1, $rs2">;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -741,22 +729,6 @@ def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
   let imm12 = 0b110000000000;
 }
 
-let Predicates = [HasStdExtZawrs] in {
-def WRS_NTO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.nto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000001101;
-}
-
-def WRS_STO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.sto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000011101;
-}
-} // Predicates = [HasStdExtZawrs]
-
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 def CSRRW : CSR_ir<0b001, "csrrw">;
@@ -797,22 +769,6 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
             Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // IsSignExtendingOpW = 1
 } // Predicates = [IsRV64]
-
-// Zimop instructions
-
-foreach i = 0...31 in {
-    let Predicates = [HasStdExtZimop] in {
-    def MOPR#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
-                 Sched<[]>;
-    } // Predicates = [HasStdExtZimop]
-}
-
-foreach i = 0...7 in {
-    let Predicates = [HasStdExtZimop] in {
-    def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
-                  Sched<[]>;
-    } // Predicates = [HasStdExtZimop]
-}
 
 //===----------------------------------------------------------------------===//
 // Privileged instructions
@@ -1415,6 +1371,24 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                             ReadSFBALU, ReadSFBALU]>;
 }
 
+// This should always expand to a branch+c.mv so the size is 6 or 4 if the
+// branch is compressible.
+let Predicates = [HasConditionalMoveFusion, NoShortForwardBranchOpt],
+    Constraints = "$dst = $falsev", isCommutable = 1, Size = 6 in {
+// This instruction moves $truev to $dst when the condition is true. It will
+// be expanded to control flow in RISCVExpandPseudoInsts.
+// We use GPRNoX0 because c.mv cannot encode X0.
+def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
+                                (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                                 GPRNoX0:$falsev, GPRNoX0:$truev),
+                                [(set GPRNoX0:$dst,
+                                  (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
+                                                           (XLenVT GPR:$rhs),
+                                                           cond, (XLenVT GPRNoX0:$truev),
+                                                           (XLenVT GPRNoX0:$falsev)))]>,
+                         Sched<[]>;
+}
+
 // Conditional binops, that updates update $dst to (op rs1, rs2) when condition
 // is true. Returns $falsev otherwise. Selected by optimizeSelect.
 // TODO: Can we use DefaultOperands on the regular binop to accomplish this more
@@ -1545,6 +1519,23 @@ def PseudoCCSRAIW : Pseudo<(outs GPR:$dst),
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
+
+// Zbb/Zbkb instructions
+def PseudoCCANDN : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+def PseudoCCORN : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+def PseudoCCXNOR : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 }
 
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
@@ -1563,7 +1554,7 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
-let Predicates = [NoShortForwardBranchOpt] in
+let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
@@ -2123,6 +2114,7 @@ include "RISCVInstrInfoM.td"
 
 // Atomic
 include "RISCVInstrInfoA.td"
+include "RISCVInstrInfoZa.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2139,13 +2131,16 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
-// Integer
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-
 // Compressed
 include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

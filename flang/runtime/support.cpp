@@ -11,10 +11,12 @@
 
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 bool RTDEF(IsContiguous)(const Descriptor &descriptor) {
   return descriptor.IsContiguous();
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

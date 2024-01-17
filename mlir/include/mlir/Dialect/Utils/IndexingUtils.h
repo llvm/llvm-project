@@ -228,6 +228,9 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
 /// Helper method to apply to inverse a permutation.
 SmallVector<int64_t> invertPermutationVector(ArrayRef<int64_t> permutation);
 
+/// Returns true if `permutation` is an identity permutation.
+bool isIdentityPermutation(ArrayRef<int64_t> permutation);
+
 /// Method to check if an interchange vector is a permutation.
 bool isPermutationVector(ArrayRef<int64_t> interchange);
 

@@ -63,6 +63,16 @@ unsigned Matrix<T>::appendExtraRow(ArrayRef<T> elems) {
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::transpose() const {
+  Matrix<T> transp(nColumns, nRows);
+  for (unsigned row = 0; row < nRows; ++row)
+    for (unsigned col = 0; col < nColumns; ++col)
+      transp(col, row) = at(row, col);
+
+  return transp;
+}
+
+template <typename T>
 void Matrix<T>::resizeHorizontally(unsigned newNColumns) {
   if (newNColumns < nColumns)
     removeColumns(newNColumns, nColumns - newNColumns);
@@ -228,6 +238,47 @@ template <typename T>
 void Matrix<T>::fillRow(unsigned row, const T &value) {
   for (unsigned col = 0; col < nColumns; ++col)
     at(row, col) = value;
+}
+
+// moveColumns is implemented by moving the columns adjacent to the source range
+// to their final position. When moving right (i.e. dstPos > srcPos), the range
+// of the adjacent columns is [srcPos + num, dstPos + num). When moving left
+// (i.e. dstPos < srcPos) the range of the adjacent columns is [dstPos, srcPos).
+// First, zeroed out columns are inserted in the final positions of the adjacent
+// columns. Then, the adjacent columns are moved to their final positions by
+// swapping them with the zeroed columns. Finally, the now zeroed adjacent
+// columns are deleted.
+template <typename T>
+void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
+  if (num == 0)
+    return;
+
+  int offset = dstPos - srcPos;
+  if (offset == 0)
+    return;
+
+  assert(srcPos + num <= getNumColumns() &&
+         "move source range exceeds matrix columns");
+  assert(dstPos + num <= getNumColumns() &&
+         "move destination range exceeds matrix columns");
+
+  unsigned insertCount = offset > 0 ? offset : -offset;
+  unsigned finalAdjStart = offset > 0 ? srcPos : srcPos + num;
+  unsigned curAdjStart = offset > 0 ? srcPos + num : dstPos;
+  // TODO: This can be done using std::rotate.
+  // Insert new zero columns in the positions where the adjacent columns are to
+  // be moved.
+  insertColumns(finalAdjStart, insertCount);
+  // Update curAdjStart if insertion of new columns invalidates it.
+  if (finalAdjStart < curAdjStart)
+    curAdjStart += insertCount;
+
+  // Swap the adjacent columns with inserted zero columns.
+  for (unsigned i = 0; i < insertCount; ++i)
+    swapColumns(finalAdjStart + i, curAdjStart + i);
+
+  // Delete the now redundant zero columns.
+  removeColumns(curAdjStart, insertCount);
 }
 
 template <typename T>
@@ -452,6 +503,9 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
   if (detM == 0)
     return MPInt(0);
 
+  if (!inverse)
+    return detM;
+
   *inverse = IntMatrix(nRows, nColumns);
   for (unsigned i = 0; i < nRows; i++)
     for (unsigned j = 0; j < nColumns; j++)
@@ -642,5 +696,4 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
-  return;
 }

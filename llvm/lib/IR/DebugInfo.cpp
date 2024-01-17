@@ -44,6 +44,42 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
+TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
+  if (!MDV)
+    return {};
+
+  TinyPtrVector<DbgDeclareInst *> Declares;
+  for (User *U : MDV->users())
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
+      Declares.push_back(DDI);
+
+  return Declares;
+}
+TinyPtrVector<DPValue *> llvm::findDPVDeclares(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DPValue *> Declares;
+  for (DPValue *DPV : L->getAllDPValueUsers())
+    if (DPV->getType() == DPValue::LocationType::Declare)
+      Declares.push_back(DPV);
+
+  return Declares;
+}
+
 template <typename IntrinsicT,
           DPValue::LocationType Type = DPValue::LocationType::Any>
 static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
@@ -95,12 +131,6 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
             DPValues->push_back(DPV);
     }
   }
-}
-
-void llvm::findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers,
-                           Value *V, SmallVectorImpl<DPValue *> *DPValues) {
-  findDbgIntrinsics<DbgDeclareInst, DPValue::LocationType::Declare>(DbgUsers, V,
-                                                                    DPValues);
 }
 
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
@@ -1757,13 +1787,6 @@ void at::deleteAssignmentMarkers(const Instruction *Inst) {
 }
 
 void at::RAUW(DIAssignID *Old, DIAssignID *New) {
-  // Replace MetadataAsValue uses.
-  if (auto *OldIDAsValue =
-          MetadataAsValue::getIfExists(Old->getContext(), Old)) {
-    auto *NewIDAsValue = MetadataAsValue::get(Old->getContext(), New);
-    OldIDAsValue->replaceAllUsesWith(NewIDAsValue);
-  }
-
   // Replace attachments.
   AssignmentInstRange InstRange = getAssignmentInsts(Old);
   // Use intermediate storage for the instruction ptrs because the
@@ -1772,6 +1795,8 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   SmallVector<Instruction *> InstVec(InstRange.begin(), InstRange.end());
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
+
+  Old->replaceAllUsesWith(New);
 }
 
 void at::deleteAll(Function *F) {
@@ -2113,6 +2138,10 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
 bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // No value in assignment tracking without optimisations.
   if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return /*Changed*/ false;
+
+  // FIXME: https://github.com/llvm/llvm-project/issues/76545
+  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return /*Changed*/ false;
 
   bool Changed = false;

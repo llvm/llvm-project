@@ -67,11 +67,11 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   [[FMV_X_W:%[0-9]+]]:gpr = FMV_X_W killed [[PHI1]]
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   $x10 = COPY [[FMV_X_W]]
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-plt) @bar, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @bar, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   $x10 = COPY [[FCVT_L_S]]
-  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-plt) @foo, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
+  ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @foo, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   PseudoRET
 entry:
@@ -90,4 +90,3 @@ declare void @foo(i64)
 declare void @bar(float)
 
 declare float @llvm.round.f32(float)
-

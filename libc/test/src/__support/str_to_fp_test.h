@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE {
 
 template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
-  using StorageType = typename fputil::FloatProperties<T>::StorageType;
+  using StorageType = typename fputil::FPBits<T>::StorageType;
 
   void clinger_fast_path_test(const StorageType inputMantissa,
                               const int32_t inputExp10,

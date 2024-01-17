@@ -359,9 +359,9 @@ constexpr inline uint64_t NextPowerOf2(uint64_t A) {
 /// Returns the power of two which is greater than or equal to the given value.
 /// Essentially, it is a ceil operation across the domain of powers of two.
 inline uint64_t PowerOf2Ceil(uint64_t A) {
-  if (!A)
+  if (!A || A > UINT64_MAX / 2)
     return 0;
-  return NextPowerOf2(A - 1);
+  return UINT64_C(1) << Log2_64_Ceil(A);
 }
 
 /// Returns the next integer (mod 2**64) that is greater than or equal to

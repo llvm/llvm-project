@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDLTIDialect
+  MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
   MLIRInferIntRangeInterface
   MLIRIR
@@ -50,19 +51,21 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/AsyncRegionRewriter.cpp
   Transforms/BufferDeallocationOpInterfaceImpl.cpp
   Transforms/DecomposeMemrefs.cpp
+  Transforms/EliminateBarriers.cpp
   Transforms/GlobalIdRewriter.cpp
   Transforms/KernelOutlining.cpp
   Transforms/MemoryPromotion.cpp
   Transforms/ModuleToBinary.cpp
   Transforms/NVVMAttachTarget.cpp
   Transforms/ParallelLoopMapper.cpp
+  Transforms/ROCDLAttachTarget.cpp
   Transforms/SerializeToBlob.cpp
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
-  Transforms/ROCDLAttachTarget.cpp
-  Transforms/EliminateBarriers.cpp
+  Transforms/SubgroupReduceLowering.cpp
+  Transforms/Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU

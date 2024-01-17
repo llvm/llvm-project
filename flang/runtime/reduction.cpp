@@ -336,6 +336,7 @@ template <int KIND> struct CountDimension {
 };
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
 bool RTDEF(All)(const Descriptor &x, const char *source, int line, int dim) {
   return GetTotalLogicalReduction(x, source, line, dim,
@@ -383,5 +384,6 @@ void RTDEF(ParityDim)(Descriptor &result, const Descriptor &x, int dim,
       result, x, dim, terminator, "PARITY");
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

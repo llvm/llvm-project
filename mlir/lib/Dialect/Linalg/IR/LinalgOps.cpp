@@ -550,7 +550,7 @@ struct EraseSelfCopy : OpRewritePattern<CopyOp> {
                                 PatternRewriter &rewriter) const override {
     if (copyOp.getInputs() != copyOp.getOutputs())
       return rewriter.notifyMatchFailure(copyOp, "not a self copy");
-    if (copyOp.hasBufferSemantics())
+    if (copyOp.hasPureBufferSemantics())
       rewriter.eraseOp(copyOp);
     else
       rewriter.replaceOp(copyOp, copyOp.getInputs());
@@ -1112,7 +1112,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
 
     // In the buffer case, we need to check exact buffer equality.
-    if (genericOp.hasBufferSemantics()) {
+    if (genericOp.hasPureBufferSemantics()) {
       if (genericOp.getNumDpsInputs() == 1 && genericOp.getNumDpsInits() == 1 &&
           genericOp.getDpsInputOperand(0)->get() ==
               genericOp.getDpsInitOperand(0)->get()) {
@@ -1123,7 +1123,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     }
 
     // Mixed semantics is not supported yet.
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     // Get the argument number of the returned values. That is the operand
@@ -1773,9 +1773,9 @@ ArrayAttr TransposeOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
   return builder.getAffineMapArrayAttr(
-      {builder.getMultiDimIdentityMap(rank),
-       AffineMap::getPermutationMap(
-           llvm::to_vector_of<unsigned>(getPermutation()), getContext())});
+      {inversePermutation(AffineMap::getPermutationMap(
+           llvm::to_vector_of<unsigned>(getPermutation()), getContext())),
+       builder.getMultiDimIdentityMap(rank)});
 }
 
 void TransposeOp::getEffects(
@@ -2257,7 +2257,7 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
 
   LogicalResult matchAndRewrite(LinalgOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    if (!linalgOp.hasTensorSemantics())
+    if (!linalgOp.hasPureTensorSemantics())
       return failure();
 
     // Maps must be projected permutations.
@@ -2376,7 +2376,7 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
       getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides));
 
   SmallVector<Type, 4> resultTypes;
-  if (hasTensorSemantics())
+  if (hasPureTensorSemantics())
     resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);

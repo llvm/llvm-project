@@ -387,6 +387,8 @@ template <bool IS_ALLOCATING> struct MatmulTranspose {
 
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 void RTDEF(MatmulTranspose)(Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   MatmulTranspose<true>{}(result, x, y, sourceFile, line);
@@ -395,5 +397,7 @@ void RTDEF(MatmulTransposeDirect)(const Descriptor &result, const Descriptor &x,
     const Descriptor &y, const char *sourceFile, int line) {
   MatmulTranspose<false>{}(result, x, y, sourceFile, line);
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

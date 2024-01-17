@@ -13,7 +13,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
@@ -95,7 +94,6 @@ LIBC_INLINE bool shift_mantissa(int shift_length, UInt128 &mant) {
 
 template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   using FPBits = fputil::FPBits<double>;
-  using FloatProp = fputil::FloatProperties<double>;
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0)) {
     return x * y + z;
@@ -268,10 +266,10 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   }
 
   // Remove hidden bit and append the exponent field and sign bit.
-  result = (result & FloatProp::FRACTION_MASK) |
-           (static_cast<uint64_t>(r_exp) << FloatProp::FRACTION_LEN);
+  result = (result & FPBits::FRACTION_MASK) |
+           (static_cast<uint64_t>(r_exp) << FPBits::FRACTION_LEN);
   if (prod_sign) {
-    result |= FloatProp::SIGN_MASK;
+    result |= FPBits::SIGN_MASK;
   }
 
   // Rounding.

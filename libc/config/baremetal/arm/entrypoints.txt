@@ -74,6 +74,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsnprintf
 
     # stdlib.h entrypoints
+    libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
     libc.src.stdlib.atof

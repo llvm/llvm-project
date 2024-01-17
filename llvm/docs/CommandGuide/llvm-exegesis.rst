@@ -44,7 +44,7 @@ SNIPPET ANNOTATIONS
 
 :program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
 However, benchmarking these snippets often requires some setup so that they
-can execute properly. :program:`llvm-exegesis` has four annotations and some
+can execute properly. :program:`llvm-exegesis` has five annotations and some
 additional utilities to help with setup so that snippets can be benchmarked
 properly.
 
@@ -183,7 +183,7 @@ annotations added to the snippet:
 
 .. code-block:: none
 
-  # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
+  # LLVM-EXEGESIS-MEM-DEF test1 4096 7fffffff
   # LLVM-EXEGESIS-MEM-MAP test1 8192
 
   movq $8192, %rax

@@ -89,7 +89,7 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   // -hi = floor(-k * 2^(-MID_BITS))
   // exp_mhi = shift -hi to the exponent field of double precision.
   int64_t exp_mhi = static_cast<int64_t>(mk >> ExpBase::MID_BITS)
-                    << fputil::FloatProperties<double>::FRACTION_LEN;
+                    << fputil::FPBits<double>::FRACTION_LEN;
   // mh = 2^(-hi - mid)
   int64_t mh_bits = ExpBase::EXP_2_MID[mk & ExpBase::MID_MASK] + exp_mhi;
   double mh = fputil::FPBits<double>(uint64_t(mh_bits)).get_val();

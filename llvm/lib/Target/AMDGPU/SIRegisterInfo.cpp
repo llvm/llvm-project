@@ -330,8 +330,10 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
 
   RegPressureIgnoredUnits.resize(getNumRegUnits());
   RegPressureIgnoredUnits.set(*regunits(MCRegister::from(AMDGPU::M0)).begin());
-  for (auto Reg : AMDGPU::VGPR_HI16RegClass)
-    RegPressureIgnoredUnits.set(*regunits(Reg).begin());
+  for (auto Reg : AMDGPU::VGPR_16RegClass) {
+    if (AMDGPU::isHi(Reg, *this))
+      RegPressureIgnoredUnits.set(*regunits(Reg).begin());
+  }
 
   // HACK: Until this is fully tablegen'd.
   static llvm::once_flag InitializeRegSplitPartsFlag;
@@ -2808,8 +2810,6 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
 
 const TargetRegisterClass *
 SIRegisterInfo::getVectorSuperClassForBitWidth(unsigned BitWidth) const {
-  if (BitWidth == 16)
-    return &AMDGPU::VGPR_LO16RegClass;
   if (BitWidth == 32)
     return &AMDGPU::AV_32RegClass;
   return ST.needsAlignedVGPRs()
@@ -3041,8 +3041,6 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
   case AMDGPU::VGPR_32RegClassID:
-  case AMDGPU::VGPR_LO16RegClassID:
-  case AMDGPU::VGPR_HI16RegClassID:
     return std::min(ST.getMaxNumVGPRs(Occupancy), ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:

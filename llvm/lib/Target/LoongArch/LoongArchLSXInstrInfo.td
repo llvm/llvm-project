@@ -892,6 +892,10 @@ def VFRECIP_S : LSX2R_VV<0x729cf400>;
 def VFRECIP_D : LSX2R_VV<0x729cf800>;
 def VFRSQRT_S : LSX2R_VV<0x729d0400>;
 def VFRSQRT_D : LSX2R_VV<0x729d0800>;
+def VFRECIPE_S : LSX2R_VV<0x729d1400>;
+def VFRECIPE_D : LSX2R_VV<0x729d1800>;
+def VFRSQRTE_S : LSX2R_VV<0x729d2400>;
+def VFRSQRTE_D : LSX2R_VV<0x729d2800>;
 
 def VFCVTL_S_H : LSX2R_VV<0x729de800>;
 def VFCVTH_S_H : LSX2R_VV<0x729dec00>;
@@ -1731,8 +1735,8 @@ def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
           (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
 
 // vselect
-def : Pat<(v16i8 (vselect LSX128:$vj, LSX128:$vd,
-                          (v16i8 (SplatPat_uimm8 uimm8:$imm)))),
+def : Pat<(v16i8 (vselect LSX128:$vd, (v16i8 (SplatPat_uimm8 uimm8:$imm)),
+                          LSX128:$vj)),
           (VBITSELI_B LSX128:$vd, LSX128:$vj, uimm8:$imm)>;
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
   def  : Pat<(vt (vselect LSX128:$va, LSX128:$vk, LSX128:$vj)),
