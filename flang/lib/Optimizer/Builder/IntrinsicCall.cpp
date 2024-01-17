@@ -5923,7 +5923,7 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 
 // SYSTEM
 void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() >= 1 && args.size()<=2);
+  assert(args.size() >= 1 && args.size() <= 2);
   mlir::Value command = fir::getBase(args[0]);
   const fir::ExtendedValue &exitstat = args[1];
 
@@ -5939,8 +5939,14 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
           : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
 
   // Create a dummmy cmdstat to prevent EXECUTE_COMMAND_LINE terminate itself
-  // when cmdstat is assigned with a non-zero value but not present 
-  mlir::Value cmdstatBox = builder.createBox(loc, builder.createIntegerConstant(loc, builder.getIndexType(), 0));
+  // when cmdstat is assigned with a non-zero value but not present
+  mlir::Value tempValue =
+      builder.createIntegerConstant(loc, builder.getI2Type(), 0);
+  mlir::Value temp = builder.createTemporary(loc, builder.getI2Type());
+  mlir::Value castVal =
+      builder.createConvert(loc, builder.getI2Type(), tempValue);
+  builder.create<fir::StoreOp>(loc, castVal, temp);
+  mlir::Value cmdstatBox = builder.createBox(loc, temp);
 
   mlir::Value cmdmsgBox =
       builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
