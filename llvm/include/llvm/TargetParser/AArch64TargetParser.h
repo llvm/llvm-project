@@ -325,15 +325,22 @@ struct ExtensionSet {
   ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
 
   // Enable the given architecture extension, and any other extensions it
-  // depends on.
+  // depends on. Does not change the base architecture, or follow dependencies
+  // between features which are only related by required arcitecture versions.
   void enable(ArchExtKind E);
+
   // Disable the given architecture extension, and any other extensions which
-  // depend on it.
+  // depend on it. Does not change the base architecture, or follow
+  // dependencies between features which are only related by required
+  // arcitecture versions.
   void disable(ArchExtKind E);
 
-  // Add default extensions for the given CPU.
+  // Add default extensions for the given CPU. Records the base architecture,
+  // to later resolve dependencies which depend on it.
   void addCPUDefaults(const CpuInfo &CPU);
-  // Add default extensions for the given architecture version.
+
+  // Add default extensions for the given architecture version. Records the
+  // base architecture, to later resolve dependencies which depend on it.
   void addArchDefaults(const ArchInfo &Arch);
 
   // Add or remove a feature based on a modifier string. The string must be of
@@ -347,6 +354,10 @@ struct ExtensionSet {
   void toLLVMFeatureList(std::vector<StringRef> &Features) const;
 };
 
+
+// Represents a dependency between two architecture extensions. If Later is
+// enabled, then Earlier must also be enabled. If Earlier is disabled, then
+// Later must also be disabled.
 struct ExtensionDependency {
   ArchExtKind Earlier;
   ArchExtKind Later;
