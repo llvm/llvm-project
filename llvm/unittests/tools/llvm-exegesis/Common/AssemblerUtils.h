@@ -81,7 +81,7 @@ private:
     BenchmarkKey Key;
     Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  Fill, AsmStream, Key, false));
+                                  Fill, AsmStream, Key, false, {}));
     Expected<ExecutableFunction> ExecFunc = ExecutableFunction::create(
         createTargetMachine(), getObjectFromBuffer(AsmStream.str()));
 

@@ -63,7 +63,8 @@ public:
   Expected<RunnableConfiguration>
   getRunnableConfiguration(const BenchmarkCode &Configuration,
                            unsigned NumRepetitions, unsigned LoopUnrollFactor,
-                           const SnippetRepetitor &Repetitor) const;
+                           const SnippetRepetitor &Repetitor,
+                           unsigned WarmupMinInstructions) const;
 
   std::pair<Error, Benchmark>
   runConfiguration(RunnableConfiguration &&RC,
@@ -116,7 +117,8 @@ private:
   Expected<SmallString<0>>
   assembleSnippet(const BenchmarkCode &BC, const SnippetRepetitor &Repetitor,
                   unsigned MinInstructions, unsigned LoopBodySize,
-                  bool GenerateMemoryInstructions) const;
+                  bool GenerateMemoryInstructions,
+                  unsigned MinWarmupInstructions) const;
 
   Expected<std::string> writeObjectFile(StringRef Buffer,
                                         StringRef FileName) const;

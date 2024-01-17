@@ -44,7 +44,7 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM);
 // Helper to fill in a basic block.
 class BasicBlockFiller {
 public:
-  BasicBlockFiller(MachineFunction &MF, MachineBasicBlock *MBB,
+  BasicBlockFiller(MachineFunction *MF, MachineBasicBlock *MBB,
                    const MCInstrInfo *MCII);
 
   void addInstruction(const MCInst &Inst, const DebugLoc &DL = DebugLoc());
@@ -53,9 +53,9 @@ public:
   void addReturn(const ExegesisTarget &ET, bool SubprocessCleanup,
                  const DebugLoc &DL = DebugLoc());
 
-  MachineFunction &MF;
-  MachineBasicBlock *const MBB;
-  const MCInstrInfo *const MCII;
+  MachineFunction *MF;
+  MachineBasicBlock *MBB;
+  const MCInstrInfo *MCII;
 };
 
 // Helper to fill in a function.
@@ -82,7 +82,8 @@ private:
 };
 
 // A callback that fills a function.
-using FillFunction = std::function<void(FunctionFiller &)>;
+using FillFunction =
+    std::function<BasicBlockFiller(FunctionFiller &, bool, BasicBlockFiller &)>;
 
 // Creates a temporary `void foo(char*)` function containing the provided
 // Instructions. Runs a set of llvm Passes to provide correct prologue and
@@ -92,7 +93,8 @@ Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
                        ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
-                       bool GenerateMemoryInstructions);
+                       bool GenerateMemoryInstructions,
+                       std::optional<FillFunction> WarmupFill);
 
 // Creates an ObjectFile in the format understood by the host.
 // Note: the resulting object keeps a copy of Buffer so it can be discarded once
