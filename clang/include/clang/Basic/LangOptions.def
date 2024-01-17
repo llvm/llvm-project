@@ -457,6 +457,7 @@ ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddres
              "Key used for return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, "Branch-target enforcement enabled")
 LANGOPT(BranchProtectionPAuthLR, 1, 0, "Use PC as a diversifier using PAuthLR NOP instructions.")
+LANGOPT(GuardedControlStack, 1, 0, "Guarded control stack enabled")
 
 LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 

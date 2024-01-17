@@ -896,8 +896,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
         }
       }
       // Create an ugly GEP with a single index for each index.
-      ResultPtr =
-          Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Idx, "uglygep");
+      ResultPtr = Builder.CreatePtrAdd(ResultPtr, Idx, "uglygep");
       if (FirstResult == nullptr)
         FirstResult = ResultPtr;
     }
@@ -906,8 +905,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
     Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
-    ResultPtr =
-        Builder.CreateGEP(Builder.getInt8Ty(), ResultPtr, Offset, "uglygep");
+    ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
 
@@ -1107,9 +1105,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
-  NewGEP = cast<Instruction>(Builder.CreateGEP(
-      Builder.getInt8Ty(), NewGEP,
-      {ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true)},
+  NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
+      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
       GEP->getName(), GEPWasInBounds));
   NewGEP->copyMetadata(*GEP);
 

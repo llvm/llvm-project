@@ -98,6 +98,7 @@
 ! HELP-NEXT: -g                      Generate source-level debug information
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
+! HELP-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
@@ -124,6 +125,7 @@
 ! HELP-NEXT: -pedantic               Warn on language extensions
 ! HELP-NEXT: -print-effective-triple Print the effective target triple
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
+! HELP-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-NEXT: -P                      Disable linemarker output in -E mode
 ! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
@@ -264,6 +266,7 @@
 ! HELP-FC1-NEXT: -pic-is-pie             File is for a position independent executable
 ! HELP-FC1-NEXT: -pic-level <value>      Value for __PIC__
 ! HELP-FC1-NEXT: -plugin <name>          Use the named plugin action instead of the default action (use "help" to list available options)
+! HELP-FC1-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-FC1-NEXT: -P                      Disable linemarker output in -E mode
 ! HELP-FC1-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-FC1-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression

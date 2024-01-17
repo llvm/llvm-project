@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidConstParamsInDecls.h"
+#include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
 #include "BracesAroundStatementsCheck.h"
@@ -67,6 +68,8 @@ public:
         "readability-use-std-min-max");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
+    CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
+        "readability-avoid-nested-conditional-operator");
     CheckFactories.registerCheck<AvoidReturnWithVoidValueCheck>(
         "readability-avoid-return-with-void-value");
     CheckFactories.registerCheck<AvoidUnconditionalPreprocessorIfCheck>(

@@ -97,6 +97,11 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
         // This operation does not allocate a tile.
         return std::nullopt;
       }]
+    >,
+    InterfaceMethod<
+      "Returns the VectorType of the tile used by this operation.",
+      /*returnType=*/"VectorType",
+      /*methodName=*/"getTileType"
     >
   ];
 
@@ -116,6 +121,11 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       auto newOp = createOpAndForwardTileId<T>(rewriter, $_op.getLoc(), std::forward<Args>(args)...);
       rewriter.replaceOp($_op, newOp);
       return newOp;
+    }
+
+    bool isInMemoryTile() {
+      auto tileId = getTileId();
+      return tileId && tileId.getInt() >= kInMemoryTileIdBase;
     }
   }];
 
@@ -331,6 +341,9 @@ def ZeroOp : ArmSME_Op<"zero", [ArmSMETileOpInterface]> {
     std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
       return arm_sme::getSMETileType(getVectorType());
     }
+    VectorType getTileType() {
+      return getVectorType();
+    }
   }];
   let assemblyFormat = "attr-dict `:` type($res)";
 }
@@ -407,6 +420,9 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
     std::optional<arm_sme::ArmSMETileType> getAllocatedTileType() {
       return arm_sme::getSMETileType(getVectorType());
     }
+    VectorType getTileType() {
+      return getVectorType();
+    }
   }];
 
   let builders = [
@@ -475,6 +491,9 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
     VectorType getVectorType() {
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
+    VectorType getTileType() {
+      return getVectorType();
+    }
   }];
 
   let builders = [
@@ -539,6 +558,9 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     VectorType getVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    VectorType getTileType() {
+      return getVectorType();
+    }
   }];
 
   let assemblyFormat = [{
@@ -595,6 +617,9 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
     }
     VectorType getVectorType() {
       return ::llvm::cast<VectorType>(getTile().getType());
+    }
+    VectorType getTileType() {
+      return getVectorType();
     }
   }];
 
@@ -688,6 +713,9 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [
 
   let extraClassDeclaration = [{
     VectorType getSliceType() { return getResult().getType(); }
+    VectorType getTileType() {
+      return ::llvm::cast<VectorType>(getTile().getType());
+    }
   }];
 
   let assemblyFormat = [{
@@ -779,6 +807,9 @@ let arguments = (ins
       if (!getAcc())
         return arm_sme::getSMETileType(getResultType());
       return std::nullopt;
+    }
+    VectorType getTileType() {
+      return getResultType();
     }
   }];
 }

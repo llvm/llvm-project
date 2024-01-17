@@ -963,18 +963,15 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    SmallVector<DbgDeclareInst *, 1> DDIs;
-    SmallVector<DPValue *, 1> DPVs;
-    findDbgDeclares(DDIs, V, &DPVs);
-    auto CacheIt = [&DIVarCache, V](auto &Container) {
+    auto CacheIt = [&DIVarCache, V](auto Container) {
       auto *I = llvm::find_if(Container, [](auto *DDI) {
         return DDI->getExpression()->getNumElements() == 0;
       });
       if (I != Container.end())
         DIVarCache.insert({V, (*I)->getVariable()});
     };
-    CacheIt(DDIs);
-    CacheIt(DPVs);
+    CacheIt(findDbgDeclares(V));
+    CacheIt(findDPVDeclares(V));
   }
 }
 
@@ -1125,9 +1122,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   assert(PromiseAlloca &&
          "Coroutine with switch ABI should own Promise alloca");
 
-  SmallVector<DbgDeclareInst *, 1> DIs;
-  SmallVector<DPValue *, 1> DPVs;
-  findDbgDeclares(DIs, PromiseAlloca, &DPVs);
+  TinyPtrVector<DbgDeclareInst *> DIs = findDbgDeclares(PromiseAlloca);
+  TinyPtrVector<DPValue *> DPVs = findDPVDeclares(PromiseAlloca);
 
   DILocalVariable *PromiseDIVariable = nullptr;
   DILocation *DILoc = nullptr;
@@ -1865,9 +1861,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
 
-        SmallVector<DbgDeclareInst *, 1> DIs;
-        SmallVector<DPValue *, 1> DPVs;
-        findDbgDeclares(DIs, Def, &DPVs);
+        TinyPtrVector<DbgDeclareInst *> DIs = findDbgDeclares(Def);
+        TinyPtrVector<DPValue *> DPVs = findDPVDeclares(Def);
         // Try best to find dbg.declare. If the spill is a temp, there may not
         // be a direct dbg.declare. Walk up the load chain to find one from an
         // alias.
@@ -1881,9 +1876,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             CurDef = LdInst->getPointerOperand();
             if (!isa<AllocaInst, LoadInst>(CurDef))
               break;
-            DIs.clear();
-            DPVs.clear();
-            findDbgDeclares(DIs, CurDef, &DPVs);
+            DIs = findDbgDeclares(CurDef);
+            DPVs = findDPVDeclares(CurDef);
           }
         }
 
@@ -2022,8 +2016,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       auto *FramePtr = GetFramePointer(Alloca);
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtr,
-                                         ConstantInt::get(ITy, Value));
+      auto *AliasPtr =
+          Builder.CreatePtrAdd(FramePtr, ConstantInt::get(ITy, Value));
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(CB, U); });
     }

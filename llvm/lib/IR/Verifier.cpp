@@ -107,6 +107,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -2161,6 +2162,15 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            V);
   }
 
+  Check(
+      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
+       Attrs.hasFnAttr("aarch64_inout_zt0") +
+       Attrs.hasFnAttr("aarch64_out_zt0") +
+       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
+      V);
+
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Check(GV->hasGlobalUnnamedAddr(),
@@ -2259,6 +2269,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
+  }
+
+  if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
+    if (!Info)
+      CheckFailed("invalid name for a VFABI variant: " + S, V);
   }
 }
 
