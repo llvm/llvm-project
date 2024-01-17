@@ -548,8 +548,7 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template<typename ...Ts>
-  void dropAttrs() {
+  template <typename... Ts> void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
@@ -559,10 +558,7 @@ public:
       HasAttrs = false;
   }
 
-  template <typename T>
-  void dropAttr() {
-    dropAttrs<T>();
-  }
+  template <typename T> void dropAttr() { dropAttrs<T>(); }
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {

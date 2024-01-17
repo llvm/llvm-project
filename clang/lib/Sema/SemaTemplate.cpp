@@ -9230,7 +9230,7 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
 static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
   if (MinGW || (isa<FunctionDecl>(D) &&
                 cast<FunctionDecl>(D)->isFunctionTemplateSpecialization()))
-    D->dropAttrs< DLLImportAttr, DLLExportAttr>();
+    D->dropAttrs<DLLImportAttr, DLLExportAttr>();
 
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
     FD->setInlineSpecified(false);
