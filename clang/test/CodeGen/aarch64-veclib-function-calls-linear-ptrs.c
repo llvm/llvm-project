@@ -17,7 +17,7 @@ vectorize.
 
 // CHECK-LABEL: define dso_local void @frexp_f64(
 // CHECK-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef writeonly [[OUT1:%.*]], ptr nocapture noundef writeonly [[OUT2:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK:    [[CALL:%.*]] = tail call double @frexp(double noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR2:[0-9]+]]
+// CHECK:    [[CALL:%.*]] = tail call double @frexp(double noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR5:[0-9]+]]
 //
 void frexp_f64(double *in, double *out1, int *out2, int N) {
   for (int i = 0; i < N; ++i)
@@ -26,30 +26,27 @@ void frexp_f64(double *in, double *out1, int *out2, int N) {
 
 // CHECK-LABEL: define dso_local void @frexp_f32(
 // CHECK-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef writeonly [[OUT1:%.*]], ptr nocapture noundef writeonly [[OUT2:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK:    [[CALL:%.*]] = tail call float @frexpf(float noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR2]]
+// CHECK:    [[CALL:%.*]] = tail call float @frexpf(float noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR5]]
 //
 void frexp_f32(float *in, float *out1, int *out2, int N) {
   for (int i = 0; i < N; ++i)
     *out1 = frexpf(in[i], out2+i);
 }
 
-
-// TODO: LAA must allow vectorization.
-
 // CHECK-LABEL: define dso_local void @modf_f64(
 // CHECK-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef writeonly [[OUT1:%.*]], ptr nocapture noundef writeonly [[OUT2:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK:    [[CALL:%.*]] = tail call double @modf(double noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR3:[0-9]+]]
+// CHECK:    [[TMP11:%.*]] = tail call <vscale x 2 x double> @armpl_svmodf_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP10:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+// CHECK:    [[CALL:%.*]] = tail call double @modf(double noundef [[TMP14:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR6:[0-9]+]]
 //
 void modf_f64(double *in, double *out1, double *out2, int N) {
   for (int i = 0; i < N; ++i)
       out1[i] = modf(in[i], out2+i);
 }
 
-// TODO: LAA must allow vectorization.
-
 // CHECK-LABEL: define dso_local void @modf_f32(
 // CHECK-SAME: ptr nocapture noundef readonly [[IN:%.*]], ptr nocapture noundef writeonly [[OUT1:%.*]], ptr nocapture noundef writeonly [[OUT2:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK:    [[CALL:%.*]] = tail call float @modff(float noundef [[TMP0:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR4:[0-9]+]]
+// CHECK:    [[TMP11:%.*]] = tail call <vscale x 4 x float> @armpl_svmodf_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP10:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+// CHECK:    [[CALL:%.*]] = tail call float @modff(float noundef [[TMP14:%.*]], ptr noundef [[ADD_PTR:%.*]]) #[[ATTR7:[0-9]+]]
 //
 void modf_f32(float *in, float *out1, float *out2, int N) {
   for (int i = 0; i < N; ++i)
