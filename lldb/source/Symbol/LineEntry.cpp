@@ -17,19 +17,6 @@ LineEntry::LineEntry()
     : range(), file(), is_start_of_statement(0), is_start_of_basic_block(0),
       is_prologue_end(0), is_epilogue_begin(0), is_terminal_entry(0) {}
 
-LineEntry::LineEntry(const lldb::SectionSP &section_sp,
-                     lldb::addr_t section_offset, lldb::addr_t byte_size,
-                     const FileSpec &_file, uint32_t _line, uint16_t _column,
-                     bool _is_start_of_statement, bool _is_start_of_basic_block,
-                     bool _is_prologue_end, bool _is_epilogue_begin,
-                     bool _is_terminal_entry)
-    : range(section_sp, section_offset, byte_size), file(_file),
-      original_file(_file), line(_line), column(_column),
-      is_start_of_statement(_is_start_of_statement),
-      is_start_of_basic_block(_is_start_of_basic_block),
-      is_prologue_end(_is_prologue_end), is_epilogue_begin(_is_epilogue_begin),
-      is_terminal_entry(_is_terminal_entry) {}
-
 void LineEntry::Clear() {
   range.Clear();
   file.Clear();

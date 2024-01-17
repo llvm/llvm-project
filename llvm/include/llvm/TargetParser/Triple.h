@@ -211,9 +211,10 @@ public:
     PS4,
     PS5,
     ELFIAMCU,
-    TvOS,      // Apple tvOS
-    WatchOS,   // Apple watchOS
-    DriverKit, // Apple DriverKit
+    TvOS,       // Apple tvOS
+    WatchOS,    // Apple watchOS
+    DriverKit,  // Apple DriverKit
+    XROS,       // Apple XROS
     Mesa3D,
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
@@ -502,14 +503,17 @@ public:
 
   bool isWatchABI() const { return getSubArch() == Triple::ARMSubArch_v7k; }
 
+  /// Is this an Apple XROS triple.
+  bool isXROS() const { return getOS() == Triple::XROS; }
+
   /// Is this an Apple DriverKit triple.
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
 
   bool isOSzOS() const { return getOS() == Triple::ZOS; }
 
-  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, or DriverKit).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
   bool isOSDarwin() const {
-    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit();
+    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS();
   }
 
   bool isSimulatorEnvironment() const {

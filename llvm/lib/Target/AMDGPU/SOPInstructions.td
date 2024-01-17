@@ -1124,7 +1124,7 @@ class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   pattern>;
 
 def S_SETREG_B32 : S_SETREG_B32_Pseudo <
-  [(int_amdgcn_s_setreg (i32 SIMM16bit:$simm16), i32:$sdst)]> {
+  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
   // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
