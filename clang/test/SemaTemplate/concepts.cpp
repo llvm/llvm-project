@@ -1064,3 +1064,24 @@ void cand(T t)
 
 void test() { cand(42); }
 }
+
+namespace GH63837 {
+
+template<class> concept IsFoo = true;
+
+template<class> struct Struct {
+  template<IsFoo auto... xs>
+  void foo() {}
+
+  template<auto... xs> requires (... && IsFoo<decltype(xs)>)
+  void bar() {}
+
+  template<IsFoo auto... xs>
+  static inline int field = 0;
+};
+
+template void Struct<void>::foo<>();
+template void Struct<void>::bar<>();
+template int Struct<void>::field<1, 2>;
+
+}

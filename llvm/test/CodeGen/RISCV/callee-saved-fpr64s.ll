@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefix=ILP32
 ; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64 -verify-machineinstrs< %s \
 ; RUN:   | FileCheck %s -check-prefix=LP64
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64e -verify-machineinstrs< %s \
+; RUN:   | FileCheck %s -check-prefix=LP64E
 ; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi ilp32d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=ILP32D
 ; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi lp64d -verify-machineinstrs < %s \
@@ -10,7 +12,7 @@
 
 @var = global [32 x double] zeroinitializer
 
-; All floating point registers are temporaries for the ilp32 and lp64 ABIs.
+; All floating point registers are temporaries for the ilp32, lp64e and lp64 ABIs.
 ; fs0-fs11 are callee-saved for the ilp32f, ilp32d, lp64f, and lp64d ABIs.
 
 ; This function tests that RISCVRegisterInfo::getCalleeSavedRegs returns
@@ -156,6 +158,76 @@ define void @callee() nounwind {
 ; LP64-NEXT:    fsd fa4, %lo(var+8)(a0)
 ; LP64-NEXT:    fsd fa5, %lo(var)(a0)
 ; LP64-NEXT:    ret
+;
+; LP64E-LABEL: callee:
+; LP64E:       # %bb.0:
+; LP64E-NEXT:    lui a0, %hi(var)
+; LP64E-NEXT:    fld fa5, %lo(var)(a0)
+; LP64E-NEXT:    fld fa4, %lo(var+8)(a0)
+; LP64E-NEXT:    addi a1, a0, %lo(var)
+; LP64E-NEXT:    fld fa3, 16(a1)
+; LP64E-NEXT:    fld fa2, 24(a1)
+; LP64E-NEXT:    fld fa1, 32(a1)
+; LP64E-NEXT:    fld fa0, 40(a1)
+; LP64E-NEXT:    fld ft0, 48(a1)
+; LP64E-NEXT:    fld ft1, 56(a1)
+; LP64E-NEXT:    fld ft2, 64(a1)
+; LP64E-NEXT:    fld ft3, 72(a1)
+; LP64E-NEXT:    fld ft4, 80(a1)
+; LP64E-NEXT:    fld ft5, 88(a1)
+; LP64E-NEXT:    fld ft6, 96(a1)
+; LP64E-NEXT:    fld ft7, 104(a1)
+; LP64E-NEXT:    fld fa6, 112(a1)
+; LP64E-NEXT:    fld fa7, 120(a1)
+; LP64E-NEXT:    fld ft8, 128(a1)
+; LP64E-NEXT:    fld ft9, 136(a1)
+; LP64E-NEXT:    fld ft10, 144(a1)
+; LP64E-NEXT:    fld ft11, 152(a1)
+; LP64E-NEXT:    fld fs0, 160(a1)
+; LP64E-NEXT:    fld fs1, 168(a1)
+; LP64E-NEXT:    fld fs2, 176(a1)
+; LP64E-NEXT:    fld fs3, 184(a1)
+; LP64E-NEXT:    fld fs4, 192(a1)
+; LP64E-NEXT:    fld fs5, 200(a1)
+; LP64E-NEXT:    fld fs6, 208(a1)
+; LP64E-NEXT:    fld fs7, 216(a1)
+; LP64E-NEXT:    fld fs8, 248(a1)
+; LP64E-NEXT:    fld fs9, 240(a1)
+; LP64E-NEXT:    fld fs10, 232(a1)
+; LP64E-NEXT:    fld fs11, 224(a1)
+; LP64E-NEXT:    fsd fs8, 248(a1)
+; LP64E-NEXT:    fsd fs9, 240(a1)
+; LP64E-NEXT:    fsd fs10, 232(a1)
+; LP64E-NEXT:    fsd fs11, 224(a1)
+; LP64E-NEXT:    fsd fs7, 216(a1)
+; LP64E-NEXT:    fsd fs6, 208(a1)
+; LP64E-NEXT:    fsd fs5, 200(a1)
+; LP64E-NEXT:    fsd fs4, 192(a1)
+; LP64E-NEXT:    fsd fs3, 184(a1)
+; LP64E-NEXT:    fsd fs2, 176(a1)
+; LP64E-NEXT:    fsd fs1, 168(a1)
+; LP64E-NEXT:    fsd fs0, 160(a1)
+; LP64E-NEXT:    fsd ft11, 152(a1)
+; LP64E-NEXT:    fsd ft10, 144(a1)
+; LP64E-NEXT:    fsd ft9, 136(a1)
+; LP64E-NEXT:    fsd ft8, 128(a1)
+; LP64E-NEXT:    fsd fa7, 120(a1)
+; LP64E-NEXT:    fsd fa6, 112(a1)
+; LP64E-NEXT:    fsd ft7, 104(a1)
+; LP64E-NEXT:    fsd ft6, 96(a1)
+; LP64E-NEXT:    fsd ft5, 88(a1)
+; LP64E-NEXT:    fsd ft4, 80(a1)
+; LP64E-NEXT:    fsd ft3, 72(a1)
+; LP64E-NEXT:    fsd ft2, 64(a1)
+; LP64E-NEXT:    fsd ft1, 56(a1)
+; LP64E-NEXT:    fsd ft0, 48(a1)
+; LP64E-NEXT:    fsd fa0, 40(a1)
+; LP64E-NEXT:    fsd fa1, 32(a1)
+; LP64E-NEXT:    fsd fa2, 24(a1)
+; LP64E-NEXT:    fsd fa3, 16(a1)
+; LP64E-NEXT:    fsd fa4, %lo(var+8)(a0)
+; LP64E-NEXT:    fsd fa5, %lo(var)(a0)
+; LP64E-NEXT:    ret
 ;
 ; ILP32D-LABEL: callee:
 ; ILP32D:       # %bb.0:
@@ -646,6 +718,149 @@ define void @caller() nounwind {
 ; LP64-NEXT:    ld s1, 264(sp) # 8-byte Folded Reload
 ; LP64-NEXT:    addi sp, sp, 288
 ; LP64-NEXT:    ret
+;
+; LP64E-LABEL: caller:
+; LP64E:       # %bb.0:
+; LP64E-NEXT:    addi sp, sp, -280
+; LP64E-NEXT:    sd ra, 272(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    sd s0, 264(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    sd s1, 256(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    lui s0, %hi(var)
+; LP64E-NEXT:    fld fa5, %lo(var)(s0)
+; LP64E-NEXT:    fsd fa5, 248(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, %lo(var+8)(s0)
+; LP64E-NEXT:    fsd fa5, 240(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    addi s1, s0, %lo(var)
+; LP64E-NEXT:    fld fa5, 16(s1)
+; LP64E-NEXT:    fsd fa5, 232(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 24(s1)
+; LP64E-NEXT:    fsd fa5, 224(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 32(s1)
+; LP64E-NEXT:    fsd fa5, 216(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 40(s1)
+; LP64E-NEXT:    fsd fa5, 208(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 48(s1)
+; LP64E-NEXT:    fsd fa5, 200(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 56(s1)
+; LP64E-NEXT:    fsd fa5, 192(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 64(s1)
+; LP64E-NEXT:    fsd fa5, 184(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 72(s1)
+; LP64E-NEXT:    fsd fa5, 176(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 80(s1)
+; LP64E-NEXT:    fsd fa5, 168(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 88(s1)
+; LP64E-NEXT:    fsd fa5, 160(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 96(s1)
+; LP64E-NEXT:    fsd fa5, 152(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 104(s1)
+; LP64E-NEXT:    fsd fa5, 144(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 112(s1)
+; LP64E-NEXT:    fsd fa5, 136(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 120(s1)
+; LP64E-NEXT:    fsd fa5, 128(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 128(s1)
+; LP64E-NEXT:    fsd fa5, 120(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 136(s1)
+; LP64E-NEXT:    fsd fa5, 112(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 144(s1)
+; LP64E-NEXT:    fsd fa5, 104(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 152(s1)
+; LP64E-NEXT:    fsd fa5, 96(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 160(s1)
+; LP64E-NEXT:    fsd fa5, 88(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 168(s1)
+; LP64E-NEXT:    fsd fa5, 80(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 176(s1)
+; LP64E-NEXT:    fsd fa5, 72(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 184(s1)
+; LP64E-NEXT:    fsd fa5, 64(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 192(s1)
+; LP64E-NEXT:    fsd fa5, 56(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 200(s1)
+; LP64E-NEXT:    fsd fa5, 48(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 208(s1)
+; LP64E-NEXT:    fsd fa5, 40(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 216(s1)
+; LP64E-NEXT:    fsd fa5, 32(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 224(s1)
+; LP64E-NEXT:    fsd fa5, 24(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 232(s1)
+; LP64E-NEXT:    fsd fa5, 16(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 240(s1)
+; LP64E-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    fld fa5, 248(s1)
+; LP64E-NEXT:    fsd fa5, 0(sp) # 8-byte Folded Spill
+; LP64E-NEXT:    call callee
+; LP64E-NEXT:    fld fa5, 0(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 248(s1)
+; LP64E-NEXT:    fld fa5, 8(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 240(s1)
+; LP64E-NEXT:    fld fa5, 16(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 232(s1)
+; LP64E-NEXT:    fld fa5, 24(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 224(s1)
+; LP64E-NEXT:    fld fa5, 32(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 216(s1)
+; LP64E-NEXT:    fld fa5, 40(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 208(s1)
+; LP64E-NEXT:    fld fa5, 48(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 200(s1)
+; LP64E-NEXT:    fld fa5, 56(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 192(s1)
+; LP64E-NEXT:    fld fa5, 64(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 184(s1)
+; LP64E-NEXT:    fld fa5, 72(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 176(s1)
+; LP64E-NEXT:    fld fa5, 80(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 168(s1)
+; LP64E-NEXT:    fld fa5, 88(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 160(s1)
+; LP64E-NEXT:    fld fa5, 96(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 152(s1)
+; LP64E-NEXT:    fld fa5, 104(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 144(s1)
+; LP64E-NEXT:    fld fa5, 112(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 136(s1)
+; LP64E-NEXT:    fld fa5, 120(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 128(s1)
+; LP64E-NEXT:    fld fa5, 128(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 120(s1)
+; LP64E-NEXT:    fld fa5, 136(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 112(s1)
+; LP64E-NEXT:    fld fa5, 144(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 104(s1)
+; LP64E-NEXT:    fld fa5, 152(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 96(s1)
+; LP64E-NEXT:    fld fa5, 160(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 88(s1)
+; LP64E-NEXT:    fld fa5, 168(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 80(s1)
+; LP64E-NEXT:    fld fa5, 176(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 72(s1)
+; LP64E-NEXT:    fld fa5, 184(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 64(s1)
+; LP64E-NEXT:    fld fa5, 192(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 56(s1)
+; LP64E-NEXT:    fld fa5, 200(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 48(s1)
+; LP64E-NEXT:    fld fa5, 208(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 40(s1)
+; LP64E-NEXT:    fld fa5, 216(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 32(s1)
+; LP64E-NEXT:    fld fa5, 224(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 24(s1)
+; LP64E-NEXT:    fld fa5, 232(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, 16(s1)
+; LP64E-NEXT:    fld fa5, 240(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, %lo(var+8)(s0)
+; LP64E-NEXT:    fld fa5, 248(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    fsd fa5, %lo(var)(s0)
+; LP64E-NEXT:    ld ra, 272(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    ld s0, 264(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    ld s1, 256(sp) # 8-byte Folded Reload
+; LP64E-NEXT:    addi sp, sp, 280
+; LP64E-NEXT:    ret
 ;
 ; ILP32D-LABEL: caller:
 ; ILP32D:       # %bb.0:

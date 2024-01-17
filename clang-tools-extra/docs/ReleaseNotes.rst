@@ -502,8 +502,8 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value. It also ignores
-  false-positives for comparison containing bool bitfield.
+  suggestions when parentheses are added to the return value or expressions. 
+  It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation
   <clang-tidy/checks/readability/misleading-indentation>` check to ignore

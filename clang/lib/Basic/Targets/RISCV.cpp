@@ -154,7 +154,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__riscv_float_abi_soft");
 
-  if (ABIName == "ilp32e")
+  if (ABIName == "ilp32e" || ABIName == "lp64e")
     Builder.defineMacro("__riscv_abi_rve");
 
   Builder.defineMacro("__riscv_arch_test");
@@ -214,6 +214,13 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_misaligned_fast");
   else
     Builder.defineMacro("__riscv_misaligned_avoid");
+
+  if (ISAInfo->hasExtension("e")) {
+    if (Is64Bit)
+      Builder.defineMacro("__riscv_64e");
+    else
+      Builder.defineMacro("__riscv_32e");
+  }
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
@@ -378,6 +385,11 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (llvm::is_contained(Features, "+experimental"))
     HasExperimental = true;
 
+  if (ABI == "ilp32e" && ISAInfo->hasExtension("d")) {
+    Diags.Report(diag::err_invalid_feature_combination)
+        << "ILP32E cannot be used with the D ISA extension";
+    return false;
+  }
   return true;
 }
 
