@@ -163,6 +163,48 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
   llvm_unreachable("Unknown 'Kind' Passed");
 }
 
+/// Used for cases where we have a token we want to check against an
+/// 'identifier-like' token, but don't want to give awkward error messages in
+/// cases where it is accidentially a keyword.
+bool isTokenIdentifierOrKeyword(Parser &P, Token Tok) {
+  if (Tok.is(tok::identifier))
+    return true;
+
+  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() &&
+      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts()))
+    return true;
+
+  return false;
+}
+
+/// Parses and consumes an identifer followed immediately by a single colon, and
+/// diagnoses if it is not the 'special token' kind that we require. Used when
+/// the tag is the only valid value.
+/// Return 'true' if the special token was matched, false if no special token,
+/// or an invalid special token was found.
+template <typename DirOrClauseTy>
+bool tryParseAndConsumeSpecialTokenKind(Parser &P, OpenACCSpecialTokenKind Kind,
+                                        DirOrClauseTy DirOrClause) {
+  Token IdentTok = P.getCurToken();
+  // If this is an identifier-like thing followed by ':', it is one of the
+  // OpenACC 'special' name tags, so consume it.
+  if (isTokenIdentifierOrKeyword(P, IdentTok) && P.NextToken().is(tok::colon)) {
+    P.ConsumeToken();
+    P.ConsumeToken();
+
+    if (!isOpenACCSpecialToken(Kind, IdentTok)) {
+      P.Diag(IdentTok, diag::err_acc_invalid_tag_kind)
+          << IdentTok.getIdentifierInfo() << DirOrClause
+          << std::is_same_v<DirOrClauseTy, OpenACCClauseKind>;
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
   if (!Tok.is(tok::identifier))
     return false;
@@ -217,11 +259,7 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
 bool expectIdentifierOrKeyword(Parser &P) {
   Token Tok = P.getCurToken();
 
-  if (Tok.is(tok::identifier))
-    return false;
-
-  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() &&
-      Tok.getIdentifierInfo()->isKeyword(P.getLangOpts()))
+  if (isTokenIdentifierOrKeyword(P, Tok))
     return false;
 
   P.Diag(P.getCurToken(), diag::err_expected) << tok::identifier;
@@ -673,14 +711,11 @@ void Parser::ParseOpenACCCacheVarList() {
     return;
 
   // The VarList is an optional `readonly:` followed by a list of a variable
-  // specifications.  First, see if we have `readonly:`, else we back-out and
-  // treat it like the beginning of a reference to a potentially-existing
-  // `readonly` variable.
-  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::ReadOnly, Tok) &&
-      NextToken().is(tok::colon)) {
-    // Consume both tokens.
-    ConsumeToken();
-    ConsumeToken();
+  // specifications. Consume something that looks like a 'tag', and diagnose if
+  // it isn't 'readonly'.
+  if (tryParseAndConsumeSpecialTokenKind(*this,
+                                         OpenACCSpecialTokenKind::ReadOnly,
+                                         OpenACCDirectiveKind::Cache)) {
     // FIXME: Record that this is a 'readonly' so that we can use that during
     // Sema/AST generation.
   }
