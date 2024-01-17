@@ -51,7 +51,6 @@ unittest("AnalysisTests") {
     "UnrollAnalyzerTest.cpp",
     "ValueLatticeTest.cpp",
     "ValueTrackingTest.cpp",
-    "VectorFunctionABITest.cpp",
     "VectorUtilsTest.cpp",
   ]
 

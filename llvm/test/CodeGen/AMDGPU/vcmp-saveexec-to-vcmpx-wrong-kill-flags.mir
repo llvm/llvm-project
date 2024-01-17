@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX1030 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX1030 %s
 
 ---
 
