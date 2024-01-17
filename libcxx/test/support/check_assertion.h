@@ -30,8 +30,6 @@
 # error "C++11 or greater is required to use this header"
 #endif
 
-#include <iostream>
-
 struct AssertionInfoMatcher {
   static const int any_line = -1;
   static constexpr const char* any_file = "*";
@@ -60,6 +58,10 @@ struct AssertionInfoMatcher {
   }
 
   bool empty() const { return is_empty_; }
+  bool IsAnyMatcher() const {
+    return msg_ == any_msg && file_ == any_file && line_ == any_line;
+  }
+
 private:
   bool CheckLineMatches(int got_line) const {
     if (line_ == any_line)
@@ -95,6 +97,7 @@ private:
     // Allow any match
     return true;
   }
+
 private:
   bool is_empty_;
   std::string_view msg_;
@@ -110,9 +113,7 @@ inline AssertionInfoMatcher& GlobalMatcher() {
 }
 
 struct DeathTest {
-  enum ResultKind {
-    RK_DidNotDie, RK_MatchFound, RK_MatchFailure, RK_Terminate, RK_SetupFailure, RK_Unknown
-  };
+  enum ResultKind { RK_DidNotDie, RK_MatchFound, RK_MatchFailure, RK_Terminate, RK_SetupFailure, RK_Trap, RK_Unknown };
 
   static const char* ResultKindToString(ResultKind RK) {
 #define CASE(K) case K: return #K
@@ -123,6 +124,7 @@ struct DeathTest {
     CASE(RK_MatchFound);
     CASE(RK_Unknown);
     CASE(RK_Terminate);
+    CASE(RK_Trap);
     }
     return "not a result kind";
   }
@@ -131,7 +133,7 @@ struct DeathTest {
     return val >= RK_DidNotDie && val <= RK_Unknown;
   }
 
-  DeathTest(AssertionInfoMatcher const& Matcher) : matcher_(Matcher) {}
+  DeathTest(AssertionInfoMatcher const& matcher) : matcher_(matcher) {}
 
   template <class Func>
   ResultKind Run(Func&& f) {
@@ -200,21 +202,20 @@ private:
     pid_t result = waitpid(child_pid_, &status_value, 0);
     assert(result != -1 && "there is no child process to wait for");
 
-    std::cout << "OBC status_value: " << status_value << std::endl;
     if (WIFEXITED(status_value)) {
       exit_code_ = WEXITSTATUS(status_value);
-      std::cout << "OBC exit code: " << exit_code_ << ", status_value: " << status_value << std::endl;
       if (!IsValidResultKind(exit_code_))
         return RK_Unknown;
       return static_cast<ResultKind>(exit_code_);
     }
+
     if (WIFSIGNALED(status_value)) {
-      std::cout << "OBC signal" << std::endl;
       exit_code_ = WTERMSIG(status_value);
-      std::cout << "OBC exit code: " << exit_code_ << ", status_value: " << status_value << std::endl;
-      // Got 5, which is sigtrap
-      // 4 is sigill
+      if (exit_code_ == SIGILL || exit_code_ == SIGTRAP) {
+        return RK_Trap;
+      }
     }
+
     return RK_Unknown;
   }
 
@@ -274,13 +275,20 @@ void std::__libcpp_verbose_abort(char const* message, ...) {
   std::exit(DeathTest::RK_Terminate);
 }
 
+enum class DeathCause {
+  VerboseAbort,
+  StdTerminate,
+  HardeningAssertion
+};
+
 template <class Func>
-inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
+inline bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, AssertionInfoMatcher matcher) {
   std::set_terminate(terminate_handler);
-  DeathTest DT(Matcher);
+  DeathTest DT(matcher);
   DeathTest::ResultKind RK = DT.Run(func);
+
   auto OnFailure = [&](const char* msg) {
-    std::fprintf(stderr, "EXPECT_DEATH( %s ) failed! (%s)\n\n", stmt, msg);
+    std::fprintf(stderr, "Failure: EXPECT_DEATH( %s ) failed!\n(Reason: %s)\n\n", stmt, msg);
     if (RK != DeathTest::RK_Unknown) {
       std::fprintf(stderr, "child exit code: %d\n", DT.getChildExitCode());
     }
@@ -292,34 +300,51 @@ inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matc
     }
     return false;
   };
+
   switch (RK) {
   case DeathTest::RK_MatchFound:
+    return true;
+
   case DeathTest::RK_Terminate:
     return true;
+
+  case DeathTest::RK_Trap:
+    switch (expected_cause) {
+  case DeathCause::HardeningAssertion:
+#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+    return true;
+#else
+    return OnFailure("The process has trapped but was expected to invoke verbose abort.");
+#endif
+  case DeathCause::VerboseAbort:
+      return OnFailure("The process has trapped but was expected to invoke verbose abort.");
+  case DeathCause::StdTerminate:
+      return OnFailure("The process has trapped but was expected to call `std::terminate`.");
+    }
+
   case DeathTest::RK_SetupFailure:
     return OnFailure("child failed to setup test environment");
   case DeathTest::RK_Unknown:
-      return OnFailure("reason unknown");
+    return OnFailure("reason unknown");
   case DeathTest::RK_DidNotDie:
-      return OnFailure("child did not die");
+    return OnFailure("child did not die");
   case DeathTest::RK_MatchFailure:
-      return OnFailure("matcher failed");
+    return OnFailure("matcher failed");
   }
+
   assert(false && "unreachable");
 }
 
 template <class Func>
-inline bool ExpectDeath(const char* stmt, Func&& func) {
-  return ExpectDeath(stmt, func, AnyMatcher);
+inline bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
+  return ExpectDeath(expected_cause, stmt, func, AnyMatcher);
 }
 
-/// Assert that the specified expression throws a libc++ debug exception.
-#define EXPECT_DEATH(...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; } )))
+/// Assert that the specified expression aborts.
+#define EXPECT_DEATH(...) /*            */ assert((ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; } )))
+#define EXPECT_DEATH_MATCHES(matcher, ...) assert((ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher)))
+#define EXPECT_STD_TERMINATE(...) /*    */ assert(ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__))
 
-#define EXPECT_STD_TERMINATE(...) assert(ExpectDeath(#__VA_ARGS__, __VA_ARGS__))
-
-#define EXPECT_DEATH_MATCHES(Matcher, ...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; }, Matcher)))
-
-#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) assert((ExpectDeath(#expr, [&]() { (void)(expr); }, AssertionInfoMatcher(message))))
+#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) assert((ExpectDeath(DeathCause::HardeningAssertion, #expr, [&]() { (void)(expr); }, AssertionInfoMatcher(message))))
 
 #endif // TEST_SUPPORT_CHECK_ASSERTION_H
