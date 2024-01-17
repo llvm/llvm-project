@@ -1434,21 +1434,37 @@ entry:
 }
 
 define zeroext i8 @add_v16i8_v16i8_acc(<16 x i8> %x, i8 %a) {
-; CHECK-SD-LABEL: add_v16i8_v16i8_acc:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    addv b0, v0.16b
-; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    add w8, w8, w0
-; CHECK-SD-NEXT:    and w0, w8, #0xff
-; CHECK-SD-NEXT:    ret
+; CHECK-SD-BASE-LABEL: add_v16i8_v16i8_acc:
+; CHECK-SD-BASE:       // %bb.0: // %entry
+; CHECK-SD-BASE-NEXT:    addv b0, v0.16b
+; CHECK-SD-BASE-NEXT:    fmov w8, s0
+; CHECK-SD-BASE-NEXT:    add w8, w8, w0
+; CHECK-SD-BASE-NEXT:    and w0, w8, #0xff
+; CHECK-SD-BASE-NEXT:    ret
 ;
-; CHECK-GI-LABEL: add_v16i8_v16i8_acc:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    addv b0, v0.16b
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    add w8, w0, w8, uxtb
-; CHECK-GI-NEXT:    and w0, w8, #0xff
-; CHECK-GI-NEXT:    ret
+; CHECK-SD-DOT-LABEL: add_v16i8_v16i8_acc:
+; CHECK-SD-DOT:       // %bb.0: // %entry
+; CHECK-SD-DOT-NEXT:    addv b0, v0.16b
+; CHECK-SD-DOT-NEXT:    fmov w8, s0
+; CHECK-SD-DOT-NEXT:    add w8, w8, w0
+; CHECK-SD-DOT-NEXT:    and w0, w8, #0xff
+; CHECK-SD-DOT-NEXT:    ret
+;
+; CHECK-GI-BASE-LABEL: add_v16i8_v16i8_acc:
+; CHECK-GI-BASE:       // %bb.0: // %entry
+; CHECK-GI-BASE-NEXT:    addv b0, v0.16b
+; CHECK-GI-BASE-NEXT:    fmov w8, s0
+; CHECK-GI-BASE-NEXT:    add w8, w0, w8, uxtb
+; CHECK-GI-BASE-NEXT:    and w0, w8, #0xff
+; CHECK-GI-BASE-NEXT:    ret
+;
+; CHECK-GI-DOT-LABEL: add_v16i8_v16i8_acc:
+; CHECK-GI-DOT:       // %bb.0: // %entry
+; CHECK-GI-DOT-NEXT:    addv b0, v0.16b
+; CHECK-GI-DOT-NEXT:    fmov w8, s0
+; CHECK-GI-DOT-NEXT:    add w8, w0, w8, uxtb
+; CHECK-GI-DOT-NEXT:    and w0, w8, #0xff
+; CHECK-GI-DOT-NEXT:    ret
 entry:
   %z = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %x)
   %r = add i8 %z, %a
