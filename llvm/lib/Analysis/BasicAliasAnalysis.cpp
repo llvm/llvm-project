@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -63,6 +64,7 @@
 #define DEBUG_TYPE "basicaa"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
@@ -255,31 +257,48 @@ void EarliestEscapeInfo::removeInstruction(Instruction *I) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Represents zext(sext(trunc(V))).
+
+// VScale can be introduced from both gep offsets and uses of by llvm.vscale.
+// This value represents vscale in VariableGEPIndex, so the two can be used in
+// similar ways.
+const Value *VScaleSentinel = reinterpret_cast<const Value *>(-1);
+
+/// Represents zext(sext(trunc(V))). For vscale V uses VScaleSentinel.
 struct CastedValue {
   const Value *V;
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
   unsigned TruncBits = 0;
+  unsigned OriginalBits;
 
-  explicit CastedValue(const Value *V) : V(V) {}
+  explicit CastedValue(const Value *V) : V(V) {
+    OriginalBits = V->getType()->getPrimitiveSizeInBits();
+  }
   explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits,
                        unsigned TruncBits)
-      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {}
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {
+    OriginalBits = V->getType()->getPrimitiveSizeInBits();
+  }
 
   unsigned getBitWidth() const {
-    return V->getType()->getPrimitiveSizeInBits() - TruncBits + ZExtBits +
-           SExtBits;
+    return OriginalBits - TruncBits + ZExtBits + SExtBits;
   }
 
   CastedValue withValue(const Value *NewV) const {
     return CastedValue(NewV, ZExtBits, SExtBits, TruncBits);
   }
 
+  CastedValue withVScale(const Value *VScale) const {
+    CastedValue C(VScale, ZExtBits, SExtBits, TruncBits);
+    C.V = VScaleSentinel;
+    return C;
+  }
+
   /// Replace V with zext(NewV)
   CastedValue withZExtOfValue(const Value *NewV) const {
-    unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
-                        NewV->getType()->getPrimitiveSizeInBits();
+    assert(V != VScaleSentinel);
+    unsigned ExtendBy =
+        OriginalBits - NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
       return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
 
@@ -290,8 +309,9 @@ struct CastedValue {
 
   /// Replace V with sext(NewV)
   CastedValue withSExtOfValue(const Value *NewV) const {
-    unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
-                        NewV->getType()->getPrimitiveSizeInBits();
+    assert(V != VScaleSentinel);
+    unsigned ExtendBy =
+        OriginalBits - NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
       return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
 
@@ -301,8 +321,7 @@ struct CastedValue {
   }
 
   APInt evaluateWith(APInt N) const {
-    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
-           "Incompatible bit width");
+    assert(N.getBitWidth() == OriginalBits && "Incompatible bit width");
     if (TruncBits) N = N.trunc(N.getBitWidth() - TruncBits);
     if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
@@ -310,8 +329,7 @@ struct CastedValue {
   }
 
   ConstantRange evaluateWith(ConstantRange N) const {
-    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
-           "Incompatible bit width");
+    assert(N.getBitWidth() == OriginalBits && "Incompatible bit width");
     if (TruncBits) N = N.truncate(N.getBitWidth() - TruncBits);
     if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
@@ -367,6 +385,12 @@ static LinearExpression GetLinearExpression(
   // Limit our recursion depth.
   if (Depth == 6)
     return Val;
+
+  // If llvm.vscale is matched, set linear expression with the VScaleSentinel
+  // and scale 1, offset 0
+  if (match(Val.V, m_VScale()))
+    return LinearExpression(Val.withVScale(Val.V), APInt(Val.getBitWidth(), 1),
+                            APInt(Val.getBitWidth(), 0), true);
 
   if (const ConstantInt *Const = dyn_cast<ConstantInt>(Val.V))
     return LinearExpression(Val, APInt(Val.getBitWidth(), 0),
@@ -492,18 +516,17 @@ struct VariableGEPIndex {
     return Scale == Other.Scale;
   }
 
+  bool isVScale() const { return Val.V == VScaleSentinel; }
+
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
   }
   void print(raw_ostream &OS) const {
-    OS << "(V=" << Val.V->getName()
-       << ", zextbits=" << Val.ZExtBits
-       << ", sextbits=" << Val.SExtBits
-       << ", truncbits=" << Val.TruncBits
-       << ", scale=" << Scale
-       << ", nsw=" << IsNSW
-       << ", negated=" << IsNegated << ")";
+    OS << "(V=" << (isVScale() ? "vscale" : Val.V->getName())
+       << ", zextbits=" << Val.ZExtBits << ", sextbits=" << Val.SExtBits
+       << ", truncbits=" << Val.TruncBits << ", scale=" << Scale
+       << ", nsw=" << IsNSW << ", negated=" << IsNegated << ")";
   }
 };
 }
@@ -635,27 +658,19 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         continue;
       }
 
+      TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
+      const bool ScalableGEP = isa<ScalableVectorType>(GTI.getIndexedType());
       // For an array/pointer, add the element offset, explicitly scaled.
+      // Skip adding to constant offset if GEP index is marked as scalable
+      // they are handled below as variable offset
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-
-        // Don't attempt to analyze GEPs if the scalable index is not zero.
-        TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
-        if (AllocTypeSize.isScalable()) {
-          Decomposed.Base = V;
-          return Decomposed;
+        if (!ScalableGEP) {
+          Decomposed.Offset += AllocTypeSize.getFixedValue() *
+                               CIdx->getValue().sextOrTrunc(MaxIndexSize);
+          continue;
         }
-
-        Decomposed.Offset += AllocTypeSize.getFixedValue() *
-                             CIdx->getValue().sextOrTrunc(MaxIndexSize);
-        continue;
-      }
-
-      TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
-      if (AllocTypeSize.isScalable()) {
-        Decomposed.Base = V;
-        return Decomposed;
       }
 
       GepHasConstantOffset = false;
@@ -665,11 +680,33 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
-      LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
+      // Scalable GEP decomposition
+      // Allow Scalable GEP to be decomposed in the case of
+      //    1. getelementptr <4 x vscale x i32> with 1st index as a constant
+      //    2. Index which have a leaf of @llvm.vscale
+      // In both cases, essentially CastedValue of VariableGEPIndex is VScale,
+      // however the intrinsic cannot be used as V in both cases, a
+      // VScaleSentinel is used to represent both.
+      LinearExpression LE(CastedValue(Index, 0, SExtBits, TruncBits));
+      if (ScalableGEP) {
+        if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
+          LE = LinearExpression(LE.Val.withVScale(CIdx),
+                                LE.Val.evaluateWith(CIdx->getValue()),
+                                APInt(LE.Val.getBitWidth(), 0), true);
+          assert(LE.Offset.isZero() && "For Scalable GEP constant first index, "
+                                       "the offset of LE should be 0");
+        } else {
+          // if first index is not a constant, a single variable gep will
+          // contain 2 variables, bail in this case
+          Decomposed.Base = V;
+          return Decomposed;
+        }
+      } else {
+        LE = GetLinearExpression(LE.Val, DL, 0, AC, DT);
+      }
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedValue();
+      unsigned TypeSize = AllocTypeSize.getKnownMinValue();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
@@ -1076,8 +1113,6 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If an inbounds GEP would have to start from an out of bounds address
   // for the two to alias, then we can assume noalias.
-  // TODO: Remove !isScalable() once BasicAA fully support scalable location
-  // size
   if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
       V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue()) &&
@@ -1112,10 +1147,6 @@ AliasResult BasicAAResult::aliasGEP(
     return BaseAlias;
   }
 
-  // Bail on analysing scalable LocationSize
-  if (V1Size.isScalable() || V2Size.isScalable())
-    return AliasResult::MayAlias;
-
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know
   // that the objects are partially overlapping.  If the difference is
@@ -1142,7 +1173,7 @@ AliasResult BasicAAResult::aliasGEP(
       Off = -Off;
     }
 
-    if (!VLeftSize.hasValue())
+    if (!VLeftSize.hasValue() || VLeftSize.isScalable())
       return AliasResult::MayAlias;
 
     const uint64_t LSize = VLeftSize.getValue();
@@ -1150,8 +1181,8 @@ AliasResult BasicAAResult::aliasGEP(
       // Conservatively drop processing if a phi was visited and/or offset is
       // too big.
       AliasResult AR = AliasResult::PartialAlias;
-      if (VRightSize.hasValue() && Off.ule(INT32_MAX) &&
-          (Off + VRightSize.getValue()).ule(LSize)) {
+      if (VRightSize.hasValue() && !VRightSize.isScalable() &&
+          Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSize)) {
         // Memory referenced by right pointer is nested. Save the offset in
         // cache. Note that originally offset estimated as GEP1-V2, but
         // AliasResult contains the shift that represents GEP1+Offset=V2.
@@ -1165,6 +1196,10 @@ AliasResult BasicAAResult::aliasGEP(
 
   // We need to know both acess sizes for all the following heuristics.
   if (!V1Size.hasValue() || !V2Size.hasValue())
+    return AliasResult::MayAlias;
+
+  // Bail on Scalable location size from now onwards
+  if (V1Size.isScalable() || V2Size.isScalable())
     return AliasResult::MayAlias;
 
   APInt GCD;
@@ -1182,10 +1217,14 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
-                                            true, &AC, Index.CxtI);
-    KnownBits Known =
-        computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
+    ConstantRange CR =
+        Index.isVScale()
+            ? getVScaleRange(&F, OffsetRange.getBitWidth())
+            : computeConstantRange(Index.Val.V, /* ForSigned */ false, true,
+                                   &AC, Index.CxtI);
+    KnownBits Known = Index.isVScale() ? KnownBits(OffsetRange.getBitWidth())
+                                       : computeKnownBits(Index.Val.V, DL, 0,
+                                                          &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1233,7 +1272,7 @@ AliasResult BasicAAResult::aliasGEP(
   if (DecompGEP1.VarIndices.size() == 1) {
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-    if (Var.Val.TruncBits == 0 &&
+    if (Var.Val.TruncBits == 0 && !Var.isVScale() &&
         isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
@@ -1241,11 +1280,10 @@ AliasResult BasicAAResult::aliasGEP(
         if (Var.IsNSW)
           return true;
 
-        int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
         // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
         // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
         // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-        int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+        int MaxScaleValueBW = Var.Val.getBitWidth() - Var.Val.OriginalBits;
         if (MaxScaleValueBW <= 0)
           return false;
         return Var.Scale.ule(
@@ -1266,6 +1304,7 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var0 = DecompGEP1.VarIndices[0];
     const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
     if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
+        !Var0.isVScale() && !Var1.isVScale() &&
         Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
         isKnownNonEqual(Var0.Val.V, Var1.Val.V, DL, &AC, /* CxtI */ nullptr,
                         DT))
@@ -1749,7 +1788,10 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
     bool Found = false;
     for (auto I : enumerate(DestGEP.VarIndices)) {
       VariableGEPIndex &Dest = I.value();
-      if (!isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI) ||
+      if (Dest.isVScale() != Src.isVScale())
+        continue;
+      if ((!Dest.isVScale() &&
+           !isValueEqualInPotentialCycles(Dest.Val.V, Src.Val.V, AAQI)) ||
           !Dest.Val.hasSameCastsAs(Src.Val))
         continue;
 
@@ -1796,8 +1838,8 @@ bool BasicAAResult::constantOffsetHeuristic(const DecomposedGEP &GEP,
 
   const VariableGEPIndex &Var0 = GEP.VarIndices[0], &Var1 = GEP.VarIndices[1];
 
-  if (Var0.Val.TruncBits != 0 || !Var0.Val.hasSameCastsAs(Var1.Val) ||
-      !Var0.hasNegatedScaleOf(Var1) ||
+  if (Var0.isVScale() || Var1.isVScale() || Var0.Val.TruncBits != 0 ||
+      !Var0.Val.hasSameCastsAs(Var1.Val) || !Var0.hasNegatedScaleOf(Var1) ||
       Var0.Val.V->getType() != Var1.Val.V->getType())
     return false;
 
