@@ -138,6 +138,8 @@ StringRef LoongArchMCExpr::getVariantKindName(VariantKind Kind) {
     return "gd_pc_hi20";
   case VK_LoongArch_TLS_GD_HI20:
     return "gd_hi20";
+  case VK_LoongArch_CALL36:
+    return "call36";
   }
 }
 
@@ -180,6 +182,7 @@ LoongArchMCExpr::getVariantKindForName(StringRef name) {
       .Case("ld_hi20", VK_LoongArch_TLS_LD_HI20)
       .Case("gd_pc_hi20", VK_LoongArch_TLS_GD_PC_HI20)
       .Case("gd_hi20", VK_LoongArch_TLS_GD_HI20)
+      .Case("call36", VK_LoongArch_CALL36)
       .Default(VK_LoongArch_Invalid);
 }
 

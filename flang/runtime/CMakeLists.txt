@@ -105,6 +105,7 @@ set(sources
   edit-output.cpp
   environment.cpp
   exceptions.cpp
+  execute.cpp
   extensions.cpp
   extrema.cpp
   file.cpp

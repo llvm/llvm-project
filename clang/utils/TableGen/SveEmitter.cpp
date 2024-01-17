@@ -1066,17 +1066,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
 
   std::string FullName = mangleName(ClassS);
   std::string ProtoName = mangleName(getClassKind());
-  std::string SMEAttrs = "";
-
-  if (Flags & Emitter.getEnumValueForFlag("IsStreaming"))
-    SMEAttrs += ", arm_streaming";
-  if (Flags & Emitter.getEnumValueForFlag("IsStreamingCompatible"))
-    SMEAttrs += ", arm_streaming_compatible";
-  if (Flags & Emitter.getEnumValueForFlag("IsSharedZA"))
-    SMEAttrs += ", arm_shared_za";
-  if (Flags & Emitter.getEnumValueForFlag("IsPreservesZA"))
-    SMEAttrs += ", arm_preserves_za";
-
   OS << (IsOverloaded ? "__aio " : "__ai ")
      << "__attribute__((__clang_arm_builtin_alias(";
 
@@ -1089,8 +1078,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
     break;
   }
 
-  if (!SMEAttrs.empty())
-    OS << SMEAttrs;
   OS << "))\n";
 
   OS << getTypes()[0].str() << " " << ProtoName << "(";
@@ -1619,7 +1606,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "}\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
-        "__arm_streaming_compatible __arm_shared_za "
+        "__arm_streaming_compatible __arm_out(\"za\") "
         "{ }\n\n";
 
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
@@ -1773,11 +1760,14 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingOrSVE2p1Flag = getEnumValueForFlag("IsStreamingOrSVE2p1");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(IsStreamingOrSVE2p1Flag))
+      StreamingMap["ArmStreamingOrSVE2p1"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

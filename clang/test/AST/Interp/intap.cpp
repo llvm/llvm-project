@@ -5,6 +5,7 @@
 
 
 using MaxBitInt = _BitInt(128);
+#define INT_MIN (~__INT_MAX__)
 
 constexpr _BitInt(2) A = 0;
 constexpr _BitInt(2) B = A + 1;
@@ -43,6 +44,35 @@ static_assert(MulA * MulB == 50, ""); // ref-error {{not an integral constant ex
                                       // expected-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}}
 static_assert(MulA * 5 == 25, "");
 static_assert(-1 * MulB == -7, "");
+
+
+constexpr _BitInt(4) DivA = 2;
+constexpr _BitInt(2) DivB = 1;
+static_assert(DivA / DivB == 2, "");
+
+constexpr _BitInt(4) DivC = DivA / 0; // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{division by zero}} \
+                                      // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{division by zero}}
+
+constexpr _BitInt(7) RemA = 47;
+constexpr _BitInt(6) RemB = 9;
+static_assert(RemA % RemB == 2, "");
+static_assert(RemA % 0 == 1, ""); // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{division by zero}} \
+                                  // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{division by zero}}
+
+constexpr _BitInt(32) bottom = -1;
+constexpr _BitInt(32) top = INT_MIN;
+constexpr _BitInt(32) nope = top / bottom;  // ref-error {{must be initialized by a constant expression}} \
+                                            // ref-note {{value 2147483648 is outside the range}} \
+                                            // expected-error {{must be initialized by a constant expression}} \
+                                            // expected-note {{value 2147483648 is outside the range}}
+constexpr _BitInt(32) noooo = top % bottom; // ref-error {{must be initialized by a constant expression}} \
+                                            // ref-note {{value 2147483648 is outside the range}} \
+                                            // expected-error {{must be initialized by a constant expression}} \
+                                            // expected-note {{value 2147483648 is outside the range}}
 
 namespace APCast {
   constexpr _BitInt(10) A = 1;

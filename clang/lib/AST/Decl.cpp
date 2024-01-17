@@ -2835,7 +2835,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
-  if (!List)
+  if (!List || List->getNumInits() == 0)
     return CharUnits::Zero();
   const Expr *FlexibleInit = List->getInit(List->getNumInits() - 1);
   auto InitTy = Ctx.getAsConstantArrayType(FlexibleInit->getType());
@@ -5369,16 +5369,23 @@ void CapturedDecl::setBody(Stmt *B) { BodyAndNothrow.setPointer(B); }
 bool CapturedDecl::isNothrow() const { return BodyAndNothrow.getInt(); }
 void CapturedDecl::setNothrow(bool Nothrow) { BodyAndNothrow.setInt(Nothrow); }
 
+EnumConstantDecl::EnumConstantDecl(const ASTContext &C, DeclContext *DC,
+                                   SourceLocation L, IdentifierInfo *Id,
+                                   QualType T, Expr *E, const llvm::APSInt &V)
+    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt *)E) {
+  setInitVal(C, V);
+}
+
 EnumConstantDecl *EnumConstantDecl::Create(ASTContext &C, EnumDecl *CD,
                                            SourceLocation L,
                                            IdentifierInfo *Id, QualType T,
                                            Expr *E, const llvm::APSInt &V) {
-  return new (C, CD) EnumConstantDecl(CD, L, Id, T, E, V);
+  return new (C, CD) EnumConstantDecl(C, CD, L, Id, T, E, V);
 }
 
 EnumConstantDecl *
 EnumConstantDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) EnumConstantDecl(nullptr, SourceLocation(), nullptr,
+  return new (C, ID) EnumConstantDecl(C, nullptr, SourceLocation(), nullptr,
                                       QualType(), nullptr, llvm::APSInt());
 }
 

@@ -48,6 +48,7 @@ void g() {
 #endif
 
 // dr2331: na
+// dr2335 is in dr2335.cxx
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
@@ -212,6 +213,8 @@ namespace dr2387 { // dr2387: 9
   extern template const int d<const int>;
 #endif
 }
+
+// dr2390 is in dr2390.cpp
 
 namespace dr2394 { // dr2394: 15
 

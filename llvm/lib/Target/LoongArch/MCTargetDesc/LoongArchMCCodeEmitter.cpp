@@ -241,6 +241,9 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20:
       FixupKind = LoongArch::fixup_loongarch_tls_gd_hi20;
       break;
+    case LoongArchMCExpr::VK_LoongArch_CALL36:
+      FixupKind = LoongArch::fixup_loongarch_call36;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
              cast<MCSymbolRefExpr>(Expr)->getKind() ==

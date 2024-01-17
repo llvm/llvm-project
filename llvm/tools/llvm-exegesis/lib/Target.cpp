@@ -35,7 +35,7 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
   return nullptr;
 }
 
-Expected<std::unique_ptr<pfm::Counter>>
+Expected<std::unique_ptr<pfm::CounterGroup>>
 ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
                               const pid_t ProcessID) const {
   pfm::PerfEvent Event(CounterName);
@@ -45,7 +45,7 @@ ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
             .concat(CounterName)
             .concat("'"));
 
-  return std::make_unique<pfm::Counter>(std::move(Event), ProcessID);
+  return std::make_unique<pfm::CounterGroup>(std::move(Event), ProcessID);
 }
 
 void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
@@ -149,10 +149,15 @@ std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
 
 static_assert(std::is_trivial_v<PfmCountersInfo>,
               "We shouldn't have dynamic initialization here");
+
 const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
-                                                  0u};
+                                                  0u,      nullptr, 0u};
 const PfmCountersInfo PfmCountersInfo::Dummy = {
-    pfm::PerfEvent::DummyEventString, pfm::PerfEvent::DummyEventString, nullptr,
+    pfm::PerfEvent::DummyEventString,
+    pfm::PerfEvent::DummyEventString,
+    nullptr,
+    0u,
+    nullptr,
     0u};
 
 const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {

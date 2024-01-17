@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader:
 ; GCN-DAG: s_mov_b32 s4, SCRATCH_RSRC_DWORD0

@@ -63,13 +63,18 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
     if (Subtarget.hasStdExtF())
-      return CSR_XLEN_F32_Interrupt_SaveList;
-    return CSR_Interrupt_SaveList;
+      return Subtarget.isRVE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
+                               : CSR_XLEN_F32_Interrupt_SaveList;
+    return Subtarget.isRVE() ? CSR_Interrupt_RVE_SaveList
+                             : CSR_Interrupt_SaveList;
   }
 
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
+  case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
+    return CSR_ILP32E_LP64E_SaveList;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
     return CSR_ILP32_LP64_SaveList;
@@ -108,6 +113,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Additionally reserve dummy register used to form the register pair
   // beginning with 'x0' for instructions that take register pairs.
   markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
+
+  // There are only 16 GPRs for RVE.
+  if (Subtarget.isRVE())
+    for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
+      markSuperRegs(Reserved, Reg);
 
   // V registers for code generation. We handle them manually.
   markSuperRegs(Reserved, RISCV::VL);
@@ -270,8 +280,9 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -303,7 +314,6 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
     const int64_t VLENB = STI.getRealMinVLen() / 8;
     int64_t Offset = VLENB * LMUL;
@@ -347,8 +357,9 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -380,7 +391,6 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
   if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
     const int64_t VLENB = STI.getRealMinVLen() / 8;
     int64_t Offset = VLENB * LMUL;
@@ -673,6 +683,9 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
+  case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
+    return CSR_ILP32E_LP64E_RegMask;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
     return CSR_ILP32_LP64_RegMask;

@@ -387,18 +387,20 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
                       MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
                      Custom);
+
+  // FIXME: Why is v8f16/v8bf16 missing?
   setOperationAction(
       ISD::EXTRACT_SUBVECTOR,
-      {MVT::v2f16,  MVT::v2i16,  MVT::v2bf16, MVT::v4f16,  MVT::v4i16,
-       MVT::v4bf16, MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,
+      {MVT::v2f16,  MVT::v2bf16, MVT::v2i16,  MVT::v4f16,  MVT::v4bf16,
+       MVT::v4i16,  MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,
        MVT::v4f32,  MVT::v4i32,  MVT::v5f32,  MVT::v5i32,  MVT::v6f32,
        MVT::v6i32,  MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,
        MVT::v9f32,  MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32,
-       MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16i16,
-       MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32, MVT::v2f64,
-       MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,  MVT::v4i64,
-       MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64, MVT::v32i16,
-       MVT::v32f16},
+       MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16bf16,
+       MVT::v16i16, MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
+       MVT::v2f64,  MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,
+       MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64,
+       MVT::v32i16, MVT::v32f16, MVT::v32bf16},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);

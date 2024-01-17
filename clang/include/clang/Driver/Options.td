@@ -773,6 +773,8 @@ def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
   "Clang will use the GCC installation with the largest version">;
+def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
+  HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
   Group<Preprocessor_Group>,
     HelpText<"Include comments from within macros in preprocessed output">,
@@ -4265,7 +4267,7 @@ def iquote : JoinedOrSeparate<["-"], "iquote">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to QUOTE include search path">, MetaVarName<"<directory>">;
 def isysroot : JoinedOrSeparate<["-"], "isysroot">, Group<clang_i_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Set the system root directory (usually /)">, MetaVarName<"<dir>">,
   MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 def isystem : JoinedOrSeparate<["-"], "isystem">, Group<clang_i_Group>,
@@ -4390,8 +4392,8 @@ def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "65535">;
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "0">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
@@ -4583,11 +4585,13 @@ let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
   HelpText<"Enable use of experimental RISC-V extensions.">;
 def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
-  HelpText<"Specify the size in bits of an RVV vector register. Defaults to "
-           "the vector length agnostic value of \"scalable\". Accepts power of "
-           "2 values between 64 and 65536. Also accepts \"zvl\" "
-           "to use the value implied by -march/-mcpu. Value will be reflected "
-           "in __riscv_v_fixed_vlen preprocessor define (RISC-V only)">;
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Specify the size in bits of an RVV vector register">,
+  DocBrief<"Defaults to the vector length agnostic value of \"scalable\". "
+           "Accepts power of 2 values between 64 and 65536. Also accepts "
+           "\"zvl\" to use the value implied by -march/-mcpu. On Clang, value "
+           "will be reflected in __riscv_v_fixed_vlen preprocessor define "
+           "(RISC-V only)">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch/RISC-V only)">;
@@ -5168,7 +5172,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
-  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86">;
+  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -5195,12 +5199,12 @@ def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
 def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Do not link device library for CUDA/HIP device compilation">;
 def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
-def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option]>,
+def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
-def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option]>;
+def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
@@ -5303,7 +5307,8 @@ def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>,
+  BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
@@ -7008,6 +7013,8 @@ def mbranch_target_enforce : Flag<["-"], "mbranch-target-enforce">,
   MarshallingInfoFlag<LangOpts<"BranchTargetEnforcement">>;
 def mbranch_protection_pauth_lr : Flag<["-"], "mbranch-protection-pauth-lr">,
   MarshallingInfoFlag<LangOpts<"BranchProtectionPAuthLR">>;
+def mguarded_control_stack : Flag<["-"], "mguarded-control-stack">,
+  MarshallingInfoFlag<LangOpts<"GuardedControlStack">>;
 def fno_dllexport_inlines : Flag<["-"], "fno-dllexport-inlines">,
   MarshallingInfoNegativeFlag<LangOpts<"DllExportInlines">>;
 def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,

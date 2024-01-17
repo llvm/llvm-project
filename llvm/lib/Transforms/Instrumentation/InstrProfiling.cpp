@@ -1189,12 +1189,10 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
 }
 
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
-  // Don't do this for Darwin.  compiler-rt uses linker magic.
-  if (TT.isOSDarwin())
-    return false;
-  // Use linker script magic to get data/cnts/name start/end.
-  if (TT.isOSAIX() || TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
-      TT.isOSSolaris() || TT.isOSFuchsia() || TT.isPS() || TT.isOSWindows())
+  // compiler-rt uses linker support to get data/counters/name start/end for
+  // ELF, COFF, Mach-O and XCOFF.
+  if (TT.isOSBinFormatELF() || TT.isOSBinFormatCOFF() ||
+      TT.isOSBinFormatMachO() || TT.isOSBinFormatXCOFF())
     return false;
 
   return true;
