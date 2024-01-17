@@ -1994,16 +1994,20 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
 static ::mlir::ParseResult parseCallCommon(
     ::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
     llvm::function_ref<::mlir::ParseResult(::mlir::OpAsmParser &,
-                                           ::mlir::OperationState &, int32_t)>
-        customOpHandler = [](::mlir::OpAsmParser &parser,
-                             ::mlir::OperationState &result,
-                             int32_t numCallArgs) { return mlir::success(); }) {
+                                           ::mlir::OperationState &)>
+        customOpHandler =
+            [](::mlir::OpAsmParser &parser, ::mlir::OperationState &result) {
+              return mlir::success();
+            }) {
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> ops;
   llvm::SMLoc opsLoc;
   (void)opsLoc;
   llvm::ArrayRef<::mlir::Type> operandsTypes;
   llvm::ArrayRef<::mlir::Type> allResultTypes;
+
+  if (customOpHandler(parser, result))
+    return ::mlir::failure();
 
   // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
@@ -2034,9 +2038,6 @@ static ::mlir::ParseResult parseCallCommon(
   operandsTypes = opsFnTy.getInputs();
   allResultTypes = opsFnTy.getResults();
   result.addTypes(allResultTypes);
-
-  if (customOpHandler(parser, result, operandsTypes.size()).failed())
-    return ::mlir::failure();
 
   if (parser.resolveOperands(ops, operandsTypes, opsLoc, result.operands))
     return ::mlir::failure();
@@ -2126,20 +2127,27 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                                      ::mlir::OperationState &result) {
   return parseCallCommon(
       parser, result,
-      [](::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
-         int32_t numCallArgs) -> ::mlir::ParseResult {
+      [](::mlir::OpAsmParser &parser,
+         ::mlir::OperationState &result) -> ::mlir::ParseResult {
         ::mlir::OpAsmParser::UnresolvedOperand exceptionRawOperands[1];
         ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand>
             exceptionOperands(exceptionRawOperands);
         ::llvm::SMLoc exceptionOperandsLoc;
         (void)exceptionOperandsLoc;
 
-        if (parser.parseComma())
-          return ::mlir::failure();
+        if (parser.parseKeyword("exception").failed())
+          return parser.emitError(parser.getCurrentLocation(),
+                                  "expected 'exception' keyword here");
+
+        if (parser.parseLParen().failed())
+          return parser.emitError(parser.getCurrentLocation(), "expected '('");
 
         exceptionOperandsLoc = parser.getCurrentLocation();
         if (parser.parseOperand(exceptionRawOperands[0]))
           return ::mlir::failure();
+
+        if (parser.parseRParen().failed())
+          return parser.emitError(parser.getCurrentLocation(), "expected ')'");
 
         auto exceptionPtrTy = cir::PointerType::get(
             parser.getBuilder().getContext(),
@@ -2153,6 +2161,9 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 void TryCallOp::print(::mlir::OpAsmPrinter &state) {
+  state << " exception(";
+  state << getExceptionInfo();
+  state << ")";
   printCallCommon(*this, getCalleeAttr(), state);
 }
 
