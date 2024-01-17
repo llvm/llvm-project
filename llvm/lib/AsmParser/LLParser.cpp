@@ -246,6 +246,34 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined comdat '$" +
                      ForwardRefComdats.begin()->first + "'");
 
+  // Automatically create declarations for intrinsics. Intrinsics can only be
+  // called directly, so the call function type directly determines the
+  // declaration function type.
+  for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
+    if (!StringRef(Name).starts_with("llvm."))
+      continue;
+
+    // Don't do anything if the intrinsic is called with different function
+    // types. This would result in a verifier error anyway.
+    auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
+      FunctionType *FTy = nullptr;
+      for (User *U : V->users()) {
+        auto *CB = dyn_cast<CallBase>(U);
+        if (!CB || (FTy && FTy != CB->getFunctionType()))
+          return nullptr;
+        FTy = CB->getFunctionType();
+      }
+      return FTy;
+    };
+    if (FunctionType *FTy = GetCommonFunctionType(Info.first)) {
+      Function *Fn =
+          Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
+      Info.first->replaceAllUsesWith(Fn);
+      Info.first->eraseFromParent();
+      ForwardRefVals.erase(Name);
+    }
+  }
+
   if (!ForwardRefVals.empty())
     return error(ForwardRefVals.begin()->second.second,
                  "use of undefined value '@" + ForwardRefVals.begin()->first +

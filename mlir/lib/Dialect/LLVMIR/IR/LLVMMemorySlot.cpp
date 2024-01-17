@@ -301,7 +301,7 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
   // the variable has been optimized out.
   auto undef =
       rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
-  rewriter.updateRootInPlace(*this, [&] { getValueMutable().assign(undef); });
+  rewriter.modifyOpInPlace(*this, [&] { getValueMutable().assign(undef); });
   return DeletionKind::Keep;
 }
 
@@ -394,7 +394,7 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
     return DeletionKind::Delete;
   }
 
-  rewriter.updateRootInPlace(*this, [&]() {
+  rewriter.modifyOpInPlace(*this, [&]() {
     // Rewire the indices by popping off the second index.
     // Start with a single zero, then add the indices beyond the second.
     SmallVector<int32_t> newIndices(1);
