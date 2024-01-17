@@ -142,9 +142,9 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
-    // This controls the availability of C++23 <print>, which
-    // has a dependency on the built library (it needs access to
-    // the underlying buffer types of std::cout, std::cerr, and std::clog.
+// This controls the availability of C++23 <print>, which
+// has a dependency on the built library (it needs access to
+// the underlying buffer types of std::cout, std::cerr, and std::clog.
 #  define _LIBCPP_AVAILABILITY_HAS_PRINT 1
 #  define _LIBCPP_AVAILABILITY_PRINT
 
@@ -175,8 +175,7 @@
 
 // TODO: Update once this is released
 #  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION                          \
-        __attribute__((unavailable))
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION __attribute__((unavailable))
 
 // <filesystem>
 // clang-format off
@@ -275,6 +274,10 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 0
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
 
+// Warning: This availability macro works differently than the other macros.
+// The dylib part of print is not needed on Apple platforms. Therefore when
+// the macro is not available the code calling the dylib is commented out.
+// The macro _LIBCPP_AVAILABILITY_PRINT is not used.
 #  define _LIBCPP_AVAILABILITY_HAS_PRINT 0
 #  define _LIBCPP_AVAILABILITY_PRINT __attribute__((unavailable))
 
@@ -313,8 +316,8 @@
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_NO_EXCEPTIONS and _LIBCPP_HAS_NO_RTTI.
 #if defined(_LIBCPP_HAS_NO_EXCEPTIONS) || defined(_LIBCPP_HAS_NO_RTTI)
-#   undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#   define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
+#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
 #endif
 
 #endif // _LIBCPP___AVAILABILITY

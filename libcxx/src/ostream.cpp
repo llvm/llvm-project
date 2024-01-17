@@ -17,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_AVAILABILITY_PRINT _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
+_LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   // dynamic_cast requires RTTI, this only affects users whose vendor builds
   // the dylib with RTTI disabled. It does not affect users who build with RTTI
   // disabled but use a dylib where the RTTI is enabled.
