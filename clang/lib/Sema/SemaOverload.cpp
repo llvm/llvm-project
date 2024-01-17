@@ -14306,6 +14306,11 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted:
+    // CreateOverloadedUnaryOp fills first element of ArgsArray with the object
+    // whose method was called. Later in NoteCandidates size of ArgsArray is
+    // passed further and it eventually ends up compared to number of function
+    // candidate parameters which never includes implicit object parameter, so
+    // do a slice to ArgsArray to make sure apples are compared to apples.
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
