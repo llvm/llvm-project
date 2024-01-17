@@ -106,8 +106,8 @@ struct RelaxScalableVectorAllocaAlignment
 
     // Set alignment based on the defaults for SVE vectors and predicates.
     unsigned aligment = vectorType.getElementType().isInteger(1) ? 2 : 16;
-    rewriter.updateRootInPlace(allocaOp,
-                               [&] { allocaOp.setAlignment(aligment); });
+    rewriter.modifyOpInPlace(allocaOp,
+                             [&] { allocaOp.setAlignment(aligment); });
 
     return success();
   }

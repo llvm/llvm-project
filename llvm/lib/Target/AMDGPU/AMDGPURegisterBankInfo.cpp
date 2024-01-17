@@ -450,8 +450,6 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
   const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
                        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
   const unsigned MemSize = 8 * MMO->getSize();
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const GCNSubtarget &Subtarget = MF->getSubtarget<GCNSubtarget>();
 
   // Require 4-byte alignment.
   return (MMO->getAlign() >= Align(4) ||
