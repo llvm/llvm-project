@@ -1123,6 +1123,9 @@ AST Matchers
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
 - Add ``macroQualifiedType``.
+- Add ``CXXFoldExpr`` related matchers: ``cxxFoldExpr``, ``callee``,
+  ``hasInit``, ``hasPattern``, ``isRightFold``, ``isLeftFold``,
+  ``isUnaryFold``, ``isBinaryFold``, ``hasOperator``, ``hasLHS``, ``hasRHS``, ``hasEitherOperand``.
 
 clang-format
 ------------
