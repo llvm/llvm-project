@@ -1063,7 +1063,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   auto evaluate_tls_address = [this, &thread_sp, &clang_void_ptr_type](
                                   Address func_ptr,
-                                  llvm::ArrayRef<addr_t> args) -> lldb::addr_t {
+                                  llvm::ArrayRef<addr_t> args) -> addr_t {
     EvaluateExpressionOptions options;
 
     lldb::ThreadPlanSP thread_plan_sp(new ThreadPlanCallFunction(
@@ -1100,7 +1100,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   // offset to get the relevant data block.
 
   const uint32_t addr_size = m_process->GetAddressByteSize();
-  uint8_t buf[sizeof(lldb::addr_t) * 3];
+  uint8_t buf[sizeof(addr_t) * 3];
   Status error;
   const size_t tls_data_size = addr_size * 3;
   const size_t bytes_read = target.ReadMemory(
@@ -1110,17 +1110,17 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
   DataExtractor data(buf, sizeof(buf), m_process->GetByteOrder(), addr_size);
   lldb::offset_t offset = 0;
-  const lldb::addr_t tls_thunk = data.GetAddress(&offset);
-  const lldb::addr_t key = data.GetAddress(&offset);
-  const lldb::addr_t tls_offset = data.GetAddress(&offset);
+  const addr_t tls_thunk = data.GetAddress(&offset);
+  const addr_t key = data.GetAddress(&offset);
+  const addr_t tls_offset = data.GetAddress(&offset);
 
   if (tls_thunk != 0) {
-    const lldb::addr_t fixed_tls_thunk = m_process->FixCodeAddress(tls_thunk);
+    const addr_t fixed_tls_thunk = m_process->FixCodeAddress(tls_thunk);
     Address thunk_load_addr;
     if (target.ResolveLoadAddress(fixed_tls_thunk, thunk_load_addr)) {
-      const lldb::addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
-      const lldb::addr_t tls_data = evaluate_tls_address(
-          thunk_load_addr, llvm::ArrayRef<lldb::addr_t>(tls_load_addr));
+      const addr_t tls_load_addr = tls_addr.GetLoadAddress(&target);
+      const addr_t tls_data = evaluate_tls_address(
+          thunk_load_addr, llvm::ArrayRef<addr_t>(tls_load_addr));
       if (tls_data != LLDB_INVALID_ADDRESS)
         return tls_data + tls_offset;
     }
@@ -1141,8 +1141,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     }
     Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
     if (pthread_getspecific_addr.IsValid()) {
-      const lldb::addr_t tls_data = evaluate_tls_address(
-          pthread_getspecific_addr, llvm::ArrayRef<lldb::addr_t>(key));
+      const addr_t tls_data = evaluate_tls_address(
+          pthread_getspecific_addr, llvm::ArrayRef<addr_t>(key));
       if (tls_data != LLDB_INVALID_ADDRESS)
         return tls_data + tls_offset;
     }
