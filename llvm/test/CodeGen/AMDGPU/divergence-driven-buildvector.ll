@@ -264,8 +264,8 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GCN-NEXT:    s_load_dword s1, s[2:3], 0x0
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
+; GCN-NEXT:    s_load_dword s1, s[2:3], 0x0 glc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GCN-NEXT:    s_lshl_b32 s1, s1, 16
@@ -279,8 +279,8 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0 glc
+; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0 glc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -292,8 +292,8 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0 glc
+; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0 glc
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
 ; GFX906-NEXT:    ;;#ASMSTART
@@ -305,8 +305,8 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
-; GFX11-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0 glc dlc
+; GFX11-NEXT:    s_load_b32 s1, s[2:3], 0x0 glc dlc
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX11-NEXT:    ;;#ASMSTART
@@ -548,8 +548,8 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GCN-NEXT:    s_load_dword s1, s[2:3], 0x0
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
+; GCN-NEXT:    s_load_dword s1, s[2:3], 0x0 glc
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GCN-NEXT:    s_lshl_b32 s1, s1, 16
@@ -563,8 +563,8 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0 glc
+; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0 glc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -576,8 +576,8 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x0 glc
+; GFX906-NEXT:    s_load_dword s5, s[2:3], 0x0 glc
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
 ; GFX906-NEXT:    ;;#ASMSTART
@@ -589,8 +589,8 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
-; GFX11-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0 glc dlc
+; GFX11-NEXT:    s_load_b32 s1, s[2:3], 0x0 glc dlc
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX11-NEXT:    ;;#ASMSTART

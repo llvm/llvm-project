@@ -9,7 +9,7 @@ define i32 @s_add_co_select_user() {
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
-; GFX7-NEXT:    s_load_dword s6, s[4:5], 0x0
+; GFX7-NEXT:    s_load_dword s6, s[4:5], 0x0 glc
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e64 v0, s[4:5], s6, s6
 ; GFX7-NEXT:    s_or_b32 s4, s4, s5
@@ -28,7 +28,7 @@ define i32 @s_add_co_select_user() {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
-; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x0
+; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x0 glc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_co_u32_e64 v0, s[4:5], s6, s6
 ; GFX9-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -46,7 +46,7 @@ define i32 @s_add_co_select_user() {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
-; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
+; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0 glc dlc
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32 v0, s5, s4, s4
 ; GFX10-NEXT:    s_cmp_lg_u32 s5, 0
@@ -63,7 +63,7 @@ define i32 @s_add_co_select_user() {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 0
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0 glc dlc
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)

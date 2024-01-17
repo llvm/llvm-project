@@ -9,8 +9,8 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0 glc
+; GFX9-NEXT:    s_load_dword s5, s[2:3], 0x0 glc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s4, s5
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -22,8 +22,8 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX803:       ; %bb.0:
 ; GFX803-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX803-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GFX803-NEXT:    s_load_dword s1, s[2:3], 0x0
+; GFX803-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
+; GFX803-NEXT:    s_load_dword s1, s[2:3], 0x0 glc
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX803-NEXT:    s_lshl_b32 s1, s1, 16
@@ -37,8 +37,8 @@ define amdgpu_kernel void @s_pack_v2i16(ptr addrspace(4) %in0, ptr addrspace(4) 
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x0
-; GFX7-NEXT:    s_load_dword s1, s[2:3], 0x0
+; GFX7-NEXT:    s_load_dword s0, s[0:1], 0x0 glc
+; GFX7-NEXT:    s_load_dword s1, s[2:3], 0x0 glc
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
