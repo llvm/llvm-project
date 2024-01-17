@@ -155,6 +155,8 @@ Changes to the RISC-V Backend
   needs to work with SiFive to define and document real extension names for
   individual CSRs and instructions.
 * ``-mcpu=sifive-p450`` was added.
+* CodeGen of RV32E/RV64E was supported experimentally.
+* CodeGen of ilp32e/lp64e was supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
