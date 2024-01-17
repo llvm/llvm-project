@@ -116,6 +116,7 @@ define i1 @length2_eq_const(ptr %X) #0 {
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 12849
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([65 x i8], ptr @.str, i32 0, i32 1), i64 2) #0
@@ -184,6 +185,7 @@ define i1 @length3_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i16 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i16 [[TMP3]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i16 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) #0
@@ -217,6 +219,7 @@ define i1 @length4_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) #0
@@ -319,6 +322,7 @@ define i1 @length5_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP3]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) #0
@@ -374,6 +378,7 @@ define i1 @length7_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i32 [[TMP3]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[TMP9]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = zext i1 [[TMP10]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP10]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 7) #0
@@ -422,6 +427,7 @@ define i1 @length8_eq_const(ptr %X) #0 {
 ; CHECK-SAME: ptr nocapture readonly [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 3978425819141910832
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 8) #0
@@ -518,6 +524,7 @@ define i1 @length12_eq(ptr %X, ptr %Y) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP12]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) #0
@@ -671,6 +678,7 @@ define i1 @length16_eq(ptr %x, ptr %y) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i128, ptr [[X]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[Y]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i64 16) #0
@@ -741,6 +749,7 @@ define i1 @length24_eq_const(ptr %X) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i128 [[TMP5]], 3689065127958034230
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i128 [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i1 [[TMP8]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP8]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 24) #0
@@ -793,6 +802,7 @@ define i1 @length32_eq_const(ptr %X) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i128 [[TMP4]], 65382562593882267225249597816672106294
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i128 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i1 [[TMP7]] to i32
 ; CHECK-NEXT:    ret i1 [[TMP7]]
 ;
   %m = tail call i32 @memcmp(ptr %X, ptr @.str, i64 32) #0
