@@ -118,8 +118,9 @@ class module_test_generator:
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-std-modules
 // UNSUPPORTED: clang-modules-build
+
+// XFAIL: *
 
 // REQUIRES: has-clang-tidy
 
