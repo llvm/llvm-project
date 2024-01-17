@@ -20,7 +20,7 @@ LineEntry::LineEntry()
 void LineEntry::Clear() {
   range.Clear();
   file.Clear();
-  original_file.Clear();
+  original_file_sp = std::make_shared<SupportFile>();
   line = LLDB_INVALID_LINE_NUMBER;
   column = 0;
   is_start_of_statement = 0;
@@ -182,7 +182,7 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   // different file / line number.
   AddressRange complete_line_range = range;
   auto symbol_context_scope = lldb::eSymbolContextLineEntry;
-  Declaration start_call_site(original_file, line);
+  Declaration start_call_site(original_file_sp->GetSpecOnly(), line);
   if (include_inlined_functions)
     symbol_context_scope |= lldb::eSymbolContextBlock;
 
@@ -196,7 +196,7 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
         next_line_sc.line_entry.range.GetByteSize() == 0)
       break;
 
-    if (original_file == next_line_sc.line_entry.original_file &&
+    if (*original_file_sp == *next_line_sc.line_entry.original_file_sp &&
         (next_line_sc.line_entry.line == 0 ||
          line == next_line_sc.line_entry.line)) {
       // Include any line 0 entries - they indicate that this is compiler-
@@ -240,8 +240,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
 void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
     // Apply any file remappings to our file.
-    if (auto new_file_spec =
-            target_sp->GetSourcePathMap().FindFile(original_file))
+    if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
+            original_file_sp->GetSpecOnly()))
       file = *new_file_spec;
   }
 }
