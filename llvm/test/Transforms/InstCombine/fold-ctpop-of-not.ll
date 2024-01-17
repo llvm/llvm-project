@@ -8,9 +8,8 @@ declare <2 x i8> @llvm.ctpop.v2i8(<2 x i8>)
 
 define i8 @fold_sub_c_ctpop(i8 %x) {
 ; CHECK-LABEL: @fold_sub_c_ctpop(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[NX]]), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 12, [[CNT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[TMP1]], 4
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -34,9 +33,8 @@ define i8 @fold_sub_var_ctpop_fail(i8 %x, i8 %y) {
 
 define <2 x i8> @fold_sub_ctpop_c(<2 x i8> %x) {
 ; CHECK-LABEL: @fold_sub_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i8> [[CNT]], <i8 -63, i8 -64>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw <2 x i8> <i8 -55, i8 -56>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %nx = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -47,9 +45,8 @@ define <2 x i8> @fold_sub_ctpop_c(<2 x i8> %x) {
 
 define i8 @fold_add_ctpop_c(i8 %x) {
 ; CHECK-LABEL: @fold_add_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[CNT]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 71, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -60,9 +57,8 @@ define i8 @fold_add_ctpop_c(i8 %x) {
 
 define i8 @fold_distjoint_or_ctpop_c(i8 %x) {
 ; CHECK-LABEL: @fold_distjoint_or_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[CNT]], 64
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 72, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -109,9 +105,8 @@ define i1 @fold_icmp_sgt_ctpop_c_i2_fail(i2 %x, i2 %C) {
 
 define i1 @fold_cmp_eq_ctpop_c(i8 %x) {
 ; CHECK-LABEL: @fold_cmp_eq_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[CNT]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 6
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -137,9 +132,8 @@ define i1 @fold_cmp_eq_ctpop_c_multiuse_fail(i8 %x) {
 
 define <2 x i1> @fold_cmp_ne_ctpop_c(<2 x i8> %x) {
 ; CHECK-LABEL: @fold_cmp_ne_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[CNT]], <i8 44, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 -36, i8 5>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %nx = xor <2 x i8> %x, <i8 -1, i8 -1>
@@ -163,11 +157,10 @@ define <2 x i1> @fold_cmp_ne_ctpop_var_fail(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @fold_cmp_ult_ctpop_c(i8 %x, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @fold_cmp_ult_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[NY:%.*]] = add i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[N:%.*]] = select i1 [[COND:%.*]], i8 [[NX]], i8 [[NY]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[N]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[CNT]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 -16, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[TMP3]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -180,11 +173,10 @@ define i1 @fold_cmp_ult_ctpop_c(i8 %x, i8 %y, i1 %cond) {
 
 define i1 @fold_cmp_sle_ctpop_c(i8 %x, i8 %y, i1 %cond) {
 ; CHECK-LABEL: @fold_cmp_sle_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[NY:%.*]] = add i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[N:%.*]] = select i1 [[COND:%.*]], i8 [[NX]], i8 [[NY]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[N]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[CNT]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 -16, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP2]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[TMP3]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -210,9 +202,8 @@ define i1 @fold_cmp_ult_ctpop_c_no_not_inst_save_fail(i8 %x) {
 
 define <2 x i1> @fold_cmp_ugt_ctpop_c(<2 x i8> %x) {
 ; CHECK-LABEL: @fold_cmp_ugt_ctpop_c(
-; CHECK-NEXT:    [[NX:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[NX]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i8> [[CNT]], <i8 8, i8 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 0, i8 2>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %nx = xor <2 x i8> %x, <i8 -1, i8 -1>
