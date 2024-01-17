@@ -24,7 +24,7 @@ transform.sequence failures(propagate) {
 
   // This is trying to use an invalidated handle leading to undefined behavior.
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-  transform.test_print_remark_at_operand %arg1, "remark" : !transform.op<"linalg.matmul">
+  transform.debug.emit_remark_at %arg1, "remark" : !transform.op<"linalg.matmul">
   transform.yield
 }
 
@@ -70,7 +70,7 @@ transform.sequence failures(propagate) {
   // Consuming an operand invalidates the consumed handle and any other handle that is
   // associated with the same payload operations, or payload operations nested in them.
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
-  transform.test_print_remark_at_operand %casted, "remark"
+  transform.debug.emit_remark_at %casted, "remark"
     : !transform.any_op
   transform.yield
 }

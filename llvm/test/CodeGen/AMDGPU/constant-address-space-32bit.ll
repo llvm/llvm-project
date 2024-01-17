@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI,SI %s
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,SICIVI,VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,SICIVI,SICI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,SICIVI,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}load_i32:
 ; GCN-DAG: s_mov_b32 s3, 0

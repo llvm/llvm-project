@@ -47,6 +47,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1317,7 +1318,7 @@ void request_evaluate(const llvm::json::Object &request) {
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
       VariableDescription desc(value);
-      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
         auto variableReference = g_dap.variables.InsertExpandableVariable(
@@ -3733,7 +3734,8 @@ int SetupStdoutStderrRedirection() {
 
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);

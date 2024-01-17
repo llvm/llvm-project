@@ -210,6 +210,14 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
+  // Lane mask PHIs, PHI where all register operands have sgpr register class
+  // with S1 LLT, are already selected in divergence lowering pass.
+  if (I.getOpcode() == AMDGPU::PHI) {
+    assert(MRI->getType(DefReg) == LLT::scalar(1));
+    assert(TRI.isSGPRClass(MRI->getRegClass(DefReg)));
+    return true;
+  }
+
   if (DefTy == LLT::scalar(1)) {
     if (!AllowRiskySelect) {
       LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
@@ -1917,7 +1925,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
+  if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
+               AMDGPU::CPol::VOLATILE))
     return false;
 
   int NumVAddrRegs = 0;
@@ -5496,11 +5505,13 @@ void AMDGPUInstructionSelector::renderExtractSWZ(MachineInstrBuilder &MIB,
   MIB.addImm(Swizzle);
 }
 
-void AMDGPUInstructionSelector::renderSetGLC(MachineInstrBuilder &MIB,
-                                             const MachineInstr &MI,
-                                             int OpIdx) const {
+void AMDGPUInstructionSelector::renderExtractCpolSetGLC(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm(MI.getOperand(OpIdx).getImm() | AMDGPU::CPol::GLC);
+  const uint32_t Cpol = MI.getOperand(OpIdx).getImm() &
+                        (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
+                                                  : AMDGPU::CPol::ALL_pregfx12);
+  MIB.addImm(Cpol | AMDGPU::CPol::GLC);
 }
 
 void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,

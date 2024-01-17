@@ -69,9 +69,9 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op,
      %arg1: !transform.op<"linalg.matmul">,
      %arg2: !transform.op<"linalg.elemwise_binary">):
-  transform.test_print_remark_at_operand %arg1, "matmul"
+  transform.debug.emit_remark_at %arg1, "matmul"
       : !transform.op<"linalg.matmul">
-  transform.test_print_remark_at_operand %arg2, "elemwise_binaries"
+  transform.debug.emit_remark_at %arg2, "elemwise_binaries"
       : !transform.op<"linalg.elemwise_binary">
   transform.yield
 }
@@ -180,7 +180,7 @@ transform.sequence failures(propagate) {
       : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
   // This is trying to use an invalidated handle leading to undefined behavior.
-  transform.test_print_remark_at_operand %arg1, "remark" : !transform.op<"linalg.matmul">
+  transform.debug.emit_remark_at %arg1, "remark" : !transform.op<"linalg.matmul">
   transform.yield
 }
 ```
@@ -197,7 +197,7 @@ $ mlir-opt matmul.mlir --pass-pipeline="
 
 ```sh
 matmul.mlir:28:3: error: op uses a handle invalidated by a previously executed transform op
-  transform.test_print_remark_at_operand %mm, "elemwise_binaries" : !transform.any_op
+  transform.debug.emit_remark_at %mm, "elemwise_binaries" : !transform.any_op
   ^
 matmul.mlir:26:9: note: handle to invalidated ops
   %mm = transform.cast %matmul : !transform.op<"linalg.matmul"> to !transform.any_op
@@ -224,7 +224,7 @@ transform.sequence failures(propagate) {
 
   // Consuming an operand invalidates the consumed handle and any other handle that is
   // associated with the same payload operations, or payload operations nested in them.
-  transform.test_print_remark_at_operand %casted, "remark"
+  transform.debug.emit_remark_at %casted, "remark"
     : !transform.any_op
   transform.yield
 }
@@ -234,7 +234,7 @@ Both `%arg1` and `%casted` reference the same payload operation. Extending the r
 
 ```sh
 matmul.mlir:28:3: error: op uses a handle invalidated by a previously executed transform op
-  transform.test_print_remark_at_operand %matmul, "elemwise_binaries" : !transform.op<"linalg.matmul">
+  transform.debug.emit_remark_at %matmul, "elemwise_binaries" : !transform.op<"linalg.matmul">
   ^
 matmul.mlir:21:29: note: handle to invalidated ops
 ^bb0(%root: !transform.any_op, %matmul: !transform.op<"linalg.matmul">, %elemwise: !transform.op<"linalg.elemwise_binary">):
@@ -358,7 +358,7 @@ Attempting to access the fusion result after outlining produces the following er
 
 ```sh
 test/Examples/transform/Ch1/invalidation-2.mlir:109:3: error: op uses a handle invalidated by a previously executed transform op
-  transform.test_print_remark_at_operand %outline_target, "outlined loop" : !transform.any_op
+  transform.debug.emit_remark_at %outline_target, "outlined loop" : !transform.any_op
   ^
 test/Examples/transform/Ch1/invalidation-2.mlir:102:25: note: handle to invalidated ops
   %outline_target, %_ = transform.structured.tile_using_forall %tiled_2 tile_sizes [1]

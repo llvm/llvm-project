@@ -679,7 +679,7 @@ public:
   ExegesisX86Target()
       : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
-  Expected<std::unique_ptr<pfm::Counter>>
+  Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
                 const pid_t ProcessID) const override {
     // If LbrSamplingPeriod was provided, then ignore the
