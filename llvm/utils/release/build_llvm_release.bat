@@ -112,7 +112,7 @@ echo Using VS devcmd: %vsdevcmd%
 
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
-set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-arm64
+set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
 set revision=llvmorg-%version%
 set package_version=%version%
