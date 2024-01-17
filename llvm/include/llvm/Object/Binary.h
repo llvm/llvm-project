@@ -202,7 +202,6 @@ public:
   OwningBinary(std::unique_ptr<T> Bin, std::unique_ptr<MemoryBuffer> Buf);
   OwningBinary(OwningBinary<T>&& Other);
   OwningBinary<T> &operator=(OwningBinary<T> &&Other);
-  void operator()(OwningBinary<T> &&Other);
 
   std::pair<std::unique_ptr<T>, std::unique_ptr<MemoryBuffer>> takeBinary();
 
