@@ -3188,7 +3188,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        VT.getVectorNumElements() >= 128 / EltSize || !Alignment ||
+        VT.getVectorNumElements() >= (128 / EltSize) || !Alignment ||
         *Alignment != Align(1))
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
