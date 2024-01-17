@@ -346,7 +346,7 @@ bool ModuleList::RemoveIfOrphaned(const Module *module_ptr) {
     collection::iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos) {
       if (pos->get() == module_ptr) {
-        if (pos->unique()) {
+        if (pos->use_count() == 1) {
           pos = RemoveImpl(pos);
           return true;
         } else
@@ -377,7 +377,7 @@ size_t ModuleList::RemoveOrphans(bool mandatory) {
     made_progress = false;
     collection::iterator pos = m_modules.begin();
     while (pos != m_modules.end()) {
-      if (pos->unique()) {
+      if (pos->use_count() == 1) {
         pos = RemoveImpl(pos);
         ++remove_count;
         // We did make progress.
