@@ -3581,6 +3581,9 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
+  /// Parses the clause of the 'bind' argument, which can be a string literal or
+  /// an ID expression.
+  ExprResult ParseOpenACCBindClauseArgument();
 
 private:
   //===--------------------------------------------------------------------===//
