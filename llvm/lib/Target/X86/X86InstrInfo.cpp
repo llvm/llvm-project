@@ -3464,9 +3464,11 @@ bool X86::isX87Instruction(MachineInstr &MI) {
 }
 
 int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
+#ifdef EXPENSIVE_CHECKS
   const auto isMemOp = [](const MCOperandInfo &OpInfo) -> bool {
     return OpInfo.OperandType == MCOI::OPERAND_MEMORY;
   };
+#endif
 
   const MCInstrDesc &Desc = MI.getDesc();
 
