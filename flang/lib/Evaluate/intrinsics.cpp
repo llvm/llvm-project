@@ -77,7 +77,9 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
-    doublePrecision, defaultCharKind, defaultLogicalKind, greaterOrEqualToKind,
+    doublePrecision, defaultCharKind, defaultLogicalKind,
+    greaterOrEqualToKind, // match kind value greater than or equal to a single
+                          // explicit kind value
     any, // matches any kind value; each instance is independent
     // match any kind, but all "same" kinds must be equal. For characters, also
     // implies that lengths must be equal.
@@ -104,8 +106,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
-  int kindValue{
-      0}; // for KindCode::exactKind and KindCode::greaterOrEqualToKind
+  int kindValue{0}; // for KindCode::exactKind and greaterOrEqualToKind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
