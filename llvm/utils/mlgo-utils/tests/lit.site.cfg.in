@@ -1,0 +1,6 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.src_root = "@LLVM_SOURCE_DIR@"
+config.obj_root = "@LLVM_BINARY_DIR@"
+
+lit_config.load_config(config, "@LLVM_SOURCE_DIR@/utils/mlgo-utils/tests/lit.cfg")
