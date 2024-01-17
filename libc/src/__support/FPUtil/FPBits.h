@@ -189,9 +189,9 @@ protected:
     using UP = Opaque<int32_t>;
     using UP::UP;
     LIBC_INLINE
-    static constexpr auto MIN() { return Exponent{1 - EXP_BIAS}; }
-    LIBC_INLINE static constexpr auto ZERO() { return Exponent{0}; }
-    LIBC_INLINE static constexpr auto MAX() { return Exponent{EXP_BIAS}; }
+    static constexpr auto MIN() { return Exponent(1 - EXP_BIAS); }
+    LIBC_INLINE static constexpr auto ZERO() { return Exponent(0); }
+    LIBC_INLINE static constexpr auto MAX() { return Exponent(EXP_BIAS); }
   };
 
   // An opaque type to store a floating point biased exponent.
@@ -206,11 +206,11 @@ protected:
         : UP(static_cast<int32_t>(exp) + EXP_BIAS) {}
     // The exponent value for denormal numbers.
     LIBC_INLINE static constexpr auto BITS_ALL_ZEROES() {
-      return BiasedExponent{uint32_t(0)};
+      return BiasedExponent(uint32_t(0));
     }
     // The exponent value for infinity.
     LIBC_INLINE static constexpr auto BITS_ALL_ONES() {
-      return BiasedExponent{uint32_t(2 * EXP_BIAS + 1)};
+      return BiasedExponent(uint32_t(2 * EXP_BIAS + 1));
     }
   };
 
@@ -224,18 +224,18 @@ protected:
     using UP::UP;
 
     LIBC_INLINE static constexpr auto ZERO() {
-      return Significand{StorageType(0)};
+      return Significand(StorageType(0));
     }
     LIBC_INLINE static constexpr auto LSB() {
-      return Significand{StorageType(1)};
+      return Significand(StorageType(1));
     }
     LIBC_INLINE static constexpr auto MSB() {
-      return Significand{StorageType(bit_at(SIG_LEN - 1))};
+      return Significand(StorageType(bit_at(SIG_LEN - 1)));
     }
     // Aliases
     LIBC_INLINE static constexpr auto BITS_ALL_ZEROES() { return ZERO(); }
     LIBC_INLINE static constexpr auto BITS_ALL_ONES() {
-      return Significand{SIG_MASK};
+      return Significand(SIG_MASK);
     }
   };
 
@@ -246,15 +246,15 @@ protected:
 
   LIBC_INLINE friend constexpr Significand operator|(const Significand a,
                                                      const Significand b) {
-    return Significand{StorageType(as<StorageType>(a) | as<StorageType>(b))};
+    return Significand(StorageType(as<StorageType>(a) | as<StorageType>(b)));
   }
   LIBC_INLINE friend constexpr Significand operator^(const Significand a,
                                                      const Significand b) {
-    return Significand{StorageType(as<StorageType>(a) ^ as<StorageType>(b))};
+    return Significand(StorageType(as<StorageType>(a) ^ as<StorageType>(b)));
   }
   LIBC_INLINE friend constexpr Significand operator>>(const Significand a,
                                                       int shift) {
-    return Significand{StorageType(as<StorageType>(a) >> shift)};
+    return Significand(StorageType(as<StorageType>(a) >> shift));
   }
 
   LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp) {
@@ -360,7 +360,7 @@ public:
   LIBC_INLINE constexpr bool is_zero() const {
     return (bits & EXP_SIG_MASK) == 0;
   }
-}; // namespace fputil
+};
 
 namespace internal {
 
@@ -443,12 +443,12 @@ public:
   LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
                                                      StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  (v ? Significand{v} : (Significand::MSB() >> 1)));
+                  (v ? Significand(v) : (Significand::MSB() >> 1)));
   }
   LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
                                                            StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  Significand::MSB() | Significand{v});
+                  Significand::MSB() | Significand(v));
   }
 
   // The function return mantissa with the implicit bit set iff the current
@@ -562,13 +562,13 @@ public:
                                                      StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   Significand::MSB() |
-                      (v ? Significand{v} : (Significand::MSB() >> 2)));
+                      (v ? Significand(v) : (Significand::MSB() >> 2)));
   }
   LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
                                                            StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   Significand::MSB() | (Significand::MSB() >> 1) |
-                      Significand{v});
+                      Significand(v));
   }
 
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
@@ -621,11 +621,11 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
 }
 
 // A generic class to represent floating point formats.
-// On most platforms, the 'float' type corresponds to single precision floating
-// point numbers, the 'double' type corresponds to double precision floating
-// point numers, and the 'long double' type corresponds to the quad precision
-// floating numbers. On x86 platforms however, the 'long double' type maps to
-// an x87 floating point format.
+// On most platforms, the 'float' type corresponds to single precision
+// floating point numbers, the 'double' type corresponds to double precision
+// floating point numers, and the 'long double' type corresponds to the quad
+// precision floating numbers. On x86 platforms however, the 'long double'
+// type maps to an x87 floating point format.
 template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
