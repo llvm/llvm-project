@@ -24,7 +24,7 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
   RUNTIME_CHECK(terminator, error == 0);
 }
 #elif _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || \
-    _POSIX_SOURCE
+    defined(_POSIX_SOURCE)
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
     Fortran::runtime::Terminator terminator) {
   const char *res{ctime_r(&cur_time, buffer)};
