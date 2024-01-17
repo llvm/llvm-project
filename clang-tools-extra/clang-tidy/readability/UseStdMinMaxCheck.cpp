@@ -22,7 +22,7 @@ UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
-      AlgotithmHeader(Options.get("AlgorithmHeader", "<algorithm>")) {}
+      AlgorithmHeader(Options.get("AlgorithmHeader", "<algorithm>")) {}
 
 void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
@@ -35,9 +35,13 @@ void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(hasOperatorName("<"), hasOperatorName(">"),
                     hasOperatorName("<="), hasOperatorName(">=")),
               hasLHS(expr().bind("lhsVar1")), hasRHS(expr().bind("rhsVar1")))),
-          hasThen(stmt(binaryOperator(hasOperatorName("="),
-                                      hasLHS(expr().bind("lhsVar2")),
-                                      hasRHS(expr().bind("rhsVar2"))))))
+          hasThen(
+              anyOf(stmt(binaryOperator(hasOperatorName("="),
+                                        hasLHS(expr().bind("lhsVar2")),
+                                        hasRHS(expr().bind("rhsVar2")))),
+                    compoundStmt(has(binaryOperator(
+                        hasOperatorName("="), hasLHS(expr().bind("lhsVar2")),
+                        hasRHS(expr().bind("rhsVar2"))))))))
           .bind("ifStmt"),
       this);
 }
@@ -67,22 +71,22 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation ifLocation = ifStmt->getIfLoc();
   SourceLocation thenLocation = ifStmt->getEndLoc();
 
-  auto lhsVar1Str = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(lhsVar1->getSourceRange()),
-      Context.getSourceManager(), Context.getLangOpts());
+  auto lhsVar1Str =
+      Lexer::getSourceText(Source.getExpansionRange(lhsVar1->getSourceRange()),
+                           Context.getSourceManager(), Context.getLangOpts());
 
-  auto lhsVar2Str = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(lhsVar2->getSourceRange()),
-      Context.getSourceManager(), Context.getLangOpts());
+  auto lhsVar2Str =
+      Lexer::getSourceText(Source.getExpansionRange(lhsVar2->getSourceRange()),
+                           Context.getSourceManager(), Context.getLangOpts());
 
-  auto rhsVar1Str = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(rhsVar1->getSourceRange()),
-      Context.getSourceManager(), Context.getLangOpts());
+  auto rhsVar1Str =
+      Lexer::getSourceText(Source.getExpansionRange(rhsVar1->getSourceRange()),
+                           Context.getSourceManager(), Context.getLangOpts());
 
   auto replacementMax = lhsVar2Str.str() + " = std::max(" + lhsVar1Str.str() +
-                        ", " + rhsVar1Str.str() + ")";
+                        ", " + rhsVar1Str.str() + ");";
   auto replacementMin = lhsVar2Str.str() + " = std::min(" + lhsVar1Str.str() +
-                        ", " + rhsVar1Str.str() + ")";
+                        ", " + rhsVar1Str.str() + ");";
   auto *operatorStr = binaryOp->getOpcodeStr().data();
 
   if (binaryOp->getOpcode() == BO_LT || binaryOp->getOpcode() == BO_LE) {
@@ -94,7 +98,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
                                           std::move(replacementMax))
           << IncludeInserter.createIncludeInsertion(
-                 Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
+                 Source.getFileID(ifStmt->getBeginLoc()), AlgorithmHeader);
     } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
                tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
       diag(ifStmt->getIfLoc(), "use `std::min` instead of `%0`")
@@ -102,7 +106,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
                                           std::move(replacementMin))
           << IncludeInserter.createIncludeInsertion(
-                 Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
+                 Source.getFileID(ifStmt->getBeginLoc()), AlgorithmHeader);
     }
   } else if (binaryOp->getOpcode() == BO_GT || binaryOp->getOpcode() == BO_GE) {
     if (tidy::utils::areStatementsIdentical(lhsVar1, lhsVar2, Context) &&
@@ -112,7 +116,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
                                           std::move(replacementMin))
           << IncludeInserter.createIncludeInsertion(
-                 Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
+                 Source.getFileID(ifStmt->getBeginLoc()), AlgorithmHeader);
     } else if (tidy::utils::areStatementsIdentical(lhsVar1, rhsVar2, Context) &&
                tidy::utils::areStatementsIdentical(rhsVar1, lhsVar2, Context)) {
       diag(ifStmt->getIfLoc(), "use `std::max` instead of `%0`")
@@ -120,7 +124,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
           << FixItHint::CreateReplacement(SourceRange(ifLocation, thenLocation),
                                           std::move(replacementMax))
           << IncludeInserter.createIncludeInsertion(
-                 Source.getFileID(ifStmt->getBeginLoc()), AlgotithmHeader);
+                 Source.getFileID(ifStmt->getBeginLoc()), AlgorithmHeader);
     }
   }
 }
