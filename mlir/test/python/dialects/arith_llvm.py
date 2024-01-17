@@ -20,9 +20,7 @@ def testOverflowFlags():
         module = Module.create()
         with InsertionPoint(module.body):
             a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
-            r = arith.AddIOp(
-                a, a, overflowFlags=arith.IntegerOverflowFlags.nsw
-            )
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
             # CHECK: arith.addi {{.*}}, {{.*}} overflow<nsw> : i32
             print(r)
 
