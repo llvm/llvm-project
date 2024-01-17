@@ -41,7 +41,8 @@ class TestExecutableIsFirst(TestBase):
     def test_executable_is_first_during_run(self):
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "break after function call", lldb.SBFileSpec("main.cpp")
+            self, "break after function call", lldb.SBFileSpec("main.cpp"),
+            extra_images=["bar"]
         )
 
         first_module = target.GetModuleAtIndex(0)
