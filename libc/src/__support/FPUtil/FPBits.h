@@ -180,15 +180,13 @@ protected:
 
     LIBC_INLINE constexpr explicit operator T() const { return value; }
 
+    LIBC_INLINE constexpr StorageType to_storage_type() const {
+      return StorageType(value);
+    }
+
   private:
     T value;
   };
-
-  // Allows explicit casting to a different type.
-  template <typename To, typename T>
-  LIBC_INLINE static constexpr To as(TypedInt<T> typed_int) {
-    return To(static_cast<T>(typed_int));
-  }
 
   // An opaque type to store a floating point exponent.
   // We define special values but it is valid to create arbitrary values as long
@@ -233,15 +231,17 @@ protected:
 
     LIBC_INLINE friend constexpr Significand operator|(const Significand a,
                                                        const Significand b) {
-      return Significand(StorageType(as<StorageType>(a) | as<StorageType>(b)));
+      return Significand(
+          StorageType(a.to_storage_type() | b.to_storage_type()));
     }
     LIBC_INLINE friend constexpr Significand operator^(const Significand a,
                                                        const Significand b) {
-      return Significand(StorageType(as<StorageType>(a) ^ as<StorageType>(b)));
+      return Significand(
+          StorageType(a.to_storage_type() ^ b.to_storage_type()));
     }
     LIBC_INLINE friend constexpr Significand operator>>(const Significand a,
                                                         int shift) {
-      return Significand(StorageType(as<StorageType>(a) >> shift));
+      return Significand(StorageType(a.to_storage_type() >> shift));
     }
 
     LIBC_INLINE static constexpr auto ZERO() {
@@ -261,11 +261,11 @@ protected:
   };
 
   LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp) {
-    return (as<StorageType>(exp) << SIG_LEN) & EXP_MASK;
+    return (exp.to_storage_type() << SIG_LEN) & EXP_MASK;
   }
 
   LIBC_INLINE static constexpr StorageType encode(Significand value) {
-    return as<StorageType>(value) & SIG_MASK;
+    return value.to_storage_type() & SIG_MASK;
   }
 
   LIBC_INLINE static constexpr StorageType encode(BiasedExponent exp,
