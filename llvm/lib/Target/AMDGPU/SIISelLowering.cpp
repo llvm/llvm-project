@@ -14386,8 +14386,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
   case ISD::LOAD: {
-    if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
-      return Widended;
+    if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
+      return Widened;
     [[fallthrough]];
   }
   default: {
