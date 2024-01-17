@@ -219,9 +219,6 @@ ExecutionEngine::ExecutionEngine(bool enableObjectDump,
 }
 
 ExecutionEngine::~ExecutionEngine() {
-  // Execute the global destructors from the module being processed.
-  if (jit)
-    llvm::consumeError(jit->deinitialize(jit->getMainJITDylib()));
   // Run all dynamic library destroy callbacks to prepare for the shutdown.
   for (LibraryDestroyFn destroy : destroyFns)
     destroy();
@@ -398,9 +395,6 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-
-  // Execute the global constructors from the module being processed.
-  cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
 
   return std::move(engine);
 }
