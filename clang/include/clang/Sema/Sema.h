@@ -2153,7 +2153,7 @@ public:
                          SourceLocation Loc);
   QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
 
-  TypeSourceInfo *GetTypeForDeclarator(Declarator &D, Scope *S);
+  TypeSourceInfo *GetTypeForDeclarator(Declarator &D);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
 
   /// Package the given type and TSI into a ParsedType.
@@ -2194,7 +2194,7 @@ public:
       SourceLocation TargetLoc, const FunctionProtoType *Source,
       bool SkipSourceFirstParameter, SourceLocation SourceLoc);
 
-  TypeResult ActOnTypeName(Scope *S, Declarator &D);
+  TypeResult ActOnTypeName(Declarator &D);
 
   /// The parser has parsed the context-sensitive type 'instancetype'
   /// in an Objective-C message declaration. Return the appropriate type.
@@ -4799,6 +4799,8 @@ public:
   bool CheckAlwaysInlineAttr(const Stmt *OrigSt, const Stmt *CurSt,
                              const AttributeCommonInfo &A);
 
+  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
+
   /// Adjust the calling convention of a method to be the ABI default if it
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
@@ -5642,6 +5644,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = std::nullopt,
+                      DeclContext *LookupCtx = nullptr,
                       TypoExpr **Out = nullptr);
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,

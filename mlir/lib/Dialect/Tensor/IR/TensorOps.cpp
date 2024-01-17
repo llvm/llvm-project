@@ -819,7 +819,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
     auto resultIndex = source.cast<OpResult>().getResultNumber();
     auto initOperand = destOp.getDpsInitOperand(resultIndex);
 
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initOperand->get()); });
     return success();
   }
@@ -1752,7 +1752,7 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
         srcType, collapseShapeOp.getReassociationMaps());
 
     if (newResultType == collapseShapeOp.getResultType()) {
-      rewriter.updateRootInPlace(collapseShapeOp, [&]() {
+      rewriter.modifyOpInPlace(collapseShapeOp, [&]() {
         collapseShapeOp.getSrcMutable().assign(castOp.getSource());
       });
     } else {
@@ -2930,7 +2930,7 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
         padTensorOp.getResultType().getShape());
 
     if (newResultType == padTensorOp.getResultType()) {
-      rewriter.updateRootInPlace(padTensorOp, [&]() {
+      rewriter.modifyOpInPlace(padTensorOp, [&]() {
         padTensorOp.getSourceMutable().assign(castOp.getSource());
       });
     } else {
@@ -3994,9 +3994,9 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 
   // Fold optional PaddingValue operand away if padding is not needed.
   if (packOp.getPaddingValue() && paddingIsNotNeeded(packOp)) {
-    rewriter.startRootUpdate(packOp);
+    rewriter.startOpModification(packOp);
     packOp.getPaddingValueMutable().clear();
-    rewriter.finalizeRootUpdate(packOp);
+    rewriter.finalizeOpModification(packOp);
     return success();
   }
   return failure();
@@ -4166,8 +4166,8 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
           unPackOp.getDest().getDefiningOp<DestinationStyleOpInterface>()) {
     auto destValue = unPackOp.getDest().cast<OpResult>();
     Value newDest = dstStyleOp.getDpsInits()[destValue.getResultNumber()];
-    rewriter.updateRootInPlace(
-        unPackOp, [&]() { unPackOp.setDpsInitOperand(0, newDest); });
+    rewriter.modifyOpInPlace(unPackOp,
+                             [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
   }
   return failure();
