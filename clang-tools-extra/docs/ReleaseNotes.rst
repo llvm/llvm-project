@@ -224,17 +224,17 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
-- New :doc:`readability-reference-to-constructed-temporary
-  <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
-
-  Detects C++ code where a reference variable is used to extend the lifetime
-  of a temporary object that has just been constructed.
-
 - New :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
 
   Finds return statements with ``void`` values used within functions with
   ``void`` result types.
+
+- New :doc:`readability-reference-to-constructed-temporary
+  <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
+
+  Detects C++ code where a reference variable is used to extend the lifetime
+  of a temporary object that has just been constructed.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -395,7 +395,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check to avoid false positive when
-  using in elaborated type and only check cpp files.
+  using in elaborated type and only check C++ files.
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
@@ -435,8 +435,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
-  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore ``typedef``
-  declaration in ``extern "C"`` scope.
+  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore
+  ``typedef`` declaration in ``extern "C"`` scope.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
@@ -444,25 +444,25 @@ Changes in existing checks
 
 - Improved :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
-  conditional noexcept expressions, eliminating false-positives.
+  conditional ``noexcept`` expressions, eliminating false-positives.
 
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature and better handling of condition
-  noexcept expressions, eliminating false-positives. ``iter_swap`` function name
-  is checked by default.
+  ``noexcept`` expressions, eliminating false-positives. ``iter_swap`` function
+  name is checked by default.
 
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
   ignore false-positive for ``if constexpr`` in lambda expression.
 
 - Improved :doc:`readability-avoid-const-params-in-decls
-  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
-  highlight the const location
+  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnostics to
+  highlight the ``const`` location
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` to correctly handle
-  interger literals with suffixes in fix-its.
+  integer literals with suffixes in fix-its.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
@@ -485,7 +485,7 @@ Changes in existing checks
   ``camel_Snake_Case`` now detect more invalid identifier names. Fields in
   anonymous records (i.e. anonymous structs and unions) now can be checked with
   the naming rules associated with their enclosing scopes rather than the naming
-  rules of public struct/union members.
+  rules of public ``struct``/``union`` members.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
