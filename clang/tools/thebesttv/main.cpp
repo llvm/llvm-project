@@ -65,6 +65,11 @@ public:
         llvm::outs() << "Found declaration " << Declaration->getQualifiedNameAsString() << " at "
                      << FullLocation.getSpellingLineNumber() << ":"
                      << FullLocation.getSpellingColumnNumber() << "\n";
+      Declaration->dump();
+      CFG::BuildOptions cfgBuildOptions;
+      auto cfg = CFG::buildCFG(Declaration, Declaration->getBody() , &Declaration->getASTContext(), cfgBuildOptions);
+      cfg->dump(Declaration->getASTContext().getLangOpts(), true);
+
     return true;
   }
 
