@@ -115,7 +115,7 @@ public:
   /// specified, the vector is cleared then filled with extra PGO data.
   /// When PGO information is requested (`PGOAnalyses` is not nullptr),
   /// `PGOAnalyses` will always be the same length as the return value,
-  /// assuming no error occurs. Upon failure, `PGOAnalyses` will be empty.
+  /// assuming no error occurs. Upon failure, `PGOAnalyses` will be emptied.
   Expected<std::vector<BBAddrMap>>
   readBBAddrMap(std::optional<unsigned> TextSectionIndex = std::nullopt,
                 std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
