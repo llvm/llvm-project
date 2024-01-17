@@ -4133,21 +4133,21 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Val = CI->getArgOperand(1);
       Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::SequentiallyConsistent);
-    } else if (IsNVVM &&
-               (Name == "max.s" || Name == "max.i" || Name == "max.ll" ||
-                Name == "max.us" || Name == "max.ui" || Name == "max.ull")) {
+    } else if (IsNVVM && Name.consume_front("max.") &&
+               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+                Name == "ui" || Name == "ull")) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("max.u")
+      Value *Cmp = Name.starts_with("u")
                        ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
                        : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
       Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
-    } else if (IsNVVM &&
-               (Name == "min.s" || Name == "min.i" || Name == "min.ll" ||
-                Name == "min.us" || Name == "min.ui" || Name == "min.ull")) {
+    } else if (IsNVVM && Name.consume_front("min.") &&
+               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+                Name == "ui" || Name == "ull")) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.starts_with("min.u")
+      Value *Cmp = Name.starts_with("u")
                        ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
                        : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
       Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");
