@@ -568,6 +568,7 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
 
 
 Improvements to Clang's time-trace
