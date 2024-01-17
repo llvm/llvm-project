@@ -354,15 +354,18 @@ struct ExtensionSet {
   void toLLVMFeatureList(std::vector<StringRef> &Features) const;
 };
 
-// Represents a dependency between two architecture extensions. If Later is
-// enabled, then Earlier must also be enabled. If Earlier is disabled, then
-// Later must also be disabled.
+// Represents a dependency between two architecture extensions. Later is the
+// feature which was added to the architecture after Earlier, and expands the
+// functionality provided by it. If Later is enabled, then Earlier will also be
+// enabled. If Earlier is disabled, then Later will also be disabled.
 struct ExtensionDependency {
   ArchExtKind Earlier;
   ArchExtKind Later;
 };
 
 // clang-format off
+// Each entry here is a link in the dependency chain starting from the
+// extension that was added to the architecture first.
 inline constexpr ExtensionDependency ExtensionDependencies[] = {
   {AEK_FP, AEK_FP16},
   {AEK_FP, AEK_SIMD},
