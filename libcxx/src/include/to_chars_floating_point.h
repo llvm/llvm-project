@@ -292,10 +292,11 @@ to_chars_result _Floating_to_chars_hex_precision(
             {
               // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus
               // cannot appear in an expression passed to a hardening assertion (because that expression might end up
-              // being passed to a printf-style formatting function). As a workaround, wrap the expression in a lambda.
-              auto __is_aligned = [&] { return _Number_of_bits_remaining % 4 == 0; };
+              // being passed to a printf-style formatting function). As a workaround, use an intermediate variable
+              // (lambdas aren't supported in C++03).
+              bool __is_aligned = _Number_of_bits_remaining % 4 == 0;
               (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
-              _LIBCPP_ASSERT_INTERNAL(__is_aligned(), "");
+              _LIBCPP_ASSERT_INTERNAL(__is_aligned, "");
             }
             _Number_of_bits_remaining -= 4;
 
@@ -426,10 +427,11 @@ to_chars_result _Floating_to_chars_hex_shortest(
             {
               // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus
               // cannot appear in an expression passed to a hardening assertion (because that expression might end up
-              // being passed to a printf-style formatting function). As a workaround, wrap the expression in a lambda.
-              auto __is_aligned = [&] { return _Number_of_bits_remaining % 4 == 0; };
+              // being passed to a printf-style formatting function). As a workaround, use an intermediate variable
+              // (lambdas aren't supported in C++03).
+              bool __is_aligned = _Number_of_bits_remaining % 4 == 0;
               (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
-              _LIBCPP_ASSERT_INTERNAL(__is_aligned(), "");
+              _LIBCPP_ASSERT_INTERNAL(__is_aligned, "");
             }
             _Number_of_bits_remaining -= 4;
 
