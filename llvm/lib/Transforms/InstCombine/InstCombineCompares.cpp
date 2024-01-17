@@ -2528,30 +2528,6 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
                                                     BinaryOperator *SRem,
                                                     const APInt &C) {
-  {
-    const APInt *C1;
-    ICmpInst::Predicate Pred = Cmp.getPredicate();
-    if ((match(SRem->getOperand(1), m_NonNegative(C1))) &&
-        ((Pred == ICmpInst::ICMP_SLT && C == *C1 - 1) ||
-         (Pred == ICmpInst::ICMP_SGT && C == *C1 - 2) ||
-         (Pred == ICmpInst::ICMP_SGT && C == -*C1 + 1) ||
-         (Pred == ICmpInst::ICMP_SLT && C == -*C1 + 2))) {
-      // icmp slt (X s% C), (C - 1) --> icmp ne (X s% C), (C - 1), if C >= 0
-      // icmp sgt (X s% C), (C - 2) --> icmp eq (X s% C), (C - 1), if C >= 0
-      // icmp sgt (X s% C), (-C + 1) --> icmp ne (X s% C), (-C + 1), if C >= 0
-      // icmp slt (X s% C), (-C + 2) --> icmp eq (X s% C), (-C + 1), if C >= 0
-      return new ICmpInst(
-          ((Pred == ICmpInst::ICMP_SLT && C == *C1 - 1) ||
-           (Pred == ICmpInst::ICMP_SGT && C == -*C1 + 1))
-              ? ICmpInst::ICMP_NE
-              : ICmpInst::ICMP_EQ,
-          SRem,
-          ConstantInt::get(SRem->getType(), C == -*C1 + 1 || C == -*C1 + 2
-                                                ? -*C1 + 1
-                                                : *C1 - 1));
-    }
-  }
-
   // Match an 'is positive' or 'is negative' comparison of remainder by a
   // constant power-of-2 value:
   // (X % pow2C) sgt/slt 0
@@ -2597,23 +2573,6 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
   // bit is set. Example:
   // (i16 X % 4) s< 0 --> (X & 32771) u> 32768
   return new ICmpInst(ICmpInst::ICMP_UGT, And, ConstantInt::get(Ty, SignMask));
-}
-
-Instruction *InstCombinerImpl::foldICmpURemConstant(ICmpInst &Cmp,
-                                                    BinaryOperator *URem,
-                                                    const APInt &C) {
-  const APInt *C1;
-  ICmpInst::Predicate Pred = Cmp.getPredicate();
-  if (match(URem->getOperand(1), m_APInt(C1)) &&
-      ((Pred == ICmpInst::ICMP_ULT && C == *C1 - 1) ||
-       (Pred == ICmpInst::ICMP_UGT && C == *C1 - 2 && C.ugt(1)))) {
-    // icmp ult (X u% C), (C - 1) --> icmp ne (X u% C), (C - 1)
-    // icmp ugt (X u% C), (C - 2) --> icmp eq (X u% C), (C - 1), if C >u 1
-    return new ICmpInst(Pred == ICmpInst::ICMP_UGT ? ICmpInst::ICMP_EQ
-                                                   : ICmpInst::ICMP_NE,
-                        URem, ConstantInt::get(URem->getType(), *C1 - 1));
-  }
-  return nullptr;
 }
 
 /// Fold icmp (udiv X, Y), C.
@@ -3751,10 +3710,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     break;
   case Instruction::SRem:
     if (Instruction *I = foldICmpSRemConstant(Cmp, BO, C))
-      return I;
-    break;
-  case Instruction::URem:
-    if (Instruction *I = foldICmpURemConstant(Cmp, BO, C))
       return I;
     break;
   case Instruction::UDiv:
