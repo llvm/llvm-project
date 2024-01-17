@@ -85,6 +85,24 @@ Module::~Module() {
   IFuncList.clear();
 }
 
+void Module::removeDebugIntrinsicDeclarations() {
+  auto *DeclareIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+  assert(DeclareIntrinsicFn->hasZeroLiveUses() &&
+         "Debug declare intrinsic should have had uses removed.");
+  DeclareIntrinsicFn->eraseFromParent();
+  auto *ValueIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+  assert(ValueIntrinsicFn->hasZeroLiveUses() &&
+         "Debug value intrinsic should have had uses removed.");
+  ValueIntrinsicFn->eraseFromParent();
+  auto *AssignIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+  assert(AssignIntrinsicFn->hasZeroLiveUses() &&
+         "Debug assign intrinsic should have had uses removed.");
+  AssignIntrinsicFn->eraseFromParent();
+}
+
 std::unique_ptr<RandomNumberGenerator>
 Module::createRNG(const StringRef Name) const {
   SmallString<32> Salt(Name);
