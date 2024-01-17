@@ -47,11 +47,8 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
 uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {
-    for (const auto &E : llvm::AArch64::Extensions)
-      if (FeatureStr == E.Name) {
-        FeaturesMask |= (1ULL << E.CPUFeature);
-        break;
-      }
+    if (auto Ext = parseArchExtension(FeatureStr))
+      FeaturesMask |= (1ULL << Ext->CPUFeature);
   }
   return FeaturesMask;
 }
@@ -75,17 +72,14 @@ StringRef AArch64::resolveCPUAlias(StringRef Name) {
 }
 
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
-  if (ArchExt.starts_with("no")) {
-    StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto &AE : Extensions) {
-      if (!AE.NegFeature.empty() && ArchExtBase == AE.Name)
-        return AE.NegFeature;
-    }
+  bool IsNegated = ArchExt.starts_with("no");
+  StringRef ArchExtBase = IsNegated ? ArchExt.drop_front(2) : ArchExt;
+
+  if (auto AE = parseArchExtension(ArchExtBase)) {
+    // Note: the returned string can be empty.
+    return IsNegated ? AE->NegFeature : AE->Feature;
   }
 
-  for (const auto &AE : Extensions)
-    if (!AE.Feature.empty() && ArchExt == AE.Name)
-      return AE.Feature;
   return StringRef();
 }
 
