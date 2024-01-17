@@ -128,11 +128,13 @@ lexical features of LLVM:
 #. Comments are delimited with a '``;``' and go until the end of line.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
-#. Unnamed temporaries are numbered sequentially (using a per-function
-   incrementing counter, starting with 0). Note that basic blocks and unnamed
-   function parameters are included in this numbering. For example, if the
-   entry basic block is not given a label name and all function parameters are
-   named, then it will get number 0.
+#. By default, unnamed temporaries are numbered sequentially (using a
+   per-function incrementing counter, starting with 0). However, when explicitly
+   specifying temporary numbers, it is allowed to skip over numbers.
+
+   Note that basic blocks and unnamed function parameters are included in this
+   numbering. For example, if the entry basic block is not given a label name
+   and all function parameters are named, then it will get number 0.
 
 It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
