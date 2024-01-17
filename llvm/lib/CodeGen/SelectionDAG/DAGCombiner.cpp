@@ -58,6 +58,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -86,6 +87,9 @@ STATISTIC(OpsNarrowed     , "Number of load/op/store narrowed");
 STATISTIC(LdStFP2Int      , "Number of fp load/store pairs transformed to int");
 STATISTIC(SlicedLoads, "Number of load sliced");
 STATISTIC(NumFPLogicOpsConv, "Number of logic ops converted to fp ops");
+
+DEBUG_COUNTER(DAGCombineCounter, "dagcombine",
+              "Controls whether a DAG combine is performed for a node");
 
 static cl::opt<bool>
 CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
@@ -2076,6 +2080,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
 }
 
 SDValue DAGCombiner::combine(SDNode *N) {
+  if (!DebugCounter::shouldExecute(DAGCombineCounter))
+    return SDValue();
+
   SDValue RV;
   if (!DisableGenericCombines)
     RV = visit(N);

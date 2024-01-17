@@ -4,8 +4,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -global-isel -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -global-isel -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -global-isel -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

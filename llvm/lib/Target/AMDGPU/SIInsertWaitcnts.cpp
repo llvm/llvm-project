@@ -299,7 +299,7 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(VS_CNT, getScoreLB(VS_CNT) + getWaitCountMax(VS_CNT));
+    setScoreUB(VS_CNT, getScoreUB(VS_CNT) + getWaitCountMax(VS_CNT));
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
 

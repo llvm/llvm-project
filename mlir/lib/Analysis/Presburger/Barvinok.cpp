@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/Barvinok.h"
 #include "llvm/ADT/Sequence.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace presburger;
@@ -143,4 +144,104 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   return GeneratingFunction(numColumns - 1, SmallVector<int>(1, sign),
                             std::vector({numerator}),
                             std::vector({denominator}));
+}
+
+/// We use an iterative procedure to find a vector not orthogonal
+/// to a given set, ignoring the null vectors.
+/// Let the inputs be {x_1, ..., x_k}, all vectors of length n.
+///
+/// In the following,
+/// vs[:i] means the elements of vs up to and including the i'th one,
+/// <vs, us> means the dot product of vs and us,
+/// vs ++ [v] means the vector vs with the new element v appended to it.
+///
+/// We proceed iteratively; for steps d = 0, ... n-1, we construct a vector
+/// which is not orthogonal to any of {x_1[:d], ..., x_n[:d]}, ignoring
+/// the null vectors.
+/// At step d = 0, we let vs = [1]. Clearly this is not orthogonal to
+/// any vector in the set {x_1[0], ..., x_n[0]}, except the null ones,
+/// which we ignore.
+/// At step d > 0 , we need a number v
+/// s.t. <x_i[:d], vs++[v]> != 0 for all i.
+/// => <x_i[:d-1], vs> + x_i[d]*v != 0
+/// => v != - <x_i[:d-1], vs> / x_i[d]
+/// We compute this value for all x_i, and then
+/// set v to be the maximum element of this set plus one. Thus
+/// v is outside the set as desired, and we append it to vs
+/// to obtain the result of the d'th step.
+Point mlir::presburger::detail::getNonOrthogonalVector(
+    ArrayRef<Point> vectors) {
+  unsigned dim = vectors[0].size();
+  assert(
+      llvm::all_of(vectors,
+                   [&](const Point &vector) { return vector.size() == dim; }) &&
+      "all vectors need to be the same size!");
+
+  SmallVector<Fraction> newPoint = {Fraction(1, 1)};
+  Fraction maxDisallowedValue = -Fraction(1, 0),
+           disallowedValue = Fraction(0, 1);
+
+  for (unsigned d = 1; d < dim; ++d) {
+    // Compute the disallowed values  - <x_i[:d-1], vs> / x_i[d] for each i.
+    maxDisallowedValue = -Fraction(1, 0);
+    for (const Point &vector : vectors) {
+      if (vector[d] == 0)
+        continue;
+      disallowedValue =
+          -dotProduct(ArrayRef(vector).slice(0, d), newPoint) / vector[d];
+
+      // Find the biggest such value
+      maxDisallowedValue = std::max(maxDisallowedValue, disallowedValue);
+    }
+    newPoint.push_back(maxDisallowedValue + 1);
+  }
+  return newPoint;
+}
+
+/// We use the following recursive formula to find the coefficient of
+/// s^power in the rational function given by P(s)/Q(s).
+///
+/// Let P[i] denote the coefficient of s^i in the polynomial P(s).
+/// (P/Q)[r] =
+/// if (r == 0) then
+///   P[0]/Q[0]
+/// else
+///   (P[r] - {Σ_{i=1}^r (P/Q)[r-i] * Q[i])}/(Q[0])
+/// We therefore recursively call `getCoefficientInRationalFunction` on
+/// all i \in [0, power).
+///
+/// https://math.ucdavis.edu/~deloera/researchsummary/
+/// barvinokalgorithm-latte1.pdf, p. 1285
+QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
+    unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
+  assert(den.size() != 0 &&
+         "division by empty denominator in rational function!");
+
+  unsigned numParam = num[0].getNumInputs();
+  // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
+  // inherits from.
+  assert(
+      llvm::all_of(
+          num, [&](const QuasiPolynomial &qp) { return num[0].isEqual(qp); }) &&
+      "the quasipolynomials should all belong to the same space!");
+
+  std::vector<QuasiPolynomial> coefficients;
+  coefficients.reserve(power + 1);
+
+  coefficients.push_back(num[0] / den[0]);
+  for (unsigned i = 1; i <= power; ++i) {
+    // If the power is not there in the numerator, the coefficient is zero.
+    coefficients.push_back(i < num.size() ? num[i]
+                                          : QuasiPolynomial(numParam, 0));
+
+    // After den.size(), the coefficients are zero, so we stop
+    // subtracting at that point (if it is less than i).
+    unsigned limit = std::min<unsigned long>(i, den.size() - 1);
+    for (unsigned j = 1; j <= limit; ++j)
+      coefficients[i] = coefficients[i] -
+                        coefficients[i - j] * QuasiPolynomial(numParam, den[j]);
+
+    coefficients[i] = coefficients[i] / den[0];
+  }
+  return coefficients[power].simplify();
 }
