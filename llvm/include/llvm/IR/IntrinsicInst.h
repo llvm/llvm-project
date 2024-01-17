@@ -534,8 +534,10 @@ public:
   /// @}
 };
 
-/// Wrapper functions for opaque interfacing between DbgVariableIntrinsics and
-/// DPValues.
+/// This set of functions allow us to write type-generic code that operates on
+/// DPValues and DbgVariableIntrinsics, reducing the necessary amount of code
+/// duplication for the temporary period in which we support both debug info
+/// models.
 /// @{
 inline bool IsaDbgValue(DPValue *DPV) { return DPV->isDbgValue(); }
 inline bool IsaDbgDeclare(DPValue *DPV) { return DPV->isDbgDeclare(); }

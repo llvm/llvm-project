@@ -162,6 +162,7 @@ DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
   // with the correct scope / inlinedAt fields.
   return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
 }
+
 DebugLoc llvm::getDebugValueLoc(DPValue *DPV) {
   // Original dbg.declare must have a location.
   const DebugLoc &DeclareLoc = DPV->getDebugLoc();
@@ -1837,6 +1838,7 @@ getFragmentOrEntireVariable(const DPValue *DPV) {
     VariableSlice.OffsetInBits = Frag->OffsetInBits;
   return VariableSlice;
 }
+
 static DIExpression::FragmentInfo
 getFragmentOrEntireVariable(const DbgVariableIntrinsic *DVI) {
   DIExpression::FragmentInfo VariableSlice(0, 0);
