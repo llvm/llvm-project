@@ -1,4 +1,4 @@
-int f(int x) {
+int fBranch(int x) {
   int result = (x / 42);
 
   if (result > 10)

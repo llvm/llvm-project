@@ -1,4 +1,3 @@
-// Declares clang::SyntaxOnlyAction.
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -7,7 +6,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
-// Declares llvm::cl::extrahelp.
+#include "clang/Analysis/CallGraph.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace clang;
@@ -67,6 +66,14 @@ public:
                      << FullLocation.getSpellingColumnNumber() << "\n";
       D->dump();
       if (D->hasBody()) {
+        TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();
+
+        if (D->getQualifiedNameAsString().find("globalF") != std::string::npos) {
+          CallGraph CG;
+          CG.addToCallGraph(TUD);
+          CG.viewGraph();
+        }
+
         CFG::BuildOptions cfgBuildOptions;
         auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), cfgBuildOptions);
         cfg->dump(D->getASTContext().getLangOpts(), true);
