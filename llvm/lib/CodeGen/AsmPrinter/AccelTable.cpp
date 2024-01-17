@@ -403,12 +403,10 @@ void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
 
 std::optional<uint64_t>
 DWARF5AccelTableData::getDefiningParentDieOffset(const DIE &Die) {
-  auto *Parent = Die.getParent();
-  if (!Parent)
-    return {};
-  if (Parent->findAttribute(dwarf::Attribute::DW_AT_declaration))
-    return {};
-  return Parent->getOffset();
+  if (auto *Parent = Die.getParent();
+      Parent && !Parent->findAttribute(dwarf::Attribute::DW_AT_declaration))
+    return Parent->getOffset();
+  return {};
 }
 
 enum IdxParentEncoding : uint8_t {

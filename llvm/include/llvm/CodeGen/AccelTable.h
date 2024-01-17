@@ -318,10 +318,9 @@ public:
   }
 
   std::optional<uint64_t> getParentDieOffset() const {
-    auto OffsetAndId = getParentDieOffsetAndUnitID();
-    if (!OffsetAndId)
-      return {};
-    return OffsetAndId->offset();
+    if (auto OffsetAndId = getParentDieOffsetAndUnitID())
+      return OffsetAndId->offset();
+    return {};
   }
 
   std::optional<OffsetAndUnitID> getParentDieOffsetAndUnitID() const {
