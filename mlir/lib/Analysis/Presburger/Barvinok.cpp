@@ -278,6 +278,10 @@ std::pair<QuasiPolynomial, std::vector<Fraction>>
 substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
                    Point mu) {
   unsigned numDims = mu.size();
+  for (const Point &d : ds)
+    assert(d.size() == numDims &&
+           "μ has to have the same number of dimensions as the generators!");
+
   // First, the exponent in the numerator becomes
   // - (μ • u_1) * (floor(first col of v))
   // - (μ • u_2) * (floor(second col of v)) - ...
