@@ -80,6 +80,8 @@ static bool EditBOZInput(
     } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
     } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
     } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
+    } else if (ch == ',') {
+      break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in B/O/Z input field", ch);
@@ -214,6 +216,8 @@ bool EditIntegerInput(
     int digit{0};
     if (ch >= '0' && ch <= '9') {
       digit = ch - '0';
+    } else if (ch == ',') {
+      break; // end non-list-directed field early
     } else {
       io.GetIoErrorHandler().SignalError(
           "Bad character '%lc' in INTEGER input field", ch);
@@ -291,7 +295,8 @@ static ScannedRealInput ScanRealInput(
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
   int exponent{0};
-  if (!next || (!bzMode && *next == ' ')) {
+  if (!next || (!bzMode && *next == ' ') ||
+      (!(edit.modes.editingFlags & decimalComma) && *next == ',')) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
       // A fixed-width field containing only a sign is also zero;
@@ -473,7 +478,7 @@ static ScannedRealInput ScanRealInput(
     while (next && (*next == ' ' || *next == '\t')) {
       next = io.NextInField(remaining, edit);
     }
-    if (next) {
+    if (next && (*next != ',' || (edit.modes.editingFlags & decimalComma))) {
       return {}; // error: unused nonblank character in fixed-width field
     }
   }
