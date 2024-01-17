@@ -163,6 +163,18 @@ DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
   return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
 }
 
+DebugLoc llvm::getDebugValueLoc(DPValue *DPV) {
+  // Original dbg.declare must have a location.
+  const DebugLoc &DeclareLoc = DPV->getDebugLoc();
+  MDNode *Scope = DeclareLoc.getScope();
+  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
+  // Because no machine insts can come from debug intrinsics, only the scope
+  // and inlinedAt is significant. Zero line numbers are used in case this
+  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
+  // with the correct scope / inlinedAt fields.
+  return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
+}
+
 //===----------------------------------------------------------------------===//
 // DebugInfoFinder implementations.
 //===----------------------------------------------------------------------===//
@@ -1813,6 +1825,31 @@ void at::deleteAll(Function *F) {
     DAI->eraseFromParent();
 }
 
+/// Get the FragmentInfo for the variable if it exists, otherwise return a
+/// FragmentInfo that covers the entire variable if the variable size is
+/// known, otherwise return a zero-sized fragment.
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DPValue *DPV) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DPV->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DPV->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DbgVariableIntrinsic *DVI) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DVI->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DVI->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+
 bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
@@ -1910,7 +1947,7 @@ bool at::calculateFragmentIntersect(
   if (DAI->isKillAddress())
     return false;
 
-  DIExpression::FragmentInfo VarFrag = DAI->getFragmentOrEntireVariable();
+  DIExpression::FragmentInfo VarFrag = getFragmentOrEntireVariable(DAI);
   if (VarFrag.SizeInBits == 0)
     return false; // Variable size is unknown.
 

@@ -1724,20 +1724,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                           SI->getIterator());
 }
 
-namespace llvm {
-// RemoveDIs: duplicate the getDebugValueLoc method using DPValues instead of
-// dbg.value intrinsics. In llvm namespace so that it overloads the
-// DbgVariableIntrinsic version.
-static DebugLoc getDebugValueLoc(DPValue *DPV) {
-  // Original dbg.declare must have a location.
-  const DebugLoc &DeclareLoc = DPV->getDebugLoc();
-  MDNode *Scope = DeclareLoc.getScope();
-  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
-  // Produce an unknown location with the correct scope / inlinedAt fields.
-  return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
-}
-} // namespace llvm
-
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
