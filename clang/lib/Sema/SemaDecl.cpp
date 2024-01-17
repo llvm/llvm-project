@@ -11801,6 +11801,26 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                          OldDecl, Previous);
 }
 
+static void CheckFunctionDeclarationAttributesUsage(Sema &S,
+                                                    FunctionDecl *NewFD) {
+  bool IsPure = NewFD->hasAttr<PureAttr>();
+  bool IsConst = NewFD->hasAttr<ConstAttr>();
+
+  if (IsPure && IsConst) {
+    S.Diag(NewFD->getLocation(), diag::warn_const_attr_with_pure_attr);
+    NewFD->dropAttr<PureAttr>();
+  }
+  if (IsPure || IsConst) {
+    // Constructors and destructors are functions which return void, so are handled here as well.
+    if (NewFD->getReturnType()->isVoidType()) {
+      S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
+          << IsConst;
+      NewFD->dropAttr<PureAttr>();
+      NewFD->dropAttr<ConstAttr>();
+    }
+  }
+}
+
 /// Perform semantic checking of a new function declaration.
 ///
 /// Performs semantic analysis of the new function declaration
@@ -11898,12 +11918,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     NewFD->setInvalidDecl();
   }
 
-  if (NewFD->hasAttr<PureAttr>() || NewFD->hasAttr<ConstAttr>()) {
-    if (isa<CXXConstructorDecl>(NewFD))
-      Diag(NewFD->getLocation(), diag::warn_pure_attr_on_cxx_constructor);
-    else if (NewFD->getReturnType()->isVoidType())
-      Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void);
-  }
+  CheckFunctionDeclarationAttributesUsage(*this, NewFD);
 
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
