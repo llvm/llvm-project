@@ -1064,12 +1064,12 @@
 // CHECK-ZFA-EXT: __riscv_zfa 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32izfbfmin0p8 -x c -E -dM %s \
+// RUN: -march=rv32izfbfmin1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFBFMIN-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64izfbfmin0p8 -x c -E -dM %s \
+// RUN: -march=rv64izfbfmin1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFBFMIN-EXT %s
-// CHECK-ZFBFMIN-EXT: __riscv_zfbfmin 8000{{$}}
+// CHECK-ZFBFMIN-EXT: __riscv_zfbfmin 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zicfilp0p4 -x c -E -dM %s \
@@ -1128,20 +1128,20 @@
 // CHECK-ZVBC-EXT: __riscv_zvbc  1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32ifzvfbfmin0p8 -x c -E -dM %s \
+// RUN: -march=rv32ifzvfbfmin1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFMIN-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64ifzvfbfmin0p8 -x c -E -dM %s \
+// RUN: -march=rv64ifzvfbfmin1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFMIN-EXT %s
-// CHECK-ZVFBFMIN-EXT: __riscv_zvfbfmin 8000{{$}}
+// CHECK-ZVFBFMIN-EXT: __riscv_zvfbfmin 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32ifzvfbfwma0p8 -x c -E -dM %s \
+// RUN: -march=rv32ifzvfbfwma1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFWMA-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64ifzvfbfwma0p8 -x c -E -dM %s \
+// RUN: -march=rv64ifzvfbfwma1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVFBFWMA-EXT %s
-// CHECK-ZVFBFWMA-EXT: __riscv_zvfbfwma 8000{{$}}
+// CHECK-ZVFBFWMA-EXT: __riscv_zvfbfwma 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zve32x_zvkg1p0 -x c -E -dM %s \
