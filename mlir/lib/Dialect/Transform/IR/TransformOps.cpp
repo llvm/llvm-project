@@ -1472,25 +1472,29 @@ DiagnosedSilenceableFailure
 transform::GetOperandOp::apply(transform::TransformRewriter &rewriter,
                                transform::TransformResults &results,
                                transform::TransformState &state) {
-  std::optional<int64_t> maybeOperandNumber = getOperandNumber();
   SmallVector<Value> operands;
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    if (!maybeOperandNumber) {
-      for (Value operand : target->getOperands())
-        operands.push_back(operand);
-      continue;
-    }
-    int64_t operandNumber = *maybeOperandNumber;
-    if (operandNumber >= target->getNumOperands()) {
-      DiagnosedSilenceableFailure diag =
-          emitSilenceableError() << "targeted op does not have enough operands";
-      diag.attachNote(target->getLoc()) << "target op";
+    SmallVector<int64_t> operandPositions;
+    DiagnosedSilenceableFailure diag = expandTargetSpecification(
+        getLoc(), getIsAll(), getIsInverted(), getRawPositionList(),
+        target->getNumOperands(), operandPositions);
+    if (diag.isSilenceableFailure()) {
+      diag.attachNote(target->getLoc())
+          << "while considering positions of this payload operation";
       return diag;
     }
-    operands.push_back(target->getOperand(operandNumber));
+    llvm::append_range(operands,
+                       llvm::map_range(operandPositions, [&](int64_t pos) {
+                         return target->getOperand(pos);
+                       }));
   }
-  results.setValues(llvm::cast<OpResult>(getResult()), operands);
+  results.setValues(cast<OpResult>(getResult()), operands);
   return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::GetOperandOp::verify() {
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1501,25 +1505,29 @@ DiagnosedSilenceableFailure
 transform::GetResultOp::apply(transform::TransformRewriter &rewriter,
                               transform::TransformResults &results,
                               transform::TransformState &state) {
-  std::optional<int64_t> maybeResultNumber = getResultNumber();
   SmallVector<Value> opResults;
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    if (!maybeResultNumber) {
-      for (Value result : target->getResults())
-        opResults.push_back(result);
-      continue;
-    }
-    int64_t resultNumber = *maybeResultNumber;
-    if (resultNumber >= target->getNumResults()) {
-      DiagnosedSilenceableFailure diag =
-          emitSilenceableError() << "targeted op does not have enough results";
-      diag.attachNote(target->getLoc()) << "target op";
+    SmallVector<int64_t> resultPositions;
+    DiagnosedSilenceableFailure diag = expandTargetSpecification(
+        getLoc(), getIsAll(), getIsInverted(), getRawPositionList(),
+        target->getNumResults(), resultPositions);
+    if (diag.isSilenceableFailure()) {
+      diag.attachNote(target->getLoc())
+          << "while considering positions of this payload operation";
       return diag;
     }
-    opResults.push_back(target->getOpResult(resultNumber));
+    llvm::append_range(opResults,
+                       llvm::map_range(resultPositions, [&](int64_t pos) {
+                         return target->getResult(pos);
+                       }));
   }
-  results.setValues(llvm::cast<OpResult>(getResult()), opResults);
+  results.setValues(cast<OpResult>(getResult()), opResults);
   return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::GetResultOp::verify() {
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//

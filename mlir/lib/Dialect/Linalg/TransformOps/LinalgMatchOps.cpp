@@ -388,33 +388,6 @@ expandTargetSpecification(Location loc, bool isAll, bool isInverted,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Checks if the positional specification defined is valid and reports errors
-/// otherwise.
-LogicalResult verifyStructuredTransformDimsOp(Operation *op,
-                                              ArrayRef<int64_t> raw,
-                                              bool inverted, bool all) {
-  if (all) {
-    if (inverted) {
-      return op->emitOpError()
-             << "cannot request both 'all' and 'inverted' values in the list";
-    }
-    if (!raw.empty()) {
-      return op->emitOpError()
-             << "cannot both request 'all' and specific values in the list";
-    }
-  }
-  if (!all && raw.empty()) {
-    return op->emitOpError() << "must request specific values in the list if "
-                                "'all' is not specified";
-  }
-  SmallVector<int64_t> rawVector = llvm::to_vector(raw);
-  auto *it = std::unique(rawVector.begin(), rawVector.end());
-  if (it != rawVector.end())
-    return op->emitOpError() << "expected the listed values to be unique";
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // MatchStructuredDimOp
 //===----------------------------------------------------------------------===//
@@ -475,8 +448,8 @@ LogicalResult transform::MatchStructuredDimOp::verify() {
     return emitOpError() << "cannot request the same dimension to be both "
                             "parallel and reduction";
   }
-  return verifyStructuredTransformDimsOp(getOperation(), getRawDimList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawDimList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -592,8 +565,8 @@ LogicalResult verifyStructuredOperandOp(OpTy op) {
 LogicalResult transform::MatchStructuredInputOp::verify() {
   if (failed(verifyStructuredOperandOp(*this)))
     return failure();
-  return verifyStructuredTransformDimsOp(getOperation(), getRawPositionList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -665,8 +638,8 @@ DiagnosedSilenceableFailure transform::MatchStructuredInitOp::getPositionsFor(
 LogicalResult transform::MatchStructuredInitOp::verify() {
   if (failed(verifyStructuredOperandOp(*this)))
     return failure();
-  return verifyStructuredTransformDimsOp(getOperation(), getRawPositionList(),
-                                         getIsInverted(), getIsAll());
+  return verifyTransformMatchDimsOp(getOperation(), getRawPositionList(),
+                                    getIsInverted(), getIsAll());
 }
 
 //===----------------------------------------------------------------------===//
@@ -791,79 +764,6 @@ void transform::MatchStructuredYieldOp::getEffects(
 void transform::MatchStructuredYieldOp::build(OpBuilder &builder,
                                               OperationState &state) {
   build(builder, state, ValueRange());
-}
-
-//===----------------------------------------------------------------------===//
-// Printing and parsing for structured match ops.
-//===----------------------------------------------------------------------===//
-
-/// Keyword syntax for positional specification inversion.
-constexpr const static llvm::StringLiteral kDimExceptKeyword = "except";
-
-/// Keyword syntax for full inclusion in positional specification.
-constexpr const static llvm::StringLiteral kDimAllKeyword = "all";
-
-/// Parses a positional specification for structured transform operations. The
-/// following forms are accepted:
-///
-///  - `all`: sets `isAll` and returns;
-///  - comma-separated-integer-list: populates `rawDimList` with the values;
-///  - `except` `(` comma-separated-integer-list `)`: populates `rawDimList`
-///  with the values and sets `isInverted`.
-static ParseResult parseStructuredTransformDims(OpAsmParser &parser,
-                                                DenseI64ArrayAttr &rawDimList,
-                                                UnitAttr &isInverted,
-                                                UnitAttr &isAll) {
-  Builder &builder = parser.getBuilder();
-  if (parser.parseOptionalKeyword(kDimAllKeyword).succeeded()) {
-    rawDimList = builder.getDenseI64ArrayAttr({});
-    isInverted = nullptr;
-    isAll = builder.getUnitAttr();
-    return success();
-  }
-
-  isAll = nullptr;
-  isInverted = nullptr;
-  if (parser.parseOptionalKeyword(kDimExceptKeyword).succeeded()) {
-    isInverted = builder.getUnitAttr();
-  }
-
-  if (isInverted) {
-    if (parser.parseLParen().failed())
-      return failure();
-  }
-
-  SmallVector<int64_t> values;
-  ParseResult listResult = parser.parseCommaSeparatedList(
-      [&]() { return parser.parseInteger(values.emplace_back()); });
-  if (listResult.failed())
-    return failure();
-
-  rawDimList = builder.getDenseI64ArrayAttr(values);
-
-  if (isInverted) {
-    if (parser.parseRParen().failed())
-      return failure();
-  }
-  return success();
-}
-
-/// Prints a positional specification for structured transform operations.
-static void printStructuredTransformDims(OpAsmPrinter &printer, Operation *op,
-                                         DenseI64ArrayAttr rawDimList,
-                                         UnitAttr isInverted, UnitAttr isAll) {
-  if (isAll) {
-    printer << kDimAllKeyword;
-    return;
-  }
-  if (isInverted) {
-    printer << kDimExceptKeyword << "(";
-  }
-  llvm::interleaveComma(rawDimList.asArrayRef(), printer.getStream(),
-                        [&](int64_t value) { printer << value; });
-  if (isInverted) {
-    printer << ")";
-  }
 }
 
 #define GET_OP_CLASSES
