@@ -10846,8 +10846,18 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
-        FriendConstraintsDependOnEnclosingTemplate(NewFD))
+        FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
       NewFD->setFriendConstraintRefersToEnclosingTemplate(true);
+
+      // C++ [temp.friend]p9:
+      //    A friend function template with a constraint that depends on a
+      //    template parameter from an enclosing template shall be a definition.
+      if (!D.isFunctionDefinition()) {
+        Diag(NewFD->getBeginLoc(),
+             diag::err_friend_decl_with_enclosing_temp_constraint_must_be_def);
+        NewFD->setInvalidDecl();
+      }
+    }
 
     if (FunctionTemplate) {
       if (NewFD->isInvalidDecl())
@@ -12065,11 +12075,12 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         checkThisInStaticMemberFunctionType(Method);
     }
 
-    // C++20: dcl.decl.general p4:
-    // The optional requires-clause ([temp.pre]) in an init-declarator or
-    // member-declarator shall be present only if the declarator declares a
-    // templated function ([dcl.fct]).
     if (Expr *TRC = NewFD->getTrailingRequiresClause()) {
+      // C++20: dcl.decl.general p4:
+      // The optional requires-clause ([temp.pre]) in an init-declarator or
+      // member-declarator shall be present only if the declarator declares a
+      // templated function ([dcl.fct]).
+      //
       // [temp.pre]/8:
       // An entity is templated if it is
       // - a template,
@@ -12087,15 +12098,29 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // templated. A templated variable is a variable template or a variable
       // that is templated.
 
-      if (!NewFD->getDescribedFunctionTemplate() && // -a template
-          // defined... in a templated entity
+      bool IsTemplate = NewFD->getDescribedFunctionTemplate();
+      bool IsFriend = NewFD->getFriendObjectKind();
+      if (!IsTemplate && // -a template
+                         // defined... in a templated entity
           !(DeclIsDefn && NewFD->isTemplated()) &&
           // a member of a templated entity
           !(isa<CXXMethodDecl>(NewFD) && NewFD->isTemplated()) &&
           // Don't complain about instantiations, they've already had these
           // rules + others enforced.
-          !NewFD->isTemplateInstantiation()) {
+          !NewFD->isTemplateInstantiation() &&
+          // If the function violates [temp.friend]p9 because it is missing
+          // a definition, and adding a definition would make it templated,
+          // then let that error take precedence.
+          !(!DeclIsDefn && IsFriend && NewFD->isTemplated())) {
         Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
+      } else if (!DeclIsDefn && !IsTemplate && IsFriend &&
+                 !NewFD->isTemplateInstantiation()) {
+        // C++ [temp.friend]p9:
+        //   A non-template friend declaration with a requires-clause shall be a
+        //   definition.
+        Diag(NewFD->getBeginLoc(),
+             diag::err_non_temp_friend_decl_with_requires_clause_must_be_def);
+        NewFD->setInvalidDecl();
       }
     }
 
