@@ -22,8 +22,7 @@ call system(command, exitstat)
 ! CHECK-NEXT:   %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i2>) -> !fir.box<none>
-! CHECK-NEXT:   %[[VAL_12:.*]] = fir.convert %[[VAL_8:.*]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
-! CHECK-NEXT:   %[[VAL_13:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12]], %[[c9_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:        %[[VAL_13:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12:.*]], %[[c9_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:   return
 ! CHECK-NEXT:  }
 end subroutine all_args
@@ -43,11 +42,10 @@ call system(command)
 ! CHECK-NEXT:   fir.store %[[c0_i2:.*]] to %[[cmdstatVal]] : !fir.ref<i2>
 ! CHECK-NEXT:   %[[cmdstatBox:.*]] = fir.embox %[[cmdstatVal]] : (!fir.ref<i2>) -> !fir.box<i2>
 ! CHECK-NEXT:   %[[absentBox2:.*]] = fir.absent !fir.box<none>
-! CHECK:        %[[c35_i32:.*]] = arith.constant 35 : i32
+! CHECK:        %[[c34_i32:.*]] = arith.constant 34 : i32
 ! CHECK-NEXT:   %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[cmdstst:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i2>) -> !fir.box<none>
-! CHECK-NEXT:   %[[VAL_10:.*]]0 = fir.convert %[[VAL_7:.*]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
-! CHECK-NEXT:   %[[VAL_11:.*]]1 = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[absentBox]], %[[cmdstst]], %[[absentBox2]], %[[VAL_10]]0, %[[c35_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:        %[[VAL_11:.*]]1 = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[absentBox]], %[[cmdstst]], %[[absentBox2]], %[[VAL_10:.*]]0, %[[c34_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:   return
 ! CHECK-NEXT:    }
 end subroutine only_command
