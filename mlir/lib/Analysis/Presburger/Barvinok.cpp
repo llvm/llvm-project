@@ -172,8 +172,10 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 Point mlir::presburger::detail::getNonOrthogonalVector(
     ArrayRef<Point> vectors) {
   unsigned dim = vectors[0].size();
-  for (const Point &vector : vectors)
-    assert(vector.size() == dim && "all vectors need to be the same size!");
+  assert(
+      llvm::all_of(vectors,
+                   [&](const Point &vector) { return vector.size() == dim; }) &&
+      "all vectors need to be the same size!");
 
   SmallVector<Fraction> newPoint = {Fraction(1, 1)};
   Fraction maxDisallowedValue = -Fraction(1, 0),
@@ -216,11 +218,12 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
          "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
-  for (const QuasiPolynomial &qp : num)
-    // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
-    // inherits from.
-    assert(num[0].isEqual(qp) &&
-           "the quasipolynomials should all belong to the same space!");
+  // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
+  // inherits from.
+  assert(
+      llvm::all_of(
+          num, [&](const QuasiPolynomial &qp) { return num[0].isEqual(qp); }) &&
+      "the quasipolynomials should all belong to the same space!");
 
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(power + 1);
