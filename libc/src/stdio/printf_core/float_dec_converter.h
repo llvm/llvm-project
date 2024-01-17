@@ -566,8 +566,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         const bool truncated = !zero_after_digits(
             exponent - FRACTION_LEN, precision,
             float_bits.get_explicit_mantissa(), FRACTION_LEN);
-        round =
-            get_round_direction(last_digit, truncated, float_bits.sign());
+        round = get_round_direction(last_digit, truncated, float_bits.sign());
 
         RET_IF_RESULT_NEGATIVE(
             float_writer.write_last_block(digits, maximum, round));
