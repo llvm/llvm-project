@@ -139,6 +139,8 @@ std::string Hurd::getDynamicLinker(const ArgList &Args) const {
     return "/lib/ld.so";
   case llvm::Triple::x86_64:
     return "/lib/ld-x86-64.so.1";
+  default:
+    break;
   }
 
   llvm_unreachable("unsupported architecture");
