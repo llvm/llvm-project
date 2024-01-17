@@ -152,7 +152,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let ClampLo = P.HasClampLo;
   let ClampHi = P.HasClampHi;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -208,8 +208,8 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
   VOP3_Real <ps, Gen.Subtarget, asm_name> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -599,7 +599,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let VALU = 1;
   let SDWA = 1;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -811,7 +811,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let DPP = 1;
   let Size = 8;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -1340,8 +1340,8 @@ class VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
 class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName> :
   VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -1470,9 +1470,8 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
   let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
       DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
-      AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate) in {
-
+      OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts],
+                            [TruePredicate]) in {
     defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }

@@ -758,14 +758,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Add framework include paths and library search paths.
-  // There are two flavors:
-  // 1. The "non-standard" paths, e.g. for DriverKit:
-  //      -L<sysroot>/System/DriverKit/usr/lib
-  //      -F<sysroot>/System/DriverKit/System/Library/Frameworks
-  // 2. The "standard" paths, e.g. for macOS and iOS:
-  //      -F<sysroot>/System/Library/Frameworks
-  //      -F<sysroot>/Library/Frameworks
+  // Add non-standard, platform-specific search paths, e.g., for DriverKit:
+  //  -L<sysroot>/System/DriverKit/usr/lib
+  //  -F<sysroot>/System/DriverKit/System/Library/Framework
   {
     bool NonStandardSearchPath = false;
     const auto &Triple = getToolChain().getTriple();
@@ -776,22 +771,18 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1);
     }
 
-    if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
-      auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
-        SmallString<128> P(Sysroot->getValue());
-        AppendPlatformPrefix(P, Triple);
-        llvm::sys::path::append(P, SearchPath);
-        if (getToolChain().getVFS().exists(P)) {
-          CmdArgs.push_back(Args.MakeArgString(Flag + P));
-        }
-      };
-
-      if (NonStandardSearchPath) {
+    if (NonStandardSearchPath) {
+      if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
+        auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
+          SmallString<128> P(Sysroot->getValue());
+          AppendPlatformPrefix(P, Triple);
+          llvm::sys::path::append(P, SearchPath);
+          if (getToolChain().getVFS().exists(P)) {
+            CmdArgs.push_back(Args.MakeArgString(Flag + P));
+          }
+        };
         AddSearchPath("-L", "/usr/lib");
         AddSearchPath("-F", "/System/Library/Frameworks");
-      } else if (!Triple.isDriverKit()) {
-        AddSearchPath("-F", "/System/Library/Frameworks");
-        AddSearchPath("-F", "/Library/Frameworks");
       }
     }
   }
@@ -2926,6 +2917,10 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
   // to fix the same problem with C++ headers, and is generally fragile.
   if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
+
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
+                                options::OPT_fno_define_target_os_macros))
+    CC1Args.push_back("-fdefine-target-os-macros");
 }
 
 void Darwin::addClangCC1ASTargetOptions(

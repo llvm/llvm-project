@@ -47,6 +47,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1316,10 +1317,9 @@ void request_evaluate(const llvm::json::Object &request) {
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      SetValueForKey(value, body, "result");
-      auto value_typename = value.GetType().GetDisplayTypeName();
-      EmplaceSafeString(body, "type",
-                        value_typename ? value_typename : NO_TYPENAME);
+      VariableDescription desc(value);
+      EmplaceSafeString(body, "result", desc.GetResult(context));
+      EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
         auto variableReference = g_dap.variables.InsertExpandableVariable(
             value, /*is_permanent=*/context == "repl");
@@ -3109,8 +3109,9 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      SetValueForKey(variable, body, "value");
-      EmplaceSafeString(body, "type", variable.GetType().GetDisplayTypeName());
+      VariableDescription desc(variable);
+      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "type", desc.display_type_name);
 
       // We don't know the index of the variable in our g_dap.variables
       // so always insert a new one to get its variablesReference.
@@ -3733,7 +3734,8 @@ int SetupStdoutStderrRedirection() {
 
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);

@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs < %s | FileCheck %s
-; RUN: opt -S -codegenprepare -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
-; RUN: opt -S -codegenprepare -cgpp-huge-func=0 -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -cgpp-huge-func=0 -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
 
 @A = dso_local global i32 zeroinitializer
 @B = dso_local global i32 zeroinitializer

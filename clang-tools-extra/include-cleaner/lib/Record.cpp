@@ -178,7 +178,8 @@ public:
       : RecordPragma(CI.getPreprocessor(), Out) {}
   RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
       : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
-        UniqueStrings(Arena) {}
+        Arena(std::make_shared<llvm::BumpPtrAllocator>()),
+        UniqueStrings(*Arena) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -204,7 +205,7 @@ public:
           std::unique(It.getSecond().begin(), It.getSecond().end()),
           It.getSecond().end());
     }
-    Out->Arena = std::move(Arena);
+    Out->Arena.emplace_back(std::move(Arena));
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -336,7 +337,7 @@ private:
   const SourceManager &SM;
   const HeaderSearch &HeaderInfo;
   PragmaIncludes *Out;
-  llvm::BumpPtrAllocator Arena;
+  std::shared_ptr<llvm::BumpPtrAllocator> Arena;
   /// Intern table for strings. Contents are on the arena.
   llvm::StringSaver UniqueStrings;
 

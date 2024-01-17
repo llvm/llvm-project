@@ -17,9 +17,9 @@ func.func @vectorize_1d_tensor_extract(%arg0: tensor<3xf32>, %arg1: tensor<4x3xi
 // CHECK-LABEL: func.func @vectorize_1d_tensor_extract
 // CHECK-SAME:    %[[ARG0:.*]]: tensor<3xf32>
 // CHECK-SAME:    %[[ARG1:.*]]: tensor<4x3xi32>
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
-// CHECK: %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[MASK:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
+// CHECK-DAG: %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
 // CHECK: %[[V0:.*]] = vector.transfer_read %[[ARG1]]
 // CHECK: %[[CAST:.*]] = arith.index_cast %[[V0]]
 // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST]]
@@ -58,7 +58,7 @@ func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg
 // CHECK-SAME:      %[[ARG_1:.*]]: tensor<1x1x3xf32>) -> tensor<1x1x3xf32> {
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
-// CHECK-DAG:       arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C0_f32_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[C0_f32:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[READ:.*]] = vector.transfer_read  %[[ARG_0]][%[[C1]], %[[C2]]], %[[C0_f32]] {in_bounds = [true, true, true], permutation_map = #[[$MAP]]} : tensor<3x3xf32>, vector<1x1x3xf32>
 // CHECK:           %[[C0_4:.*]] = arith.constant 0 : index
@@ -93,10 +93,10 @@ func.func @vectorize_nd_tensor_extract_transfer_read_basic(%arg0: tensor<3x3x3xf
 // CHECK-LABEL: func.func @vectorize_nd_tensor_extract_transfer_read_basic
 // CHECK-SAME: %[[ARG0:.*]]: tensor<3x3x3xf32>
 // CHECK-SAME: %[[ARG1:.*]]: tensor<1x1x3xf32>
-// CHECK:   %[[CST:.*]] = arith.constant dense<0> : vector<1x1x3xindex>
-// CHECK:   %[[C0_i32:.*]] = arith.constant 0 : i32
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
-// CHECK:   %[[CST_0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG: %[[CST:.*]] = arith.constant dense<0> : vector<1x1x3xindex>
+// CHECK-DAG: %[[C0_i32:.*]] = arith.constant 0 : i32
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[CST_0:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:   %[[IDX_VEC0:.*]] = vector.shape_cast %[[CST]] : vector<1x1x3xindex> to vector<3xindex>
 // CHECK:   %[[IDX1:.*]] = vector.extractelement %[[IDX_VEC0]][%[[C0_i32]] : i32] : vector<3xindex>
 // CHECK:   %[[IDX_VEC:.*]] = vector.shape_cast %[[CST]] : vector<1x1x3xindex> to vector<3xindex>
@@ -139,11 +139,11 @@ func.func @vectorize_nd_tensor_extract_transfer_read_complex(%6: tensor<45x80x16
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<45x80x16xf32>,
 // CHECK-SAME:      %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index, %[[VAL_4:.*]]: index,
 // CHECK-SAME:      %[[VAL_5:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK:           %[[VAL_6:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK:           %[[VAL_7:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_8:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_10:.*]] = arith.constant 79 : index
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_10:.*]] = arith.constant 79 : index
 // CHECK:           %[[VAL_11:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_12:.*]] = vector.broadcast %[[VAL_11]] : index to vector<1x4xindex>
 // CHECK:           %[[VAL_13:.*]] = vector.broadcast %[[VAL_3]] : index to vector<4xindex>
@@ -191,11 +191,11 @@ func.func @vectorize_nd_tensor_extract_index_from_tensor(%arg0: tensor<3x3xf32>,
 // CHECK-SAME: %[[ARG2:arg2]]: tensor<4x3xi32>
 // CHECK-SAME: %[[ARG3:.*]]: tensor<4x7x2xf32>
 // CHECK-SAME: %[[ARG4:.*]]: tensor<4x7x3x2xf32>
-// CHECK:    %[[C0:.*]] = arith.constant 0 : index
-// CHECK:    %[[C0_i32:.*]] = arith.constant 0 : i32
-// CHECK:    %[[CST:.*]] = arith.constant dense<3> : vector<7x2x4x3xindex>
-// CHECK:    %[[CST_1:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
-// CHECK:    %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C0_i32:.*]] = arith.constant 0 : i32
+// CHECK-DAG: %[[CST:.*]] = arith.constant dense<3> : vector<7x2x4x3xindex>
+// CHECK-DAG: %[[CST_1:.*]] = arith.constant dense<true> : vector<4x7x3x2xi1>
+// CHECK-DAG: %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<4x7x3x2xf32>
 // CHECK:    %[[V0:.*]] = vector.transfer_read %[[ARG1]][%[[C0]], %[[C0]]], %[[C0_i32]] {in_bounds = [true, true]} : tensor<4x3xi32>, vector<4x3xi32>
 // CHECK:    %[[V1:.*]] = vector.transfer_read %[[ARG2]][%[[C0]], %[[C0]]], %[[C0_i32]] {in_bounds = [true, true]} : tensor<4x3xi32>, vector<4x3xi32>
 // CHECK:    %[[CAST:.*]] = arith.index_cast %[[V0]] : vector<4x3xi32> to vector<4x3xindex>
@@ -239,12 +239,12 @@ func.func @vectorize_nd_tensor_extract_contiguous_and_gather(%arg0: tensor<6xf32
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_contiguous_and_gather(
 // CHECK-SAME:                    %[[VAL_0:.*]]: tensor<6xf32>
 // CHECK-SAME:                    %[[VAL_1:.*]]: tensor<5xi32>
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_4:.*]] = arith.constant dense<0> : vector<5xindex>
-// CHECK:           %[[VAL_5:.*]] = arith.constant dense<5> : vector<5xindex>
-// CHECK:           %[[VAL_6:.*]] = arith.constant dense<true> : vector<5xi1>
-// CHECK:           %[[VAL_7:.*]] = arith.constant dense<0.000000e+00> : vector<5xf32>
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant dense<0> : vector<5xindex>
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant dense<5> : vector<5xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<true> : vector<5xi1>
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant dense<0.000000e+00> : vector<5xf32>
 // CHECK:           %[[VAL_8:.*]] = tensor.empty() : tensor<5xf32>
 // CHECK:           %[[VAL_9:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_2]]], %[[VAL_3]] {in_bounds = [true]} : tensor<5xi32>, vector<5xi32>
 // CHECK:           %[[VAL_10:.*]] = arith.index_cast %[[VAL_9]] : vector<5xi32> to vector<5xindex>
@@ -285,11 +285,11 @@ func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(%6: tensor<8
 // CHECK-SAME:                                                                        %[[VAL_0:.*]]: tensor<80x16xf32>,
 // CHECK-SAME:                                                                        %[[VAL_1:.*]]: index,
 // CHECK-SAME:                                                                        %[[VAL_2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = arith.constant 79 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 79 : index
 // CHECK:           %[[VAL_8:.*]] = vector.broadcast %[[VAL_1]] : index to vector<4xindex>
 // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : vector<4xindex>
 // CHECK:           %[[VAL_10:.*]] = vector.extractelement %[[VAL_9]]{{\[}}%[[VAL_4]] : i32] : vector<4xindex>
@@ -373,11 +373,11 @@ func.func @vectorize_nd_tensor_extract_with_affine_apply_gather(%6: tensor<80x16
 // CHECK-SAME:                                                                    %[[VAL_0:.*]]: tensor<80x16xf32>,
 // CHECK-SAME:                                                                    %[[VAL_1:.*]]: index,
 // CHECK-SAME:                                                                    %[[VAL_2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK:           %[[VAL_4:.*]] = arith.constant dense<true> : vector<1x4xi1>
-// CHECK:           %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_7:.*]] = arith.constant dense<16> : vector<1x4xindex>
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant dense<true> : vector<1x4xi1>
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant dense<16> : vector<1x4xindex>
 // CHECK:           %[[VAL_8:.*]] = vector.broadcast %[[VAL_1]] : index to vector<4xindex>
 // CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : vector<4xindex>
 // CHECK:           %[[VAL_10:.*]] = vector.broadcast %[[VAL_9]] : vector<4xindex> to vector<1x4xindex>
@@ -418,11 +418,11 @@ func.func @vectorize_nd_tensor_extract_with_maxsi_gather(%arg0: tensor<80x16xf32
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_maxsi_gather(
 // CHECK-SAME:                                                             %[[VAL_0:.*]]: tensor<80x16xf32>,
 // CHECK-SAME:                                                             %[[VAL_1:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK:           %[[VAL_3:.*]] = arith.constant dense<1264> : vector<1x4xindex>
-// CHECK:           %[[VAL_4:.*]] = arith.constant dense<true> : vector<1x4xi1>
-// CHECK:           %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<1264> : vector<1x4xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant dense<true> : vector<1x4xi1>
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<1x4xf32>
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_7:.*]] = vector.broadcast %[[VAL_2]] : vector<4xindex> to vector<1x4xindex>
 // CHECK:           %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %[[VAL_3]] : vector<1x4xindex>
 // CHECK:           %[[VAL_9:.*]] = vector.gather %[[VAL_0]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {{\[}}%[[VAL_8]]], %[[VAL_4]], %[[VAL_5]] : tensor<80x16xf32>, vector<1x4xindex>, vector<1x4xi1>, vector<1x4xf32> into vector<1x4xf32>
@@ -461,10 +461,10 @@ func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(%arg0: tensor<80x16
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_maxsi_contiguous(
 // CHECK-SAME:                                                                 %[[VAL_0:.*]]: tensor<80x16xf32>,
 // CHECK-SAME:                                                                 %[[VAL_1:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<16> : vector<1x4xindex>
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant dense<16> : vector<1x4xindex>
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_6:.*]] = vector.shape_cast %[[VAL_2]] : vector<1x4xindex> to vector<4xindex>
 // CHECK:           %[[VAL_7:.*]] = vector.extractelement %[[VAL_6]]{{\[}}%[[VAL_3]] : i32] : vector<4xindex>
 // CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_4]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
@@ -499,11 +499,11 @@ func.func @vectorize_nd_tensor_extract_block_arg(%arg0: tensor<5x6xf32>, %arg1: 
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_block_arg(
 // CHECK-SAME:                                                     %[[VAL_0:.*]]: tensor<5x6xf32>,
 // CHECK-SAME:                                                     %[[VAL_1:.*]]: tensor<5xindex>) -> tensor<5xf32> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3, 4]> : vector<5xindex>
-// CHECK:           %[[VAL_4:.*]] = arith.constant dense<true> : vector<5xi1>
-// CHECK:           %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<5xf32>
-// CHECK:           %[[VAL_6:.*]] = arith.constant dense<6> : vector<5xindex>
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant dense<[0, 1, 2, 3, 4]> : vector<5xindex>
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant dense<true> : vector<5xi1>
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant dense<0.000000e+00> : vector<5xf32>
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<6> : vector<5xindex>
 // CHECK:           %[[VAL_7:.*]] = tensor.empty() : tensor<5xf32>
 // CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_1]]{{\[}}%[[VAL_2]]], %[[VAL_2]] {in_bounds = [true]} : tensor<5xindex>, vector<5xindex>
 // CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_8]], %[[VAL_6]] : vector<5xindex>

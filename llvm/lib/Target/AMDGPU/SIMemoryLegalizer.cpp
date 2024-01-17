@@ -578,6 +578,14 @@ public:
                                       bool IsNonTemporal) const override;
 };
 
+class SIGfx12CacheControl : public SIGfx11CacheControl {
+public:
+  SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
+
+  bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, Position Pos) const override;
+};
+
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
 
@@ -857,7 +865,9 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx7CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX11)
     return std::make_unique<SIGfx10CacheControl>(ST);
-  return std::make_unique<SIGfx11CacheControl>(ST);
+  if (Generation < AMDGPUSubtarget::GFX12)
+    return std::make_unique<SIGfx11CacheControl>(ST);
+  return std::make_unique<SIGfx12CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -1423,7 +1433,7 @@ bool SIGfx90ACacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   bool Changed = false;
 
   MachineBasicBlock &MBB = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
 
   if (Pos == Position::AFTER)
     ++MI;
@@ -2130,6 +2140,62 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   return Changed;
+}
+
+bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
+                                        SIAtomicScope Scope,
+                                        SIAtomicAddrSpace AddrSpace,
+                                        Position Pos) const {
+  if (!InsertCacheInv)
+    return false;
+
+  MachineBasicBlock &MBB = *MI->getParent();
+  DebugLoc DL = MI->getDebugLoc();
+
+  /// The scratch address space does not need the global memory cache
+  /// to be flushed as all memory operations by the same thread are
+  /// sequentially consistent, and no other thread can access scratch
+  /// memory.
+
+  /// Other address spaces do not have a cache.
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+    return false;
+
+  AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    break;
+  case SIAtomicScope::AGENT:
+    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::WORKGROUP:
+    // In WGP mode the waves of a work-group can be executing on either CU of
+    // the WGP. Therefore we need to invalidate the L0 which is per CU.
+    // Otherwise in CU mode all waves of a work-group are on the same CU, and so
+    // the L0 does not need to be invalidated.
+    if (ST.isCuModeEnabled())
+      return false;
+
+    ScopeImm = AMDGPU::CPol::SCOPE_SE;
+    break;
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    // No cache to invalidate.
+    return false;
+  default:
+    llvm_unreachable("Unsupported synchronization scope");
+  }
+
+  if (Pos == Position::AFTER)
+    ++MI;
+
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_INV)).addImm(ScopeImm);
+
+  if (Pos == Position::AFTER)
+    --MI;
+
+  return true;
 }
 
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {

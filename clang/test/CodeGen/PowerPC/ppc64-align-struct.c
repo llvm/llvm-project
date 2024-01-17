@@ -60,7 +60,7 @@ void test9 (int x, struct test9 y)
 {
 }
 
-// CHECK: define{{.*}} void @test1va(ptr noalias sret(%struct.test1) align 4 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test1va(ptr dead_on_unwind noalias writable sret(%struct.test1) align 4 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
@@ -75,7 +75,7 @@ struct test1 test1va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @test2va(ptr noalias sret(%struct.test2) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test2va(ptr dead_on_unwind noalias writable sret(%struct.test2) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
@@ -92,7 +92,7 @@ struct test2 test2va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @test3va(ptr noalias sret(%struct.test3) align 32 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test3va(ptr dead_on_unwind noalias writable sret(%struct.test3) align 32 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
@@ -109,7 +109,7 @@ struct test3 test3va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @test4va(ptr noalias sret(%struct.test4) align 4 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test4va(ptr dead_on_unwind noalias writable sret(%struct.test4) align 4 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
@@ -124,7 +124,7 @@ struct test4 test4va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @test8va(ptr noalias sret(%struct.test8) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test8va(ptr dead_on_unwind noalias writable sret(%struct.test8) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
@@ -140,7 +140,7 @@ struct test8 test8va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @test9va(ptr noalias sret(%struct.test9) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @test9va(ptr dead_on_unwind noalias writable sret(%struct.test9) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
@@ -156,7 +156,7 @@ struct test9 test9va (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @testva_longdouble(ptr noalias sret(%struct.test_longdouble) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @testva_longdouble(ptr dead_on_unwind noalias writable sret(%struct.test_longdouble) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
@@ -172,7 +172,7 @@ struct test_longdouble testva_longdouble (int x, ...)
   return y;
 }
 
-// CHECK: define{{.*}} void @testva_vector(ptr noalias sret(%struct.test_vector) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
+// CHECK: define{{.*}} void @testva_vector(ptr dead_on_unwind noalias writable sret(%struct.test_vector) align 16 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[TMP0:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i32 15
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)

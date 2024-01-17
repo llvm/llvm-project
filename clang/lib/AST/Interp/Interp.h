@@ -37,7 +37,6 @@
 namespace clang {
 namespace interp {
 
-using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
 /// Convert a value to an APValue.
@@ -77,6 +76,9 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+
+/// Checks if the Descriptor is of a constexpr or const global variable.
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 
 /// Checks if a pointer points to a mutable field.
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -1005,8 +1007,19 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
+
+  if (!CheckConstant(S, OpPC, B->getDescriptor()))
+    return false;
   if (B->isExtern())
     return false;
+  S.Stk.push<T>(B->deref<T>());
+  return true;
+}
+
+/// Same as GetGlobal, but without the checks.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
+  auto *B = S.P.getGlobal(I);
   S.Stk.push<T>(B->deref<T>());
   return true;
 }
@@ -1814,9 +1827,6 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
-
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;
 
@@ -1843,9 +1853,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!CheckArray(S, OpPC, Ptr))
-    return false;
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
     return false;

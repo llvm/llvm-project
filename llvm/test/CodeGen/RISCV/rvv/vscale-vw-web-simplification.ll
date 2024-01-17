@@ -10,12 +10,14 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=FOLDING
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=FOLDING
 
+; FIXME: We should use vwadd/vwsub/vwmul instructions.
 
 ; Check that the scalable vector add/sub/mul operations are all promoted into their
 ; vw counterpart when the folding of the web size is increased to 3.
 ; We need the web size to be at least 3 for the folding to happen, because
 ; %c has 3 uses.
 ; see https://github.com/llvm/llvm-project/pull/72340
+; FIXME: We don't currently use widening instructions.
 define <vscale x 2 x i16> @vwop_vscale_sext_multiple_users(ptr %x, ptr %y, ptr %z) {
 ; NO_FOLDING-LABEL: vwop_vscale_sext_multiple_users:
 ; NO_FOLDING:       # %bb.0:
@@ -35,16 +37,18 @@ define <vscale x 2 x i16> @vwop_vscale_sext_multiple_users(ptr %x, ptr %y, ptr %
 ;
 ; FOLDING-LABEL: vwop_vscale_sext_multiple_users:
 ; FOLDING:       # %bb.0:
-; FOLDING-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; FOLDING-NEXT:    vsetvli a3, zero, e16, mf2, ta, ma
 ; FOLDING-NEXT:    vle8.v v8, (a0)
 ; FOLDING-NEXT:    vle8.v v9, (a1)
 ; FOLDING-NEXT:    vle8.v v10, (a2)
-; FOLDING-NEXT:    vwmul.vv v11, v8, v9
-; FOLDING-NEXT:    vwadd.vv v9, v8, v10
-; FOLDING-NEXT:    vwsub.vv v12, v8, v10
-; FOLDING-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; FOLDING-NEXT:    vor.vv v8, v11, v9
-; FOLDING-NEXT:    vor.vv v8, v8, v12
+; FOLDING-NEXT:    vsext.vf2 v11, v8
+; FOLDING-NEXT:    vsext.vf2 v8, v9
+; FOLDING-NEXT:    vsext.vf2 v9, v10
+; FOLDING-NEXT:    vmul.vv v8, v11, v8
+; FOLDING-NEXT:    vadd.vv v10, v11, v9
+; FOLDING-NEXT:    vsub.vv v9, v11, v9
+; FOLDING-NEXT:    vor.vv v8, v8, v10
+; FOLDING-NEXT:    vor.vv v8, v8, v9
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i8>, ptr %x
   %b = load <vscale x 2 x i8>, ptr %y
@@ -81,16 +85,18 @@ define <vscale x 2 x i16> @vwop_vscale_zext_multiple_users(ptr %x, ptr %y, ptr %
 ;
 ; FOLDING-LABEL: vwop_vscale_zext_multiple_users:
 ; FOLDING:       # %bb.0:
-; FOLDING-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; FOLDING-NEXT:    vsetvli a3, zero, e16, mf2, ta, ma
 ; FOLDING-NEXT:    vle8.v v8, (a0)
 ; FOLDING-NEXT:    vle8.v v9, (a1)
 ; FOLDING-NEXT:    vle8.v v10, (a2)
-; FOLDING-NEXT:    vwmulu.vv v11, v8, v9
-; FOLDING-NEXT:    vwaddu.vv v9, v8, v10
-; FOLDING-NEXT:    vwsubu.vv v12, v8, v10
-; FOLDING-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; FOLDING-NEXT:    vor.vv v8, v11, v9
-; FOLDING-NEXT:    vor.vv v8, v8, v12
+; FOLDING-NEXT:    vzext.vf2 v11, v8
+; FOLDING-NEXT:    vzext.vf2 v8, v9
+; FOLDING-NEXT:    vzext.vf2 v9, v10
+; FOLDING-NEXT:    vmul.vv v8, v11, v8
+; FOLDING-NEXT:    vadd.vv v10, v11, v9
+; FOLDING-NEXT:    vsub.vv v9, v11, v9
+; FOLDING-NEXT:    vor.vv v8, v8, v10
+; FOLDING-NEXT:    vor.vv v8, v8, v9
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i8>, ptr %x
   %b = load <vscale x 2 x i8>, ptr %y

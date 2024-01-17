@@ -9,9 +9,6 @@
 ; The raw profiles storesd compressed function names, so profile reader should
 ; be built with zlib support to decompress them.
 ; REQUIRES: zlib
-; REQUIRES: host-byteorder-little-endian
-; Raw profiles are generate on 64-bit systems.
-; REQUIRES: llvm-64-bits
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 

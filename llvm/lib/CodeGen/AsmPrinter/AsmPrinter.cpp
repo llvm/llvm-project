@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -139,6 +140,26 @@ static cl::opt<std::string> BasicBlockProfileDump(
              "matching up BBs with afterwards, the compilation must be "
              "performed with -basic-block-sections=labels. Enabling this "
              "flag during in-process ThinLTO is not supported."));
+
+// This is a replication of fields of object::PGOAnalysisMap::Features. It
+// should match the order of the fields so that
+// `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
+// succeeds.
+enum class PGOMapFeaturesEnum {
+  FuncEntryCount,
+  BBFreq,
+  BrProb,
+};
+static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
+    "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
+    cl::values(clEnumValN(PGOMapFeaturesEnum::FuncEntryCount,
+                          "func-entry-count", "Function Entry Count"),
+               clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
+                          "Basic Block Frequency"),
+               clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob",
+                          "Branch Probability")),
+    cl::desc("Enable extended information within the BBAddrMap that is "
+             "extracted from PGO related analysis."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -428,6 +449,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+  AU.addRequired<MachineBranchProbabilityInfo>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -1379,7 +1401,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  OutStreamer->emitInt8(0);
+  auto FeaturesBits = static_cast<uint8_t>(PgoAnalysisMapFeatures.getBits());
+  OutStreamer->emitInt8(FeaturesBits);
   OutStreamer->AddComment("function address");
   OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
   OutStreamer->AddComment("number of basic blocks");
@@ -1409,6 +1432,51 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
+
+  if (FeaturesBits != 0) {
+    assert(BBAddrMapVersion >= 2 &&
+           "PGOAnalysisMap only supports version 2 or later");
+
+    auto FeatEnable =
+        cantFail(object::PGOAnalysisMap::Features::decode(FeaturesBits));
+
+    if (FeatEnable.FuncEntryCount) {
+      OutStreamer->AddComment("function entry count");
+      auto MaybeEntryCount = MF.getFunction().getEntryCount();
+      OutStreamer->emitULEB128IntValue(
+          MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
+    }
+    const MachineBlockFrequencyInfo *MBFI =
+        FeatEnable.BBFreq
+            ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+            : nullptr;
+    const MachineBranchProbabilityInfo *MBPI =
+        FeatEnable.BrProb ? &getAnalysis<MachineBranchProbabilityInfo>()
+                          : nullptr;
+
+    if (FeatEnable.BBFreq || FeatEnable.BrProb) {
+      for (const MachineBasicBlock &MBB : MF) {
+        if (FeatEnable.BBFreq) {
+          OutStreamer->AddComment("basic block frequency");
+          OutStreamer->emitULEB128IntValue(
+              MBFI->getBlockFreq(&MBB).getFrequency());
+        }
+        if (FeatEnable.BrProb) {
+          unsigned SuccCount = MBB.succ_size();
+          OutStreamer->AddComment("basic block successor count");
+          OutStreamer->emitULEB128IntValue(SuccCount);
+          for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
+            OutStreamer->AddComment("successor BB ID");
+            OutStreamer->emitULEB128IntValue(SuccMBB->getBBID()->BaseID);
+            OutStreamer->AddComment("successor branch probability");
+            OutStreamer->emitULEB128IntValue(
+                MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
+          }
+        }
+      }
+    }
+  }
+
   OutStreamer->popSection();
 }
 
@@ -1934,8 +2002,14 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing BB address offsets and their metadata, when
   // BB labels are requested for this function. Skip empty functions.
-  if (MF->hasBBLabels() && HasAnyRealCode)
-    emitBBAddrMapSection(*MF);
+  if (HasAnyRealCode) {
+    if (MF->hasBBLabels())
+      emitBBAddrMapSection(*MF);
+    else if (PgoAnalysisMapFeatures.getBits() != 0)
+      MF->getContext().reportWarning(
+          SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
+                       " but it does not have labels");
+  }
 
   // Emit sections containing instruction and function PCs.
   emitPCSections(*MF);

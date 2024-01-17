@@ -39,6 +39,10 @@ extern cl::OptionCategory Options;
 extern cl::OptionCategory BenchmarkOptions;
 extern cl::OptionCategory AnalysisOptions;
 
+enum ValidationEvent {
+  InstructionRetired
+};
+
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
   // cycles.
@@ -59,6 +63,9 @@ struct PfmCountersInfo {
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
 
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationEvents;
+
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
 };
@@ -77,7 +84,7 @@ public:
       : CpuPfmCounters(CpuPfmCounters), IsOpcodeAvailable(IsOpcodeAvailable) {}
 
   // Targets can use this to create target-specific perf counters.
-  virtual Expected<std::unique_ptr<pfm::Counter>>
+  virtual Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
                 const pid_t ProcessID = 0) const;
 

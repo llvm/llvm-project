@@ -19,6 +19,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
 namespace llvm {
@@ -49,11 +50,11 @@ public:
   Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
-                                             const SymbolLookupSet &Lookup);
+  Expected<std::vector<ExecutorSymbolDef>>
+  lookup(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup);
 
   /// Looks up symbols within the given dylib.
-  Expected<std::vector<ExecutorAddr>>
+  Expected<std::vector<ExecutorSymbolDef>>
   lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup);
 
 private:

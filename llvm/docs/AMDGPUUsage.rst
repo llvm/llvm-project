@@ -4114,6 +4114,9 @@ Code object V5 metadata is the same as
                                                        buffer that conforms to the requirements of the malloc/free
                                                        device library V1 version implementation.
 
+                                                     "hidden_dynamic_lds_size"
+                                                       Size of the dynamically allocated LDS memory is passed in the kernarg.
+
                                                      "hidden_private_base"
                                                        The high 32 bits of the flat addressing private aperture base.
                                                        Only used by GFX8 to allow conversion between private segment
@@ -4406,7 +4409,15 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC3``
                                                        configuration
                                                        register. See
-                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+                                                     GFX12
+                                                       Compute Shader (CS)
+                                                       program settings used by
+                                                       CP to set up
+                                                       ``COMPUTE_PGM_RSRC3``
+                                                       configuration
+                                                       register. See
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
@@ -4831,13 +4842,16 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
-     6       1 bit   ENABLE_TRAP_HANDLER             Must be 0.
+     6       1 bit   ENABLE_TRAP_HANDLER             GFX6-GFX11
+                                                       Must be 0.
 
-                                                     This bit represents
-                                                     ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
-                                                     which is set by the CP if
-                                                     the runtime has installed a
-                                                     trap handler.
+                                                       This bit represents
+                                                       ``COMPUTE_PGM_RSRC2.TRAP_PRESENT``,
+                                                       which is set by the CP if
+                                                       the runtime has installed a
+                                                       trap handler.
+                                                     GFX12
+                                                       Reserved, must be 0.
      7       1 bit   ENABLE_SGPR_WORKGROUP_ID_X      Enable the setup of the
                                                      system SGPR register for
                                                      the work-group id in the X
@@ -4957,7 +4971,7 @@ The fields used by CP for code objects before V3 also match those specified in
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit                                   Reserved, must be 0.
+     31      1 bit   RESERVED                        Reserved, must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -4986,8 +5000,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX10-GFX12
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table
+  .. table:: compute_pgm_rsrc3 for GFX10-GFX11
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -5033,6 +5047,32 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Not used for compute kernels that are not part of a graphics pipeline and
                                                        must be 0.
+     32      **Total size 4 bytes.**
+     ======= ===================================================================================================================
+
+..
+
+  .. table:: compute_pgm_rsrc3 for GFX12
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table
+
+     ======= ======= =============================== ===========================================================================
+     Bits    Size    Field Name                      Description
+     ======= ======= =============================== ===========================================================================
+     3:0     4 bits  RESERVED                        Reserved, must be 0.
+     11:4    8 bits  INST_PREF_SIZE                  Number of instruction bytes to prefetch, starting at the kernel's entry
+                                                     point instruction, before wavefront starts execution. The value is 0..255
+                                                     with a granularity of 128 bytes.
+     12      1 bit   RESERVED                        Reserved, must be 0.
+     13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
+     30:14   17 bits RESERVED                        Reserved, must be 0.
+     31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
+                                                     part of a graphics pipeline, image read instructions will stall waiting
+                                                     for any necessary ``WAIT_SYNC`` fence to be performed in order to
+                                                     indicate that earlier pipeline stages have completed writing to the
+                                                     image.
+
+                                                     Not used for compute kernels that are not part of a graphics pipeline and
+                                                     must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
@@ -15508,7 +15548,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in

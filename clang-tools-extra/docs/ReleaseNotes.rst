@@ -119,7 +119,7 @@ Improvements to clang-tidy
 
 - Improved `--dump-config` to print check options in alphabetical order.
 
-- Improved :program:`clang-tidy-diff.py` script. 
+- Improved :program:`clang-tidy-diff.py` script.
     * Return exit code `1` if any :program:`clang-tidy` subprocess exits with
       a non-zero code or if exporting fixes fails.
 
@@ -224,6 +224,17 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
+- New :doc:`readability-avoid-nested-conditional-operator
+  <clang-tidy/checks/readability/avoid-nested-conditional-operator>` check.
+
+  Identifies instances of nested conditional operators in the code.
+
+- New :doc:`readability-avoid-return-with-void-value
+  <clang-tidy/checks/readability/avoid-return-with-void-value>` check.
+
+  Finds return statements with ``void`` values used within functions with
+  ``void`` result types.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
@@ -253,6 +264,14 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
   casting during type conversions at variable initialization, now with improved
   compatibility for C++17 and later versions.
+
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check by extending the default
+  check function names to include ``iter_swap`` and ``iter_move``.
+
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  to correctly emit fixes.
 
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
@@ -294,6 +313,10 @@ Changes in existing checks
   check to ignore false positives related to matching parameters of non
   coroutine functions and increase issue detection for cases involving type
   aliases with references.
+
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check to
+  address false positives in the capture list and body of lambdas.
 
 - Improved :doc:`cppcoreguidelines-narrowing-conversions
   <clang-tidy/checks/cppcoreguidelines/narrowing-conversions>` check by
@@ -358,7 +381,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
-  type-dependent binary operator.
+  type-dependent binary operator. Improved performance of the check through
+  optimizations.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
@@ -370,9 +394,13 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check to ignore
   false-positives in unevaluated context (e.g., ``decltype``).
 
+- Improved :doc:`misc-static-assert
+  <clang-tidy/checks/misc/static-assert>` check to ignore false-positives when
+  referring to non-``constexpr`` variables in non-unevaluated context.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check to avoid false positive when
-  using in elaborated type.
+  using in elaborated type and only check C++ files.
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
@@ -394,6 +422,10 @@ Changes in existing checks
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
 
+- Improved :doc:`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
+  ``emplace`` cannot construct with aggregate initialization.
+
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
   false-positives when special member function is actually used or implicit.
@@ -408,38 +440,45 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check to fix function pointer and
-  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore ``typedef``
-  declaration in ``extern "C"`` scope.
+  forward declared ``typedef`` correctly. Added option `IgnoreExternC` to ignore
+  ``typedef`` declaration in ``extern "C"`` scope.
 
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
 
+- Improved :doc:`performance-for-range-copy
+  <clang-tidy/checks/performance/for-range-copy>` check to handle cases where
+  the loop variable is a structured binding.
+
 - Improved :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
-  conditional noexcept expressions, eliminating false-positives.
+  conditional ``noexcept`` expressions, eliminating false-positives.
 
 - Improved :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature and better handling of condition
-  noexcept expressions, eliminating false-positives.
+  ``noexcept`` expressions, eliminating false-positives. ``iter_swap`` function
+  name is checked by default.
 
 - Improved :doc:`readability-braces-around-statements
   <clang-tidy/checks/readability/braces-around-statements>` check to
   ignore false-positive for ``if constexpr`` in lambda expression.
 
 - Improved :doc:`readability-avoid-const-params-in-decls
-  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
-  highlight the const location
+  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnostics to
+  highlight the ``const`` location
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` to correctly handle
-  interger literals with suffixes in fix-its.
+  integer literals with suffixes in fix-its.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
   detect comparison between string and empty string literals and support
-  ``length()`` method as an alternative to ``size()``.
+  ``length()`` method as an alternative to ``size()``. Resolved false positives
+  tied to negative values from size-like methods, and one triggered by size
+  checks below zero.
 
 - Improved :doc:`readability-function-size
   <clang-tidy/checks/readability/function-size>` check configuration to use
@@ -457,13 +496,14 @@ Changes in existing checks
   ``camel_Snake_Case`` now detect more invalid identifier names. Fields in
   anonymous records (i.e. anonymous structs and unions) now can be checked with
   the naming rules associated with their enclosing scopes rather than the naming
-  rules of public struct/union members.
+  rules of public ``struct``/``union`` members.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value.
+  suggestions when parentheses are added to the return value or expressions. 
+  It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation
   <clang-tidy/checks/readability/misleading-indentation>` check to ignore
@@ -472,6 +512,15 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore
   false-positives in initializer list of record.
+
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability/redundant-member-init>` check to now also
+  detect redundant in-class initializers.
+
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check by adding the
+  new option `IgnoreMacros` that allows to ignore boolean expressions originating
+  from expanded macros.
 
 - Improved :doc:`readability-simplify-subscript-expr
   <clang-tidy/checks/readability/simplify-subscript-expr>` check by extending

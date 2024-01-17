@@ -280,7 +280,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                          operandDimPos)))
       return failure();
 
-    Value dynamicDim = linalgOp.hasTensorSemantics()
+    Value dynamicDim = linalgOp.hasPureTensorSemantics()
                            ? (Value)rewriter.create<tensor::DimOp>(
                                  linalgOp.getLoc(), operand, operandDimPos)
                            : (Value)rewriter.create<memref::DimOp>(
@@ -894,10 +894,16 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   return result;
 }
 
-/// Check whether \p extractOp would be a gather or a contiguous load Op after
-/// vectorising \p linalgOp. Note that it is always safe to use gather load
-/// operations for contiguous loads (albeit slow), but not vice-versa. When in
-/// doubt, bail out and assume that \p extractOp is a gather load.
+/// Infer the memory access pattern for the input ExtractOp
+///
+/// Based on the operation shapes and indices (usually based on the iteration
+/// space of the parent `linalgOp` operation), decides whether the input
+/// ExtractOp is a contiguous load (including a broadcast of a scalar) or a
+/// gather load.
+///
+/// Note that it is always safe to use gather load operations for contiguous
+/// loads (albeit slow), but not vice-versa. When in doubt, bail out and assume
+/// that `extractOp` is a gather load.
 static VectorMemoryAccessKind
 getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
                                     LinalgOp &linalgOp) {
@@ -916,8 +922,8 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::Gather;
 
   // 1. Assume that it's a gather load when reading _into_:
-  //    * an n-D vector, like`tensor<1x2x4xi32` or`tensor<2x1x4xi32>`, or
-  //    * a 1-D vector with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
+  //    * an n-D "vector", like `tensor<1x2x4xi32` or `tensor<2x1x4xi32>`, or
+  //    * a 1-D "vector" with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
   // TODO: Relax these conditions.
   // FIXME: This condition assumes non-dynamic sizes.
   if ((llvm::count_if(targetShape,
@@ -1946,7 +1952,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
 
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));

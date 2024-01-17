@@ -187,22 +187,6 @@ private:
   LegalizeResult widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
                                  LLT WideTy);
 
-  /// Helper function to split a wide generic register into bitwise blocks with
-  /// the given Type (which implies the number of blocks needed). The generic
-  /// registers created are appended to Ops, starting at bit 0 of Reg.
-  void extractParts(Register Reg, LLT Ty, int NumParts,
-                    SmallVectorImpl<Register> &VRegs);
-
-  /// Version which handles irregular splits.
-  bool extractParts(Register Reg, LLT RegTy, LLT MainTy,
-                    LLT &LeftoverTy,
-                    SmallVectorImpl<Register> &VRegs,
-                    SmallVectorImpl<Register> &LeftoverVRegs);
-
-  /// Version which handles irregular sub-vector splits.
-  void extractVectorParts(Register Reg, unsigned NumElst,
-                          SmallVectorImpl<Register> &VRegs);
-
   /// Helper function to build a wide generic register \p DstReg of type \p
   /// RegTy from smaller parts. This will produce a G_MERGE_VALUES,
   /// G_BUILD_VECTOR, G_CONCAT_VECTORS, or sequence of G_INSERT as appropriate
@@ -288,11 +272,14 @@ private:
 
   // Implements floating-point environment read/write via library function call.
   LegalizeResult createGetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI);
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver);
   LegalizeResult createSetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                       MachineInstr &MI);
+                                       MachineInstr &MI,
+                                       LostDebugLocObserver &LocObserver);
   LegalizeResult createResetStateLibcall(MachineIRBuilder &MIRBuilder,
-                                         MachineInstr &MI);
+                                         MachineInstr &MI,
+                                         LostDebugLocObserver &LocObserver);
 
 public:
   /// Return the alignment to use for a stack temporary object with the given
@@ -347,6 +334,9 @@ public:
 
   LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
                                                unsigned TypeIdx, LLT NarrowTy);
+  LegalizeResult fewerElementsVectorSeqReductions(MachineInstr &MI,
+                                                  unsigned TypeIdx,
+                                                  LLT NarrowTy);
 
   LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
                                             LLT NarrowTy);
@@ -440,13 +430,15 @@ public:
 LegalizerHelper::LegalizeResult
 createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
               const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC);
+              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC,
+              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
 
 /// Helper function that creates the given libcall.
 LegalizerHelper::LegalizeResult
 createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
               const CallLowering::ArgInfo &Result,
-              ArrayRef<CallLowering::ArgInfo> Args);
+              ArrayRef<CallLowering::ArgInfo> Args,
+              LostDebugLocObserver &LocObserver, MachineInstr *MI = nullptr);
 
 /// Create a libcall to memcpy et al.
 LegalizerHelper::LegalizeResult

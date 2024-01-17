@@ -1,7 +1,15 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @const_attribute_str() {
+    // expected-error @+1 {{'emitc.constant' op string attributes are not supported, use #emitc.opaque instead}}                 
+    %c0 = "emitc.constant"(){value = "NULL"} : () -> !emitc.ptr<i32>
+    return
+}
+
+// -----
+
 func.func @const_attribute_return_type_1() {
-    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('i64') to match op's return type ('i32')}}
+    // expected-error @+1 {{'emitc.constant' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.constant"(){value = 42: i64} : () -> i32
     return
 }
@@ -9,8 +17,8 @@ func.func @const_attribute_return_type_1() {
 // -----
 
 func.func @const_attribute_return_type_2() {
-    // expected-error @+1 {{'emitc.constant' op requires attribute's type ('!emitc.opaque<"char">') to match op's return type ('!emitc.opaque<"mychar">')}}
-    %c0 = "emitc.constant"(){value = "CHAR_MIN" : !emitc.opaque<"char">} : () -> !emitc.opaque<"mychar">
+    // expected-error @+1 {{'emitc.constant' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
+    %c0 = "emitc.constant"(){value = unit} : () -> i32
     return
 }
 
@@ -18,7 +26,7 @@ func.func @const_attribute_return_type_2() {
 
 func.func @empty_constant() {
     // expected-error @+1 {{'emitc.constant' op value must not be empty}}
-    %c0 = "emitc.constant"(){value = ""} : () -> i32
+    %c0 = "emitc.constant"(){value = #emitc.opaque<"">} : () -> i32
     return
 }
 
@@ -98,7 +106,7 @@ func.func @illegal_operand() {
 // -----
 
 func.func @var_attribute_return_type_1() {
-    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('i64') to match op's return type ('i32')}}
+    // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.variable"(){value = 42: i64} : () -> i32
     return
 }
@@ -106,8 +114,8 @@ func.func @var_attribute_return_type_1() {
 // -----
 
 func.func @var_attribute_return_type_2() {
-    // expected-error @+1 {{'emitc.variable' op requires attribute's type ('!emitc.ptr<i64>') to match op's return type ('!emitc.ptr<i32>')}}
-    %c0 = "emitc.variable"(){value = "nullptr" : !emitc.ptr<i64>} : () -> !emitc.ptr<i32>
+    // expected-error @+1 {{'emitc.variable' op attribute 'value' failed to satisfy constraint: An opaque attribute or TypedAttr instance}}
+    %c0 = "emitc.variable"(){value = unit} : () -> i32
     return
 }
 

@@ -698,7 +698,7 @@ protected:
   bool CheckPossibleBadForwardRef(const Symbol &);
 
   bool inSpecificationPart_{false};
-  bool inDataStmtObject_{false};
+  bool deferImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
 
   // Some information is collected from a specification part for deferred
@@ -1629,6 +1629,7 @@ private:
   bool BeginScopeForNode(const ProgramTree &);
   void EndScopeForNode(const ProgramTree &);
   void FinishSpecificationParts(const ProgramTree &);
+  void FinishExecutionParts(const ProgramTree &);
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
   void UseCUDABuiltinNames();
@@ -2533,7 +2534,7 @@ void ScopeHandler::ApplyImplicitRules(
     // or object, it'll be caught later.
     return;
   }
-  if (inDataStmtObject_) {
+  if (deferImplicitTyping_) {
     return;
   }
   if (!context().HasError(symbol)) {
@@ -2709,7 +2710,7 @@ const DeclTypeSpec &ScopeHandler::MakeLogicalType(int kind) {
 }
 
 void ScopeHandler::NotePossibleBadForwardRef(const parser::Name &name) {
-  if (inSpecificationPart_ && !inDataStmtObject_ && name.symbol) {
+  if (inSpecificationPart_ && !deferImplicitTyping_ && name.symbol) {
     auto kind{currScope().kind()};
     if ((kind == Scope::Kind::Subprogram && !currScope().IsStmtFunction()) ||
         kind == Scope::Kind::BlockConstruct) {
@@ -4553,6 +4554,9 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
   auto &details{symbol.get<ObjectEntityDetails>()};
+  if (details.init() || symbol.test(Symbol::Flag::InDataStmt)) {
+    Say(name, "Named constant '%s' already has a value"_err_en_US);
+  }
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
@@ -4931,6 +4935,8 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else if (MustBeScalar(symbol)) {
         Say(name,
             "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US);
+      } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
+        Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
         details->set_shape(arraySpec());
       }
@@ -5939,9 +5945,9 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
     }
     if (const auto *pointeeType{pointee->GetType()}) {
       if (const auto *derived{pointeeType->AsDerived()}) {
-        if (!derived->typeSymbol().get<DerivedTypeDetails>().sequence()) {
+        if (!IsSequenceOrBindCType(derived)) {
           Say(pointeeName,
-              "Type of Cray pointee '%s' is a non-sequence derived type"_err_en_US);
+              "Type of Cray pointee '%s' is a derived type that is neither SEQUENCE nor BIND(C)"_err_en_US);
         }
       }
     }
@@ -6176,15 +6182,13 @@ void DeclarationVisitor::CheckCommonBlocks() {
         Say(name,
             "Unlimited polymorphic pointer '%s' may not appear in a COMMON block"_err_en_US);
       } else if (const auto *derived{type->AsDerived()}) {
-        auto &typeSymbol{derived->typeSymbol()};
-        if (!typeSymbol.attrs().test(Attr::BIND_C) &&
-            !typeSymbol.get<DerivedTypeDetails>().sequence()) {
+        if (!IsSequenceOrBindCType(derived)) {
           Say(name,
               "Derived type '%s' in COMMON block must have the BIND or"
               " SEQUENCE attribute"_err_en_US);
         }
         UnorderedSymbolSet typeSet;
-        CheckCommonBlockDerivedType(name, typeSymbol, typeSet);
+        CheckCommonBlockDerivedType(name, derived->typeSymbol(), typeSet);
       }
     }
   }
@@ -6639,10 +6643,14 @@ void ConstructVisitor::ResolveIndexName(
   const parser::Name &name{std::get<parser::Name>(control.t)};
   auto *prev{FindSymbol(name)};
   if (prev) {
-    if (prev->owner().kind() == Scope::Kind::Forall ||
-        prev->owner() == currScope()) {
+    if (prev->owner() == currScope()) {
       SayAlreadyDeclared(name, *prev);
       return;
+    } else if (prev->owner().kind() == Scope::Kind::Forall &&
+        context().ShouldWarn(
+            common::LanguageFeature::OddIndexVariableRestrictions)) {
+      SayWithDecl(name, *prev,
+          "Index variable '%s' should not also be an index in an enclosing FORALL or DO CONCURRENT"_port_en_US);
     }
     name.symbol = nullptr;
   }
@@ -6652,22 +6660,26 @@ void ConstructVisitor::ResolveIndexName(
   } else if (!prev) {
     ApplyImplicitRules(symbol);
   } else {
-    const Symbol &prevRoot{prev->GetUltimate()};
-    // prev could be host- use- or construct-associated with another symbol
-    if (!prevRoot.has<ObjectEntityDetails>() &&
-        !prevRoot.has<AssocEntityDetails>()) {
-      Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
-          *prev, "Previous declaration of '%s'"_en_US);
-      context().SetError(symbol);
-      return;
+    // Odd rules in F'2023 19.4 paras 6 & 8.
+    Symbol &prevRoot{prev->GetUltimate()};
+    if (const auto *type{prevRoot.GetType()}) {
+      symbol.SetType(*type);
     } else {
-      if (const auto *type{prevRoot.GetType()}) {
-        symbol.SetType(*type);
+      ApplyImplicitRules(symbol);
+    }
+    if (prevRoot.has<ObjectEntityDetails>() ||
+        ConvertToObjectEntity(prevRoot)) {
+      if (prevRoot.IsObjectArray() &&
+          context().ShouldWarn(
+              common::LanguageFeature::OddIndexVariableRestrictions)) {
+        SayWithDecl(name, *prev,
+            "Index variable '%s' should be scalar in the enclosing scope"_port_en_US);
       }
-      if (prevRoot.IsObjectArray()) {
-        SayWithDecl(name, *prev, "Index variable '%s' is not scalar"_err_en_US);
-        return;
-      }
+    } else if (!prevRoot.has<CommonBlockDetails>() &&
+        context().ShouldWarn(
+            common::LanguageFeature::OddIndexVariableRestrictions)) {
+      SayWithDecl(name, *prev,
+          "Index variable '%s' should be a scalar object or common block if it is present in the enclosing scope"_port_en_US);
     }
   }
   EvaluateExpr(parser::Scalar{parser::Integer{common::Clone(name)}});
@@ -6802,7 +6814,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(common::visitors{
                     [&](const Indirection<parser::Variable> &y) {
-                      auto restorer{common::ScopedSet(inDataStmtObject_, true)};
+                      auto restorer{
+                          common::ScopedSet(deferImplicitTyping_, true)};
                       Walk(y.value());
                       const parser::Name &first{
                           parser::GetFirstName(y.value())};
@@ -6839,7 +6852,10 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
 
 bool ConstructVisitor::Pre(const parser::DoConstruct &x) {
   if (x.IsDoConcurrent()) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    // The new scope has Kind::Forall for index variable name conflict
+    // detection with nested FORALL/DO CONCURRENT constructs in
+    // ResolveIndexName().
+    PushScope(Scope::Kind::Forall, nullptr);
   }
   return true;
 }
@@ -7386,7 +7402,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     }
     return &name;
   }
-  if (isImplicitNoneType() && !inDataStmtObject_) {
+  if (isImplicitNoneType() && !deferImplicitTyping_) {
     Say(name, "No explicit type declared for '%s'"_err_en_US);
     return nullptr;
   }
@@ -7548,7 +7564,15 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
   common::visit(
       common::visitors{
           [&](const parser::ConstantExpr &expr) {
-            NonPointerInitialization(name, expr);
+            Walk(expr);
+            if (IsNamedConstant(ultimate) || inComponentDecl) {
+              NonPointerInitialization(name, expr);
+            } else {
+              // Defer analysis so forward references to nested subprograms
+              // can be properly resolved when they appear in structure
+              // constructors.
+              ultimate.set(Symbol::Flag::InDataStmt);
+            }
           },
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
@@ -7558,9 +7582,11 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
                     "Pointer initializer must be intrinsic NULL()"_err_en_US);
               } else if (IsPointer(ultimate)) {
                 if (auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+                  CHECK(!object->init());
                   object->set_init(std::move(*nullInit));
                 } else if (auto *procPtr{
                                ultimate.detailsIf<ProcEntityDetails>()}) {
+                  CHECK(!procPtr->init());
                   procPtr->set_init(nullptr);
                 }
               } else {
@@ -7569,10 +7595,12 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               }
             }
           },
-          [&](const parser::InitialDataTarget &) {
+          [&](const parser::InitialDataTarget &target) {
             // Defer analysis to the end of the specification part
             // so that forward references and attribute checks like SAVE
             // work better.
+            auto restorer{common::ScopedSet(deferImplicitTyping_, true)};
+            Walk(target);
             ultimate.set(Symbol::Flag::InDataStmt);
           },
           [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
@@ -7590,12 +7618,27 @@ void DeclarationVisitor::PointerInitialization(
     Symbol &ultimate{name.symbol->GetUltimate()};
     if (!context().HasError(ultimate)) {
       if (IsPointer(ultimate)) {
-        if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
-          CHECK(!details->init());
-          Walk(target);
-          if (MaybeExpr expr{EvaluateExpr(target)}) {
-            // Validation is done in declaration checking.
+        Walk(target);
+        if (MaybeExpr expr{EvaluateExpr(target)}) {
+          // Validation is done in declaration checking.
+          if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+            CHECK(!details->init());
             details->set_init(std::move(*expr));
+            ultimate.set(Symbol::Flag::InDataStmt, false);
+          } else if (auto *details{ultimate.detailsIf<ProcEntityDetails>()}) {
+            // something like "REAL, EXTERNAL, POINTER :: p => t"
+            if (evaluate::IsNullProcedurePointer(*expr)) {
+              CHECK(!details->init());
+              details->set_init(nullptr);
+            } else if (const Symbol *
+                targetSymbol{evaluate::UnwrapWholeSymbolDataRef(*expr)}) {
+              CHECK(!details->init());
+              details->set_init(*targetSymbol);
+            } else {
+              Say(name,
+                  "Procedure pointer '%s' must be initialized with a procedure name or NULL()"_err_en_US);
+              context().SetError(ultimate);
+            }
           }
         }
       } else {
@@ -7635,27 +7678,25 @@ void DeclarationVisitor::PointerInitialization(
 
 void DeclarationVisitor::NonPointerInitialization(
     const parser::Name &name, const parser::ConstantExpr &expr) {
-  if (name.symbol) {
+  if (!context().HasError(name.symbol)) {
     Symbol &ultimate{name.symbol->GetUltimate()};
-    if (!context().HasError(ultimate) && !context().HasError(name.symbol)) {
+    if (!context().HasError(ultimate)) {
       if (IsPointer(ultimate)) {
         Say(name,
             "'%s' is a pointer but is not initialized like one"_err_en_US);
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
-        CHECK(!details->init());
-        if (IsAllocatable(ultimate)) {
+        if (details->init()) {
+          SayWithDecl(name, *name.symbol,
+              "'%s' has already been initialized"_err_en_US);
+        } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
-          return;
-        }
-        Walk(expr);
-        if (ultimate.owner().IsParameterizedDerivedType()) {
+        } else if (ultimate.owner().IsParameterizedDerivedType()) {
           // Save the expression for per-instantiation analysis.
           details->set_unanalyzedPDTComponentInit(&expr.thing.value());
-        } else {
-          if (MaybeExpr folded{EvaluateNonPointerInitializer(
-                  ultimate, expr, expr.thing.value().source)}) {
-            details->set_init(std::move(*folded));
-          }
+        } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
+                       ultimate, expr, expr.thing.value().source)}) {
+          details->set_init(std::move(*folded));
+          ultimate.set(Symbol::Flag::InDataStmt, false);
         }
       } else {
         Say(name, "'%s' is not an object that can be initialized"_err_en_US);
@@ -7735,6 +7776,11 @@ void ResolveNamesVisitor::HandleProcedureName(
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
       if (CheckImplicitNoneExternal(name.source, *symbol)) {
         MakeExternal(*symbol);
+        // Create a place-holder HostAssocDetails symbol to preclude later
+        // use of this name as a local symbol; but don't actually use this new
+        // HostAssocDetails symbol in expressions.
+        MakeHostAssocSymbol(name, *symbol);
+        name.symbol = symbol;
       }
     }
     CheckEntryDummyUse(name.source, symbol);
@@ -7742,7 +7788,14 @@ void ResolveNamesVisitor::HandleProcedureName(
   } else if (CheckUseError(name)) {
     // error was reported
   } else {
-    symbol = &Resolve(name, symbol)->GetUltimate();
+    symbol = &symbol->GetUltimate();
+    if (!name.symbol ||
+        (name.symbol->has<HostAssocDetails>() && symbol->owner().IsGlobal() &&
+            (symbol->has<ProcEntityDetails>() ||
+                (symbol->has<SubprogramDetails>() &&
+                    symbol->scope() /*not ENTRY*/)))) {
+      name.symbol = symbol;
+    }
     CheckEntryDummyUse(name.source, symbol);
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
@@ -8424,6 +8477,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
   ResolveExecutionParts(root);
+  FinishExecutionParts(root);
   ResolveAccParts(context(), x);
   ResolveOmpParts(context(), x);
   return false;
@@ -8841,6 +8895,8 @@ public:
     }
   }
 
+  bool Pre(const parser::BlockConstruct &x) { return true; }
+
   void Post(const parser::ProcInterface &pi) {
     if (const auto *name{std::get_if<parser::Name>(&pi.u)}) {
       resolver_.CheckExplicitInterface(*name);
@@ -8871,7 +8927,6 @@ public:
       resolver_.CheckBindings(tbps);
     }
   }
-  bool Pre(const parser::StmtFunctionStmt &stmtFunc) { return false; }
 
 private:
   void Init(const parser::Name &name,
@@ -8880,6 +8935,14 @@ private:
       if (const auto *target{
               std::get_if<parser::InitialDataTarget>(&init->u)}) {
         resolver_.PointerInitialization(name, *target);
+      } else if (const auto *expr{
+                     std::get_if<parser::ConstantExpr>(&init->u)}) {
+        if (name.symbol) {
+          if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
+              !object || !object->init()) {
+            resolver_.NonPointerInitialization(name, *expr);
+          }
+        }
       }
     }
   }
@@ -8894,15 +8957,16 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
   if (!node.scope()) {
     return; // error occurred creating scope
   }
+  auto flagRestorer{common::ScopedSet(inSpecificationPart_, true)};
   SetScope(*node.scope());
-  // The initializers of pointers, the default initializers of pointer
-  // components, non-deferred type-bound procedure bindings have not
-  // yet been traversed.
-  // We do that now, when any (formerly) forward references that appear
+  // The initializers of pointers and non-PARAMETER objects, the default
+  // initializers of components, and non-deferred type-bound procedure
+  // bindings have not yet been traversed.
+  // We do that now, when any forward references that appeared
   // in those initializers will resolve to the right symbols without
-  // incurring spurious errors with IMPLICIT NONE.
+  // incurring spurious errors with IMPLICIT NONE or forward references
+  // to nested subprograms.
   DeferredCheckVisitor{*this}.Walk(node.spec());
-  DeferredCheckVisitor{*this}.Walk(node.exec()); // for BLOCK
   for (Scope &childScope : currScope().children()) {
     if (childScope.IsParameterizedDerivedTypeInstantiation()) {
       FinishDerivedTypeInstantiation(childScope);
@@ -8910,6 +8974,18 @@ void ResolveNamesVisitor::FinishSpecificationParts(const ProgramTree &node) {
   }
   for (const auto &child : node.children()) {
     FinishSpecificationParts(child);
+  }
+}
+
+void ResolveNamesVisitor::FinishExecutionParts(const ProgramTree &node) {
+  if (node.scope()) {
+    SetScope(*node.scope());
+    if (node.exec()) {
+      DeferredCheckVisitor{*this}.Walk(*node.exec());
+    }
+    for (const auto &child : node.children()) {
+      FinishExecutionParts(child);
+    }
   }
 }
 

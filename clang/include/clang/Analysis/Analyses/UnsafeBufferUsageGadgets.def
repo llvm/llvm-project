@@ -30,6 +30,7 @@ WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
+WARNING_GADGET(DataInvocation)
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context
 FIXABLE_GADGET(DerefSimplePtrArithFixable)
 FIXABLE_GADGET(PointerDereference)

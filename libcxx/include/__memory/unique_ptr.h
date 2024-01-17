@@ -132,10 +132,6 @@ public:
 private:
   __compressed_pair<pointer, deleter_type> __ptr_;
 
-  struct __nat {
-    int __for_bool_;
-  };
-
   typedef _LIBCPP_NODEBUG __unique_ptr_deleter_sfinae<_Dp> _DeleterSFINAE;
 
   template <bool _Dummy>

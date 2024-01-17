@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
 

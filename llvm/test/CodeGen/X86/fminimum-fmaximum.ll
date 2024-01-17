@@ -699,10 +699,9 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; X86-NEXT:    vextractps $1, %xmm2, %eax
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    vextractps $1, %xmm0, %eax
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    js .LBB14_1
 ; X86-NEXT:  # %bb.2:
@@ -1321,5 +1320,64 @@ define <4 x float> @test_fmaximum_vector_zero(<4 x float> %x) {
 ; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl
   %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> <float 0., float 0., float 0., float 0.>)
+  ret <4 x float> %r
+}
+
+; PR77805: Check that signed zeroes are handled correctly in this case (FIXME)
+define <4 x float> @test_fmaximum_v4f32_splat(<4 x float> %x, float %y) {
+; SSE2-LABEL: test_fmaximum_v4f32_splat:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pandn %xmm0, %xmm3
+; SSE2-NEXT:    movaps %xmm1, %xmm4
+; SSE2-NEXT:    andps %xmm2, %xmm4
+; SSE2-NEXT:    orps %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    maxps %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    cmpunordps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: test_fmaximum_v4f32_splat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
+; AVX1-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_fmaximum_v4f32_splat:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX512-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
+; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+;
+; X86-LABEL: test_fmaximum_v4f32_splat:
+; X86:       # %bb.0:
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    retl
+  %splatinsert = insertelement <4 x float> poison, float %y, i64 0
+  %vec = shufflevector <4 x float> %splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+  %r = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %vec) readnone
   ret <4 x float> %r
 }
