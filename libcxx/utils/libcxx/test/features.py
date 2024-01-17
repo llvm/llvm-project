@@ -586,13 +586,4 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
-    # Tests that require support for <print> and std::print in <ostream> in the built library.
-    Feature(
-        name="availability-print-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            # TODO(ldionne) Please provide the correct value.
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
 ]

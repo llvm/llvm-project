@@ -1476,9 +1476,11 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
         ":Object",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )

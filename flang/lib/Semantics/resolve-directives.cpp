@@ -1946,7 +1946,11 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
-        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone) {
+        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
+            // Exclude indices of sequential loops that are privatised in
+            // the scope of the parallel region, and not in this scope.
+            // TODO: check whether this should be caught in IsObjectWithDSA
+            !symbol->test(Symbol::Flag::OmpPrivate)) {
           context_.Say(name.source,
               "The DEFAULT(NONE) clause requires that '%s' must be listed in "
               "a data-sharing attribute clause"_err_en_US,
