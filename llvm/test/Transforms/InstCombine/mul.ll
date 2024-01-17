@@ -1701,6 +1701,21 @@ define i32 @combine_mul_abs_x_abs_y_poison_2(i32 %x, i32 %y) {
   ret i32 %mul
 }
 
+define i32 @combine_mul_abs_x_abs_y_not_oneuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @combine_mul_abs_x_abs_y_not_oneuse(
+; CHECK-NEXT:    [[ABS_X:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_Y:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[ABS_X1:%.*]] = add nuw i32 [[ABS_Y]], 1
+; CHECK-NEXT:    [[RET:%.*]] = mul i32 [[ABS_X]], [[ABS_X1]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %abs_x = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %abs_y = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %mul = mul nsw i32 %abs_x, %abs_y
+  %ret = add i32 %mul, %abs_x
+  ret i32 %ret
+}
+
 ;
 ; fold mul(sub(x,y),negpow2) -> shl(sub(y,x),log2(pow2))
 ;
