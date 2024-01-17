@@ -57085,17 +57085,17 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // in the normal allocation?
     case 'k':
       if (Subtarget.hasAVX512()) {
-        if (VT == MVT::i1)
+        if (VT == MVT::v1i1 || VT == MVT::i1)
           return std::make_pair(0U, &X86::VK1RegClass);
-        if (VT == MVT::i8)
+        if (VT == MVT::v8i1 || VT == MVT::i8)
           return std::make_pair(0U, &X86::VK8RegClass);
-        if (VT == MVT::i16)
+        if (VT == MVT::v16i1 || VT == MVT::i16)
           return std::make_pair(0U, &X86::VK16RegClass);
       }
       if (Subtarget.hasBWI()) {
-        if (VT == MVT::i32)
+        if (VT == MVT::v32i1 || VT == MVT::i32)
           return std::make_pair(0U, &X86::VK32RegClass);
-        if (VT == MVT::i64)
+        if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64RegClass);
       }
       break;
@@ -57343,17 +57343,17 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'k':
       // This register class doesn't allocate k0 for masked vector operation.
       if (Subtarget.hasAVX512()) {
-        if (VT == MVT::i1)
+        if (VT == MVT::v1i1 || VT == MVT::i1)
           return std::make_pair(0U, &X86::VK1WMRegClass);
-        if (VT == MVT::i8)
+        if (VT == MVT::v8i1 || VT == MVT::i8)
           return std::make_pair(0U, &X86::VK8WMRegClass);
-        if (VT == MVT::i16)
+        if (VT == MVT::v16i1 || VT == MVT::i16)
           return std::make_pair(0U, &X86::VK16WMRegClass);
       }
       if (Subtarget.hasBWI()) {
-        if (VT == MVT::i32)
+        if (VT == MVT::v32i1 || VT == MVT::i32)
           return std::make_pair(0U, &X86::VK32WMRegClass);
-        if (VT == MVT::i64)
+        if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64WMRegClass);
       }
       break;
@@ -57506,15 +57506,15 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       Res.second = nullptr;
     }
   } else if (isVKClass(*Class)) {
-    if (VT == MVT::i1)
+    if (VT == MVT::v1i1 || VT == MVT::i1)
       Res.second = &X86::VK1RegClass;
-    else if (VT == MVT::i8)
+    else if (VT == MVT::v8i1 || VT == MVT::i8)
       Res.second = &X86::VK8RegClass;
-    else if (VT == MVT::i16)
+    else if (VT == MVT::v16i1 || VT == MVT::i16)
       Res.second = &X86::VK16RegClass;
-    else if (VT == MVT::i32)
+    else if (VT == MVT::v32i1 || VT == MVT::i32)
       Res.second = &X86::VK32RegClass;
-    else if (VT == MVT::i64)
+    else if (VT == MVT::v64i1 || VT == MVT::i64)
       Res.second = &X86::VK64RegClass;
     else {
       // Type mismatch and not a clobber: Return an error;
