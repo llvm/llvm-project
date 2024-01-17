@@ -236,10 +236,13 @@ private:
 };
 
 #ifdef _LIBCPP_VERSION
-void std::__libcpp_verbose_abort(char const* message, ...) {
+void std::__libcpp_verbose_abort(char const* printf_format, ...) {
   // Extract information from the error message. This has to stay synchronized with how we format assertions in the
-  // library. Note that the variadic arguments to `__libcpp_verbose_abort` are empty but maintained for backward
-  // compatibility reasons.
+  // library.
+  va_list args;
+  va_start(args, printf_format);
+  char const* message = va_arg(args, char const*);
+
   std::regex message_format("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
 
   std::cmatch match_result;
