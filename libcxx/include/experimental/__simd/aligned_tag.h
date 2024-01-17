@@ -36,7 +36,7 @@ inline constexpr bool is_simd_flag_type_v<element_aligned_tag> = true;
 
 struct vector_aligned_tag {
   template <class _Tp, class _Up = typename _Tp::value_type>
-  static constexpr size_t __alignment = memory_alignment_v<_Tp, std::remove_const_t<_Up>>;
+  static constexpr size_t __alignment = memory_alignment_v<_Tp, remove_const_t<_Up>>;
 
   template <class _Tp, class _Up>
   static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {
