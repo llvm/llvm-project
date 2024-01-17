@@ -90,6 +90,8 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
+  // TODO: Skip this on GFX12 which does have scalar sub-dword loads.
+
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 

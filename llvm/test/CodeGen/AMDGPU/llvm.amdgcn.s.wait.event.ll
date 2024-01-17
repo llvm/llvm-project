@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -march=amdgcn -verify-machineinstrs -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn -verify-machineinstrs -mcpu=gfx1100 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_wait_event:
 ; GCN: s_wait_event 0x0

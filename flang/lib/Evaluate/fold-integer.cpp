@@ -270,7 +270,8 @@ template <typename T, int MASK_KIND> class CountAccumulator {
 
 public:
   CountAccumulator(const Constant<MaskT> &mask) : mask_{mask} {}
-  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+  void operator()(
+      Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
     if (mask_.At(at).IsTrue()) {
       auto incremented{element.AddSigned(Scalar<T>{1})};
       overflow_ |= incremented.overflow;
@@ -287,22 +288,20 @@ private:
 
 template <typename T, int maskKind>
 static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
-  using LogicalResult = Type<TypeCategory::Logical, maskKind>;
+  using KindLogical = Type<TypeCategory::Logical, maskKind>;
   static_assert(T::category == TypeCategory::Integer);
-  ActualArguments &arg{ref.arguments()};
-  if (const Constant<LogicalResult> *mask{arg.empty()
-              ? nullptr
-              : Folder<LogicalResult>{context}.Folding(arg[0])}) {
-    std::optional<int> dim;
-    if (CheckReductionDIM(dim, context, arg, 1, mask->Rank())) {
-      CountAccumulator<T, maskKind> accumulator{*mask};
-      Constant<T> result{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
-      if (accumulator.overflow()) {
-        context.messages().Say(
-            "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
-      }
-      return Expr<T>{std::move(result)};
+  std::optional<int> dim;
+  if (std::optional<ArrayAndMask<KindLogical>> arrayAndMask{
+          ProcessReductionArgs<KindLogical>(
+              context, ref.arguments(), dim, /*ARRAY=*/0, /*DIM=*/1)}) {
+    CountAccumulator<T, maskKind> accumulator{arrayAndMask->array};
+    Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, Scalar<T>{}, accumulator)};
+    if (accumulator.overflow()) {
+      context.messages().Say(
+          "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
     }
+    return Expr<T>{std::move(result)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -395,7 +394,7 @@ public:
         for (ConstantSubscript k{0}; k < dimLength;
              ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
           if ((!mask || mask->At(maskAt).IsTrue()) &&
-              IsHit(array->At(at), value, relation)) {
+              IsHit(array->At(at), value, relation, back)) {
             hit = at[zbDim];
             if constexpr (WHICH == WhichLocation::Findloc) {
               if (!back) {
@@ -422,7 +421,7 @@ public:
       for (ConstantSubscript j{0}; j < n; ++j, array->IncrementSubscripts(at),
            mask && mask->IncrementSubscripts(maskAt)) {
         if ((!mask || mask->At(maskAt).IsTrue()) &&
-            IsHit(array->At(at), value, relation)) {
+            IsHit(array->At(at), value, relation, back)) {
           resultIndices = at;
           if constexpr (WHICH == WhichLocation::Findloc) {
             if (!back) {
@@ -444,7 +443,8 @@ private:
   template <typename T>
   bool IsHit(typename Constant<T>::Element element,
       std::optional<Constant<T>> &value,
-      [[maybe_unused]] RelationalOperator relation) const {
+      [[maybe_unused]] RelationalOperator relation,
+      [[maybe_unused]] bool back) const {
     std::optional<Expr<LogicalResult>> cmp;
     bool result{true};
     if (value) {
@@ -455,8 +455,19 @@ private:
             Expr<T>{LogicalOperation<T::kind>{LogicalOperator::Eqv,
                 Expr<T>{Constant<T>{element}}, Expr<T>{Constant<T>{*value}}}}));
       } else { // compare array(at) to value
-        cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
-            Expr<T>{Constant<T>{*value}}));
+        if constexpr (T::category == TypeCategory::Real &&
+            (WHICH == WhichLocation::Maxloc ||
+                WHICH == WhichLocation::Minloc)) {
+          if (value && value->GetScalarValue().value().IsNotANumber() &&
+              (back || !element.IsNotANumber())) {
+            // Replace NaN
+            cmp.emplace(Constant<LogicalResult>{Scalar<LogicalResult>{true}});
+          }
+        }
+        if (!cmp) {
+          cmp.emplace(PackageRelation(relation, Expr<T>{Constant<T>{element}},
+              Expr<T>{Constant<T>{*value}}));
+        }
       }
       Expr<LogicalResult> folded{Fold(context_, std::move(*cmp))};
       result = GetScalarConstantValue<LogicalResult>(folded).value().IsTrue();
@@ -523,11 +534,12 @@ static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer);
   std::optional<int> dim;
-  if (std::optional<Constant<T>> array{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{
+          ProcessReductionArgs<T>(context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    OperationAccumulator<T> accumulator{*array, operation};
-    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
+    OperationAccumulator<T> accumulator{arrayAndMask->array, operation};
+    return Expr<T>{DoReduction<T>(
+        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }

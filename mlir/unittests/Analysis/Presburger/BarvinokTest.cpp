@@ -82,3 +82,45 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
           1, {1}, {makeFracMatrix(2, 3, {{-83, -100, -41}, {-22, -27, -15}})},
           {{{8, 47, -17}, {-7, -41, 15}, {1, 5, -2}}}));
 }
+
+// The following vectors are randomly generated.
+// We then check that the output of the function has non-zero
+// dot product with all non-null vectors.
+TEST(BarvinokTest, getNonOrthogonalVector) {
+  std::vector<Point> vectors = {Point({1, 2, 3, 4}), Point({-1, 0, 1, 1}),
+                                Point({2, 7, 0, 0}), Point({0, 0, 0, 0})};
+  Point nonOrth = getNonOrthogonalVector(vectors);
+
+  for (unsigned i = 0; i < 3; i++)
+    EXPECT_NE(dotProduct(nonOrth, vectors[i]), 0);
+
+  vectors = {Point({0, 1, 3}), Point({-2, -1, 1}), Point({6, 3, 0}),
+             Point({0, 0, -3}), Point({5, 0, -1})};
+  nonOrth = getNonOrthogonalVector(vectors);
+
+  for (const Point &vector : vectors)
+    EXPECT_NE(dotProduct(nonOrth, vector), 0);
+}
+
+// The following polynomials are randomly generated and the
+// coefficients are computed by hand.
+// Although the function allows the coefficients of the numerator
+// to be arbitrary quasipolynomials, we stick to constants for simplicity,
+// as the relevant arithmetic operations on quasipolynomials
+// are tested separately.
+TEST(BarvinokTest, getCoefficientInRationalFunction) {
+  std::vector<QuasiPolynomial> numerator = {
+      QuasiPolynomial(0, 2), QuasiPolynomial(0, 3), QuasiPolynomial(0, 5)};
+  std::vector<Fraction> denominator = {Fraction(1), Fraction(0), Fraction(4),
+                                       Fraction(3)};
+  QuasiPolynomial coeff =
+      getCoefficientInRationalFunction(1, numerator, denominator);
+  EXPECT_EQ(coeff.getConstantTerm(), 3);
+
+  numerator = {QuasiPolynomial(0, -1), QuasiPolynomial(0, 4),
+               QuasiPolynomial(0, -2), QuasiPolynomial(0, 5),
+               QuasiPolynomial(0, 6)};
+  denominator = {Fraction(8), Fraction(4), Fraction(0), Fraction(-2)};
+  coeff = getCoefficientInRationalFunction(3, numerator, denominator);
+  EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
+}
