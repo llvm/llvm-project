@@ -92,6 +92,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("create", OpenACCClauseKind::Create)
+      .Case("collapse", OpenACCClauseKind::Collapse)
       .Case("copy", OpenACCClauseKind::Copy)
       .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
@@ -151,6 +152,7 @@ enum class OpenACCSpecialTokenKind {
   DevNum,
   Queues,
   Zero,
+  Force,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
@@ -166,6 +168,8 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("queues");
   case OpenACCSpecialTokenKind::Zero:
     return Tok.getIdentifierInfo()->isStr("zero");
+  case OpenACCSpecialTokenKind::Force:
+    return Tok.getIdentifierInfo()->isStr("force");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -462,6 +466,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Reduction:
+  case OpenACCClauseKind::Collapse:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -654,6 +659,15 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
+    case OpenACCClauseKind::Collapse: {
+      tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
+                                         Kind);
+      ExprResult NumLoops =
+          getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+      if (NumLoops.isInvalid())
+        return true;
+      break;
+    }
     default:
       llvm_unreachable("Not a required parens type?");
     }
