@@ -118,7 +118,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      if (LastLoad) {
+      if (LastLoad && !LastLoad->memoperands_empty()) {
         MachineMemOperand *MMO = *LastLoad->memoperands_begin();
         MMO->setFlags(MOLastUse);
         Changed = true;
