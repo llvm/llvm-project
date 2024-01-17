@@ -1336,6 +1336,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -8703,6 +8704,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
@@ -8744,6 +8748,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
 
   case Intrinsic::amdgcn_buffer_atomic_cmpswap: {
     unsigned Slc = Op.getConstantOperandVal(7);
