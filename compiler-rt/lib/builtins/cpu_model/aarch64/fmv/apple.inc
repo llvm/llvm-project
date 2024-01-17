@@ -23,7 +23,7 @@ void __init_cpu_features_resolver(void) {
   static dispatch_once_t onceToken = 0;
   dispatch_once(&onceToken, ^{
     // https://developer.apple.com/documentation/kernel/1387446-sysctlbyname/determining_instruction_set_characteristics
-    static struct {
+    static const struct {
       const char *sysctl_name;
       enum CPUFeatures feature;
     } features[] = {
