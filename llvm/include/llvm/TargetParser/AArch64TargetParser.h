@@ -354,7 +354,6 @@ struct ExtensionSet {
   void toLLVMFeatureList(std::vector<StringRef> &Features) const;
 };
 
-
 // Represents a dependency between two architecture extensions. If Later is
 // enabled, then Earlier must also be enabled. If Earlier is disabled, then
 // Later must also be disabled.
