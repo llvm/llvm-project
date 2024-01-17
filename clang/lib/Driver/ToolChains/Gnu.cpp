@@ -508,6 +508,11 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Add crtfastmath.o if available and fast math is enabled.
     ToolChain.addFastMathRuntimeIfAvailable(Args, CmdArgs);
+
+    if (isAndroid && Args.hasFlag(options::OPT_fandroid_pad_segment,
+                                  options::OPT_fno_android_pad_segment, false))
+      CmdArgs.push_back(
+          Args.MakeArgString(ToolChain.GetFilePath("crt_pad_segment.o")));
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
