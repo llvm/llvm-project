@@ -20,6 +20,7 @@ namespace lldb_private {
 /// file yet. This also stores an optional checksum of the on-disk content.
 class SupportFile {
 public:
+  SupportFile() : m_file_spec(), m_checksum() {}
   SupportFile(const FileSpec &spec) : m_file_spec(spec), m_checksum() {}
   SupportFile(const FileSpec &spec, const Checksum &checksum)
       : m_file_spec(spec), m_checksum(checksum) {}
@@ -29,9 +30,11 @@ public:
 
   virtual ~SupportFile() = default;
 
-  bool operator==(const SupportFile &other) {
+  bool operator==(const SupportFile &other) const {
     return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
   }
+
+  bool operator!=(const SupportFile &other) const { return !(*this == other); }
 
   /// Return the file name only. Useful for resolving breakpoints by file name.
   const FileSpec &GetSpecOnly() const { return m_file_spec; };
