@@ -239,7 +239,7 @@ private:
 void std::__libcpp_verbose_abort(char const* message, ...) {
   // Extract information from the error message. This has to stay synchronized with how we format assertions in the
   // library. Note that the variadic arguments to `__libcpp_verbose_abort` are empty but maintained for backward
-  // compatibility reasons
+  // compatibility reasons.
   std::regex message_format("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
 
   std::cmatch match_result;
