@@ -1204,17 +1204,19 @@ namespace IndirectFieldInit {
   static_assert(s.x == 1 && s.y == 2);
 
   struct S2 {
+    int a;
     struct {
+      int b;
       struct {
         int x, y;
       };
     };
 
-    constexpr S2(int x_, int y_) : x(x_), y(y_) {}
+    constexpr S2(int x_, int y_) : a(3), b(4), x(x_), y(y_) {}
   };
 
   constexpr S2 s2(1, 2);
-  static_assert(s2.x == 1 && s2.y == 2);
+  static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
 
 #endif
 }
