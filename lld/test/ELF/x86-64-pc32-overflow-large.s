@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
 # RUN: not ld.lld %t/a.o -T %t/lds -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: error: {{.*}}a.o:(.text+{{.*}}): relocation R_X86_64_PC32 out of range: {{.*}}; a R_X86_64_PC32 relocation should not reference a section marked SHF_X86_64_LARGE
+# CHECK: error: {{.*}}a.o:(.text+{{.*}}): relocation R_X86_64_PC32 out of range: {{.*}}; R_X86_64_PC32 should not reference a section marked SHF_X86_64_LARGE
 
 #--- a.s
 .text

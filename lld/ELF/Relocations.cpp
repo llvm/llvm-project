@@ -109,8 +109,8 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
     if (config->emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
         rel.sym->getOutputSection() &&
         (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
-      hint += "; a R_X86_64_PC32 relocation should not reference a section "
-              "marked SHF_X86_64_LARGE";
+      hint += "; R_X86_64_PC32 should not reference a section marked "
+              "SHF_X86_64_LARGE";
     }
   }
   if (!errPlace.srcLoc.empty())
