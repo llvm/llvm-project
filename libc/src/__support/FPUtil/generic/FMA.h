@@ -118,10 +118,8 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   }
 
   FPBits x_bits(x), y_bits(y), z_bits(z);
-  bool x_sign = x_bits.is_neg();
-  bool y_sign = y_bits.is_neg();
-  bool z_sign = z_bits.is_neg();
-  bool prod_sign = x_sign != y_sign;
+  const Sign z_sign = z_bits.sign();
+  Sign prod_sign = Sign(x_bits.sign() != y_bits.sign());
   x_exp += x_bits.get_biased_exponent();
   y_exp += y_bits.get_biased_exponent();
   z_exp += z_bits.get_biased_exponent();
@@ -248,27 +246,26 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     }
   } else {
     // Return +0.0 when there is exact cancellation, i.e., x*y == -z exactly.
-    prod_sign = false;
+    prod_sign = Sign::POS;
   }
 
   // Finalize the result.
   int round_mode = fputil::quick_get_round();
   if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_BIASED_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
-        (round_mode == FE_UPWARD && prod_sign) ||
-        (round_mode == FE_DOWNWARD && !prod_sign)) {
+        (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
+        (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
       result = FPBits::MAX_NORMAL;
-      return prod_sign ? -cpp::bit_cast<double>(result)
-                       : cpp::bit_cast<double>(result);
+      return prod_sign.is_neg() ? -cpp::bit_cast<double>(result)
+                                : cpp::bit_cast<double>(result);
     }
-    return prod_sign ? static_cast<double>(FPBits::neg_inf())
-                     : static_cast<double>(FPBits::inf());
+    return static_cast<double>(FPBits::inf(prod_sign));
   }
 
   // Remove hidden bit and append the exponent field and sign bit.
   result = (result & FPBits::FRACTION_MASK) |
            (static_cast<uint64_t>(r_exp) << FPBits::FRACTION_LEN);
-  if (prod_sign) {
+  if (prod_sign.is_neg()) {
     result |= FPBits::SIGN_MASK;
   }
 
@@ -276,8 +273,8 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   if (round_mode == FE_TONEAREST) {
     if (round_bit && (sticky_bits || ((result & 1) != 0)))
       ++result;
-  } else if ((round_mode == FE_UPWARD && !prod_sign) ||
-             (round_mode == FE_DOWNWARD && prod_sign)) {
+  } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
+             (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
     if (round_bit || sticky_bits)
       ++result;
   }
