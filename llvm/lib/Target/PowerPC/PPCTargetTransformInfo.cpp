@@ -788,7 +788,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // VSX has 32b/64b load instructions. Legalization can handle loading of
   // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
   // PPCTargetLowering can't compute the cost appropriately. So here we
-  // explicitly check this case. There are also corresponding store 
+  // explicitly check this case. There are also corresponding store
   // instructions.
   unsigned MemBytes = Src->getPrimitiveSizeInBits();
   if (ST->hasVSX() && IsAltivecType &&
