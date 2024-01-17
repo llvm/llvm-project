@@ -71,6 +71,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  offsetof_macro
+  HDR
+    offsetof-macro.h
+)
+
+add_macro_header(
   sched_macros
   HDR
     sched-macros.h

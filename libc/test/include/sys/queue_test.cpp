@@ -18,69 +18,89 @@ using LIBC_NAMESPACE::cpp::string;
 namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcQueueTest, SList) {
-  struct Contrived {
+  struct Entry {
     char c;
-    SLIST_ENTRY(Contrived) entry;
+    SLIST_ENTRY(Entry) entries;
   };
 
-  SLIST_HEAD(Head, Contrived) head = SLIST_HEAD_INITIALIZER(head);
+  SLIST_HEAD(Head, Entry);
+
+  Head head = SLIST_HEAD_INITIALIZER(head);
 
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
     bool match(Head head) {
-      Contrived *e;
+      Entry *e;
       CharVector v;
-      SLIST_FOREACH(e, &head, entry) { v.append(e->c); }
+      SLIST_FOREACH(e, &head, entries) { v.append(e->c); }
       return s == v.c_str();
     }
   };
 
-  SLIST_INIT(&head);
-  ASSERT_TRUE(SLIST_EMPTY(&head));
-
-  Contrived e1 = {'a', {NULL}};
-  SLIST_INSERT_HEAD(&head, &e1, entry);
+  Entry e1 = {'a', {NULL}};
+  SLIST_INSERT_HEAD(&head, &e1, entries);
 
   ASSERT_THAT(head, Contains("a"));
 
-  Contrived e2 = {'b', {NULL}};
-  SLIST_INSERT_AFTER(&e1, &e2, entry);
+  Entry e2 = {'b', {NULL}};
+  SLIST_INSERT_AFTER(&e1, &e2, entries);
 
   ASSERT_THAT(head, Contains("ab"));
 
-  Contrived *e, *tmp = NULL;
-  SLIST_FOREACH_SAFE(e, &head, entry, tmp) {
+  Head head2 = SLIST_HEAD_INITIALIZER(head);
+
+  Entry e3 = {'c', {NULL}};
+  SLIST_INSERT_HEAD(&head2, &e3, entries);
+
+  ASSERT_THAT(head2, Contains("c"));
+
+  SLIST_SWAP(&head, &head2, Entry);
+
+  ASSERT_THAT(head2, Contains("ab"));
+
+  SLIST_CONCAT(&head2, &head, Entry, entries);
+
+  ASSERT_THAT(head2, Contains("abc"));
+
+  SLIST_CONCAT(&head, &head2, Entry, entries);
+
+  ASSERT_THAT(head, Contains("abc"));
+
+  Entry *e = NULL, *tmp = NULL;
+  SLIST_FOREACH_SAFE(e, &head, entries, tmp) {
     if (e == &e2) {
-      SLIST_REMOVE(&head, e, Contrived, entry);
+      SLIST_REMOVE(&head, e, Entry, entries);
     }
   }
 
-  ASSERT_THAT(head, Contains("a"));
+  ASSERT_THAT(head, Contains("ac"));
 
   while (!SLIST_EMPTY(&head)) {
     e = SLIST_FIRST(&head);
-    SLIST_REMOVE_HEAD(&head, entry);
+    SLIST_REMOVE_HEAD(&head, entries);
   }
 
   ASSERT_TRUE(SLIST_EMPTY(&head));
 }
 
 TEST(LlvmLibcQueueTest, STailQ) {
-  struct Contrived {
+  struct Entry {
     char c;
-    STAILQ_ENTRY(Contrived) entry;
+    STAILQ_ENTRY(Entry) entries;
   };
 
-  STAILQ_HEAD(Head, Contrived) head = STAILQ_HEAD_INITIALIZER(head);
+  STAILQ_HEAD(Head, Entry);
+
+  Head head = STAILQ_HEAD_INITIALIZER(head);
 
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
     bool match(Head head) {
-      Contrived *e;
+      Entry *e;
       CharVector v;
-      STAILQ_FOREACH(e, &head, entry) { v.append(e->c); }
+      STAILQ_FOREACH(e, &head, entries) { v.append(e->c); }
       return s == v.c_str();
     }
   };
@@ -88,33 +108,58 @@ TEST(LlvmLibcQueueTest, STailQ) {
   STAILQ_INIT(&head);
   ASSERT_TRUE(STAILQ_EMPTY(&head));
 
-  Contrived e1 = {'a', {NULL}};
-  STAILQ_INSERT_HEAD(&head, &e1, entry);
+  Entry e1 = {'a', {NULL}};
+  STAILQ_INSERT_HEAD(&head, &e1, entries);
 
   ASSERT_THAT(head, Contains("a"));
 
-  Contrived e2 = {'b', {NULL}};
-  STAILQ_INSERT_TAIL(&head, &e2, entry);
+  Entry e2 = {'b', {NULL}};
+  STAILQ_INSERT_TAIL(&head, &e2, entries);
 
   ASSERT_THAT(head, Contains("ab"));
 
-  Contrived e3 = {'c', {NULL}};
-  SLIST_INSERT_AFTER(&e2, &e3, entry);
+  Entry e3 = {'c', {NULL}};
+  STAILQ_INSERT_AFTER(&head, &e2, &e3, entries);
 
   ASSERT_THAT(head, Contains("abc"));
 
-  Contrived *e, *tmp = NULL;
-  STAILQ_FOREACH_SAFE(e, &head, entry, tmp) {
+  Head head2 = STAILQ_HEAD_INITIALIZER(head);
+
+  Entry e4 = {'d', {NULL}};
+  STAILQ_INSERT_HEAD(&head2, &e4, entries);
+
+  ASSERT_THAT(head2, Contains("d"));
+
+  STAILQ_SWAP(&head, &head2, Entry);
+
+  ASSERT_THAT(head2, Contains("abc"));
+
+  STAILQ_CONCAT(&head2, &head, Entry, entries);
+
+  ASSERT_EQ(STAILQ_FIRST(&head2), &e1);
+  ASSERT_EQ(STAILQ_LAST(&head2, Entry, entries), &e4);
+
+  ASSERT_THAT(head2, Contains("abcd"));
+
+  STAILQ_CONCAT(&head, &head2, Entry, entries);
+
+  ASSERT_EQ(STAILQ_FIRST(&head), &e1);
+  ASSERT_EQ(STAILQ_LAST(&head, Entry, entries), &e4);
+
+  ASSERT_THAT(head, Contains("abcd"));
+
+  Entry *e = NULL, *tmp = NULL;
+  STAILQ_FOREACH_SAFE(e, &head, entries, tmp) {
     if (e == &e2) {
-      STAILQ_REMOVE(&head, e, Contrived, entry);
+      STAILQ_REMOVE(&head, e, Entry, entries);
     }
   }
 
-  ASSERT_THAT(head, Contains("ac"));
+  ASSERT_THAT(head, Contains("acd"));
 
   while (!STAILQ_EMPTY(&head)) {
     e = STAILQ_FIRST(&head);
-    STAILQ_REMOVE_HEAD(&head, entry);
+    STAILQ_REMOVE_HEAD(&head, entries);
   }
 
   ASSERT_TRUE(STAILQ_EMPTY(&head));

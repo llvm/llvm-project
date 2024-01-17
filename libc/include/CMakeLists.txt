@@ -351,6 +351,7 @@ add_header(
     sys/queue.h
   DEPENDS
     .llvm-libc-macros.null_macro
+    .llvm-libc-macros.offsetof_macro
 )
 
 add_gen_header(
