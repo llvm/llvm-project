@@ -132,6 +132,18 @@ DWARF:
           Attributes:
             - Attribute:       DW_AT_name
               Form:            DW_FORM_strp
+        - Code:            0x00000003
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_abstract_origin
+              Form:            DW_FORM_ref1
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref1
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -145,6 +157,12 @@ DWARF:
         - AbbrCode:        0x00000002
           Values:
             - Value:           0x000000000000000a # Name = NameType2
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x000000000000000e # Ref abstract origin to NameType1 DIE.
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000013 # Ref specification to NameType2 DIE.
         - AbbrCode:        0x00000000
 )";
 
@@ -162,4 +180,10 @@ DWARF:
 
   DIERef third_die(std::nullopt, DIERef::Section::DebugInfo, 19);
   EXPECT_EQ(debug_info.PeekDIEName(third_die), "NameType2");
+
+  DIERef fourth_die(std::nullopt, DIERef::Section::DebugInfo, 24);
+  EXPECT_EQ(debug_info.PeekDIEName(fourth_die), "NameType1");
+
+  DIERef fifth_die(std::nullopt, DIERef::Section::DebugInfo, 26);
+  EXPECT_EQ(debug_info.PeekDIEName(fifth_die), "NameType2");
 }
