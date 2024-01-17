@@ -19,9 +19,7 @@
 #include <type_traits>
 
 #include "../types.h"
-
-template <class Iter, class Sent>
-concept EqualityComparable = std::invocable<std::equal_to<>, const Iter&, const Sent&> ;
+#include "test_range.h"
 
 using Iterator = random_access_iterator<BufferView<int*>*>;
 using ConstIterator = random_access_iterator<const BufferView<int*>*>;
@@ -53,9 +51,9 @@ struct ConstComparableView : BufferView<BufferView<int*>*> {
   constexpr auto end() const { return ConstComparableSentinel<true>(ConstIterator(data_ + size_)); }
 };
 
-static_assert(EqualityComparable<std::ranges::iterator_t<ConstComparableView>,
+static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<ConstComparableView>,
                                  std::ranges::sentinel_t<const ConstComparableView>>);
-static_assert(EqualityComparable<std::ranges::iterator_t<const ConstComparableView>,
+static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<const ConstComparableView>,
                                  std::ranges::sentinel_t<ConstComparableView>>);
 
 constexpr bool test() {

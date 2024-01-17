@@ -10,9 +10,11 @@
 #define LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <ranges>
 
+#include "__concepts/invocable.h"
 #include "test_iterators.h"
 
 #if TEST_STD_VER < 17
@@ -92,6 +94,14 @@ concept simple_view =
 template <class View, class T>
 concept CanBePiped = requires(View&& view, T&& t) {
   { std::forward<View>(view) | std::forward<T>(t) };
+};
+
+template <class T, class U = T>
+concept weakly_equality_comparable_with = requires(const T& t, const U& u) {
+  { t == u } -> std::same_as<bool>;
+  { t != u } -> std::same_as<bool>;
+  { u == t } -> std::same_as<bool>;
+  { u != t } -> std::same_as<bool>;
 };
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H
