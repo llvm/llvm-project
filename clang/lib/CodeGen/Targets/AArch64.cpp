@@ -9,7 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Sema/Sema.h"
+#include "llvm/Support/AArch64SMEAttributes.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -827,13 +827,24 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   if (!Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  auto CalleeStreamingMode = Sema::getArmStreamingFnType(Callee);
-  auto CallerStreamingMode = Sema::getArmStreamingFnType(Caller);
+  auto GetSMEAttrs = [](const FunctionDecl *F) {
+    llvm::SMEAttrs FAttrs;
+    if (F->hasAttr<ArmLocallyStreamingAttr>())
+      FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
+    if (const auto *T = F->getType()->getAs<FunctionProtoType>()) {
+      if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+        FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
+      if (T->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        FAttrs.set(llvm::SMEAttrs::Mask::SM_Compatible);
+    }
+    return FAttrs;
+  };
 
-  // The caller can inline the callee if their streaming modes match or the
-  // callee is streaming compatible
-  if (CalleeStreamingMode != CallerStreamingMode &&
-      CalleeStreamingMode != Sema::ArmStreamingCompatible)
+  auto CalleeAttrs = GetSMEAttrs(Callee);
+  auto CallerAttrs = GetSMEAttrs(Caller);
+
+  if (CallerAttrs.requiresSMChange(CalleeAttrs, true))
     CGM.getDiags().Report(CallLoc,
                           diag::err_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";

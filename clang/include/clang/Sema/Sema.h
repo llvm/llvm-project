@@ -13832,16 +13832,8 @@ public:
     FormatArgumentPassingKind ArgPassingKind;
   };
 
-  enum ArmStreamingType {
-    ArmNonStreaming,
-    ArmStreaming,
-    ArmStreamingCompatible,
-    ArmStreamingOrSVE2p1
-  };
-
   static bool getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
                                   bool IsVariadic, FormatStringInfo *FSI);
-  static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
