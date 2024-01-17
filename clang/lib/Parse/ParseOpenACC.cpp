@@ -112,6 +112,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("nohost", OpenACCClauseKind::NoHost)
       .Case("present", OpenACCClauseKind::Present)
       .Case("private", OpenACCClauseKind::Private)
+      .Case("reduction", OpenACCClauseKind::Reduction)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
@@ -260,6 +261,47 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, Token Tok) {
   llvm_unreachable("Unknown 'Kind' Passed");
 }
 
+OpenACCReductionOperator ParseReductionOperator(Parser &P) {
+  // If there is no colon, treat as if the reduction operator was missing, else
+  // we probably will not recover from it in the case where an expression starts
+  // with one of the operator tokens.
+  if (P.NextToken().isNot(tok::colon)) {
+    P.Diag(P.getCurToken(), diag::err_acc_expected_reduction_operator);
+    return OpenACCReductionOperator::Invalid;
+  }
+  Token ReductionKindTok = P.getCurToken();
+  // Consume both the kind and the colon.
+  P.ConsumeToken();
+  P.ConsumeToken();
+
+  switch (ReductionKindTok.getKind()) {
+  case tok::plus:
+    return OpenACCReductionOperator::Addition;
+  case tok::star:
+    return OpenACCReductionOperator::Multiplication;
+  case tok::amp:
+    return OpenACCReductionOperator::BitwiseAnd;
+  case tok::pipe:
+    return OpenACCReductionOperator::BitwiseOr;
+  case tok::caret:
+    return OpenACCReductionOperator::BitwiseXOr;
+  case tok::ampamp:
+    return OpenACCReductionOperator::And;
+  case tok::pipepipe:
+    return OpenACCReductionOperator::Or;
+  case tok::identifier:
+    if (ReductionKindTok.getIdentifierInfo()->isStr("max"))
+      return OpenACCReductionOperator::Max;
+    if (ReductionKindTok.getIdentifierInfo()->isStr("min"))
+      return OpenACCReductionOperator::Min;
+    LLVM_FALLTHROUGH;
+  default:
+    P.Diag(ReductionKindTok, diag::err_acc_invalid_reduction_operator);
+    return OpenACCReductionOperator::Invalid;
+  }
+  llvm_unreachable("Reduction op token kind not caught by 'default'?");
+}
+
 /// Used for cases where we expect an identifier-like token, but don't want to
 /// give awkward error messages in cases where it is accidentially a keyword.
 bool expectIdentifierOrKeyword(Parser &P) {
@@ -393,10 +435,12 @@ enum ClauseParensKind {
   Required
 };
 
-ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
+ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
+                                     OpenACCClauseKind Kind) {
   switch (Kind) {
   case OpenACCClauseKind::Self:
-    return ClauseParensKind::Optional;
+    return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
+                                                   : ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
@@ -417,6 +461,7 @@ ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Host:
+  case OpenACCClauseKind::Reduction:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -433,12 +478,14 @@ ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
   llvm_unreachable("Unhandled clause kind");
 }
 
-bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
-  return getClauseParensKind(Kind) == ClauseParensKind::Optional;
+bool ClauseHasOptionalParens(OpenACCDirectiveKind DirKind,
+                             OpenACCClauseKind Kind) {
+  return getClauseParensKind(DirKind, Kind) == ClauseParensKind::Optional;
 }
 
-bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
-  return getClauseParensKind(Kind) == ClauseParensKind::Required;
+bool ClauseHasRequiredParens(OpenACCDirectiveKind DirKind,
+                             OpenACCClauseKind Kind) {
+  return getClauseParensKind(DirKind, Kind) == ClauseParensKind::Required;
 }
 
 ExprResult ParseOpenACCConditionalExpr(Parser &P) {
@@ -465,7 +512,7 @@ void SkipUntilEndOfDirective(Parser &P) {
 // a pqr-list is a comma-separated list of pdr items. The one exception is a
 // clause-list, which is a list of one or more clauses optionally separated by
 // commas.
-void Parser::ParseOpenACCClauseList() {
+void Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
   bool FirstClause = true;
   while (getCurToken().isNot(tok::annot_pragma_openacc_end)) {
     // Comma is optional in a clause-list.
@@ -475,7 +522,7 @@ void Parser::ParseOpenACCClauseList() {
 
     // Recovering from a bad clause is really difficult, so we just give up on
     // error.
-    if (ParseOpenACCClause()) {
+    if (ParseOpenACCClause(DirKind)) {
       SkipUntilEndOfDirective(*this);
       return;
     }
@@ -508,7 +555,7 @@ bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
 // really have its owner grammar and each individual one has its own definition.
 // However, they all are named with a single-identifier (or auto/default!)
 // token, followed in some cases by either braces or parens.
-bool Parser::ParseOpenACCClause() {
+bool Parser::ParseOpenACCClause(OpenACCDirectiveKind DirKind) {
   // A number of clause names are actually keywords, so accept a keyword that
   // can be converted to a name.
   if (expectIdentifierOrKeyword(*this))
@@ -523,14 +570,15 @@ bool Parser::ParseOpenACCClause() {
   // Consume the clause name.
   ConsumeToken();
 
-  return ParseOpenACCClauseParams(Kind);
+  return ParseOpenACCClauseParams(DirKind, Kind);
 }
 
-bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
+bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                      OpenACCClauseKind Kind) {
   BalancedDelimiterTracker Parens(*this, tok::l_paren,
                                   tok::annot_pragma_openacc_end);
 
-  if (ClauseHasRequiredParens(Kind)) {
+  if (ClauseHasRequiredParens(DirKind, Kind)) {
     if (Parens.expectAndConsume()) {
       // We are missing a paren, so assume that the person just forgot the
       // parameter.  Return 'false' so we try to continue on and parse the next
@@ -576,6 +624,19 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
+    case OpenACCClauseKind::Reduction:
+      // If we're missing a clause-kind (or it is invalid), see if we can parse
+      // the var-list anyway.
+      ParseReductionOperator(*this);
+      if (ParseOpenACCClauseVarList(Kind))
+        return true;
+      break;
+    case OpenACCClauseKind::Self:
+      // The 'self' clause is a var-list instead of a 'condition' in the case of
+      // the 'update' clause, so we have to handle it here.  U se an assert to
+      // make sure we get the right differentiator.
+      assert(DirKind == OpenACCDirectiveKind::Update);
+      LLVM_FALLTHROUGH;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::Delete:
@@ -598,10 +659,11 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
     }
 
     return Parens.consumeClose();
-  } else if (ClauseHasOptionalParens(Kind)) {
+  } else if (ClauseHasOptionalParens(DirKind, Kind)) {
     if (!Parens.consumeOpen()) {
       switch (Kind) {
       case OpenACCClauseKind::Self: {
+        assert(DirKind != OpenACCDirectiveKind::Update);
         ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
         // An invalid expression can be just about anything, so just give up on
         // this clause list.
@@ -817,7 +879,7 @@ void Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present.
-  ParseOpenACCClauseList();
+  ParseOpenACCClauseList(DirKind);
 
   Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
