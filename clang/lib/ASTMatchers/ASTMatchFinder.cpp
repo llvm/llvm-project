@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -1467,6 +1468,12 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
 bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   if (!DeclNode) {
     return true;
+  }
+
+  if (Options.SkipDeclsInModules && DeclNode->isFromASTFile()) {
+    auto *M = DeclNode->getOwningModule();
+    if (M && (M->isInterfaceOrPartition() || M->isGlobalModule()))
+      return true;
   }
 
   bool ScopedTraversal =

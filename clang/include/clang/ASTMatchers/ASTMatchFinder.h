@@ -139,6 +139,11 @@ public:
     ///
     /// It prints a report after match.
     std::optional<Profiling> CheckProfiling;
+
+    bool SkipDeclsInModules = false;
+
+    MatchFinderOptions()
+        : CheckProfiling(std::nullopt), SkipDeclsInModules(false) {}
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());
