@@ -248,7 +248,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 
 static std::vector<Fraction> convolution(std::vector<Fraction> a,
                                          std::vector<Fraction> b) {
-  // The length of the convolution is the maximum of the lengths
+  // The length of the convolution is the sum of the lengths
   // of the two sequences. We pad the shorter one with zeroes.
   unsigned len = a.size() + b.size();
   a.resize(len);

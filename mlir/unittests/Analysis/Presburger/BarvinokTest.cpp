@@ -195,7 +195,7 @@ TEST(BarvinokTest, computeNumTerms) {
   numPoints = numPoints.collectTerms().simplify();
 
   // First, we make sure all the affine functions are either
-  // ⌊M⌋, ⌊N⌋, or ⌊P⌋.
+  // M, N, or P.
   for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine())
     for (const SmallVector<Fraction> &aff : term)
       EXPECT_EQ(aff[0] + aff[1] + aff[2] + aff[3], 1);
