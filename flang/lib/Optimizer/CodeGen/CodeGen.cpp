@@ -67,8 +67,25 @@ static constexpr unsigned defaultAlign = 8;
 static constexpr unsigned kAttrPointer = CFI_attribute_pointer;
 static constexpr unsigned kAttrAllocatable = CFI_attribute_allocatable;
 
-static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context) {
-  return mlir::LLVM::LLVMPointerType::get(context);
+static inline unsigned getAddressSpace(mlir::ModuleOp module) {
+  if (mlir::Attribute addrSpace =
+          mlir::DataLayout(module).getAllocaMemorySpace())
+    return addrSpace.cast<mlir::IntegerAttr>().getUInt();
+
+  return 0u;
+}
+
+static inline unsigned
+getAddressSpace(mlir::ConversionPatternRewriter &rewriter) {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  return parentOp
+             ? ::getAddressSpace(parentOp->getParentOfType<mlir::ModuleOp>())
+             : 0u;
+}
+
+static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
+                                        unsigned addressSpace) {
+  return mlir::LLVM::LLVMPointerType::get(context, addressSpace);
 }
 
 static inline mlir::Type getI8Type(mlir::MLIRContext *context) {
@@ -197,7 +214,8 @@ protected:
                               mlir::ConversionPatternRewriter &rewriter,
                               int boxValue) const {
     if (box.getType().isa<mlir::LLVM::LLVMPointerType>()) {
-      auto pty = ::getLlvmPtrType(resultTy.getContext());
+      auto pty =
+          ::getLlvmPtrType(resultTy.getContext(), ::getAddressSpace(rewriter));
       auto p = rewriter.create<mlir::LLVM::GEPOp>(
           loc, pty, boxTy.llvm, box,
           llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
@@ -278,7 +296,8 @@ protected:
   mlir::Value
   getBaseAddrFromBox(mlir::Location loc, TypePair boxTy, mlir::Value box,
                      mlir::ConversionPatternRewriter &rewriter) const {
-    mlir::Type resultTy = ::getLlvmPtrType(boxTy.llvm.getContext());
+    mlir::Type resultTy =
+        ::getLlvmPtrType(boxTy.llvm.getContext(), ::getAddressSpace(rewriter));
     return getValueFromBox(loc, boxTy, box, resultTy, rewriter, kAddrPosInBox);
   }
 
@@ -350,7 +369,8 @@ protected:
                            mlir::ConversionPatternRewriter &rewriter,
                            mlir::Value base, ARGS... args) const {
     llvm::SmallVector<mlir::LLVM::GEPArg> cv = {args...};
-    auto llvmPtrTy = ::getLlvmPtrType(ty.getContext());
+    auto llvmPtrTy =
+        ::getLlvmPtrType(ty.getContext(), ::getAddressSpace(rewriter));
     return rewriter.create<mlir::LLVM::GEPOp>(loc, llvmPtrTy, ty, base, cv);
   }
 
@@ -378,7 +398,8 @@ protected:
     mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp);
     rewriter.setInsertionPointToStart(insertBlock);
     auto size = genI32Constant(loc, rewriter, 1);
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(llvmObjectTy.getContext());
+    mlir::Type llvmPtrTy = ::getLlvmPtrType(llvmObjectTy.getContext(),
+                                            ::getAddressSpace(rewriter));
     auto al = rewriter.create<mlir::LLVM::AllocaOp>(
         loc, llvmPtrTy, llvmObjectTy, size, alignment);
     rewriter.restoreInsertionPoint(thisPt);
@@ -532,7 +553,8 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
         size = rewriter.create<mlir::LLVM::MulOp>(
             loc, ity, size, integerCast(loc, rewriter, ity, operands[i]));
     }
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(alloc.getContext());
+    mlir::Type llvmPtrTy =
+        ::getLlvmPtrType(alloc.getContext(), ::getAddressSpace(rewriter));
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but
     // this should have no functional purpose (and passing the operand segment
@@ -1167,9 +1189,10 @@ getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
   auto indexType = mlir::IntegerType::get(op.getContext(), 64);
   return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       rewriter.getUnknownLoc(), "malloc",
-      mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
-                                        indexType,
-                                        /*isVarArg=*/false));
+      mlir::LLVM::LLVMFunctionType::get(
+          getLlvmPtrType(op.getContext(), ::getAddressSpace(rewriter)),
+          indexType,
+          /*isVarArg=*/false));
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1189,7 +1212,8 @@ computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
   // *)0 + 1)' trick for all types. The generated instructions are optimized
   // into constant by the first pass of InstCombine, so it should not be a
   // performance issue.
-  auto llvmPtrTy = ::getLlvmPtrType(llvmObjectType.getContext());
+  auto llvmPtrTy = ::getLlvmPtrType(llvmObjectType.getContext(),
+                                    ::getAddressSpace(rewriter));
   auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
   auto gep = rewriter.create<mlir::LLVM::GEPOp>(
       loc, llvmPtrTy, llvmObjectType, nullPtr,
@@ -1232,7 +1256,8 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
     heap->setAttr("callee", mlir::SymbolRefAttr::get(mallocFunc));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        heap, ::getLlvmPtrType(heap.getContext()), size, heap->getAttrs());
+        heap, ::getLlvmPtrType(heap.getContext(), ::getAddressSpace(rewriter)),
+        size, heap->getAttrs());
     return mlir::success();
   }
 
@@ -1258,9 +1283,10 @@ getFree(fir::FreeMemOp op, mlir::ConversionPatternRewriter &rewriter) {
   auto voidType = mlir::LLVM::LLVMVoidType::get(op.getContext());
   return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       rewriter.getUnknownLoc(), "free",
-      mlir::LLVM::LLVMFunctionType::get(voidType,
-                                        getLlvmPtrType(op.getContext()),
-                                        /*isVarArg=*/false));
+      mlir::LLVM::LLVMFunctionType::get(
+          voidType,
+          getLlvmPtrType(op.getContext(), ::getAddressSpace(rewriter)),
+          /*isVarArg=*/false));
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
@@ -1386,7 +1412,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return {getCharacterByteSize(loc, rewriter, charTy, lenParams),
               typeCodeVal};
     if (fir::isa_ref_type(boxEleTy)) {
-      auto ptrTy = ::getLlvmPtrType(rewriter.getContext());
+      auto ptrTy =
+          ::getLlvmPtrType(rewriter.getContext(), ::getAddressSpace(rewriter));
       return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy), typeCodeVal};
     }
     if (boxEleTy.isa<fir::RecordType>())
@@ -1447,7 +1474,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                                 fir::RecordType recType) const {
     std::string name =
         fir::NameUniquer::getTypeDescriptorName(recType.getName());
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
+    mlir::Type llvmPtrTy =
+        ::getLlvmPtrType(mod.getContext(), ::getAddressSpace(rewriter));
     if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
       return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
                                                       global.getSymName());
@@ -1505,7 +1533,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.
             typeDesc = rewriter.create<mlir::LLVM::ZeroOp>(
-                loc, ::getLlvmPtrType(mod.getContext()));
+                loc, ::getLlvmPtrType(mod.getContext(),
+                                      ::getAddressSpace(rewriter)));
           }
         } else {
           typeDesc = getTypeDescriptor(mod, rewriter, loc,
@@ -1653,7 +1682,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
             loc, outterOffsetTy, gepArgs[0].get<mlir::Value>(), cast);
       }
     }
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(resultTy.getContext());
+    mlir::Type llvmPtrTy =
+        ::getLlvmPtrType(resultTy.getContext(), ::getAddressSpace(rewriter));
     return rewriter.create<mlir::LLVM::GEPOp>(
         loc, llvmPtrTy, llvmBaseObjectType, base, gepArgs);
   }
@@ -2673,7 +2703,8 @@ private:
         getBaseAddrFromBox(loc, boxTyPair, boxBaseAddr, rewriter);
     // Component Type
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(coor.getContext());
+    mlir::Type llvmPtrTy =
+        ::getLlvmPtrType(coor.getContext(), ::getAddressSpace(rewriter));
     mlir::Type byteTy = ::getI8Type(coor.getContext());
     mlir::LLVM::IntegerOverflowFlagsAttr nsw =
         mlir::LLVM::IntegerOverflowFlagsAttr::get(
@@ -2890,7 +2921,8 @@ struct TypeDescOpConversion : public FIROpConversion<fir::TypeDescOp> {
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
     std::string typeDescName =
         fir::NameUniquer::getTypeDescriptorName(recordType.getName());
-    auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
+    auto llvmPtrTy =
+        ::getLlvmPtrType(typeDescOp.getContext(), ::getAddressSpace(rewriter));
     if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
           typeDescOp, llvmPtrTy, global.getSymName());
@@ -3678,7 +3710,8 @@ struct BoxOffsetOpConversion : public FIROpConversion<fir::BoxOffsetOp> {
   matchAndRewrite(fir::BoxOffsetOp boxOffset, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
-    mlir::Type pty = ::getLlvmPtrType(boxOffset.getContext());
+    mlir::Type pty =
+        ::getLlvmPtrType(boxOffset.getContext(), ::getAddressSpace(rewriter));
     mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
     mlir::Type llvmBoxTy =
         lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
