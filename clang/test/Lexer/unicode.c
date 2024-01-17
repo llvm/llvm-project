@@ -75,7 +75,7 @@ extern int 👷; // expected-error {{unexpected character <U+1F477>}} \
 
 extern int 👷‍♀; // expected-warning {{declaration does not declare anything}} \
                   expected-error {{unexpected character <U+1F477>}} \
-                  expected-error {{unexpected character <U+200D>}} \
+                  expected-error {{character <U+200D> not allowed at the start of an identifier}} \
                   expected-error {{unexpected character <U+2640>}}
 #else
 
