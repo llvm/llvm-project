@@ -15,7 +15,6 @@
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
-#include <__utility/unreachable.h>
 #include <cstddef>
 #include <cstdlib>
 #include <new>
