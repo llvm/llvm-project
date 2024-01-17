@@ -1597,7 +1597,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           Block *inline_block = sc->block->GetContainingInlinedBlock();
           if (inline_block) {
             const InlineFunctionInfo *inline_info =
-                sc->block->GetInlinedFunctionInfo();
+                inline_block->GetInlinedFunctionInfo();
             if (inline_info) {
               s.PutCString(" [inlined] ");
               inline_info->GetName().Dump(&s);
@@ -1638,6 +1638,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         name = sc->symbol->GetNameNoArguments();
       if (name) {
         s.PutCString(name.GetCString());
+        if (sc->block) {
+          Block *inline_block = sc->block->GetContainingInlinedBlock();
+          if (inline_block) {
+            const InlineFunctionInfo *inline_info =
+                inline_block->GetInlinedFunctionInfo();
+            if (inline_info) {
+              s.PutCString(" [inlined] ");
+              inline_info->GetName().Dump(&s);
+            }
+          }
+        }
         return true;
       }
     }
@@ -1678,7 +1689,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
             if (inline_block) {
               get_function_vars = false;
-              inline_info = sc->block->GetInlinedFunctionInfo();
+              inline_info = inline_block->GetInlinedFunctionInfo();
               if (inline_info)
                 variable_list_sp = inline_block->GetBlockVariableList(true);
             }
@@ -1734,11 +1745,15 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return false;
     s.PutCString(name);
 
-    if (sc->block && sc->block->GetContainingInlinedBlock()) {
-      if (const InlineFunctionInfo *inline_info =
-              sc->block->GetInlinedFunctionInfo()) {
-        s.PutCString(" [inlined] ");
-        inline_info->GetName().Dump(&s);
+    if (sc->block) {
+      Block *inline_block = sc->block->GetContainingInlinedBlock();
+      if (inline_block) {
+        const InlineFunctionInfo *inline_info =
+            inline_block->GetInlinedFunctionInfo();
+        if (inline_info) {
+          s.PutCString(" [inlined] ");
+          inline_info->GetName().Dump(&s);
+        }
       }
     }
     return true;
