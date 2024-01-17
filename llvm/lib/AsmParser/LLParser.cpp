@@ -54,9 +54,6 @@
 
 using namespace llvm;
 
-// Avoid large gaps in the NumberedVals vector.
-static const size_t MaxNumberedValSkip = 1000;
-
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
@@ -2937,10 +2934,6 @@ bool LLParser::checkValueID(LocTy Loc, StringRef Kind, StringRef Prefix,
     return error(Loc, Kind + " expected to be numbered '" + Prefix +
                           Twine(NextID) + "' or greater");
 
-  if (ID > NextID + MaxNumberedValSkip)
-    return error(Loc, "value numbers can skip at most " +
-                          Twine(MaxNumberedValSkip) + " values");
-
   return false;
 }
 
@@ -3304,8 +3297,7 @@ LLParser::PerFunctionState::PerFunctionState(LLParser &p, Function &f,
   for (Argument &A : F.args()) {
     if (!A.hasName()) {
       unsigned ArgNum = *It++;
-      NumberedVals.resize(ArgNum);
-      NumberedVals.push_back(&A);
+      NumberedVals.add(ArgNum, &A);
     }
   }
 }
@@ -3388,7 +3380,7 @@ Value *LLParser::PerFunctionState::getVal(const std::string &Name, Type *Ty,
 
 Value *LLParser::PerFunctionState::getVal(unsigned ID, Type *Ty, LocTy Loc) {
   // Look this name up in the normal function symbol table.
-  Value *Val = ID < NumberedVals.size() ? NumberedVals[ID] : nullptr;
+  Value *Val = NumberedVals.get(ID);
 
   // If this is a forward reference for the value, see if we already created a
   // forward ref record.
@@ -3436,9 +3428,9 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
   if (NameStr.empty()) {
     // If neither a name nor an ID was specified, just use the next ID.
     if (NameID == -1)
-      NameID = NumberedVals.size();
+      NameID = NumberedVals.getNext();
 
-    if (P.checkValueID(NameLoc, "instruction", "%", NumberedVals.size(),
+    if (P.checkValueID(NameLoc, "instruction", "%", NumberedVals.getNext(),
                        NameID))
       return true;
 
@@ -3455,10 +3447,7 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
       ForwardRefValIDs.erase(FI);
     }
 
-    // Fill in skipped IDs using nullptr.
-    NumberedVals.resize(unsigned(NameID));
-
-    NumberedVals.push_back(Inst);
+    NumberedVals.add(NameID, Inst);
     return false;
   }
 
@@ -3506,15 +3495,14 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
   BasicBlock *BB;
   if (Name.empty()) {
     if (NameID != -1) {
-      if (P.checkValueID(Loc, "label", "", NumberedVals.size(), NameID))
+      if (P.checkValueID(Loc, "label", "", NumberedVals.getNext(), NameID))
         return nullptr;
     } else {
-      NameID = NumberedVals.size();
+      NameID = NumberedVals.getNext();
     }
     BB = getBB(NameID, Loc);
     if (!BB) {
-      P.error(Loc, "unable to create block numbered '" +
-                       Twine(NumberedVals.size()) + "'");
+      P.error(Loc, "unable to create block numbered '" + Twine(NameID) + "'");
       return nullptr;
     }
   } else {
@@ -3532,8 +3520,7 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
   // Remove the block from forward ref sets.
   if (Name.empty()) {
     ForwardRefValIDs.erase(NameID);
-    NumberedVals.resize(NameID);
-    NumberedVals.push_back(BB);
+    NumberedVals.add(NameID, BB);
   } else {
     // BB forward references are already in the function symbol table.
     ForwardRefVals.erase(Name);

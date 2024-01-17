@@ -451,13 +451,27 @@ namespace llvm {
     bool parseFunctionType(Type *&Result);
     bool parseTargetExtType(Type *&Result);
 
+    class NumberedValues {
+      DenseMap<unsigned, Value *> Vals;
+      unsigned NextUnusedID = 0;
+
+    public:
+      unsigned getNext() const { return NextUnusedID; }
+      Value *get(unsigned ID) const { return Vals.lookup(ID); }
+      void add(unsigned ID, Value *V) {
+        assert(ID >= NextUnusedID && "Invalid value ID");
+        Vals.insert({ID, V});
+        NextUnusedID = ID + 1;
+      }
+    };
+
     // Function Semantic Analysis.
     class PerFunctionState {
       LLParser &P;
       Function &F;
       std::map<std::string, std::pair<Value*, LocTy> > ForwardRefVals;
       std::map<unsigned, std::pair<Value*, LocTy> > ForwardRefValIDs;
-      std::vector<Value*> NumberedVals;
+      NumberedValues NumberedVals;
 
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
