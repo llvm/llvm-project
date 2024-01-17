@@ -25,14 +25,6 @@
 #include <immintrin.h>
 #endif
 
-// SIMD types are defined with attributes. e.g., '__m128i' is defined as
-// long long  __attribute__((__vector_size__(16), __aligned__(16)))
-// When we use these SIMD types in template specialization GCC complains:
-// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
-// Therefore, we disable this warning in this file.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-
 // Define fake functions to prevent the compiler from failing on undefined
 // functions in case the CPU extension is not present.
 #if !defined(__AVX512BW__) && (defined(_MSC_VER) || defined(__SCE__))
@@ -123,6 +115,14 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
   const auto b = load_be<uint64_t>(p2, offset);
   return cmp_neq_uint64_t(a, b);
 }
+
+// SIMD types are defined with attributes. e.g., '__m128i' is defined as
+// long long  __attribute__((__vector_size__(16), __aligned__(16)))
+// When we use these SIMD types in template specialization GCC complains:
+// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+// Therefore, we disable this warning in this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
@@ -312,9 +312,9 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 }
 #endif // __AVX512BW__
 
-} // namespace LIBC_NAMESPACE::generic
-
 #pragma GCC diagnostic pop
+
+} // namespace LIBC_NAMESPACE::generic
 
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
