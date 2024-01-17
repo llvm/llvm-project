@@ -1903,8 +1903,8 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
                              APInt Offset, Type *PointerTy,
                              const Twine &NamePrefix) {
   if (Offset != 0)
-    Ptr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(Offset),
-                                NamePrefix + "sroa_idx");
+    Ptr = IRB.CreateInBoundsPtrAdd(Ptr, IRB.getInt(Offset),
+                                   NamePrefix + "sroa_idx");
   return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
                                                  NamePrefix + "sroa_cast");
 }
@@ -5021,9 +5021,6 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
       // Remove any existing intrinsics on the new alloca describing
       // the variable fragment.
-      SmallVector<DbgDeclareInst *, 1> FragDbgDeclares;
-      SmallVector<DPValue *, 1> FragDPVs;
-      findDbgDeclares(FragDbgDeclares, Fragment.Alloca, &FragDPVs);
       auto RemoveOne = [DbgVariable](auto *OldDII) {
         auto SameVariableFragment = [](const auto *LHS, const auto *RHS) {
           return LHS->getVariable() == RHS->getVariable() &&
@@ -5033,8 +5030,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();
       };
-      for_each(FragDbgDeclares, RemoveOne);
-      for_each(FragDPVs, RemoveOne);
+      for_each(findDbgDeclares(Fragment.Alloca), RemoveOne);
+      for_each(findDPVDeclares(Fragment.Alloca), RemoveOne);
 
       insertNewDbgInst(DIB, DbgVariable, Fragment.Alloca, FragmentExpr, &AI);
     }
@@ -5042,11 +5039,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   // Migrate debug information from the old alloca to the new alloca(s)
   // and the individual partitions.
-  SmallVector<DbgDeclareInst *, 1> DbgDeclares;
-  SmallVector<DPValue *, 1> DPValues;
-  findDbgDeclares(DbgDeclares, &AI, &DPValues);
-  for_each(DbgDeclares, MigrateOne);
-  for_each(DPValues, MigrateOne);
+  for_each(findDbgDeclares(&AI), MigrateOne);
+  for_each(findDPVDeclares(&AI), MigrateOne);
   for_each(at::getAssignmentMarkers(&AI), MigrateOne);
 
   return Changed;
@@ -5169,12 +5163,9 @@ bool SROA::deleteDeadInstructions(
     // not be able to find it.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
       DeletedAllocas.insert(AI);
-      SmallVector<DbgDeclareInst *, 1> DbgDeclares;
-      SmallVector<DPValue *, 1> DPValues;
-      findDbgDeclares(DbgDeclares, AI, &DPValues);
-      for (DbgDeclareInst *OldDII : DbgDeclares)
+      for (DbgDeclareInst *OldDII : findDbgDeclares(AI))
         OldDII->eraseFromParent();
-      for (DPValue *OldDII : DPValues)
+      for (DPValue *OldDII : findDPVDeclares(AI))
         OldDII->eraseFromParent();
     }
 

@@ -84,11 +84,11 @@ public:
   MatcherTableEmitter(const Matcher *TheMatcher, const CodeGenDAGPatterns &cgp)
       : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {
     // Record the usage of ComplexPattern.
-    DenseMap<const ComplexPattern *, unsigned> ComplexPatternUsage;
+    MapVector<const ComplexPattern *, unsigned> ComplexPatternUsage;
     // Record the usage of PatternPredicate.
-    std::map<StringRef, unsigned> PatternPredicateUsage;
+    MapVector<StringRef, unsigned> PatternPredicateUsage;
     // Record the usage of Predicate.
-    DenseMap<TreePattern *, unsigned> PredicateUsage;
+    MapVector<TreePattern *, unsigned> PredicateUsage;
 
     // Iterate the whole MatcherTable once and do some statistics.
     std::function<void(const Matcher *)> Statistic = [&](const Matcher *N) {
@@ -116,16 +116,18 @@ public:
     // Sort ComplexPatterns by usage.
     std::vector<std::pair<const ComplexPattern *, unsigned>> ComplexPatternList(
         ComplexPatternUsage.begin(), ComplexPatternUsage.end());
-    sort(ComplexPatternList,
-         [](const auto &A, const auto &B) { return A.second > B.second; });
+    stable_sort(ComplexPatternList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
     for (const auto &ComplexPattern : ComplexPatternList)
       ComplexPatterns.push_back(ComplexPattern.first);
 
     // Sort PatternPredicates by usage.
     std::vector<std::pair<std::string, unsigned>> PatternPredicateList(
         PatternPredicateUsage.begin(), PatternPredicateUsage.end());
-    sort(PatternPredicateList,
-         [](const auto &A, const auto &B) { return A.second > B.second; });
+    stable_sort(PatternPredicateList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
     for (const auto &PatternPredicate : PatternPredicateList)
       PatternPredicates.push_back(PatternPredicate.first);
 
@@ -141,19 +143,20 @@ public:
     // Sum the usage.
     for (auto &Predicate : NodePredicatesByCodeToRun) {
       TinyPtrVector<TreePattern *> &TPs = Predicate.second;
-      sort(TPs, [](const auto *A, const auto *B) {
+      stable_sort(TPs, [](const auto *A, const auto *B) {
         return A->getRecord()->getName() < B->getRecord()->getName();
       });
       unsigned Uses = 0;
       for (TreePattern *TP : TPs)
-        Uses += PredicateUsage.at(TP);
+        Uses += PredicateUsage[TP];
 
       // We only add the first predicate here since they are with the same code.
       PredicateList.push_back({TPs[0], Uses});
     }
 
-    sort(PredicateList,
-         [](const auto &A, const auto &B) { return A.second > B.second; });
+    stable_sort(PredicateList, [](const auto &A, const auto &B) {
+      return A.second > B.second;
+    });
     for (const auto &Predicate : PredicateList) {
       TreePattern *TP = Predicate.first;
       if (TreePredicateFn(TP).usesOperands())

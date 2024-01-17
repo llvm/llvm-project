@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
@@ -3568,6 +3569,17 @@ private:
   void ParseOpenACCCacheVarList();
   /// Parses a single variable in a variable list for OpenACC.
   bool ParseOpenACCVar();
+  /// Parses the variable list for the variety of clauses that take a var-list,
+  /// including the optional Special Token listed for some,based on clause type.
+  bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
+  /// Parses any parameters for an OpenACC Clause, including required/optional
+  /// parens.
+  bool ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                OpenACCClauseKind Kind);
+  /// Parses a single clause in a clause-list for OpenACC.
+  bool ParseOpenACCClause(OpenACCDirectiveKind DirKind);
+  /// Parses the clause-list for an OpenACC directive.
+  void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
 
 private:

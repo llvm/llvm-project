@@ -632,10 +632,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
 
     const bool InReg = Arg.hasAttribute(Attribute::InReg);
 
-    // SGPR arguments to functions not implemented.
-    if (!IsGraphics && InReg)
-      return false;
-
     if (Arg.hasAttribute(Attribute::SwiftSelf) ||
         Arg.hasAttribute(Attribute::SwiftError) ||
         Arg.hasAttribute(Attribute::Nest))
