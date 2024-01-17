@@ -599,6 +599,40 @@ endfunction()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
+# Build libcxx with ccache if the package is present
+set(LIBCXX_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
+if(LIBCXX_CCACHE_BUILD)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(LIBCXX_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
+    set(LIBCXX_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
+    set(LIBCXX_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes"
+        CACHE STRING "Parameters to pass through to ccache")
+
+    if(NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+      set(CCACHE_PROGRAM "${LIBCXX_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
+      if (LIBCXX_CCACHE_MAXSIZE)
+        set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LIBCXX_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
+      endif()
+      if (LIBCXX_CCACHE_DIR)
+        set(CCACHE_PROGRAM "CCACHE_DIR=${LIBCXX_CCACHE_DIR} ${CCACHE_PROGRAM}")
+      endif()
+      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+    else()
+      if(LIBCXX_CCACHE_MAXSIZE OR LIBCXX_CCACHE_DIR OR
+         NOT LIBCXX_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes")
+        message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
+      endif()
+      # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
+      # with cmd.exe and some MSVC tools other than cl.exe
+      set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    endif()
+  else()
+    message(FATAL_ERROR "Unable to find the program ccache. Set LIBCXX_CCACHE_BUILD to OFF")
+  endif()
+endif()
+
 # Sanitizer flags =============================================================
 
 function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
