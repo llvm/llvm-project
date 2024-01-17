@@ -30,6 +30,8 @@
 # error "C++11 or greater is required to use this header"
 #endif
 
+#include <iostream>
+
 struct AssertionInfoMatcher {
   static const int any_line = -1;
   static constexpr const char* any_file = "*";
@@ -198,11 +200,20 @@ private:
     pid_t result = waitpid(child_pid_, &status_value, 0);
     assert(result != -1 && "there is no child process to wait for");
 
+    std::cout << "OBC status_value: " << status_value << std::endl;
     if (WIFEXITED(status_value)) {
       exit_code_ = WEXITSTATUS(status_value);
+      std::cout << "OBC exit code: " << exit_code_ << ", status_value: " << status_value << std::endl;
       if (!IsValidResultKind(exit_code_))
         return RK_Unknown;
       return static_cast<ResultKind>(exit_code_);
+    }
+    if (WIFSIGNALED(status_value)) {
+      std::cout << "OBC signal" << std::endl;
+      exit_code_ = WTERMSIG(status_value);
+      std::cout << "OBC exit code: " << exit_code_ << ", status_value: " << status_value << std::endl;
+      // Got 5, which is sigtrap
+      // 4 is sigill
     }
     return RK_Unknown;
   }
