@@ -2881,12 +2881,6 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   }
   }
 
-  // Fallback - this is a splat if all demanded elts are the same constant.
-  if (computeKnownBits(V, DemandedElts, Depth).isConstant()) {
-    UndefElts = ~DemandedElts;
-    return true;
-  }
-
   return false;
 }
 
