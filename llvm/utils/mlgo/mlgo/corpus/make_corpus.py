@@ -16,7 +16,7 @@ from absl import app
 from absl import flags
 from absl import logging
 
-from mlgo import make_corpus_lib
+from mlgo.corpus import make_corpus_lib
 
 flags.DEFINE_string("input_dir", None, "The input directory.")
 flags.DEFINE_string("output_dir", None, "The output directory.")

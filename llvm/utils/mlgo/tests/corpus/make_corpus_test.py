@@ -8,7 +8,7 @@ import os
 
 from absl.testing import absltest
 
-from mlgo import make_corpus_lib
+from mlgo.corpus import make_corpus_lib
 
 
 class MakeCorpusTest(absltest.TestCase):

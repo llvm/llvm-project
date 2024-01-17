@@ -8,7 +8,7 @@ import os.path
 
 from absl.testing import absltest
 
-from mlgo import extract_ir_lib
+from mlgo.corpus import extract_ir_lib
 
 
 class ExtractIrTest(absltest.TestCase):

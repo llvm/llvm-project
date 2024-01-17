@@ -26,7 +26,7 @@ and corpus2 are combined into combinedcorpus.
 from absl import app
 from absl import flags
 
-from mlgo import combine_training_corpus_lib
+from mlgo.corpus import combine_training_corpus_lib
 
 flags.DEFINE_string("root_dir", "", "root dir of module paths to combine.")
 
