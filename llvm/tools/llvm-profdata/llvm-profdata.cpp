@@ -35,6 +35,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -132,9 +133,11 @@ cl::opt<std::string>
                    cl::sub(MergeSubcommand));
 cl::opt<std::string> FuncNameFilter(
     "function",
-    cl::desc("Details for matching functions. For overlapping CSSPGO, this "
-             "takes a function name with calling context."),
-    cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand));
+    cl::desc("Only functions matching the filter are shown in the output. For "
+             "overlapping CSSPGO, this takes a function name with calling "
+             "context."),
+    cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand),
+    cl::sub(MergeSubcommand));
 
 // TODO: Consider creating a template class (e.g., MergeOption, ShowOption) to
 // factor out the common cl::sub in cl::opt constructor for subcommand-specific
@@ -244,6 +247,10 @@ cl::opt<uint64_t> TemporalProfMaxTraceLength(
     cl::sub(MergeSubcommand),
     cl::desc("The maximum length of a single temporal profile trace "
              "(default: 10000)"));
+cl::opt<std::string> FuncNameNegativeFilter(
+    "no-function", cl::init(""),
+    cl::sub(MergeSubcommand),
+    cl::desc("Exclude functions matching the filter from the output."));
 
 cl::opt<FailureMode>
     FailMode("failure-mode", cl::init(failIfAnyAreInvalid),
@@ -760,6 +767,45 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   });
 }
 
+static StringRef
+getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
+  return Val.first();
+}
+
+static std::string
+getFuncName(const SampleProfileMap::value_type &Val) {
+  return Val.second.getContext().toString();
+}
+
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
+  bool hasFilter = !FuncNameFilter.empty();
+  bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
+  if (hasFilter || hasNegativeFilter) {
+    size_t Count = ProfileMap.size();
+
+    llvm::Regex Pattern(FuncNameFilter);
+    llvm::Regex NegativePattern(FuncNameNegativeFilter);
+    std::string Error;
+    if (hasFilter && !Pattern.isValid(Error))
+      exitWithError(Error);
+    if (hasNegativeFilter && !NegativePattern.isValid(Error))
+      exitWithError(Error);
+
+    for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+      auto Tmp = I++;
+      const auto &FuncName = getFuncName(*Tmp);
+      // Negative filter has higher precedence than positive filter.
+      if ((hasNegativeFilter && NegativePattern.match(FuncName)) ||
+          (hasFilter && !Pattern.match(FuncName)))
+        ProfileMap.erase(Tmp);
+    }
+
+    llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions"
+                 << " in the original profile are filtered.\n";
+  }
+}
+
 static void writeInstrProfile(StringRef OutputFilename,
                               ProfileFormat OutputFormat,
                               InstrProfWriter &Writer) {
@@ -878,6 +924,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
     exitWithError("no profile can be merged");
+
+  filterFunctions(Contexts[0]->Writer.getProfileData());
 
   writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
@@ -1458,6 +1506,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     CSConverter.convertCSProfiles();
     ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
+
+  filterFunctions(ProfileMap);
 
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);

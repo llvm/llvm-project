@@ -1330,6 +1330,8 @@ public:
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
+
+  iterator erase(iterator It) { return base_type::erase(It); }
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
