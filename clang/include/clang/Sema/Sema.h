@@ -955,6 +955,10 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callback to the parser to parse a type expressed as a string.
+  std::function<TypeResult(StringRef, StringRef, SourceLocation)>
+      ParseTypeFromStringCallback;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -3017,6 +3021,9 @@ public:
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
+  QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
+                                                  SourceLocation NameLoc,
+                                                  TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,
@@ -4815,6 +4822,29 @@ public:
   /// Get the outermost AttributedType node that sets a calling convention.
   /// Valid types should not have multiple attributes with different CCs.
   const AttributedType *getCallingConvAttributedType(QualType T) const;
+
+  /// Check whether a nullability type specifier can be added to the given
+  /// type through some means not written in source (e.g. API notes).
+  ///
+  /// \param Type The type to which the nullability specifier will be
+  /// added. On success, this type will be updated appropriately.
+  ///
+  /// \param Nullability The nullability specifier to add.
+  ///
+  /// \param DiagLoc The location to use for diagnostics.
+  ///
+  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
+  /// array type (e.g., because it will decay to a pointer).
+  ///
+  /// \param OverrideExisting Whether to override an existing, locally-specified
+  /// nullability specifier rather than complaining about the conflict.
+  ///
+  /// \returns true if nullability cannot be applied, false otherwise.
+  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
+                                             NullabilityKind Nullability,
+                                             SourceLocation DiagLoc,
+                                             bool AllowArrayTypes,
+                                             bool OverrideExisting);
 
   /// Process the attributes before creating an attributed statement. Returns
   /// the semantic attributes that have been processed.
