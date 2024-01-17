@@ -585,7 +585,7 @@ namespace dr647 { // dr647: 3.1
     constexpr C(NonLiteral);
     constexpr C(NonLiteral, int) {}
     // cxx11-20-error@-1 {{constexpr constructor with 1st non-literal parameter type 'NonLiteral' is a C++23 extension}}
-    // cxx11-20-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    //   cxx11-20-note@#dr647-NonLiteral {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr C() try {} catch (...) {}
     // cxx11-17-error@-1 {{function try block in constexpr constructor is a C++20 extension}}
     // cxx11-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}

@@ -411,10 +411,10 @@ namespace dr1358 { // dr1358: 3.1
     int member;
     constexpr B(NonLit u) : member(u) {}
     // cxx11-20-error@-1 {{constexpr constructor with 1st non-literal parameter type 'NonLit' is a C++23 extension}}
-    // cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
     constexpr NonLit f(NonLit u) const { return NonLit(); }
     // cxx11-20-error@-1 {{constexpr function with non-literal return type 'NonLit' is a C++23 extension}}
-    // cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+    //   cxx11-20-note@#dr1358-NonLit {{'NonLit' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   };
 #endif
 }
