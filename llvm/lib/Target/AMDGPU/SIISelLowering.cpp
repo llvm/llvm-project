@@ -2783,12 +2783,9 @@ SDValue SITargetLowering::LowerFormalArguments(
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
-    if (!Subtarget->enableFlatScratch()) {
-      // FIXME: Sink this into allocateSpecialInputSGPRs
-      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
-                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
-                              4);
-    }
+    // FIXME: Sink this into allocateSpecialInputSGPRs
+    if (!Subtarget->enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
 
     allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
