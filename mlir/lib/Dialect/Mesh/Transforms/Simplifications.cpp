@@ -80,7 +80,7 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
       opMeshAxes = opAxesIota;
     }
     if (llvm::all_of(opMeshAxes, [&mesh](MeshAxis axis) {
-          return ShapedType::isDynamic(mesh.getDimSizes()[axis]);
+          return ShapedType::isDynamic(mesh.getShape()[axis]);
         })) {
       // All mesh dimensions are dynamic. Nothing to fold.
       return failure();
@@ -91,7 +91,7 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
     SmallVector<size_t> newToOldResultsIndexMap;
 
     for (size_t i = 0; i < opMeshAxes.size(); ++i) {
-      auto meshAxisSize = mesh.getDimSizes()[opMeshAxes[i]];
+      auto meshAxisSize = mesh.getShape()[opMeshAxes[i]];
       if (ShapedType::isDynamic(meshAxisSize)) {
         newToOldResultsIndexMap.push_back(i);
         newShapeOpMeshAxes.push_back(opMeshAxes[i]);

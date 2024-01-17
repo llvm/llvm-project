@@ -990,6 +990,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
       }
     }
+    if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
+      // %b64 = call i64 ballot.i64(...)
+      // =>
+      // %b32 = call i32 ballot.i32(...)
+      // %b64 = zext i32 %b32 to i64
+      Value *Call = IC.Builder.CreateZExt(
+          IC.Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
+                                     {IC.Builder.getInt32Ty()},
+                                     {II.getArgOperand(0)}),
+          II.getType());
+      Call->takeName(&II);
+      return IC.replaceInstUsesWith(II, Call);
+    }
     break;
   }
   case Intrinsic::amdgcn_wqm_vote: {

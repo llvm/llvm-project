@@ -108,8 +108,8 @@ class VOPC_NoSdst_Profile<list<SchedReadWrite> sched, ValueType vt0,
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
-  let AsmVOP3Base = !if(isFloatType<Src0VT>.ret, "$src0_modifiers, $src1_modifiers$clamp",
-                                           "$src0, $src1");
+  let AsmVOP3Base = !if(Src0VT.isFP, "$src0_modifiers, $src1_modifiers$clamp",
+                                     "$src0, $src1");
   let AsmSDWA9 = "$src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let EmitDst = 0;
 }
@@ -146,7 +146,7 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
   let mayStore = 0;
   let hasSideEffects = 0;
 
-  let ReadsModeReg = isFloatType<P.Src0VT>.ret;
+  let ReadsModeReg = P.Src0VT.isFP;
 
   let VALU = 1;
   let VOPC = 1;
