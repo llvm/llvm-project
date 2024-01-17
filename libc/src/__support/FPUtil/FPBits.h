@@ -171,10 +171,12 @@ protected:
     return StorageType(1) << position;
   }
 
-  template <typename T> struct Opaque {
+  // A stongly typed integer that prevents mixing and matching integers with
+  // different semantics.
+  template <typename T> struct TypedInt {
     using value_type = T;
-    LIBC_INLINE constexpr explicit Opaque(T value) : value(value) {}
-    LIBC_INLINE constexpr Opaque(const Opaque &value) = default;
+    LIBC_INLINE constexpr explicit TypedInt(T value) : value(value) {}
+    LIBC_INLINE constexpr TypedInt(const TypedInt &value) = default;
 
     LIBC_INLINE constexpr explicit operator T() const { return value; }
 
@@ -185,8 +187,8 @@ protected:
   // An opaque type to store a floating point exponent.
   // We define special values but it is valid to create arbitrary values as long
   // as they are in the range [MIN, MAX].
-  struct Exponent : public Opaque<int32_t> {
-    using UP = Opaque<int32_t>;
+  struct Exponent : public TypedInt<int32_t> {
+    using UP = TypedInt<int32_t>;
     using UP::UP;
     LIBC_INLINE
     static constexpr auto MIN() { return Exponent(1 - EXP_BIAS); }
@@ -198,8 +200,8 @@ protected:
   // We define special values but it is valid to create arbitrary values as long
   // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
   // Values greater than BITS_ALL_ONES are truncated.
-  struct BiasedExponent : public Opaque<uint32_t> {
-    using UP = Opaque<uint32_t>;
+  struct BiasedExponent : public TypedInt<uint32_t> {
+    using UP = TypedInt<uint32_t>;
     using UP::UP;
 
     LIBC_INLINE constexpr BiasedExponent(Exponent exp)
@@ -219,8 +221,8 @@ protected:
   // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
   // Note that the semantics of the Significand are implementation dependent.
   // Values greater than BITS_ALL_ONES are truncated.
-  struct Significand : public Opaque<StorageType> {
-    using UP = Opaque<StorageType>;
+  struct Significand : public TypedInt<StorageType> {
+    using UP = TypedInt<StorageType>;
     using UP::UP;
 
     LIBC_INLINE static constexpr auto ZERO() {
@@ -240,8 +242,8 @@ protected:
   };
 
   template <typename To, typename T>
-  LIBC_INLINE static constexpr To as(Opaque<T> opaque) {
-    return To(static_cast<T>(opaque));
+  LIBC_INLINE static constexpr To as(TypedInt<T> typed_int) {
+    return To(static_cast<T>(typed_int));
   }
 
   LIBC_INLINE friend constexpr Significand operator|(const Significand a,
