@@ -109,12 +109,30 @@ public:
   }
 };
 
+std::unique_ptr<CompilationDatabase> getCompilationDatabase(std::string buildPath) {
+  llvm::errs() << "Getting compilation database from: " << buildPath << "\n";
+  std::string errorMsg;
+  std::unique_ptr<CompilationDatabase> cb =
+    CompilationDatabase::autoDetectFromDirectory(buildPath, errorMsg);
+  if (!cb) {
+    llvm::errs() << "Error while trying to load a compilation database:\n"
+                 << errorMsg << "Running without flags.\n";
+    exit(1);
+  }
+  return cb;
+}
 
 int main(int argc, const char **argv) {
-  auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
-  CommonOptionsParser &OptionsParser = ExpectedParser.get();
+  std::string buildPath = argv[1];
+  std::unique_ptr<CompilationDatabase> cb = getCompilationDatabase(buildPath);
 
-  ClangTool Tool(OptionsParser.getCompilations(),
-                 OptionsParser.getSourcePathList());
+  const auto &allFiles = cb->getAllFiles();
+
+  llvm::errs() << "All files:\n";
+  for (auto &file : allFiles) {
+    llvm::outs() << "  " << file << "\n";
+  }
+
+  ClangTool Tool(*cb, allFiles);
   return Tool.run(newFrontendActionFactory<FindNamedClassAction>().get());
 }
