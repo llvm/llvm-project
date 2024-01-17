@@ -765,6 +765,9 @@ Bug Fixes in This Version
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 - Fix an issue where CTAD fails for function-type/array-type arguments.
   Fixes (`#51710 <https://github.com/llvm/llvm-project/issues/51710>`_)
+- Fix crashes when using the binding decl from an invalid structured binding.
+  Fixes (`#67495 <https://github.com/llvm/llvm-project/issues/67495>`_) and
+  (`#72198 <https://github.com/llvm/llvm-project/issues/72198>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
