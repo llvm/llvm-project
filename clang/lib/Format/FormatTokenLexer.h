@@ -95,6 +95,9 @@ private:
 
   void handleCSharpVerbatimAndInterpolatedStrings();
 
+  // Handles TableGen multiline strings. It has the form [{ ... }].
+  void handleTableGenMultilineString();
+
   void tryParsePythonComment();
 
   bool tryMerge_TMacro();
