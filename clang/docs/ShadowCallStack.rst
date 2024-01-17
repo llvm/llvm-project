@@ -66,14 +66,14 @@ generate the software shadow call stack with ``Zicfiss``_ by passing
 ``-mforced-sw-shadow-stack``.
 For simplicity we will refer to this as the ``SCSReg``. On some platforms,
 ``SCSReg`` is reserved, and on others, it is designated as a scratch register.
-This generally means that any code that may run on the same thread as code compiled with ShadowCallStack must either target
-one of the platforms whose ABI reserves ``SCSReg`` (currently Android, Darwin,
-Fuchsia and Windows) or be compiled with a flag to reserve that register (e.g.,
-``-ffixed-x18``). If absolutely necessary, code compiled without reserving the
-register may be run on the same thread as code that uses ShadowCallStack by
-saving the register value temporarily on the stack (`example in Android`_) but
-this should be done with care since it risks leaking the shadow call stack
-address.
+This generally means that any code that may run on the same thread as code
+compiled with ShadowCallStack must either target one of the platforms whose ABI
+reserves ``SCSReg`` (currently Android, Darwin, Fuchsia and Windows) or be
+compiled with a flag to reserve that register (e.g., ``-ffixed-x18``). If
+absolutely necessary, code compiled without reserving the register may be run on
+the same thread as code that uses ShadowCallStack by saving the register value
+temporarily on the stack (`example in Android`_) but this should be done with
+care since it risks leaking the shadow call stack address.
 
 .. _`Zicfiss`: https://github.com/riscv/riscv-cfi/blob/main/cfi_backward.adoc
 .. _`example in Android`: https://android-review.googlesource.com/c/platform/frameworks/base/+/803717
@@ -158,8 +158,9 @@ Usage
 To enable ShadowCallStack, just pass the ``-fsanitize=shadow-call-stack`` flag
 to both compile and link command lines. On aarch64, you also need to pass
 ``-ffixed-x18`` unless your target already reserves ``x18``. No additional flags
-need to be passed on RISC-V because the software based shadow stack uses ``x3`` (``gp``),
-which is always reserved, and the hardware based shadow call stack uses a dedicated register, ``ssp``.
+need to be passed on RISC-V because the software based shadow stack uses
+``x3`` (``gp``), which is always reserved, and the hardware based shadow call
+stack uses a dedicated register, ``ssp``.
 However, it is important to disable GP relaxation in the linker when using the
 software based shadow call stack on RISC-V. This can be done with the
 ``--no-relax-gp`` flag in GNU ld, and is off by default in LLD.
