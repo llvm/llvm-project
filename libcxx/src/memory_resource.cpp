@@ -234,9 +234,7 @@ public:
       // Note: the `%` symbol is used to introduce a conversion specifier in printf format syntax and thus cannot appear
       // in an expression passed to a hardening assertion (because that expression might end up being passed to
       // a printf-style formatting function). As a workaround, wrap the expression in a lambda.
-      auto __is_aligned = [&] {
-        return chunk_size % block_size == 0;
-      };
+      auto __is_aligned = [&] { return chunk_size % block_size == 0; };
       (void)__is_aligned; // Prevent "maybe unused" warnings in modes which don't enable the assertion.
       _LIBCPP_ASSERT_INTERNAL(__is_aligned(), "");
     }
