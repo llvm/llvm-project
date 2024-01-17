@@ -41,10 +41,29 @@ def SIEncodingFamily {
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
-def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD",
-  SDTypeProfile<1, 3, [SDTCisVT<1, v4i32>, SDTCisVT<2, i32>, SDTCisVT<3, i32>]>,
-  [SDNPMayLoad, SDNPMemOperand]
->;
+def SDTSBufferLoad : SDTypeProfile<1, 3,
+    [                    // vdata
+     SDTCisVT<1, v4i32>, // rsrc
+     SDTCisVT<2, i32>,   // offset(imm)
+     SDTCisVT<3, i32>]>; // cachepolicy
+
+def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD", SDTSBufferLoad,
+                            [SDNPMayLoad, SDNPMemOperand]>;
+
+def SIsbuffer_load_byte : SDNode<"AMDGPUISD::SBUFFER_LOAD_BYTE", SDTSBufferLoad,
+                                 [SDNPMayLoad, SDNPMemOperand]>;
+
+def SIsbuffer_load_ubyte
+    : SDNode<"AMDGPUISD::SBUFFER_LOAD_UBYTE", SDTSBufferLoad,
+             [SDNPMayLoad, SDNPMemOperand]>;
+
+def SIsbuffer_load_short
+    : SDNode<"AMDGPUISD::SBUFFER_LOAD_SHORT", SDTSBufferLoad,
+             [SDNPMayLoad, SDNPMemOperand]>;
+
+def SIsbuffer_load_ushort
+    : SDNode<"AMDGPUISD::SBUFFER_LOAD_USHORT", SDTSBufferLoad,
+             [SDNPMayLoad, SDNPMemOperand]>;
 
 def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i16>]>,
@@ -767,9 +786,12 @@ class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Bit, SDLoc(N), MVT::i1);
 }]>;
 
-def SIMM16bit : TImmLeaf <i32,
-  [{return isInt<16>(Imm) || isUInt<16>(Imm);}],
-  as_i16timm
+def SIMM16bit : ImmLeaf <i32,
+  [{return isInt<16>(Imm);}]
+>;
+
+def UIMM16bit : ImmLeaf <i32,
+  [{return isUInt<16>(Imm);}]
 >;
 
 def i64imm_32bit : ImmLeaf<i64, [{

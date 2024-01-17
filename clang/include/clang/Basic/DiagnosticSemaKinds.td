@@ -7006,6 +7006,11 @@ def err_member_decl_does_not_match : Error<
   "does not match any declaration in %1">;
 def err_friend_decl_with_def_arg_must_be_def : Error<
   "friend declaration specifying a default argument must be a definition">;
+def err_friend_decl_with_enclosing_temp_constraint_must_be_def : Error<
+  "friend declaration with a constraint that depends on an enclosing "
+  "template parameter must be a definition">;
+def err_non_temp_friend_decl_with_requires_clause_must_be_def : Error<
+  "non-template friend declaration with a requires clause must be a definition">;
 def err_friend_decl_with_def_arg_redeclared : Error<
   "friend declaration specifying a default argument must be the only declaration">;
 def err_friend_decl_does_not_match : Error<

@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/SupportFile.h"
+#include "lldb/lldb-forward.h"
 
 #include <cstddef>
 #include <vector>
@@ -25,21 +26,22 @@ public:
   SupportFileList(const SupportFileList &) = delete;
   SupportFileList(SupportFileList &&other) = default;
 
-  typedef std::vector<std::unique_ptr<SupportFile>> collection;
+  typedef std::vector<std::shared_ptr<SupportFile>> collection;
   typedef collection::const_iterator const_iterator;
   const_iterator begin() const { return m_files.begin(); }
   const_iterator end() const { return m_files.end(); }
 
   void Append(const FileSpec &file) {
-    return Append(std::make_unique<SupportFile>(file));
+    return Append(std::make_shared<SupportFile>(file));
   }
-  void Append(std::unique_ptr<SupportFile> &&file) {
+  void Append(std::shared_ptr<SupportFile> &&file) {
     m_files.push_back(std::move(file));
   }
   // FIXME: Only used by SymbolFilePDB. Replace with a DenseSet at call site.
   bool AppendIfUnique(const FileSpec &file);
   size_t GetSize() const { return m_files.size(); }
   const FileSpec &GetFileSpecAtIndex(size_t idx) const;
+  lldb::SupportFileSP GetSupportFileAtIndex(size_t idx) const;
   size_t FindFileIndex(size_t idx, const FileSpec &file, bool full) const;
   /// Find a compatible file index.
   ///
@@ -69,7 +71,7 @@ public:
 
   template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.push_back(
-        std::make_unique<SupportFile>(std::forward<Args>(args)...));
+        std::make_shared<SupportFile>(std::forward<Args>(args)...));
   }
 
 protected:

@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}sdwa_imm_operand:
 # GCN: v_mov_b32_e32 v[[SHIFT:[0-9]+]], 2
