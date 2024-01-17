@@ -1501,7 +1501,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
-   FeatureScalarDwordx3Loads]>;
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR]>;
 
 //===----------------------------------------------------------------------===//
 

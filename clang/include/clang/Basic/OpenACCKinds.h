@@ -217,6 +217,8 @@ enum class OpenACCClauseKind {
   /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
   /// constructs.
   Reduction,
+  /// 'collapse' clause, allowed on 'loop' and Combined constructs.
+  Collapse,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -311,6 +313,9 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::Reduction:
     return Out << "reduction";
+
+  case OpenACCClauseKind::Collapse:
+    return Out << "collapse";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
