@@ -9076,8 +9076,7 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  if (SIInstrInfo::isSoftWaitcnt(Opcode))
-    Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
+  Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
 
   unsigned Gen = subtargetEncodingFamily(ST);
 

@@ -97,6 +97,15 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
   return true;
 }
 
+static bool isReferenced(const VarDecl &LoopVar, const Stmt &Stmt,
+                         ASTContext &Context) {
+  const auto IsLoopVar = varDecl(equalsNode(&LoopVar));
+  return !match(stmt(hasDescendant(declRefExpr(to(valueDecl(anyOf(
+                    IsLoopVar, bindingDecl(forDecomposition(IsLoopVar)))))))),
+                Stmt, Context)
+              .empty();
+}
+
 bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     const VarDecl &LoopVar, const CXXForRangeStmt &ForRange,
     ASTContext &Context) {
@@ -113,9 +122,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
   // compiler warning which can't be suppressed.
   // Since this case is very rare, it is safe to ignore it.
   if (!ExprMutationAnalyzer(*ForRange.getBody(), Context).isMutated(&LoopVar) &&
-      !utils::decl_ref_expr::allDeclRefExprs(LoopVar, *ForRange.getBody(),
-                                             Context)
-           .empty()) {
+      isReferenced(LoopVar, *ForRange.getBody(), Context)) {
     auto Diag = diag(
         LoopVar.getLocation(),
         "loop variable is copied but only used as const reference; consider "

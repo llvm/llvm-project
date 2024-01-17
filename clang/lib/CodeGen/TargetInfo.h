@@ -496,7 +496,8 @@ createPPC64_SVR4_TargetCodeGenInfo(CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind,
                                    bool SoftFloatABI);
 
 std::unique_ptr<TargetCodeGenInfo>
-createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen);
+createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen,
+                             bool EABI);
 
 std::unique_ptr<TargetCodeGenInfo>
 createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);

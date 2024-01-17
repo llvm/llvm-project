@@ -1411,9 +1411,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel, "
-              "DIImportedEntity or DIType",
+                     isa<DIImportedEntity>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel or "
+              "DIImportedEntity",
               &N, Node, Op);
     }
   }
@@ -2160,6 +2160,15 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
            "are incompatible!",
            V);
   }
+
+  Check(
+      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
+       Attrs.hasFnAttr("aarch64_inout_zt0") +
+       Attrs.hasFnAttr("aarch64_out_zt0") +
+       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
+      V);
 
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);

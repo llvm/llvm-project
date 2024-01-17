@@ -59,7 +59,7 @@ module @transforms attributes { transform.with_named_sequence } {
   // This is an action sequence.
   transform.named_sequence @print_generic_matmul(
       %matmul: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %matmul, "matmul" : !transform.any_op
+    transform.debug.emit_remark_at %matmul, "matmul" : !transform.any_op
     transform.yield
   }
 

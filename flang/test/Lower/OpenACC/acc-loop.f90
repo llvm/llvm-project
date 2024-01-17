@@ -67,10 +67,10 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop {
+!CHECK:      acc.loop gang {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
-!CHECK-NEXT: } attributes {gang = [#acc.device_type<none>]}{{$}}
+!CHECK-NEXT: }{{$}}
 
   !$acc loop gang(num: 8)
   DO i = 1, n
@@ -109,10 +109,10 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop {
+!CHECK:      acc.loop vector {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
-!CHECK-NEXT: } attributes {vector = [#acc.device_type<none>]}{{$}}
+!CHECK-NEXT: }{{$}}
 
   !$acc loop vector(128)
   DO i = 1, n
@@ -141,10 +141,10 @@ program acc_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.loop {
+!CHECK:      acc.loop worker {
 !CHECK:        fir.do_loop
 !CHECK:        acc.yield
-!CHECK-NEXT: } attributes {worker = [#acc.device_type<none>]}{{$}}
+!CHECK-NEXT: }{{$}}
 
   !$acc loop worker(128)
   DO i = 1, n
@@ -319,5 +319,11 @@ program acc_loop
   100 continue
 ! CHECK: acc.loop
 ! CHECK: fir.do_loop
+
+  !$acc loop gang device_type(nvidia) gang(8)
+  DO i = 1, n
+  END DO
+
+! CHECK: acc.loop gang([#acc.device_type<none>], {num=%c8{{.*}} : i32} [#acc.device_type<nvidia>])
 
 end program

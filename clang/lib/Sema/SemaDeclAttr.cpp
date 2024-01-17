@@ -8951,26 +8951,74 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+static bool checkArmNewAttrMutualExclusion(
+    Sema &S, const ParsedAttr &AL, const FunctionProtoType *FPT,
+    FunctionType::ArmStateValue CurrentState, StringRef StateName) {
+  auto CheckForIncompatibleAttr =
+      [&](FunctionType::ArmStateValue IncompatibleState,
+          StringRef IncompatibleStateName) {
+        if (CurrentState == IncompatibleState) {
+          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+              << (std::string("'__arm_new(\"") + StateName.str() + "\")'")
+              << (std::string("'") + IncompatibleStateName.str() + "(\"" +
+                  StateName.str() + "\")'")
+              << true;
+          AL.setInvalid();
+        }
+      };
 
-static void handleArmNewZaAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  CheckForIncompatibleAttr(FunctionType::ARM_In, "__arm_in");
+  CheckForIncompatibleAttr(FunctionType::ARM_Out, "__arm_out");
+  CheckForIncompatibleAttr(FunctionType::ARM_InOut, "__arm_inout");
+  CheckForIncompatibleAttr(FunctionType::ARM_Preserves, "__arm_preserves");
+  return AL.isInvalid();
+}
+
+static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.getNumArgs()) {
+    S.Diag(AL.getLoc(), diag::err_missing_arm_state) << AL;
+    AL.setInvalid();
+    return;
+  }
+
+  std::vector<StringRef> NewState;
+  if (const auto *ExistingAttr = D->getAttr<ArmNewAttr>()) {
+    for (StringRef S : ExistingAttr->newArgs())
+      NewState.push_back(S);
+  }
+
+  bool HasZA = false;
+  for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, StateName, &LiteralLoc))
+      return;
+
+    if (StateName == "za")
+      HasZA = true;
+    else {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      AL.setInvalid();
+      return;
+    }
+
+    if (std::find(NewState.begin(), NewState.end(), StateName) ==
+        NewState.end()) { // Avoid adding duplicates.
+      NewState.push_back(StateName);
+    }
+  }
+
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZASharedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_shared_za'" << true;
-      AL.setInvalid();
-    }
-    if (FPT->getAArch64SMEAttributes() &
-        FunctionType::SME_PStateZAPreservedMask) {
-      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-          << AL << "'__arm_preserves_za'" << true;
-      AL.setInvalid();
-    }
-    if (AL.isInvalid())
+    FunctionType::ArmStateValue ZAState =
+        FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
+    if (HasZA && ZAState != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
       return;
   }
 
-  handleSimpleAttribute<ArmNewZAAttr>(S, D, AL);
+  D->dropAttr<ArmNewAttr>();
+  D->addAttr(::new (S.Context)
+                 ArmNewAttr(S.Context, AL, NewState.data(), NewState.size()));
 }
 
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
@@ -9752,8 +9800,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
     break;
 
-  case ParsedAttr::AT_ArmNewZA:
-    handleArmNewZaAttr(S, D, AL);
+  case ParsedAttr::AT_ArmNew:
+    handleArmNewAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:

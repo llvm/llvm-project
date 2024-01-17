@@ -788,11 +788,11 @@ Experimental extensions
     zicond              1.0
     zimop               0.1
     zacas               1.0
-    zfbfmin             0.8
+    zfbfmin             1.0
     zcmop               0.2
     ztso                0.1
-    zvfbfmin            0.8
-    zvfbfwma            0.8
+    zvfbfmin            1.0
+    zvfbfwma            1.0
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
