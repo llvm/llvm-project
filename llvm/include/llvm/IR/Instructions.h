@@ -3506,7 +3506,9 @@ public:
     return cast<BasicBlock>(getOperand(1));
   }
 
-  bool defaultDestIsUnreachable() const {
+  /// Returns true if the default branch must result in immediate undefined
+  /// behavior, false otherwise.
+  bool defaultDestUndefined() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 

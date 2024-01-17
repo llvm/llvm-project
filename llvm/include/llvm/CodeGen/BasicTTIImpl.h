@@ -446,7 +446,7 @@ public:
     /// inline cost heuristic, but it's a generic cost model to be used in other
     /// places (e.g., in loop unrolling).
     unsigned N = SI.getNumCases();
-    bool HasDefault = !SI.defaultDestIsUnreachable();
+    bool HasDefault = !SI.defaultDestUndefined();
     const TargetLoweringBase *TLI = getTLI();
     const DataLayout &DL = this->getDataLayout();
 

@@ -65,7 +65,7 @@ public:
     (void)PSI;
     (void)BFI;
     JTSize = 0;
-    bool HasDefault = !SI.defaultDestIsUnreachable();
+    bool HasDefault = !SI.defaultDestUndefined();
     return SI.getNumCases() + HasDefault;
   }
 
