@@ -74,8 +74,7 @@ public:
           CG.viewGraph();
         }
 
-        CFG::BuildOptions cfgBuildOptions;
-        auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), cfgBuildOptions);
+        auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), CFG::BuildOptions());
         cfg->dump(D->getASTContext().getLangOpts(), true);
       }
 
