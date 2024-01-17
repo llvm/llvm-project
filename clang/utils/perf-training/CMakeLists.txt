@@ -38,14 +38,13 @@ if(LLVM_BUILD_INSTRUMENTED)
               USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw)
       add_dependencies(generate-profdata generate-profraw-external)
     else()
-      # Default to compiling a file from clang. This also builds all the
-      # dependencies needed to build this file, like TableGen.
-      set(generate_profraw_clang_sema tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.o)
-      llvm_ExternalProject_Add(generate-profraw-clang ${CMAKE_CURRENT_SOURCE_DIR}/../../../llvm
+      # Default to compiling the libcxx test suite.
+      set(generate_profraw_libcxx check-cxx)
+      llvm_ExternalProject_Add(generate-profraw-libcxx ${CMAKE_CURRENT_SOURCE_DIR}/../../../runtimes
               USE_TOOLCHAIN EXLUDE_FROM_ALL NO_INSTALL DEPENDS generate-profraw
-              EXTRA_TARGETS generate_profraw_clang_sema
-              CMAKE_ARGS -DLLVM_ENABLE_PROJECTS=clang)
-      add_dependencies(generate-profdata generate_profraw_clang_sema)
+              EXTRA_TARGETS generate_profraw_libcxx
+	      CMAKE_ARGS -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi)
+      add_dependencies(generate-profdata generate_profraw_libcxx)
     endif()
   endif()
 endif()
