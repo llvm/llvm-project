@@ -11,7 +11,7 @@
 #error
 // expected-error@-1 {{}}
 
-//      CHECK: error: no expected directives found: consider use of {{.*}}-no-diagnostics
+//      CHECK: error: no expected directives found: consider use of '{{.*}}-no-diagnostics'
 // CHECK-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-NEXT:   (frontend): error reading '{{.*}}verify.m.tmp.invalid'
 // CHECK-NEXT: 2 errors generated.
