@@ -4395,14 +4395,41 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::objectsize: {
     // The default behavior before the addition of the '<wholeobj>' argument
     // was to return the size of the whole object.
-    Value *WholeObj = Builder.getTrue();
-    Value *NullIsUnknownSize =
-        CI->arg_size() == 2 ? Builder.getFalse() : CI->getArgOperand(2);
-    Value *Dynamic =
-        CI->arg_size() < 4 ? Builder.getFalse() : CI->getArgOperand(3);
+    Value *WholeObj = nullptr;
+    Value *UnknownVal = nullptr;
+    Value *NullIsUnknownSize = nullptr;
+    Value *Dynamic = nullptr;
+
+    switch (CI->arg_size()) {
+    case 2:
+      WholeObj = Builder.getTrue();
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = Builder.getFalse();
+      Dynamic = Builder.getFalse();
+      break;
+    case 3:
+      WholeObj = Builder.getTrue();
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = Builder.getFalse();
+      break;
+    case 4:
+      WholeObj = Builder.getTrue();
+      UnknownVal = CI->getArgOperand(1);
+      NullIsUnknownSize = CI->getArgOperand(2);
+      Dynamic = CI->getArgOperand(3);
+      break;
+    case 5:
+      WholeObj = CI->getArgOperand(1);
+      UnknownVal = CI->getArgOperand(2);
+      NullIsUnknownSize = CI->getArgOperand(3);
+      Dynamic = CI->getArgOperand(4);
+      break;
+    }
+
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), WholeObj,
-                                         CI->getArgOperand(1),
-                                         NullIsUnknownSize, Dynamic});
+                                         UnknownVal, NullIsUnknownSize,
+                                         Dynamic});
     break;
   }
 

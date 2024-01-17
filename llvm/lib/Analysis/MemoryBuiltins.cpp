@@ -615,7 +615,6 @@ Value *llvm::lowerObjectSizeCall(
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
-  bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(2))->isZero();
   ObjectSizeOpts EvalOptions;
   EvalOptions.AA = AA;
 
@@ -624,6 +623,7 @@ Value *llvm::lowerObjectSizeCall(
 
   // Unless we have to fold this to something, try to be as accurate as
   // possible.
+  bool MaxVal = cast<ConstantInt>(ObjectSize->getArgOperand(2))->isZero();
   if (MustSucceed)
     EvalOptions.EvalMode =
         MaxVal ? ObjectSizeOpts::Mode::Max : ObjectSizeOpts::Mode::Min;
@@ -1211,16 +1211,12 @@ ObjectSizeOffsetEvaluator::visitExtractValueInst(ExtractValueInst &) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitGEPOperator(GEPOperator &GEP) {
-  SizeOffsetValue PtrData;
-
-  PtrData = compute_(GEP.getPointerOperand());
-
+  SizeOffsetValue PtrData = compute_(GEP.getPointerOperand());
   if (!PtrData.bothKnown())
     return ObjectSizeOffsetEvaluator::unknown();
 
   Value *Offset = emitGEPOffset(&Builder, DL, &GEP, /*NoAssumptions=*/true);
   Offset = Builder.CreateAdd(PtrData.Offset, Offset);
-
   return SizeOffsetValue(PtrData.Size, Offset);
 }
 
