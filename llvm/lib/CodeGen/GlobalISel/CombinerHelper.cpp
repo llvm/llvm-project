@@ -6668,6 +6668,11 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   if (!Cmp2)
     return false;
 
+  // We want to fold the icmps.
+  if (!MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Cmp2->getReg(0)))
+    return false;
+
   APInt C1;
   APInt C2;
   std::optional<ValueAndVReg> MaybeC1 =
@@ -6693,7 +6698,7 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   // They must be legal to build.
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_AND, CmpOperandTy}) ||
       !isLegalOrBeforeLegalizer({TargetOpcode::G_ADD, CmpOperandTy}) ||
-      !isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, CmpOperandTy}))
+      !isConstantLegalOrBeforeLegalizer(CmpOperandTy))
     return false;
 
   // Look through add of a constant offset on R1, R2, or both operands. This
@@ -6737,10 +6742,8 @@ bool CombinerHelper::tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
   APInt LowerDiff;
   std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
-    // We want to fold the icmps.
-    if (!MRI.hasOneNonDBGUse(Cmp1->getReg(0)) ||
-        !MRI.hasOneNonDBGUse(Cmp2->getReg(0)) || CR1.isWrappedSet() ||
-        CR2.isWrappedSet())
+    // We need non-wrapping ranges.
+    if (CR1.isWrappedSet() || CR2.isWrappedSet())
       return false;
 
     // Check whether we have equal-size ranges that only differ by one bit.

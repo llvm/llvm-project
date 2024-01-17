@@ -36,9 +36,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: %one:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %two:_(s64) = G_CONSTANT i64 2
     ; CHECK-NEXT: %cmp1:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), %one
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s64), %one
-    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT [[ICMP]](s1)
+    ; CHECK-NEXT: %cmp2:_(s1) = G_ICMP intpred(ne), [[COPY]](s64), %two
+    ; CHECK-NEXT: %and:_(s1) = G_AND %cmp1, %cmp2
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT %and(s1)
     ; CHECK-NEXT: %cmp1zext:_(s64) = G_ZEXT %cmp1(s1)
     ; CHECK-NEXT: $x0 = COPY %zext(s64)
     ; CHECK-NEXT: $x0 = COPY %cmp1zext(s64)
