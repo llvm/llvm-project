@@ -3869,13 +3869,7 @@ public:
 
     if (!forcedDataLayout.empty()) {
       llvm::DataLayout dl(forcedDataLayout);
-      mlir::MLIRContext *context = mod.getContext();
-      mod->setAttr(
-          mlir::LLVM::LLVMDialect::getDataLayoutAttrName(),
-          mlir::StringAttr::get(context, dl.getStringRepresentation()));
-      mlir::DataLayoutSpecInterface dlSpec =
-          mlir::translateDataLayout(dl, context);
-      mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+      fir::support::setMLIRDataLayout(mod, dl);
     }
 
     // Run dynamic pass pipeline for converting Math dialect
