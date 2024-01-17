@@ -75,28 +75,28 @@ using std::ranges::sentinel_t;
 using std::ranges::take_while_view;
 
 static_assert(weakly_equality_comparable_with<iterator_t<take_while_view<R, LessThan3>>, //
-                       sentinel_t<take_while_view<R, LessThan3>>>);
+                                              sentinel_t<take_while_view<R, LessThan3>>>);
 
 static_assert(!weakly_equality_comparable_with<iterator_t<const take_while_view<R, LessThan3>>, //
-                        sentinel_t<take_while_view<R, LessThan3>>>);
+                                               sentinel_t<take_while_view<R, LessThan3>>>);
 
 static_assert(!weakly_equality_comparable_with<iterator_t<take_while_view<R, LessThan3>>, //
-                        sentinel_t<const take_while_view<R, LessThan3>>>);
+                                               sentinel_t<const take_while_view<R, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const take_while_view<R, LessThan3>>, //
-                       sentinel_t<const take_while_view<R, LessThan3>>>);
+                                              sentinel_t<const take_while_view<R, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<take_while_view<R, LessThan3>>, //
-                       sentinel_t<take_while_view<R, LessThan3>>>);
+                                              sentinel_t<take_while_view<R, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const take_while_view<CrossComparableR, LessThan3>>, //
-                       sentinel_t<take_while_view<CrossComparableR, LessThan3>>>);
+                                              sentinel_t<take_while_view<CrossComparableR, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<take_while_view<CrossComparableR, LessThan3>>, //
-                       sentinel_t<const take_while_view<CrossComparableR, LessThan3>>>);
+                                              sentinel_t<const take_while_view<CrossComparableR, LessThan3>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const take_while_view<CrossComparableR, LessThan3>>, //
-                       sentinel_t<const take_while_view<CrossComparableR, LessThan3>>>);
+                                              sentinel_t<const take_while_view<CrossComparableR, LessThan3>>>);
 
 template <class R, bool ConstIter, bool ConstSent>
 constexpr void testOne() {

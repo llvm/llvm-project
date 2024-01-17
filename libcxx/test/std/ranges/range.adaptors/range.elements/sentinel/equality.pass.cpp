@@ -69,28 +69,28 @@ using std::ranges::iterator_t;
 using std::ranges::sentinel_t;
 
 static_assert(weakly_equality_comparable_with<iterator_t<elements_view<R, 0>>, //
-                       sentinel_t<elements_view<R, 0>>>);
+                                              sentinel_t<elements_view<R, 0>>>);
 
 static_assert(!weakly_equality_comparable_with<iterator_t<const elements_view<R, 0>>, //
-                        sentinel_t<elements_view<R, 0>>>);
+                                               sentinel_t<elements_view<R, 0>>>);
 
 static_assert(!weakly_equality_comparable_with<iterator_t<elements_view<R, 0>>, //
-                        sentinel_t<const elements_view<R, 0>>>);
+                                               sentinel_t<const elements_view<R, 0>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<R, 0>>, //
-                       sentinel_t<const elements_view<R, 0>>>);
+                                              sentinel_t<const elements_view<R, 0>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<elements_view<R, 0>>, //
-                       sentinel_t<elements_view<R, 0>>>);
+                                              sentinel_t<elements_view<R, 0>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<elements_view<CrossComparableR, 0>>>);
+                                              sentinel_t<elements_view<CrossComparableR, 0>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<const elements_view<CrossComparableR, 0>>>);
+                                              sentinel_t<const elements_view<CrossComparableR, 0>>>);
 
 static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<const elements_view<CrossComparableR, 0>>>);
+                                              sentinel_t<const elements_view<CrossComparableR, 0>>>);
 
 template <class R, bool ConstIter, bool ConstSent>
 constexpr void testOne() {

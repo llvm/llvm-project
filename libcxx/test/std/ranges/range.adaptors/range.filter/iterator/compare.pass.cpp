@@ -24,7 +24,6 @@
 
 #include "../types.h"
 
-
 template <class Iterator>
 constexpr void test() {
   using Sentinel = sentinel_wrapper<Iterator>;

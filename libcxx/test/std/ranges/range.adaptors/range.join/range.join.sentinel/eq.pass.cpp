@@ -52,9 +52,9 @@ struct ConstComparableView : BufferView<BufferView<int*>*> {
 };
 
 static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<ConstComparableView>,
-                                 std::ranges::sentinel_t<const ConstComparableView>>);
+                                              std::ranges::sentinel_t<const ConstComparableView>>);
 static_assert(weakly_equality_comparable_with<std::ranges::iterator_t<const ConstComparableView>,
-                                 std::ranges::sentinel_t<ConstComparableView>>);
+                                              std::ranges::sentinel_t<ConstComparableView>>);
 
 constexpr bool test() {
   int buffer[4][4] = {{1111, 2222, 3333, 4444}, {555, 666, 777, 888}, {99, 1010, 1111, 1212}, {13, 14, 15, 16}};
