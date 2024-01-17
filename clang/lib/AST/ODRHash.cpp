@@ -688,7 +688,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
   AddBoolean(Function->isVirtualAsWritten());
-  AddBoolean(Function->isPure());
+  AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
 

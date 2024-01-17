@@ -2293,8 +2293,8 @@ public:
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return FunctionDeclBits.IsPure; }
-  void setPure(bool P = true);
+  bool isPureVirtual() const { return FunctionDeclBits.IsPureVirtual; }
+  void setIsPureVirtual(bool P = true);
 
   /// Whether this templated function will be late parsed.
   bool isLateTemplateParsed() const {

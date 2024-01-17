@@ -3896,7 +3896,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setLexicalDeclContext(LexicalDC);
   ToFunction->setVirtualAsWritten(D->isVirtualAsWritten());
   ToFunction->setTrivial(D->isTrivial());
-  ToFunction->setPure(D->isPure());
+  ToFunction->setIsPureVirtual(D->isPureVirtual());
   ToFunction->setDefaulted(D->isDefaulted());
   ToFunction->setExplicitlyDefaulted(D->isExplicitlyDefaulted());
   ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
