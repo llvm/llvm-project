@@ -15841,13 +15841,13 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
-static bool IsGetReturnType(FunctionDecl *FD) {
+bool Sema::IsGetReturnObject(const FunctionDecl *FD) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
          FD->getDeclName().isIdentifier() &&
          FD->getName().equals("get_return_object");
 }
 
-static bool IsGetReturnTypeOnAllocFailure(FunctionDecl *FD) {
+bool Sema::IsGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
   return FD->isStatic() && FD->param_empty() &&
          FD->getDeclName().isIdentifier() &&
          FD->getName().equals("get_return_object_on_allocation_failure");
@@ -15858,9 +15858,7 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
   // Allow some_promise_type::get_return_object().
-  // Since we are still in the promise definition, we can only do this
-  // heuristically as the promise may not be yet associated to a coroutine.
-  if (IsGetReturnType(FD) || IsGetReturnTypeOnAllocFailure(FD))
+  if (IsGetReturnObject(FD) || IsGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;

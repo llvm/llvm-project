@@ -11220,6 +11220,11 @@ public:
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
+  // Heuristically tells if the function is get_return_object by matching
+  // function name.
+  static bool IsGetReturnObject(const FunctionDecl *FD);
+  static bool IsGetReturnTypeOnAllocFailure(const FunctionDecl *FD);
+
   // As a clang extension, enforces that a non-coroutine function must be marked
   // with [[clang::coro_wrapper]] if it returns a type marked with
   // [[clang::coro_return_type]].

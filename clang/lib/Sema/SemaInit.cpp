@@ -7589,6 +7589,10 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     if (auto *LE = dyn_cast<LambdaExpr>(ObjectArg->IgnoreImplicit());
         LE && LE->captures().empty())
       CheckCoroObjArg = false;
+    // Allow `get_return_object()` as the object param (__promise) is not
+    // lifetimebound.
+    if (Sema::IsGetReturnObject(Callee))
+      CheckCoroObjArg = false;
     if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
       VisitLifetimeBoundArg(Callee, ObjectArg);
   }
