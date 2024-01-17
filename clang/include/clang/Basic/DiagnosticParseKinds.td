@@ -1617,6 +1617,9 @@ def err_pragma_invalid_keyword : Error<
 def err_pragma_pipeline_invalid_keyword : Error<
     "invalid argument; expected 'disable'">;
 
+// API notes.
+def err_type_unparsed : Error<"unparsed tokens following type">;
+
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<
   "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
