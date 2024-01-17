@@ -14,6 +14,7 @@
 #ifndef MLIR_TARGET_LLVMIR_DIALECT_ALL_H
 #define MLIR_TARGET_LLVMIR_DIALECT_ALL_H
 
+#include "mlir/Dialect/OpenMP/ExternalModels.h"
 #include "mlir/Target/LLVMIR/Dialect/AMX/AMXToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmNeon/ArmNeonToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmSME/ArmSMEToLLVMIRTranslation.h"
@@ -52,6 +53,8 @@ static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
 
   // Extension required for translating GPU offloading Ops.
   gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+  // Extensions required for translating the OpenMP dialect.
+  omp::registerAllExternalModels(registry);
 }
 
 /// Registers all the translations to LLVM IR required by GPU passes.
@@ -62,12 +65,15 @@ registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
   registerBuiltinDialectTranslation(registry);
   registerGPUDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerOpenMPDialectTranslation(registry);
   registerNVVMDialectTranslation(registry);
   registerROCDLDialectTranslation(registry);
   registerSPIRVDialectTranslation(registry);
 
   // Extension required for translating GPU offloading Ops.
   gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+  // Extensions required for translating the OpenMP dialect.
+  omp::registerAllExternalModels(registry);
 }
 
 /// Registers all dialects that can be translated from LLVM IR and the

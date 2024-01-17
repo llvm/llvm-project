@@ -107,4 +107,39 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
   let genVerifyDecl = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// GPU LLVM offload attribute.
+//===----------------------------------------------------------------------===//
+def GPU_OffloadOpenMP : I32EnumAttrCase<"OpenMP", 1, "omp">;
+def GPU_OffloadCUDA : I32EnumAttrCase<"CUDA", 2, "cuda">;
+def GPU_OffloadHIP : I32EnumAttrCase<"HIP", 3, "hip">;
+def GPU_OffloadKindEnum : GPU_I32Enum<
+  "OffloadKind", "GPU offload kind", [
+    GPU_OffloadOpenMP,
+    GPU_OffloadCUDA,
+    GPU_OffloadHIP
+  ]>;
+
+def GPU_OffloadEmbeddingAttr : GPU_Attr<"OffloadEmbedding", "offload_embedding", [
+    OffloadingTranslationAttrTrait
+  ]> {
+  let description = [{
+    This GPU offloading handler uses LLVM offloading infrastructure to embed GPU
+    binaries in the IR. At program start, the LLVM offloading mechanism registers
+    kernels and variables with the runtime library: CUDA RT, HIP RT or
+    LibOMPTarget.
+    The offloading mechanism relies on the runtime library to dispatch the
+    correct kernel based on the registered symbols.
+    This offload mechanism requires to specify which runtime is being called,
+    this is done by the `kind` parameter.
+    Example:
+    ```mlir
+    gpu.binary @binary <#gpu.offload_embedding<omp>> [...]
+    gpu.binary @binary <#gpu.offload_embedding<cuda>> [...]
+    ```
+  }];
+  let parameters = (ins "gpu::OffloadKind":$kind);
+  let assemblyFormat = [{ `<` $kind `>` }];
+}
+
 #endif // GPU_COMPILATION_ATTRS

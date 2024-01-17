@@ -57,6 +57,10 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   MLIRNVVMToLLVMIRTranslation
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
+  MLIROpenMPBuiltinExternalModels
+  MLIROpenMPFuncExternalModels
+  MLIROpenMPGPUExternalModels
+  MLIROpenMPLLVMExternalModels
   MLIRROCDLToLLVMIRTranslation
   MLIRSPIRVToLLVMIRTranslation
   )

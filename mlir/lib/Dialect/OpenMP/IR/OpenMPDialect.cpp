@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -39,20 +37,6 @@ using namespace mlir;
 using namespace mlir::omp;
 
 namespace {
-struct MemRefPointerLikeModel
-    : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
-                                            MemRefType> {
-  Type getElementType(Type pointer) const {
-    return llvm::cast<MemRefType>(pointer).getElementType();
-  }
-};
-
-struct LLVMPointerPointerLikeModel
-    : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
-                                            LLVM::LLVMPointerType> {
-  Type getElementType(Type pointer) const { return Type(); }
-};
-
 struct OpenMPDialectFoldInterface : public DialectFoldInterface {
   using DialectFoldInterface::DialectFoldInterface;
 
@@ -78,33 +62,6 @@ void OpenMPDialect::initialize() {
       >();
 
   addInterface<OpenMPDialectFoldInterface>();
-  MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
-      *getContext());
-
-  // Attach default offload module interface to module op to access
-  // offload functionality through
-  mlir::ModuleOp::attachInterface<mlir::omp::OffloadModuleDefaultModel>(
-      *getContext());
-
-  // Attach default declare target interfaces to operations which can be marked
-  // as declare target (Global Operations and Functions/Subroutines in dialects
-  // that Fortran (or other languages that lower to MLIR) translates too
-  mlir::LLVM::GlobalOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::GlobalOp>>(
-      *getContext());
-  mlir::LLVM::LLVMFuncOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::LLVM::LLVMFuncOp>>(
-      *getContext());
-  mlir::func::FuncOp::attachInterface<
-      mlir::omp::DeclareTargetDefaultModel<mlir::func::FuncOp>>(*getContext());
-
-  // Attach default early outlining interface to func ops.
-  mlir::func::FuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::func::FuncOp>>(*getContext());
-  mlir::LLVM::LLVMFuncOp::attachInterface<
-      mlir::omp::EarlyOutliningDefaultModel<mlir::LLVM::LLVMFuncOp>>(
-      *getContext());
 }
 
 //===----------------------------------------------------------------------===//
