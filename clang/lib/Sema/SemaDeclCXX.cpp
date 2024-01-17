@@ -7873,6 +7873,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
               << CSM;
           for (const auto &I : RD->vbases())
             Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here);
+          HadError = true;
         } else {
           Diag(MD->getBeginLoc(),
                getLangOpts().CPlusPlus23
@@ -7881,8 +7882,6 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
               << CSM << MD->isConsteval();
         }
     // FIXME: Explain why the special member can't be constexpr.
-    if (!getLangOpts().CPlusPlus23)
-      HadError = true;
   }
 
   if (First) {

@@ -433,18 +433,9 @@ namespace dr1359 { // dr1359: 3.5
 
   constexpr A a = A();
   constexpr B b = B();
-  // cxx11-17-error@-1 {{no matching constructor for initialization of 'B'}}
-  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
-  //   cxx11-17-note@#dr1359-B {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   constexpr C c = C();
-  // cxx11-17-error@-1 {{no matching constructor for initialization of 'C'}}
-  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
-  //   cxx11-17-note@#dr1359-C {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   constexpr X x = X();
   constexpr Y y = Y();
-  // cxx11-17-error@-1 {{no matching constructor for initialization of 'Y'}}
-  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
-  //   cxx11-17-note@#dr1359-Y {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 #endif
 }
 
