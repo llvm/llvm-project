@@ -3751,6 +3751,37 @@ void Attribute::dump() const {
   llvm::errs() << "\n";
 }
 
+void Attribute::printStripped(raw_ostream &os, AsmState &state) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmPrinter::Impl subPrinter(os, state.getImpl());
+  if (succeeded(subPrinter.printAlias(*this)))
+    return;
+
+  auto &dialect = this->getDialect();
+  uint64_t posPrior = os.tell();
+  DialectAsmPrinter printer(subPrinter);
+  dialect.printAttribute(*this, printer);
+  if (posPrior != os.tell())
+    return;
+
+  // Fallback to printing with prefix if the above failed to write anything
+  // to the output stream.
+  print(os, state);
+}
+void Attribute::printStripped(raw_ostream &os) const {
+  if (!*this) {
+    os << "<<NULL ATTRIBUTE>>";
+    return;
+  }
+
+  AsmState state(getContext());
+  printStripped(os, state);
+}
+
 void Type::print(raw_ostream &os) const {
   if (!*this) {
     os << "<<NULL TYPE>>";

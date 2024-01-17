@@ -290,7 +290,7 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
 }
 
-bool DataSharingProcessor ::needBarrier() {
+bool DataSharingProcessor::needBarrier() {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
         sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
@@ -299,7 +299,7 @@ bool DataSharingProcessor ::needBarrier() {
   return false;
 }
 
-void DataSharingProcessor ::insertBarrier() {
+void DataSharingProcessor::insertBarrier() {
   // Emit implicit barrier to synchronize threads and avoid data races on
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.

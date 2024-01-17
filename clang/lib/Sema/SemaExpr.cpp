@@ -16974,7 +16974,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
   assert(ParamInfo.getContext() == DeclaratorContext::BlockLiteral);
   BlockScopeInfo *CurBlock = getCurBlock();
 
-  TypeSourceInfo *Sig = GetTypeForDeclarator(ParamInfo, CurScope);
+  TypeSourceInfo *Sig = GetTypeForDeclarator(ParamInfo);
   QualType T = Sig->getType();
 
   // FIXME: We should allow unexpanded parameter packs here, but that would,

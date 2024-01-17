@@ -283,7 +283,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
-  for (Instruction &InstRef : *BB) {
+  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
 
     // There shouldn't be any VPValue for Inst at this point. Otherwise, we

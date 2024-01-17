@@ -35,7 +35,6 @@ concurrency:
 
 
 env:
-  CMAKE: "/opt/bin/cmake"
   # LLVM POST-BRANCH bump version
   # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
   # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
@@ -169,24 +168,18 @@ jobs:
           'bootstrapping-build'
         ]
         machine: [ 'libcxx-runners-8-set' ]
-        std_modules: [ 'OFF' ]
         include:
         - config: 'generic-cxx26'
           machine: libcxx-runners-8-set
-          std_modules: 'ON'
         - config: 'generic-asan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         - config: 'generic-tsan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         - config: 'generic-ubsan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
           machine: libcxx-runners-8-set
-          std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:
       - uses: actions/checkout@v4
@@ -196,7 +189,6 @@ jobs:
           CC: clang-18
           CXX: clang++-18
           ENABLE_CLANG_TIDY: "OFF"
-          ENABLE_STD_MODULES: ${{ matrix.std_modules }}
       - uses: actions/upload-artifact@v3
         if: always()
         with:
