@@ -14,14 +14,23 @@
 //   see below visit_format_arg(Visitor&& vis, basic_format_arg<Context> arg);
 
 #include <format>
+#include <tuple>
+
+#include "test_macros.h"
+
+template <typename CharT, class To, class From>
+void test(From value) {
+  using Context = std::basic_format_context<CharT*, CharT>;
+  auto store    = std::make_format_args<Context>(value);
+  std::basic_format_args<Context> format_args{store};
+
+  // expected-warning-re@+1 2 {{std::basic_format_context{{.*}}' is deprecated}}
+  std::ignore = std::visit_format_arg([]([[maybe_unused]] auto a) -> To { return {}; }, format_args.get(0));
+}
 
 void test() {
-  // expected-warning@+1 {{std::basic_format_context<char *, char>>' is deprecated}}
-  std::visit_format_arg([]([[maybe_unused]] auto a) -> char { return {}; },
-                        std::basic_format_arg<std::basic_format_context<char*, char>>{});
+  test<char, bool>('a');
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  // expected-warning@+1 {{std::basic_format_context<wchar_t *, wchar_t>>' is deprecated}}
-  std::visit_format_arg([]([[maybe_unused]] auto a) -> wchar_t { return {}; },
-                        std::basic_format_arg<std::basic_format_context<wchar_t*, wchar_t>>{});
+  test<wchar_t, bool>('a');
 #endif
 }
