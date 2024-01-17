@@ -126,7 +126,6 @@ static_library("Analysis") {
     "TypeBasedAliasAnalysis.cpp",
     "TypeMetadataUtils.cpp",
     "UniformityAnalysis.cpp",
-    "VFABIDemangling.cpp",
     "ValueLattice.cpp",
     "ValueLatticeUtils.cpp",
     "ValueTracking.cpp",
