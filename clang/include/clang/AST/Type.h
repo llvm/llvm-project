@@ -1754,10 +1754,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasExtraBitfields : 1;
 
-    /// Whether this function has a trailing object for Arm type attributes.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasArmTypeAttributes : 1;
-
     /// Whether the function is variadic.
     LLVM_PREFERRED_TYPE(bool)
     unsigned Variadic : 1;
@@ -4042,7 +4038,11 @@ public:
     /// [implimits] 8 bits would be enough here.
     unsigned NumExceptionType : 10;
 
-    FunctionTypeExtraBitfields() : NumExceptionType(0) {}
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasArmTypeAttributes : 1;
+
+    FunctionTypeExtraBitfields()
+        : NumExceptionType(0), HasArmTypeAttributes(false) {}
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
@@ -4288,7 +4288,8 @@ public:
     }
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
-      return ExceptionSpec.Type == EST_Dynamic;
+      return ExceptionSpec.Type == EST_Dynamic ||
+             requiresFunctionProtoTypeArmAttributes();
     }
 
     bool requiresFunctionProtoTypeArmAttributes() const {
@@ -4405,7 +4406,9 @@ private:
   }
 
   bool hasArmTypeAttributes() const {
-    return FunctionTypeBits.HasArmTypeAttributes;
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasArmTypeAttributes;
   }
 
   bool hasExtQualifiers() const {

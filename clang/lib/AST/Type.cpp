@@ -3460,13 +3460,13 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   }
 
   if (epi.requiresFunctionProtoTypeArmAttributes()) {
-    FunctionTypeBits.HasArmTypeAttributes = true;
     auto &ArmTypeAttrs = *getTrailingObjects<FunctionTypeArmAttributes>();
     ArmTypeAttrs = FunctionTypeArmAttributes();
-  } else {
-    FunctionTypeBits.HasArmTypeAttributes = false;
-  }
 
+    // Also set the bit in FunctionTypeExtraBitfields
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.HasArmTypeAttributes = true;
+  }
 
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
