@@ -3081,8 +3081,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             // Use BaseDirectoryAsWritten to ensure we use the same path in the
             // ModuleCache as when writing.
             ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
-          } else
+            ImportedCacheKey = ReadString(Record, Idx);
+          } else {
             SkipPath(Record, Idx);
+            SkipString(Record, Idx);
+          }
         } else if (ImportedFile.empty()) {
           Diag(clang::diag::err_failed_to_find_module_file) << ImportedName;
           return Missing;

@@ -1463,10 +1463,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
       AddString(M.ModuleName, Record);
 
-      if (!M.StandardCXXModule)
+      if (!M.StandardCXXModule) {
         AddPath(M.FileName, Record);
-      
-      AddString(M.ModuleCacheKey, Record);
+        // FIXME: cache support for standard C++ modules.
+        AddString(M.ModuleCacheKey, Record);
+      }
 
     }
     Stream.EmitRecord(IMPORTS, Record);
