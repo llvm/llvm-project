@@ -66,6 +66,26 @@ constexpr bool test_signed() {
     assert(prod == IntegerT{56});
   }
 
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, IntegerT{1});
+    assert(prod == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{1}, minVal);
+    assert(prod == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{-1});
+    assert(prod == IntegerT{-1} * maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{-1}, maxVal);
+    assert(prod == IntegerT{-1} * maxVal);
+  }
+
   // Saturation - max - both arguments positive
   {
     // Large values
@@ -93,7 +113,7 @@ constexpr bool test_signed() {
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
 
     std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
-    assert(sum == minVal);
+    assert(sum == maxVal);
   }
 
   {
@@ -112,13 +132,8 @@ constexpr bool test_signed() {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
 
-    std::same_as<IntegerT> decltype(auto) sum = std::mulSat(x, y);
+    std::same_as<IntegerT> decltype(auto) sum = std::mul_sat(x, y);
     assert(sum == minVal);
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, IntegerT{-1});
-    assert(prod == minVal);
   }
 
   {
@@ -188,7 +203,7 @@ constexpr bool test_unsigned() {
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(Integer{0}, minVal);
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(IntegerT{0}, minVal);
     assert(prod == IntegerT{0});
   }
 
@@ -204,6 +219,11 @@ constexpr bool test_unsigned() {
 
   {
     std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, maxVal);
+    assert(prod == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(maxVal, minVal);
     assert(prod == IntegerT{0});
   }
 
