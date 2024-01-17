@@ -5280,7 +5280,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
     return ST.useRealTrue16Insts() ? AMDGPU::V_CEIL_F16_t16_e64
                                    : AMDGPU::V_CEIL_F16_fake16_e64;
   case AMDGPU::S_FLOOR_F16:
-    return AMDGPU::V_FLOOR_F16_fake16_e64;
+    return ST.useRealTrue16Insts() ? AMDGPU::V_FLOOR_F16_t16_e64
+                                   : AMDGPU::V_FLOOR_F16_fake16_e64;
   case AMDGPU::S_TRUNC_F16:
     return AMDGPU::V_TRUNC_F16_fake16_e64;
   case AMDGPU::S_RNDNE_F16:
