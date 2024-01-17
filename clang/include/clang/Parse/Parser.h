@@ -3576,11 +3576,12 @@ private:
   bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
-  bool ParseOpenACCClauseParams(OpenACCClauseKind Kind);
+  bool ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                OpenACCClauseKind Kind);
   /// Parses a single clause in a clause-list for OpenACC.
-  bool ParseOpenACCClause();
+  bool ParseOpenACCClause(OpenACCDirectiveKind DirKind);
   /// Parses the clause-list for an OpenACC directive.
-  void ParseOpenACCClauseList();
+  void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
 
 private:
