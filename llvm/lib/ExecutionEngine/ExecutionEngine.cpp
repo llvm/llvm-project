@@ -386,7 +386,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
 
     Constant *FP = CS->getOperand(1);
     if (FP->isNullValue())
-      continue;  // Found a sentinal value, ignore.
+      continue;  // Found a sentinel value, ignore.
 
     // Strip off constant expression casts.
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(FP))

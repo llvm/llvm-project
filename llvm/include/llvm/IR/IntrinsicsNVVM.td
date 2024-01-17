@@ -1372,6 +1372,14 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier_cluster_wait :
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
 
+  // 'aligned' versions of the above barrier.cluster.* intrinsics
+  def int_nvvm_barrier_cluster_arrive_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
@@ -2490,6 +2498,47 @@ def int_nvvm_tex_unified_cube_array_level_v4u32_f32
               [llvm_i64_ty, llvm_i32_ty,
                llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
               "llvm.nvvm.tex.unified.cube.array.level.v4u32.f32">;
+
+def int_nvvm_tex_unified_cube_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4f32.f32">;
+def int_nvvm_tex_unified_cube_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4s32.f32">;
+def int_nvvm_tex_unified_cube_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4u32.f32">;
+
+def int_nvvm_tex_unified_cube_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4f32.f32">;
+def int_nvvm_tex_unified_cube_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4s32.f32">;
+def int_nvvm_tex_unified_cube_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4u32.f32">;
 
 def int_nvvm_tld4_unified_r_2d_v4f32_f32
   : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],

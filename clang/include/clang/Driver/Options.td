@@ -5172,7 +5172,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
-  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86">;
+  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -5307,7 +5307,8 @@ def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>,
+  BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;

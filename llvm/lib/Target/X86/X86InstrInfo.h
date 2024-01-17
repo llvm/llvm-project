@@ -79,6 +79,13 @@ unsigned getSwappedVCMPImm(unsigned Imm);
 
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
+
+/// Return the index of the instruction's first address operand, if it has a
+/// memory reference, or -1 if it has none. Unlike X86II::getMemoryOperandNo(),
+/// this also works for both pseudo instructions (e.g., TCRETURNmi) as well as
+/// real instructions (e.g., JMP64m).
+int getFirstAddrOperandIdx(const MachineInstr &MI);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is

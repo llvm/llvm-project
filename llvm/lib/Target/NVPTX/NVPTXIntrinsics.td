@@ -132,6 +132,7 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
         NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
@@ -144,6 +145,15 @@ def barrier_cluster_arrive_relaxed:
         int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
 def barrier_cluster_wait:
         INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
+
+// 'aligned' versions of the cluster barrier intrinsics
+def barrier_cluster_arrive_aligned:
+        INT_BARRIER_CLUSTER<"arrive.aligned", int_nvvm_barrier_cluster_arrive_aligned>;
+def barrier_cluster_arrive_relaxed_aligned:
+        INT_BARRIER_CLUSTER<"arrive.relaxed.aligned",
+        int_nvvm_barrier_cluster_arrive_relaxed_aligned, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait_aligned:
+        INT_BARRIER_CLUSTER<"wait.aligned", int_nvvm_barrier_cluster_wait_aligned>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -3753,6 +3763,62 @@ defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_LEVEL
 defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL
   : TEX_UNIFIED_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.u32.f32",
                                  Int32Regs, Float32Regs>;
+
+class TEX_UNIFIED_CUBE_GRAD_base<string inst, NVPTXRegClass outtype,
+                                 NVPTXRegClass intype, dag tex>
+    : NVPTXInst<(outs outtype:$r, outtype:$g,
+                      outtype:$b, outtype:$a),
+                 !con(tex, (ins intype:$x, intype:$y, intype:$z,
+                                intype:$gradx0, intype:$gradx1,
+                                intype:$gradx2, intype:$grady0,
+                                intype:$grady1, intype:$grady2)),
+                 inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}],"
+                        " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
+                        " \\{$grady0, $grady1, $grady2, $grady2\\};",
+                 []>;
+
+multiclass TEX_UNIFIED_CUBE_GRAD<string inst, NVPTXRegClass outtype,
+                                 NVPTXRegClass intype> {
+  def _R : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+  def _I : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
+}
+
+defm TEX_UNIFIED_CUBE_F32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_S32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_U32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+
+class TEX_UNIFIED_CUBE_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
+                                       NVPTXRegClass intype, dag tex>
+    : NVPTXInst<(outs outtype:$r, outtype:$g,
+                      outtype:$b, outtype:$a),
+                 !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y, intype:$z,
+                                intype:$gradx0, intype:$gradx1,
+                                intype:$gradx2, intype:$grady0,
+                                intype:$grady1, intype:$grady2)),
+                 inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $z\\}],"
+                        " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
+                        " \\{$grady0, $grady1, $grady2, $grady2\\};",
+                 []>;
+multiclass TEX_UNIFIED_CUBE_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
+                                       NVPTXRegClass intype> {
+  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
+                                            (ins Int64Regs:$t)>;
+  def _I : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
+                                            (ins i64imm:$t)>;
+}
+
+defm TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.f32.f32",
+                                Float32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.s32.f32",
+                                Int32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.u32.f32",
+                                Int32Regs, Float32Regs>;
 
 class TLD4_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
                            NVPTXRegClass intype, dag tex>
