@@ -1141,8 +1141,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
     }
     Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
     if (pthread_getspecific_addr.IsValid()) {
-      const addr_t tls_data = evaluate_tls_address(
-          pthread_getspecific_addr, llvm::ArrayRef<addr_t>(key));
+      const addr_t tls_data = evaluate_tls_address(pthread_getspecific_addr,
+                                                   llvm::ArrayRef<addr_t>(key));
       if (tls_data != LLDB_INVALID_ADDRESS)
         return tls_data + tls_offset;
     }
