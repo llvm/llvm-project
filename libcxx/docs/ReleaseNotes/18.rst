@@ -89,6 +89,10 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
   the function ``std::shared_ptr<...>::unique()`` available.
 
+- The cmake option ``LIBCXX_ENABLE_STD_MODULES`` has been removed. The test
+  infrastructure no longer depends on a modern CMake, it works with the minimal
+  required LLVM version (3.20.0).
+
 
 Deprecations and Removals
 -------------------------
