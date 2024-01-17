@@ -18,6 +18,6 @@
 #endif
 
 // TODO(hardening): in production, trap rather than abort.
-#define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_VERBOSE_ABORT(message)
+#define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_VERBOSE_ABORT("%s", message)
 
 #endif // _LIBCPP___ASSERTION_HANDLER
