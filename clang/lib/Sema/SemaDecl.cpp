@@ -13609,7 +13609,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       //  2) if the var decl is decompsition decl with a non-deduced type, and
       //     the initialization fails (e.g. `int [a] = {1, 2};`);
       // Case 1) was already handled elsewhere.
-      if (llvm::isa<DecompositionDecl>(VDecl)) // Case 2)
+      if (isa<DecompositionDecl>(VDecl)) // Case 2)
         VDecl->setInvalidDecl();
       return;
     }
