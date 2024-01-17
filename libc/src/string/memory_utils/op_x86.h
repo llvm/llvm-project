@@ -25,8 +25,11 @@
 #include <immintrin.h>
 #endif
 
-// Disable GCC complaining about missing attributes when using SIMD types in
-// template specializations.
+// SIMD types are defined with attributes. e.g., '__m128i' is defined as
+// long long  __attribute__((__vector_size__(16), __aligned__(16)))
+// When we use these SIMD types in template specialization GCC complains:
+// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+// Therefore, we disable this warning in this file.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 
