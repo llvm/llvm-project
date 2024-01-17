@@ -106,7 +106,8 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
     else if (auto *d = dyn_cast<Defined>(rel.sym))
       hint = ("; references section '" + d->section->name + "'").str();
 
-    if (rel.type == R_X86_64_PC32 && rel.sym->getOutputSection() &&
+    if (config->emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
+        rel.sym->getOutputSection() &&
         (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
       hint += "; a R_X86_64_PC32 relocation should not reference a section "
               "marked SHF_X86_64_LARGE";
