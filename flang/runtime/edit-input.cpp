@@ -976,7 +976,12 @@ bool EditCharacterInput(IoStatementState &io, const DataEdit &edit, CHAR *x,
       if (skipping) {
         --skipChars;
       } else if (auto ucs{DecodeUTF8(input)}) {
-        *x++ = *ucs;
+        if ((sizeof *x == 1 && *ucs > 0xff) ||
+            (sizeof *x == 2 && *ucs > 0xffff)) {
+          *x++ = '?';
+        } else {
+          *x++ = *ucs;
+        }
         --lengthChars;
       } else if (chunkBytes == 0) {
         // error recovery: skip bad encoding
@@ -990,7 +995,12 @@ bool EditCharacterInput(IoStatementState &io, const DataEdit &edit, CHAR *x,
       } else {
         char32_t buffer{0};
         std::memcpy(&buffer, input, chunkBytes);
-        *x++ = buffer;
+        if ((sizeof *x == 1 && buffer > 0xff) ||
+            (sizeof *x == 2 && buffer > 0xffff)) {
+          *x++ = '?';
+        } else {
+          *x++ = buffer;
+        }
         --lengthChars;
       }
     } else if constexpr (sizeof *x > 1) {
