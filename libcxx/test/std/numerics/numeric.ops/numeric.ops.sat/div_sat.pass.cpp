@@ -27,8 +27,123 @@ constexpr bool test_signed() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{3}, IntegerT{4});
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, IntegerT{-1});
+    assert(quot == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, IntegerT{1});
+    assert(quot == IntegerT{-1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, minVal);
     assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, maxVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, IntegerT{-1});
+    assert(quot == IntegerT{-1} * maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{-1});
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{1});
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, minVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, IntegerT{-1});
+    assert(quot == IntegerT{-1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, minVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, maxVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, IntegerT{1});
+    assert(quot == minVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, IntegerT{1});
+    assert(quot == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{27}, IntegerT{28});
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{28}, IntegerT{27});
+    assert(quot == IntegerT{1});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{-1});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-27};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{-1});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{0});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-28};
+    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-27};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{1});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{0});
   }
 
   {
@@ -59,16 +174,64 @@ constexpr bool test_unsigned() {
 
   // No saturation
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{3}, IntegerT{4});
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{1});
     assert(quot == IntegerT{0});
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
-    assert(quot == (minVal / maxVal));
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, maxVal);
+    assert(quot == IntegerT{0});
   }
 
-  // Unsigned integer devision never overflow
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, IntegerT{1});
+    assert(quot == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, maxVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{27}, IntegerT{28});
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{28}, IntegerT{27});
+    assert(quot == IntegerT{1});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{0});
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
+    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{27};
+
+    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
+    assert(sum == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
+    assert(quot == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, maxVal);
+    assert(quot == IntegerT{1});
+  }
+
+  // Unsigned integer devision never overflows
 
   return true;
 }
@@ -96,27 +259,18 @@ constexpr bool test() {
   return true;
 }
 
-bool test_constexpr() {
-  // Signed
-  test_constexpr<signed char>();
-  test_constexpr<short int>();
-  test_constexpr<int>();
-  test_constexpr<long int>();
-  test_constexpr<long long int>();
-  // Unsigned
-  test_constexpr<unsigned char>();
-  test_constexpr<unsigned short int>();
-  test_constexpr<unsigned int>();
-  test_constexpr<unsigned long int>();
-  test_constexpr<unsigned long long int>();
-
-  return true;
-}
+// #include <print>
 
 int main(int, char**) {
+  using IntegerT = int;
+  // constexpr auto minVal = std::numeric_limits<IntegerT>::min();
+
+  // std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, minVal);
+
+  // std::println(stderr, "--------> {}", quot);
+  // assert(false);
   assert(test());
   static_assert(test());
-  assert(test_constexpr());
 
   return 0;
 }

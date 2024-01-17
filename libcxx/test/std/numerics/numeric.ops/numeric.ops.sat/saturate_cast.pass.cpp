@@ -19,15 +19,6 @@
 #include <numeric>
 #include <utility>
 
-// Signed T1 < Singed T2 - overflow
-// Signed T1 == Signed T2 - no overflow
-// Signed T1 > Signed T2 - no overflow
-
-// Unsigned T1 < Unsigned T2 - overflow
-// Unsigned T1 == Unsigned T2 - no overflow
-// Unsigned T1 > Unsigned T2 - no overflow
-
-
 template <typename IntegerResultT, typename IntegerT>
 constexpr bool test_signed_notsaturated() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();

@@ -234,6 +234,7 @@ constexpr bool test_unsigned() {
   }
 
   {
+    // Large values
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
 
