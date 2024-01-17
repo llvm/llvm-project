@@ -992,9 +992,7 @@ public:
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
-  bool hasNonNSAEncoding() const {
-    return getGeneration() < GFX12;
-  }
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
