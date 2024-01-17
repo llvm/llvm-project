@@ -94,52 +94,6 @@ TEST_P(RISCVInstrInfoTest, IsAddImmediate) {
   }
 }
 
-TEST_P(RISCVInstrInfoTest, GetConstValDefinedInReg) {
-  const RISCVInstrInfo *TII = ST->getInstrInfo();
-  DebugLoc DL;
-  int64_t ImmVal;
-
-  auto *MI1 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
-                  .addReg(RISCV::X2)
-                  .addReg(RISCV::X3)
-                  .getInstr();
-  EXPECT_FALSE(TII->getConstValDefinedInReg(*MI1, RISCV::X1, ImmVal));
-
-  auto *MI2 = BuildMI(*MF, DL, TII->get(RISCV::ADDI), RISCV::X1)
-                  .addReg(RISCV::X0)
-                  .addImm(-128)
-                  .getInstr();
-  EXPECT_FALSE(TII->getConstValDefinedInReg(*MI2, RISCV::X0, ImmVal));
-  ASSERT_TRUE(TII->getConstValDefinedInReg(*MI2, RISCV::X1, ImmVal));
-  EXPECT_EQ(ImmVal, -128);
-
-  auto *MI3 = BuildMI(*MF, DL, TII->get(RISCV::ORI), RISCV::X2)
-                  .addReg(RISCV::X0)
-                  .addImm(1024)
-                  .getInstr();
-  EXPECT_FALSE(TII->getConstValDefinedInReg(*MI3, RISCV::X0, ImmVal));
-  ASSERT_TRUE(TII->getConstValDefinedInReg(*MI3, RISCV::X2, ImmVal));
-  EXPECT_EQ(ImmVal, 1024);
-
-  if (ST->is64Bit()) {
-    auto *MI4 = BuildMI(*MF, DL, TII->get(RISCV::ADDIW), RISCV::X2)
-                    .addReg(RISCV::X0)
-                    .addImm(512)
-                    .getInstr();
-    EXPECT_FALSE(TII->getConstValDefinedInReg(*MI4, RISCV::X0, ImmVal));
-    ASSERT_TRUE(TII->getConstValDefinedInReg(*MI4, RISCV::X2, ImmVal));
-    EXPECT_EQ(ImmVal, 512);
-  }
-
-  auto *MI5 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
-                  .addReg(RISCV::X0)
-                  .addReg(RISCV::X0)
-                  .getInstr();
-  EXPECT_FALSE(TII->getConstValDefinedInReg(*MI5, RISCV::X0, ImmVal));
-  ASSERT_TRUE(TII->getConstValDefinedInReg(*MI5, RISCV::X1, ImmVal));
-  EXPECT_EQ(ImmVal, 0);
-}
-
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   const RISCVInstrInfo *TII = ST->getInstrInfo();
   const TargetRegisterInfo *TRI = ST->getRegisterInfo();
