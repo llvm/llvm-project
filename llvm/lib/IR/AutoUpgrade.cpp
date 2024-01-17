@@ -4427,9 +4427,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       break;
     }
 
-    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), WholeObj,
-                                         UnknownVal, NullIsUnknownSize,
-                                         Dynamic});
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), WholeObj, UnknownVal,
+                                   NullIsUnknownSize, Dynamic});
     break;
   }
 
