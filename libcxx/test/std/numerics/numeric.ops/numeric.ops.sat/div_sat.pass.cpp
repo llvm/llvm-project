@@ -259,16 +259,7 @@ constexpr bool test() {
   return true;
 }
 
-// #include <print>
-
 int main(int, char**) {
-  using IntegerT = int;
-  // constexpr auto minVal = std::numeric_limits<IntegerT>::min();
-
-  // std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, minVal);
-
-  // std::println(stderr, "--------> {}", quot);
-  // assert(false);
   assert(test());
   static_assert(test());
 
