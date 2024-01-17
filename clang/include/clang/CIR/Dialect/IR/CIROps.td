@@ -2018,15 +2018,11 @@ def CallOp : CIR_CallOp<"call"> {
 // TryCallOp
 //===----------------------------------------------------------------------===//
 
-def TryCallOp : CIR_CallOp<"try_call",
-      [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
-       Terminator]> {
+def TryCallOp : CIR_CallOp<"try_call"> {
   let summary = "try call operation";
   let description = [{
     Works very similar to `cir.call` but passes down an exception object
-    in case anything is thrown by the callee. Upon the callee throwing,
-    `cir.try_call` goes to current `cir.scope`'s `abort` label, otherwise
-    execution follows to the `continue` label.
+    in case anything is thrown by the callee.
 
     To walk the operands for this operation, use `getNumArgOperands()`,
     `getArgOperand()`, `getArgOperands()`, `arg_operand_begin()` and
@@ -2038,18 +2034,14 @@ def TryCallOp : CIR_CallOp<"try_call",
     Example:
 
     ```mlir
-    %r = cir.try_call @division(%1, %2), ^continue_A, ^abort, %0
+    %r = cir.try_call @division(%1, %2), %0
     ```
   }];
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                        ExceptionInfoPtr:$exceptionInfo,
-                       Variadic<CIR_AnyType>:$destContOps,
-                       Variadic<CIR_AnyType>:$destAbortOps,
                        Variadic<CIR_AnyType>:$callOps,
                        OptionalAttr<ASTCallExprInterface>:$ast);
-  let successors = (successor AnySuccessor:$destContinue,
-                              AnySuccessor:$destAbort);
   let results = (outs Variadic<CIR_AnyType>);
 
   let builders = [

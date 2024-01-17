@@ -2134,69 +2134,9 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
         ::llvm::SMLoc exceptionOperandsLoc;
         (void)exceptionOperandsLoc;
 
-        ::mlir::Block *destContinueSuccessor = nullptr;
-        ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4>
-            destOperandsContinue;
-        ::llvm::SMLoc destOperandsContinueLoc;
-        (void)destOperandsContinueLoc;
-        ::llvm::SmallVector<::mlir::Type, 1> destOperandsContinueTypes;
-        ::mlir::Block *destAbortSuccessor = nullptr;
-        ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4>
-            destOperandsAbort;
-        ::llvm::SMLoc destOperandsAbortLoc;
-        (void)destOperandsAbortLoc;
-        ::llvm::SmallVector<::mlir::Type, 1> destOperandsAbortTypes;
-
-        // So far we have 4: exception ptr, variadic continue, variadic abort
-        // and variadic call args.
-        enum {
-          Segment_Exception_Idx,
-          Segment_Continue_Idx,
-          Segment_Abort_Idx,
-          Segment_CallArgs_Idx,
-        };
-        ::llvm::SmallVector<int32_t, 4> operandSegmentSizes = {0, 0, 0, 0};
-
         if (parser.parseComma())
           return ::mlir::failure();
 
-        // Handle continue destination and potential bb operands.
-        if (parser.parseSuccessor(destContinueSuccessor))
-          return ::mlir::failure();
-        if (::mlir::succeeded(parser.parseOptionalLParen())) {
-
-          destOperandsContinueLoc = parser.getCurrentLocation();
-          if (parser.parseOperandList(destOperandsContinue))
-            return ::mlir::failure();
-          if (parser.parseColon())
-            return ::mlir::failure();
-
-          if (parser.parseTypeList(destOperandsContinueTypes))
-            return ::mlir::failure();
-          if (parser.parseRParen())
-            return ::mlir::failure();
-        }
-        if (parser.parseComma())
-          return ::mlir::failure();
-
-        // Handle abort destination and potential bb operands.
-        if (parser.parseSuccessor(destAbortSuccessor))
-          return ::mlir::failure();
-        if (::mlir::succeeded(parser.parseOptionalLParen())) {
-          destOperandsAbortLoc = parser.getCurrentLocation();
-          if (parser.parseOperandList(destOperandsAbort))
-            return ::mlir::failure();
-          if (parser.parseColon())
-            return ::mlir::failure();
-
-          if (parser.parseTypeList(destOperandsAbortTypes))
-            return ::mlir::failure();
-          if (parser.parseRParen())
-            return ::mlir::failure();
-        }
-
-        if (parser.parseComma())
-          return ::mlir::failure();
         exceptionOperandsLoc = parser.getCurrentLocation();
         if (parser.parseOperand(exceptionRawOperands[0]))
           return ::mlir::failure();
@@ -2208,40 +2148,12 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                                    exceptionOperandsLoc, result.operands))
           return ::mlir::failure();
 
-        // Add information to the builders.
-        result.addSuccessors(destContinueSuccessor);
-        result.addSuccessors(destAbortSuccessor);
-
-        if (parser.resolveOperands(destOperandsContinue,
-                                   destOperandsContinueTypes,
-                                   destOperandsContinueLoc, result.operands))
-          return ::mlir::failure();
-        if (parser.resolveOperands(destOperandsAbort, destOperandsAbortTypes,
-                                   destOperandsAbortLoc, result.operands))
-          return ::mlir::failure();
-
-        // Required to always be there.
-        operandSegmentSizes[Segment_Exception_Idx] = 1;
-        operandSegmentSizes[Segment_Continue_Idx] =
-            destOperandsContinueTypes.size();
-        operandSegmentSizes[Segment_Abort_Idx] = destOperandsAbortTypes.size();
-        operandSegmentSizes[Segment_CallArgs_Idx] = numCallArgs;
-        result.addAttribute(
-            "operandSegmentSizes",
-            parser.getBuilder().getDenseI32ArrayAttr(operandSegmentSizes));
-
         return ::mlir::success();
       });
 }
 
 void TryCallOp::print(::mlir::OpAsmPrinter &state) {
   printCallCommon(*this, getCalleeAttr(), state);
-}
-
-mlir::SuccessorOperands TryCallOp::getSuccessorOperands(unsigned index) {
-  assert(index < getNumSuccessors() && "invalid successor index");
-  return SuccessorOperands(index == 0 ? getDestContOpsMutable()
-                                      : getDestAbortOpsMutable());
 }
 
 //===----------------------------------------------------------------------===//
