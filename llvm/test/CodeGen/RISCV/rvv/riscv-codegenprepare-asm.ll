@@ -4,130 +4,41 @@
 declare i64 @llvm.vscale.i64()
 declare float @llvm.vector.reduce.fadd.nxv4f32(float, <vscale x 4 x float>)
 
-define float @reduce_fadd(ptr nocapture noundef readonly %f, i32 noundef signext %N) {
+define float @reduce_fadd(ptr %f) {
 ; CHECK-LABEL: reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    blez a1, .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    addi sp, sp, -48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -8
-; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    .cfi_offset s3, -40
-; CHECK-NEXT:    csrr s1, vlenb
-; CHECK-NEXT:    srli s0, s1, 1
-; CHECK-NEXT:    bgeu a1, s0, .LBB0_4
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    fmv.w.x fa0, zero
-; CHECK-NEXT:    j .LBB0_7
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    fmv.w.x fa0, zero
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_4: # %vector.ph
-; CHECK-NEXT:    srli a2, s1, 3
-; CHECK-NEXT:    lui a3, 524288
-; CHECK-NEXT:    addiw a3, a3, -4
-; CHECK-NEXT:    mv s2, a0
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv s3, a1
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    call __muldi3
-; CHECK-NEXT:    mv a1, s3
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    and a2, a2, s3
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a1, a2, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    slli a3, s1, 1
-; CHECK-NEXT:    mv a4, s2
-; CHECK-NEXT:    mv a5, a2
-; CHECK-NEXT:  .LBB0_5: # %vector.body
+; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl2re32.v v10, (a4)
-; CHECK-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vl2re32.v v10, (a0)
+; CHECK-NEXT:    vsetvli a4, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v8, v10, v8
-; CHECK-NEXT:    sub a5, a5, s0
-; CHECK-NEXT:    add a4, a4, a3
-; CHECK-NEXT:    bnez a5, .LBB0_5
-; CHECK-NEXT:  # %bb.6: # %middle.block
+; CHECK-NEXT:    sub a3, a3, a1
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    bnez a3, .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
-; CHECK-NEXT:    beq a2, a1, .LBB0_9
-; CHECK-NEXT:  .LBB0_7: # %for.body.preheader7
-; CHECK-NEXT:    slli a2, a2, 2
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:  .LBB0_8: # %for.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw fa5, 0(a2)
-; CHECK-NEXT:    addi a2, a2, 4
-; CHECK-NEXT:    fadd.s fa0, fa0, fa5
-; CHECK-NEXT:    bne a2, a0, .LBB0_8
-; CHECK-NEXT:  .LBB0_9:
-; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 entry:
-  %cmp4 = icmp sgt i32 %N, 0
-  br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
-
-for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext nneg i32 %N to i64
-  %0 = tail call i64 @llvm.vscale.i64()
-  %1 = shl nuw nsw i64 %0, 2
-  %min.iters.check = icmp ugt i64 %1, %wide.trip.count
-  br i1 %min.iters.check, label %for.body.preheader7, label %vector.ph
-
-vector.ph:                                        ; preds = %for.body.preheader
-  %2 = tail call i64 @llvm.vscale.i64()
-  %.neg = mul nuw nsw i64 %2, 2147483644
-  %n.vec = and i64 %.neg, %wide.trip.count
-  %3 = tail call i64 @llvm.vscale.i64()
-  %4 = shl nuw nsw i64 %3, 2
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %vecsize = shl nuw nsw i64 %vscale, 2
   br label %vector.body
 
-vector.body:                                      ; preds = %vector.body, %vector.ph
-  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %vec.phi = phi float [ 0.000000e+00, %vector.ph ], [ %6, %vector.body ]
-  %5 = getelementptr inbounds float, ptr %f, i64 %index
-  %wide.load = load <vscale x 4 x float>, ptr %5, align 4
-  %6 = tail call float @llvm.vector.reduce.fadd.nxv4f32(float %vec.phi, <vscale x 4 x float> %wide.load)
-  %index.next = add nuw i64 %index, %4
-  %7 = icmp eq i64 %index.next, %n.vec
-  br i1 %7, label %middle.block, label %vector.body
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.phi = phi float [ 0.000000e+00, %entry ], [ %acc, %vector.body ]
+  %gep = getelementptr inbounds float, ptr %f, i64 %index
+  %wide.load = load <vscale x 4 x float>, ptr %gep, align 4
+  %acc = tail call float @llvm.vector.reduce.fadd.nxv4f32(float %vec.phi, <vscale x 4 x float> %wide.load)
+  %index.next = add nuw i64 %index, %vecsize
+  %done = icmp eq i64 %index.next, 1024
+  br i1 %done, label %exit, label %vector.body
 
-middle.block:                                     ; preds = %vector.body
-  %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
-  br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader7
-
-for.body.preheader7:                              ; preds = %for.body.preheader, %middle.block
-  %indvars.iv.ph = phi i64 [ 0, %for.body.preheader ], [ %n.vec, %middle.block ]
-  %sum.05.ph = phi float [ 0.000000e+00, %for.body.preheader ], [ %6, %middle.block ]
-  br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
-  %sum.0.lcssa = phi float [ 0.000000e+00, %entry ], [ %6, %middle.block ], [ %add, %for.body ]
-  ret float %sum.0.lcssa
-
-for.body:                                         ; preds = %for.body.preheader7, %for.body
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ %indvars.iv.ph, %for.body.preheader7 ]
-  %sum.05 = phi float [ %add, %for.body ], [ %sum.05.ph, %for.body.preheader7 ]
-  %arrayidx = getelementptr inbounds float, ptr %f, i64 %indvars.iv
-  %8 = load float, ptr %arrayidx, align 4
-  %add = fadd float %sum.05, %8
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret float %acc
 }
