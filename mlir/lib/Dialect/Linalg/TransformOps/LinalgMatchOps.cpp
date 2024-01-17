@@ -330,64 +330,6 @@ static DiagnosedSilenceableFailure containsAll(ArrayRef<unsigned> reference,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Populates `result` with the positional identifiers relative to `maxNumber`.
-/// If `isAll` is set, the result will contain all numbers from `0` to
-/// `maxNumber - 1` inclusive regardless of `rawList`. Otherwise, negative
-/// values from `rawList` are  are interpreted as counting backwards from
-/// `maxNumber`, i.e., `-1` is interpreted a `maxNumber - 1`, while positive
-/// numbers remain as is. If `isInverted` is set, populates `result` with those
-/// values from the `0` to `maxNumber - 1` inclusive range that don't appear in
-/// `rawList`. If `rawList` contains values that are greater than or equal to
-/// `maxNumber` or less than `-maxNumber`, produces a silenceable error at the
-/// given location. `maxNumber` must be positive. If `rawList` contains
-/// duplicate numbers or numbers that become duplicate after negative value
-/// remapping, emits a silenceable error.
-static DiagnosedSilenceableFailure
-expandTargetSpecification(Location loc, bool isAll, bool isInverted,
-                          ArrayRef<int64_t> rawList, int64_t maxNumber,
-                          SmallVectorImpl<int64_t> &result) {
-  assert(maxNumber > 0 && "expected size to be positive");
-  assert(!(isAll && isInverted) && "cannot invert all");
-  if (isAll) {
-    result = llvm::to_vector(llvm::seq<int64_t>(0, maxNumber));
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  SmallVector<int64_t> expanded;
-  llvm::SmallDenseSet<int64_t> visited;
-  expanded.reserve(rawList.size());
-  SmallVectorImpl<int64_t> &target = isInverted ? expanded : result;
-  for (int64_t raw : rawList) {
-    int64_t updated = raw < 0 ? maxNumber + raw : raw;
-    if (updated >= maxNumber) {
-      return emitSilenceableFailure(loc)
-             << "position overflow " << updated << " (updated from " << raw
-             << ") for maximum " << maxNumber;
-    }
-    if (updated < 0) {
-      return emitSilenceableFailure(loc) << "position underflow " << updated
-                                         << " (updated from " << raw << ")";
-    }
-    if (!visited.insert(updated).second) {
-      return emitSilenceableFailure(loc) << "repeated position " << updated
-                                         << " (updated from " << raw << ")";
-    }
-    target.push_back(updated);
-  }
-
-  if (!isInverted)
-    return DiagnosedSilenceableFailure::success();
-
-  result.reserve(result.size() + (maxNumber - expanded.size()));
-  for (int64_t candidate : llvm::seq<int64_t>(0, maxNumber)) {
-    if (llvm::is_contained(expanded, candidate))
-      continue;
-    result.push_back(candidate);
-  }
-
-  return DiagnosedSilenceableFailure::success();
-}
-
 //===----------------------------------------------------------------------===//
 // MatchStructuredDimOp
 //===----------------------------------------------------------------------===//
