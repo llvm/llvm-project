@@ -14,6 +14,7 @@
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
 #include <ctime>
 
@@ -39,8 +40,10 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 #endif
 
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-// System is posix-compliant and has getlogin_r
+// System is posix-compliant and has getlogin_r and sleep
 #include <unistd.h>
+#elif _WIN32
+#include <windows.h> // for sleep
 #endif
 
 extern "C" {
@@ -111,6 +114,16 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+// CALL SLEEP(SECONDS)
+void RTNAME(Sleep)(std::int64_t seconds) {
+  // ensure that conversion to unsigned makes sense,
+  // sleep(0) is an immidiate return anyway
+  if (seconds < 1) {
+    return;
+  }
+  sleep(static_cast<unsigned>(seconds));
 }
 
 } // namespace Fortran::runtime
