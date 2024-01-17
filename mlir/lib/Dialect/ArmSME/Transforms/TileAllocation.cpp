@@ -218,7 +218,7 @@ struct AssignTileIDsPattern
       return defaultVal;
     };
     auto setDiscardableIntAttr = [&](StringRef name, auto value) {
-      rewriter.updateRootInPlace(tileOp, [&] {
+      rewriter.modifyOpInPlace(tileOp, [&] {
         func->setDiscardableAttr(name,
                                  rewriter.getI32IntegerAttr((unsigned)value));
       });
@@ -274,10 +274,10 @@ struct AssignTileIDsPattern
       setDiscardableIntAttr(kTilesInUseAttr, tilesInUse);
     else
       setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
-    rewriter.updateRootInPlace(tileOp, [&] { tileOp.setTileId(tileIDAttr); });
+    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIDAttr); });
     for (auto *op : dependantOps) {
       if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
-        rewriter.updateRootInPlace(
+        rewriter.modifyOpInPlace(
             dependantTileOp, [&] { dependantTileOp.setTileId(tileIDAttr); });
       }
     }
