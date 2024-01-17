@@ -123,6 +123,12 @@ Deprecations and Removals
   overload of ``allocate``. However, this led to the library being non-conforming due to incorrect
   constexpr-ness.
 
+- The macros ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` have been deprecated and
+  will be removed in LLVM 19. These macros used to re-enable all features
+  that were removed in the C++17 and C++20 standards. Instead of using these
+  macros, please use the macros to re-enable individual features.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -148,6 +154,10 @@ LLVM 19
 
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been deprecated in LLVM 18 and will be removed
   entirely in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have been deprecated
+  in LLVM 18 and will be removed entirely in LLVM 19.
 
 LLVM 20
 ~~~~~~~
