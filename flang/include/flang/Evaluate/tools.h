@@ -1192,6 +1192,10 @@ private:
 std::optional<bool> AreEquivalentInInterface(
     const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
 
+bool CheckForCoindexedObject(parser::ContextualMessages &,
+    const std::optional<ActualArgument> &, const std::string &procName,
+    const std::string &argName);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
