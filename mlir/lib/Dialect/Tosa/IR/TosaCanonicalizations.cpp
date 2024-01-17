@@ -68,7 +68,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
     return failure();
-  rewriter.updateRootInPlace(op, [&]() {
+  rewriter.modifyOpInPlace(op, [&]() {
     op.getOperation()->setOperands(
         {notOp.getInput1(), op.getOnFalse(), op.getOnTrue()});
   });

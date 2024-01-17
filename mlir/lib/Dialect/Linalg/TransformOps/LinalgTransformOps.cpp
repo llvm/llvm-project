@@ -785,7 +785,7 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   rewriter.replaceOp(sliceOpToTile, *maybeRankReduced);
 
   // Replace the use in containingOp.
-  rewriter.updateRootInPlace(containingOp, [&]() {
+  rewriter.modifyOpInPlace(containingOp, [&]() {
     containingOp->setOperand(pUse->getOperandNumber(),
                              destinationTensors.front());
   });
@@ -835,7 +835,7 @@ static Operation *cloneAndFuseFirstUse(RewriterBase &rewriter, Diagnostic &diag,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(use->getOwner());
   fusedOp = rewriter.clone(*producerOp);
-  rewriter.updateRootInPlace(
+  rewriter.modifyOpInPlace(
       use->getOwner(), [&] { use->set(fusedOp->getOpResult(resultNumber)); });
 
   return fusedOp;
