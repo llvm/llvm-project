@@ -6555,6 +6555,9 @@ bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
   Register False = Select->getFalseReg();
   LLT DstTy = MRI.getType(DstReg);
 
+  if (DstTy.isPointer())
+    return false;
+
   // We need an G_ICMP on the condition register.
   GICmp *Cmp = getOpcodeDef<GICmp>(Cond, MRI);
   if (!Cmp)

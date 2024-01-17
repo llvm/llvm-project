@@ -3398,6 +3398,10 @@ struct FormatStyle {
   /// \version 14
   unsigned PenaltyBreakOpenParenthesis;
 
+  /// The penalty for breaking after ``::``.
+  /// \version 18
+  unsigned PenaltyBreakScopeResolution;
+
   /// The penalty for each line break introduced inside a string literal.
   /// \version 3.7
   unsigned PenaltyBreakString;
@@ -4873,6 +4877,7 @@ struct FormatStyle {
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
+           PenaltyBreakScopeResolution == R.PenaltyBreakScopeResolution &&
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyBreakTemplateDeclaration ==
                R.PenaltyBreakTemplateDeclaration &&

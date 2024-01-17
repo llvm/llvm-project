@@ -14,6 +14,7 @@ add_mlir_library(MLIRTilingInterfaceTestPasses
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
+  MLIRIndexDialect
   MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRMemRefDialect
@@ -21,4 +22,5 @@ add_mlir_library(MLIRTilingInterfaceTestPasses
   MLIRSCFTransforms
   MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl
+  MLIRTransformDialect
   )
