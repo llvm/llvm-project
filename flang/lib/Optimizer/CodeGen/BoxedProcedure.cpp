@@ -347,6 +347,19 @@ public:
             }
           rewriter.finalizeRootUpdate(op);
         }
+        // Ensure block arguments are updated if needed.
+        if (op->getNumRegions() != 0) {
+          rewriter.startRootUpdate(op);
+          for (mlir::Region &region : op->getRegions())
+            for (mlir::Block &block : region.getBlocks())
+              for (mlir::BlockArgument blockArg : block.getArguments())
+                if (typeConverter.needsConversion(blockArg.getType())) {
+                  mlir::Type toTy =
+                      typeConverter.convertType(blockArg.getType());
+                  blockArg.setType(toTy);
+                }
+          rewriter.finalizeRootUpdate(op);
+        }
       });
     }
   }

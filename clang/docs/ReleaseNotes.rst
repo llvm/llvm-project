@@ -680,6 +680,8 @@ Bug Fixes in This Version
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 - Clang now properly diagnoses use of stand-alone OpenMP directives after a
   label (including ``case`` or ``default`` labels).
+- Fix compiler memory leak for enums with underlying type larger than 64 bits.
+  Fixes (`#78311 <https://github.com/llvm/llvm-project/pull/78311>`_)
 
   Before:
 
@@ -753,6 +755,8 @@ Bug Fixes in This Version
 - Fix an issue where clang cannot find conversion function with template
   parameter when instantiation of template class.
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
+- Fix an issue where CTAD fails for function-type/array-type arguments.
+  Fixes (`#51710 <https://github.com/llvm/llvm-project/issues/51710>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -958,6 +962,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when a lambda marked as ``static`` referenced a captured
   variable in an expression.
   `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+- Fixed a crash with modules and a ``constexpr`` destructor.
+  `Issue 68702 <https://github.com/llvm/llvm-project/issues/68702>`_
 
 
 OpenACC Specific Changes
@@ -1061,6 +1067,8 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+- CodeGen of RV32E/RV64E was supported experimentally.
+- CodeGen of ilp32e/lp64e was supported experimentally.
 
 - Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
   for RV64.
@@ -1122,6 +1130,9 @@ AST Matchers
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
 - Add ``macroQualifiedType``.
+- Add ``CXXFoldExpr`` related matchers: ``cxxFoldExpr``, ``callee``,
+  ``hasInit``, ``hasPattern``, ``isRightFold``, ``isLeftFold``,
+  ``isUnaryFold``, ``isBinaryFold``, ``hasOperator``, ``hasLHS``, ``hasRHS``, ``hasEitherOperand``.
 
 clang-format
 ------------
@@ -1131,6 +1142,7 @@ clang-format
 - Add ``BreakAdjacentStringLiterals`` option.
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
+- Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 

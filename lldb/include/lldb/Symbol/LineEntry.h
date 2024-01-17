@@ -23,12 +23,6 @@ struct LineEntry {
   /// Initialize all member variables to invalid values.
   LineEntry();
 
-  LineEntry(const lldb::SectionSP &section_sp, lldb::addr_t section_offset,
-            lldb::addr_t byte_size, const FileSpec &file, uint32_t _line,
-            uint16_t _column, bool _is_start_of_statement,
-            bool _is_start_of_basic_block, bool _is_prologue_end,
-            bool _is_epilogue_begin, bool _is_terminal_entry);
-
   /// Clear the object's state.
   ///
   /// Clears all member variables to invalid values.
