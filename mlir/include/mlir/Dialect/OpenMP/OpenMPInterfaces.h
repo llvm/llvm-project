@@ -27,9 +27,10 @@ namespace mlir::omp {
 // You can override defaults here or implement more complex implementations of
 // functions. Or define a completely seperate external model implementation,
 // to override the existing implementation.
+template <typename T>
 struct OffloadModuleDefaultModel
-    : public OffloadModuleInterface::ExternalModel<OffloadModuleDefaultModel,
-                                                   mlir::ModuleOp> {};
+    : public OffloadModuleInterface::ExternalModel<OffloadModuleDefaultModel<T>,
+                                                   T> {};
 
 template <typename T>
 struct DeclareTargetDefaultModel

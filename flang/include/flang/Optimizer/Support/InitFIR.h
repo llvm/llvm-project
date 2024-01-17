@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "mlir/Dialect/OpenMP/ExternalModels.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -44,6 +45,9 @@ namespace fir::support {
 inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
   mlir::func::registerInlinerExtension(registry);
+  mlir::omp::registerBuiltinExternalModels(registry);
+  mlir::omp::registerFuncExternalModels(registry);
+  mlir::omp::registerLLVMExternalModels(registry);
 }
 
 /// Register all the dialects used by flang.
