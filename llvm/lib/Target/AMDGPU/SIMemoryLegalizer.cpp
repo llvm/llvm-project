@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -677,6 +678,28 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
+/// Reads \p MI's MMRAs to parse the "opencl-fence-mem" MMRA.
+/// If this tag isn't present, or if it has no meaningful value, returns \p
+/// Default. Otherwise returns all the address spaces concerned by the MMRA.
+static SIAtomicAddrSpace
+getOpenCLFenceAddrSpaceMMRA(const MachineInstr &MI, SIAtomicAddrSpace Default) {
+  static constexpr const char *Prefix = "opencl-fence-mem";
+
+  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+  if (!MMRA)
+    return Default;
+
+  SIAtomicAddrSpace AS = SIAtomicAddrSpace::NONE;
+  if (MMRA.hasTag(Prefix, "global"))
+    AS |= SIAtomicAddrSpace::GLOBAL;
+  if (MMRA.hasTag(Prefix, "local"))
+    AS |= SIAtomicAddrSpace::LDS;
+  if (MMRA.hasTag(Prefix, "image"))
+    AS |= SIAtomicAddrSpace::SCRATCH;
+
+  return (AS != SIAtomicAddrSpace::NONE) ? AS : Default;
+}
 
 } // end namespace anonymous
 
@@ -2535,12 +2558,19 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
+  // Refine fenced address space based on MMRAs.
+  //
+  // TODO: Should we support this MMRA on other atomic operations?
+  // Frontend doesn't directly emit those. Can optimizations merge
+  // an atomic load w/ a fence and give us, e.g. load acquire with this MMRA?
+  auto OrderingAddrSpace =
+      getOpenCLFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Acquire)
-      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
-                                SIMemOp::LOAD | SIMemOp::STORE,
-                                MOI.getIsCrossAddressSpaceOrdering(),
-                                Position::BEFORE);
+      Changed |= CC->insertWait(
+          MI, MOI.getScope(), OrderingAddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+          MOI.getIsCrossAddressSpaceOrdering(), Position::BEFORE);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
@@ -2552,8 +2582,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// generate a fence. Could add support in this file for
       /// barrier. SIInsertWaitcnt.cpp could then stop unconditionally
       /// adding S_WAITCNT before a S_BARRIER.
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
@@ -2565,8 +2594,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     if (MOI.getOrdering() == AtomicOrdering::Acquire ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
 
     return Changed;
