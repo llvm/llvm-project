@@ -1039,21 +1039,17 @@ define i32 @test_udot_v25i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ushll v3.8h, v2.8b, #0
-; CHECK-NEXT:    ushll v4.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v4.8h, v2.8b, #0
 ; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEXT:    uaddl2 v5.4s, v4.8h, v3.8h
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-NEXT:    uaddl v3.4s, v4.4h, v3.4h
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-NEXT:    ushll2 v1.8h, v2.16b, #0
-; CHECK-NEXT:    mov v5.d[1], v6.d[0]
-; CHECK-NEXT:    uaddlv s2, v3.8h
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    uaddlv s3, v5.8h
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    uaddw2 v1.4s, v3.4s, v1.8h
+; CHECK-NEXT:    uaddw2 v1.4s, v5.4s, v2.8h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NEXT:    add v1.4s, v3.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0
@@ -1635,30 +1631,23 @@ define i32 @test_udot_v33i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v33i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr b1, [x0, #32]
-; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    ldp q3, q2, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ushll2 v4.8h, v2.16b, #0
-; CHECK-NEXT:    ushll2 v5.8h, v3.16b, #0
-; CHECK-NEXT:    ushll v3.8h, v3.8b, #0
-; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-NEXT:    ushll v5.8h, v3.8b, #0
+; CHECK-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NEXT:    ushll2 v3.8h, v3.16b, #0
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ext v6.16b, v4.16b, v4.16b, #8
-; CHECK-NEXT:    ext v7.16b, v5.16b, v5.16b, #8
-; CHECK-NEXT:    mov v4.d[1], v5.d[0]
-; CHECK-NEXT:    ext v16.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    uaddl2 v6.4s, v3.8h, v2.8h
+; CHECK-NEXT:    uaddl v2.4s, v3.4h, v2.4h
 ; CHECK-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-NEXT:    uaddlv s4, v4.8h
-; CHECK-NEXT:    mov v16.d[1], v1.d[0]
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
-; CHECK-NEXT:    uaddlv s1, v6.8h
-; CHECK-NEXT:    uaddlv s2, v16.8h
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v3.4h
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    add v0.4s, v4.4s, v0.4s
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uaddl2 v1.4s, v5.8h, v4.8h
+; CHECK-NEXT:    add v1.4s, v1.4s, v6.4s
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v5.4h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v4.4h
+; CHECK-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
