@@ -48,7 +48,7 @@ TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
 
   Float192 z = quick_add(x, y);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(xd + yd, (volatile double)(z));
+  EXPECT_FP_EQ_ALL_ROUNDING(xd + yd, double(z));
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickMul) {
