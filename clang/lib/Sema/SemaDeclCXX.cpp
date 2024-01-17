@@ -11326,10 +11326,7 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
           Conversion->getDescribedFunctionTemplate()) {
     if (ConvType->isUndeducedAutoType()) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
-          << Conversion->getTypeSourceInfo()
-                 ->getTypeLoc()
-                 .getContainedAutoTypeLoc()
-                 .getSourceRange()
+          << getReturnTypeLoc(Conversion).getSourceRange()
           << llvm::to_underlying(Conversion->getConversionType()
                                      ->getAs<AutoType>()
                                      ->getKeyword())
