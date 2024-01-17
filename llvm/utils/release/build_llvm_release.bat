@@ -7,7 +7,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] --test
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -15,7 +15,8 @@ echo --help: display this help
 echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
-echo --test: use local git checkout instead of downloading src.zip
+echo --skip-checkout: use local git checkout instead of downloading src.zip
+echo --local-python: use installed Python and does not try to use a specific version (3.10)
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -31,7 +32,8 @@ set help=
 set x86=
 set x64=
 set arm64=
-set test=
+set skip-checkout=
+set local-python=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -108,9 +110,9 @@ echo Using VS devcmd: %vsdevcmd%
 :: start echoing what we do
 @echo on
 
-set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
-set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
-set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
+set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
+set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
+set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-arm64
 
 set revision=llvmorg-%version%
 set package_version=%version%
@@ -128,7 +130,7 @@ if exist %build_dir% (
 mkdir %build_dir%
 cd %build_dir% || exit /b 1
 
-if "%test%" == "true" (
+if "%skip-checkout%" == "true" (
   echo Using local source
   set llvm_src=%~dp0..\..\..
 ) else (
@@ -163,7 +165,7 @@ set common_cmake_flags=^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
 
-set cmake_profile_flag=""
+set cmake_profile_flags=""
 
 REM Preserve original path
 set OLDPATH=%PATH%
@@ -276,7 +278,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build64
 cd build64
 call :do_generate_profile || exit /b 1
-cmake -GNinja %cmake_flags% %cmake_profile_flag% %llvm_src%\llvm || exit /b 1
+cmake -GNinja %cmake_flags% %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
@@ -367,8 +369,13 @@ set PATH=%OLDPATH%
 set python_dir=%1
 
 REM Set Python environment
-%python_dir%/python.exe --version || exit /b 1
-set PYTHONHOME=%python_dir%
+if "%local-python%" == "true" (
+  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
+  set PYTHONHOME=!python_exe:~0,-11!
+) else (
+  %python_dir%/python.exe --version || exit /b 1
+  set PYTHONHOME=%python_dir%
+)
 set PATH=%PYTHONHOME%;%PATH%
 
 set "VSCMD_START_DIR=%build_dir%"
@@ -431,7 +438,7 @@ cd ..
 set profile=%cd:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% instrument\profiles\*.profraw || exit /b 1
 set common_compiler_flags=%common_compiler_flags% -Wno-backend-plugin
-set cmake_profile_flag=-DLLVM_PROFDATA_FILE=%profile% ^
+set cmake_profile_flags=-DLLVM_PROFDATA_FILE=%profile% ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%"
 exit /b 0
