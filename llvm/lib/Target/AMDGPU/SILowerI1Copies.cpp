@@ -78,7 +78,7 @@ public:
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainAsLaneMask(Incoming &In) override;
+  void constrainIncomingRegisterTakenAsIs(Incoming &In) override;
 
   bool lowerCopiesFromI1();
   bool lowerCopiesToI1();
@@ -619,7 +619,7 @@ bool PhiLoweringHelper::lowerPhis() {
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         if (PIA.isSource(IMBB)) {
-          constrainAsLaneMask(Incoming);
+          constrainIncomingRegisterTakenAsIs(Incoming);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
         } else {
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
@@ -911,4 +911,6 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   }
 }
 
-void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) { return; }
+void Vreg1LoweringHelper::constrainIncomingRegisterTakenAsIs(Incoming &In) {
+  return;
+}
