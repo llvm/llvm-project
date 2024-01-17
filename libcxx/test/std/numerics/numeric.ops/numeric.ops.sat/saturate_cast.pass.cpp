@@ -17,6 +17,16 @@
 #include <concepts>
 #include <limits>
 #include <numeric>
+#include <utility>
+
+// Signed T1 < Singed T2 - overflow
+// Signed T1 == Signed T2 - no overflow
+// Signed T1 > Signed T2 - no overflow
+
+// Unsigned T1 < Unsigned T2 - overflow
+// Unsigned T1 == Unsigned T2 - no overflow
+// Unsigned T1 > Unsigned T2 - no overflow
+
 
 template <typename IntegerResultT, typename IntegerT>
 constexpr bool test_signed_notsaturated() {
@@ -25,6 +35,22 @@ constexpr bool test_signed_notsaturated() {
 
   static_assert(noexcept(std::saturate_cast<IntegerResultT>(minVal)));
   static_assert(noexcept(std::saturate_cast<IntegerResultT>(maxVal)));
+
+  assert(std::saturate_cast<IntegerResultT>(IntegerT{-1}) == IntegerT{-1});
+  assert(std::saturate_cast<IntegerResultT>(IntegerT{0}) == IntegerT{0});
+  assert(std::saturate_cast<IntegerResultT>(IntegerT{1}) == IntegerT{1});
+
+  {
+    // Large values
+    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
+    assert(std::saturate_cast<IntegerResultT>(x) == x);
+  }
+
+  {
+    // Large values
+    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
+    assert(std::saturate_cast<IntegerResultT>(x) == x);
+  }
 
   assert(std::saturate_cast<IntegerResultT>(minVal) == minVal);
   assert(std::saturate_cast<IntegerResultT>(maxVal) == maxVal);
@@ -42,6 +68,14 @@ constexpr bool test_signed_saturated() {
 
   assert(std::saturate_cast<IntegerResultT>(minVal) == std::numeric_limits<IntegerResultT>::min());
   assert(std::saturate_cast<IntegerResultT>(maxVal) == std::numeric_limits<IntegerResultT>::max());
+
+  if constexpr (std::cmp_less(std::numeric_limits<IntegerResultT>::min(), std::numeric_limits<IntegerT>::min())) {
+    assert(std::saturate_cast<IntegerResultT>(minVal - IntegerT{1}) == std::numeric_limits<IntegerResultT>::min());
+  }
+
+  if constexpr (std::cmp_greater(std::numeric_limits<IntegerResultT>::max(), std::numeric_limits<IntegerT>::max())) {
+    assert(std::saturate_cast<IntegerResultT>(minVal - IntegerT{1}) == std::numeric_limits<IntegerResultT>::min());
+  }
 
   return true;
 }

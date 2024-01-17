@@ -105,6 +105,16 @@ constexpr bool test_signed() {
     assert(sum == maxVal + IntegerT{-1});
   }
 
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(minVal, maxVal);
+    assert(sum == IntegerT{-1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, minVal);
+    assert(sum == IntegerT{-1});
+  }
+
   // Saturation - max - both arguments positive
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, IntegerT{27});
@@ -151,9 +161,25 @@ constexpr bool test_unsigned() {
   static_assert(noexcept(std::div_sat(minVal, maxVal)));
 
   // No Saturation
+
   {
-    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{27}, IntegerT{28});
-    assert(sum == IntegerT{55});
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{0}, IntegerT{0});
+    assert(sum == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{0}, IntegerT{1});
+    assert(sum == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{1}, IntegerT{0});
+    assert(sum == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{1}, IntegerT{1});
+    assert(sum == IntegerT{2});
   }
 
   {
@@ -167,11 +193,41 @@ constexpr bool test_unsigned() {
   }
 
   {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{0}, minVal);
+    assert(sum == IntegerT{0});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{1}, minVal);
+    assert(sum == IntegerT{1});
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(IntegerT{27}, IntegerT{28});
+    assert(sum == IntegerT{55});
+  }
+
+  {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(minVal, minVal);
     assert(sum == minVal);
   }
 
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(minVal, maxVal);
+    assert(sum == maxVal);
+  }
+
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, minVal);
+    assert(sum == maxVal);
+  }
+
   // Saturation - max only
+  {
+    std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, IntegerT{1});
+    assert(sum == maxVal);
+  }
+
   {
     std::same_as<IntegerT> decltype(auto) sum = std::add_sat(maxVal, IntegerT{27});
     assert(sum == maxVal);
