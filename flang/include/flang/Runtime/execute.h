@@ -23,7 +23,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait = true,
     const Descriptor *exitstat = nullptr, const Descriptor *cmdstat = nullptr,
     const Descriptor *cmdmsg = nullptr, const char *sourceFile = nullptr,
     int line = 0);
-
 }
 } // namespace Fortran::runtime
 
