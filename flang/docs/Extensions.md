@@ -465,6 +465,9 @@ end
 * A `SEQUENCE` derived type is required (F'2023 C745) to have
   at least one component.  No compiler enforces this constraint;
   this compiler emits a warning.
+* Many compilers disallow a `VALUE` assumed-length character dummy
+  argument, which has been standard since F'2008.
+  We accept this usage with an optional portability warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 

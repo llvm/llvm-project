@@ -570,6 +570,12 @@ void CheckHelper::CheckValue(
     messages_.Say(
         "VALUE attribute may not apply to an assumed-rank array"_err_en_US);
   }
+  if (context_.ShouldWarn(common::UsageWarning::Portability) &&
+      IsAssumedLengthCharacter(symbol)) {
+    // F'2008 feature not widely implemented
+    messages_.Say(
+        "VALUE attribute on assumed-length CHARACTER may not be portable"_port_en_US);
+  }
 }
 
 void CheckHelper::CheckAssumedTypeEntity( // C709
