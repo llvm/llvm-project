@@ -7767,6 +7767,11 @@ void ResolveNamesVisitor::HandleProcedureName(
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
       if (CheckImplicitNoneExternal(name.source, *symbol)) {
         MakeExternal(*symbol);
+        // Create a place-holder HostAssocDetails symbol to preclude later
+        // use of this name as a local symbol; but don't actually use this new
+        // HostAssocDetails symbol in expressions.
+        MakeHostAssocSymbol(name, *symbol);
+        name.symbol = symbol;
       }
     }
     CheckEntryDummyUse(name.source, symbol);
@@ -7774,7 +7779,14 @@ void ResolveNamesVisitor::HandleProcedureName(
   } else if (CheckUseError(name)) {
     // error was reported
   } else {
-    symbol = &Resolve(name, symbol)->GetUltimate();
+    symbol = &symbol->GetUltimate();
+    if (!name.symbol ||
+        (name.symbol->has<HostAssocDetails>() && symbol->owner().IsGlobal() &&
+            (symbol->has<ProcEntityDetails>() ||
+                (symbol->has<SubprogramDetails>() &&
+                    symbol->scope() /*not ENTRY*/)))) {
+      name.symbol = symbol;
+    }
     CheckEntryDummyUse(name.source, symbol);
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
