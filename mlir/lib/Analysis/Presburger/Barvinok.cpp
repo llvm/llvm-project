@@ -265,7 +265,7 @@ static std::vector<Fraction> convolution(std::vector<Fraction> a,
   return convolution;
 }
 
-/// Substitute x_i = (s+1)^μ_i in one term of a generating function,
+/// Substitute x_i = t^μ_i in one term of a generating function,
 /// returning
 /// a quasipolynomial which represents the exponent of the numerator
 /// of the result, and
@@ -307,7 +307,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   // given by the dot product of μ with u_i.
   for (const Point &d : ds) {
     // This term in the denominator is
-    // (1 - (s+1)^dens.back())
+    // (1 - t^dens.back())
     dens.push_back(dotProduct(d, mu));
   }
 
