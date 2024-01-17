@@ -153,7 +153,13 @@ def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
 // stack on some microarchitectures. Also remove the reserved registers X0, X2,
 // X3, and X4 as it reduces the number of register classes that get synthesized
 // by tablegen.
-def GPRJALR : GPRRegisterClass<(sub GPR, (sequence "X%u", 0, 5))>;
+// If RAS is supported, we select the alternative register order without X5. 
+def GPRJALR : GPRRegisterClass<(sub GPR, (sequence "X%u", 0, 4))> {
+  list<dag> AltOrders = [(sub GPR, (sequence "X%u", 0, 5))];
+  code AltOrderSelect = [{
+    return MF.getSubtarget<RISCVSubtarget>().hasRetAddrStack();
+  }];
+}
 
 def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
                                  (sequence "X%u", 8, 9))>;
@@ -162,9 +168,17 @@ def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
 // restored to the saved value before the tail call, which would clobber a call
 // address. We shouldn't use x5 since that is a hint for to pop the return
 // address stack on some microarchitectures.
-def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
+// If RAS is supported, we select the alternative register order without X5.
+def GPRTC : GPRRegisterClass<(add (sequence "X%u", 5, 7),
                                   (sequence "X%u", 10, 17),
-                                  (sequence "X%u", 28, 31))>;
+                                  (sequence "X%u", 28, 31))> {
+  list<dag> AltOrders = [(add (sequence "X%u", 6, 7),
+                              (sequence "X%u", 10, 17),
+                              (sequence "X%u", 28, 31))];
+  code AltOrderSelect = [{
+    return MF.getSubtarget<RISCVSubtarget>().hasRetAddrStack();
+  }];
+}
 
 def SP : GPRRegisterClass<(add X2)>;
 

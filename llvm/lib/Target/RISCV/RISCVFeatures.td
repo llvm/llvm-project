@@ -1125,6 +1125,9 @@ def FeatureFastUnalignedAccess
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
+def FeatureNoRAS : SubtargetFeature<"no-ret-addr-stack", "HasRetAddrStack", "false",
+                                    "Hasn't RAS (Return Address Stack)">;
+
 def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "false", "Hasn't optimized (perform fewer memory operations)"
