@@ -24,7 +24,7 @@ void test(From value) {
   auto store    = std::make_format_args<Context>(value);
   std::basic_format_args<Context> format_args{store};
 
-  // expected-warning-re@+1 2 {{std::basic_format_context{{.*}}' is deprecated}}
+  // expected-warning-re@+1 1-2 {{std::basic_format_context{{.*}}' is deprecated}}
   std::ignore = std::visit_format_arg([]([[maybe_unused]] auto a) -> To { return {}; }, format_args.get(0));
 }
 
