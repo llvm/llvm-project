@@ -364,11 +364,12 @@ TEST(ExprMutationAnalyzerTest, FoldExpression) {
   // A fold expression may contain `Exp` as it's initializer.
   // We don't know if the operator modifies `Exp` because the
   // operator is type dependent due to the parameter pack.
-  const auto AST = buildASTFromCode(
+  const auto AST = buildASTFromCodeWithArgs(
       "struct Stream {};"
       "template <typename T> Stream& operator<<(Stream&, T); "
       "template <typename... Args> void concatenate(Args... args) "
-      "{ Stream x; (x << ... << args); }");
+      "{ Stream x; (x << ... << args); }",
+      {"-fno-delayed-template-parsing"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(x << ... << args)"));
