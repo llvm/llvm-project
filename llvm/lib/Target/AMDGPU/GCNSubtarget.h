@@ -781,9 +781,7 @@ public:
     return HasFP8Insts;
   }
 
-  bool hasFP8ConversionInsts() const {
-    return HasFP8ConversionInsts;
-  }
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
