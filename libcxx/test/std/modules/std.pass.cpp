@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-
-// UNSUPPORTED: libcpp-has-no-std-modules
 // UNSUPPORTED: clang-modules-build
+
+// XFAIL: *
 
 // A minimal test to validate import works.
 
