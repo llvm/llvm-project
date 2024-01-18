@@ -719,6 +719,31 @@ def ContinueOp : CIR_Op<"continue", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Resume
+//===----------------------------------------------------------------------===//
+
+def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
+    ParentOneOf<["CatchOp"]>]> {
+  let summary = "Resumes execution after not catching exceptions";
+  let description = [{
+    The `cir.resume` operation terminates a region on `cir.catch`, "resuming"
+    or continuing the unwind process. The incoming argument is of !cir.eh_info
+    populated by `cir.try_call` and available in `cir.catch`.
+
+    Examples:
+    ```mlir
+    cir.catch %4 {
+      ...
+      fallback { cir.resume(%0) };
+    }
+    ```
+  }];
+
+  let arguments = (ins ExceptionInfoPtr:$ptr);
+  let assemblyFormat = "$ptr attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
 

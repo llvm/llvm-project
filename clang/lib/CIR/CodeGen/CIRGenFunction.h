@@ -1503,8 +1503,9 @@ public:
     bool isConditional() const { return IsConditional; }
   };
 
-  /// Emits landing pad information for the current EH stack.
+  /// Emits try/catch information for the current EH stack.
   mlir::Operation *buildLandingPad();
+  mlir::Block *getEHResumeBlock(bool isCleanup);
   mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
 
   mlir::Operation *getInvokeDestImpl();

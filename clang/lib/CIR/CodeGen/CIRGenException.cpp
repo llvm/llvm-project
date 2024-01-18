@@ -251,6 +251,36 @@ void CIRGenFunction::buildAnyExprToExn(const Expr *e, Address addr) {
   DeactivateCleanupBlock(cleanup, op);
 }
 
+mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
+  // Just like some other try/catch related logic: return the basic block
+  // pointer but only use it to denote we're tracking things, but there
+  // shouldn't be any changes to that block after work done in this function.
+  auto catchOp = currExceptionInfo.catchOp;
+  assert(catchOp.getNumRegions() && "expected at least one region");
+  auto &fallbackRegion = catchOp.getRegion(catchOp.getNumRegions() - 1);
+
+  auto *resumeBlock = &fallbackRegion.getBlocks().back();
+  if (!resumeBlock->empty())
+    return resumeBlock;
+
+  auto ip = getBuilder().saveInsertionPoint();
+  getBuilder().setInsertionPointToStart(resumeBlock);
+
+  const EHPersonality &Personality = EHPersonality::get(*this);
+
+  // This can always be a call because we necessarily didn't find
+  // anything on the EH stack which needs our help.
+  const char *RethrowName = Personality.CatchallRethrowFn;
+  if (RethrowName != nullptr && !isCleanup) {
+    llvm_unreachable("NYI");
+  }
+
+  getBuilder().create<mlir::cir::ResumeOp>(catchOp.getLoc(),
+                                           currExceptionInfo.exceptionAddr);
+  getBuilder().restoreInsertionPoint(ip);
+  return resumeBlock;
+}
+
 mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
   const llvm::Triple &T = getTarget().getTriple();
   // If we encounter a try statement on in an OpenMP target region offloaded to
@@ -288,7 +318,9 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
             [&](mlir::OpBuilder &b, mlir::Location loc,
                 mlir::OperationState &result) {
               mlir::OpBuilder::InsertionGuard guard(b);
-              for (int i = 0, e = numHandlers; i != e; ++i) {
+              // Once for each handler and one for fallback (which could be a
+              // resume or rethrow).
+              for (int i = 0, e = numHandlers + 1; i != e; ++i) {
                 auto *r = result.addRegion();
                 builder.createBlock(r);
               }
@@ -346,11 +378,25 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
     // Check for address space mismatch: if (typeValue->getType() != argTy)
     assert(!UnimplementedFeature::addressSpace());
 
+    bool nextIsEnd = false;
     // If this is the last handler, we're at the end, and the next
     // block is the block for the enclosing EH scope. Make sure to call
     // getEHDispatchBlock for caching it.
-    if (i + 1 == e)
+    if (i + 1 == e) {
       (void)CGF.getEHDispatchBlock(catchScope.getEnclosingEHScope());
+      nextIsEnd = true;
+
+      // If the next handler is a catch-all, we're at the end, and the
+      // next block is that handler.
+    } else if (catchScope.getHandler(i + 1).isCatchAll()) {
+      // Block already created when creating CatchOp, just mark this
+      // is the end.
+      nextIsEnd = true;
+    }
+
+    // If the next handler is a catch-all, we're completely done.
+    if (nextIsEnd)
+      return;
   }
 }
 
@@ -549,7 +595,7 @@ CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si) {
   // The dispatch block for the end of the scope chain is a block that
   // just resumes unwinding.
   if (si == EHStack.stable_end())
-    llvm_unreachable("NYI");
+    return getEHResumeBlock(true);
 
   // Otherwise, we should look at the actual scope.
   EHScope &scope = *EHStack.find(si);
