@@ -288,7 +288,7 @@ def MatchStructuredDimOp : Op<Transform_Dialect, "match.structured.dim", [
   let results = (outs Optional<TransformParamTypeInterface>:$result);
   let assemblyFormat =
       "$operand_handle `[`"
-      "custom<StructuredTransformDims>($raw_dim_list, $is_inverted, $is_all)"
+      "custom<TransformMatchDims>($raw_dim_list, $is_inverted, $is_all)"
       "`]` attr-dict `:` "
       "custom<SemiFunctionType>(type($operand_handle), type($result))";
 
@@ -347,7 +347,7 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
       (outs Optional<AnyTypeOf<[TransformAnyHandle,Transform_AffineMapParamType]>>:$result);
   let assemblyFormat =
       "$operand_handle `[`"
-      "custom<StructuredTransformDims>($raw_position_list, $is_inverted, $is_all)"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
       "`]` attr-dict "
       "`:` custom<SemiFunctionType>(type($operand_handle), type($result))";
 
