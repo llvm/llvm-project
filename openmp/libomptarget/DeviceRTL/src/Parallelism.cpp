@@ -88,6 +88,7 @@ void __kmpc_parallel_spmd(IdentTy *ident, int32_t, int32_t if_expr,
                           void *wrapper_fn, void **args, const int64_t nargs) {
   uint32_t TId = mapping::getThreadIdInBlock();
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  uint32_t PTeamSize = NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
   // Avoid the race between the read of the `icv::Level` above and the write
   // below by synchronizing all threads here.
   synchronize::threadsAligned(atomic::seq_cst);
@@ -95,24 +96,28 @@ void __kmpc_parallel_spmd(IdentTy *ident, int32_t, int32_t if_expr,
     // Note that the order here is important. `icv::Level` has to be updated
     // last or the other updates will cause a thread specific state to be
     // created.
-    state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
+    state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, TId == 0, ident,
                                           /*ForceTeamState=*/true);
-    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
-                                     /*ForceTeamState=*/true);
+    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0,
+                                     ident, /*ForceTeamState=*/true);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
                                /*ForceTeamState=*/true);
 
     // Synchronize all threads after the main thread (TId == 0) set up the
     // team state properly.
-    synchronize::threadsAligned(atomic::relaxed);
+    synchronize::threadsAligned(atomic::acq_rel);
 
-    state::ParallelTeamSize.assert_eq(NumThreads, ident,
+    state::ParallelTeamSize.assert_eq(PTeamSize, ident,
                                       /*ForceTeamState=*/true);
     icv::ActiveLevel.assert_eq(1u, ident, /*ForceTeamState=*/true);
     icv::Level.assert_eq(1u, ident, /*ForceTeamState=*/true);
 
-    if (TId < NumThreads)
+    // Ensure we synchronize before we run user code to avoid invalidating the
+    // assumptions above.
+    synchronize::threadsAligned(atomic::relaxed);
+
+    if (!PTeamSize || TId < PTeamSize)
       invokeMicrotask(TId, 0, fn, args, nargs);
 
     // Synchronize all threads at the end of a parallel region.

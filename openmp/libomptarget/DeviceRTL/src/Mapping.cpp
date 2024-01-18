@@ -49,7 +49,6 @@ const llvm::omp::GV &getGridValue() {
 }
 
 uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
-  // PRINT(">> getNumberOfThreadsInBlock\n");
   switch (Dim) {
   case 0:
     return __builtin_amdgcn_workgroup_size_x();
@@ -83,10 +82,6 @@ uint32_t getThreadIdInWarp() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
-uint32_t getKernelSize() { return __builtin_amdgcn_grid_size_x(); }
-
-uint32_t getBlockId() { return __builtin_amdgcn_workgroup_id_x(); }
-
 uint32_t getThreadIdInBlock(int32_t Dim) {
   switch (Dim) {
   case 0:
@@ -117,7 +112,6 @@ uint32_t getBlockIdInKernel(int32_t Dim) {
 }
 
 uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
-  // DP(">> getNumberOfBlocksInKernel\n");
   switch (Dim) {
   case 0:
     return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
