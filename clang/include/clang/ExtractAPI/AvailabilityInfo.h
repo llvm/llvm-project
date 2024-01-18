@@ -19,7 +19,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
 
 namespace clang {
 namespace extractapi {
