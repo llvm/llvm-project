@@ -1439,7 +1439,7 @@ getDeviceInput(const ArgList &Args) {
           if (Index == CompatibleTargets.size() - 1)
             InputFiles[ID].emplace_back(std::move(Binary));
           else
-            InputFiles[ID].emplace_back(std::move(Binary.copy()));
+            InputFiles[ID].emplace_back(Binary.copy());
         }
 
         // If we extracted any files we need to check all the symbols again.
