@@ -22,7 +22,7 @@ class RewriterBase;
 /// `replaceWithAdditionalYields`. `newBbArgs` are the newly added region
 /// iter_args. This function should return as many values as there are block
 /// arguments in `newBbArgs`.
-using NewYieldValuesFn = std::function<SmallVector<Value>(
+using NewYieldValuesFn = llvm::function_ref<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs)>;
 
 /// A function that allows returning additional yielded values during
@@ -41,7 +41,7 @@ using NewYieldValuesFn = std::function<SmallVector<Value>(
 /// - `resultStrides` is of the same size as `tiledValues` and represents
 ///   the strides to use when inserting corresponding element from `tiledValues`
 ///   into the element from `newBbArgs`.
-using YieldTiledValuesFn = std::function<LogicalResult(
+using YieldTiledValuesFn = llvm::function_ref<LogicalResult(
     RewriterBase &rewriter, Location loc, ValueRange ivs, ValueRange newBbArgs,
     SmallVector<Value> &tiledValues,
     SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
