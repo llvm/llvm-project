@@ -292,8 +292,11 @@ def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
 
+def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
+// PSEUDO includes a workaround for a hardware anomaly where some ASICs
+// zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
