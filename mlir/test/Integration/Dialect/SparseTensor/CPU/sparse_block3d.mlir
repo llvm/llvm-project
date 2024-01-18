@@ -51,13 +51,13 @@
 module {
 
   //
-  // Main driver that reads matrix from file and calls the sparse kernel.
+  // Main driver that tests sparse tensor storage.
   //
   func.func @main() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant 0 : i32
 
-    // Setup input sparse matrix from compressed constant.
+    // Setup input dense tensor and convert to two sparse tensors.
     %d = arith.constant dense <[
        [ // i=0
          [ 1, 0, 0, 0 ],
