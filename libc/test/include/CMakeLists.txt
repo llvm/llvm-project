@@ -1,13 +1,13 @@
 add_custom_target(libc_include_tests)
 
-add_libc_test(
+add_libc_unittest(
   sys_queue_test
   SUITE
     libc_include_tests
   SRCS
     sys/queue_test.cpp
   DEPENDS
-    libc.include.sys.sys_queue_macros
+    libc.include.llvm-libc-macros.sys_queue_macros
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
   COMPILE_OPTIONS

@@ -352,6 +352,7 @@ add_header(
   DEPENDS
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.containerof_macro
+    .llvm-libc-macros.sys_queue_macros
 )
 
 add_gen_header(
