@@ -2439,7 +2439,7 @@ class AMDGPUGlobalLoadLDS : Intrinsic <
   [],
   [LLVMQualPointerType<1>,             // Base global pointer to load from
    LLVMQualPointerType<3>,             // LDS base pointer to store to
-   llvm_i32_ty,                        // Data byte size: 1/2/4
+   llvm_i32_ty,                        // Data byte size: 1/2/4 (/12/16 for gfx950)
    llvm_i32_ty,                        // imm offset (applied to both global and LDS address)
    llvm_i32_ty],                       // auxiliary data (imm, cachepolicy (bit 0 = glc/sc0,
                                        //                                   bit 1 = slc/sc1,
