@@ -1,4 +1,5 @@
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate -Xclang "-fprofile-instrument=clang"
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
+// RUN:     -Xclang "-fprofile-instrument=clang"
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
@@ -30,9 +31,18 @@ int main() {
 // CHECK-NEXT: [ 10 ]
 // CHECK-NEXT: [ 20 ]
 // CHECK-NEXT: ========== Data ===========
-// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}} {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CHECK-NEXT: { {{[0-9]*}} {{[0-9]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
+// CHECK-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
 // CHECK-NEXT: ======== Functions ========
 // CHECK-NEXT: pgo1.c:__omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
 // CHECK-NEXT: test1
