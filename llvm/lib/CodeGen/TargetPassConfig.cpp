@@ -609,40 +609,6 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
   registerPartialPipelineCallback(PIC, LLVMTM);
 }
 
-Expected<TargetPassConfig::StartStopInfo>
-TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
-  auto [StartBefore, StartBeforeInstanceNum] =
-      getPassNameAndInstanceNum(StartBeforeOpt);
-  auto [StartAfter, StartAfterInstanceNum] =
-      getPassNameAndInstanceNum(StartAfterOpt);
-  auto [StopBefore, StopBeforeInstanceNum] =
-      getPassNameAndInstanceNum(StopBeforeOpt);
-  auto [StopAfter, StopAfterInstanceNum] =
-      getPassNameAndInstanceNum(StopAfterOpt);
-
-  if (!StartBefore.empty() && !StartAfter.empty())
-    return make_error<StringError>(
-        Twine(StartBeforeOptName) + " and " + StartAfterOptName + " specified!",
-        std::make_error_code(std::errc::invalid_argument));
-  if (!StopBefore.empty() && !StopAfter.empty())
-    return make_error<StringError>(
-        Twine(StopBeforeOptName) + " and " + StopAfterOptName + " specified!",
-        std::make_error_code(std::errc::invalid_argument));
-
-  StartStopInfo Result;
-  Result.StartPass = StartBefore.empty() ? StartAfter : StartBefore;
-  Result.StopPass = StopBefore.empty() ? StopAfter : StopBefore;
-  Result.StartInstanceNum =
-      StartBefore.empty() ? StartAfterInstanceNum : StartBeforeInstanceNum;
-  Result.StopInstanceNum =
-      StopBefore.empty() ? StopAfterInstanceNum : StopBeforeInstanceNum;
-  Result.StartAfter = !StartAfter.empty();
-  Result.StopAfter = !StopAfter.empty();
-  Result.StartInstanceNum += Result.StartInstanceNum == 0;
-  Result.StopInstanceNum += Result.StopInstanceNum == 0;
-  return Result;
-}
-
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
 TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)

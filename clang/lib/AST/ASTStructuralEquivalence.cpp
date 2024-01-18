@@ -1467,7 +1467,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       Method1->isConst() == Method2->isConst() &&
       Method1->isVolatile() == Method2->isVolatile() &&
       Method1->isVirtual() == Method2->isVirtual() &&
-      Method1->isPure() == Method2->isPure() &&
+      Method1->isPureVirtual() == Method2->isPureVirtual() &&
       Method1->isDefaulted() == Method2->isDefaulted() &&
       Method1->isDeleted() == Method2->isDeleted();
   if (!PropertiesEqual)
