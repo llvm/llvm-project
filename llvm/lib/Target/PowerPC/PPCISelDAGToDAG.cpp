@@ -7656,9 +7656,7 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
 
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
-  const PPCSubtarget &Subtarget =
-      CurDAG->getMachineFunction().getSubtarget<PPCSubtarget>();
-  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
+  bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
