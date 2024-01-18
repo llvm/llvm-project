@@ -732,8 +732,8 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   if (!Options.WholeObjectSize && AllocaTy) {
     // At this point, SOT.Size is the size of the whole struct. However, we
     // want the size of the sub-object.
-    const StructLayout &SL = *DL.getStructLayout(
-        const_cast<StructType *>(AllocaTy));
+    const StructLayout &SL =
+        *DL.getStructLayout(const_cast<StructType *>(AllocaTy));
 
     unsigned Idx = SL.getElementContainingOffset(Offset.getLimitedValue());
 
