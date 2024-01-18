@@ -316,9 +316,10 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
       reportUnsupportedWarning(EmitDiagnostic,
                                "variable is aligned wider than a pointer");
     } else if (D->hasAttr<SectionAttr>()) {
-      reportUnsupportedWarning(EmitDiagnostic, "of a section attribute");
-    } else if ((GV->hasExternalLinkage() || M.getCodeGenOpts().AllTocData) &&
-               !GV->hasLocalLinkage()) {
+      reportUnsupportedWarning(EmitDiagnostic,
+                               "variable has a section attribute");
+    } else if (GV->hasExternalLinkage() ||
+               (M.getCodeGenOpts().AllTocData && !GV->hasLocalLinkage())) {
       GVar->addAttribute("toc-data");
     }
   }

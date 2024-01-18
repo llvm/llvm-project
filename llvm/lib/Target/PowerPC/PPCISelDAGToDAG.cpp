@@ -522,8 +522,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize,
 
   if (!GV->hasAttribute("toc-data"))
     return false;
-
-  return Subtarget->tocDataChecks(PointerSize, GV);
+  return true;
 }
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant

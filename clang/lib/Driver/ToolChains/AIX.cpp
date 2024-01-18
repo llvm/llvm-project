@@ -443,12 +443,11 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
   // To enable toc-data globally, -mtocdata must be specified.
   // Additionally, it must be last to take effect.
   const bool TOCDataGloballyinEffect = [&Args]() {
-    if (!Args.hasArg(options::OPT_mtocdata))
+    if (const Arg *LastArg =
+            Args.getLastArg(options::OPT_mtocdata, options::OPT_mno_tocdata))
+      return LastArg->getOption().matches(options::OPT_mtocdata);
+    else
       return false;
-
-    const Arg *LastArg =
-        Args.getLastArg(options::OPT_mtocdata, options::OPT_mno_tocdata);
-    return LastArg->getOption().matches(options::OPT_mtocdata);
   }();
 
   // Currently only supported for small code model.

@@ -1,4 +1,3 @@
-// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -S -mtocdata=h,g,f,e,d,c,b,a,globalOneWithAlias,globalTwoWithAlias,ll,t3 -verify -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
 // RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -S -mtocdata -verify=none -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
 
@@ -15,7 +14,7 @@ struct large_struct a;                      // expected-warning {{-mtocdata opti
 long long b = 5;                            // expected-warning {{-mtocdata option is ignored for b because variable is larger than a pointer}}
 int __attribute__((aligned(128))) c = 0;    // expected-warning {{-mtocdata option is ignored for c because variable is aligned wider than a pointer}}
 double d = 2.5;                             // expected-warning {{-mtocdata option is ignored for d because variable is larger than a pointer}}
-int e __attribute__((section("foo"))) = 10; // expected-warning {{-mtocdata option is ignored for e because of a section attribute}}
+int e __attribute__((section("foo"))) = 10; // expected-warning {{-mtocdata option is ignored for e because variable has a section attribute}}
 __thread int f;                             // expected-warning {{-mtocdata option is ignored for f because of thread local storage}}
 
 struct SomeStruct;
