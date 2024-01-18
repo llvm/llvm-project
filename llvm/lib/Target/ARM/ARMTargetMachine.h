@@ -91,6 +91,12 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 
 /// ARM/Thumb little endian target machine.

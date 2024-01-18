@@ -17,6 +17,7 @@ add_public_tablegen_target(SystemZCommonTableGen)
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
   SystemZCallingConv.cpp
+  SystemZCodeGenPassBuilder.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
   SystemZElimCompare.cpp
@@ -45,6 +46,7 @@ add_llvm_target(SystemZCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
   Scalar
   SelectionDAG
@@ -53,6 +55,7 @@ add_llvm_target(SystemZCodeGen
   SystemZInfo
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   SystemZ

@@ -23,6 +23,7 @@ add_llvm_target(M68kCodeGen
   GISel/M68kLegalizerInfo.cpp
   GISel/M68kRegisterBankInfo.cpp
   M68kAsmPrinter.cpp
+  M68kCodeGenPassBuilder.cpp
   M68kCollapseMOVEMPass.cpp
   M68kExpandPseudo.cpp
   M68kFrameLowering.cpp
@@ -43,12 +44,15 @@ add_llvm_target(M68kCodeGen
   CodeGenTypes
   Core
   GlobalISel
+  IRPrinter
   M68kDesc
   M68kInfo
   MC
+  Scalar
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   M68k

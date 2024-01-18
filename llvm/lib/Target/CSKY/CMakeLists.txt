@@ -18,6 +18,7 @@ add_public_tablegen_target(CSKYCommonTableGen)
 
 add_llvm_target(CSKYCodeGen
   CSKYAsmPrinter.cpp
+  CSKYCodeGenPassBuilder.cpp
   CSKYConstantIslandPass.cpp
   CSKYConstantPoolValue.cpp
   CSKYFrameLowering.cpp
@@ -38,10 +39,13 @@ add_llvm_target(CSKYCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   CSKY

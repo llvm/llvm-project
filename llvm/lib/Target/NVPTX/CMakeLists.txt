@@ -16,6 +16,7 @@ set(NVPTXCodeGen_sources
   NVPTXAtomicLower.cpp
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
+  NVPTXCodeGenPassBuilder.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp
   NVPTXISelDAGToDAG.cpp
@@ -51,6 +52,7 @@ add_llvm_target(NVPTXCodeGen
   CodeGenTypes
   Core
   IPO
+  IRPrinter
   MC
   NVPTXDesc
   NVPTXInfo

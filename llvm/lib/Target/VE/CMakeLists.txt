@@ -16,6 +16,7 @@ add_public_tablegen_target(VECommonTableGen)
 add_llvm_target(VECodeGen
   LVLGen.cpp
   VEAsmPrinter.cpp
+  VECodeGenPassBuilder.cpp
   VECustomDAG.cpp
   VEFrameLowering.cpp
   VEISelDAGToDAG.cpp
@@ -34,10 +35,13 @@ add_llvm_target(VECodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target
+  TransformUtils
   VEDesc
   VEInfo
 

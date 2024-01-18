@@ -28,6 +28,7 @@ add_public_tablegen_target(RISCVCommonTableGen)
 
 add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
+  RISCVCodeGenPassBuilder.cpp
   RISCVCodeGenPrepare.cpp
   RISCVDeadRegisterDefinitions.cpp
   RISCVMakeCompressible.cpp
@@ -72,6 +73,7 @@ add_llvm_target(RISCVCodeGen
   Core
   GlobalISel
   IPO
+  IRPrinter
   MC
   RISCVDesc
   RISCVInfo

@@ -49,6 +49,12 @@ public:
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 
 } // end namespace llvm

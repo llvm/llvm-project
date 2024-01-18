@@ -57,6 +57,12 @@ public:
     return getPointerSize(SrcAs) == getPointerSize(DestAs);
   }
 
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
+
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   AVRSubtarget SubTarget;

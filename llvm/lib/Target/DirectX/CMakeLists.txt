@@ -14,6 +14,7 @@ add_public_tablegen_target(DirectXCommonTableGen)
 add_llvm_target(DirectXCodeGen
   CBufferDataLayout.cpp
   DirectXAsmPrinter.cpp
+  DirectXCodeGenPassBuilder.cpp
   DirectXInstrInfo.cpp
   DirectXRegisterInfo.cpp
   DirectXSubtarget.cpp
@@ -40,7 +41,9 @@ add_llvm_target(DirectXCodeGen
   DirectXInfo
   DirectXPointerTypeAnalysis
   FrontendHLSL
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target

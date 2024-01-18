@@ -56,6 +56,12 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 
 } // end namespace llvm

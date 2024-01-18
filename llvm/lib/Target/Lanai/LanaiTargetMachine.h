@@ -55,6 +55,12 @@ public:
   bool isMachineVerifierClean() const override {
     return false;
   }
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 } // namespace llvm
 

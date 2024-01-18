@@ -44,6 +44,12 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB,
                                     bool PopulateClassToPassNames) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 }
 

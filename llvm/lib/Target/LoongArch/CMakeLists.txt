@@ -16,6 +16,7 @@ add_public_tablegen_target(LoongArchCommonTableGen)
 
 add_llvm_target(LoongArchCodeGen
   LoongArchAsmPrinter.cpp
+  LoongArchCodeGenPassBuilder.cpp
   LoongArchExpandAtomicPseudoInsts.cpp
   LoongArchExpandPseudoInsts.cpp
   LoongArchFrameLowering.cpp
@@ -34,6 +35,7 @@ add_llvm_target(LoongArchCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   LoongArchDesc
   LoongArchInfo
   MC
@@ -42,6 +44,7 @@ add_llvm_target(LoongArchCodeGen
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   LoongArch

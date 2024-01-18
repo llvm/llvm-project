@@ -24,6 +24,7 @@ add_llvm_target(BPFCodeGen
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
+  BPFCodeGenPassBuilder.cpp
   BPFCheckAndAdjustIR.cpp
   BPFFrameLowering.cpp
   BPFInstrInfo.cpp
@@ -52,6 +53,7 @@ add_llvm_target(BPFCodeGen
   Core
   GlobalISel
   IPO
+  IRPrinter
   MC
   Scalar
   SelectionDAG

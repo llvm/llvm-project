@@ -25,6 +25,7 @@ add_llvm_target(PowerPCCodeGen
   PPCBranchSelector.cpp
   PPCBranchCoalescing.cpp
   PPCCallingConv.cpp
+  PPCCodeGenPassBuilder.cpp
   PPCCCState.cpp
   PPCCTRLoops.cpp
   PPCCTRLoopsVerify.cpp
@@ -70,6 +71,7 @@ add_llvm_target(PowerPCCodeGen
   CodeGenTypes
   Core
   GlobalISel
+  IRPrinter
   MC
   PowerPCDesc
   PowerPCInfo

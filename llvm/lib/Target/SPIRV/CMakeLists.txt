@@ -17,6 +17,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVCodeGenPassBuilder.cpp
   SPIRVDuplicatesTracker.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
@@ -44,9 +45,11 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
+  IRPrinter
   MC
   SPIRVDesc
   SPIRVInfo
+  Scalar
   SelectionDAG
   Support
   Target

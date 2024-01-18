@@ -24,6 +24,7 @@ add_llvm_target(HexagonCodeGen
   HexagonBranchRelaxation.cpp
   HexagonCFGOptimizer.cpp
   HexagonCommonGEP.cpp
+  HexagonCodeGenPassBuilder.cpp
   HexagonConstExtenders.cpp
   HexagonConstPropagation.cpp
   HexagonCopyToCombine.cpp
@@ -78,6 +79,7 @@ add_llvm_target(HexagonCodeGen
   HexagonDesc
   HexagonInfo
   IPO
+  IRPrinter
   MC
   Scalar
   SelectionDAG

@@ -115,6 +115,15 @@ public:
     return &ST;
   }
 
+  Error buildCodeGenPipeline(ModulePassManager &MPM,
+                             MachineFunctionPassManager &MFPM,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType, CGPassBuilderOption Opt,
+                             PassInstrumentationCallbacks *PIC) override {
+    return Error::success();
+  }
+
 private:
   BogusSubtarget ST;
 };

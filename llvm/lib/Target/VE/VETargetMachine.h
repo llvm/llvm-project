@@ -58,6 +58,12 @@ public:
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   unsigned getSjLjDataSize() const override { return 64; }
+
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
 };
 
 } // namespace llvm

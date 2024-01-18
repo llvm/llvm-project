@@ -16,6 +16,7 @@ add_public_tablegen_target(AVRCommonTableGen)
 
 add_llvm_target(AVRCodeGen
   AVRAsmPrinter.cpp
+  AVRCodeGenPassBuilder.cpp
   AVRExpandPseudoInsts.cpp
   AVRFrameLowering.cpp
   AVRInstrInfo.cpp
@@ -34,14 +35,18 @@ add_llvm_target(AVRCodeGen
   LINK_COMPONENTS
   AVRDesc
   AVRInfo
+  Analysis
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   AVR

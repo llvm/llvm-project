@@ -15,6 +15,7 @@ add_public_tablegen_target(ARCCommonTableGen)
 add_llvm_target(ARCCodeGen
   ARCAsmPrinter.cpp
   ARCBranchFinalize.cpp
+  ARCCodeGenPassBuilder.cpp
   ARCExpandPseudos.cpp
   ARCFrameLowering.cpp
   ARCInstrInfo.cpp
@@ -35,7 +36,9 @@ add_llvm_target(ARCCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target

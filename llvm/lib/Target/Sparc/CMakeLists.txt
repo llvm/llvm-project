@@ -19,6 +19,7 @@ add_llvm_target(SparcCodeGen
   DelaySlotFiller.cpp
   LeonPasses.cpp
   SparcAsmPrinter.cpp
+  SparcCodeGenPassBuilder.cpp
   SparcInstrInfo.cpp
   SparcISelDAGToDAG.cpp
   SparcISelLowering.cpp
@@ -31,17 +32,21 @@ add_llvm_target(SparcCodeGen
   SparcTargetObjectFile.cpp
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   SparcDesc
   SparcInfo
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   Sparc

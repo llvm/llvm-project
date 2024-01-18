@@ -13,15 +13,20 @@ tablegen(LLVM XtensaGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(XtensaCommonTableGen)
 
 add_llvm_target(XtensaCodeGen
+  XtensaCodeGenPassBuilder.cpp
   XtensaTargetMachine.cpp
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   CodeGen
   Core
+  IRPrinter
   MC
+  Scalar
   Support
   Target
+  TransformUtils
   XtensaDesc
   XtensaInfo
 

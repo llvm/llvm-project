@@ -28,6 +28,7 @@ add_llvm_target(ARMCodeGen
   ARMBranchTargets.cpp
   ARMCallingConv.cpp
   ARMCallLowering.cpp
+  ARMCodeGenPassBuilder.cpp
   ARMConstantIslandPass.cpp
   ARMConstantPoolValue.cpp
   ARMExpandPseudoInsts.cpp
@@ -81,6 +82,7 @@ add_llvm_target(ARMCodeGen
   Core
   GlobalISel
   IPO
+  IRPrinter
   MC
   Scalar
   SelectionDAG

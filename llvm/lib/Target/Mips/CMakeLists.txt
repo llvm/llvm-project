@@ -33,6 +33,7 @@ add_llvm_target(MipsCodeGen
   MipsAsmPrinter.cpp
   MipsCallLowering.cpp
   MipsCCState.cpp
+  MipsCodeGenPassBuilder.cpp
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
   MipsExpandPseudo.cpp
@@ -72,13 +73,16 @@ add_llvm_target(MipsCodeGen
   CodeGenTypes
   Core
   GlobalISel
+  IRPrinter
   MC
   MipsDesc
   MipsInfo
+  Scalar
   SelectionDAG
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   Mips

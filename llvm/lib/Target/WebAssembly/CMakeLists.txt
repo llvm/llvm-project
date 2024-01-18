@@ -20,6 +20,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
   WebAssemblyCFGSort.cpp
+  WebAssemblyCodeGenPassBuilder.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
   WebAssemblyLateEHPrepare.cpp
@@ -69,6 +70,7 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
   Scalar
   SelectionDAG

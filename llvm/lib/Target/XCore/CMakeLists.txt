@@ -14,6 +14,7 @@ add_public_tablegen_target(XCoreCommonTableGen)
 
 add_llvm_target(XCoreCodeGen
   XCoreAsmPrinter.cpp
+  XCoreCodeGenPassBuilder.cpp
   XCoreFrameLowering.cpp
   XCoreInstrInfo.cpp
   XCoreISelDAGToDAG.cpp
@@ -34,7 +35,9 @@ add_llvm_target(XCoreCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
   MC
+  Scalar
   SelectionDAG
   Support
   Target
