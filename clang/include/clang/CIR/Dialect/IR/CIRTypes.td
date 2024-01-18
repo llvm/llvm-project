@@ -283,7 +283,7 @@ def ExceptionInfoPtr : Type<
     ]>, "void*">,
     BuildableType<
       "mlir::cir::PointerType::get($_builder.getContext(),"
-      "mlir::cir::ExceptionInfo::get($_builder.getContext()))"> {
+      "mlir::cir::ExceptionInfoType::get($_builder.getContext()))"> {
 }
 
 //===----------------------------------------------------------------------===//
