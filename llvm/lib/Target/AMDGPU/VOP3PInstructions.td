@@ -972,6 +972,10 @@ let WaveSizePredicate = isWave64 in {
 
 }
 
+class isBF16<ValueType SrcVT> {
+  bit ret = !or(!eq(SrcVT, v4bf16), !eq(SrcVT, v8bf16), !eq(SrcVT, v16bf16));
+}
+
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8>
     : VOP3P_Profile<VOPProfile<ArgTy>> {
@@ -986,9 +990,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   let IsSWMMAC = _IsSWMMAC;
 
   bit IsAB_F16 = !and(IsF16BF16, ArgTy[1].isFP);
-  bit IsAB_BF16 = !and(IsF16BF16, isIntType<ArgTy[1]>.ret);
+  bit IsAB_BF16 = !and(IsF16BF16, isBF16<ArgTy[1]>.ret);
   bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32));
-  bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16));
+  bit IsC_BF16 = !or(!eq(ArgTy[3], v8bf16), !eq(ArgTy[3], v4bf16));
   bit IsC_F16 = !or(!eq(ArgTy[3], v8f16), !eq(ArgTy[3], v4f16));
 
   bit NegLo01 = !or(IsF16BF16, IsIU);
@@ -1001,24 +1005,24 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   let DstRC = !cond(!eq(ArgTy[0], v8f32): VDst_256,
                     !eq(ArgTy[0], v8i32): VDst_256,
                     !eq(ArgTy[0], v8f16): VDst_128,
-                    !eq(ArgTy[0], v8i16): VDst_128,
+                    !eq(ArgTy[0], v8bf16): VDst_128,
                     !eq(ArgTy[0], v4f32): VDst_128,
                     !eq(ArgTy[0], v4i32): VDst_128,
                     !eq(ArgTy[0], v4f16): VDst_64,
-                    !eq(ArgTy[0], v4i16): VDst_64);
+                    !eq(ArgTy[0], v4bf16): VDst_64);
   let Src0RC64 = !cond(!eq(ArgTy[1], v8f16): VRegSrc_128,
                        !eq(ArgTy[1], v4f16): VRegSrc_64,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
-                       !eq(ArgTy[1], v8i16): VRegSrc_128,
+                       !eq(ArgTy[1], v4bf16): VRegSrc_64,
+                       !eq(ArgTy[1], v8bf16): VRegSrc_128,
                        !eq(ArgTy[1], v4i32): VRegSrc_128,
                        !eq(ArgTy[1], v2i32): VRegSrc_64,
                        !eq(ArgTy[1], i32)  : VRegSrc_32);
   let Src1RC64 = !cond(!eq(ArgTy[2], v16f16): VRegSrc_256,
-                       !eq(ArgTy[2], v16i16): VRegSrc_256,
+                       !eq(ArgTy[2], v16bf16): VRegSrc_256,
                        !eq(ArgTy[2], v8f16): VRegSrc_128,
-                       !eq(ArgTy[2], v8i16): VRegSrc_128,
+                       !eq(ArgTy[2], v8bf16): VRegSrc_128,
                        !eq(ArgTy[2], v4i32): VRegSrc_128,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
+                       !eq(ArgTy[1], v4bf16): VRegSrc_64,
                        !eq(ArgTy[1], v4f16): VRegSrc_64,
                        !eq(ArgTy[2], v2i32): VRegSrc_64,
                        !eq(ArgTy[2], i32)  : VRegSrc_32);
@@ -1026,9 +1030,9 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                !cond(!eq(ArgTy[3], v8f32): VISrc_256_f32,
                                      !eq(ArgTy[3], v8i32): VISrc_256_b32,
                                      !eq(ArgTy[3], v8f16): VISrc_128_f16,
-                                     !eq(ArgTy[3], v8i16): VISrc_128_f32, // bf16
+                                     !eq(ArgTy[3], v8bf16): VISrc_128_f32,
                                      !eq(ArgTy[3], v4f16): VISrc_64_f16,
-                                     !eq(ArgTy[3], v4i16): VISrc_64_b32,
+                                     !eq(ArgTy[3], v4bf16): VISrc_64_b32,
                                      !eq(ArgTy[3], v4i32): VISrc_128_b32,
                                      !eq(ArgTy[3], v4f32): VISrc_128_f32));
 
@@ -1197,41 +1201,41 @@ multiclass SWMMACInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string P
 // Non-standard types (iu8, iu4, fp8, bf8) will be packed in vectors of i32s.
 // Original type for them is in comment on the right and refers to A and B.
 
-def F32_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v8f16, v8f32], 0, 0, 0, 0>;
-def F32_BF16_WMMA_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v8i16, v8f32], 0, 0, 0, 0>;
-def F16_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v8f16, v8f16], 0, 0, 0, 0>;
-def BF16_BF16_WMMA_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v8i16, v8i16], 0, 0, 0, 0>;
-def I32_IU8_WMMA_w32    : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], 0, 0, 1, 0>; // 8xi8
-def I32_IU4X16_WMMA_w32 : VOP3PWMMA_Profile<[v8i32,   i32,   i32, v8i32], 0, 0, 1, 0>; // 8xi4
-def F32_FP8BF8_WMMA_w32 : VOP3PWMMA_Profile<[v8f32, v2i32, v2i32, v8f32], 0, 0, 0, 1>; // 8xf8
-def I32_IU4X32_WMMA_w32 : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], 0, 0, 1, 0>; // 16xi4
+def F32_F16_WMMA_w32    : VOP3PWMMA_Profile<[ v8f32,  v8f16,  v8f16,  v8f32], 0, 0, 0, 0>;
+def F32_BF16_WMMA_w32   : VOP3PWMMA_Profile<[ v8f32, v8bf16, v8bf16,  v8f32], 0, 0, 0, 0>;
+def F16_F16_WMMA_w32    : VOP3PWMMA_Profile<[ v8f16,  v8f16,  v8f16,  v8f16], 0, 0, 0, 0>;
+def BF16_BF16_WMMA_w32  : VOP3PWMMA_Profile<[v8bf16, v8bf16, v8bf16, v8bf16], 0, 0, 0, 0>;
+def I32_IU8_WMMA_w32    : VOP3PWMMA_Profile<[ v8i32,  v2i32,  v2i32,  v8i32], 0, 0, 1, 0>; // 8xi8
+def I32_IU4X16_WMMA_w32 : VOP3PWMMA_Profile<[ v8i32,    i32,    i32,  v8i32], 0, 0, 1, 0>; // 8xi4
+def F32_FP8BF8_WMMA_w32 : VOP3PWMMA_Profile<[ v8f32,  v2i32,  v2i32,  v8f32], 0, 0, 0, 1>; // 8xf8
+def I32_IU4X32_WMMA_w32 : VOP3PWMMA_Profile<[ v8i32,  v2i32,  v2i32,  v8i32], 0, 0, 1, 0>; // 16xi4
 
-def F32_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v4f16, v4f32], 0, 0, 0, 0>;
-def F32_BF16_WMMA_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v4i16, v4f32], 0, 0, 0, 0>;
-def F16_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v4f16, v4f16], 0, 0, 0, 0>;
-def BF16_BF16_WMMA_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v4i16, v4i16], 0, 0, 0, 0>;
-def I32_IU8_WMMA_w64    : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 4xi8
-def I32_IU4X16_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 8xi4 *
-def F32_FP8BF8_WMMA_w64 : VOP3PWMMA_Profile<[v4f32,   i32,   i32, v4f32], 0, 0, 0, 1>; // 4xf8
-def I32_IU4X32_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 8xi4
+def F32_F16_WMMA_w64    : VOP3PWMMA_Profile<[ v4f32,  v4f16,  v4f16,  v4f32], 0, 0, 0, 0>;
+def F32_BF16_WMMA_w64   : VOP3PWMMA_Profile<[ v4f32, v4bf16, v4bf16,  v4f32], 0, 0, 0, 0>;
+def F16_F16_WMMA_w64    : VOP3PWMMA_Profile<[ v4f16,  v4f16,  v4f16,  v4f16], 0, 0, 0, 0>;
+def BF16_BF16_WMMA_w64  : VOP3PWMMA_Profile<[v4bf16, v4bf16, v4bf16, v4bf16], 0, 0, 0, 0>;
+def I32_IU8_WMMA_w64    : VOP3PWMMA_Profile<[ v4i32,    i32,    i32,  v4i32], 0, 0, 1, 0>; // 4xi8
+def I32_IU4X16_WMMA_w64 : VOP3PWMMA_Profile<[ v4i32,    i32,    i32,  v4i32], 0, 0, 1, 0>; // 8xi4 *
+def F32_FP8BF8_WMMA_w64 : VOP3PWMMA_Profile<[ v4f32,    i32,    i32,  v4f32], 0, 0, 0, 1>; // 4xf8
+def I32_IU4X32_WMMA_w64 : VOP3PWMMA_Profile<[ v4i32,    i32,    i32,  v4i32], 0, 0, 1, 0>; // 8xi4
 
-def F32_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v16f16, v8f32], 1, 16, 0, 0>;
-def F32_BF16_SWMMAC_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v16i16, v8f32], 1, 16, 0, 0>;
-def F16_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v16f16, v8f16], 1, 16, 0, 0>;
-def BF16_BF16_SWMMAC_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v16i16, v8i16], 1, 16, 0, 0>;
-def I32_IU8_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], 1, 16, 1, 0>; // 8xi8, 16xi8
-def I32_IU4X32_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32,   i32,  v2i32, v8i32], 1, 16, 1, 0>; // 8xi4, 16xi4
-def I32_IU4X64_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], 1,  0, 1, 0>; // 16xi4, 32xi4 **
-def F32_FP8BF8_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v2i32,  v4i32, v8f32], 1, 16, 0, 1>; // 8xf8, 16xf8
+def F32_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[ v8f32,  v8f16,  v16f16,  v8f32], 1, 16, 0, 0>;
+def F32_BF16_SWMMAC_w32   : VOP3PWMMA_Profile<[ v8f32, v8bf16, v16bf16,  v8f32], 1, 16, 0, 0>;
+def F16_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[ v8f16,  v8f16,  v16f16,  v8f16], 1, 16, 0, 0>;
+def BF16_BF16_SWMMAC_w32  : VOP3PWMMA_Profile<[v8bf16, v8bf16, v16bf16, v8bf16], 1, 16, 0, 0>;
+def I32_IU8_SWMMAC_w32    : VOP3PWMMA_Profile<[ v8i32,  v2i32,   v4i32,  v8i32], 1, 16, 1, 0>; // 8xi8, 16xi8
+def I32_IU4X32_SWMMAC_w32 : VOP3PWMMA_Profile<[ v8i32,    i32,   v2i32,  v8i32], 1, 16, 1, 0>; // 8xi4, 16xi4
+def I32_IU4X64_SWMMAC_w32 : VOP3PWMMA_Profile<[ v8i32,  v2i32,   v4i32,  v8i32], 1,  0, 1, 0>; // 16xi4, 32xi4 **
+def F32_FP8BF8_SWMMAC_w32 : VOP3PWMMA_Profile<[ v8f32,  v2i32,   v4i32,  v8f32], 1, 16, 0, 1>; // 8xf8, 16xf8
 
-def F32_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v8f16, v4f32], 1,  8, 0, 0>;
-def F32_BF16_SWMMAC_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v8i16, v4f32], 1,  8, 0, 0>;
-def F16_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v8f16, v4f16], 1,  8, 0, 0>;
-def BF16_BF16_SWMMAC_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v8i16, v4i16], 1,  8, 0, 0>;
-def I32_IU8_SWMMAC_w64    : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], 1,  8, 1, 0>; // 4xi8, 8xi8
-def I32_IU4X32_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 1, 16, 1, 0>; // 8xi4, 8xi4 ***
-def I32_IU4X64_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], 1, 16, 1, 0>; // 8xi4, 16xi4
-def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[v4f32,   i32, v2i32, v4f32], 1,  8, 0, 1>; // 4xf8, 8xf8
+def F32_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[ v4f32,  v4f16,  v8f16,  v4f32], 1,  8, 0, 0>;
+def F32_BF16_SWMMAC_w64   : VOP3PWMMA_Profile<[ v4f32, v4bf16, v8bf16,  v4f32], 1,  8, 0, 0>;
+def F16_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[ v4f16,  v4f16,  v8f16,  v4f16], 1,  8, 0, 0>;
+def BF16_BF16_SWMMAC_w64  : VOP3PWMMA_Profile<[v4bf16, v4bf16, v8bf16, v4bf16], 1,  8, 0, 0>;
+def I32_IU8_SWMMAC_w64    : VOP3PWMMA_Profile<[ v4i32,    i32,  v2i32,  v4i32], 1,  8, 1, 0>; // 4xi8, 8xi8
+def I32_IU4X32_SWMMAC_w64 : VOP3PWMMA_Profile<[ v4i32,    i32,    i32,  v4i32], 1, 16, 1, 0>; // 8xi4, 8xi4 ***
+def I32_IU4X64_SWMMAC_w64 : VOP3PWMMA_Profile<[ v4i32,    i32,  v2i32,  v4i32], 1, 16, 1, 0>; // 8xi4, 16xi4
+def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[ v4f32,    i32,  v2i32,  v4f32], 1,  8, 0, 1>; // 4xf8, 8xf8
 
 // *   IU4X16_WMMA_w64 lanes 0-31 will have 8xi4, remaining lanes are ignored
 // **  IU4X64_SWMMAC_w32 index is i32, index_key is not used

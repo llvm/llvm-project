@@ -47,14 +47,38 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, ptr addrspace(1) %IndexVecPtr, ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) {
+define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<4 x bfloat> %A, <8 x bfloat> %B, <4 x float> %C, ptr addrspace(1) %IndexVecPtr, ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) {
 ; GFX12-LABEL: test_swmmac_f32_16x16x32_bf16_index_key:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    global_load_b32 v10, v[10:11], off
+; GFX12-NEXT:    v_lshrrev_b32_e32 v20, 16, v1
+; GFX12-NEXT:    v_lshrrev_b32_e32 v22, 16, v3
+; GFX12-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
+; GFX12-NEXT:    v_lshrrev_b32_e32 v21, 16, v2
+; GFX12-NEXT:    v_lshrrev_b32_e32 v23, 16, v4
+; GFX12-NEXT:    v_lshrrev_b32_e32 v24, 16, v5
+; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX12-NEXT:    v_and_b32_e32 v26, 0xffff, v5
+; GFX12-NEXT:    v_lshlrev_b32_e32 v5, 16, v20
+; GFX12-NEXT:    v_lshlrev_b32_e32 v20, 16, v22
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX12-NEXT:    v_and_b32_e32 v25, 0xffff, v4
+; GFX12-NEXT:    v_lshlrev_b32_e32 v4, 16, v11
+; GFX12-NEXT:    v_lshlrev_b32_e32 v11, 16, v21
+; GFX12-NEXT:    v_lshlrev_b32_e32 v27, 16, v23
+; GFX12-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; GFX12-NEXT:    v_or_b32_e32 v5, v5, v1
+; GFX12-NEXT:    v_or_b32_e32 v1, v20, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v23, v9
+; GFX12-NEXT:    v_or_b32_e32 v4, v4, v0
+; GFX12-NEXT:    v_or_b32_e32 v0, v11, v2
 ; GFX12-NEXT:    v_mov_b32_e32 v22, v8
 ; GFX12-NEXT:    v_mov_b32_e32 v21, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v20, v6
+; GFX12-NEXT:    v_or_b32_e32 v2, v27, v25
+; GFX12-NEXT:    v_or_b32_e32 v3, v24, v26
 ; GFX12-NEXT:    v_mov_b32_e32 v27, v9
 ; GFX12-NEXT:    v_mov_b32_e32 v26, v8
 ; GFX12-NEXT:    v_mov_b32_e32 v25, v7
@@ -64,11 +88,11 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<4 x i16> %A, <8 
 ; GFX12-NEXT:    v_mov_b32_e32 v29, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v28, v6
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[20:23], v[0:1], v[2:5], v10
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[24:27], v[0:1], v[2:5], v10 index_key:1
+; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[20:23], v[4:5], v[0:3], v10
+; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[24:27], v[4:5], v[0:3], v10 index_key:1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[28:31], v[0:1], v[2:5], v10 index_key:2
-; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[6:9], v[0:1], v[2:5], v10 index_key:3
+; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[28:31], v[4:5], v[0:3], v10 index_key:2
+; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[6:9], v[4:5], v[0:3], v10 index_key:3
 ; GFX12-NEXT:    global_store_b128 v[12:13], v[20:23], off
 ; GFX12-NEXT:    global_store_b128 v[14:15], v[24:27], off
 ; GFX12-NEXT:    global_store_b128 v[16:17], v[28:31], off
@@ -79,16 +103,16 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<4 x i16> %A, <8 
 bb:
   %IndexVec = load <4 x i8>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <4 x i8> %IndexVec, i32 0
-  %res0 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, i8 %Index0)
+  %res0 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4bf16.v8bf16.v4f32.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x float> %C, i8 %Index0)
   store <4 x float> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <4 x i8> %IndexVec, i32 1
-  %res1 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, i8 %Index1)
+  %res1 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4bf16.v8bf16.v4f32.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x float> %C, i8 %Index1)
   store <4 x float> %res1, ptr addrspace(1) %out1
   %Index2 = extractelement <4 x i8> %IndexVec, i32 2
-  %res2 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, i8 %Index2)
+  %res2 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4bf16.v8bf16.v4f32.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x float> %C, i8 %Index2)
   store <4 x float> %res2, ptr addrspace(1) %out2
   %Index3 = extractelement <4 x i8> %IndexVec, i32 3
-  %res3 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16> %A, <8 x i16> %B, <4 x float> %C, i8 %Index3)
+  %res3 = call <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4bf16.v8bf16.v4f32.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x float> %C, i8 %Index3)
   store <4 x float> %res3, ptr addrspace(1) %out3
   ret void
 }
@@ -133,22 +157,54 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, ptr addrspace(1) %IndexVecPtr, ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) {
+define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<4 x bfloat> %A, <8 x bfloat> %B, <4 x bfloat> %C, ptr addrspace(1) %IndexVecPtr, ptr addrspace(1) %out0, ptr addrspace(1) %out1, ptr addrspace(1) %out2, ptr addrspace(1) %out3) {
 ; GFX12-LABEL: test_swmmac_bf16_16x16x32_bf16_index_key:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    global_load_b32 v22, v[8:9], off
+; GFX12-NEXT:    v_lshrrev_b32_e32 v21, 16, v5
+; GFX12-NEXT:    v_and_b32_e32 v24, 0xffff, v5
+; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v7
+; GFX12-NEXT:    v_lshrrev_b32_e32 v20, 16, v4
+; GFX12-NEXT:    v_and_b32_e32 v23, 0xffff, v4
+; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v6
+; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
+; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX12-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX12-NEXT:    v_lshlrev_b32_e32 v26, 16, v5
+; GFX12-NEXT:    v_lshrrev_b32_e32 v18, 16, v2
+; GFX12-NEXT:    v_lshrrev_b32_e32 v19, 16, v3
+; GFX12-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GFX12-NEXT:    v_lshlrev_b32_e32 v25, 16, v4
+; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; GFX12-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; GFX12-NEXT:    v_or_b32_e32 v7, v26, v7
+; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX12-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX12-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
+; GFX12-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
+; GFX12-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
+; GFX12-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; GFX12-NEXT:    v_or_b32_e32 v6, v25, v6
+; GFX12-NEXT:    v_or_b32_e32 v4, v8, v0
+; GFX12-NEXT:    v_or_b32_e32 v5, v9, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v9, v7
+; GFX12-NEXT:    v_or_b32_e32 v0, v18, v2
+; GFX12-NEXT:    v_or_b32_e32 v1, v19, v3
+; GFX12-NEXT:    v_or_b32_e32 v2, v20, v23
+; GFX12-NEXT:    v_or_b32_e32 v3, v21, v24
 ; GFX12-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX12-NEXT:    v_mov_b32_e32 v19, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v18, v6
 ; GFX12-NEXT:    v_mov_b32_e32 v21, v7
 ; GFX12-NEXT:    v_mov_b32_e32 v20, v6
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[8:9], v[0:1], v[2:5], v22
-; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[18:19], v[0:1], v[2:5], v22 index_key:1
+; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[8:9], v[4:5], v[0:3], v22
+; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[18:19], v[4:5], v[0:3], v22 index_key:1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[20:21], v[0:1], v[2:5], v22 index_key:2
-; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[6:7], v[0:1], v[2:5], v22 index_key:3
+; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[20:21], v[4:5], v[0:3], v22 index_key:2
+; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[6:7], v[4:5], v[0:3], v22 index_key:3
 ; GFX12-NEXT:    global_store_b64 v[10:11], v[8:9], off
 ; GFX12-NEXT:    global_store_b64 v[12:13], v[18:19], off
 ; GFX12-NEXT:    global_store_b64 v[14:15], v[20:21], off
@@ -159,17 +215,17 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<4 x i16> %A, <8
 bb:
   %IndexVec = load <4 x i8>, ptr addrspace(1) %IndexVecPtr, align 4
   %Index0 = extractelement <4 x i8> %IndexVec, i32 0
-  %res0 = call <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, i8 %Index0)
-  store <4 x i16> %res0, ptr addrspace(1) %out0
+  %res0 = call <4 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4bf16.v4bf16.v8bf16.v4bf16.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x bfloat> %C, i8 %Index0)
+  store <4 x bfloat> %res0, ptr addrspace(1) %out0
   %Index1 = extractelement <4 x i8> %IndexVec, i32 1
-  %res1 = call <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, i8 %Index1)
-  store <4 x i16> %res1, ptr addrspace(1) %out1
+  %res1 = call <4 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4bf16.v4bf16.v8bf16.v4bf16.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x bfloat> %C, i8 %Index1)
+  store <4 x bfloat> %res1, ptr addrspace(1) %out1
   %Index2 = extractelement <4 x i8> %IndexVec, i32 2
-  %res2 = call <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, i8 %Index2)
-  store <4 x i16> %res2, ptr addrspace(1) %out2
+  %res2 = call <4 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4bf16.v4bf16.v8bf16.v4bf16.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x bfloat> %C, i8 %Index2)
+  store <4 x bfloat> %res2, ptr addrspace(1) %out2
   %Index3 = extractelement <4 x i8> %IndexVec, i32 3
-  %res3 = call <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16> %A, <8 x i16> %B, <4 x i16> %C, i8 %Index3)
-  store <4 x i16> %res3, ptr addrspace(1) %out3
+  %res3 = call <4 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4bf16.v4bf16.v8bf16.v4bf16.i8(<4 x bfloat> %A, <8 x bfloat> %B, <4 x bfloat> %C, i8 %Index3)
+  store <4 x bfloat> %res3, ptr addrspace(1) %out3
   ret void
 }
 
@@ -460,9 +516,9 @@ bb:
 }
 
 declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.f16.v4f32.v4f16.v8f16.v4f32.i8(<4 x half>, <8 x half>, <4 x float>, i8)
-declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4i16.v8i16.v4f32.i8(<4 x i16>, <8 x i16>, <4 x float>, i8)
+declare <4 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf16.v4f32.v4bf16.v8bf16.v4f32.i8(<4 x bfloat>, <8 x bfloat>, <4 x float>, i8)
 declare <4 x half> @llvm.amdgcn.swmmac.f16.16x16x32.f16.v4f16.v4f16.v8f16.v4f16.i8(<4 x half>, <8 x half>, <4 x half>, i8)
-declare <4 x i16> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4i16.v4i16.v8i16.v4i16.i8(<4 x i16>, <8 x i16>, <4 x i16>, i8)
+declare <4 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x32.bf16.v4bf16.v4bf16.v8bf16.v4bf16.i8(<4 x bfloat>, <8 x bfloat>, <4 x bfloat>, i8)
 declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu8.v4i32.i32.v2i32.v4i32.i8(i1 immarg, i32, i1 immarg, <2 x i32>, <4 x i32>, i8 %Index, i1 immarg)
 declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x32.iu4.v4i32.i32.i32.v4i32.i16(i1 immarg, i32, i1 immarg, i32, <4 x i32>, i16 %Index, i1 immarg)
 declare <4 x i32> @llvm.amdgcn.swmmac.i32.16x16x64.iu4.v4i32.i32.v2i32.v4i32.i16(i1 immarg, i32, i1 immarg, <2 x i32>, <4 x i32>, i16 %Index, i1 immarg)

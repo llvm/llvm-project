@@ -9,22 +9,22 @@ typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef half   v16h  __attribute__((ext_vector_type(16)));
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
-typedef short  v8s   __attribute__((ext_vector_type(8)));
-typedef short  v16s  __attribute__((ext_vector_type(16)));
+typedef __bf16 v8bf  __attribute__((ext_vector_type(8)));
+typedef __bf16 v16bf __attribute__((ext_vector_type(16)));
 
 #ifdef WMMA_GFX1100_TESTS
 
 // Wave64
 
 void test_amdgcn_wmma_f32_16x16x16_bf16_w64(v16h a16h, v16h b16h, unsigned int i,
-                                            global v8h* out8h, v16s a16s, v16s b16s, v8h c8h,
-                                            global v8s* out8s, v4i a4i, v4i b4i, v8s c8s,
+                                            global v8h* out8h, v16bf a16bf, v16bf b16bf, v8h c8h,
+                                            global v8bf* out8bf, v4i a4i, v4i b4i, v8bf c8bf,
                                             global v4i* out4i, v2i a2i, v2i b2i, v4i c4i)
 {
  *out8h = __builtin_amdgcn_wmma_f16_16x16x16_f16_w64(a16h, b16h, c8h, i); // expected-error{{argument to '__builtin_amdgcn_wmma_f16_16x16x16_f16_w64' must be a constant integer}}
- *out8s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64(a16s, b16s, c8s, i); // expected-error{{argument to '__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64' must be a constant integer}}
+ *out8bf = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64(a16bf, b16bf, c8bf, i); // expected-error{{argument to '__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64' must be a constant integer}}
  *out8h = __builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64(a16h, b16h, c8h, i); // expected-error{{argument to '__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64' must be a constant integer}}
- *out8s = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(a16s, b16s, c8s, i); // expected-error{{argument to '__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64' must be a constant integer}}
+ *out8bf = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(a16bf, b16bf, c8bf, i); // expected-error{{argument to '__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64' must be a constant integer}}
  *out4i = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64(i, a4i, true, b4i, c4i, false); // expected-error{{argument to '__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64' must be a constant integer}}
  *out4i = __builtin_amdgcn_wmma_i32_16x16x16_iu8_w64(true, a4i, i, b4i, c4i, false); // expected-error{{argument to '__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64' must be a constant integer}}
  *out4i = __builtin_amdgcn_wmma_i32_16x16x16_iu4_w64(i, a2i, true, b2i, c4i, false); // expected-error{{argument to '__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64' must be a constant integer}}
