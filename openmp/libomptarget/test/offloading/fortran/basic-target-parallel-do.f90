@@ -30,4 +30,4 @@ program main
 end program main
 
 ! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
-! CHECKi: number of errors: 0
+! CHECK:  number of errors: 0
