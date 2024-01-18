@@ -646,6 +646,12 @@ def FeatureFP8Insts : SubtargetFeature<"fp8-insts",
   "Has fp8 and bf8 instructions"
 >;
 
+def FeatureFP8ConversionInsts : SubtargetFeature<"fp8-conversion-insts",
+  "HasFP8ConversionInsts",
+  "true",
+  "Has fp8 and bf8 conversion instructions"
+>;
+
 def FeaturePkFmacF16Inst : SubtargetFeature<"pk-fmac-f16-inst",
   "HasPkFmacF16Inst",
   "true",
@@ -1324,6 +1330,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
    FeatureFP8Insts,
+   FeatureFP8ConversionInsts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
@@ -1492,6 +1499,10 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
@@ -1993,6 +2004,9 @@ def HasShaderCyclesHiLoRegisters : Predicate<"Subtarget->hasShaderCyclesHiLoRegi
 
 def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
   AssemblerPredicate<(all_of FeatureFP8Insts)>;
+
+def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
+  AssemblerPredicate<(all_of FeatureFP8ConversionInsts)>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

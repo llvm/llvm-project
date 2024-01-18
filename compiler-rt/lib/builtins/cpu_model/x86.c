@@ -148,7 +148,8 @@ enum ProcessorFeatures {
   FEATURE_LZCNT,
   FEATURE_MOVBE,
 
-  FEATURE_X86_64_BASELINE = 95,
+  FEATURE_AVX512FP16 = 94,
+  FEATURE_X86_64_BASELINE,
   FEATURE_X86_64_V2,
   FEATURE_X86_64_V3,
   FEATURE_X86_64_V4,
@@ -812,6 +813,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VP2INTERSECT);
+  if (HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX512FP16);
 
   bool HasLeaf7Subleaf1 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);

@@ -3514,6 +3514,23 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   return -1;
 }
 
+const Constant *X86::getConstantFromPool(const MachineInstr &MI,
+                                         const MachineOperand &Op) {
+  if (!Op.isCPI() || Op.getOffset() != 0)
+    return nullptr;
+
+  ArrayRef<MachineConstantPoolEntry> Constants =
+      MI.getParent()->getParent()->getConstantPool()->getConstants();
+  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
+
+  // Bail if this is a machine constant pool entry, we won't be able to dig out
+  // anything useful.
+  if (ConstantEntry.isMachineConstantPoolEntry())
+    return nullptr;
+
+  return ConstantEntry.Val.ConstVal;
+}
+
 bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case X86::TCRETURNdi:

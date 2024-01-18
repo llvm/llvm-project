@@ -687,7 +687,9 @@ template <typename... Ts> hash_code hash_value(const std::variant<Ts...> &arg) {
 template <> struct DenseMapInfo<hash_code, void> {
   static inline hash_code getEmptyKey() { return hash_code(-1); }
   static inline hash_code getTombstoneKey() { return hash_code(-2); }
-  static unsigned getHashValue(hash_code val) { return val; }
+  static unsigned getHashValue(hash_code val) {
+    return static_cast<unsigned>(size_t(val));
+  }
   static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
 };
 

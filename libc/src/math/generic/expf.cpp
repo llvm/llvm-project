@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       return 0.0f;
     }
     // x >= 89 or nan
-    if (!xbits.get_sign() && (xbits.uintval() >= 0x42b2'0000)) {
+    if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();

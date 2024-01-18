@@ -794,7 +794,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     llvm::Constant *fnPtr;
 
     // Pure virtual member functions.
-    if (cast<CXXMethodDecl>(GD.getDecl())->isPure()) {
+    if (cast<CXXMethodDecl>(GD.getDecl())->isPureVirtual()) {
       if (!PureVirtualFn)
         PureVirtualFn =
             getSpecialVirtualFn(CGM.getCXXABI().GetPureVirtualCallName());

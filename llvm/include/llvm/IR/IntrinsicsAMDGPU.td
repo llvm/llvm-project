@@ -1032,6 +1032,9 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   defm int_amdgcn_image_atomic_cmpswap :
       AMDGPUImageDimAtomicX<"ATOMIC_CMPSWAP", [AMDGPUArg<LLVMMatchType<0>, "src">,
                                                AMDGPUArg<LLVMMatchType<0>, "cmp">]>;
+
+  defm int_amdgcn_image_atomic_pk_add_f16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_F16">;
+  defm int_amdgcn_image_atomic_pk_add_bf16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_BF16">;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1316,6 +1319,26 @@ def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyfloat_ty>;
+// gfx12+ intrinsic
+def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+ [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+ AMDGPURsrcIntrinsic<1, 0>;
+def int_amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   AMDGPUBufferRsrcTy,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+ [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+  ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+ AMDGPURsrcIntrinsic<1, 0>;
 
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
@@ -1392,6 +1415,28 @@ def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_struct_ptr_buffer_atomic_fadd : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
+// gfx12 intrinsic
+def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+  [ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<1, 0>;
+def int_amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   AMDGPUBufferRsrcTy,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+  [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<1, 0>;
 
 // gfx90a intrinsics
 def int_amdgcn_struct_buffer_atomic_fmin : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
@@ -1814,6 +1859,8 @@ def int_amdgcn_s_setreg :
 // not cross a 4Gb address boundary. Use for any other purpose may not
 // produce the desired results as optimizations may cause code movement,
 // especially as we explicitly use IntrNoMem to allow optimizations.
+// This intrinsic always returns PC sign-extended from 48 bits even if the
+// s_getpc_b64 instruction returns a zero-extended value.
 def int_amdgcn_s_getpc :
   ClangBuiltin<"__builtin_amdgcn_s_getpc">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable,
@@ -2530,6 +2577,28 @@ def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 def int_amdgcn_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty>;
 
+class AMDGPULoadTr<LLVMType ptr_ty>:
+  Intrinsic<
+    [llvm_any_ty],
+    [ptr_ty],
+    [IntrReadMem, IntrWillReturn, IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+// Wave32
+// <2 x i32>    @llvm.amdgcn.global.load.tr.v2i32(ptr addrspace(1))  -> global_load_tr_b64
+// <8 x i16>    @llvm.amdgcn.global.load.tr.v8i16(ptr addrspace(1))  -> global_load_tr_b128
+// <8 x half>   @llvm.amdgcn.global.load.tr.v8f16(ptr addrspace(1))  -> global_load_tr_b128
+// <8 x bfloat> @llvm.amdgcn.global.load.tr.v8bf16(ptr addrspace(1)) -> global_load_tr_b128
+// Wave64
+// i32          @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1))    -> global_load_tr_b64
+// <4 x i16>    @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1))  -> global_load_tr_b128
+// <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
+// <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
+
+def int_amdgcn_global_load_tr : AMDGPULoadTr<global_ptr_ty>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
@@ -2726,6 +2795,25 @@ def int_amdgcn_udot8 :
     [IntrNoMem, IntrSpeculatable,
      ImmArg<ArgIndex<0>>,  ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
   >;
+
+// f32 %r = llvm.amdgcn.dot4.f32.type_a.type_b (v4type_a (as i32) %a, v4type_b (as i32) %b, f32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+class AMDGPU8bitFloatDot4Intrinsic :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [llvm_float_ty], // %r
+    [
+      llvm_i32_ty,   // %a
+      llvm_i32_ty,   // %b
+      llvm_float_ty, // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+def int_amdgcn_dot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
 
 //===----------------------------------------------------------------------===//
 // gfx908 intrinsics

@@ -1081,7 +1081,11 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
       error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
             "but got " +
             knownSafeName);
-    vtableSymbolsWithNoRTTI.remove(knownSafeName);
+    Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
+    if (!pat)
+      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+    vtableSymbolsWithNoRTTI.remove_if(
+        [&](StringRef s) { return pat->match(s); });
   }
 
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();

@@ -166,6 +166,9 @@ extern char &SILowerI1CopiesID;
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
 
+void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+extern char &AMDGPUMarkLastScratchLoadID;
+
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;
 
