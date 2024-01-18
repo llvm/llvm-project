@@ -10,6 +10,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.dyadic_float
   COMPILE_OPTIONS
+    # Prevent constant folding with a default rounding mode.
     "-frounding-math"
 )
 
