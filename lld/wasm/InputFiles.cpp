@@ -351,7 +351,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 
   // We assume that this compilation unit has unrelocatable references to
   // this table.
-  config->legacyFunctionTable = true;
+  ctx.legacyFunctionTable = true;
 }
 
 static bool shouldMerge(const WasmSection &sec) {
