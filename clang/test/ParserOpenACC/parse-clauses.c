@@ -54,6 +54,45 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc loop seq,
 
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse()
+  for(;;){}
+
+  // expected-error@+3{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(unknown:)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(force:)
+  for(;;){}
+
+  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(unknown:5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(force:5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(5)
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(5, 6)
+  for(;;){}
 }
 
 void DefaultClause() {
