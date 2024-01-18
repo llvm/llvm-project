@@ -71,6 +71,11 @@ struct Configuration {
   uint64_t initialHeap;
   uint64_t initialMemory;
   uint64_t maxMemory;
+  // The table offset at which to place function addresses.  We reserve zero
+  // for the null function pointer.  This gets set to 1 for executables and 0
+  // for shared libraries (since they always added to a dynamic offset at
+  // runtime).
+  uint64_t tableBase;
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
@@ -96,23 +101,19 @@ struct Configuration {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+};
 
-  // The following config options do not directly correspond to any
-  // particular command line options, and should probably be moved to separate
-  // Ctx struct as in ELF/Config.h
+// The only instance of Configuration struct.
+extern Configuration *config;
 
+// The Ctx object hold all other (non-configuration) global state.
+struct Ctx {
   // True if we are creating position-independent code.
   bool isPic;
 
   // True if we have an MVP input that uses __indirect_function_table and which
   // requires it to be allocated to table number 0.
   bool legacyFunctionTable = false;
-
-  // The table offset at which to place function addresses.  We reserve zero
-  // for the null function pointer.  This gets set to 1 for executables and 0
-  // for shared libraries (since they always added to a dynamic offset at
-  // runtime).
-  uint32_t tableBase = 0;
 
   // Will be set to true if bss data segments should be emitted. In most cases
   // this is not necessary.
@@ -124,8 +125,7 @@ struct Configuration {
       whyExtractRecords;
 };
 
-// The only instance of Configuration struct.
-extern Configuration *config;
+extern Ctx ctx;
 
 } // namespace lld::wasm
 

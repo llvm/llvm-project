@@ -187,7 +187,7 @@ bool MarkLive::isCallCtorsLive() {
 
   // In Emscripten-style PIC, we call `__wasm_call_ctors` which calls
   // `__wasm_apply_data_relocs`.
-  if (config->isPic)
+  if (ctx.isPic)
     return true;
 
   // If there are any init functions, mark `__wasm_call_ctors` live so that
