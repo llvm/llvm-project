@@ -30,7 +30,7 @@ void test(From value) {
     else
       assert(false);
   };
-#if _LIBCPP_STD_VER >= 26 && defined(__cpp_explicit_this_parameter)
+#if _LIBCPP_STD_VER >= 26 && (!defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800)
   format_args.get(0).visit(visitor);
 #else
   std::visit_format_arg(visitor, format_args.get(0));
@@ -45,10 +45,11 @@ void test_handle(T value) {
   std::basic_format_args<Context> format_args{store};
 
   auto visitor = [](auto a) { assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>)); };
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && (!defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800)
   format_args.get(0).visit(visitor);
-#endif
+#else
   std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 // Test specific for string and string_view.
@@ -70,10 +71,11 @@ void test_string_view(From value) {
     else
       assert(false);
   };
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && (!defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800)
   format_args.get(0).visit(visitor);
-#endif
+#else
   std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 template <class CharT>
