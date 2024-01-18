@@ -37,6 +37,29 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Fix a bug in reversed argument for templated operators.
+  This breaks code in C++20 which was previously accepted in C++17.
+  Clang did not properly diagnose such casese in C++20 before this change. Eg:
+
+  .. code-block:: cpp
+
+    struct P {};
+    template<class S> bool operator==(const P&, const S&);
+
+    struct A : public P {};
+    struct B : public P {};
+
+    // This equality is now ambiguous in C++20.
+    bool ambiguous(A a, B b) { return a == b; }
+
+    template<class S> bool operator!=(const P&, const S&);
+    // Ok. Found a matching operator!=.
+    bool fine(A a, B b) { return a == b; }
+
+  To reduce such widespread breakages, as an extension, Clang accepts this code
+  with an existing warning ``-Wambiguous-reversed-operator`` warning.
+  Fixes `GH <https://github.com/llvm/llvm-project/issues/53954>`_.
+
 - The CMake variable ``GCC_INSTALL_PREFIX`` (which sets the default
   ``--gcc-toolchain=``) is deprecated and will be removed. Specify
   ``--gcc-install-dir=`` or ``--gcc-triple=`` in a `configuration file
@@ -73,6 +96,10 @@ C/C++ Language Potentially Breaking Changes
 - Fixed a bug in finding matching `operator!=` while adding reversed `operator==` as
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
   Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
+
+- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
+  require all the dependent modules to specified from the command line.
+  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -200,6 +227,11 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
+  making unions (that have either no members or at least one literal member) literal types.
+  (`#77924: <https://github.com/llvm/llvm-project/issues/77924>`_).
+
+
 C Language Changes
 ------------------
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
@@ -248,6 +280,8 @@ Non-comprehensive list of changes in this release
 * Since MSVC 19.33 added undocumented attribute ``[[msvc::constexpr]]``, this release adds the attribute as well.
 
 * Added ``#pragma clang fp reciprocal``.
+
+* The version of Unicode used by Clang (primarily to parse identifiers) has been updated to 15.1.
 
 New Compiler Flags
 ------------------
@@ -533,6 +567,34 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses the requirement that non-template friend declarations with requires clauses
+  and template friend declarations with a constraint that depends on a template parameter from an
+  enclosing template must be a definition.
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
+
+- Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
+  expressions on matrix types or builtin functions without an argument list) as placement-args
+  to new-expressions.
+
+  Before:
+
+  .. code-block:: text
+
+    error: no matching function for call to 'operator new'
+       13 |     new (__builtin_memset) S {};
+          |     ^   ~~~~~~~~~~~~~~~~~~
+
+    note: candidate function not viable: no known conversion from '<builtin fn type>' to 'int' for 2nd argument
+        5 |     void* operator new(__SIZE_TYPE__, int);
+          |           ^
+
+  After:
+
+  .. code-block:: text
+
+    error: builtin functions must be directly called
+       13 |     new (__builtin_memset) S {};
+          |          ^
 
 
 Improvements to Clang's time-trace
@@ -653,6 +715,8 @@ Bug Fixes in This Version
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 - Clang now properly diagnoses use of stand-alone OpenMP directives after a
   label (including ``case`` or ``default`` labels).
+- Fix compiler memory leak for enums with underlying type larger than 64 bits.
+  Fixes (`#78311 <https://github.com/llvm/llvm-project/pull/78311>`_)
 
   Before:
 
@@ -719,9 +783,27 @@ Bug Fixes in This Version
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
   and `if consteval` branches.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
+- Fix assertion failure when declaring a template friend function with
+  a constrained parameter in a template class that declares a class method
+  or lambda at different depth.
+  Fixes (`#75426 <https://github.com/llvm/llvm-project/issues/75426>`_)
 - Fix an issue where clang cannot find conversion function with template
   parameter when instantiation of template class.
   Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
+- Fix an issue where CTAD fails for function-type/array-type arguments.
+  Fixes (`#51710 <https://github.com/llvm/llvm-project/issues/51710>`_)
+- Fix crashes when using the binding decl from an invalid structured binding.
+  Fixes (`#67495 <https://github.com/llvm/llvm-project/issues/67495>`_) and
+  (`#72198 <https://github.com/llvm/llvm-project/issues/72198>`_)
+- Fix assertion failure when call noreturn-attribute function with musttail
+  attribute.
+  Fixes (`#76631 <https://github.com/llvm/llvm-project/issues/76631>`_)
+  - The MS ``__noop`` builtin without an argument list is now accepted
+  in the placement-args of new-expressions, matching MSVC's behaviour.
+- Fix an issue that caused MS ``__decspec(property)`` accesses as well as
+  Objective-C++ property accesses to not be converted to a function call
+  to the getter in the placement-args of new-expressions.
+  Fixes (`#65053 <https://github.com/llvm/llvm-project/issues/65053>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -882,10 +964,17 @@ Bug Fixes to C++ Support
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
+- Fixed a crash where we lost uninstantiated constraints on placeholder NTTP packs. Fixes:
+  (`#63837 <https://github.com/llvm/llvm-project/issues/63837>`_)
+
 - Fixed a regression where clang forgets how to substitute into constraints on template-template
   parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
+- Fix a bug where clang would produce inconsistent values when
+  ``std::source_location::current()`` was used in a function template.
+  Fixes (`#78128 <https://github.com/llvm/llvm-project/issues/78128>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -927,6 +1016,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when a lambda marked as ``static`` referenced a captured
   variable in an expression.
   `Issue 74608 <https://github.com/llvm/llvm-project/issues/74608>`_
+- Fixed a crash with modules and a ``constexpr`` destructor.
+  `Issue 68702 <https://github.com/llvm/llvm-project/issues/68702>`_
 
 
 OpenACC Specific Changes
@@ -1030,6 +1121,8 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+- CodeGen of RV32E/RV64E was supported experimentally.
+- CodeGen of ilp32e/lp64e was supported experimentally.
 
 - Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
   for RV64.
@@ -1091,6 +1184,9 @@ AST Matchers
 - Add ``convertVectorExpr``.
 - Add ``dependentSizedExtVectorType``.
 - Add ``macroQualifiedType``.
+- Add ``CXXFoldExpr`` related matchers: ``cxxFoldExpr``, ``callee``,
+  ``hasInit``, ``hasPattern``, ``isRightFold``, ``isLeftFold``,
+  ``isUnaryFold``, ``isBinaryFold``, ``hasOperator``, ``hasLHS``, ``hasRHS``, ``hasEitherOperand``.
 
 clang-format
 ------------
@@ -1100,6 +1196,7 @@ clang-format
 - Add ``BreakAdjacentStringLiterals`` option.
 - Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
   attributes (like ``nonatomic, strong, nullable``).
+- Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 

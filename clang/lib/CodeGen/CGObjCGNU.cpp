@@ -1431,12 +1431,24 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                                 const std::string &TypeEncoding) override {
     return GetConstantSelector(Sel, TypeEncoding);
   }
+  std::string GetSymbolNameForTypeEncoding(const std::string &TypeEncoding) {
+    std::string MangledTypes = std::string(TypeEncoding);
+    // @ is used as a special character in ELF symbol names (used for symbol
+    // versioning), so mangle the name to not include it.  Replace it with a
+    // character that is not a valid type encoding character (and, being
+    // non-printable, never will be!)
+    if (CGM.getTriple().isOSBinFormatELF())
+      std::replace(MangledTypes.begin(), MangledTypes.end(), '@', '\1');
+    // = in dll exported names causes lld to fail when linking on Windows.
+    if (CGM.getTriple().isOSWindows())
+      std::replace(MangledTypes.begin(), MangledTypes.end(), '=', '\2');
+    return MangledTypes;
+  }
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
     if (TypeEncoding.empty())
       return NULLPtr;
-    std::string MangledTypes = std::string(TypeEncoding);
-    std::replace(MangledTypes.begin(), MangledTypes.end(),
-      '@', '\1');
+    std::string MangledTypes =
+        GetSymbolNameForTypeEncoding(std::string(TypeEncoding));
     std::string TypesVarName = ".objc_sel_types_" + MangledTypes;
     auto *TypesGlobal = TheModule.getGlobalVariable(TypesVarName);
     if (!TypesGlobal) {
@@ -1453,13 +1465,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   }
   llvm::Constant *GetConstantSelector(Selector Sel,
                                       const std::string &TypeEncoding) override {
-    // @ is used as a special character in symbol names (used for symbol
-    // versioning), so mangle the name to not include it.  Replace it with a
-    // character that is not a valid type encoding character (and, being
-    // non-printable, never will be!)
-    std::string MangledTypes = TypeEncoding;
-    std::replace(MangledTypes.begin(), MangledTypes.end(),
-      '@', '\1');
+    std::string MangledTypes = GetSymbolNameForTypeEncoding(TypeEncoding);
     auto SelVarName = (StringRef(".objc_selector_") + Sel.getAsString() + "_" +
       MangledTypes).str();
     if (auto *GV = TheModule.getNamedGlobal(SelVarName))
@@ -1671,9 +1677,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                                         const ObjCIvarDecl *Ivar) override {
     std::string TypeEncoding;
     CGM.getContext().getObjCEncodingForType(Ivar->getType(), TypeEncoding);
-    // Prevent the @ from being interpreted as a symbol version.
-    std::replace(TypeEncoding.begin(), TypeEncoding.end(),
-      '@', '\1');
+    TypeEncoding = GetSymbolNameForTypeEncoding(TypeEncoding);
     const std::string Name = "__objc_ivar_offset_" + ID->getNameAsString()
       + '.' + Ivar->getNameAsString() + '.' + TypeEncoding;
     return Name;

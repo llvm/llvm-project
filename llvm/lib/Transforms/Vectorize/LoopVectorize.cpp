@@ -2346,9 +2346,8 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
     auto *Offset = CreateMul(Index, Step);
     return CreateAdd(StartValue, Offset);
   }
-  case InductionDescriptor::IK_PtrInduction: {
-    return B.CreateGEP(B.getInt8Ty(), StartValue, CreateMul(Index, Step));
-  }
+  case InductionDescriptor::IK_PtrInduction:
+    return B.CreatePtrAdd(StartValue, CreateMul(Index, Step));
   case InductionDescriptor::IK_FpInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
            "Vector indices not supported for FP inductions yet");
@@ -6950,10 +6949,25 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
-    return TTI.getArithmeticInstrCost(
+    auto InstrCost = TTI.getArithmeticInstrCost(
         I->getOpcode(), VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
         Op2Info, Operands, I);
+
+    // Some targets can replace frem with vector library calls.
+    InstructionCost VecCallCost = InstructionCost::getInvalid();
+    if (I->getOpcode() == Instruction::FRem) {
+      LibFunc Func;
+      if (TLI->getLibFunc(I->getOpcode(), I->getType(), Func) &&
+          TLI->isFunctionVectorizable(TLI->getName(Func), VF)) {
+        SmallVector<Type *, 4> OpTypes;
+        for (auto &Op : I->operands())
+          OpTypes.push_back(Op->getType());
+        VecCallCost =
+            TTI.getCallInstrCost(nullptr, VectorTy, OpTypes, CostKind);
+      }
+    }
+    return std::min(InstrCost, VecCallCost);
   }
   case Instruction::FNeg: {
     return TTI.getArithmeticInstrCost(
@@ -9047,9 +9061,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PreviousLink = RedRecipe;
     }
   }
-    Builder.setInsertPoint(&*LatchVPBB->begin());
-    for (VPRecipeBase &R :
-         Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+  Builder.setInsertPoint(&*LatchVPBB->begin());
+  for (VPRecipeBase &R :
+       Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;

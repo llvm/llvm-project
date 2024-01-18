@@ -84,7 +84,7 @@ public:
       : CpuPfmCounters(CpuPfmCounters), IsOpcodeAvailable(IsOpcodeAvailable) {}
 
   // Targets can use this to create target-specific perf counters.
-  virtual Expected<std::unique_ptr<pfm::Counter>>
+  virtual Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
                 const pid_t ProcessID = 0) const;
 

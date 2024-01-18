@@ -54,10 +54,10 @@ Implemented Papers
 - P2905R2 - Runtime format strings
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
-- P2870R3 - Remove basic_string::reserve()
+- P2870R3 - Remove ``basic_string::reserve()``
 - P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
-- P2821R5 - span.at()
-- P0521R0 - Proposed Resolution for CA 14 (shared_ptr use_count/unique)
+- P2821R5 - ``span.at()``
+- P0521R0 - Proposed Resolution for CA 14 (``shared_ptr`` ``use_count/unique``)
 - P1759R6 - Native handles and file streams
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
 
@@ -89,6 +89,10 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
   the function ``std::shared_ptr<...>::unique()`` available.
 
+- The cmake option ``LIBCXX_ENABLE_STD_MODULES`` has been removed. The test
+  infrastructure no longer depends on a modern CMake, it works with the minimal
+  required LLVM version (3.20.0).
+
 
 Deprecations and Removals
 -------------------------
@@ -107,6 +111,10 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
+- The only supported way to customize the assertion handler that gets invoked when a hardening assertion fails
+  is now by setting the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See
+  the documentation on overriding the default assertion handler for details.
+
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro is not honored anymore in LLVM 18.
   Please see the updated documentation about the hardening modes in libc++ and in particular the
   ``_LIBCPP_VERBOSE_ABORT`` macro for details.
@@ -116,6 +124,18 @@ Deprecations and Removals
   ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
   and ``<experimental/vector>`` have been removed in LLVM 18, as all their contents will have been
   implemented in namespace ``std`` for at least two releases.
+
+- The macro ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` has been deprecated and will be removed
+  in LLVM 19. This macro used to re-enable redundant members of ``std::allocator<T>`` like ``pointer``,
+  ``reference``, ``rebind``, ``address``, ``max_size``, ``construct``, ``destroy``, and the two-argument
+  overload of ``allocate``. However, this led to the library being non-conforming due to incorrect
+  constexpr-ness.
+
+- The macros ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` have been deprecated and
+  will be removed in LLVM 19. These macros used to re-enable all features
+  that were removed in the C++17 and C++20 standards. Instead of using these
+  macros, please use the macros to re-enable individual features.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -139,6 +159,13 @@ LLVM 19
 
 - The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
   in ``std::variant`` will be removed in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been deprecated in LLVM 18 and will be removed
+  entirely in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have been deprecated
+  in LLVM 18 and will be removed entirely in LLVM 19.
 
 LLVM 20
 ~~~~~~~
@@ -191,3 +218,10 @@ Build System Changes
   passing ``-Dexecutor=...`` to ``llvm-lit``. Alternatively, this flag can be made persistent in the generated test
   configuration file by passing ``-DLIBCXX_TEST_PARAMS=executor=...``. This also applies to the ``LIBUWIND_EXECTOR``
   and ``LIBCXXABI_EXECUTOR`` CMake variables. LLVM 19 will completely remove support for the ``*_EXECUTOR`` variables.
+
+- ``LIBCXXABI_USE_LLVM_UNWINDER`` and ``COMPILER_RT_USE_LLVM_UNWINDER`` switched defaults from ``OFF`` to ``ON``.
+  This means that by default, libc++abi and compiler-rt will link against the LLVM provided ``libunwind`` library
+  instead of the system-provided unwinding library. If you are building the LLVM runtimes with the goal of shipping
+  them so that they can interoperate with other system-provided libraries that might be using a different unwinding
+  library (such as ``libgcc_s``), you should pass ``LIBCXXABI_USE_LLVM_UNWINDER=OFF`` and ``COMPILER_RT_USE_LLVM_UNWINDER=OFF``
+  to make sure the system-provided unwinding library is used by the LLVM runtimes.
