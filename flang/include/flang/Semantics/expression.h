@@ -328,7 +328,7 @@ private:
   std::vector<Subscript> AnalyzeSectionSubscripts(
       const std::list<parser::SectionSubscript> &);
   std::optional<Component> CreateComponent(DataRef &&, const Symbol &,
-      const semantics::Scope &, bool C919AlreadyEnforced = false);
+      const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
   void CheckConstantSubscripts(ArrayRef &);

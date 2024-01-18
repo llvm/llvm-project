@@ -1298,8 +1298,8 @@ static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
 // Components of parent derived types are explicitly represented as such.
 std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
     const Symbol &component, const semantics::Scope &scope,
-    bool C919AlreadyEnforced) {
-  if (!C919AlreadyEnforced && IsAllocatableOrPointer(component) &&
+    bool C919bAlreadyEnforced) {
+  if (!C919bAlreadyEnforced && IsAllocatableOrPointer(component) &&
       base.Rank() > 0) { // C919b
     Say("An allocatable or pointer component reference must be applied to a scalar base"_err_en_US);
   }
@@ -1315,7 +1315,7 @@ std::optional<Component> ExpressionAnalyzer::CreateComponent(DataRef &&base,
                   parentType->derivedTypeSpec().scope()}) {
             return CreateComponent(
                 DataRef{Component{std::move(base), *parentComponent}},
-                component, *parentScope, C919AlreadyEnforced);
+                component, *parentScope, C919bAlreadyEnforced);
           }
         }
       }
@@ -2396,12 +2396,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
             if (dtSpec && dtSpec->scope()) {
               if (auto component{CreateComponent(std::move(*dataRef), *sym,
-                      *dtSpec->scope(), /*C919AlreadyEnforced=*/true)}) {
+                      *dtSpec->scope(), /*C919bAlreadyEnforced=*/true)}) {
                 return CalleeAndArguments{
                     ProcedureDesignator{std::move(*component)},
                     std::move(arguments)};
               }
             }
+            Say(sc.component.source,
+                "Component is not in scope of base derived type"_err_en_US);
+            return std::nullopt;
           } else {
             AddPassArg(arguments,
                 Expr<SomeDerived>{Designator<SomeDerived>{std::move(*dataRef)}},
