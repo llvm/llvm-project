@@ -1315,7 +1315,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL1-LABEL: @non_primary_iv_float_scalar(
 ; VEC4_INTERL1-NEXT:  entry:
 ; VEC4_INTERL1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; VEC4_INTERL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
+; VEC4_INTERL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; VEC4_INTERL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL1:       vector.ph:
 ; VEC4_INTERL1-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
@@ -1392,7 +1392,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-LABEL: @non_primary_iv_float_scalar(
 ; VEC4_INTERL2-NEXT:  entry:
 ; VEC4_INTERL2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; VEC4_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 8
+; VEC4_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 8
 ; VEC4_INTERL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC4_INTERL2:       vector.ph:
 ; VEC4_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775800
@@ -1508,7 +1508,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC1_INTERL2-LABEL: @non_primary_iv_float_scalar(
 ; VEC1_INTERL2-NEXT:  entry:
 ; VEC1_INTERL2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; VEC1_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; VEC1_INTERL2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; VEC1_INTERL2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC1_INTERL2:       vector.ph:
 ; VEC1_INTERL2-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806
@@ -1566,7 +1566,7 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC2_INTERL1_PRED_STORE-LABEL: @non_primary_iv_float_scalar(
 ; VEC2_INTERL1_PRED_STORE-NEXT:  entry:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 1)
-; VEC2_INTERL1_PRED_STORE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 2
+; VEC2_INTERL1_PRED_STORE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 2
 ; VEC2_INTERL1_PRED_STORE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; VEC2_INTERL1_PRED_STORE:       vector.ph:
 ; VEC2_INTERL1_PRED_STORE-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775806

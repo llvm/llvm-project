@@ -228,7 +228,7 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 template <typename ELFT> void writeARMCmseImportLib();
-uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc);
+uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections();
 void addArmInputSectionMappingSymbols();
@@ -300,6 +300,16 @@ inline void write32(void *p, uint32_t v) {
 
 inline void write64(void *p, uint64_t v) {
   llvm::support::endian::write64(p, v, config->endianness);
+}
+
+// Overwrite a ULEB128 value and keep the original length.
+inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
+  while (*bufLoc & 0x80) {
+    *bufLoc++ = 0x80 | (val & 0x7f);
+    val >>= 7;
+  }
+  *bufLoc = val;
+  return val;
 }
 } // namespace elf
 } // namespace lld

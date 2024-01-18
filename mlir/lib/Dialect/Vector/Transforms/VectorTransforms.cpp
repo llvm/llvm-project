@@ -1050,7 +1050,7 @@ public:
       mask = rewriter.create<arith::AndIOp>(loc, mask, xferOp.getMask());
     }
 
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getMaskMutable().assign(mask);
       xferOp.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
     });

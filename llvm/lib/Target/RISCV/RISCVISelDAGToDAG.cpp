@@ -763,8 +763,8 @@ bool RISCVDAGToDAGISel::tryIndexedLoad(SDNode *Node) {
     return false;
 
   EVT LoadVT = Ld->getMemoryVT();
-  assert(AM == ISD::PRE_INC ||
-         AM == ISD::POST_INC && "Unexpected addressing mode");
+  assert((AM == ISD::PRE_INC || AM == ISD::POST_INC) &&
+         "Unexpected addressing mode");
   bool IsPre = AM == ISD::PRE_INC;
   bool IsPost = AM == ISD::POST_INC;
   int64_t Offset = C->getSExtValue();

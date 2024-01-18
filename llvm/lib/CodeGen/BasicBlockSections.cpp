@@ -103,7 +103,7 @@ class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
-  BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
+  BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
   BasicBlockSections() : MachineFunctionPass(ID) {
     initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
@@ -128,7 +128,7 @@ INITIALIZE_PASS_BEGIN(
     "Prepares for basic block sections, by splitting functions "
     "into clusters of basic blocks.",
     false, false)
-INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
+INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
                     "into clusters of basic blocks.",
@@ -306,7 +306,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
     auto [HasProfile, ClusterInfo] =
-        getAnalysis<BasicBlockSectionsProfileReader>()
+        getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
             .getClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return false;
@@ -318,9 +318,8 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   MF.setBBSectionsType(BBSectionsType);
   assignSections(MF, FuncClusterInfo);
 
-  // We make sure that the cluster including the entry basic block precedes all
-  // other clusters.
-  auto EntryBBSectionID = MF.front().getSectionID();
+  const MachineBasicBlock &EntryBB = MF.front();
+  auto EntryBBSectionID = EntryBB.getSectionID();
 
   // Helper function for ordering BB sections as follows:
   //   * Entry section (section including the entry block).
@@ -341,12 +340,17 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   // contiguous and ordered accordingly. Furthermore, clusters are ordered in
   // increasing order of their section IDs, with the exception and the
   // cold section placed at the end of the function.
+  // Also, we force the entry block of the function to be placed at the
+  // beginning of the function, regardless of the requested order.
   auto Comparator = [&](const MachineBasicBlock &X,
                         const MachineBasicBlock &Y) {
     auto XSectionID = X.getSectionID();
     auto YSectionID = Y.getSectionID();
     if (XSectionID != YSectionID)
       return MBBSectionOrder(XSectionID, YSectionID);
+    // Make sure that the entry block is placed at the beginning.
+    if (&X == &EntryBB || &Y == &EntryBB)
+      return &X == &EntryBB;
     // If the two basic block are in the same section, the order is decided by
     // their position within the section.
     if (XSectionID.Type == MBBSectionID::SectionType::Default)
@@ -362,7 +366,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<BasicBlockSectionsProfileReader>();
+  AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

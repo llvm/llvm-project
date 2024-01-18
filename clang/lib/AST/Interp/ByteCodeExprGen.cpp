@@ -114,6 +114,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingCast: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
@@ -121,6 +123,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToFloating: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     if (!FromT)
       return false;
@@ -135,6 +139,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_FloatingToBoolean:
   case CK_FloatingToIntegral: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     std::optional<PrimType> ToT = classify(CE->getType());
 
     if (!ToT)
@@ -2330,7 +2337,7 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
     if (VarT) {
-      if (!this->emitGetGlobal(*VarT, *GlobalIndex, VD))
+      if (!this->emitGetGlobalUnchecked(*VarT, *GlobalIndex, VD))
         return false;
     } else {
       if (!this->emitGetPtrGlobal(*GlobalIndex, VD))
@@ -2761,7 +2768,8 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: { // __real x
-    assert(!T);
+    if (T)
+      return this->delegate(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(0, E))
@@ -2776,7 +2784,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return true;
   }
   case UO_Imag: { // __imag x
-    assert(!T);
+    if (T) {
+      if (!this->discard(SubExpr))
+        return false;
+      return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+    }
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(1, E))
@@ -2944,7 +2956,6 @@ bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
-/// FIXME: Handle virtual destructors.
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   assert(Desc);

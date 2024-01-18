@@ -366,6 +366,10 @@ private:
                        BranchProbability BranchProbToNext, Register Reg,
                        SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
 
+  void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
+                     const SwitchCG::SwitchWorkListItem &W, Value *Cond,
+                     MachineBasicBlock *SwitchMBB, MachineIRBuilder &MIB);
+
   bool lowerJumpTableWorkItem(
       SwitchCG::SwitchWorkListItem W, MachineBasicBlock *SwitchMBB,
       MachineBasicBlock *CurMBB, MachineBasicBlock *DefaultMBB,

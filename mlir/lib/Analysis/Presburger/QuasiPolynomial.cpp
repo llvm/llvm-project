@@ -36,6 +36,12 @@ QuasiPolynomial::QuasiPolynomial(
 #endif // NDEBUG
 }
 
+/// Define a quasipolynomial which is a single constant.
+QuasiPolynomial::QuasiPolynomial(unsigned numVars, Fraction constant)
+    : PresburgerSpace(/*numDomain=*/numVars, /*numRange=*/1, /*numSymbols=*/0,
+                      /*numLocals=*/0),
+      coefficients({constant}), affine({{}}) {}
+
 QuasiPolynomial QuasiPolynomial::operator+(const QuasiPolynomial &x) const {
   assert(getNumInputs() == x.getNumInputs() &&
          "two quasi-polynomials with different numbers of symbols cannot "
@@ -112,4 +118,12 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     newAffine.push_back(affine[i]);
   }
   return QuasiPolynomial(getNumInputs(), newCoeffs, newAffine);
+}
+
+Fraction QuasiPolynomial::getConstantTerm() {
+  Fraction constTerm = 0;
+  for (unsigned i = 0, e = coefficients.size(); i < e; ++i)
+    if (affine[i].size() == 0)
+      constTerm += coefficients[i];
+  return constTerm;
 }

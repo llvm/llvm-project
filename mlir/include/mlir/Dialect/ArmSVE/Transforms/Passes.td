@@ -21,7 +21,7 @@ def LegalizeVectorStorage
 
     This pass currently addresses two issues.
 
-    ## Loading and storing predicate types
+    #### Loading and storing predicate types
 
     It is only legal to load/store predicate types equal to (or greater than) a
     full predicate register, which in MLIR is `vector<[16]xi1>`. Smaller
@@ -49,7 +49,7 @@ def LegalizeVectorStorage
     %reload = arm_sve.convert_from_svbool %reload_svbool : vector<[4]xi1>
     ```
 
-    ## Relax alignments for SVE vector allocas
+    #### Relax alignments for SVE vector allocas
 
     The storage for SVE vector types only needs to have an alignment that
     matches the element type (for example 4 byte alignment for `f32`s). However,

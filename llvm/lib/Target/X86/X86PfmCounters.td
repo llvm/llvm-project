@@ -18,6 +18,10 @@ def DefaultPfmCounters : ProcPfmCounters {}
 def : PfmCountersDefaultBinding<DefaultPfmCounters>;
 
 // Intel X86 Counters.
+defvar DefaultIntelPfmValidationCounters = [
+  PfmValidationCounter<InstructionRetired, "INSTRUCTIONS_RETIRED">
+];
+
 def PentiumPfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
   let UopsCounter = PfmCounter<"uops_retired">;
@@ -100,6 +104,7 @@ def SandyBridgePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SBPort4",  "uops_dispatched_port:port_4">,
     PfmIssueCounter<"SBPort5",  "uops_dispatched_port:port_5">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"sandybridge", SandyBridgePfmCounters>;
 def : PfmCountersBinding<"ivybridge", SandyBridgePfmCounters>;
@@ -117,6 +122,7 @@ def HaswellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"HWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"HWPort7", "uops_executed_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"haswell", HaswellPfmCounters>;
 
@@ -133,6 +139,7 @@ def BroadwellPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"BWPort6", "uops_executed_port:port_6">,
     PfmIssueCounter<"BWPort7", "uops_executed_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"broadwell", BroadwellPfmCounters>;
 
@@ -149,6 +156,7 @@ def SkylakeClientPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKLPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKLPort7", "uops_dispatched_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"skylake", SkylakeClientPfmCounters>;
 
@@ -165,6 +173,7 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
     PfmIssueCounter<"SKXPort6", "uops_dispatched_port:port_6">,
     PfmIssueCounter<"SKXPort7", "uops_dispatched_port:port_7">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
 def : PfmCountersBinding<"cascadelake", SkylakeServerPfmCounters>;
@@ -182,6 +191,7 @@ def IceLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ICXPort6",  "uops_dispatched_port:port_6">,
     PfmIssueCounter<"ICXPort78", "uops_dispatched_port:port_7_8">
   ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"icelake-client", IceLakePfmCounters>;
 def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
@@ -189,6 +199,10 @@ def : PfmCountersBinding<"rocketlake", IceLakePfmCounters>;
 def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
 
 // AMD X86 Counters.
+defvar DefaultAMDPfmValidationCounters = [
+  PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">
+];
+
 // Set basic counters for AMD cpus that we know libpfm4 supports.
 def DefaultAMDPfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
@@ -265,6 +279,7 @@ def ZnVer1PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ZnAGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"ZnDivider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver1", ZnVer1PfmCounters>;
 
@@ -275,6 +290,7 @@ def ZnVer2PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn2AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn2Divider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver2", ZnVer2PfmCounters>;
 
@@ -288,6 +304,7 @@ def ZnVer3PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn3Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn3Divider", "div_op_count">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver3", ZnVer3PfmCounters>;
 
@@ -302,5 +319,6 @@ def ZnVer4PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"Zn4Divider", "div_op_count">,
     PfmIssueCounter<"Zn4AGU", "ls_dispatch:ld_st_dispatch + ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">
   ];
+  let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;

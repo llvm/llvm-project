@@ -16,6 +16,17 @@
 #  pragma GCC system_header
 #endif
 
+#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED
@@ -283,6 +294,9 @@
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
 //
+// - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
+//   be benign in our implementation.
+//
 // - `_LIBCPP_ASSERT_INTERNAL` -- checks that internal invariants of the library hold. These assertions don't depend on
 //   user input.
 //
@@ -325,6 +339,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
@@ -339,6 +354,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
@@ -352,6 +368,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
 
@@ -365,6 +382,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
@@ -1124,11 +1142,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // as well.
 #  if (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) || defined(_LIBCPP_HAS_THREAD_API_WIN32)
 #    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
-#  endif
-
-// Some systems do not provide gets() in their C library, for security reasons.
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || defined(__OpenBSD__)
-#    define _LIBCPP_C_HAS_NO_GETS
 #  endif
 
 #  if defined(__BIONIC__) || defined(__NuttX__) || defined(__Fuchsia__) || defined(__wasi__) ||                        \

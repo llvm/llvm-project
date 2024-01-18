@@ -34,14 +34,20 @@ jobs:
       (github.event.pull_request.author_association != 'MEMBER') &&
       (github.event.pull_request.author_association != 'OWNER')
     steps:
+      - name: Checkout Automation Script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: llvm/utils/git/
+          ref: main
+
       - name: Setup Automation Script
+        working-directory: ./llvm/utils/git/
         run: |
-          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
-          curl -O -L --fail https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
           chmod a+x github-automation.py
           pip install -r requirements.txt
 
       - name: Greet Author
+        working-directory: ./llvm/utils/git/
         run: |
           ./github-automation.py \
             --token '${{ secrets.GITHUB_TOKEN }}' \

@@ -366,7 +366,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v4s32, p0, s128, 8},
                                  {v2s64, p0, s128, 8}})
       // These extends are also legal
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
+      .legalForTypesWithMemDesc(
+          {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
       .widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
@@ -448,10 +449,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   auto IndexedLoadBasicPred = [=](const LegalityQuery &Query) {
     LLT LdTy = Query.Types[0];
     LLT PtrTy = Query.Types[1];
-    if (llvm::find(PackedVectorAllTypesVec, LdTy) ==
-            PackedVectorAllTypesVec.end() &&
-        llvm::find(ScalarAndPtrTypesVec, LdTy) == ScalarAndPtrTypesVec.end() &&
-        LdTy != s128)
+    if (!llvm::is_contained(PackedVectorAllTypesVec, LdTy) &&
+        !llvm::is_contained(ScalarAndPtrTypesVec, LdTy) && LdTy != s128)
       return false;
     if (PtrTy != p0)
       return false;
@@ -496,6 +495,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .clampScalar(0, MinFPScalar, s128);
 
+  // FIXME: fix moreElementsToNextPow2
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{s32, s32},
                  {s32, s64},
@@ -525,7 +525,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
-      .clampNumElements(0, v2s32, v4s32);
+      .moreElementsToNextPow2(0)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_FCMP)
       // If we don't have full FP16 support, then scalarize the elements of
@@ -864,6 +868,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           },
           0, s8)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
+      .moreElementsToNextPow2(1)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1024,6 +1029,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
+  getActionDefinitionsBuilder({G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL})
+      .scalarize(2)
+      .lower();
+
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor({{s8, v16s8},
                  {s8, v8s8},
@@ -1161,7 +1170,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FMAD).lower();
 
   // Access to floating-point environment.
-  getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
+  getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV,
+                               G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
 
   getActionDefinitionsBuilder(G_IS_FPCLASS).lower();

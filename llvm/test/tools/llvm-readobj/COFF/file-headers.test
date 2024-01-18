@@ -320,7 +320,7 @@ symbols:
 # RUN: llvm-readobj -h %p/Inputs/magic.coff-importlib \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix IMPORTLIB
 
-#      IMPORTLIB:Format: COFF-import-file
+#      IMPORTLIB:Format: COFF-import-file-i386
 # IMPORTLIB-NEXT:Type: code
 # IMPORTLIB-NEXT:Name type: noprefix
 # IMPORTLIB-NEXT:Symbol: __imp__func
