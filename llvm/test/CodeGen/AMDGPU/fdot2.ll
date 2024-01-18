@@ -54,7 +54,7 @@ entry:
 ; GFX906: v_mac_f32_e32
 
 ; GFX906-DL-UNSAFE: v_dot2_f32_f16
-; GFX10-DL-UNSAFE: v_dot2c_f32_f16_e32
+; GFX10-DL-UNSAFE: v_dot2c_f32_f16
 
 ; GFX906-CONTRACT: v_dot2_f32_f16
 
@@ -95,7 +95,7 @@ entry:
 ; GFX906: v_mac_f32_e32
 
 ; GFX906-DL-UNSAFE: v_dot2_f32_f16
-; GFX10-DL-UNSAFE: v_dot2c_f32_f16_e32
+; GFX10-DL-UNSAFE: v_dot2c_f32_f16
 
 ; GFX906-CONTRACT: v_dot2_f32_f16
 ; GFX906-DENORM-CONTRACT: v_dot2_f32_f16

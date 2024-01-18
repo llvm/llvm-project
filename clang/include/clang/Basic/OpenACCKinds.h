@@ -103,6 +103,37 @@ enum class OpenACCClauseKind {
   Copy,
   /// 'use_device' clause, allowed on 'host_data' construct.
   UseDevice,
+  /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'enter data'.
+  Attach,
+  /// 'delete' clause, allowed on the 'exit data' construct.
+  Delete,
+  /// 'detach' clause, allowed on the 'exit data' construct.
+  Detach,
+  /// 'device' clause, allowed on the 'update' construct.
+  Device,
+  /// 'deviceptr' clause, allowed on Compute and Combined Constructs, plus
+  /// 'data' and 'declare'.
+  DevicePtr,
+  /// 'device_resident' clause, allowed on the 'declare' construct.
+  DeviceResident,
+  /// 'firstprivate' clause, allowed on 'parallel', 'serial', 'parallel loop',
+  /// and 'serial loop' constructs.
+  FirstPrivate,
+  /// 'host' clause, allowed on 'update' construct.
+  Host,
+  /// 'link' clause, allowed on 'declare' construct.
+  Link,
+  /// 'no_create' clause, allowed on allowed on Compute and Combined constructs,
+  /// plus 'data'.
+  NoCreate,
+  /// 'present' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'declare'.
+  Present,
+  /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
+  /// loop', and 'serial loop' constructs.
+  Private,
+
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
 };
