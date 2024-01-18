@@ -11,14 +11,14 @@ package(default_visibility = ["//visibility:public"])
         data = [
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
+            "//mlir:mlir-pdll",
+            "//mlir:mlir-reduce",
             "//mlir:mlir-translate",
             "//mlir/test:lit_data",
         ] + glob([
             "IRDL/*.irdl.mlir",
             "LLVM/*-symbol-def.mlir",
-            "Transform/*-source.mlir",
-            "Transform/*-symbol-def.mlir",
-            "Transform/*-symbol-decl-and-schedule.mlir",
+            "Transform/include/**/*.mlir",
         ]),
     )
     for src in glob(
@@ -26,10 +26,8 @@ package(default_visibility = ["//visibility:public"])
         exclude = [
             "IRDL/*.irdl.mlir",
             "LLVM/*-symbol-def.mlir",
-            "Transform/*-source.mlir",
-            "Transform/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
-            "Transform/test-repro-dump.mlir",
+            "Transform/include/**/*.mlir",
         ],
     )
 ]

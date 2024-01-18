@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 constexpr size_t max_buff_size() {
@@ -74,4 +74,4 @@ cpp::string_view get_error_string(int err_num, cpp::span<char> buffer) {
     return internal::build_error_string(err_num, buffer);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

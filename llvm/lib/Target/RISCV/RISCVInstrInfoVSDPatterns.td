@@ -1358,7 +1358,8 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // 11.15. Vector Integer Merge Instructions
 // 13.15. Vector Floating-Point Merge Instruction
 foreach fvti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<fvti>.Predicates in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0), fvti.RegClass:$rs1,
                                                           fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
@@ -1367,6 +1368,15 @@ foreach fvti = AllFloatVectors in {
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+                                    (SplatFPOp (fvti.Scalar fpimm0)),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+
+  }
+  let Predicates = GetVTypePredicates<fvti>.Predicates in 
+    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp fvti.ScalarRegClass:$rs1),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
@@ -1374,14 +1384,6 @@ foreach fvti = AllFloatVectors in {
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
-                                    (SplatFPOp (fvti.Scalar fpimm0)),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
-  }
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
@@ -1422,18 +1424,18 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 //===----------------------------------------------------------------------===//
 
 foreach fvti = AllFloatVectors in {
-  let Predicates = GetVTypePredicates<fvti>.Predicates in {
+  let Predicates = GetVTypePredicates<fvti>.Predicates in
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl undef, fvti.ScalarRegClass:$rs1, srcvalue)),
               (!cast<Instruction>("PseudoVFMV_V_"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                 (fvti.Vector (IMPLICIT_DEF)),
                 (fvti.Scalar fvti.ScalarRegClass:$rs1),
                 fvti.AVL, fvti.Log2SEW, TA_MA)>;
-
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in
     def : Pat<(fvti.Vector (SplatFPOp (fvti.Scalar fpimm0))),
               (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
                 (fvti.Vector (IMPLICIT_DEF)),
                 0, fvti.AVL, fvti.Log2SEW, TA_MA)>;
-  }
 }
 
 //===----------------------------------------------------------------------===//

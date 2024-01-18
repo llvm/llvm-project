@@ -75,7 +75,7 @@ define i32 @abs(i32 %arg) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %30 = call <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8> undef, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %31 = call <vscale x 32 x i8> @llvm.abs.nxv32i8(<vscale x 32 x i8> undef, i1 false)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %32 = call <vscale x 64 x i8> @llvm.abs.nxv64i8(<vscale x 64 x i8> undef, i1 false)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   call <2 x i64> @llvm.abs.v2i64(<2 x i64> undef, i1 false)
   call <4 x i64> @llvm.abs.v4i64(<4 x i64> undef, i1 false)

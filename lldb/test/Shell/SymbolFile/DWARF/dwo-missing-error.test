@@ -1,0 +1,34 @@
+# Check that LLDB prints an error message containing the DWO_AT_comp_dir and
+# DW_AT_dwo_name when it can't find a DWO and the DW_AT_comp_dir and
+# DW_AT_dwo_name are relative.
+
+# -gsplit-dwarf is supported only on Linux.
+# REQUIRES: system-linux
+
+# Test the error message with a relative DW_AT_comp_dir and DW_AT_dwo_name.
+# Creating and compiling to %t.compdir makes it easy to remove the dwo files.
+# DW_AT_comp_dir should be "./a/b/", and DW_AT_dwo_name should be
+# "a.out-dwo-missing-error.dwo".
+# since %T is deprecated.
+# RUN: rm -rf %t.compdir/
+# RUN: mkdir -p %t.compdir/a/b/
+# RUN: cd %t.compdir/a/b/
+# RUN: %clang_host %S/Inputs/dwo-missing-error.c -glldb -gdwarf-5 \
+# RUN:     -gsplit-dwarf -fdebug-prefix-map=%t.compdir=. -o a.out
+# RUN: rm *.dwo
+# RUN: %lldb a.out -s %s -o exit 2>&1 | FileCheck %s 
+# RUN: cd -
+
+# Test the error message with an absolute DW_AT_comp_dir and DW_AT_dwo_name.
+# RUN: rm -rf %t.compdir/
+# RUN: mkdir -p %t.compdir/a/b/
+# RUN: %clang_host %S/Inputs/dwo-missing-error.c -glldb -gdwarf-5 \
+# RUN:     -gsplit-dwarf -o %t.compdir/a/b/a.out
+# RUN: rm %t.compdir/a/b/*.dwo
+# RUN: %lldb %t.compdir/a/b/a.out -s %s -o exit 2>&1 | FileCheck %s 
+
+b main
+run
+
+fr v
+# CHECK: error: unable to locate .dwo debug file "{{.*}}a/b/a.out-dwo-missing-error.dwo" for skeleton DIE {{.*}}

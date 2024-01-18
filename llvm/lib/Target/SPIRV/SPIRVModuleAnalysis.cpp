@@ -528,8 +528,8 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 void SPIRV::RequirementHandler::removeCapabilityIf(
     const Capability::Capability ToRemove,
     const Capability::Capability IfPresent) {
-  if (AvailableCaps.contains(IfPresent))
-    AvailableCaps.erase(ToRemove);
+  if (AllCaps.contains(IfPresent))
+    AllCaps.erase(ToRemove);
 }
 
 namespace llvm {
@@ -902,6 +902,13 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpGroupNonUniformBallotFindLSB:
   case SPIRV::OpGroupNonUniformBallotFindMSB:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
+    break;
+  case SPIRV::OpAssumeTrueKHR:
+  case SPIRV::OpExpectKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
+      Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    }
     break;
   default:
     break;

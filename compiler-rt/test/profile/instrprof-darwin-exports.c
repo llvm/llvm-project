@@ -22,7 +22,7 @@
 //
 // RUN: %clang_pgogen -Werror -o %t.default %s
 // RUN: nm -jUg %t.default | grep -v __mh_execute_header > %t.default.exports
-// RUN: nm -jUg %t > %t.clang.exports
+// RUN: nm -jUg %t | grep -v __mh_execute_header > %t.clang.exports
 // RUN: diff %t.default.exports %t.clang.exports
 
 // 4) Ditto (3), but for GCOV.

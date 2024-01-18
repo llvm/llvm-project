@@ -16,9 +16,9 @@
 #include <sys/socket.h> // For AF_LOCAL and SOCK_DGRAM
 
 TEST(LlvmLibcSocketTest, LocalSocket) {
-  int sock = __llvm_libc::socket(AF_LOCAL, SOCK_DGRAM, 0);
+  int sock = LIBC_NAMESPACE::socket(AF_LOCAL, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
   ASSERT_EQ(libc_errno, 0);
 
-  __llvm_libc::close(sock);
+  LIBC_NAMESPACE::close(sock);
 }

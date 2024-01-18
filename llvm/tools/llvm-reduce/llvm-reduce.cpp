@@ -26,7 +26,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
-#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>

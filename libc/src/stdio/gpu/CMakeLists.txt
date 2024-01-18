@@ -33,6 +33,39 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fseek
+  SRCS
+    fseek.cpp
+  HDRS
+    ../fseek.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  ftell
+  SRCS
+    ftell.cpp
+  HDRS
+    ../ftell.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    ../fflush.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
   clearerr
   SRCS
     clearerr.cpp
@@ -216,6 +249,17 @@ add_entrypoint_object(
     .gpu_file
     .feof
     .ferror
+)
+
+add_entrypoint_object(
+  ungetc
+  SRCS
+    ungetc.cpp
+  HDRS
+    ../ungetc.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
 )
 
 add_entrypoint_object(

@@ -227,7 +227,8 @@ bool Variable::LocationIsValidForFrame(StackFrame *frame) {
       // contains the current address when converted to a load address
       return m_location_list.ContainsAddress(
           loclist_base_load_addr,
-          frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get()));
+          frame->GetFrameCodeAddressForSymbolication().GetLoadAddress(
+              target_sp.get()));
     }
   }
   return false;

@@ -37,56 +37,56 @@ namespace wait_notify_broadcast_test {
 
 constexpr unsigned int THRD_COUNT = 1000;
 
-static __llvm_libc::cpp::Atomic<unsigned int> broadcast_count(0);
+static LIBC_NAMESPACE::cpp::Atomic<unsigned int> broadcast_count(0);
 static cnd_t broadcast_cnd, threads_ready_cnd;
 static mtx_t broadcast_mtx, threads_ready_mtx;
 
 int broadcast_thread_func(void *) {
-  __llvm_libc::mtx_lock(&broadcast_mtx);
+  LIBC_NAMESPACE::mtx_lock(&broadcast_mtx);
   unsigned oldval = broadcast_count.fetch_add(1);
   if (oldval == THRD_COUNT - 1) {
-    __llvm_libc::mtx_lock(&threads_ready_mtx);
-    __llvm_libc::cnd_signal(&threads_ready_cnd);
-    __llvm_libc::mtx_unlock(&threads_ready_mtx);
+    LIBC_NAMESPACE::mtx_lock(&threads_ready_mtx);
+    LIBC_NAMESPACE::cnd_signal(&threads_ready_cnd);
+    LIBC_NAMESPACE::mtx_unlock(&threads_ready_mtx);
   }
 
-  __llvm_libc::cnd_wait(&broadcast_cnd, &broadcast_mtx);
-  __llvm_libc::mtx_unlock(&broadcast_mtx);
+  LIBC_NAMESPACE::cnd_wait(&broadcast_cnd, &broadcast_mtx);
+  LIBC_NAMESPACE::mtx_unlock(&broadcast_mtx);
   broadcast_count.fetch_sub(1);
   return 0;
 }
 
 void wait_notify_broadcast_test() {
-  __llvm_libc::cnd_init(&broadcast_cnd);
-  __llvm_libc::cnd_init(&threads_ready_cnd);
-  __llvm_libc::mtx_init(&broadcast_mtx, mtx_plain);
-  __llvm_libc::mtx_init(&threads_ready_mtx, mtx_plain);
+  LIBC_NAMESPACE::cnd_init(&broadcast_cnd);
+  LIBC_NAMESPACE::cnd_init(&threads_ready_cnd);
+  LIBC_NAMESPACE::mtx_init(&broadcast_mtx, mtx_plain);
+  LIBC_NAMESPACE::mtx_init(&threads_ready_mtx, mtx_plain);
 
-  __llvm_libc::mtx_lock(&threads_ready_mtx);
+  LIBC_NAMESPACE::mtx_lock(&threads_ready_mtx);
   thrd_t threads[THRD_COUNT];
   for (unsigned int i = 0; i < THRD_COUNT; ++i)
-    __llvm_libc::thrd_create(&threads[i], broadcast_thread_func, nullptr);
+    LIBC_NAMESPACE::thrd_create(&threads[i], broadcast_thread_func, nullptr);
 
-  __llvm_libc::cnd_wait(&threads_ready_cnd, &threads_ready_mtx);
-  __llvm_libc::mtx_unlock(&threads_ready_mtx);
+  LIBC_NAMESPACE::cnd_wait(&threads_ready_cnd, &threads_ready_mtx);
+  LIBC_NAMESPACE::mtx_unlock(&threads_ready_mtx);
 
-  __llvm_libc::mtx_lock(&broadcast_mtx);
+  LIBC_NAMESPACE::mtx_lock(&broadcast_mtx);
   ASSERT_EQ(broadcast_count.val, THRD_COUNT);
-  __llvm_libc::cnd_broadcast(&broadcast_cnd);
-  __llvm_libc::mtx_unlock(&broadcast_mtx);
+  LIBC_NAMESPACE::cnd_broadcast(&broadcast_cnd);
+  LIBC_NAMESPACE::mtx_unlock(&broadcast_mtx);
 
   for (unsigned int i = 0; i < THRD_COUNT; ++i) {
     int retval = 0xBAD;
-    __llvm_libc::thrd_join(threads[i], &retval);
+    LIBC_NAMESPACE::thrd_join(threads[i], &retval);
     ASSERT_EQ(retval, 0);
   }
 
   ASSERT_EQ(broadcast_count.val, 0U);
 
-  __llvm_libc::cnd_destroy(&broadcast_cnd);
-  __llvm_libc::cnd_destroy(&threads_ready_cnd);
-  __llvm_libc::mtx_destroy(&broadcast_mtx);
-  __llvm_libc::mtx_destroy(&threads_ready_mtx);
+  LIBC_NAMESPACE::cnd_destroy(&broadcast_cnd);
+  LIBC_NAMESPACE::cnd_destroy(&threads_ready_cnd);
+  LIBC_NAMESPACE::mtx_destroy(&broadcast_mtx);
+  LIBC_NAMESPACE::mtx_destroy(&threads_ready_mtx);
 }
 
 } // namespace wait_notify_broadcast_test
@@ -101,46 +101,47 @@ mtx_t waiter_mtx, main_thread_mtx;
 cnd_t waiter_cnd, main_thread_cnd;
 
 int waiter_thread_func(void *unused) {
-  __llvm_libc::mtx_lock(&waiter_mtx);
+  LIBC_NAMESPACE::mtx_lock(&waiter_mtx);
 
-  __llvm_libc::mtx_lock(&main_thread_mtx);
-  __llvm_libc::cnd_signal(&main_thread_cnd);
-  __llvm_libc::mtx_unlock(&main_thread_mtx);
+  LIBC_NAMESPACE::mtx_lock(&main_thread_mtx);
+  LIBC_NAMESPACE::cnd_signal(&main_thread_cnd);
+  LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx);
 
-  __llvm_libc::cnd_wait(&waiter_cnd, &waiter_mtx);
-  __llvm_libc::mtx_unlock(&waiter_mtx);
+  LIBC_NAMESPACE::cnd_wait(&waiter_cnd, &waiter_mtx);
+  LIBC_NAMESPACE::mtx_unlock(&waiter_mtx);
 
   return 0x600D;
 }
 
 void single_waiter_test() {
-  ASSERT_EQ(__llvm_libc::mtx_init(&waiter_mtx, mtx_plain), int(thrd_success));
-  ASSERT_EQ(__llvm_libc::mtx_init(&main_thread_mtx, mtx_plain),
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&waiter_mtx, mtx_plain),
             int(thrd_success));
-  ASSERT_EQ(__llvm_libc::cnd_init(&waiter_cnd), int(thrd_success));
-  ASSERT_EQ(__llvm_libc::cnd_init(&main_thread_cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&main_thread_mtx, mtx_plain),
+            int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&waiter_cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&main_thread_cnd), int(thrd_success));
 
-  ASSERT_EQ(__llvm_libc::mtx_lock(&main_thread_mtx), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&main_thread_mtx), int(thrd_success));
 
   thrd_t waiter_thread;
-  __llvm_libc::thrd_create(&waiter_thread, waiter_thread_func, nullptr);
+  LIBC_NAMESPACE::thrd_create(&waiter_thread, waiter_thread_func, nullptr);
 
-  ASSERT_EQ(__llvm_libc::cnd_wait(&main_thread_cnd, &main_thread_mtx),
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_wait(&main_thread_cnd, &main_thread_mtx),
             int(thrd_success));
-  ASSERT_EQ(__llvm_libc::mtx_unlock(&main_thread_mtx), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&main_thread_mtx), int(thrd_success));
 
-  ASSERT_EQ(__llvm_libc::mtx_lock(&waiter_mtx), int(thrd_success));
-  ASSERT_EQ(__llvm_libc::cnd_signal(&waiter_cnd), int(thrd_success));
-  ASSERT_EQ(__llvm_libc::mtx_unlock(&waiter_mtx), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&waiter_mtx), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_signal(&waiter_cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&waiter_mtx), int(thrd_success));
 
   int retval;
-  __llvm_libc::thrd_join(waiter_thread, &retval);
+  LIBC_NAMESPACE::thrd_join(waiter_thread, &retval);
   ASSERT_EQ(retval, 0x600D);
 
-  __llvm_libc::mtx_destroy(&waiter_mtx);
-  __llvm_libc::mtx_destroy(&main_thread_mtx);
-  __llvm_libc::cnd_destroy(&waiter_cnd);
-  __llvm_libc::cnd_destroy(&main_thread_cnd);
+  LIBC_NAMESPACE::mtx_destroy(&waiter_mtx);
+  LIBC_NAMESPACE::mtx_destroy(&main_thread_mtx);
+  LIBC_NAMESPACE::cnd_destroy(&waiter_cnd);
+  LIBC_NAMESPACE::cnd_destroy(&main_thread_cnd);
 }
 
 } // namespace single_waiter_test

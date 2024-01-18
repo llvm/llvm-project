@@ -240,16 +240,6 @@ public:
                                                        Unsupported);
   }
 
-  static SizeAndActionsVec
-  narrowToSmallerAndWidenToSmallest(const SizeAndActionsVec &v) {
-    using namespace LegacyLegalizeActions;
-    assert(v.size() > 0 &&
-           "At least one size that can be legalized towards is needed"
-           " for this SizeChangeStrategy");
-    return decreaseToSmallerTypesAndIncreaseToSmallest(v, NarrowScalar,
-                                                       WidenScalar);
-  }
-
   /// A SizeChangeStrategy for the common case where legalization for a
   /// particular vector operation consists of having more elements in the
   /// vector, to a type that is legal. Unless there is no such type and then

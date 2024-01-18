@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 // A generic class to perform comuptations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
@@ -32,19 +32,17 @@ namespace __llvm_libc::fputil {
 // To simplify and improve the efficiency, many functions will assume that the
 // inputs are normal.
 template <size_t Bits> struct DyadicFloat {
-  using MantissaType = __llvm_libc::cpp::UInt<Bits>;
+  using MantissaType = LIBC_NAMESPACE::cpp::UInt<Bits>;
 
   bool sign = false;
   int exponent = 0;
   MantissaType mantissa = MantissaType(0);
 
-  DyadicFloat() = default;
+  constexpr DyadicFloat() = default;
 
-  template <typename T,
-            cpp::enable_if_t<cpp::is_floating_point_v<T> &&
-                                 (FloatProperties<T>::MANTISSA_WIDTH < Bits),
-                             int> = 0>
+  template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
   DyadicFloat(T x) {
+    static_assert(FloatProperties<T>::MANTISSA_WIDTH < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.get_sign();
     exponent = x_bits.get_exponent() - FloatProperties<T>::MANTISSA_WIDTH;
@@ -96,7 +94,7 @@ template <size_t Bits> struct DyadicFloat {
       return 0.0;
 
     // Assume that it is normalized, and output is also normal.
-    constexpr size_t PRECISION = FloatProperties<T>::MANTISSA_WIDTH + 1;
+    constexpr uint32_t PRECISION = FloatProperties<T>::MANTISSA_PRECISION;
     using output_bits_t = typename FPBits<T>::UIntType;
 
     int exp_hi = exponent + static_cast<int>((Bits - 1) +
@@ -112,12 +110,12 @@ template <size_t Bits> struct DyadicFloat {
       exp_hi = FloatProperties<T>::EXPONENT_BIAS;
     }
 
-    int exp_lo = exp_hi - PRECISION - 1;
+    int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
 
     MantissaType m_hi(mantissa >> shift);
 
     T d_hi = FPBits<T>::create_value(sign, exp_hi,
-                                     output_bits_t(m_hi) &
+                                     static_cast<output_bits_t>(m_hi) &
                                          FloatProperties<T>::MANTISSA_MASK)
                  .get_val();
 
@@ -306,6 +304,6 @@ constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
   return result;
 }
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H

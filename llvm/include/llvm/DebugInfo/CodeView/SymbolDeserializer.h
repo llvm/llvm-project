@@ -24,7 +24,7 @@ class SymbolVisitorDelegate;
 class SymbolDeserializer : public SymbolVisitorCallbacks {
   struct MappingInfo {
     MappingInfo(ArrayRef<uint8_t> RecordData, CodeViewContainer Container)
-        : Stream(RecordData, llvm::support::little), Reader(Stream),
+        : Stream(RecordData, llvm::endianness::little), Reader(Stream),
           Mapping(Reader, Container) {}
 
     BinaryByteStream Stream;

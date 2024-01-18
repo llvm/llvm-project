@@ -1,6 +1,6 @@
 # UNSUPPORTED: system-windows
-# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+experimental-zfa,+v --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ABINAME
-# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+experimental-zfa,+v -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ARCHNAME
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ABINAME
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=CHECK,ASM,ARCHNAME
 
 # CHECK:	.text
 # Registers and immediates

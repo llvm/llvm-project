@@ -64,3 +64,13 @@ subroutine s7_c1107
     arr(x) = x - 1 ! ok
   end block
 end
+
+subroutine s8
+  real x(1)
+  associate (sf=>x)
+    block
+      integer :: j = 1
+      sf(j) = j ! looks like a statement function, but isn't one
+    end block
+  end associate
+end

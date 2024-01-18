@@ -9,10 +9,10 @@
 #include "src/math/remainderf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, remainderf, (float x, float y)) {
   return __builtin_remainderf(x, y);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

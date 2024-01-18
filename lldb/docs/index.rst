@@ -102,10 +102,13 @@ Additionally it builds:
 See the :doc:`LLDB Build Page <resources/build>` for build instructions.
 
 Discussions about LLDB should go to the `LLDB forum
-<https://discourse.llvm.org/c/subprojects/lldb>`__. Commit
+<https://discourse.llvm.org/c/subprojects/lldb>`__ or the ``lldb`` channel on
+the `LLVM Discord server <https://discord.com/invite/xS7Z362>`__.
+
+For contributions follow the
+`LLVM contribution process <https://llvm.org/docs/Contributing.html>`__. Commit
 messages are automatically sent to the `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list, and
-this is also the preferred mailing list for patch submissions.
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`__ mailing list.
 
 See the :doc:`Projects page <resources/projects>` if you are looking for some
 interesting areas to contribute to lldb.
@@ -125,6 +128,7 @@ interesting areas to contribute to lldb.
    use/qemu-testing
    use/intel_pt
    use/ondemand
+   use/aarch64-linux
    use/troubleshooting
    use/links
    Man Page <man/lldb>

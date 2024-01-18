@@ -75,7 +75,7 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
 }
 
 MCSymbol *WinCFGuard::lookupImpSymbol(const MCSymbol *Sym) {
-  if (Sym->getName().startswith("__imp_"))
+  if (Sym->getName().starts_with("__imp_"))
     return nullptr;
   return Asm->OutContext.lookupSymbol(Twine("__imp_") + Sym->getName());
 }

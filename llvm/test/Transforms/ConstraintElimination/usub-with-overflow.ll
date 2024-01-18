@@ -212,10 +212,9 @@ exit.fail:
 define i8 @usub_may_overflow1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @usub_may_overflow1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[C_1]], label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
+; CHECK-NEXT:    br i1 true, label [[MATH:%.*]], label [[EXIT_FAIL:%.*]]
 ; CHECK:       math:
-; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B:%.*]], i8 [[A]])
+; CHECK-NEXT:    [[OP:%.*]] = tail call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[B:%.*]], i8 [[A:%.*]])
 ; CHECK-NEXT:    [[STATUS:%.*]] = extractvalue { i8, i1 } [[OP]], 1
 ; CHECK-NEXT:    br i1 [[STATUS]], label [[EXIT_FAIL]], label [[EXIT_OK:%.*]]
 ; CHECK:       exit.ok:

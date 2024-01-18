@@ -939,4 +939,18 @@ void fundamentalTypesTest() {
   // CHECK-FIXES: for (double Double : Doubles)
 }
 
+template <unsigned  p> void _dependenceArrayTest() {
+  unsigned test[3][p];
+  for (unsigned i = 0; i < p; ++i)
+    for (unsigned j = 0; j < 3; ++j)
+      printf("%d", test[j][i]);
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use range-based for loop instead
+  // CHECK-FIXES: (auto & j : test)
+  // CHECK-FIXES: printf("%d", j[i]);
+}
+void dependenceArrayTest() {
+  _dependenceArrayTest<1>();
+  _dependenceArrayTest<2>();
+}
+
 } // namespace PseudoArray

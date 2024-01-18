@@ -256,18 +256,47 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
   return mlir::ceilDiv(*ubConstant - *lbConstant, *stepConstant);
 }
 
-LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs) {
+bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {
+  return llvm::none_of(sizesOrOffsets, [](int64_t value) {
+    return !ShapedType::isDynamic(value) && value < 0;
+  });
+}
+
+bool hasValidStrides(SmallVector<int64_t> strides) {
+  return llvm::none_of(strides, [](int64_t value) {
+    return !ShapedType::isDynamic(value) && value == 0;
+  });
+}
+
+LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
+                                   bool onlyNonNegative, bool onlyNonZero) {
   bool valuesChanged = false;
   for (OpFoldResult &ofr : ofrs) {
     if (ofr.is<Attribute>())
       continue;
     Attribute attr;
     if (matchPattern(ofr.get<Value>(), m_Constant(&attr))) {
+      // Note: All ofrs have index type.
+      if (onlyNonNegative && *getConstantIntValue(attr) < 0)
+        continue;
+      if (onlyNonZero && *getConstantIntValue(attr) == 0)
+        continue;
       ofr = attr;
       valuesChanged = true;
     }
   }
   return success(valuesChanged);
+}
+
+LogicalResult
+foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes) {
+  return foldDynamicIndexList(offsetsOrSizes, /*onlyNonNegative=*/true,
+                              /*onlyNonZero=*/false);
+}
+
+LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides) {
+  return foldDynamicIndexList(strides, /*onlyNonNegative=*/false,
+                              /*onlyNonZero=*/true);
 }
 
 } // namespace mlir

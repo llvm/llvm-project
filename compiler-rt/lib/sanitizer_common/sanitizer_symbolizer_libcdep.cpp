@@ -117,7 +117,7 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
       return true;
     }
   }
-  return true;
+  return false;
 }
 
 bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
@@ -133,7 +133,7 @@ bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
       return true;
     }
   }
-  return true;
+  return false;
 }
 
 bool Symbolizer::GetModuleNameAndOffsetForPC(uptr pc, const char **module_name,
@@ -189,6 +189,13 @@ void Symbolizer::RefreshModules() {
   fallback_modules_.fallbackInit();
   RAW_CHECK(modules_.size() > 0);
   modules_fresh_ = true;
+}
+
+const ListOfModules &Symbolizer::GetRefreshedListOfModules() {
+  if (!modules_fresh_)
+    RefreshModules();
+
+  return modules_;
 }
 
 static const LoadedModule *SearchForModule(const ListOfModules &modules,
@@ -385,8 +392,8 @@ void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
   str = ExtractUptr(str, "\n", &info->line);
 }
 
-static void ParseSymbolizeFrameOutput(const char *str,
-                                      InternalMmapVector<LocalInfo> *locals) {
+void ParseSymbolizeFrameOutput(const char *str,
+                               InternalMmapVector<LocalInfo> *locals) {
   if (internal_strncmp(str, "??", 2) == 0)
     return;
 

@@ -30,6 +30,7 @@ private:
   const SIInstrInfo *TII = nullptr;
   MachineDominatorTree *MDT = nullptr;
 
+  void expandChainCall(MachineInstr &MI);
   void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
@@ -116,6 +117,18 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->getBase().applyUpdates(DTUpdates);
 }
 
+void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
+  // This is a tail call that needs to be expanded into at least
+  // 2 instructions, one for setting EXEC and one for the actual tail call.
+  constexpr unsigned ExecIdx = 3;
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
+      ->addOperand(MI.getOperand(ExecIdx));
+  MI.removeOperand(ExecIdx);
+
+  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
+}
+
 void SILateBranchLowering::earlyTerm(MachineInstr &MI,
                                      MachineBasicBlock *EarlyExitBlock) {
   MachineBasicBlock &MBB = *MI.getParent();
@@ -156,6 +169,12 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
           MI.eraseFromParent();
           MadeChange = true;
         }
+        break;
+
+      case AMDGPU::SI_CS_CHAIN_TC_W32:
+      case AMDGPU::SI_CS_CHAIN_TC_W64:
+        expandChainCall(MI);
+        MadeChange = true;
         break;
 
       case AMDGPU::SI_EARLY_TERMINATE_SCC0:

@@ -55,7 +55,6 @@ static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
-STATISTIC(NumMemAccess, "Number of memory access targets propagated");
 STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
@@ -93,6 +92,7 @@ STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
+STATISTIC(NumZExt, "Number of non-negative deductions");
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
@@ -263,23 +263,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
   return Changed;
 }
 
-static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
-  Value *Pointer = nullptr;
-  if (LoadInst *L = dyn_cast<LoadInst>(I))
-    Pointer = L->getPointerOperand();
-  else
-    Pointer = cast<StoreInst>(I)->getPointerOperand();
-
-  if (isa<Constant>(Pointer)) return false;
-
-  Constant *C = LVI->getConstant(Pointer, I);
-  if (!C) return false;
-
-  ++NumMemAccess;
-  I->replaceUsesOfWith(Pointer, C);
-  return true;
-}
-
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!CanonicalizeICmpPredicatesToUnsigned)
     return false;
@@ -294,8 +277,9 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
 
   ICmpInst::Predicate UnsignedPred =
       ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(), LVI->getConstantRange(Cmp->getOperand(0), Cmp),
-          LVI->getConstantRange(Cmp->getOperand(1), Cmp));
+          Cmp->getPredicate(),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0)),
+          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1)));
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -470,17 +454,17 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
 // because it is negation-invariant.
 static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   Value *X = II->getArgOperand(0);
-  bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
-
   Type *Ty = X->getType();
-  Constant *IntMin =
-      ConstantInt::get(Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
-  LazyValueInfo::Tristate Result;
+  if (!Ty->isIntegerTy())
+    return false;
+
+  bool IsIntMinPoison = cast<ConstantInt>(II->getArgOperand(1))->isOne();
+  APInt IntMin = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+  ConstantRange Range = LVI->getConstantRangeAtUse(
+      II->getOperandUse(0), /*UndefAllowed*/ IsIntMinPoison);
 
   // Is X in [0, IntMin]?  NOTE: INT_MIN is fine!
-  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_ULE, X, IntMin, II,
-                               /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::True) {
+  if (Range.icmp(CmpInst::ICMP_ULE, IntMin)) {
     ++NumAbs;
     II->replaceAllUsesWith(X);
     II->eraseFromParent();
@@ -488,40 +472,30 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   }
 
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
-  Constant *Zero = ConstantInt::getNullValue(Ty);
-  Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_SLE, X, Zero, II,
-                               /*UseBlockValue=*/true);
-  assert(Result != LazyValueInfo::False && "Should have been handled already.");
+  if (Range.getSignedMax().isNonPositive()) {
+    IRBuilder<> B(II);
+    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+                              /*HasNSW=*/IsIntMinPoison);
+    ++NumAbs;
+    II->replaceAllUsesWith(NegX);
+    II->eraseFromParent();
 
-  if (Result == LazyValueInfo::Unknown) {
-    // Argument's range crosses zero.
-    bool Changed = false;
-    if (!IsIntMinPoison) {
-      // Can we at least tell that the argument is never INT_MIN?
-      Result = LVI->getPredicateAt(CmpInst::Predicate::ICMP_NE, X, IntMin, II,
-                                   /*UseBlockValue=*/true);
-      if (Result == LazyValueInfo::True) {
-        ++NumNSW;
-        ++NumSubNSW;
-        II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
-        Changed = true;
-      }
-    }
-    return Changed;
+    // See if we can infer some no-wrap flags.
+    if (auto *BO = dyn_cast<BinaryOperator>(NegX))
+      processBinOp(BO, LVI);
+
+    return true;
   }
 
-  IRBuilder<> B(II);
-  Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
-                            /*HasNSW=*/IsIntMinPoison);
-  ++NumAbs;
-  II->replaceAllUsesWith(NegX);
-  II->eraseFromParent();
-
-  // See if we can infer some no-wrap flags.
-  if (auto *BO = dyn_cast<BinaryOperator>(NegX))
-    processBinOp(BO, LVI);
-
-  return true;
+  // Argument's range crosses zero.
+  // Can we at least tell that the argument is never INT_MIN?
+  if (!IsIntMinPoison && !Range.contains(IntMin)) {
+    ++NumNSW;
+    ++NumSubNSW;
+    II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
+    return true;
+  }
+  return false;
 }
 
 // See if this min/max intrinsic always picks it's one specific operand.
@@ -783,7 +757,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
     Value *FrozenX = X;
-    if (!isGuaranteedNotToBeUndefOrPoison(X))
+    if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
@@ -919,6 +893,14 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   assert(SDI->getOpcode() == Instruction::SDiv);
   assert(!SDI->getType()->isVectorTy());
 
+  // Check whether the division folds to a constant.
+  ConstantRange DivCR = LCR.sdiv(RCR);
+  if (const APInt *Elem = DivCR.getSingleElement()) {
+    SDI->replaceAllUsesWith(ConstantInt::get(SDI->getType(), *Elem));
+    SDI->eraseFromParent();
+    return true;
+  }
+
   struct Operand {
     Value *V;
     Domain D;
@@ -1026,8 +1008,27 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "", SDI);
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
+  ZExt->setNonNeg();
   SDI->replaceAllUsesWith(ZExt);
   SDI->eraseFromParent();
+
+  return true;
+}
+
+static bool processZExt(ZExtInst *ZExt, LazyValueInfo *LVI) {
+  if (ZExt->getType()->isVectorTy())
+    return false;
+
+  if (ZExt->hasNonNeg())
+    return false;
+
+  const Use &Base = ZExt->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base, /*UndefAllowed*/ false)
+           .isAllNonNegative())
+    return false;
+
+  ++NumZExt;
+  ZExt->setNonNeg();
 
   return true;
 }
@@ -1140,10 +1141,6 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::FCmp:
         BBChanged |= processCmp(cast<CmpInst>(&II), LVI);
         break;
-      case Instruction::Load:
-      case Instruction::Store:
-        BBChanged |= processMemAccess(&II, LVI);
-        break;
       case Instruction::Call:
       case Instruction::Invoke:
         BBChanged |= processCallSite(cast<CallBase>(II), LVI);
@@ -1161,6 +1158,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::SExt:
         BBChanged |= processSExt(cast<SExtInst>(&II), LVI);
+        break;
+      case Instruction::ZExt:
+        BBChanged |= processZExt(cast<ZExtInst>(&II), LVI);
         break;
       case Instruction::Add:
       case Instruction::Sub:

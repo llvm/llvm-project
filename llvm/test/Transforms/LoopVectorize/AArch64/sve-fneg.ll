@@ -31,29 +31,29 @@ define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds half, ptr [[S]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds half, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP10]], align 2
-; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds half, ptr [[TMP9]], i64 [[TMP12]]
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x half>, ptr [[TMP13]], align 2
-; CHECK-NEXT:    [[TMP14:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD3]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds half, ptr [[D]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds half, ptr [[TMP16]], i32 0
-; CHECK-NEXT:    store <vscale x 8 x half> [[TMP14]], ptr [[TMP17]], align 2
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds half, ptr [[TMP16]], i64 [[TMP19]]
-; CHECK-NEXT:    store <vscale x 8 x half> [[TMP15]], ptr [[TMP20]], align 2
-; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], 16
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP22]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[S]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds half, ptr [[TMP11]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP12]], align 2
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 8
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds half, ptr [[TMP11]], i64 [[TMP14]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x half>, ptr [[TMP15]], align 2
+; CHECK-NEXT:    [[TMP16:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fneg <vscale x 8 x half> [[WIDE_LOAD3]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds half, ptr [[D]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds half, ptr [[TMP18]], i32 0
+; CHECK-NEXT:    store <vscale x 8 x half> [[TMP16]], ptr [[TMP19]], align 2
+; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP20]], 8
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds half, ptr [[TMP18]], i64 [[TMP21]]
+; CHECK-NEXT:    store <vscale x 8 x half> [[TMP17]], ptr [[TMP22]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

@@ -107,6 +107,7 @@ protected:
   bool GFX940Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
+  bool GFX12Insts = false;
   bool GFX10_3Insts = false;
   bool GFX7GFX8GFX9Insts = false;
   bool SGPRInitBug = false;
@@ -128,6 +129,7 @@ protected:
   bool HasDPP = false;
   bool HasDPP8 = false;
   bool HasDPALU_DPP = false;
+  bool HasDPPSrc1SGPR = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -159,6 +161,7 @@ protected:
   bool HasAtomicFaddNoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
+  bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool SupportsSRAMECC = false;
@@ -193,6 +196,7 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -206,6 +210,7 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
+  bool HasMSAALoadDstSelBug = false;
   bool HasGFX11FullVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
@@ -915,6 +920,8 @@ public:
     return HasDPALU_DPP;
   }
 
+  bool hasDPPSrc1SGPR() const { return HasDPPSrc1SGPR; }
+
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
   }
@@ -954,11 +961,15 @@ public:
 
   bool hasMADIntraFwdBug() const { return HasMADIntraFwdBug; }
 
+  bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
+
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
-  unsigned getNSAMaxSize() const { return AMDGPU::getNSAMaxSize(*this); }
+  unsigned getNSAMaxSize(bool HasSampler = false) const {
+    return AMDGPU::getNSAMaxSize(*this, HasSampler);
+  }
 
   bool hasGFX10_AEncoding() const {
     return GFX10_AEncoding;
@@ -1139,6 +1150,8 @@ public:
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1193,6 +1206,9 @@ public:
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
+
+  // \returns true is CSUB atomics support a no-return form.
+  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
@@ -1394,8 +1410,6 @@ public:
 
 class GCNUserSGPRUsageInfo {
 public:
-  unsigned getNumUsedUserSGPRs() const;
-
   bool hasImplicitBufferPtr() const { return ImplicitBufferPtr; }
 
   bool hasPrivateSegmentBuffer() const { return PrivateSegmentBuffer; }
@@ -1409,6 +1423,14 @@ public:
   bool hasDispatchID() const { return DispatchID; }
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
+
+  unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
+
+  unsigned getNumFreeUserSGPRs();
+
+  void allocKernargPreloadSGPRs(unsigned NumSGPRs);
 
   enum UserSGPRID : unsigned {
     ImplicitBufferPtrID = 0,
@@ -1447,6 +1469,8 @@ public:
   GCNUserSGPRUsageInfo(const Function &F, const GCNSubtarget &ST);
 
 private:
+  const GCNSubtarget &ST;
+
   // Private memory buffer
   // Compute directly in sgpr[0:1]
   // Other shaders indirect 64-bits at sgpr[0:1]
@@ -1463,6 +1487,10 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned NumUsedUserSGPRs = 0;
 };
 
 } // end namespace llvm

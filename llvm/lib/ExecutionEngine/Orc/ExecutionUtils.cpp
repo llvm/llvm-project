@@ -284,7 +284,7 @@ StaticLibraryDefinitionGenerator::Load(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -347,7 +347,7 @@ StaticLibraryDefinitionGenerator::Create(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->get())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -538,11 +538,11 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
   }
 }
 
-Expected<support::endianness>
+Expected<llvm::endianness>
 DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
-    return support::endianness::little;
+    return llvm::endianness::little;
   default:
     return make_error<StringError>(
         "architecture unsupported by DLLImportDefinitionGenerator",

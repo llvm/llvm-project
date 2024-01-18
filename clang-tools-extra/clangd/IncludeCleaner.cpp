@@ -102,7 +102,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   // Headers without include guards have side effects and are not
   // self-contained, skip them.
   if (!AST.getPreprocessor().getHeaderSearchInfo().isFileMultipleIncludeGuarded(
-          &FE->getFileEntry())) {
+          *FE)) {
     dlog("{0} doesn't have header guard and will not be considered unused",
          FE->getName());
     return false;
@@ -397,10 +397,10 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
-  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
-                                .getHeaderSearchInfo()
-                                .getModuleMap()
-                                .getBuiltinDir();
+  OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
+                                              .getHeaderSearchInfo()
+                                              .getModuleMap()
+                                              .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
       AST.getPragmaIncludes().get(), AST.getPreprocessor(),

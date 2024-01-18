@@ -54,8 +54,8 @@ _LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
 __format_context_create(
     _OutIt __out_it,
     basic_format_args<basic_format_context<_OutIt, _CharT>> __args,
-    optional<_VSTD::locale>&& __loc = nullopt) {
-  return _VSTD::basic_format_context(_VSTD::move(__out_it), __args, _VSTD::move(__loc));
+    optional<std::locale>&& __loc = nullopt) {
+  return std::basic_format_context(std::move(__out_it), __args, std::move(__loc));
 }
 #else
 template <class _OutIt, class _CharT>
@@ -63,7 +63,7 @@ _LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
 __format_context_create(
     _OutIt __out_it,
     basic_format_args<basic_format_context<_OutIt, _CharT>> __args) {
-  return _VSTD::basic_format_context(_VSTD::move(__out_it), __args);
+  return std::basic_format_context(std::move(__out_it), __args);
 }
 #endif
 
@@ -95,9 +95,9 @@ public:
     return __args_.get(__id);
   }
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-  _LIBCPP_HIDE_FROM_ABI _VSTD::locale locale() {
+  _LIBCPP_HIDE_FROM_ABI std::locale locale() {
     if (!__loc_)
-      __loc_ = _VSTD::locale{};
+      __loc_ = std::locale{};
     return *__loc_;
   }
 #endif
@@ -118,20 +118,20 @@ private:
   // locale() is called and the optional has no value the value will be created.
   // This allows the implementation to lazily create the locale.
   // TODO FMT Validate whether lazy creation is the best solution.
-  optional<_VSTD::locale> __loc_;
+  optional<std::locale> __loc_;
 
   template <class _OtherOutIt, class _OtherCharT>
   friend _LIBCPP_HIDE_FROM_ABI basic_format_context<_OtherOutIt, _OtherCharT>
   __format_context_create(_OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>,
-                          optional<_VSTD::locale>&&);
+                          optional<std::locale>&&);
 
   // Note: the Standard doesn't specify the required constructors.
   _LIBCPP_HIDE_FROM_ABI
   explicit basic_format_context(_OutIt __out_it,
                                 basic_format_args<basic_format_context> __args,
-                                optional<_VSTD::locale>&& __loc)
-      : __out_it_(_VSTD::move(__out_it)), __args_(__args),
-        __loc_(_VSTD::move(__loc)) {}
+                                optional<std::locale>&& __loc)
+      : __out_it_(std::move(__out_it)), __args_(__args),
+        __loc_(std::move(__loc)) {}
 #else
   template <class _OtherOutIt, class _OtherCharT>
   friend _LIBCPP_HIDE_FROM_ABI basic_format_context<_OtherOutIt, _OtherCharT>
@@ -140,7 +140,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI
   explicit basic_format_context(_OutIt __out_it,
                                 basic_format_args<basic_format_context> __args)
-      : __out_it_(_VSTD::move(__out_it)), __args_(__args) {}
+      : __out_it_(std::move(__out_it)), __args_(__args) {}
 #endif
 };
 
@@ -198,7 +198,7 @@ public:
     return __arg_(__ctx_, __id);
   }
 #  ifndef _LIBCPP_HAS_NO_LOCALIZATION
-  _LIBCPP_HIDE_FROM_ABI _VSTD::locale locale() { return __loc_(__ctx_); }
+  _LIBCPP_HIDE_FROM_ABI std::locale locale() { return __loc_(__ctx_); }
 #  endif
   _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }

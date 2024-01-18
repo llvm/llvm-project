@@ -15,38 +15,38 @@
 
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcExpfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcExpfTest, SpecialNumbers) {
+TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
   libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::expf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(inf, __llvm_libc::expf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::expf(inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::expf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::expf(neg_inf));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::expf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::expf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, __llvm_libc::expf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::expf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExpfTest, Overflow) {
+TEST_F(LlvmLibcExpfTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, __llvm_libc::expf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::expf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }

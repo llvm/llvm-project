@@ -29,15 +29,13 @@ struct Lowerer : coro::LowererBase {
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
-  Value *FrameRaw = SubFn->getFrame();
+  Value *FramePtr = SubFn->getFrame();
   int Index = SubFn->getIndex();
 
-  auto *FrameTy = StructType::get(
-      SubFn->getContext(), {Builder.getInt8PtrTy(), Builder.getInt8PtrTy()});
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
+  auto *FrameTy = StructType::get(SubFn->getContext(),
+                                  {Builder.getPtrTy(), Builder.getPtrTy()});
 
   Builder.SetInsertPoint(SubFn);
-  auto *FramePtr = Builder.CreateBitCast(FrameRaw, FramePtrTy);
   auto *Gep = Builder.CreateConstInBoundsGEP2_32(FrameTy, FramePtr, 0, Index);
   auto *Load = Builder.CreateLoad(FrameTy->getElementType(Index), Gep);
 

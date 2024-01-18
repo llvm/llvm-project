@@ -71,8 +71,7 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
   // that is a reference type.
   wasm::ValType ValTy;
   bool IsTable = false;
-  if (GlobalVT->isArrayTy() && WebAssembly::isWebAssemblyReferenceType(
-                                   GlobalVT->getArrayElementType())) {
+  if (WebAssembly::isWebAssemblyTableType(GlobalVT)) {
     IsTable = true;
     const Type *ElTy = GlobalVT->getArrayElementType();
     if (WebAssembly::isWebAssemblyExternrefType(ElTy))

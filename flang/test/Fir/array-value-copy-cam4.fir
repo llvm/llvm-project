@@ -98,5 +98,5 @@ module {
     return
   }
   func.func private @_QPinit(!fir.ref<!fir.array<4x27xf64>>)
-  fir.dispatch_table @_QMcam4Tpbuf_fld
+  fir.type_info @_QMcam4Tpbuf_fld : !fir.type<_QMcam4Tpbuf_fld{fld_ptr:!fir.box<!fir.ptr<!fir.array<?x?x?x?x?xf64>>>}>
 }

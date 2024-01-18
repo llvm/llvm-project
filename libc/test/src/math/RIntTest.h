@@ -19,18 +19,18 @@
 #include <math.h>
 #include <stdio.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename T>
-class RIntTestTemplate : public __llvm_libc::testing::Test {
+class RIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef T (*RIntFunc)(T);
 
 private:
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
   const T zero = T(FPBits::zero());
@@ -57,7 +57,7 @@ private:
 public:
   void testSpecialNumbers(RIntFunc func) {
     for (int mode : ROUNDING_MODES) {
-      __llvm_libc::fputil::set_round(mode);
+      LIBC_NAMESPACE::fputil::set_round(mode);
       ASSERT_FP_EQ(inf, func(inf));
       ASSERT_FP_EQ(neg_inf, func(neg_inf));
       ASSERT_FP_EQ(nan, func(nan));
@@ -68,7 +68,7 @@ public:
 
   void testRoundNumbers(RIntFunc func) {
     for (int mode : ROUNDING_MODES) {
-      __llvm_libc::fputil::set_round(mode);
+      LIBC_NAMESPACE::fputil::set_round(mode);
       mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
       ASSERT_FP_EQ(func(T(1.0)), mpfr::round(T(1.0), mpfr_mode));
       ASSERT_FP_EQ(func(T(-1.0)), mpfr::round(T(-1.0), mpfr_mode));
@@ -81,7 +81,7 @@ public:
 
   void testFractions(RIntFunc func) {
     for (int mode : ROUNDING_MODES) {
-      __llvm_libc::fputil::set_round(mode);
+      LIBC_NAMESPACE::fputil::set_round(mode);
       mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
       ASSERT_FP_EQ(func(T(0.5)), mpfr::round(T(0.5), mpfr_mode));
       ASSERT_FP_EQ(func(T(-0.5)), mpfr::round(T(-0.5), mpfr_mode));
@@ -101,7 +101,7 @@ public:
          i += STEP) {
       T x = T(FPBits(i));
       for (int mode : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(mode);
+        LIBC_NAMESPACE::fputil::set_round(mode);
         mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
         ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }
@@ -121,7 +121,7 @@ public:
       }
 
       for (int mode : ROUNDING_MODES) {
-        __llvm_libc::fputil::set_round(mode);
+        LIBC_NAMESPACE::fputil::set_round(mode);
         mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
         ASSERT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
       }

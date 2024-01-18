@@ -19,10 +19,20 @@
 using namespace llvm;
 
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
+  // RemoveDIs: there's no bitcode representation of the DPValue debug-info,
+  // convert to dbg.values before writing out.
+  bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    M.convertFromNewDbgValues();
+
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
                        : nullptr;
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
+
+  if (IsNewDbgInfoFormat)
+    M.convertToNewDbgValues();
+
   return PreservedAnalyses::all();
 }
 
@@ -54,8 +64,17 @@ namespace {
           EmitSummaryIndex
               ? &(getAnalysis<ModuleSummaryIndexWrapperPass>().getIndex())
               : nullptr;
+      // RemoveDIs: there's no bitcode representation of the DPValue debug-info,
+      // convert to dbg.values before writing out.
+      bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+      if (IsNewDbgInfoFormat)
+        M.convertFromNewDbgValues();
+
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
                          EmitModuleHash);
+
+      if (IsNewDbgInfoFormat)
+        M.convertToNewDbgValues();
       return false;
     }
     void getAnalysisUsage(AnalysisUsage &AU) const override {

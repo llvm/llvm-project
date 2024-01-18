@@ -295,7 +295,8 @@ TEST_F(TestTypeSystemClang, TestOwningModule) {
 
   CompilerType record_type = ast.CreateRecordType(
       nullptr, OptionalClangModuleID(200), lldb::eAccessPublic, "FooRecord",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   auto *rd = TypeSystemClang::GetAsRecordDecl(record_type);
   EXPECT_FALSE(!rd);
   EXPECT_EQ(rd->getOwningModuleID(), 200u);
@@ -315,7 +316,8 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
   CompilerType bool_type(m_ast->weak_from_this(), bool_ctype);
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(100), lldb::eAccessPublic, "FooRecord",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   // Clang builtin type and record type should pass
   EXPECT_TRUE(ClangUtil::IsClangType(bool_type));
   EXPECT_TRUE(ClangUtil::IsClangType(record_type));
@@ -327,7 +329,8 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
 TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "FooRecord",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
@@ -399,7 +402,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   // Test that a record with no fields returns false
   CompilerType empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyBase",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_base);
   TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
@@ -410,7 +414,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   // Test that a record with direct fields returns true
   CompilerType non_empty_base = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "NonEmptyBase",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
   FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
       non_empty_base, "MyField", int_type, eAccessPublic, 0);
@@ -426,7 +431,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   // Test that a record with no direct fields, but fields in a base returns true
   CompilerType empty_derived = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -448,7 +454,8 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   // returns true
   CompilerType empty_derived2 = m_ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived2",
-      clang::TTK_Struct, lldb::eLanguageTypeC_plus_plus, nullptr);
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, nullptr);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -479,14 +486,14 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   // template<typename T, int I> struct foo;
   ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
       m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
-      "foo", TTK_Struct, infos);
+      "foo", llvm::to_underlying(clang::TagTypeKind::Struct), infos);
   ASSERT_NE(decl, nullptr);
 
   // foo<int, 47>
   ClassTemplateSpecializationDecl *spec_decl =
       m_ast->CreateClassTemplateSpecializationDecl(
           m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), decl,
-          TTK_Struct, infos);
+          llvm::to_underlying(clang::TagTypeKind::Struct), infos);
   ASSERT_NE(spec_decl, nullptr);
   CompilerType type = m_ast->CreateClassTemplateSpecializationType(spec_decl);
   ASSERT_TRUE(type);
@@ -543,7 +550,7 @@ protected:
   CreateClassTemplate(const TypeSystemClang::TemplateParameterInfos &infos) {
     ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
         m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
-        "foo", TTK_Struct, infos);
+        "foo", llvm::to_underlying(clang::TagTypeKind::Struct), infos);
     return decl;
   }
 
@@ -934,8 +941,7 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   bool artificial = false;
   bool objc_direct = false;
   clang::ObjCMethodDecl *method = TypeSystemClang::AddMethodToObjCObjectType(
-      c, "-[A foo]", func_type, lldb::eAccessPublic, artificial, variadic,
-      objc_direct);
+      c, "-[A foo]", func_type, artificial, variadic, objc_direct);
   ASSERT_NE(method, nullptr);
 
   // The interface decl should still have external lexical storage.

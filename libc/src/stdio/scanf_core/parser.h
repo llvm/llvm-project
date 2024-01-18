@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 #ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
@@ -280,6 +280,6 @@ private:
 };
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H

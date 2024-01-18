@@ -204,11 +204,6 @@ public:
     add(llvm::ConstantPointerNull::get(ptrTy));
   }
 
-  /// Add a bitcast of a value to a specific type.
-  void addBitCast(llvm::Constant *value, llvm::Type *type) {
-    add(llvm::ConstantExpr::getBitCast(value, type));
-  }
-
   /// Add a bunch of new values to this initializer.
   void addAll(llvm::ArrayRef<llvm::Constant *> values) {
     assert(!Finished && "cannot add more values after finishing builder");

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
 
 #include <x86intrin.h>
 

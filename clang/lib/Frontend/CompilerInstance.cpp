@@ -151,9 +151,6 @@ bool CompilerInstance::createTarget() {
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getDiagnostics(), getLangOpts());
 
-  // Adjust target options based on codegen options.
-  getTarget().adjustTargetOptions(getCodeGenOpts(), getTargetOpts());
-
   if (auto *Aux = getAuxTarget())
     getTarget().setAuxTarget(Aux);
 
@@ -403,14 +400,8 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
   // Remap files in the source manager (with buffers).
   for (const auto &RB : InitOpts.RemappedFileBuffers) {
     // Create the file entry for the file that we're mapping from.
-    const FileEntry *FromFile =
-        FileMgr.getVirtualFile(RB.first, RB.second->getBufferSize(), 0);
-    if (!FromFile) {
-      Diags.Report(diag::err_fe_remap_missing_from_file) << RB.first;
-      if (!InitOpts.RetainRemappedFileBuffers)
-        delete RB.second;
-      continue;
-    }
+    FileEntryRef FromFile =
+        FileMgr.getVirtualFileRef(RB.first, RB.second->getBufferSize(), 0);
 
     // Override the contents of the "from" file with the contents of the
     // "to" file. If the caller owns the buffers, then pass a MemoryBufferRef;
@@ -704,7 +695,7 @@ static bool EnableCodeCompletion(Preprocessor &PP,
                                  unsigned Column) {
   // Tell the source manager to chop off the given file at a specific
   // line and column.
-  auto Entry = PP.getFileManager().getFile(Filename);
+  auto Entry = PP.getFileManager().getOptionalFileRef(Filename);
   if (!Entry) {
     PP.getDiagnostics().Report(diag::err_fe_invalid_code_complete_file)
       << Filename;
@@ -756,10 +747,22 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
     ExternalSemaSrc->InitializeSema(*TheSema);
+  }
+
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto *currentModule = getPreprocessor().getCurrentModule()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+        currentModule, getLangOpts().APINotesModules,
+        getAPINotesOpts().ModuleSearchPaths);
   }
 }
 
@@ -1360,7 +1363,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
         [&](CompilerInstance &Instance) {
       std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
           llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
-      const FileEntry *ModuleMapFile = Instance.getFileManager().getVirtualFile(
+      FileEntryRef ModuleMapFile = Instance.getFileManager().getVirtualFileRef(
           FakeModuleMapFile, InferredModuleMapContent.size(), 0);
       Instance.getSourceManager().overrideFileContents(
           ModuleMapFile, std::move(ModuleMapBuffer));
@@ -2125,7 +2128,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     // Check whether this module is available.
     if (Preprocessor::checkModuleIsAvailable(getLangOpts(), getTarget(),
-                                             getDiagnostics(), Module)) {
+                                             *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
         << SourceRange(Path.front().second, Path.back().second);
       LastModuleImportLoc = ImportLoc;
@@ -2185,7 +2188,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   auto PreBuildStep = [&](CompilerInstance &Other) {
     // Create a virtual file containing our desired source.
     // FIXME: We shouldn't need to do this.
-    const FileEntry *ModuleMapFile = Other.getFileManager().getVirtualFile(
+    FileEntryRef ModuleMapFile = Other.getFileManager().getVirtualFileRef(
         ModuleMapFileName, NullTerminatedSource.size(), 0);
     Other.getSourceManager().overrideFileContents(
         ModuleMapFile, llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource));
@@ -2257,7 +2260,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
       Module *TheModule = I->second;
-      const FileEntry *Entry = TheModule->getASTFile();
+      OptionalFileEntryRef Entry = TheModule->getASTFile();
       if (!Entry) {
         SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
         Path.push_back(std::make_pair(

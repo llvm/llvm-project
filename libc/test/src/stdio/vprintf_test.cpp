@@ -17,7 +17,7 @@
 int call_vprintf(const char *__restrict format, ...) {
   va_list vlist;
   va_start(vlist, format);
-  int ret = __llvm_libc::vprintf(format, vlist);
+  int ret = LIBC_NAMESPACE::vprintf(format, vlist);
   va_end(vlist);
   return ret;
 }

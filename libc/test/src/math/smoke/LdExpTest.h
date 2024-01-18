@@ -19,20 +19,20 @@
 #include <stdint.h>
 
 template <typename T>
-class LdExpTestTemplate : public __llvm_libc::testing::Test {
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
-  using NormalFloat = __llvm_libc::fputil::NormalFloat<T>;
+class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+  using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
   using UIntType = typename FPBits::UIntType;
   static constexpr UIntType MANTISSA_WIDTH =
-      __llvm_libc::fputil::MantissaWidth<T>::VALUE;
+      LIBC_NAMESPACE::fputil::MantissaWidth<T>::VALUE;
   // A normalized mantissa to be used with tests.
   static constexpr UIntType MANTISSA = NormalFloat::ONE + 0x1234;
 
-  const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
-  const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
-  const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
-  const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
+  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
+  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
+  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
+  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
+  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
 
 public:
   typedef T (*LdExpFunc)(T, int);

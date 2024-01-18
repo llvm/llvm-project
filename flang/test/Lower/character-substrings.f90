@@ -1,11 +1,11 @@
 ! Test character substring lowering
-! RUN: bbc %s -o - -emit-fir | FileCheck %s
+! RUN: bbc %s -o - -emit-fir -hlfir=false | FileCheck %s
 
 ! Test substring lower where the parent is a scalar-char-literal-constant
 ! CHECK-LABEL: func @_QPscalar_substring_embox(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<i64>{{.*}}, %[[VAL_1:.*]]: !fir.ref<i64>{{.*}}) {
 subroutine scalar_substring_embox(i, j)
-  ! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,18>>
+  ! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,18>>
   ! CHECK:         %[[VAL_3:.*]] = fir.load %[[VAL_0]] : !fir.ref<i64>
   ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i64>
   ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
@@ -147,7 +147,7 @@ end subroutine substring_assignment
 ! CHECK:         %[[VAL_15:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_16:.*]] = fir.slice %[[VAL_4]], %[[VAL_8]], %[[VAL_6]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:         %[[VAL_17:.*]] = fir.array_load %[[VAL_2]](%[[VAL_15]]) {{\[}}%[[VAL_16]]] : (!fir.ref<!fir.array<6x!fir.char<1,5>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<6x!fir.char<1,5>>
-! CHECK:         %[[VAL_18:.*]] = fir.address_of(@_QQcl.424144) : !fir.ref<!fir.char<1,3>>
+! CHECK:         %[[VAL_18:.*]] = fir.address_of(@_QQclX424144) : !fir.ref<!fir.char<1,3>>
 ! CHECK:         %[[VAL_19:.*]] = arith.constant 3 : index
 ! CHECK:         %[[VAL_20:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_21:.*]] = arith.constant 0 : index
@@ -235,7 +235,7 @@ end subroutine array_substring_assignment
 ! CHECK:         %[[cmp:.*]] = arith.cmpi sgt, %[[div]], %[[c0]] : index
 ! CHECK:         %[[select:.*]] = arith.select %[[cmp]], %[[div]], %[[c0]] : index
 ! CHECK:         %[[VAL_6:.*]] = fir.array_load %[[VAL_0]](%[[VAL_3]]) {{\[}}%[[VAL_5]]] : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<8x!fir.char<1,7>>
-! CHECK:         %[[VAL_7:.*]] = fir.address_of(@_QQcl.6E696365) : !fir.ref<!fir.char<1,4>>
+! CHECK:         %[[VAL_7:.*]] = fir.address_of(@_QQclX6E696365) : !fir.ref<!fir.char<1,4>>
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 4 : index
 ! CHECK:         %[[VAL_9:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 0 : index

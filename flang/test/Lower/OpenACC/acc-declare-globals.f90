@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenACC declare directive in module specification
 ! part.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 module acc_declare_test

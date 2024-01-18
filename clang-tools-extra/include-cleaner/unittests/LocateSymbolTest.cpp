@@ -30,8 +30,6 @@ using testing::ElementsAre;
 using testing::ElementsAreArray;
 using testing::Eq;
 using testing::Field;
-using testing::Pair;
-using testing::UnorderedElementsAre;
 
 // A helper for building ASTs and getting decls out of it by name. Example usage
 // looks like:

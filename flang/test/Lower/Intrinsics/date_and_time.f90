@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPdate_and_time_test(
 ! CHECK-SAME: %[[date:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[time:[^:]+]]: !fir.boxchar<1>{{.*}}, %[[zone:.*]]: !fir.boxchar<1>{{.*}}, %[[values:.*]]: !fir.box<!fir.array<?xi64>>{{.*}}) {

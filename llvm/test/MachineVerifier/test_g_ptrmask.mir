@@ -1,5 +1,5 @@
 # REQUIRES: aarch64-registered-target
-# RUN: not --crash llc -o - -march=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 
 ---
 name:            test_ptr_mask

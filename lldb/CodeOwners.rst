@@ -234,8 +234,8 @@ lldb-server
 | Pavel Labath
 | pavel\@labath.sk (email), labath (Phabricator), labath (GitHub), labath (Discourse)
 
-lldb-vscode
-~~~~~~~~~~~
+lldb-dap
+~~~~~~~~
 | Greg Clayton
 | gclayton\@fb.com (email), clayborg (Phabricator), clayborg (GitHub), clayborg (Discourse)
 

@@ -330,8 +330,8 @@ static inline bool isInefficientLEAReg(unsigned Reg) {
          Reg == X86::R13D || Reg == X86::R13;
 }
 
-/// Returns true if this LEA uses base an index registers, and the base register
-/// is known to be inefficient for the subtarget.
+/// Returns true if this LEA uses base and index registers, and the base
+/// register is known to be inefficient for the subtarget.
 // TODO: use a variant scheduling class to model the latency profile
 // of LEA instructions, and implement this logic as a scheduling predicate.
 static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
@@ -341,7 +341,8 @@ static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
 }
 
 static inline bool hasLEAOffset(const MachineOperand &Offset) {
-  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal();
+  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal() ||
+         Offset.isBlockAddress();
 }
 
 static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {

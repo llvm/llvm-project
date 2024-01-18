@@ -690,7 +690,7 @@ func.func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %
 func.func @slice_must_be_integral() {
   %0 = arith.constant 42 : i32
   %1 = fir.field_index field, !fir.type<t(param:i32){field:i32}> (%0 : i32)
-  // expected-error@+1 {{'fir.slice' op operand #0 must be any integer, but got '!fir.field'}}
+  // expected-error@+1 {{'fir.slice' op operand #0 must be variadic of any integer, but got '!fir.field'}}
   %2 = fir.slice %1, %1, %1 : (!fir.field, !fir.field, !fir.field) -> !fir.slice<1>
   return
 }
@@ -961,4 +961,20 @@ func.func @fp_to_logical(%arg0: f32) -> !fir.logical<4> {
   // expected-error@+1{{'fir.convert' op invalid type conversion}}
   %0 = fir.convert %arg0 : (f32) -> !fir.logical<4>
   return %0 : !fir.logical<4>
+}
+
+// -----
+
+func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
+  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> type}}
+  %addr1 = fir.box_offset %not_a_box base_addr : (!fir.ref<i32>) -> !fir.llvm_ptr<!fir.ref<i32>>
+  return
+}
+
+// -----
+
+func.func @bad_box_offset(%no_addendum : !fir.ref<!fir.box<i32>>) {
+  // expected-error@+1{{'fir.box_offset' op can only address derived_type field of derived type or unlimited polymorphic fir.box}}
+  %addr1 = fir.box_offset %no_addendum derived_type : (!fir.ref<!fir.box<i32>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<none>>>
+  return
 }

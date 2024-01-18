@@ -135,7 +135,7 @@ Options *CommandAlias::GetOptions() {
   return nullptr;
 }
 
-bool CommandAlias::Execute(const char *args_string,
+void CommandAlias::Execute(const char *args_string,
                            CommandReturnObject &result) {
   llvm_unreachable("CommandAlias::Execute is not to be called");
 }

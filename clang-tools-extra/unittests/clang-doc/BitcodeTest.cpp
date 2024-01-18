@@ -81,7 +81,7 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
-  I.TagType = TagTypeKind::TTK_Class;
+  I.TagType = TagTypeKind::Class;
   I.IsTypeDef = true;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);

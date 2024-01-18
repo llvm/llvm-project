@@ -45,7 +45,7 @@ namespace __iter_swap {
     (__class_or_enum<remove_cvref_t<_T1>> || __class_or_enum<remove_cvref_t<_T2>>) &&
     requires (_T1&& __x, _T2&& __y) {
       // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_swap ADL calls should only be made through ranges::iter_swap
-      iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
+      iter_swap(std::forward<_T1>(__x), std::forward<_T2>(__y));
     };
 
   template<class _T1, class _T2>
@@ -60,9 +60,9 @@ namespace __iter_swap {
       requires __unqualified_iter_swap<_T1, _T2>
     _LIBCPP_HIDE_FROM_ABI
     constexpr void operator()(_T1&& __x, _T2&& __y) const
-      noexcept(noexcept(iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y))))
+      noexcept(noexcept(iter_swap(std::forward<_T1>(__x), std::forward<_T2>(__y))))
     {
-      (void)iter_swap(_VSTD::forward<_T1>(__x), _VSTD::forward<_T2>(__y));
+      (void)iter_swap(std::forward<_T1>(__x), std::forward<_T2>(__y));
     }
     // NOLINTEND(libcpp-robust-against-adl)
 
@@ -71,25 +71,25 @@ namespace __iter_swap {
                __readable_swappable<_T1, _T2>
     _LIBCPP_HIDE_FROM_ABI
     constexpr void operator()(_T1&& __x, _T2&& __y) const
-      noexcept(noexcept(ranges::swap(*_VSTD::forward<_T1>(__x), *_VSTD::forward<_T2>(__y))))
+      noexcept(noexcept(ranges::swap(*std::forward<_T1>(__x), *std::forward<_T2>(__y))))
     {
-      ranges::swap(*_VSTD::forward<_T1>(__x), *_VSTD::forward<_T2>(__y));
+      ranges::swap(*std::forward<_T1>(__x), *std::forward<_T2>(__y));
     }
 
     template <class _T1, class _T2>
-      requires (!__unqualified_iter_swap<_T1, _T2> &&
-                !__readable_swappable<_T1, _T2>) &&
-               indirectly_movable_storable<_T1, _T2> &&
+      requires (!__unqualified_iter_swap<_T1, _T2> && //
+                !__readable_swappable<_T1, _T2>) && //
+               indirectly_movable_storable<_T1, _T2> && //
                indirectly_movable_storable<_T2, _T1>
     _LIBCPP_HIDE_FROM_ABI
     constexpr void operator()(_T1&& __x, _T2&& __y) const
-      noexcept(noexcept(iter_value_t<_T2>(ranges::iter_move(__y))) &&
-               noexcept(*__y = ranges::iter_move(__x)) &&
-               noexcept(*_VSTD::forward<_T1>(__x) = std::declval<iter_value_t<_T2>>()))
+      noexcept(noexcept(iter_value_t<_T2>(ranges::iter_move(__y))) && //
+               noexcept(*__y = ranges::iter_move(__x)) && //
+               noexcept(*std::forward<_T1>(__x) = std::declval<iter_value_t<_T2>>()))
     {
       iter_value_t<_T2> __old(ranges::iter_move(__y));
       *__y = ranges::iter_move(__x);
-      *_VSTD::forward<_T1>(__x) = _VSTD::move(__old);
+      *std::forward<_T1>(__x) = std::move(__old);
     }
   };
 } // namespace __iter_swap

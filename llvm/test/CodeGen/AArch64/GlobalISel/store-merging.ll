@@ -83,8 +83,8 @@ define void @test_simple_vector(ptr %ptr) {
 ; CHECK-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-NEXT:    strh w9, [x0, #2]
 ; CHECK-NEXT:    mov w9, #8 ; =0x8
-; CHECK-NEXT:    strh w8, [x0, #4]
-; CHECK-NEXT:    strh w9, [x0, #6]
+; CHECK-NEXT:    strh w8, [x0, #4]!
+; CHECK-NEXT:    strh w9, [x0, #2]
 ; CHECK-NEXT:    ret
   store <2 x i16> <i16 4, i16 7>, ptr %ptr
   %addr2 = getelementptr <2 x i16>, ptr %ptr, i64 1

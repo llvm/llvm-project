@@ -47,7 +47,7 @@ struct __debug_less
 
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_SINCE_CXX14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     decltype((void)std::declval<_Compare&>()(
         std::declval<_LHS &>(), std::declval<_RHS &>()))
     __do_compare_assert(int, _LHS & __l, _RHS & __r) {
@@ -59,13 +59,13 @@ struct __debug_less
 
     template <class _LHS, class _RHS>
     _LIBCPP_CONSTEXPR_SINCE_CXX14
-    inline _LIBCPP_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI
     void __do_compare_assert(long, _LHS &, _RHS &) {}
 };
 
 // Pass the comparator by lvalue reference. Or in debug mode, using a
 // debugging wrapper that stores a reference.
-#if _LIBCPP_ENABLE_DEBUG_MODE
+#  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 template <class _Comp>
 using __comp_ref_type = __debug_less<_Comp>;
 #else

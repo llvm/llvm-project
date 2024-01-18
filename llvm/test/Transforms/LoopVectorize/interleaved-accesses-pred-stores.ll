@@ -45,7 +45,7 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
@@ -125,7 +125,7 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P:%.*]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP2]], i32 1
@@ -232,7 +232,7 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P:%.*]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]], i32 1

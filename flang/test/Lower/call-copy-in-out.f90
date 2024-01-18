@@ -1,5 +1,5 @@
 ! Test copy-in / copy-out of non-contiguous variable passed as F77 array arguments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Nominal test
 ! CHECK-LABEL: func @_QPtest_assumed_shape_to_array(

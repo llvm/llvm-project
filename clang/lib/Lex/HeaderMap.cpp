@@ -87,9 +87,8 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
 
   // Check the number of buckets.  It should be a power of two, and there
   // should be enough space in the file for all of them.
-  uint32_t NumBuckets = NeedsByteSwap
-                            ? llvm::sys::getSwappedBytes(Header->NumBuckets)
-                            : Header->NumBuckets;
+  uint32_t NumBuckets =
+      NeedsByteSwap ? llvm::byteswap(Header->NumBuckets) : Header->NumBuckets;
   if (!llvm::isPowerOf2_32(NumBuckets))
     return false;
   if (File.getBufferSize() <

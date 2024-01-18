@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -canonicalize -split-input-file | FileCheck %s -check-prefix=TILE-10n25
+// RUN: mlir-opt %s -transform-interpreter -canonicalize -split-input-file | FileCheck %s -check-prefix=TILE-10n25
 
 func.func @indexed_vector(%arg0: memref<50xindex>) {
   linalg.generic {indexing_maps = [affine_map<(i) -> (i)>],
@@ -11,10 +11,12 @@ func.func @indexed_vector(%arg0: memref<50xindex>) {
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop = transform.structured.tile %0 [10] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1, %loop = transform.structured.tile_using_for %0 [10] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }
 
 // TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>
@@ -41,10 +43,12 @@ func.func @indexed_matrix(%arg0: memref<50x50xindex>) {
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1, %loop:2 = transform.structured.tile %0 [10, 25] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1, %loop:2 = transform.structured.tile_using_for %0 [10, 25] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }
 
 // TILE-10n25-DAG: [[$MAP:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0 + d1)>

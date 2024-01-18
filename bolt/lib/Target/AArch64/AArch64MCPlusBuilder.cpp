@@ -128,9 +128,7 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
 }
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
-  AArch64MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                       const MCRegisterInfo *RegInfo)
-      : MCPlusBuilder(Analysis, Info, RegInfo) {}
+  using MCPlusBuilder::MCPlusBuilder;
 
   bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
               CompFuncTy Comp) const override {
@@ -316,6 +314,12 @@ public:
 
   bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
                       MCPhysReg &To) const override {
+    if (Inst.getOpcode() == AArch64::FMOVDXr) {
+      From = Inst.getOperand(1).getReg();
+      To = Inst.getOperand(0).getReg();
+      return true;
+    }
+
     if (Inst.getOpcode() != AArch64::ORRXrs)
       return false;
     if (Inst.getOperand(1).getReg() != AArch64::XZR)
@@ -469,6 +473,22 @@ public:
     MCInst::iterator OI = getMemOperandDisp(Inst);
     *OI = Operand;
     return true;
+  }
+
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(AArch64::X18);
+    Regs |= getAliases(AArch64::X19);
+    Regs |= getAliases(AArch64::X20);
+    Regs |= getAliases(AArch64::X21);
+    Regs |= getAliases(AArch64::X22);
+    Regs |= getAliases(AArch64::X23);
+    Regs |= getAliases(AArch64::X24);
+    Regs |= getAliases(AArch64::X25);
+    Regs |= getAliases(AArch64::X26);
+    Regs |= getAliases(AArch64::X27);
+    Regs |= getAliases(AArch64::X28);
+    Regs |= getAliases(AArch64::LR);
+    Regs |= getAliases(AArch64::FP);
   }
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
@@ -847,6 +867,14 @@ public:
   ///    ldr     x17, [x16, #3040]
   ///    add     x16, x16, #0xbe0
   ///    br      x17
+  ///
+  ///  The other type of trampolines are located in .plt.got, that are used for
+  ///  non-lazy bindings so doesn't use x16 arg to transfer .got entry address:
+  ///
+  ///    adrp    x16, 230000
+  ///    ldr     x17, [x16, #3040]
+  ///    br      x17
+  ///    nop
   ///
   uint64_t analyzePLTEntry(MCInst &Instruction, InstructionIterator Begin,
                            InstructionIterator End,
@@ -1629,6 +1657,8 @@ public:
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
+
+  uint16_t getMinFunctionAlignment() const override { return 4; }
 };
 
 } // end anonymous namespace
@@ -1638,8 +1668,9 @@ namespace bolt {
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *Analysis,
                                           const MCInstrInfo *Info,
-                                          const MCRegisterInfo *RegInfo) {
-  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo);
+                                          const MCRegisterInfo *RegInfo,
+                                          const MCSubtargetInfo *STI) {
+  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

@@ -1001,6 +1001,9 @@ GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX12)
+    return 0; // Not MIMG encoding.
+
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 
@@ -1027,7 +1030,8 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
 }
 
 GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
-                                           const GCNSubtarget &ST) {
+                                           const GCNSubtarget &ST)
+    : ST(ST) {
   const CallingConv::ID CC = F.getCallingConv();
   const bool IsKernel =
       CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
@@ -1068,30 +1072,35 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
   }
-}
 
-unsigned GCNUserSGPRUsageInfo::getNumUsedUserSGPRs() const {
-  unsigned NumUserSGPRs = 0;
   if (hasImplicitBufferPtr())
-    NumUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
 
   if (hasPrivateSegmentBuffer())
-    NumUserSGPRs += getNumUserSGPRForField(PrivateSegmentBufferID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentBufferID);
 
   if (hasDispatchPtr())
-    NumUserSGPRs += getNumUserSGPRForField(DispatchPtrID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(DispatchPtrID);
 
   if (hasQueuePtr())
-    NumUserSGPRs += getNumUserSGPRForField(QueuePtrID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(QueuePtrID);
 
   if (hasKernargSegmentPtr())
-    NumUserSGPRs += getNumUserSGPRForField(KernargSegmentPtrID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(KernargSegmentPtrID);
 
   if (hasDispatchID())
-    NumUserSGPRs += getNumUserSGPRForField(DispatchIdID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(DispatchIdID);
 
   if (hasFlatScratchInit())
-    NumUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+    NumUsedUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+}
 
-  return NumUserSGPRs;
+void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
+  assert(NumKernargPreloadSGPRs + NumSGPRs <= AMDGPU::getMaxNumUserSGPRs(ST));
+  NumKernargPreloadSGPRs += NumSGPRs;
+  NumUsedUserSGPRs += NumSGPRs;
+}
+
+unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
+  return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
 }

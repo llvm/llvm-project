@@ -13,6 +13,7 @@
 .. contents::
    :local:
 
+==============
 OpenMP Support
 ==============
 

@@ -68,30 +68,6 @@ def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
 }
 
-def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
-    [NavigationTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let summary = "Gets a handle to the parent 'for' loop of the given operation";
-  let description = [{
-    Produces a handle to the n-th (default 1) parent `scf.for` or `affine.for`
-    (when the affine flag is true) loop for each Payload IR operation
-    associated with the operand. Fails if such a loop cannot be found. The list
-    of operations associated with the handle contains parent operations in the
-    same order as the list associated with the operand, except for operations
-    that are parents to more than one input which are only present once.
-  }];
-
-  let arguments =
-    (ins TransformHandleTypeInterface:$target,
-         DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
-                           "1">:$num_loops,
-         DefaultValuedAttr<BoolAttr, "false">:$affine);
-  let results = (outs TransformHandleTypeInterface : $parent);
-
-  let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
-}
-
 def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -142,23 +118,22 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
-     This operation always succeeds and returns the scf::ForOp with the
-     postcondition: "the loop trip count is divisible by the step".
-     This operation may return the same unmodified loop handle when peeling did
-     not modify the IR (i.e. the loop trip count was already divisible).
+     This operation returns two scf::ForOp Ops, with the first Op satisfying
+     the postcondition: "the loop trip count is divisible by the step". The
+     second loop Op contains the remaining iteration. Note that even though the
+     Payload IR modification may be performed in-place, this operation consumes
+     the operand handle and produces a new one.
 
-     Note that even though the Payload IR modification may be performed
-     in-place, this operation consumes the operand handle and produces a new
-     one.
+     #### Return Modes
 
-     TODO: Return both the peeled loop and the remainder loop.
+     Produces a definite failure if peeling fails.
   }];
 
   let arguments =
       (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
-  // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$peeled_loop,
+                      TransformHandleTypeInterface:$remainder_loop);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";

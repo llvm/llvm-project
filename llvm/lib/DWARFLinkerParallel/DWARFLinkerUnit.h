@@ -10,8 +10,8 @@
 #define LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERUNIT_H
 
 #include "DWARFLinkerGlobalData.h"
+#include "IndexedValuesMap.h"
 #include "OutputSections.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"
@@ -35,12 +35,6 @@ public:
 
   /// Unique id of the unit.
   unsigned getUniqueID() const { return ID; }
-
-  /// Return language of this unit.
-  uint16_t getLanguage() const { return Language; }
-
-  /// Set size of this(newly generated) compile unit.
-  void setUnitSize(uint64_t UnitSize) { this->UnitSize = UnitSize; }
 
   /// Returns size of this(newly generated) compile unit.
   uint64_t getUnitSize() const { return UnitSize; }
@@ -79,7 +73,12 @@ public:
   DIE *getOutUnitDIE() { return OutUnitDIE; }
 
   /// Set output unit DIE.
-  void setOutUnitDIE(DIE *UnitDie) { OutUnitDIE = UnitDie; }
+  void setOutUnitDIE(DIE *UnitDie) {
+    OutUnitDIE = UnitDie;
+
+    if (OutUnitDIE != nullptr)
+      UnitSize = getDebugInfoHeaderSize() + OutUnitDIE->getSize();
+  }
 
   /// \defgroup Methods used to emit unit's debug info:
   ///
@@ -88,41 +87,15 @@ public:
   Error emitAbbreviations();
 
   /// Emit .debug_info section for unit DIEs.
-  Error emitDebugInfo(Triple &TargetTriple);
+  Error emitDebugInfo(const Triple &TargetTriple);
 
   /// Emit .debug_line section.
-  Error emitDebugLine(Triple &TargetTriple,
+  Error emitDebugLine(const Triple &TargetTriple,
                       const DWARFDebugLine::LineTable &OutLineTable);
+
+  /// Emit the .debug_str_offsets section for current unit.
+  Error emitDebugStringOffsetSection();
   /// @}
-
-  /// This structure keeps fields which would be used for creating accelerator
-  /// table.
-  struct AccelInfo {
-    AccelInfo(StringEntry *Name, const DIE *Die, bool SkipPubSection = false);
-    AccelInfo(StringEntry *Name, const DIE *Die, uint32_t QualifiedNameHash,
-              bool ObjCClassIsImplementation);
-
-    /// Name of the entry.
-    StringEntry *Name = nullptr;
-
-    /// Tag of the DIE this entry describes.
-    dwarf::Tag Tag = dwarf::DW_TAG_null;
-
-    /// Output offset of the DIE this entry describes.
-    uint64_t OutOffset = 0;
-
-    /// Hash of the fully qualified name.
-    uint32_t QualifiedNameHash = 0;
-
-    /// Emit this entry only in the apple_* sections.
-    bool SkipPubSection = false;
-
-    /// Is this an ObjC class implementation?
-    bool ObjcClassImplementation = false;
-
-    /// Cloned Die containing acceleration info.
-    const DIE *Die = nullptr;
-  };
 
   /// \defgroup Methods used for reporting warnings and errors:
   ///
@@ -132,16 +105,68 @@ public:
   void error(const Twine &Err) { GlobalData.warn(Err, getUnitName()); }
   /// @}
 
+  /// \defgroup Methods and data members used for building accelerator tables:
+  ///
+  /// @{
+
+  enum class AccelType : uint8_t { None, Name, Namespace, ObjC, Type };
+
+  /// This structure keeps fields which would be used for creating accelerator
+  /// table.
+  struct AccelInfo {
+    AccelInfo() {
+      AvoidForPubSections = false;
+      ObjcClassImplementation = false;
+    }
+
+    /// Name of the entry.
+    StringEntry *String = nullptr;
+
+    /// Output offset of the DIE this entry describes.
+    uint64_t OutOffset;
+
+    /// Hash of the fully qualified name.
+    uint32_t QualifiedNameHash = 0;
+
+    /// Tag of the DIE this entry describes.
+    dwarf::Tag Tag = dwarf::DW_TAG_null;
+
+    /// Type of this accelerator record.
+    AccelType Type = AccelType::None;
+
+    /// Avoid emitting this entry for pub sections.
+    bool AvoidForPubSections : 1;
+
+    /// Is this an ObjC class implementation?
+    bool ObjcClassImplementation : 1;
+  };
+
+  /// Emit .debug_pubnames and .debug_pubtypes for \p Unit.
+  void emitPubAccelerators();
+
+  /// Enumerates accelerator data.
+  virtual void
+  forEachAcceleratorRecord(function_ref<void(AccelInfo &)> Handler) = 0;
+
+  /// @}
+
+  /// Returns index(inside .debug_str_offsets) of specified string.
+  virtual uint64_t getDebugStrIndex(const StringEntry *String) {
+    return DebugStringIndexMap.getValueIndex(String);
+  }
+
 protected:
   /// Emit single abbreviation entry.
   void emitDwarfAbbrevEntry(const DIEAbbrev &Abbrev,
                             SectionDescriptor &AbbrevSection);
 
+  /// Emit single pubnames/pubtypes accelerator entry.
+  std::optional<uint64_t>
+  emitPubAcceleratorEntry(SectionDescriptor &OutSection, const AccelInfo &Info,
+                          std::optional<uint64_t> LengthOffset);
+
   /// Unique ID for the unit.
   unsigned ID = 0;
-
-  /// The DW_AT_language of this unit.
-  uint16_t Language = 0;
 
   /// The name of this unit.
   std::string UnitName;
@@ -165,7 +190,30 @@ protected:
 
   /// Output unit DIE.
   DIE *OutUnitDIE = nullptr;
+
+  /// Cache for file names for this unit.
+  using FileNamesCache =
+      DenseMap<uint64_t, std::pair<std::string, std::string>>;
+  FileNamesCache FileNames;
+
+  /// Maps a string into the index inside .debug_str_offsets section.
+  IndexedValuesMap<const StringEntry *> DebugStringIndexMap;
 };
+
+inline bool isODRLanguage(uint16_t Language) {
+  switch (Language) {
+  case dwarf::DW_LANG_C_plus_plus:
+  case dwarf::DW_LANG_C_plus_plus_03:
+  case dwarf::DW_LANG_C_plus_plus_11:
+  case dwarf::DW_LANG_C_plus_plus_14:
+  case dwarf::DW_LANG_ObjC_plus_plus:
+    return true;
+  default:
+    return false;
+  };
+
+  return false;
+}
 
 } // end of namespace dwarflinker_parallel
 } // end namespace llvm

@@ -273,6 +273,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     break;
   case ELF::EM_AARCH64:
     switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_AUTH_RELR);
       STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
       STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
     }
@@ -745,7 +746,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
       }
       BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
     }
-    FunctionEntries.push_back({Address, std::move(BBEntries)});
+    FunctionEntries.emplace_back(Address, std::move(BBEntries));
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or
   // MetadataDecodeErr (but not both), but we join all errors here to be safe.

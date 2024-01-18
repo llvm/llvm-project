@@ -123,7 +123,8 @@ public:
   TokenSequence &RemoveBlanks(std::size_t firstChar = 0);
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
-  const TokenSequence &CheckBadFortranCharacters(Messages &) const;
+  const TokenSequence &CheckBadFortranCharacters(
+      Messages &, const Prescanner &) const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;

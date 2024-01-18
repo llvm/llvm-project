@@ -10,7 +10,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: Add support for locales.
 LLVM_LIBC_FUNCTION(int, strcoll, (const char *left, const char *right)) {
@@ -19,4 +19,4 @@ LLVM_LIBC_FUNCTION(int, strcoll, (const char *left, const char *right)) {
   return static_cast<int>(*left) - static_cast<int>(*right);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

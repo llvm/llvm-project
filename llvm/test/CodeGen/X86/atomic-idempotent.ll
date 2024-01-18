@@ -182,12 +182,10 @@ define i128 @or128(ptr %p) {
 ; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
-; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    .cfi_offset %esi, -16
-; X86-SSE2-NEXT:    .cfi_offset %edi, -12
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
+; X86-SSE2-NEXT:    .cfi_offset %esi, -12
 ; X86-SSE2-NEXT:    movl 8(%ebp), %esi
 ; X86-SSE2-NEXT:    movl %esp, %eax
 ; X86-SSE2-NEXT:    pushl $0
@@ -198,18 +196,11 @@ define i128 @or128(ptr %p) {
 ; X86-SSE2-NEXT:    pushl %eax
 ; X86-SSE2-NEXT:    calll __sync_fetch_and_or_16
 ; X86-SSE2-NEXT:    addl $20, %esp
-; X86-SSE2-NEXT:    movl (%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    movl %edi, 8(%esi)
-; X86-SSE2-NEXT:    movl %edx, 12(%esi)
-; X86-SSE2-NEXT:    movl %eax, (%esi)
-; X86-SSE2-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE2-NEXT:    movaps (%esp), %xmm0
+; X86-SSE2-NEXT:    movaps %xmm0, (%esi)
 ; X86-SSE2-NEXT:    movl %esi, %eax
-; X86-SSE2-NEXT:    leal -8(%ebp), %esp
+; X86-SSE2-NEXT:    leal -4(%ebp), %esp
 ; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl $4
@@ -223,7 +214,7 @@ define i128 @or128(ptr %p) {
 ; X86-SLM-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SLM-NEXT:    pushl %edi
 ; X86-SLM-NEXT:    pushl %esi
-; X86-SLM-NEXT:    andl $-8, %esp
+; X86-SLM-NEXT:    andl $-16, %esp
 ; X86-SLM-NEXT:    subl $16, %esp
 ; X86-SLM-NEXT:    .cfi_offset %esi, -16
 ; X86-SLM-NEXT:    .cfi_offset %edi, -12
@@ -263,7 +254,7 @@ define i128 @or128(ptr %p) {
 ; X86-ATOM-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-ATOM-NEXT:    pushl %edi
 ; X86-ATOM-NEXT:    pushl %esi
-; X86-ATOM-NEXT:    andl $-8, %esp
+; X86-ATOM-NEXT:    andl $-16, %esp
 ; X86-ATOM-NEXT:    leal -{{[0-9]+}}(%esp), %esp
 ; X86-ATOM-NEXT:    .cfi_offset %esi, -16
 ; X86-ATOM-NEXT:    .cfi_offset %edi, -12
@@ -528,8 +519,8 @@ define void @or128_nouse_seq_cst(ptr %p) {
 ; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
-; X86-SSE2-NEXT:    andl $-8, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
 ; X86-SSE2-NEXT:    movl %esp, %eax
 ; X86-SSE2-NEXT:    pushl $0
 ; X86-SSE2-NEXT:    pushl $0
@@ -551,8 +542,8 @@ define void @or128_nouse_seq_cst(ptr %p) {
 ; X86-SLM-NEXT:    .cfi_offset %ebp, -8
 ; X86-SLM-NEXT:    movl %esp, %ebp
 ; X86-SLM-NEXT:    .cfi_def_cfa_register %ebp
-; X86-SLM-NEXT:    andl $-8, %esp
-; X86-SLM-NEXT:    subl $16, %esp
+; X86-SLM-NEXT:    andl $-16, %esp
+; X86-SLM-NEXT:    subl $32, %esp
 ; X86-SLM-NEXT:    movl 8(%ebp), %eax
 ; X86-SLM-NEXT:    movl %esp, %ecx
 ; X86-SLM-NEXT:    pushl $0
@@ -575,7 +566,7 @@ define void @or128_nouse_seq_cst(ptr %p) {
 ; X86-ATOM-NEXT:    .cfi_offset %ebp, -8
 ; X86-ATOM-NEXT:    leal (%esp), %ebp
 ; X86-ATOM-NEXT:    .cfi_def_cfa_register %ebp
-; X86-ATOM-NEXT:    andl $-8, %esp
+; X86-ATOM-NEXT:    andl $-16, %esp
 ; X86-ATOM-NEXT:    leal -{{[0-9]+}}(%esp), %esp
 ; X86-ATOM-NEXT:    movl 8(%ebp), %eax
 ; X86-ATOM-NEXT:    movl %esp, %ecx

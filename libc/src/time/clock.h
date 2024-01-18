@@ -11,10 +11,10 @@
 
 #include <time.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 clock_t clock();
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_CLOCK_H

@@ -7,17 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
+#include "IntegralAP.h"
 #include "Interp.h"
 #include "Opcode.h"
-#include "Program.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
-
-using APSInt = llvm::APSInt;
-template <typename T> using Expected = llvm::Expected<T>;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk, APValue &Result)
@@ -25,6 +23,14 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
   // Create a dummy frame for the interpreter which does not have locals.
   S.Current =
       new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr());
+}
+
+EvalEmitter::~EvalEmitter() {
+  for (auto &[K, V] : Locals) {
+    Block *B = reinterpret_cast<Block *>(V.get());
+    if (B->isInitialized())
+      B->invokeDtor();
+  }
 }
 
 llvm::Expected<bool> EvalEmitter::interpretExpr(const Expr *E) {
@@ -179,6 +185,12 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       }
       return Ok;
     }
+
+    if (Ty->isIncompleteArrayType()) {
+      R = APValue(APValue::UninitArray(), 0, 0);
+      return true;
+    }
+
     if (const auto *AT = Ty->getAsArrayTypeUnsafe()) {
       const size_t NumElems = Ptr.getNumElems();
       QualType ElemTy = AT->getElementType();

@@ -21,7 +21,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 using ThreadRunnerPosix = void *(void *);
 using ThreadRunnerStdc = int(void *);
@@ -41,7 +41,7 @@ union ThreadReturnValue {
 
 #if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
      defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                    \
-     defined(LIBC_TARGET_ARCH_IS_RISCV64))
+     defined(LIBC_TARGET_ARCH_IS_ANY_RISCV))
 constexpr unsigned int STACK_ALIGNMENT = 16;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.
@@ -247,6 +247,6 @@ void call_atexit_callbacks(ThreadAttributes *attrib);
 
 } // namespace internal
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H

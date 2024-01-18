@@ -10,4 +10,4 @@
 
 #include "src/math/sqrt.h"
 
-LIST_SQRT_TESTS(double, __llvm_libc::sqrt)
+LIST_SQRT_TESTS(double, LIBC_NAMESPACE::sqrt)

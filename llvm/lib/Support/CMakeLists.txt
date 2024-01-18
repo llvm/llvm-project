@@ -118,6 +118,15 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   endif()
 endif()
 
+# FIXME: We are currently guarding AIX headers with _XOPEN_SOURCE=700.
+# See llvm/CMakeLists.txt. However, we need _SC_NPROCESSORS_ONLN in
+# unistd.h and it is guarded by _ALL_SOURCE, so we remove the _XOPEN_SOURCE
+# guard here. We should remove the guards all together once AIX cleans up
+# the system headers.
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+endif()
+
 add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport

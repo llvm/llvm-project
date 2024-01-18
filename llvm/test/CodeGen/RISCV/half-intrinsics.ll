@@ -2092,34 +2092,30 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-LABEL: copysign_f16:
 ; RV32IZHINXMIN:       # %bb.0:
 ; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-NEXT:    addi a2, sp, 12
-; RV32IZHINXMIN-NEXT:    sh a1, 0(a2)
-; RV32IZHINXMIN-NEXT:    addi a1, sp, 8
-; RV32IZHINXMIN-NEXT:    sh a0, 0(a1)
+; RV32IZHINXMIN-NEXT:    sh a1, 12(sp)
+; RV32IZHINXMIN-NEXT:    sh a0, 8(sp)
 ; RV32IZHINXMIN-NEXT:    lbu a0, 13(sp)
-; RV32IZHINXMIN-NEXT:    lbu a2, 9(sp)
+; RV32IZHINXMIN-NEXT:    lbu a1, 9(sp)
 ; RV32IZHINXMIN-NEXT:    andi a0, a0, 128
-; RV32IZHINXMIN-NEXT:    andi a2, a2, 127
-; RV32IZHINXMIN-NEXT:    or a0, a2, a0
+; RV32IZHINXMIN-NEXT:    andi a1, a1, 127
+; RV32IZHINXMIN-NEXT:    or a0, a1, a0
 ; RV32IZHINXMIN-NEXT:    sb a0, 9(sp)
-; RV32IZHINXMIN-NEXT:    lh a0, 0(a1)
+; RV32IZHINXMIN-NEXT:    lh a0, 8(sp)
 ; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: copysign_f16:
 ; RV64IZHINXMIN:       # %bb.0:
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-NEXT:    addi a2, sp, 8
-; RV64IZHINXMIN-NEXT:    sh a1, 0(a2)
-; RV64IZHINXMIN-NEXT:    mv a1, sp
-; RV64IZHINXMIN-NEXT:    sh a0, 0(a1)
+; RV64IZHINXMIN-NEXT:    sh a1, 8(sp)
+; RV64IZHINXMIN-NEXT:    sh a0, 0(sp)
 ; RV64IZHINXMIN-NEXT:    lbu a0, 9(sp)
-; RV64IZHINXMIN-NEXT:    lbu a2, 1(sp)
+; RV64IZHINXMIN-NEXT:    lbu a1, 1(sp)
 ; RV64IZHINXMIN-NEXT:    andi a0, a0, 128
-; RV64IZHINXMIN-NEXT:    andi a2, a2, 127
-; RV64IZHINXMIN-NEXT:    or a0, a2, a0
+; RV64IZHINXMIN-NEXT:    andi a1, a1, 127
+; RV64IZHINXMIN-NEXT:    or a0, a1, a0
 ; RV64IZHINXMIN-NEXT:    sb a0, 1(sp)
-; RV64IZHINXMIN-NEXT:    lh a0, 0(a1)
+; RV64IZHINXMIN-NEXT:    lh a0, 0(sp)
 ; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)

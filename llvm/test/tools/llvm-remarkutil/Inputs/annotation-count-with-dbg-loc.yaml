@@ -12,7 +12,7 @@ Args:
 Pass:            annotation-remarks
 Name:            AnnotationSummary
 DebugLoc:        { File: path/to/anno2.c, Line: 1, Column: 2 }
-Function:        func2 
+Function:        func2
 Args:
   - String:          'Annotated '
   - count:           '2'

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -fclang-abi-compat=latest -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -fclang-abi-compat=latest -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
 // expected-no-diagnostics
 
 namespace test1 {

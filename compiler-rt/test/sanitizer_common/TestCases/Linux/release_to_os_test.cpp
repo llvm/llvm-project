@@ -3,7 +3,7 @@
 
 // Temporarily disable test
 // UNSUPPORTED: tsan
-// UNSUPPORTED: target=powerpc64{{.*}}
+// UNSUPPORTED: target={{(powerpc64|loongarch64).*}}
 
 // Not needed, no allocator.
 // UNSUPPORTED: ubsan

@@ -104,9 +104,9 @@ static cl::opt<unsigned> DistributeSCEVCheckThreshold(
 static cl::opt<unsigned> PragmaDistributeSCEVCheckThreshold(
     "loop-distribute-scev-check-threshold-with-pragma", cl::init(128),
     cl::Hidden,
-    cl::desc(
-        "The maximum number of SCEV checks allowed for Loop "
-        "Distribution for loop marked with #pragma loop distribute(enable)"));
+    cl::desc("The maximum number of SCEV checks allowed for Loop "
+             "Distribution for loop marked with #pragma clang loop "
+             "distribute(enable)"));
 
 static cl::opt<bool> EnableLoopDistribute(
     "enable-loop-distribute", cl::Hidden,

@@ -881,6 +881,10 @@ static bool isEndbrImm64(uint64_t Imm) {
   return false;
 }
 
+static bool needBWI(MVT VT) {
+  return (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v64i8);
+}
+
 void X86DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
@@ -986,15 +990,15 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case X86ISD::VBROADCAST: {
       MVT VT = N->getSimpleValueType(0);
       // Emulate v32i16/v64i8 broadcast without BWI.
-      if (!Subtarget->hasBWI() && (VT == MVT::v32i16 || VT == MVT::v64i8)) {
-        MVT NarrowVT = VT == MVT::v32i16 ? MVT::v16i16 : MVT::v32i8;
+      if (!Subtarget->hasBWI() && needBWI(VT)) {
+        MVT NarrowVT = VT.getHalfNumVectorElementsVT();
         SDLoc dl(N);
         SDValue NarrowBCast =
             CurDAG->getNode(X86ISD::VBROADCAST, dl, NarrowVT, N->getOperand(0));
         SDValue Res =
             CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, CurDAG->getUNDEF(VT),
                             NarrowBCast, CurDAG->getIntPtrConstant(0, dl));
-        unsigned Index = VT == MVT::v32i16 ? 16 : 32;
+        unsigned Index = NarrowVT.getVectorMinNumElements();
         Res = CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, NarrowBCast,
                               CurDAG->getIntPtrConstant(Index, dl));
 
@@ -1010,8 +1014,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case X86ISD::VBROADCAST_LOAD: {
       MVT VT = N->getSimpleValueType(0);
       // Emulate v32i16/v64i8 broadcast without BWI.
-      if (!Subtarget->hasBWI() && (VT == MVT::v32i16 || VT == MVT::v64i8)) {
-        MVT NarrowVT = VT == MVT::v32i16 ? MVT::v16i16 : MVT::v32i8;
+      if (!Subtarget->hasBWI() && needBWI(VT)) {
+        MVT NarrowVT = VT.getHalfNumVectorElementsVT();
         auto *MemNode = cast<MemSDNode>(N);
         SDLoc dl(N);
         SDVTList VTs = CurDAG->getVTList(NarrowVT, MVT::Other);
@@ -1022,7 +1026,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         SDValue Res =
             CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, CurDAG->getUNDEF(VT),
                             NarrowBCast, CurDAG->getIntPtrConstant(0, dl));
-        unsigned Index = VT == MVT::v32i16 ? 16 : 32;
+        unsigned Index = NarrowVT.getVectorMinNumElements();
         Res = CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, NarrowBCast,
                               CurDAG->getIntPtrConstant(Index, dl));
 
@@ -1034,6 +1038,50 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         continue;
       }
 
+      break;
+    }
+    case ISD::LOAD: {
+      // If this is a XMM/YMM load of the same lower bits as another YMM/ZMM
+      // load, then just extract the lower subvector and avoid the second load.
+      auto *Ld = cast<LoadSDNode>(N);
+      MVT VT = N->getSimpleValueType(0);
+      if (!ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+          !(VT.is128BitVector() || VT.is256BitVector()))
+        break;
+
+      MVT MaxVT = VT;
+      SDNode *MaxLd = nullptr;
+      SDValue Ptr = Ld->getBasePtr();
+      SDValue Chain = Ld->getChain();
+      for (SDNode *User : Ptr->uses()) {
+        auto *UserLd = dyn_cast<LoadSDNode>(User);
+        MVT UserVT = User->getSimpleValueType(0);
+        if (User != N && UserLd && ISD::isNormalLoad(User) &&
+            UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&
+            !User->hasAnyUseOfValue(1) &&
+            (UserVT.is256BitVector() || UserVT.is512BitVector()) &&
+            UserVT.getSizeInBits() > VT.getSizeInBits() &&
+            (!MaxLd || UserVT.getSizeInBits() > MaxVT.getSizeInBits())) {
+          MaxLd = User;
+          MaxVT = UserVT;
+        }
+      }
+      if (MaxLd) {
+        SDLoc dl(N);
+        unsigned NumSubElts = VT.getSizeInBits() / MaxVT.getScalarSizeInBits();
+        MVT SubVT = MVT::getVectorVT(MaxVT.getScalarType(), NumSubElts);
+        SDValue Extract = CurDAG->getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT,
+                                          SDValue(MaxLd, 0),
+                                          CurDAG->getIntPtrConstant(0, dl));
+        SDValue Res = CurDAG->getBitcast(VT, Extract);
+
+        --I;
+        SDValue To[] = {Res, SDValue(MaxLd, 1)};
+        CurDAG->ReplaceAllUsesWith(N, To);
+        ++I;
+        MadeChange = true;
+        continue;
+      }
       break;
     }
     case ISD::VSELECT: {
@@ -1699,10 +1747,28 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
         !isDispSafeForFrameIndex(Val))
       return true;
+    // In ILP32 (x32) mode, pointers are 32 bits and need to be zero-extended to
+    // 64 bits. Instructions with 32-bit register addresses perform this zero
+    // extension for us and we can safely ignore the high bits of Offset.
+    // Instructions with only a 32-bit immediate address do not, though: they
+    // sign extend instead. This means only address the low 2GB of address space
+    // is directly addressable, we need indirect addressing for the high 2GB of
+    // address space.
+    // TODO: Some of the earlier checks may be relaxed for ILP32 mode as the
+    // implicit zero extension of instructions would cover up any problem.
+    // However, we have asserts elsewhere that get triggered if we do, so keep
+    // the checks for now.
+    // TODO: We would actually be able to accept these, as well as the same
+    // addresses in LP64 mode, by adding the EIZ pseudo-register as an operand
+    // to get an address size override to be emitted. However, this
+    // pseudo-register is not part of any register class and therefore causes
+    // MIR verification to fail.
+    if (Subtarget->isTarget64BitILP32() && !isUInt<31>(Val) &&
+        !AM.hasBaseOrIndexReg())
+      return true;
   }
   AM.Disp = Val;
   return false;
-
 }
 
 bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
@@ -2296,6 +2362,28 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
         uint64_t Offset = (uint64_t)AddVal->getZExtValue();
         if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
+          SDValue Res;
+          // If we're also scaling, see if we can use that as well.
+          if (AddSrc.getOpcode() == ISD::SHL &&
+              isa<ConstantSDNode>(AddSrc.getOperand(1))) {
+            SDValue ShVal = AddSrc.getOperand(0);
+            uint64_t ShAmt = AddSrc.getConstantOperandVal(1);
+            APInt HiBits =
+                APInt::getHighBitsSet(AddSrc.getScalarValueSizeInBits(), ShAmt);
+            uint64_t ScaleAmt = 1ULL << ShAmt;
+            if ((AM.Scale * ScaleAmt) <= 8 &&
+                (AddSrc->getFlags().hasNoUnsignedWrap() ||
+                 CurDAG->MaskedValueIsZero(ShVal, HiBits))) {
+              AM.Scale *= ScaleAmt;
+              SDValue ExtShVal = CurDAG->getNode(Opc, DL, VT, ShVal);
+              SDValue ExtShift = CurDAG->getNode(ISD::SHL, DL, VT, ExtShVal,
+                                                 AddSrc.getOperand(1));
+              insertDAGNode(*CurDAG, N, ExtShVal);
+              insertDAGNode(*CurDAG, N, ExtShift);
+              AddSrc = ExtShift;
+              Res = ExtShVal;
+            }
+          }
           SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
           SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(SrcOpc, DL, VT, ExtSrc, ExtVal);
@@ -2304,7 +2392,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
           insertDAGNode(*CurDAG, N, ExtAdd);
           CurDAG->ReplaceAllUsesWith(N, ExtAdd);
           CurDAG->RemoveDeadNode(N.getNode());
-          return ExtSrc;
+          return Res ? Res : ExtSrc;
         }
       }
     }
@@ -2589,8 +2677,18 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1)
       break;
 
-    // Peek through mask: zext(and(shl(x,c1),c2))
     SDValue Src = N.getOperand(0);
+
+    // See if we can match a zext(addlike(x,c)).
+    // TODO: Move more ZERO_EXTEND patterns into matchIndexRecursively.
+    if (Src.getOpcode() == ISD::ADD || Src.getOpcode() == ISD::OR)
+      if (SDValue Index = matchIndexRecursively(N, AM, Depth + 1))
+        if (Index != N) {
+          AM.IndexReg = Index;
+          return false;
+        }
+
+    // Peek through mask: zext(and(shl(x,c1),c2))
     APInt Mask = APInt::getAllOnes(Src.getScalarValueSizeInBits());
     if (Src.getOpcode() == ISD::AND && Src.hasOneUse())
       if (auto *MaskC = dyn_cast<ConstantSDNode>(Src.getOperand(1))) {
@@ -2613,7 +2711,8 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       // That makes it safe to widen to the destination type.
       APInt HighZeros =
           APInt::getHighBitsSet(ShlSrc.getValueSizeInBits(), ShAmtV);
-      if (!CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
+      if (!Src->getFlags().hasNoUnsignedWrap() &&
+          !CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
         break;
 
       // zext (shl nuw i8 %x, C1) to i32

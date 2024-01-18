@@ -34,6 +34,11 @@ class PatternRewriter;
 
 namespace tosa {
 
+ParseResult parseTypeOrAttr(OpAsmParser &parser, TypeAttr &typeAttr,
+                            Attribute &attr);
+void printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
+                     Attribute attr);
+
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
 } // namespace tosa

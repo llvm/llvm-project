@@ -8,7 +8,7 @@
 
 #include "test/UnitTest/Test.h"
 
-template <auto Func> struct StrchrTest : public __llvm_libc::testing::Test {
+template <auto Func> struct StrchrTest : public LIBC_NAMESPACE::testing::Test {
   void findsFirstCharacter() {
     const char *src = "abcde";
 
@@ -82,7 +82,7 @@ template <auto Func> struct StrchrTest : public __llvm_libc::testing::Test {
   }
 };
 
-template <auto Func> struct StrrchrTest : public __llvm_libc::testing::Test {
+template <auto Func> struct StrrchrTest : public LIBC_NAMESPACE::testing::Test {
   void findsFirstCharacter() {
     const char *src = "abcde";
 

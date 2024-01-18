@@ -13,16 +13,16 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-namespace cpp = __llvm_libc::cpp;
+namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcNanosleep, SmokeTest) {
   // TODO: When we have the code to read clocks, test that time has passed.
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   libc_errno = 0;
 
   struct timespec tim = {1, 500};
   struct timespec tim2 = {0, 0};
-  int ret = __llvm_libc::nanosleep(&tim, &tim2);
+  int ret = LIBC_NAMESPACE::nanosleep(&tim, &tim2);
   ASSERT_EQ(libc_errno, 0);
   ASSERT_EQ(ret, 0);
 }

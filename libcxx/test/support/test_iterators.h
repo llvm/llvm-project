@@ -1420,6 +1420,125 @@ ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
 #endif // TEST_STD_VER > 17
 
+#if TEST_STD_VER >= 17
+
+namespace util {
+template <class Derived, class Iter>
+class iterator_wrapper {
+  Iter iter_;
+
+  using iter_traits = std::iterator_traits<Iter>;
+
+public:
+  using iterator_category = typename iter_traits::iterator_category;
+  using value_type        = typename iter_traits::value_type;
+  using difference_type   = typename iter_traits::difference_type;
+  using pointer           = typename iter_traits::pointer;
+  using reference         = typename iter_traits::reference;
+
+  constexpr iterator_wrapper() : iter_() {}
+  constexpr explicit iterator_wrapper(Iter iter) : iter_(iter) {}
+
+  decltype(*iter_) operator*() { return *iter_; }
+  decltype(*iter_) operator*() const { return *iter_; }
+
+  decltype(iter_[0]) operator[](difference_type v) const {
+    return iter_[v];
+  }
+
+  Derived& operator++() {
+    ++iter_;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived operator++(int) {
+    auto tmp = static_cast<Derived&>(*this);
+    ++(*this);
+    return tmp;
+  }
+
+  Derived& operator--() {
+    --iter_;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived operator--(int) {
+    auto tmp = static_cast<Derived&>(*this);
+    --(*this);
+    return tmp;
+  }
+
+  iterator_wrapper& operator+=(difference_type i) {
+    iter_ += i;
+    return *this;
+  }
+
+  friend decltype(iter_ - iter_) operator-(const iterator_wrapper& lhs, const iterator_wrapper& rhs) {
+    return lhs.iter_ - rhs.iter_;
+  }
+
+  friend Derived operator-(Derived iter, difference_type i) {
+    iter.iter_ -= i;
+    return iter;
+  }
+
+  friend Derived operator+(Derived iter, difference_type i) {
+    iter.iter_ += i;
+    return iter;
+  }
+
+  friend bool operator==(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ == rhs.iter_; }
+  friend bool operator!=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ != rhs.iter_; }
+};
+
+class iterator_error : std::runtime_error {
+public:
+  iterator_error(const char* what) : std::runtime_error(what) {}
+};
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+template <class Iter>
+class throw_on_move_iterator : public iterator_wrapper<throw_on_move_iterator<Iter>, Iter> {
+  using base = iterator_wrapper<throw_on_move_iterator<Iter>, Iter>;
+
+  int moves_until_throw_ = 0;
+
+public:
+  using difference_type   = typename base::difference_type;
+  using value_type        = typename base::value_type;
+  using iterator_category = typename base::iterator_category;
+
+  throw_on_move_iterator() = default;
+  throw_on_move_iterator(Iter iter, int moves_until_throw)
+      : base(std::move(iter)), moves_until_throw_(moves_until_throw) {}
+
+  throw_on_move_iterator(const throw_on_move_iterator& other) : base(other) {}
+  throw_on_move_iterator& operator=(const throw_on_move_iterator& other) {
+    static_cast<base&>(*this) = other;
+    return *this;
+  }
+
+  throw_on_move_iterator(throw_on_move_iterator&& other)
+      : base(std::move(other)), moves_until_throw_(other.moves_until_throw_ - 1) {
+    if (moves_until_throw_ == -1)
+      throw iterator_error("throw_on_move_iterator");
+  }
+
+  throw_on_move_iterator& operator=(throw_on_move_iterator&& other) {
+    moves_until_throw_ = other.moves_until_throw_ - 1;
+    if (moves_until_throw_ == -1)
+      throw iterator_error("throw_on_move_iterator");
+    return *this;
+  }
+};
+
+template <class Iter>
+throw_on_move_iterator(Iter) -> throw_on_move_iterator<Iter>;
+#endif // TEST_HAS_NO_EXCEPTIONS
+} // namespace util
+
+#endif // TEST_STD_VER >= 17
+
 namespace types {
 template <class Ptr>
 using random_access_iterator_list =

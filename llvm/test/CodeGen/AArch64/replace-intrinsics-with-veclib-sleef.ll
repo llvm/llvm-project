@@ -4,7 +4,7 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;.
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [14 x ptr] [ptr @_ZGVnN2v_cos, ptr @_ZGVnN4v_cosf, ptr @_ZGVnN2v_exp, ptr @_ZGVnN4v_expf, ptr @_ZGVnN2v_exp2, ptr @_ZGVnN4v_exp2f, ptr @_ZGVnN2v_log, ptr @_ZGVnN4v_logf, ptr @_ZGVnN2v_log10, ptr @_ZGVnN4v_log10f, ptr @_ZGVnN2v_log2, ptr @_ZGVnN4v_log2f, ptr @_ZGVnN2v_sin, ptr @_ZGVnN4v_sinf], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [16 x ptr] [ptr @_ZGVnN2v_cos, ptr @_ZGVnN4v_cosf, ptr @_ZGVnN2v_exp, ptr @_ZGVnN4v_expf, ptr @_ZGVnN2v_exp2, ptr @_ZGVnN4v_exp2f, ptr @_ZGVnN2v_exp10, ptr @_ZGVnN4v_exp10f, ptr @_ZGVnN2v_log, ptr @_ZGVnN4v_logf, ptr @_ZGVnN2v_log10, ptr @_ZGVnN4v_log10f, ptr @_ZGVnN2v_log2, ptr @_ZGVnN4v_log2f, ptr @_ZGVnN2v_sin, ptr @_ZGVnN4v_sinf], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_ceil_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_ceil_f64(
@@ -93,6 +93,24 @@ define <4 x float> @llvm_exp2_f32(<4 x float> %in) {
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
+  ret <4 x float> %1
+}
+
+define <2 x double> @llvm_exp10_f64(<2 x double> %in) {
+; CHECK-LABEL: @llvm_exp10_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_exp10(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = call fast <2 x double> @llvm.exp10.v2f64(<2 x double> %in)
+  ret <2 x double> %1
+}
+
+define <4 x float> @llvm_exp10_f32(<4 x float> %in) {
+; CHECK-LABEL: @llvm_exp10_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_exp10f(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call fast <4 x float> @llvm.exp10.v4f32(<4 x float> %in)
   ret <4 x float> %1
 }
 
@@ -376,6 +394,8 @@ declare <2 x double> @llvm.exp.v2f64(<2 x double>)
 declare <4 x float> @llvm.exp.v4f32(<4 x float>)
 declare <2 x double> @llvm.exp2.v2f64(<2 x double>)
 declare <4 x float> @llvm.exp2.v4f32(<4 x float>)
+declare <2 x double> @llvm.exp10.v2f64(<2 x double>)
+declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 declare <2 x double> @llvm.floor.v2f64(<2 x double>)

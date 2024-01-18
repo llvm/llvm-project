@@ -12,23 +12,23 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 TEST(LlvmLibcDifftime, SmokeTest) {
   time_t t1_seconds = TimeConstants::SECONDS_PER_HOUR;
   time_t t2_seconds = 0;
 
-  __llvm_libc::fputil::FPBits<long double> expected_fp =
-      __llvm_libc::fputil::FPBits<long double>();
-  expected_fp = __llvm_libc::fputil::FPBits<long double>(
+  LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =
+      LIBC_NAMESPACE::fputil::FPBits<long double>();
+  expected_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(
       static_cast<long double>(t1_seconds));
 
-  double result = __llvm_libc::difftime(t1_seconds, t2_seconds);
+  double result = LIBC_NAMESPACE::difftime(t1_seconds, t2_seconds);
 
-  __llvm_libc::fputil::FPBits<long double> actual_fp =
-      __llvm_libc::fputil::FPBits<long double>();
-  actual_fp = __llvm_libc::fputil::FPBits<long double>(
+  LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
+      LIBC_NAMESPACE::fputil::FPBits<long double>();
+  actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(
       static_cast<long double>(result));
 
   EXPECT_EQ(actual_fp.bits, expected_fp.bits);

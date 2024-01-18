@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace fma {
 
@@ -84,6 +84,6 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
 
 } // namespace fma
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_FMA_H

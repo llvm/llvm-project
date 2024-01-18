@@ -100,10 +100,10 @@ constexpr size_t MID_INT_SIZE = 192;
 // Any block that is all 9s adds one to the max block counter and doesn't clear
 // the buffer because they can cause the block above them to be rounded up.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 using BlockInt = uint32_t;
-constexpr size_t BLOCK_SIZE = 9;
+constexpr uint32_t BLOCK_SIZE = 9;
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
@@ -115,7 +115,7 @@ namespace internal {
 
 // Returns floor(log_10(2^e)); requires 0 <= e <= 42039.
 LIBC_INLINE constexpr uint32_t log10_pow2(const uint64_t e) {
-  LIBC_ASSERT(e >= 0 && e <= 42039 &&
+  LIBC_ASSERT(e <= 42039 &&
               "Incorrect exponent to perform log10_pow2 approximation.");
   // This approximation is based on the float value for log_10(2). It first
   // gives an incorrect result for our purposes at 42039 (well beyond the 16383
@@ -136,12 +136,12 @@ LIBC_INLINE constexpr uint32_t log10_pow2(const uint64_t e) {
   // us the floor, whereas counting the digits of the power of 2 gives us the
   // ceiling. With a similar loop I checked the maximum valid value and found
   // 42039.
-  return (e * 0x13441350fbdll) >> 42;
+  return static_cast<uint32_t>((e * 0x13441350fbdll) >> 42);
 }
 
 // Same as above, but with different constants.
 LIBC_INLINE constexpr uint32_t log2_pow5(const uint64_t e) {
-  return (e * 0x12934f0979bll) >> 39;
+  return static_cast<uint32_t>((e * 0x12934f0979bll) >> 39);
 }
 
 // Returns 1 + floor(log_10(2^e). This could technically be off by 1 if any
@@ -290,7 +290,7 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     } else {
       ten_blocks = 0;
       five_blocks = i;
-      shift_amount = static_cast<int>(shift_amount + (i * BLOCK_SIZE));
+      shift_amount = shift_amount + (static_cast<int>(i) * BLOCK_SIZE);
     }
   }
 
@@ -488,7 +488,8 @@ public:
 
       val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
 #endif
-      const uint32_t shift_amount = SHIFT_CONST + (IDX_SIZE * idx) - exponent;
+      const uint32_t shift_amount =
+          SHIFT_CONST + (static_cast<uint32_t>(IDX_SIZE) * idx) - exponent;
       const uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
       return digits;
@@ -548,7 +549,8 @@ public:
 
       val = POW10_SPLIT_2[p];
 #endif
-      const int32_t shift_amount = SHIFT_CONST + (-exponent - IDX_SIZE * idx);
+      const int32_t shift_amount =
+          SHIFT_CONST + (-exponent - (static_cast<int32_t>(IDX_SIZE) * idx));
       uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;
@@ -602,7 +604,7 @@ public:
   }
 };
 
-#ifndef LONG_DOUBLE_IS_DOUBLE
+#ifndef LIBC_LONG_DOUBLE_IS_FLOAT64
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
 template <>
@@ -708,7 +710,7 @@ FloatToString<long double>::get_negative_block(int block_index) {
     const int32_t SHIFT_CONST = TABLE_SHIFT_CONST;
 
     // if the requested block is zero
-    if (block_index <= MIN_BLOCK_2[idx]) {
+    if (block_index < MIN_BLOCK_2[idx]) {
       return 0;
     }
     const uint32_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
@@ -746,7 +748,8 @@ FloatToString<long double>::get_negative_block(int block_index) {
                                                        block_index + 1);
     }
 #endif
-    const int32_t shift_amount = SHIFT_CONST + (-exponent - IDX_SIZE * idx);
+    const int32_t shift_amount =
+        SHIFT_CONST + (-exponent - static_cast<int>(IDX_SIZE * idx));
     BlockInt digits = internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
     return digits;
   } else {
@@ -754,8 +757,8 @@ FloatToString<long double>::get_negative_block(int block_index) {
   }
 }
 
-#endif // LONG_DOUBLE_IS_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_FLOAT64
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H

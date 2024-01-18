@@ -93,6 +93,7 @@ struct Config {
     Strict,
     None,
   };
+  enum class FastCheckPolicy { Strict, Loose, None };
   /// Controls warnings and errors when parsing code.
   struct {
     bool SuppressAll = false;
@@ -103,6 +104,7 @@ struct Config {
       // A comma-separated list of globs specify which clang-tidy checks to run.
       std::string Checks;
       llvm::StringMap<std::string> CheckOptions;
+      FastCheckPolicy FastCheckFilter = FastCheckPolicy::Strict;
     } ClangTidy;
 
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;

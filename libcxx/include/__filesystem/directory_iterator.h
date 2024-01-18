@@ -29,7 +29,7 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -74,7 +74,7 @@ public:
   directory_iterator& operator=(directory_iterator&& __o) noexcept {
     // non-default implementation provided to support self-move assign.
     if (this != &__o) {
-      __imp_ = _VSTD::move(__o.__imp_);
+      __imp_ = std::move(__o.__imp_);
     }
     return *this;
   }
@@ -156,14 +156,14 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_borrowed_range<_VSTD_FS::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::directory_iterator> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 #endif // _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H

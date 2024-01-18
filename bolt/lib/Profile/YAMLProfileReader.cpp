@@ -31,7 +31,7 @@ static llvm::cl::opt<bool>
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
-}
+} // namespace opts
 
 namespace llvm {
 namespace bolt {
@@ -354,7 +354,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       matchProfileToFunction(YamlBF, Function);
   }
 
-  for (auto &[CommonName, LTOProfiles]: LTOCommonNameMap) {
+  for (const auto &[CommonName, LTOProfiles] : LTOCommonNameMap) {
     if (!LTOCommonNameFunctionMap.contains(CommonName))
       continue;
     std::unordered_set<BinaryFunction *> &Functions =

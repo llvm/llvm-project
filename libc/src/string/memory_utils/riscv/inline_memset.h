@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE static void inline_memset_riscv(Ptr dst, uint8_t value,
                                             size_t count) {
@@ -28,6 +28,6 @@ LIBC_INLINE static void inline_memset_riscv(Ptr dst, uint8_t value,
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H

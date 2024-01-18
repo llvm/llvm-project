@@ -44,6 +44,7 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
 
 def StructSchedParam : NamedType<"struct sched_param">;
 def StructSchedParamPtr : PtrType<StructSchedParam>;
@@ -1192,7 +1193,7 @@ def POSIX : StandardSpec<"POSIX"> {
           FunctionSpec<
               "nanosleep",
               RetValSpec<IntType>,
-              [ArgSpec<StructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
+              [ArgSpec<ConstStructTimeSpecPtr>, ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;
@@ -1267,6 +1268,38 @@ def POSIX : StandardSpec<"POSIX"> {
       >,
     ]
   >;
+
+  HeaderSpec Search = HeaderSpec<
+    "search.h",
+    [], // Macros
+    [
+        ActionType,
+        EntryType
+    ], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "hcreate",
+            RetValSpec<IntType>,
+            [
+                ArgSpec<SizeTType>
+            ]
+        >,
+        FunctionSpec<
+            "hdestroy",
+            RetValSpec<VoidType>,
+            [] // Args
+        >,
+        FunctionSpec<
+            "hsearch",
+            RetValSpec<EntryTypePtr>,
+            [
+                ArgSpec<EntryType>, 
+                ArgSpec<ActionType>
+            ]
+        >,
+    ]
+  >; 
 
   HeaderSpec Termios = HeaderSpec<
     "termios.h",
@@ -1413,6 +1446,7 @@ def POSIX : StandardSpec<"POSIX"> {
     Time,
     Termios,
     UniStd,
-    String
+    String,
+    Search,
   ];
 }

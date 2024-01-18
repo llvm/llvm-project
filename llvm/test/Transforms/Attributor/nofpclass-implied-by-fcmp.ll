@@ -465,7 +465,7 @@ define float @if_fcmp_oeq_1_0_else_arg(float %arg) {
 
 define float @if_fcmp_oeq_0_1_else_arg(float %arg) {
 ; CHECK-LABEL: define nofpclass(zero) float @if_fcmp_oeq_0_1_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(zero) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[IS_OEQ_0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OEQ_0]], float 1.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -477,7 +477,7 @@ define float @if_fcmp_oeq_0_1_else_arg(float %arg) {
 
 define float @if_fcmp_one_0_arg_else_1(float %arg) {
 ; CHECK-LABEL: define nofpclass(nan zero) float @if_fcmp_one_0_arg_else_1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(nan zero) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[IS_ONE_0:%.*]] = fcmp one float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ONE_0]], float [[ARG]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -489,7 +489,7 @@ define float @if_fcmp_one_0_arg_else_1(float %arg) {
 
 define float @if_fcmp_une_0_arg_else_1(float %arg) {
 ; CHECK-LABEL: define nofpclass(zero) float @if_fcmp_une_0_arg_else_1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(zero) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[IS_UNE_0:%.*]] = fcmp une float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UNE_0]], float [[ARG]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -501,7 +501,7 @@ define float @if_fcmp_une_0_arg_else_1(float %arg) {
 
 define float @if_fcmp_one_0_1_else_arg(float %arg) {
 ; CHECK-LABEL: define nofpclass(inf sub nnorm) float @if_fcmp_one_0_1_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(inf sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[IS_ONE_0:%.*]] = fcmp one float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ONE_0]], float 1.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -524,8 +524,8 @@ define float @if_fcmp_one_1_arg_else_0(float %arg) {
 }
 
 define float @fcmp_fabs_oeq_1_else_1(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_oeq_1_else_1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_oeq_1_else_1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[FABS_IS_OEQ_1:%.*]] = fcmp oeq float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OEQ_1]], float [[ARG]], float 1.000000e+00
@@ -538,8 +538,8 @@ define float @fcmp_fabs_oeq_1_else_1(float %arg) {
 }
 
 define float @fcmp_fabs_oeq_1_0_else_arg(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_oeq_1_0_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_oeq_1_0_else_arg(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OEQ_1:%.*]] = fcmp oeq float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OEQ_1]], float 0.000000e+00, float [[ARG]]
@@ -552,8 +552,8 @@ define float @fcmp_fabs_oeq_1_0_else_arg(float %arg) {
 }
 
 define float @fcmp_fabs_ueq_1_0_else_arg(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_ueq_1_0_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_ueq_1_0_else_arg(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UEQ_1:%.*]] = fcmp ueq float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UEQ_1]], float 0.000000e+00, float [[ARG]]
@@ -566,8 +566,8 @@ define float @fcmp_fabs_ueq_1_0_else_arg(float %arg) {
 }
 
 define float @fcmp_fabs_one_1_arg_else_0(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_one_1_arg_else_0(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_one_1_arg_else_0(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ONE_1:%.*]] = fcmp one float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ONE_1]], float [[ARG]], float 0.000000e+00
@@ -580,8 +580,8 @@ define float @fcmp_fabs_one_1_arg_else_0(float %arg) {
 }
 
 define float @fcmp_fabs_une_1_arg_else_0(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_une_1_arg_else_0(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_une_1_arg_else_0(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UNE_1:%.*]] = fcmp une float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UNE_1]], float [[ARG]], float 0.000000e+00
@@ -594,8 +594,8 @@ define float @fcmp_fabs_une_1_arg_else_0(float %arg) {
 }
 
 define float @fcmp_fabs_one_1_0_else_arg(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_one_1_0_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_one_1_0_else_arg(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ONE_1:%.*]] = fcmp one float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ONE_1]], float 0.000000e+00, float [[ARG]]
@@ -608,8 +608,8 @@ define float @fcmp_fabs_one_1_0_else_arg(float %arg) {
 }
 
 define float @fcmp_fabs_une_1_0_else_arg(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_une_1_0_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fcmp_fabs_une_1_0_else_arg(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UNE_1:%.*]] = fcmp une float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UNE_1]], float 0.000000e+00, float [[ARG]]
@@ -622,8 +622,8 @@ define float @fcmp_fabs_une_1_0_else_arg(float %arg) {
 }
 
 define float @fcmp_fabs_one_1_neg2_else_arg(float %arg) {
-; CHECK-LABEL: define float @fcmp_fabs_one_1_neg2_else_arg(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @fcmp_fabs_one_1_neg2_else_arg(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ONE_1:%.*]] = fcmp one float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ONE_1]], float -2.000000e+00, float [[ARG]]
@@ -753,11 +753,11 @@ define float @fcmp_oeq_largest_denormal_arg_else_0.0(float %arg) {
 
 ; can't be inf
 define float @clamp_fabs_value_ogt_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_ogt_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_ogt_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OGT_1:%.*]] = fcmp ogt float [[FABS_ARG]], 1.000000e+00
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OGT_1]], float [[COPYSIGN]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -770,11 +770,11 @@ define float @clamp_fabs_value_ogt_1_to_1_copysign(float %arg) {
 
 ; can't be inf
 define float @clamp_fabs_value_oge_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_oge_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_oge_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OGE_1:%.*]] = fcmp oge float [[FABS_ARG]], 1.000000e+00
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OGE_1]], float [[COPYSIGN]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -787,8 +787,8 @@ define float @clamp_fabs_value_oge_1_to_1_copysign(float %arg) {
 
 ; can't be inf or nan
 define float @clamp_fabs_value_olt_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_olt_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_olt_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OLT_1:%.*]] = fcmp olt float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
@@ -804,8 +804,8 @@ define float @clamp_fabs_value_olt_1_to_1_copysign(float %arg) {
 
 ; can't be inf or nan
 define float @clamp_fabs_value_ole_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_ole_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_ole_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OLE_1:%.*]] = fcmp ole float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
@@ -821,11 +821,11 @@ define float @clamp_fabs_value_ole_1_to_1_copysign(float %arg) {
 
 ; can't be inf or nan
 define float @clamp_fabs_value_ugt_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_ugt_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_ugt_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UGT_1:%.*]] = fcmp ugt float [[FABS_ARG]], 1.000000e+00
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UGT_1]], float [[COPYSIGN]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -838,11 +838,11 @@ define float @clamp_fabs_value_ugt_1_to_1_copysign(float %arg) {
 
 ; can't be inf or nan
 define float @clamp_fabs_value_uge_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_uge_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_uge_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UGE_1:%.*]] = fcmp ugt float [[FABS_ARG]], 1.000000e+00
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UGE_1]], float [[COPYSIGN]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -855,8 +855,8 @@ define float @clamp_fabs_value_uge_1_to_1_copysign(float %arg) {
 
 ; can't be inf
 define float @clamp_fabs_value_ult_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_ult_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_ult_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ULT_1:%.*]] = fcmp ult float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
@@ -872,8 +872,8 @@ define float @clamp_fabs_value_ult_1_to_1_copysign(float %arg) {
 
 ; can't be inf
 define float @clamp_fabs_value_ule_1_to_1_copysign(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_value_ule_1_to_1_copysign(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf zero sub) float @clamp_fabs_value_ule_1_to_1_copysign(
+; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ULE_1:%.*]] = fcmp ule float [[FABS_ARG]], 1.000000e+00
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nofpclass(nan inf zero sub) float @llvm.copysign.f32(float noundef 1.000000e+00, float [[ARG]]) #[[ATTR4]]
@@ -945,8 +945,8 @@ define float @clamp_is_uge_largest_normal_to_largest_normal(float %arg) {
 
 ; Can't be +inf or -inf
 define float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGT_LARGEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
@@ -960,8 +960,8 @@ define float @clamp_fabs_is_ogt_largest_normal_to_largest_normal(float %arg) {
 
 ; Can't be +inf or -inf
 define float @clamp_fabs_is_oge_largest_normal_to_largest_normal(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_is_oge_largest_normal_to_largest_normal(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_is_oge_largest_normal_to_largest_normal(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGE_LARGEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
@@ -975,8 +975,8 @@ define float @clamp_fabs_is_oge_largest_normal_to_largest_normal(float %arg) {
 
 ; Can't be +inf or -inf or nan
 define float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp ugt float [[FABS_ARG]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
@@ -990,8 +990,8 @@ define float @clamp_fabs_is_ugt_largest_normal_to_largest_normal(float %arg) {
 
 ; Can't be +inf or -inf or nan
 define float @clamp_fabs_is_uge_largest_normal_to_largest_normal(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_is_uge_largest_normal_to_largest_normal(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_is_uge_largest_normal_to_largest_normal(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UGT_LARGEST_NORMAL:%.*]] = fcmp uge float [[FABS_ARG]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_LARGEST_NORMAL]], float 0x47EFFFFFE0000000, float [[ARG]]
@@ -1009,8 +1009,8 @@ define float @clamp_fabs_is_uge_largest_normal_to_largest_normal(float %arg) {
 
 ; can't be negative or positive subnormal
 define float @clamp_fabs_ogt_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ogt_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_ogt_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGT_SMALLEST_NORMAL:%.*]] = fcmp ogt float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1025,8 +1025,8 @@ define float @clamp_fabs_ogt_smallest_normal_to_zero(float %arg) {
 
 ; can't be negative or positive subnormal
 define float @clamp_fabs_oge_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define nofpclass(inf norm) float @clamp_fabs_oge_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(inf nzero nsub norm) float @clamp_fabs_oge_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(inf nzero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGE_SMALLEST_NORMAL:%.*]] = fcmp oge float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1040,8 +1040,8 @@ define float @clamp_fabs_oge_smallest_normal_to_zero(float %arg) {
 
 ; can't be negative or subnormal
 define float @clamp_fabs_olt_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define nofpclass(nzero sub) float @clamp_fabs_olt_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @clamp_fabs_olt_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1055,8 +1055,8 @@ define float @clamp_fabs_olt_smallest_normal_to_zero(float %arg) {
 
 ; can't be negative or subnormal
 define float @clamp_fabs_ole_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ole_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_ole_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1069,8 +1069,8 @@ define float @clamp_fabs_ole_smallest_normal_to_zero(float %arg) {
 }
 
 define float @clamp_fabs_is_is_olt_smallest_normal_to_0(float %arg) {
-; CHECK-LABEL: define nofpclass(nzero sub) float @clamp_fabs_is_is_olt_smallest_normal_to_0(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero sub nnorm) float @clamp_fabs_is_is_olt_smallest_normal_to_0(
+; CHECK-SAME: float nofpclass(ninf nzero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLT_SMALLEST_NORMAL:%.*]] = fcmp olt float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1083,8 +1083,8 @@ define float @clamp_fabs_is_is_olt_smallest_normal_to_0(float %arg) {
 }
 
 define float @clamp_fabs_is_is_ole_smallest_normal_to_0(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_is_is_ole_smallest_normal_to_0(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_is_is_ole_smallest_normal_to_0(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLE_SMALLEST_NORMAL:%.*]] = fcmp ole float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1097,8 +1097,8 @@ define float @clamp_fabs_is_is_ole_smallest_normal_to_0(float %arg) {
 }
 
 define float @clamp_fabs_oeq_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_oeq_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_oeq_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1111,8 +1111,8 @@ define float @clamp_fabs_oeq_smallest_normal_to_zero(float %arg) {
 }
 
 define float @clamp_fabs_one_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_one_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_one_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ONE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1125,8 +1125,8 @@ define float @clamp_fabs_one_smallest_normal_to_zero(float %arg) {
 }
 
 define float @clamp_fabs_ueq_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ueq_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_ueq_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1139,8 +1139,8 @@ define float @clamp_fabs_ueq_smallest_normal_to_zero(float %arg) {
 }
 
 define float @clamp_fabs_une_smallest_normal_to_zero(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_une_smallest_normal_to_zero(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_une_smallest_normal_to_zero(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UNE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
@@ -1157,8 +1157,8 @@ define float @clamp_fabs_une_smallest_normal_to_zero(float %arg) {
 ;---------------------------------------------------------------------
 
 define float @clamp_fabs_olt_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_olt_neg1_to_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_olt_neg1_to_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1168,8 +1168,8 @@ define float @clamp_fabs_olt_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_ole_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ole_neg1_to_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_ole_neg1_to_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1179,8 +1179,8 @@ define float @clamp_fabs_ole_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_ult_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ult_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_ult_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ULT_NEG1:%.*]] = fcmp ult float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ULT_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1193,8 +1193,8 @@ define float @clamp_fabs_ult_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_ule_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ule_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_ule_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ULE_NEG1:%.*]] = fcmp ule float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ULE_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1207,8 +1207,8 @@ define float @clamp_fabs_ule_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_ogt_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ogt_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_ogt_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OGT_NEG1:%.*]] = fcmp ogt float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OGT_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1221,8 +1221,8 @@ define float @clamp_fabs_ogt_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_oge_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_oge_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_oge_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_OGE_NEG1:%.*]] = fcmp oge float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_OGE_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1236,7 +1236,7 @@ define float @clamp_fabs_oge_neg1_to_neg1(float %arg) {
 
 define float @clamp_fabs_ugt_neg1_to_neg1(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf zero sub pnorm) float @clamp_fabs_ugt_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1247,7 +1247,7 @@ define float @clamp_fabs_ugt_neg1_to_neg1(float %arg) {
 
 define float @clamp_fabs_uge_neg1_to_neg1(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf zero sub pnorm) float @clamp_fabs_uge_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1257,8 +1257,8 @@ define float @clamp_fabs_uge_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_oeq_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_oeq_neg1_to_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @clamp_fabs_oeq_neg1_to_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1268,8 +1268,8 @@ define float @clamp_fabs_oeq_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_ueq_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_ueq_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_ueq_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_UEQ_NEG1:%.*]] = fcmp ueq float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_UEQ_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1282,8 +1282,8 @@ define float @clamp_fabs_ueq_neg1_to_neg1(float %arg) {
 }
 
 define float @clamp_fabs_one_neg1_to_neg1(float %arg) {
-; CHECK-LABEL: define float @clamp_fabs_one_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub) float @clamp_fabs_one_neg1_to_neg1(
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[FABS_IS_ONE_NEG1:%.*]] = fcmp one float [[FABS_ARG]], -1.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[FABS_IS_ONE_NEG1]], float -1.000000e+00, float [[ARG]]
@@ -1297,7 +1297,7 @@ define float @clamp_fabs_one_neg1_to_neg1(float %arg) {
 
 define float @clamp_fabs_une_neg1_to_neg1(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf zero sub pnorm) float @clamp_fabs_une_neg1_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
   %fabs.arg = call float @llvm.fabs.f32(float %arg)
@@ -1407,8 +1407,8 @@ define float @ret_assumed_ule_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ogt_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ogt_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ogt_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OGT_1:%.*]] = fcmp ogt float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OGT_1]]) #[[ATTR5]]
@@ -1421,8 +1421,8 @@ define float @ret_assumed_fabs_ogt_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_oge_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_oge_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_oge_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OGE_1:%.*]] = fcmp oge float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OGE_1]]) #[[ATTR5]]
@@ -1435,8 +1435,8 @@ define float @ret_assumed_fabs_oge_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_olt_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_olt_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_olt_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OLT_1:%.*]] = fcmp olt float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OLT_1]]) #[[ATTR5]]
@@ -1449,8 +1449,8 @@ define float @ret_assumed_fabs_olt_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ole_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ole_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ole_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OLE_1:%.*]] = fcmp olt float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OLE_1]]) #[[ATTR5]]
@@ -1463,8 +1463,8 @@ define float @ret_assumed_fabs_ole_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ugt_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ugt_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ugt_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UGT_1:%.*]] = fcmp ugt float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UGT_1]]) #[[ATTR5]]
@@ -1477,8 +1477,8 @@ define float @ret_assumed_fabs_ugt_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_uge_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_uge_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_uge_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UGE_1:%.*]] = fcmp ugt float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UGE_1]]) #[[ATTR5]]
@@ -1491,8 +1491,8 @@ define float @ret_assumed_fabs_uge_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ult_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ult_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ult_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ULT_1:%.*]] = fcmp ult float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ULT_1]]) #[[ATTR5]]
@@ -1505,8 +1505,8 @@ define float @ret_assumed_fabs_ult_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ule_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ule_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ule_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ULE_1:%.*]] = fcmp ule float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ULE_1]]) #[[ATTR5]]
@@ -1687,8 +1687,8 @@ define float @ret_assumed_une_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_oeq_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_oeq_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_oeq_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OEQ_1:%.*]] = fcmp oeq float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OEQ_1]]) #[[ATTR5]]
@@ -1701,8 +1701,8 @@ define float @ret_assumed_fabs_oeq_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ueq_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ueq_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ueq_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UEQ_1:%.*]] = fcmp ueq float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UEQ_1]]) #[[ATTR5]]
@@ -1715,8 +1715,8 @@ define float @ret_assumed_fabs_ueq_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_one_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_one_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_one_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ONE_1:%.*]] = fcmp one float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ONE_1]]) #[[ATTR5]]
@@ -1729,8 +1729,8 @@ define float @ret_assumed_fabs_one_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_une_1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_une_1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_une_1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UNE_1:%.*]] = fcmp one float [[ARG_FABS]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNE_1]]) #[[ATTR5]]
@@ -1743,8 +1743,8 @@ define float @ret_assumed_fabs_une_1(float %arg) {
 }
 
 define float @ret_assumed_fabs_oeq_neg1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_oeq_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_oeq_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -1755,8 +1755,8 @@ define float @ret_assumed_fabs_oeq_neg1(float %arg) {
 }
 
 define float @ret_assumed_fabs_ueq_neg1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_ueq_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_ueq_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UEQ_NEG1:%.*]] = fcmp ueq float [[ARG_FABS]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UEQ_NEG1]]) #[[ATTR5]]
@@ -1769,8 +1769,8 @@ define float @ret_assumed_fabs_ueq_neg1(float %arg) {
 }
 
 define float @ret_assumed_fabs_one_neg1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_one_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_one_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[ONE_NEG1:%.*]] = fcmp one float [[ARG_FABS]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ONE_NEG1]]) #[[ATTR5]]
@@ -1783,8 +1783,8 @@ define float @ret_assumed_fabs_one_neg1(float %arg) {
 }
 
 define float @ret_assumed_fabs_une_neg1(float %arg) {
-; CHECK-LABEL: define float @ret_assumed_fabs_une_neg1(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_assumed_fabs_une_neg1(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
@@ -1801,7 +1801,7 @@ define float @ret_assumed_fabs_une_neg1(float %arg) {
 ; Can't be +inf
 define float @clamp_is_ogt_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ogt_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGT_KNOWN_POSITIVE:%.*]] = fcmp ogt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1815,7 +1815,7 @@ define float @clamp_is_ogt_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_oge_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_oge_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OGE_KNOWN_POSITIVE:%.*]] = fcmp oge float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGE_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1829,7 +1829,7 @@ define float @clamp_is_oge_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_olt_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_olt_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLT_KNOWN_POSITIVE:%.*]] = fcmp olt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLT_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1843,7 +1843,7 @@ define float @clamp_is_olt_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_ole_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ole_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OLE_KNOWN_POSITIVE:%.*]] = fcmp olt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OLE_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1857,7 +1857,7 @@ define float @clamp_is_ole_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_ugt_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ugt_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UGT_KNOWN_POSITIVE:%.*]] = fcmp ugt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGT_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1871,7 +1871,7 @@ define float @clamp_is_ugt_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_uge_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_uge_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UGE_KNOWN_POSITIVE:%.*]] = fcmp uge float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UGE_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1885,7 +1885,7 @@ define float @clamp_is_uge_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_ult_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ult_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_ULT_KNOWN_POSITIVE:%.*]] = fcmp ult float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ULT_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1899,7 +1899,7 @@ define float @clamp_is_ult_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_ule_known_positive_to_1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ule_known_positive_to_1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_ULE_KNOWN_POSITIVE:%.*]] = fcmp ult float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ULE_KNOWN_POSITIVE]], float 1.000000e+00, float [[ARG]]
@@ -1913,7 +1913,7 @@ define float @clamp_is_ule_known_positive_to_1(float %arg, float %unknown) {
 
 define float @clamp_is_olt_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_olt_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_OLT_NEGATIVE:%.*]] = fcmp olt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -1929,7 +1929,7 @@ define float @clamp_is_olt_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_ole_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ole_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_OLE_NEGATIVE:%.*]] = fcmp ole float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -1945,7 +1945,7 @@ define float @clamp_is_ole_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_ogt_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ogt_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_OGT_NEGATIVE:%.*]] = fcmp ogt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -1961,7 +1961,7 @@ define float @clamp_is_ogt_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_oge_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_oge_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_OGE_NEGATIVE:%.*]] = fcmp oge float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -1977,7 +1977,7 @@ define float @clamp_is_oge_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_ult_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ult_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_ULT_NEGATIVE:%.*]] = fcmp ult float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -1993,7 +1993,7 @@ define float @clamp_is_ult_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_ule_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ule_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_ULE_NEGATIVE:%.*]] = fcmp ule float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2009,7 +2009,7 @@ define float @clamp_is_ule_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_ugt_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_ugt_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_UGT_NEGATIVE:%.*]] = fcmp ugt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2025,7 +2025,7 @@ define float @clamp_is_ugt_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @clamp_is_uge_known_negative_to_neg1(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @clamp_is_uge_known_negative_to_neg1(
-; CHECK-SAME: float [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[IS_UGE_NEGATIVE:%.*]] = fcmp uge float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2041,7 +2041,7 @@ define float @clamp_is_uge_known_negative_to_neg1(float %arg, float %unknown) {
 
 define float @ret_assumed_ogt_known_positive(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ogt_known_positive(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OGT_KNOWN_POSITIVE:%.*]] = fcmp ogt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OGT_KNOWN_POSITIVE]]) #[[ATTR5]]
@@ -2055,7 +2055,7 @@ define float @ret_assumed_ogt_known_positive(float %arg, float %unknown) {
 
 define float @ret_assumed_oge_known_positive(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_oge_known_positive(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[OGE_KNOWN_POSITIVE:%.*]] = fcmp oge float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[OGE_KNOWN_POSITIVE]]) #[[ATTR5]]
@@ -2069,7 +2069,7 @@ define float @ret_assumed_oge_known_positive(float %arg, float %unknown) {
 
 define float @ret_assumed_ugt_known_positive(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ugt_known_positive(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UGT_KNOWN_POSITIVE:%.*]] = fcmp ugt float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UGT_KNOWN_POSITIVE]]) #[[ATTR5]]
@@ -2083,7 +2083,7 @@ define float @ret_assumed_ugt_known_positive(float %arg, float %unknown) {
 
 define float @ret_assumed_uge_known_positive(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_uge_known_positive(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(ninf nzero nsub nnorm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[UGE_KNOWN_POSITIVE:%.*]] = fcmp uge float [[ARG]], [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UGE_KNOWN_POSITIVE]]) #[[ATTR5]]
@@ -2097,7 +2097,7 @@ define float @ret_assumed_uge_known_positive(float %arg, float %unknown) {
 
 define float @ret_assumed_olt_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_olt_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[OLT_KNOWN_NEGATIVE:%.*]] = fcmp olt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2113,7 +2113,7 @@ define float @ret_assumed_olt_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_ole_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ole_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[OLE_KNOWN_NEGATIVE:%.*]] = fcmp ole float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2129,7 +2129,7 @@ define float @ret_assumed_ole_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_ult_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ult_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[ULT_KNOWN_NEGATIVE:%.*]] = fcmp ult float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2145,7 +2145,7 @@ define float @ret_assumed_ult_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_ule_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ule_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[ULE_KNOWN_NEGATIVE:%.*]] = fcmp ule float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2161,7 +2161,7 @@ define float @ret_assumed_ule_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_ogt_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ogt_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[OGT_KNOWN_NEGATIVE:%.*]] = fcmp ogt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2177,7 +2177,7 @@ define float @ret_assumed_ogt_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_oge_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_oge_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[OGE_KNOWN_NEGATIVE:%.*]] = fcmp oge float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2193,7 +2193,7 @@ define float @ret_assumed_oge_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_ugt_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_ugt_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[UGT_KNOWN_NEGATIVE:%.*]] = fcmp ugt float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2209,7 +2209,7 @@ define float @ret_assumed_ugt_known_negative(float %arg, float %unknown) {
 
 define float @ret_assumed_uge_known_negative(float %arg, float %unknown) {
 ; CHECK-LABEL: define float @ret_assumed_uge_known_negative(
-; CHECK-SAME: float returned [[ARG:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float returned [[ARG:%.*]], float nofpclass(inf zero sub norm) [[UNKNOWN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[KNOWN_POSITIVE:%.*]] = call float @llvm.fabs.f32(float [[UNKNOWN]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE:%.*]] = fneg float [[KNOWN_POSITIVE]]
 ; CHECK-NEXT:    [[UGE_KNOWN_NEGATIVE:%.*]] = fcmp uge float [[ARG]], [[KNOWN_NEGATIVE]]
@@ -2300,8 +2300,8 @@ define float @assume_uno_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_oeq_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_oeq_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_oeq_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
@@ -2314,8 +2314,8 @@ define float @assume_fabs_oeq_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_one_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_one_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_one_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ONE_SMALLEST_NORMAL]]) #[[ATTR5]]
@@ -2328,8 +2328,8 @@ define float @assume_fabs_one_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_ueq_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_ueq_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ueq_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
@@ -2342,8 +2342,8 @@ define float @assume_fabs_ueq_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_une_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_une_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_une_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNE_SMALLEST_NORMAL]]) #[[ATTR5]]
@@ -2356,8 +2356,8 @@ define float @assume_fabs_une_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_ord_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_ord_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ord_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD_SMALLEST_NORMAL]]) #[[ATTR5]]
@@ -2370,8 +2370,8 @@ define float @assume_fabs_ord_smallest_normal(float %arg) {
 }
 
 define float @assume_fabs_uno_smallest_normal(float %arg) {
-; CHECK-LABEL: define float @assume_fabs_uno_smallest_normal(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_uno_smallest_normal(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[FABS_ARG]], 0x3810000000000000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNO_SMALLEST_NORMAL]]) #[[ATTR5]]

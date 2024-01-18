@@ -13,7 +13,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -87,5 +87,5 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_getcpucount
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

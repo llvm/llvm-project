@@ -24,9 +24,9 @@ getExpandedDimToCollapsedDimMap(ArrayRef<AffineMap> reassociation) {
   llvm::DenseMap<int64_t, int64_t> expandedDimToCollapsedDim;
   for (const auto &map : enumerate(reassociation)) {
     unsigned startPos =
-        map.value().getResults().front().cast<AffineDimExpr>().getPosition();
+        cast<AffineDimExpr>(map.value().getResults().front()).getPosition();
     unsigned endPos =
-        map.value().getResults().back().cast<AffineDimExpr>().getPosition();
+        cast<AffineDimExpr>(map.value().getResults().back()).getPosition();
     for (auto dim : llvm::seq_inclusive(startPos, endPos)) {
       expandedDimToCollapsedDim[dim] = map.index();
     }
@@ -47,8 +47,8 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
   }
   AffineMap map = reassociationMap[dimIndex];
   unsigned startPos =
-      map.getResults().front().cast<AffineDimExpr>().getPosition();
-  unsigned endPos = map.getResults().back().cast<AffineDimExpr>().getPosition();
+      cast<AffineDimExpr>(map.getResults().front()).getPosition();
+  unsigned endPos = cast<AffineDimExpr>(map.getResults().back()).getPosition();
   AffineExpr expr;
   SmallVector<OpFoldResult> dynamicDims;
   for (auto dim : llvm::seq_inclusive(startPos, endPos)) {
@@ -87,16 +87,12 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
     return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }
   unsigned sourceDimPos = expandedDimToCollapsedDim[dimIndex];
-  unsigned startPos = reassociation[sourceDimPos]
-                          .getResults()
-                          .front()
-                          .cast<AffineDimExpr>()
-                          .getPosition();
-  unsigned endPos = reassociation[sourceDimPos]
-                        .getResults()
-                        .back()
-                        .cast<AffineDimExpr>()
-                        .getPosition();
+  unsigned startPos =
+      cast<AffineDimExpr>(reassociation[sourceDimPos].getResults().front())
+          .getPosition();
+  unsigned endPos =
+      cast<AffineDimExpr>(reassociation[sourceDimPos].getResults().back())
+          .getPosition();
   int64_t linearizedStaticDim = 1;
   for (auto d :
        llvm::enumerate(dstStaticShape.slice(startPos, endPos - startPos + 1))) {

@@ -28,7 +28,7 @@ error_code directory_entry::__do_refresh() noexcept {
     return failure_ec;
   }
 
-  if (!_VSTD_FS::exists(st) || !_VSTD_FS::is_symlink(st)) {
+  if (!filesystem::exists(st) || !filesystem::is_symlink(st)) {
     __data_.__cache_type_ = directory_entry::_RefreshNonSymlink;
     __data_.__type_ = st.type();
     __data_.__non_sym_perms_ = st.permissions();
@@ -54,10 +54,10 @@ error_code directory_entry::__do_refresh() noexcept {
     __data_.__cache_type_ = directory_entry::_RefreshSymlink;
   }
 
-  if (_VSTD_FS::is_regular_file(st))
+  if (filesystem::is_regular_file(st))
     __data_.__size_ = static_cast<uintmax_t>(full_st.st_size);
 
-  if (_VSTD_FS::exists(st)) {
+  if (filesystem::exists(st)) {
     __data_.__nlink_ = static_cast<uintmax_t>(full_st.st_nlink);
 
     // Attempt to extract the mtime, and fail if it's not representable using

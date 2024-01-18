@@ -67,7 +67,8 @@ char *dlangDemangle(std::string_view MangledName);
 /// demangling occurred.
 std::string demangle(std::string_view MangledName);
 
-bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result);
+bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
+                          bool CanHaveLeadingDot = true);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain

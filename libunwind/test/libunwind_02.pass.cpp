@@ -10,6 +10,9 @@
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
+// This test fails on older llvm, when built with picolibc.
+// XFAIL: clang-16 && LIBCXX-PICOLIBC-FIXME
+
 #undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>

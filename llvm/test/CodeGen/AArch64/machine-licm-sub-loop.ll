@@ -35,18 +35,18 @@ define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_5: // %vector.ph
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    dup v0.8h, w15
 ; CHECK-NEXT:    mov x16, x14
 ; CHECK-NEXT:    mov x17, x13
 ; CHECK-NEXT:    mov x18, x12
 ; CHECK-NEXT:  .LBB0_6: // %vector.body
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    dup v0.8h, w15
 ; CHECK-NEXT:    ldp q1, q4, [x16, #-16]
-; CHECK-NEXT:    ldp q3, q2, [x17, #-32]
 ; CHECK-NEXT:    subs x18, x18, #16
-; CHECK-NEXT:    ldp q6, q5, [x17]
+; CHECK-NEXT:    ldp q3, q2, [x17, #-32]
 ; CHECK-NEXT:    add x16, x16, #32
+; CHECK-NEXT:    ldp q6, q5, [x17]
 ; CHECK-NEXT:    smlal2 v2.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    smlal v3.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    smlal2 v5.4s, v0.8h, v4.8h

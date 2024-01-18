@@ -51,10 +51,6 @@ public:
   void setScalarizeLoadStore(bool Value) { Options.ScalarizeLoadStore = Value; }
   void setScalarizeMinBits(unsigned Value) { Options.ScalarizeMinBits = Value; }
 };
-
-/// Create a legacy pass manager instance of the Scalarizer pass
-FunctionPass *createScalarizerPass();
-
 }
 
 #endif /* LLVM_TRANSFORMS_SCALAR_SCALARIZER_H */

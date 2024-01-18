@@ -233,7 +233,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X64-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X64-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X64-NEXT:   Predicates:
-; X64:       Loop %loop: Trip multiple is 1
+; X64-NEXT:  Loop %loop: Trip multiple is 1
 ;
 ; X32-LABEL: 'ptrtoint_of_addrec'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_of_addrec
@@ -253,7 +253,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X32-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X32-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (zext i32 %count to i64))<nsw>
 ; X32-NEXT:   Predicates:
-; X32:       Loop %loop: Trip multiple is 1
+; X32-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %i3 = zext i32 %count to i64
@@ -401,7 +401,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
 ; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64))
 ; X64-NEXT:   Predicates:
-; X64:       Loop %bb6: Trip multiple is 1
+; X64-NEXT:  Loop %bb6: Trip multiple is 1
 ;
 ; X32-LABEL: 'pr46786_c26_char'
 ; X32-NEXT:  Classifying expressions for: @pr46786_c26_char
@@ -429,7 +429,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
 ; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32))
 ; X32-NEXT:   Predicates:
-; X32:       Loop %bb6: Trip multiple is 1
+; X32-NEXT:  Loop %bb6: Trip multiple is 1
 ;
   %i = icmp eq ptr %arg, %arg1
   br i1 %i, label %bb5, label %bb3
@@ -490,7 +490,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:  Loop %bb6: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4)
 ; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i64)) + (ptrtoint ptr %arg1 to i64)) /u 4)
 ; X64-NEXT:   Predicates:
-; X64:       Loop %bb6: Trip multiple is 1
+; X64-NEXT:  Loop %bb6: Trip multiple is 1
 ;
 ; X32-LABEL: 'pr46786_c26_int'
 ; X32-NEXT:  Classifying expressions for: @pr46786_c26_int
@@ -520,7 +520,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:  Loop %bb6: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4)
 ; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) /u 4)
 ; X32-NEXT:   Predicates:
-; X32:       Loop %bb6: Trip multiple is 1
+; X32-NEXT:  Loop %bb6: Trip multiple is 1
 ;
   %i = icmp eq ptr %arg, %arg1
   br i1 %i, label %bb5, label %bb3

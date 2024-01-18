@@ -67,6 +67,25 @@ struct VPlanTransforms {
   /// regions until no improvements are remaining.
   static void createAndOptimizeReplicateRegions(VPlan &Plan);
 
+  /// Replace (ICMP_ULE, wide canonical IV, backedge-taken-count) checks with an
+  /// (active-lane-mask recipe, wide canonical IV, trip-count). If \p
+  /// UseActiveLaneMaskForControlFlow is true, introduce an
+  /// VPActiveLaneMaskPHIRecipe. If \p DataAndControlFlowWithoutRuntimeCheck is
+  /// true, no minimum-iteration runtime check will be created (during skeleton
+  /// creation) and instead it is handled using active-lane-mask. \p
+  /// DataAndControlFlowWithoutRuntimeCheck implies \p
+  /// UseActiveLaneMaskForControlFlow.
+  static void addActiveLaneMask(VPlan &Plan,
+                                bool UseActiveLaneMaskForControlFlow,
+                                bool DataAndControlFlowWithoutRuntimeCheck);
+
+  /// Insert truncates and extends for any truncated recipe. Redundant casts
+  /// will be folded later.
+  static void
+  truncateToMinimalBitwidths(VPlan &Plan,
+                             const MapVector<Instruction *, uint64_t> &MinBWs,
+                             LLVMContext &Ctx);
+
 private:
   /// Remove redundant VPBasicBlocks by merging them into their predecessor if
   /// the predecessor has a single successor.

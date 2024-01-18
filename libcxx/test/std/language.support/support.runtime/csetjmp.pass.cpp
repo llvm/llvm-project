@@ -9,20 +9,28 @@
 // test <csetjmp>
 
 #include <csetjmp>
+#include <cassert>
 #include <type_traits>
 
-#include "test_macros.h"
+int main(int, char**) {
+  std::jmp_buf jb;
 
-#ifndef setjmp
-#error setjmp not defined
-#endif
+  switch (setjmp(jb)) {
+  // First time we set the buffer, the function should return 0
+  case 0:
+    break;
 
-int main(int, char**)
-{
-    std::jmp_buf jb;
-    ((void)jb); // Prevent unused warning
-    static_assert((std::is_same<decltype(std::longjmp(jb, 0)), void>::value),
-                  "std::is_same<decltype(std::longjmp(jb, 0)), void>::value");
+  // If it returned 42, then we're coming from the std::longjmp call below
+  case 42:
+    return 0;
 
-  return 0;
+  // Otherwise, something is wrong
+  default:
+    return 1;
+  }
+
+  std::longjmp(jb, 42);
+  static_assert(std::is_same<decltype(std::longjmp(jb, 0)), void>::value, "");
+
+  return 1;
 }

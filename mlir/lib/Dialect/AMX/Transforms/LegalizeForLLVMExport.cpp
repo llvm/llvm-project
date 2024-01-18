@@ -73,13 +73,6 @@ Value getStride(ConversionPatternRewriter &rewriter,
   return rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Type, attr);
 }
 
-/// Cast any pointer to the !llvm.ptr<i8> pointer type.
-Value castPtr(ConversionPatternRewriter &rewriter, Location loc, Value ptr) {
-  auto i8Ptr =
-      LLVM::LLVMPointerType::get(IntegerType::get(ptr.getContext(), 8));
-  return rewriter.create<LLVM::BitcastOp>(loc, i8Ptr, ptr);
-}
-
 struct TileZeroConversion : public ConvertOpToLLVMPattern<TileZeroOp> {
   using ConvertOpToLLVMPattern<TileZeroOp>::ConvertOpToLLVMPattern;
   LogicalResult
@@ -116,7 +109,6 @@ struct TileLoadConversion : public ConvertOpToLLVMPattern<TileLoadOp> {
     // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    ptr = castPtr(rewriter, op.getLoc(), ptr);
     Type resType = typeConverter->convertType(vType);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tileloadd64>(
         op, resType, tsz.first, tsz.second, ptr, stride);
@@ -143,7 +135,6 @@ struct TileStoreConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
     // Replace operation with intrinsic.
     Value ptr = getStridedElementPtr(op.getLoc(), mType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    ptr = castPtr(rewriter, op.getLoc(), ptr);
     rewriter.replaceOpWithNewOp<amx::x86_amx_tilestored64>(
         op, tsz.first, tsz.second, ptr, stride, adaptor.getVal());
     return success();

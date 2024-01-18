@@ -33,13 +33,13 @@ constexpr void test() {
   };
 
   std::array array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
+  FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
 
   for (std::size_t n = 0; n != array.size(); ++n) {
-    FilterIterator const iter(view, Iterator(array.begin() + n));
+    FilterIterator const iter(view, Iterator(array.data() + n));
     ValueType& result = *iter;
     ASSERT_SAME_TYPE(ValueType&, decltype(*iter));
-    assert(&result == array.begin() + n);
+    assert(&result == array.data() + n);
   }
 }
 

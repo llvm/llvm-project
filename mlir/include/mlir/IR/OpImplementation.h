@@ -226,6 +226,8 @@ public:
     printArrowTypeList(results);
   }
 
+  void printDimensionList(ArrayRef<int64_t> shape);
+
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
   public:
@@ -1242,10 +1244,7 @@ public:
   }
 
   /// Parse a type list.
-  ParseResult parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
+  ParseResult parseTypeList(SmallVectorImpl<Type> &result);
 
   /// Parse an arrow followed by a type list.
   virtual ParseResult parseArrowTypeList(SmallVectorImpl<Type> &result) = 0;
@@ -1765,6 +1764,17 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+//===--------------------------------------------------------------------===//
+// Custom printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

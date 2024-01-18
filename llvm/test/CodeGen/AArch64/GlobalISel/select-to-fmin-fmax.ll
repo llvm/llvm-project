@@ -39,8 +39,7 @@ entry:
 define <4 x half> @test_v4s16(<4 x half> %a) #0 {
 ; CHECK-LABEL: test_v4s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    dup v1.4h, v1.h[0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fmax v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
 entry:
@@ -52,8 +51,7 @@ entry:
 define <8 x half> @test_v8s16(<8 x half> %a) #0 {
 ; CHECK-LABEL: test_v8s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    dup v1.8h, v1.h[0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fmax v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -65,8 +63,7 @@ entry:
 define <2 x float> @test_v2s32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_v2s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    dup v1.2s, v1.s[0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fmax v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -78,8 +75,7 @@ entry:
 define <4 x float> @test_v4s32(<4 x float> %a) #0 {
 ; CHECK-LABEL: test_v4s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    dup v1.4s, v1.s[0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fmax v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -91,8 +87,7 @@ entry:
 define <2 x double> @test_v2s64(<2 x double> %a) #0 {
 ; CHECK-LABEL: test_v2s64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    dup v1.2d, v1.d[0]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fmax v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:

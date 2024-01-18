@@ -283,3 +283,12 @@ namespace std_example {
     return r;
   }
 }
+
+struct Base {
+ constexpr Base() = default;
+};
+struct Derived : virtual Base { // expected-note 3{{virtual base class declared here}}
+  constexpr Derived() = default; // expected-error {{default constructor cannot be 'constexpr' in a class with virtual base class}}
+  constexpr Derived(const Derived&) = default; // expected-error {{copy constructor cannot be 'constexpr' in a class with virtual base class}}
+  constexpr Derived(Derived&&) = default; // expected-error {{move constructor cannot be 'constexpr' in a class with virtual base class}}
+};

@@ -13,7 +13,7 @@ func.func @correct_variadic_result() -> tensor<f32> {
 // -----
 
 func.func @error_in_first_variadic_result() -> tensor<f32> {
-  // expected-error @+1 {{result #1 must be tensor of any type}}
+  // expected-error @+1 {{result #1 must be variadic of tensor of any type}}
   %0:5 = "test.mixed_normal_variadic_result"() : () -> (tensor<f32>, f32, tensor<f32>, tensor<f32>, tensor<f32>)
   return %0#4 : tensor<f32>
 }
@@ -29,7 +29,7 @@ func.func @error_in_normal_result() -> tensor<f32> {
 // -----
 
 func.func @error_in_second_variadic_result() -> tensor<f32> {
-  // expected-error @+1 {{result #3 must be tensor of any type}}
+  // expected-error @+1 {{result #3 must be variadic of tensor of any type}}
   %0:5 = "test.mixed_normal_variadic_result"() : () -> (tensor<f32>, tensor<f32>, tensor<f32>, f32, tensor<f32>)
   return %0#4 : tensor<f32>
 }

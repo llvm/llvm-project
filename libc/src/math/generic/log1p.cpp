@@ -18,7 +18,7 @@
 
 #include "common_constants.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -949,8 +949,9 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   x_u = xhi_bits.uintval();
   // Range reduction:
   // Find k such that |x_hi - k * 2^-7| <= 2^-8.
-  int idx = ((x_u & MANTISSA_MASK) + (1ULL << (MANTISSA_WIDTH - 8))) >>
-            (MANTISSA_WIDTH - 7);
+  int idx = static_cast<int>(
+      ((x_u & MANTISSA_MASK) + (1ULL << (MANTISSA_WIDTH - 8))) >>
+      (MANTISSA_WIDTH - 7));
   int x_e = xhi_bits.get_exponent() + (idx >> 7);
   double e_x = static_cast<double>(x_e);
 
@@ -1034,4 +1035,4 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   return log1p_accurate(x_e, idx, v_dd);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

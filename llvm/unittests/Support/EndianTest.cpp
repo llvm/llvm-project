@@ -23,12 +23,17 @@ TEST(Endian, Read) {
   unsigned char bigval[] = {0x00, 0x01, 0x02, 0x03, 0x04};
   unsigned char littleval[] = {0x00, 0x04, 0x03, 0x02, 0x01};
   int32_t BigAsHost = 0x00010203;
-  EXPECT_EQ(BigAsHost, (endian::read<int32_t, big, unaligned>(bigval)));
+  EXPECT_EQ(BigAsHost,
+            (endian::read<int32_t, llvm::endianness::big, unaligned>(bigval)));
   int32_t LittleAsHost = 0x02030400;
-  EXPECT_EQ(LittleAsHost,(endian::read<int32_t, little, unaligned>(littleval)));
+  EXPECT_EQ(
+      LittleAsHost,
+      (endian::read<int32_t, llvm::endianness::little, unaligned>(littleval)));
 
-  EXPECT_EQ((endian::read<int32_t, big, unaligned>(bigval + 1)),
-            (endian::read<int32_t, little, unaligned>(littleval + 1)));
+  EXPECT_EQ(
+      (endian::read<int32_t, llvm::endianness::big, unaligned>(bigval + 1)),
+      (endian::read<int32_t, llvm::endianness::little, unaligned>(littleval +
+                                                                  1)));
 }
 
 TEST(Endian, ReadBitAligned) {
@@ -36,35 +41,43 @@ TEST(Endian, ReadBitAligned) {
   unsigned char littleval[] = {0x3f, 0x00, 0x00, 0x00, 0xc0, 0xff, 0xff, 0xff};
   unsigned char bigval[] = {0x00, 0x00, 0x00, 0x3f, 0xff, 0xff, 0xff, 0xc0};
   EXPECT_EQ(
-      (endian::readAtBitAlignment<int, little, unaligned>(&littleval[0], 6)),
+      (endian::readAtBitAlignment<int, llvm::endianness::little, unaligned>(
+          &littleval[0], 6)),
       0x0);
-  EXPECT_EQ((endian::readAtBitAlignment<int, big, unaligned>(&bigval[0], 6)),
+  EXPECT_EQ((endian::readAtBitAlignment<int, llvm::endianness::big, unaligned>(
+                &bigval[0], 6)),
             0x0);
   // Test to make sure that signed right shift of 0xf0000000 is masked
   // properly.
   unsigned char littleval2[] = {0x00, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x00, 0x00};
   unsigned char bigval2[] = {0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   EXPECT_EQ(
-      (endian::readAtBitAlignment<int, little, unaligned>(&littleval2[0], 4)),
+      (endian::readAtBitAlignment<int, llvm::endianness::little, unaligned>(
+          &littleval2[0], 4)),
       0x0f000000);
-  EXPECT_EQ((endian::readAtBitAlignment<int, big, unaligned>(&bigval2[0], 4)),
+  EXPECT_EQ((endian::readAtBitAlignment<int, llvm::endianness::big, unaligned>(
+                &bigval2[0], 4)),
             0x0f000000);
   // Test to make sure left shift of start bit doesn't overflow.
   EXPECT_EQ(
-      (endian::readAtBitAlignment<int, little, unaligned>(&littleval2[0], 1)),
+      (endian::readAtBitAlignment<int, llvm::endianness::little, unaligned>(
+          &littleval2[0], 1)),
       0x78000000);
-  EXPECT_EQ((endian::readAtBitAlignment<int, big, unaligned>(&bigval2[0], 1)),
+  EXPECT_EQ((endian::readAtBitAlignment<int, llvm::endianness::big, unaligned>(
+                &bigval2[0], 1)),
             0x78000000);
   // Test to make sure 64-bit int doesn't overflow.
   unsigned char littleval3[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0,
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   unsigned char bigval3[] = {0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  EXPECT_EQ((endian::readAtBitAlignment<int64_t, little, unaligned>(
-                &littleval3[0], 4)),
-            0x0f00000000000000);
   EXPECT_EQ(
-      (endian::readAtBitAlignment<int64_t, big, unaligned>(&bigval3[0], 4)),
+      (endian::readAtBitAlignment<int64_t, llvm::endianness::little, unaligned>(
+          &littleval3[0], 4)),
+      0x0f00000000000000);
+  EXPECT_EQ(
+      (endian::readAtBitAlignment<int64_t, llvm::endianness::big, unaligned>(
+          &bigval3[0], 4)),
       0x0f00000000000000);
 }
 
@@ -72,8 +85,8 @@ TEST(Endian, WriteBitAligned) {
   // This test ensures that signed right shift of 0xffffaa is masked
   // properly.
   unsigned char bigval[8] = {0x00};
-  endian::writeAtBitAlignment<int32_t, big, unaligned>(bigval, (int)0xffffaaaa,
-                                                       4);
+  endian::writeAtBitAlignment<int32_t, llvm::endianness::big, unaligned>(
+      bigval, (int)0xffffaaaa, 4);
   EXPECT_EQ(bigval[0], 0xff);
   EXPECT_EQ(bigval[1], 0xfa);
   EXPECT_EQ(bigval[2], 0xaa);
@@ -84,8 +97,8 @@ TEST(Endian, WriteBitAligned) {
   EXPECT_EQ(bigval[7], 0x0f);
 
   unsigned char littleval[8] = {0x00};
-  endian::writeAtBitAlignment<int32_t, little, unaligned>(littleval,
-                                                          (int)0xffffaaaa, 4);
+  endian::writeAtBitAlignment<int32_t, llvm::endianness::little, unaligned>(
+      littleval, (int)0xffffaaaa, 4);
   EXPECT_EQ(littleval[0], 0xa0);
   EXPECT_EQ(littleval[1], 0xaa);
   EXPECT_EQ(littleval[2], 0xfa);
@@ -98,8 +111,8 @@ TEST(Endian, WriteBitAligned) {
   // This test makes sure 1<<31 doesn't overflow.
   // Test to make sure left shift of start bit doesn't overflow.
   unsigned char bigval2[8] = {0x00};
-  endian::writeAtBitAlignment<int32_t, big, unaligned>(bigval2, (int)0xffffffff,
-                                                       1);
+  endian::writeAtBitAlignment<int32_t, llvm::endianness::big, unaligned>(
+      bigval2, (int)0xffffffff, 1);
   EXPECT_EQ(bigval2[0], 0xff);
   EXPECT_EQ(bigval2[1], 0xff);
   EXPECT_EQ(bigval2[2], 0xff);
@@ -110,8 +123,8 @@ TEST(Endian, WriteBitAligned) {
   EXPECT_EQ(bigval2[7], 0x01);
 
   unsigned char littleval2[8] = {0x00};
-  endian::writeAtBitAlignment<int32_t, little, unaligned>(littleval2,
-                                                          (int)0xffffffff, 1);
+  endian::writeAtBitAlignment<int32_t, llvm::endianness::little, unaligned>(
+      littleval2, (int)0xffffffff, 1);
   EXPECT_EQ(littleval2[0], 0xfe);
   EXPECT_EQ(littleval2[1], 0xff);
   EXPECT_EQ(littleval2[2], 0xff);
@@ -123,7 +136,7 @@ TEST(Endian, WriteBitAligned) {
 
   // Test to make sure 64-bit int doesn't overflow.
   unsigned char bigval64[16] = {0x00};
-  endian::writeAtBitAlignment<int64_t, big, unaligned>(
+  endian::writeAtBitAlignment<int64_t, llvm::endianness::big, unaligned>(
       bigval64, (int64_t)0xffffffffffffffff, 1);
   EXPECT_EQ(bigval64[0], 0xff);
   EXPECT_EQ(bigval64[1], 0xff);
@@ -143,7 +156,7 @@ TEST(Endian, WriteBitAligned) {
   EXPECT_EQ(bigval64[15], 0x01);
 
   unsigned char littleval64[16] = {0x00};
-  endian::writeAtBitAlignment<int64_t, little, unaligned>(
+  endian::writeAtBitAlignment<int64_t, llvm::endianness::little, unaligned>(
       littleval64, (int64_t)0xffffffffffffffff, 1);
   EXPECT_EQ(littleval64[0], 0xfe);
   EXPECT_EQ(littleval64[1], 0xff);
@@ -165,23 +178,26 @@ TEST(Endian, WriteBitAligned) {
 
 TEST(Endian, Write) {
   unsigned char data[5];
-  endian::write<int32_t, big, unaligned>(data, -1362446643);
+  endian::write<int32_t, llvm::endianness::big, unaligned>(data, -1362446643);
   EXPECT_EQ(data[0], 0xAE);
   EXPECT_EQ(data[1], 0xCA);
   EXPECT_EQ(data[2], 0xB6);
   EXPECT_EQ(data[3], 0xCD);
-  endian::write<int32_t, big, unaligned>(data + 1, -1362446643);
+  endian::write<int32_t, llvm::endianness::big, unaligned>(data + 1,
+                                                           -1362446643);
   EXPECT_EQ(data[1], 0xAE);
   EXPECT_EQ(data[2], 0xCA);
   EXPECT_EQ(data[3], 0xB6);
   EXPECT_EQ(data[4], 0xCD);
 
-  endian::write<int32_t, little, unaligned>(data, -1362446643);
+  endian::write<int32_t, llvm::endianness::little, unaligned>(data,
+                                                              -1362446643);
   EXPECT_EQ(data[0], 0xCD);
   EXPECT_EQ(data[1], 0xB6);
   EXPECT_EQ(data[2], 0xCA);
   EXPECT_EQ(data[3], 0xAE);
-  endian::write<int32_t, little, unaligned>(data + 1, -1362446643);
+  endian::write<int32_t, llvm::endianness::little, unaligned>(data + 1,
+                                                              -1362446643);
   EXPECT_EQ(data[1], 0xCD);
   EXPECT_EQ(data[2], 0xB6);
   EXPECT_EQ(data[3], 0xCA);

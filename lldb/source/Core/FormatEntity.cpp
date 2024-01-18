@@ -286,13 +286,6 @@ void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
 }
 
-Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
-  entry.Clear();
-  entry.type = Entry::Type::Root;
-  llvm::StringRef modifiable_format(format_str);
-  return ParseInternal(modifiable_format, entry, 0);
-}
-
 #define ENUM_TO_CSTR(eee)                                                      \
   case FormatEntity::Entry::Type::eee:                                         \
     return #eee
@@ -1252,9 +1245,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
             llvm::Triple::OSType ostype = arch.IsValid()
                                               ? arch.GetTriple().getOS()
                                               : llvm::Triple::UnknownOS;
-            if ((ostype == llvm::Triple::FreeBSD) ||
-                (ostype == llvm::Triple::Linux) ||
-                (ostype == llvm::Triple::NetBSD)) {
+            if (ostype == llvm::Triple::FreeBSD ||
+                ostype == llvm::Triple::Linux ||
+                ostype == llvm::Triple::NetBSD ||
+                ostype == llvm::Triple::OpenBSD) {
               format = "%" PRIu64;
             }
           } else {
@@ -1991,8 +1985,8 @@ static const Definition *FindEntry(const llvm::StringRef &format_str,
   return parent;
 }
 
-Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
-                                   uint32_t depth) {
+static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
+                            uint32_t depth) {
   Status error;
   while (!format.empty() && error.Success()) {
     const size_t non_special_chars = format.find_first_of("${}\\");
@@ -2017,7 +2011,7 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
     case '{': {
       format = format.drop_front(); // Skip the '{'
       Entry scope_entry(Entry::Type::Scope);
-      error = FormatEntity::ParseInternal(format, scope_entry, depth + 1);
+      error = ParseInternal(format, scope_entry, depth + 1);
       if (error.Fail())
         return error;
       parent_entry.AppendEntry(std::move(scope_entry));
@@ -2466,4 +2460,11 @@ void FormatEntity::PrettyPrintFunctionArguments(
     } else
       out_stream.Printf("%s=<unavailable>", var_name);
   }
+}
+
+Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
+  entry.Clear();
+  entry.type = Entry::Type::Root;
+  llvm::StringRef modifiable_format(format_str);
+  return ParseInternal(modifiable_format, entry, 0);
 }

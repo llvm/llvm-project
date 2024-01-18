@@ -5,13 +5,15 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 // INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+// INSTR_PROF_RAW_HEADER(uint64_t, NumBitmaskBytes, NumBitmaskBytes)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
+// INSTR_PROF_RAW_HEADER(uint64_t, BitmaskDelta, (uintptr_t)BitmaskBegin)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\11\0\0\0\0\0\0\0' >> %t.profraw
 // There will be 2 20-byte binary IDs, so the total Binary IDs size will be 64 bytes.
 //   2 * 8  binary ID sizes
 // + 2 * 20 binary IDs (of size 20)
@@ -23,8 +25,11 @@ RUN: printf '\2\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\20\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
@@ -51,14 +56,18 @@ RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
-RUN: printf '\xd8\xff\3\0\1\0\0\0' >> %t.profraw
+RUN: printf '\xc8\xff\3\0\1\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t.profraw

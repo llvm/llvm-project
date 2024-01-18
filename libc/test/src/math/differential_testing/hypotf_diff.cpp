@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_DIFF(float, __llvm_libc::hypotf, ::hypotf,
+BINARY_OP_SINGLE_OUTPUT_DIFF(float, LIBC_NAMESPACE::hypotf, ::hypotf,
                              "hypotf_diff.log")

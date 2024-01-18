@@ -885,9 +885,40 @@ exit:
   ret void
 }
 
-; TODO: The store can be promoted, as sret memory is writable.
-define void @sret_cond_store(ptr sret(i32) noalias %ptr) {
-; CHECK-LABEL: @sret_cond_store(
+define void @cond_store_writable_dereferenceable(ptr noalias writable dereferenceable(4) %ptr) {
+; CHECK-LABEL: @cond_store_writable_dereferenceable(
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[V_INC1:%.*]] = phi i32 [ [[V_INC:%.*]], [[LOOP_LATCH:%.*]] ], [ [[PTR_PROMOTED]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[V_INC1]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[V_INC]] = add i32 [[V_INC1]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[V_INC1_LCSSA:%.*]] = phi i32 [ [[V_INC1]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[V_INC1_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  br label %loop
+
+loop:
+  %v = load i32, ptr %ptr
+  %c = icmp ult i32 %v, 10
+  br i1 %c, label %loop.latch, label %exit
+
+loop.latch:
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @cond_store_writable_not_sufficiently_dereferenceable(ptr noalias writable dereferenceable(2) %ptr) {
+; CHECK-LABEL: @cond_store_writable_not_sufficiently_dereferenceable(
 ; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

@@ -465,8 +465,13 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
   // lvalue unless it's a reference type (C++ [temp.param]p6), so we need to
   // special-case this.
 
-  if (isa<CXXMethodDecl>(D) && cast<CXXMethodDecl>(D)->isInstance())
-    return Cl::CL_MemberFunction;
+  if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
+    if (M->isImplicitObjectMemberFunction())
+      return Cl::CL_MemberFunction;
+    if (M->isStatic())
+      return Cl::CL_LValue;
+    return Cl::CL_PRValue;
+  }
 
   bool islvalue;
   if (const auto *NTTParm = dyn_cast<NonTypeTemplateParmDecl>(D))
@@ -551,8 +556,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
   //      -- If it refers to a static member function [...], then E1.E2 is an
   //         lvalue; [...]
   //      -- Otherwise [...] E1.E2 is a prvalue.
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(Member))
-    return Method->isStatic() ? Cl::CL_LValue : Cl::CL_MemberFunction;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Member)) {
+    if (Method->isStatic())
+      return Cl::CL_LValue;
+    if (Method->isImplicitObjectMemberFunction())
+      return Cl::CL_MemberFunction;
+    return Cl::CL_PRValue;
+  }
 
   //   -- If E2 is a member enumerator [...], the expression E1.E2 is a prvalue.
   // So is everything else we haven't handled yet.

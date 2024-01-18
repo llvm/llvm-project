@@ -14,15 +14,15 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_key_create,
                    (pthread_key_t * key, __pthread_tss_dtor_t dtor)) {
-  auto k = __llvm_libc::new_tss_key(dtor);
+  auto k = LIBC_NAMESPACE::new_tss_key(dtor);
   if (!k)
     return EINVAL;
   *key = *k;
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

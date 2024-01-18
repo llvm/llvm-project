@@ -31,4 +31,4 @@
 ; RUN: %{check}
 ; CHECK:# | %clang_cc1 -verify -fopenmp -fopenmp-version=51 -triple x86_64-unknown-linux-gnu -emit-llvm -o - {{.*}} | FileCheck -check-prefix=NO-SIMD {{.*}}
 
-; CHECK: Passed: 1
+; CHECK: Passed: 1 {{\([0-9]*\.[0-9]*%\)}}

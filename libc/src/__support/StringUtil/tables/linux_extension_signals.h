@@ -13,7 +13,7 @@
 
 #include <signal.h> // For signal numbers
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The array being larger than necessary isn't a problem. The MsgMappings will
 // be set to their default state which maps 0 to an empty string. This will get
@@ -28,6 +28,6 @@ LIBC_INLINE_VAR constexpr const MsgTable<3> LINUX_SIGNALS = {
 #endif
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_EXTENSION_SIGNALS_H

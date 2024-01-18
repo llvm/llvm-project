@@ -16,8 +16,8 @@ using namespace mlir::LLVM;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(LLVM, llvm, LLVMDialect)
 
-MlirType mlirLLVMPointerTypeGet(MlirType pointee, unsigned addressSpace) {
-  return wrap(LLVMPointerType::get(unwrap(pointee), addressSpace));
+MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
+  return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
 MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {

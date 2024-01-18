@@ -11,10 +11,10 @@
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void *tss_get(tss_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_TSS_GET_H

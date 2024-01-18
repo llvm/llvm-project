@@ -95,6 +95,24 @@ define <vscale x 4 x float> @llvm_exp2_vscale_f32(<vscale x 4 x float> %in) {
   ret <vscale x 4 x float> %1
 }
 
+define <vscale x 2 x double> @llvm_exp10_vscale_f64(<vscale x 2 x double> %in) {
+; CHECK-LABEL: @llvm_exp10_vscale_f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = call fast <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double> %in)
+  ret <vscale x 2 x double> %1
+}
+
+define <vscale x 4 x float> @llvm_exp10_vscale_f32(<vscale x 4 x float> %in) {
+; CHECK-LABEL: @llvm_exp10_vscale_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = call fast <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float> %in)
+  ret <vscale x 4 x float> %1
+}
+
 define <vscale x 2 x double> @llvm_fabs_vscale_f64(<vscale x 2 x double> %in) {
 ; CHECK-LABEL: @llvm_fabs_vscale_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
@@ -375,6 +393,8 @@ declare <vscale x 2 x double> @llvm.exp.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.exp2.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 2 x double> @llvm.exp10.nxv2f64(<vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.exp10.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double>)

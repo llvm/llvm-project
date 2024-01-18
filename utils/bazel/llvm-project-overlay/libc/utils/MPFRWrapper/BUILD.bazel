@@ -4,6 +4,8 @@
 
 # A wrapper library over MPFR for use with LLVM libc math unittests.
 
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
@@ -24,7 +26,7 @@ cc_library(
     ),
 )
 
-cc_library(
+libc_support_library(
     name = "mpfr_wrapper",
     srcs = ["MPFRUtils.cpp"],
     hdrs = ["MPFRUtils.h"],
@@ -45,9 +47,6 @@ cc_library(
         "//libc:__support_fputil_float_properties",
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
-        "//libc:__support_fputil_platform_defs",
-        "//libc:libc_root",
-        "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
     ],

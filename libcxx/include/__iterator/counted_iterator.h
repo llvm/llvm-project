@@ -74,9 +74,6 @@ class counted_iterator
   , public __counted_iterator_value_type<_Iter>
 {
 public:
-  _LIBCPP_NO_UNIQUE_ADDRESS _Iter __current_ = _Iter();
-  iter_difference_t<_Iter> __count_ = 0;
-
   using iterator_type = _Iter;
   using difference_type = iter_difference_t<_Iter>;
 
@@ -85,7 +82,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr counted_iterator(_Iter __iter, iter_difference_t<_Iter> __n)
-   : __current_(_VSTD::move(__iter)), __count_(__n) {
+   : __current_(std::move(__iter)), __count_(__n) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "__n must not be negative.");
   }
 
@@ -108,7 +105,7 @@ public:
   constexpr const _Iter& base() const& noexcept { return __current_; }
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr _Iter base() && { return _VSTD::move(__current_); }
+  constexpr _Iter base() && { return std::move(__current_); }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
@@ -131,7 +128,7 @@ public:
   constexpr auto operator->() const noexcept
     requires contiguous_iterator<_Iter>
   {
-    return _VSTD::to_address(__current_);
+    return std::to_address(__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI
@@ -297,6 +294,12 @@ public:
                                  "Iterators must not be past end of range.");
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
+
+private:
+  _LIBCPP_NO_UNIQUE_ADDRESS _Iter __current_ = _Iter();
+  iter_difference_t<_Iter> __count_ = 0;
+  template<input_or_output_iterator _OtherIter>
+  friend class counted_iterator;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(counted_iterator);
 

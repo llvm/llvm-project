@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SPRINTF_H
 #define LLVM_LIBC_SRC_STDIO_SPRINTF_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sprintf(char *__restrict buffer, const char *__restrict format, ...);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SPRINTF_H

@@ -184,6 +184,46 @@ add_math_entrypoint_gpu_object(
 )
 
 add_math_entrypoint_gpu_object(
+  lround
+  SRCS
+    lround.cpp
+  HDRS
+    ../lround.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  lroundf
+  SRCS
+    lroundf.cpp
+  HDRS
+    ../lroundf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llround
+  SRCS
+    llround.cpp
+  HDRS
+    ../llround.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llroundf
+  SRCS
+    llroundf.cpp
+  HDRS
+    ../llroundf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
   modf
   SRCS
     modf.cpp
@@ -284,16 +324,6 @@ add_math_entrypoint_gpu_object(
 )
 
 add_math_entrypoint_gpu_object(
-  sinhf
-  SRCS
-    sinhf.cpp
-  HDRS
-    ../sinhf.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_math_entrypoint_gpu_object(
   sqrt
   SRCS
     sqrt.cpp
@@ -324,31 +354,11 @@ add_math_entrypoint_gpu_object(
 )
 
 add_math_entrypoint_gpu_object(
-  tanf
-  SRCS
-    tanf.cpp
-  HDRS
-    ../tanf.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_math_entrypoint_gpu_object(
   tanh
   SRCS
     tanh.cpp
   HDRS
     ../tanh.h
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_math_entrypoint_gpu_object(
-  tanhf
-  SRCS
-    tanhf.cpp
-  HDRS
-    ../tanhf.h
   COMPILE_OPTIONS
     -O2
 )

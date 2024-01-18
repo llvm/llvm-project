@@ -517,15 +517,15 @@ OPTIONS
 
  Skip source code files with file paths that match the given regular expression.
 
- .. option:: -skip-expansions
+.. option:: -skip-expansions
 
  Skip exporting macro expansion coverage data.
 
- .. option:: -skip-functions
+.. option:: -skip-functions
 
  Skip exporting per-function coverage data.
 
- .. option:: -num-threads=N, -j=N
+.. option:: -num-threads=N, -j=N
 
  Use N threads to export coverage data. When N=0, llvm-cov auto-detects an
  appropriate number of threads to use. This is the default.

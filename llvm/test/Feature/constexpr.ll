@@ -42,7 +42,7 @@
 @char8a = global i32* bitcast (i8* getelementptr([11x i8], [11x i8]* @somestr, i64 0, i64 8) to i32*)
 
 ;; getelementptr containing casts
-@char8b = global i8* getelementptr([11x i8], [11x i8]* @somestr, i64 sext (i8 0 to i64), i64 sext (i8 8 to i64))
+@char8b = global i8* getelementptr([11x i8], [11x i8]* @somestr, i64 trunc (i128 0 to i64), i64 trunc (i128 8 to i64))
 
 ;;-------------------------------------------------------
 ;; TODO: Test constant getelementpr expressions for structures

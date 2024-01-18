@@ -1,7 +1,7 @@
 ! This test checks that chunk size is passed correctly when lowering of
 ! OpenMP DO Directive(Worksharing) with chunk size
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program wsloop
         integer :: i

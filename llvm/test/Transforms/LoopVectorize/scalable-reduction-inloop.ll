@@ -5,6 +5,10 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
+; CHECK:         call i32 @llvm.vscale.i32()
+; CHECK:         call i32 @llvm.vscale.i32()
+; CHECK:         [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP30]], 16
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i32 0), %vector.ph ], [ [[TMP34:%.*]], %vector.body ]
@@ -17,14 +21,12 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD2]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP28:%.*]] = add <vscale x 8 x i32> [[TMP14]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = add <vscale x 8 x i32> [[TMP15]], [[TMP27]]
-; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP30]], 16
+; CHECK-NEXT:    [[TMP33:%.*]] = trunc <vscale x 8 x i32> [[TMP28]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[TMP35:%.*]] = trunc <vscale x 8 x i32> [[TMP29]] to <vscale x 8 x i8>
+; CHECK-NEXT:    [[TMP34]] = zext <vscale x 8 x i8> [[TMP33]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[TMP36]] = zext <vscale x 8 x i8> [[TMP35]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], {{%.*}}
-; CHECK-NEXT:    [[TMP33:%.*]] = trunc <vscale x 8 x i32> [[TMP28]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[TMP34]] = zext <vscale x 8 x i8> [[TMP33]] to <vscale x 8 x i32>
-; CHECK-NEXT:    [[TMP35:%.*]] = trunc <vscale x 8 x i32> [[TMP29]] to <vscale x 8 x i8>
-; CHECK-NEXT:    [[TMP36]] = zext <vscale x 8 x i8> [[TMP35]] to <vscale x 8 x i32>
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP37:%.*]] = trunc <vscale x 8 x i32> [[TMP34]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[TMP38:%.*]] = trunc <vscale x 8 x i32> [[TMP36]] to <vscale x 8 x i8>

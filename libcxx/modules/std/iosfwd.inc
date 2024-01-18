@@ -16,8 +16,19 @@ export namespace std {
   using std::u32streampos;
   using std::u8streampos;
 
+  using std::basic_osyncstream;
+  using std::basic_syncbuf;
+
   using std::istreambuf_iterator;
   using std::ostreambuf_iterator;
+
+  using std::osyncstream;
+  using std::syncbuf;
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  using std::wosyncstream;
+  using std::wsyncbuf;
+#endif
 
   using std::fpos;
 } // namespace std

@@ -107,7 +107,7 @@ define void @nested_const_expr() {
 ; PTX-LABEL: nested_const_expr(
   ; store 1 to bitcast(gep(addrspacecast(array), 0, 1))
   store i32 1, ptr getelementptr ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 1), align 4
-; PTX: mov.u32 %r1, 1;
+; PTX: mov.b32 %r1, 1;
 ; PTX-NEXT: st.shared.u32 [array+4], %r1;
   ret void
 }

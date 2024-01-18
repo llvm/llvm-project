@@ -1010,6 +1010,121 @@ else:
   ret i1 %res2
 }
 
+define i1 @cttz_fold(i16 %x) {
+; CHECK-LABEL: @cttz_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    ret i1 false
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %res = icmp uge i16 %cttz, 8
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @cttz_nofold1(i16 %x) {
+; CHECK-LABEL: @cttz_nofold1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %res = icmp uge i16 %cttz, 7
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @cttz_nofold2(i16 %x) {
+; CHECK-LABEL: @cttz_nofold2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 false)
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 8
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
+  %res = icmp uge i16 %cttz, 8
+  ret i1 %res
+
+else:
+  ret i1 false
+}
+
+define i1 @ctpop_fold(i16 %x) {
+; CHECK-LABEL: @ctpop_fold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctpop = call i16 @llvm.ctpop.i16(i16 %x)
+  %res = icmp ule i16 %ctpop, 8
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
+define i1 @ctpop_nofold(i16 %x) {
+; CHECK-LABEL: @ctpop_nofold(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 256
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i16 [[CTPOP]], 7
+; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i16 %x, 256
+  br i1 %cmp, label %if, label %else
+
+if:
+  %ctpop = call i16 @llvm.ctpop.i16(i16 %x)
+  %res = icmp ule i16 %ctpop, 7
+  ret i1 %res
+
+else:
+  ret i1 true
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
+declare i16 @llvm.cttz.i16(i16, i1)
+declare i16 @llvm.ctpop.i16(i16)
 declare i16 @llvm.abs.i16(i16, i1)
 declare void @llvm.assume(i1)

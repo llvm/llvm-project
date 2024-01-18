@@ -46,17 +46,16 @@ enum {
 
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
-0000 0000 1000 - 0080 0000 0000: main binary and/or MAP_32BIT mappings (512GB)
-0040 0000 0000 - 0100 0000 0000: -
-0100 0000 0000 - 1000 0000 0000: shadow
-1000 0000 0000 - 3000 0000 0000: -
-3000 0000 0000 - 3400 0000 0000: metainfo (memory blocks and sync objects)
-3400 0000 0000 - 5500 0000 0000: -
-5500 0000 0000 - 5680 0000 0000: pie binaries without ASLR or on 4.1+ kernels
-5680 0000 0000 - 7d00 0000 0000: -
-7b00 0000 0000 - 7c00 0000 0000: heap
-7c00 0000 0000 - 7e80 0000 0000: -
-7e80 0000 0000 - 8000 0000 0000: modules and main thread stack
+0000 0000 1000 - 0200 0000 0000: main binary and/or MAP_32BIT mappings (2TB)
+0200 0000 0000 - 1000 0000 0000: -
+1000 0000 0000 - 3000 0000 0000: shadow (32TB)
+3000 0000 0000 - 3800 0000 0000: metainfo (memory blocks and sync objects; 8TB)
+3800 0000 0000 - 5500 0000 0000: -
+5500 0000 0000 - 5a00 0000 0000: pie binaries without ASLR or on 4.1+ kernels
+5a00 0000 0000 - 7200 0000 0000: -
+7200 0000 0000 - 7300 0000 0000: heap (1TB)
+7300 0000 0000 - 7a00 0000 0000: -
+7a00 0000 0000 - 8000 0000 0000: modules and main thread stack (6TB)
 
 C/C++ on netbsd/amd64 can reuse the same mapping:
  * The address space starts from 0x1000 (option with 0x0) and ends with
@@ -72,20 +71,20 @@ C/C++ on netbsd/amd64 can reuse the same mapping:
 */
 struct Mapping48AddressSpace {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
-  static const uptr kMetaShadowEnd = 0x340000000000ull;
-  static const uptr kShadowBeg     = 0x010000000000ull;
-  static const uptr kShadowEnd = 0x100000000000ull;
-  static const uptr kHeapMemBeg    = 0x7b0000000000ull;
-  static const uptr kHeapMemEnd    = 0x7c0000000000ull;
+  static const uptr kMetaShadowEnd = 0x380000000000ull;
+  static const uptr kShadowBeg = 0x100000000000ull;
+  static const uptr kShadowEnd = 0x300000000000ull;
+  static const uptr kHeapMemBeg = 0x720000000000ull;
+  static const uptr kHeapMemEnd = 0x730000000000ull;
   static const uptr kLoAppMemBeg   = 0x000000001000ull;
-  static const uptr kLoAppMemEnd   = 0x008000000000ull;
+  static const uptr kLoAppMemEnd = 0x020000000000ull;
   static const uptr kMidAppMemBeg  = 0x550000000000ull;
-  static const uptr kMidAppMemEnd  = 0x568000000000ull;
-  static const uptr kHiAppMemBeg   = 0x7e8000000000ull;
+  static const uptr kMidAppMemEnd = 0x5a0000000000ull;
+  static const uptr kHiAppMemBeg = 0x7a0000000000ull;
   static const uptr kHiAppMemEnd   = 0x800000000000ull;
-  static const uptr kShadowMsk = 0x780000000000ull;
-  static const uptr kShadowXor = 0x040000000000ull;
-  static const uptr kShadowAdd = 0x000000000000ull;
+  static const uptr kShadowMsk = 0x700000000000ull;
+  static const uptr kShadowXor = 0x000000000000ull;
+  static const uptr kShadowAdd = 0x100000000000ull;
   static const uptr kVdsoBeg       = 0xf000000000000000ull;
 };
 
@@ -378,6 +377,71 @@ struct MappingPPC64_47 {
 };
 
 /*
+C/C++ on linux/riscv64 (39-bit VMA)
+0000 0010 00 - 0200 0000 00: main binary                      ( 8 GB)
+0200 0000 00 - 1000 0000 00: -
+1000 0000 00 - 4000 0000 00: shadow memory                    (64 GB)
+4000 0000 00 - 4800 0000 00: metainfo                         (16 GB)
+4800 0000 00 - 5500 0000 00: -
+5500 0000 00 - 5a00 0000 00: main binary (PIE)                (~8 GB)
+5600 0000 00 - 7c00 0000 00: -
+7d00 0000 00 - 7fff ffff ff: libraries and main thread stack  ( 8 GB)
+
+mmap by default allocates from top downwards
+VDSO sits below loader and above dynamic libraries, within HiApp region.
+Heap starts after program region whose position depends on pie or non-pie.
+Disable tracking them since their locations are not fixed.
+*/
+struct MappingRiscv64_39 {
+  static const uptr kLoAppMemBeg = 0x0000001000ull;
+  static const uptr kLoAppMemEnd = 0x0200000000ull;
+  static const uptr kShadowBeg = 0x1000000000ull;
+  static const uptr kShadowEnd = 0x2000000000ull;
+  static const uptr kMetaShadowBeg = 0x2000000000ull;
+  static const uptr kMetaShadowEnd = 0x2400000000ull;
+  static const uptr kMidAppMemBeg = 0x2aaaaaa000ull;
+  static const uptr kMidAppMemEnd = 0x2c00000000ull;
+  static const uptr kHeapMemBeg = 0x2c00000000ull;
+  static const uptr kHeapMemEnd = 0x2c00000000ull;
+  static const uptr kHiAppMemBeg = 0x3c00000000ull;
+  static const uptr kHiAppMemEnd = 0x3fffffffffull;
+  static const uptr kShadowMsk = 0x3800000000ull;
+  static const uptr kShadowXor = 0x0800000000ull;
+  static const uptr kShadowAdd = 0x0000000000ull;
+  static const uptr kVdsoBeg = 0x4000000000ull;
+};
+
+/*
+C/C++ on linux/riscv64 (48-bit VMA)
+0000 0000 1000 - 0400 0000 0000: main binary                      ( 4 TB)
+0500 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 4000 0000 0000: shadow memory                    (32 TB)
+4000 0000 0000 - 4800 0000 0000: metainfo                         ( 8 TB)
+4800 0000 0000 - 5555 5555 5000: -
+5555 5555 5000 - 5a00 0000 0000: main binary (PIE)                (~5 TB)
+5a00 0000 0000 - 7a00 0000 0000: -
+7a00 0000 0000 - 7fff ffff ffff: libraries and main thread stack  ( 6 TB)
+*/
+struct MappingRiscv64_48 {
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x040000000000ull;
+  static const uptr kShadowBeg = 0x200000000000ull;
+  static const uptr kShadowEnd = 0x400000000000ull;
+  static const uptr kMetaShadowBeg = 0x400000000000ull;
+  static const uptr kMetaShadowEnd = 0x480000000000ull;
+  static const uptr kMidAppMemBeg = 0x555555555000ull;
+  static const uptr kMidAppMemEnd = 0x5a0000000000ull;
+  static const uptr kHeapMemBeg = 0x5a0000000000ull;
+  static const uptr kHeapMemEnd = 0x5a0000000000ull;
+  static const uptr kHiAppMemBeg = 0x7a0000000000ull;
+  static const uptr kHiAppMemEnd = 0x7fffffffffffull;
+  static const uptr kShadowMsk = 0x700000000000ull;
+  static const uptr kShadowXor = 0x100000000000ull;
+  static const uptr kShadowAdd = 0x000000000000ull;
+  static const uptr kVdsoBeg = 0x800000000000ull;
+};
+
+/*
 C/C++ on linux/s390x
 While the kernel provides a 64-bit address space, we have to restrict ourselves
 to 48 bits due to how e.g. SyncVar::GetId() works.
@@ -665,6 +729,13 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
   }
 #  elif defined(__mips64)
   return Func::template Apply<MappingMips64_40>(arg);
+#  elif SANITIZER_RISCV64
+  switch (vmaSize) {
+    case 39:
+      return Func::template Apply<MappingRiscv64_39>(arg);
+    case 48:
+      return Func::template Apply<MappingRiscv64_48>(arg);
+  }
 #  elif defined(__s390x__)
   return Func::template Apply<MappingS390x>(arg);
 #  else
@@ -686,6 +757,8 @@ void ForEachMapping() {
   Func::template Apply<MappingPPC64_44>();
   Func::template Apply<MappingPPC64_46>();
   Func::template Apply<MappingPPC64_47>();
+  Func::template Apply<MappingRiscv64_39>();
+  Func::template Apply<MappingRiscv64_48>();
   Func::template Apply<MappingS390x>();
   Func::template Apply<MappingGo48>();
   Func::template Apply<MappingGoWindows>();

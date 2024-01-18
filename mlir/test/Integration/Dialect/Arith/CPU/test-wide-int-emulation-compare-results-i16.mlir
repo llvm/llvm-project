@@ -15,18 +15,6 @@
 // Common Utility Functions
 //===----------------------------------------------------------------------===//
 
-llvm.mlir.global internal constant @str_mismatch("Mismatch\0A")
-func.func private @printCString(!llvm.ptr<i8>) -> ()
-// Prints 'Mismatch' to stdout.
-func.func @printMismatch() -> () {
-  %0 = llvm.mlir.addressof @str_mismatch : !llvm.ptr<array<9 x i8>>
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.getelementptr %0[%1, %1]
-    : (!llvm.ptr<array<9 x i8>>, i64, i64) -> !llvm.ptr<i8>
-  func.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
-  return
-}
-
 // Prints both binary op operands and the first result. If the second result
 // does not match, prints the second result and a 'Mismatch' message.
 func.func @check_results(%lhs : i16, %rhs : i16, %res0 : i16, %res1 : i16) -> () {
@@ -38,7 +26,7 @@ func.func @check_results(%lhs : i16, %rhs : i16, %res0 : i16, %res1 : i16) -> ()
   %mismatch = arith.cmpi ne, %res0, %res1 : i16
   scf.if %mismatch -> () {
     vector.print %res1 : i16
-    func.call @printMismatch() : () -> ()
+    vector.print str "Mismatch"
   }
   return
 }

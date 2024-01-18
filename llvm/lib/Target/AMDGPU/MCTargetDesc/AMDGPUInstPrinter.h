@@ -66,6 +66,8 @@ private:
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTH(const MCInst *MI, int64_t TH, int64_t Scope, raw_ostream &O);
+  void printScope(int64_t Scope, raw_ostream &O);
   void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -91,7 +93,7 @@ private:
   void printImmediate32(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediate64(uint64_t Imm, const MCSubtargetInfo &STI,
-                        raw_ostream &O);
+                        raw_ostream &O, bool IsFP);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printRegularOperand(const MCInst *MI, unsigned OpNo,

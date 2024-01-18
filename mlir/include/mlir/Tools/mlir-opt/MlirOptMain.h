@@ -82,6 +82,9 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+  bool shouldElideResourceDataFromBytecode() const {
+    return elideResourceDataFromBytecodeFlag;
+  }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -185,6 +188,9 @@ protected:
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
 
+  /// Elide resources when generating bytecode.
+  bool elideResourceDataFromBytecodeFlag = false;
+
   /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
   bool enableDebuggerActionHookFlag = false;
 
@@ -229,6 +235,15 @@ protected:
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 
+/// Register and parse command line options.
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
+std::pair<std::string, std::string>
+registerAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
+                           DialectRegistry &registry);
+
 /// Perform the core processing behind `mlir-opt`.
 /// - outputStream is the stream where the resulting IR is printed.
 /// - buffer is the in-memory file to parser and process.
@@ -243,6 +258,16 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
+                          DialectRegistry &registry);
+
+/// Implementation for tools like `mlir-opt`.
+/// This function can be used with registrationAndParseCLIOptions so that
+/// CLI options can be accessed before running MlirOptMain.
+/// - inputFilename is the name of the input mlir file.
+/// - outputFilename is the name of the output file.
+/// - registry should contain all the dialects that can be parsed in the source.
+LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef inputFilename,
+                          llvm::StringRef outputFilename,
                           DialectRegistry &registry);
 
 /// Helper wrapper to return the result of MlirOptMain directly from main.

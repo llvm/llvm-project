@@ -39,4 +39,6 @@ BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_size_t, std::vector<size_t>{}, g
 BENCHMARK_CAPTURE(BM_ConstructFromRange, vector_string, std::vector<std::string>{}, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
+BENCHMARK_CAPTURE(BM_Pushback, vector_int, std::vector<int>{})->Arg(TestNumInputs);
+
 BENCHMARK_MAIN();

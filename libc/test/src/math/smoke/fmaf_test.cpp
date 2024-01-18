@@ -13,5 +13,5 @@
 using LlvmLibcFmafTest = FmaTestTemplate<float>;
 
 TEST_F(LlvmLibcFmafTest, SpecialNumbers) {
-  test_special_numbers(&__llvm_libc::fmaf);
+  test_special_numbers(&LIBC_NAMESPACE::fmaf);
 }

@@ -49,7 +49,7 @@ define void @undef_constant(i32 %arg0) {
 
 ; CHECK-LABEL: @null_constant
 define ptr @null_constant() {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
   ret ptr null
 }
@@ -180,7 +180,7 @@ define i32 @function_address_after_def() {
 ; CHECK-DAG:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN0]][1]
 ; CHECK-DAG:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN1]][2]
 ; CHECK-DAG:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C4]], %[[CHAIN2]][3]
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
 ; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr)>
 ; CHECK-DAG:  %[[CHAIN4:.+]] = llvm.insertvalue %[[CHAIN3]], %[[ROOT]][0]
 ; CHECK-DAG:  %[[CHAIN5:.+]] = llvm.insertvalue %[[NULL]], %[[CHAIN4]][1]
@@ -188,7 +188,7 @@ define i32 @function_address_after_def() {
 %nested_agg_type = type {%simple_agg_type, ptr}
 @nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK-DAG:  %[[NULL:.+]] = llvm.mlir.zero : !llvm.ptr
 ; CHECK-DAG:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
 ; CHECK-DAG:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
 ; CHECK-DAG:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
@@ -219,10 +219,10 @@ define i64 @const_exprs_with_duplicate() {
 
 ; Verify the import of constant expressions with cyclic dependencies.
 
-@cyclic = internal constant i64 mul (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
+@cyclic = internal constant i64 add (i64 ptrtoint (ptr @cyclic to i64), i64 ptrtoint (ptr @cyclic to i64))
 
 ; CHECK-LABEL: @cyclic
 ; CHECK:  %[[ADDR:.+]] = llvm.mlir.addressof @cyclic
 ; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
-; CHECK:  %[[VAL1:.+]] = llvm.mul %[[VAL0]], %[[VAL0]]
+; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]

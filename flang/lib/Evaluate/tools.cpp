@@ -1082,7 +1082,8 @@ std::optional<std::string> FindImpureCall(
 std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure,
-    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible) {
+    const SpecificIntrinsic *specificIntrinsic, std::string &whyNotCompatible,
+    std::optional<std::string> &warning) {
   std::optional<parser::MessageFixedText> msg;
   if (!lhsProcedure) {
     msg = "In assignment to object %s, the target '%s' is a procedure"
@@ -1096,8 +1097,8 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
           *rhsProcedure->functionResult, &whyNotCompatible)) {
     msg =
         "Function %s associated with incompatible function designator '%s': %s"_err_en_US;
-  } else if (lhsProcedure->IsCompatibleWith(
-                 *rhsProcedure, &whyNotCompatible, specificIntrinsic)) {
+  } else if (lhsProcedure->IsCompatibleWith(*rhsProcedure, &whyNotCompatible,
+                 specificIntrinsic, &warning)) {
     // OK
   } else if (isCall) {
     msg = "Procedure %s associated with result of reference to function '%s'"
@@ -1272,6 +1273,83 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     return ConvertToType(type, Expr<SomeType>{bits});
   } else {
     return std::nullopt;
+  }
+}
+
+// Extracts a whole symbol being used as a bound of a dummy argument,
+// possibly wrapped with parentheses or MAX(0, ...).
+template <int KIND>
+static const Symbol *GetBoundSymbol(
+    const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
+  using T = Type<TypeCategory::Integer, KIND>;
+  return common::visit(
+      common::visitors{
+          [](const Extremum<T> &max) -> const Symbol * {
+            if (max.ordering == Ordering::Greater) {
+              if (auto zero{ToInt64(max.left())}; zero && *zero == 0) {
+                return GetBoundSymbol(max.right());
+              }
+            }
+            return nullptr;
+          },
+          [](const Parentheses<T> &x) { return GetBoundSymbol(x.left()); },
+          [](const Designator<T> &x) -> const Symbol * {
+            if (const auto *ref{std::get_if<SymbolRef>(&x.u)}) {
+              return &**ref;
+            }
+            return nullptr;
+          },
+          [](const Convert<T, TypeCategory::Integer> &x) {
+            return common::visit(
+                [](const auto &y) -> const Symbol * {
+                  using yType = std::decay_t<decltype(y)>;
+                  using yResult = typename yType::Result;
+                  if constexpr (yResult::kind <= KIND) {
+                    return GetBoundSymbol(y);
+                  } else {
+                    return nullptr;
+                  }
+                },
+                x.left().u);
+          },
+          [](const auto &) -> const Symbol * { return nullptr; },
+      },
+      expr.u);
+}
+
+std::optional<bool> AreEquivalentInInterface(
+    const Expr<SubscriptInteger> &x, const Expr<SubscriptInteger> &y) {
+  auto xVal{ToInt64(x)};
+  auto yVal{ToInt64(y)};
+  if (xVal && yVal) {
+    return *xVal == *yVal;
+  } else if (xVal || yVal) {
+    return false;
+  }
+  const Symbol *xSym{GetBoundSymbol(x)};
+  const Symbol *ySym{GetBoundSymbol(y)};
+  if (xSym && ySym) {
+    if (&xSym->GetUltimate() == &ySym->GetUltimate()) {
+      return true; // USE/host associated same symbol
+    }
+    auto xNum{semantics::GetDummyArgumentNumber(xSym)};
+    auto yNum{semantics::GetDummyArgumentNumber(ySym)};
+    if (xNum && yNum) {
+      if (*xNum == *yNum) {
+        auto xType{DynamicType::From(*xSym)};
+        auto yType{DynamicType::From(*ySym)};
+        return xType && yType && xType->IsEquivalentTo(*yType);
+      }
+    }
+    return false;
+  } else if (xSym || ySym) {
+    return false;
+  }
+  // Neither expression is an integer constant or a whole symbol.
+  if (x == y) {
+    return true;
+  } else {
+    return std::nullopt; // not sure
   }
 }
 
@@ -1786,6 +1864,25 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &symbol) {
     }
   }
   return result;
+}
+
+std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
+  if (symbol) {
+    if (IsDummy(*symbol)) {
+      if (const Symbol * subpSym{symbol->owner().symbol()}) {
+        if (const auto *subp{subpSym->detailsIf<SubprogramDetails>()}) {
+          int j{0};
+          for (const Symbol *dummy : subp->dummyArgs()) {
+            if (dummy == symbol) {
+              return j;
+            }
+            ++j;
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace Fortran::semantics

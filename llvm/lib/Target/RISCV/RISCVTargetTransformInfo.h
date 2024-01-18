@@ -169,6 +169,9 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
 
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
+
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
@@ -196,7 +199,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
+    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -221,7 +224,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
+    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -354,6 +357,10 @@ public:
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
+
+  bool shouldFoldTerminatingConditionAfterLSR() const {
+    return true;
+  }
 };
 
 } // end namespace llvm

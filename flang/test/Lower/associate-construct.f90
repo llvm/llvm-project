@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain
 program p

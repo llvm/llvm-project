@@ -71,6 +71,45 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    ../fflush.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fseek
+  SRCS
+    fseek.cpp
+  HDRS
+    ../fseek.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ftell
+  SRCS
+    ftell.cpp
+  HDRS
+    ../ftell.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fopen
   SRCS
     fopen.cpp
@@ -280,9 +319,9 @@ add_entrypoint_object(
 add_entrypoint_object(
   getchar_unlocked
   SRCS
-    getc_unlocked.cpp
+    getchar_unlocked.cpp
   HDRS
-    ../getc_unlocked.h
+    ../getchar_unlocked.h
   DEPENDS
     libc.src.errno.errno
     libc.include.stdio
@@ -298,6 +337,18 @@ add_entrypoint_object(
     ../fgets.h
   DEPENDS
     libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ungetc
+  SRCS
+    ungetc.cpp
+  HDRS
+    ../ungetc.h
+  DEPENDS
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file

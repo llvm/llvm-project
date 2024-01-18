@@ -134,7 +134,8 @@ public:
     DCC_FastCall,
     DCC_StdCall,
     DCC_VectorCall,
-    DCC_RegCall
+    DCC_RegCall,
+    DCC_RtdCall
   };
 
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };
@@ -151,6 +152,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
@@ -501,6 +503,11 @@ public:
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
 
+  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
+  // This exists so that we can override the macro value and test our incomplete
+  // implementation on real-world examples.
+  std::string OpenACCMacroOverride;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -595,6 +602,9 @@ public:
   bool implicitFunctionsAllowed() const {
     return !requiresStrictPrototypes() && !OpenCL;
   }
+
+  /// Returns true if the language supports calling the 'atexit' function.
+  bool hasAtExit() const { return !(OpenMP && OpenMPIsTargetDevice); }
 
   /// Returns true if implicit int is part of the language requirements.
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }

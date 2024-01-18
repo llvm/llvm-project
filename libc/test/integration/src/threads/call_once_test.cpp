@@ -20,14 +20,14 @@
 #include <threads.h>
 
 static constexpr unsigned int NUM_THREADS = 5;
-static __llvm_libc::cpp::Atomic<unsigned int> thread_count;
+static LIBC_NAMESPACE::cpp::Atomic<unsigned int> thread_count;
 
 static unsigned int call_count;
 static void call_once_func() { ++call_count; }
 
 static int func(void *) {
   static once_flag flag = ONCE_FLAG_INIT;
-  __llvm_libc::call_once(&flag, call_once_func);
+  LIBC_NAMESPACE::call_once(&flag, call_once_func);
 
   thread_count.fetch_add(1);
 
@@ -41,13 +41,13 @@ void call_from_5_threads() {
 
   thrd_t threads[NUM_THREADS];
   for (unsigned int i = 0; i < NUM_THREADS; ++i) {
-    ASSERT_EQ(__llvm_libc::thrd_create(threads + i, func, nullptr),
+    ASSERT_EQ(LIBC_NAMESPACE::thrd_create(threads + i, func, nullptr),
               static_cast<int>(thrd_success));
   }
 
   for (unsigned int i = 0; i < NUM_THREADS; ++i) {
     int retval;
-    ASSERT_EQ(__llvm_libc::thrd_join(threads[i], &retval),
+    ASSERT_EQ(LIBC_NAMESPACE::thrd_join(threads[i], &retval),
               static_cast<int>(thrd_success));
     ASSERT_EQ(retval, 0);
   }
@@ -58,16 +58,16 @@ void call_from_5_threads() {
 
 static mtx_t once_func_blocker;
 static void blocking_once_func() {
-  __llvm_libc::mtx_lock(&once_func_blocker);
-  __llvm_libc::mtx_unlock(&once_func_blocker);
+  LIBC_NAMESPACE::mtx_lock(&once_func_blocker);
+  LIBC_NAMESPACE::mtx_unlock(&once_func_blocker);
 }
 
-static __llvm_libc::cpp::Atomic<unsigned int> start_count;
-static __llvm_libc::cpp::Atomic<unsigned int> done_count;
+static LIBC_NAMESPACE::cpp::Atomic<unsigned int> start_count;
+static LIBC_NAMESPACE::cpp::Atomic<unsigned int> done_count;
 static int once_func_caller(void *) {
   static once_flag flag;
   start_count.fetch_add(1);
-  __llvm_libc::call_once(&flag, blocking_once_func);
+  LIBC_NAMESPACE::call_once(&flag, blocking_once_func);
   done_count.fetch_add(1);
   return 0;
 }
@@ -79,16 +79,16 @@ void test_synchronization() {
   start_count = 0;
   done_count = 0;
 
-  ASSERT_EQ(__llvm_libc::mtx_init(&once_func_blocker, mtx_plain),
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&once_func_blocker, mtx_plain),
             static_cast<int>(thrd_success));
   // Lock the blocking mutex so that the once func blocks.
-  ASSERT_EQ(__llvm_libc::mtx_lock(&once_func_blocker),
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&once_func_blocker),
             static_cast<int>(thrd_success));
 
   thrd_t t1, t2;
-  ASSERT_EQ(__llvm_libc::thrd_create(&t1, once_func_caller, nullptr),
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&t1, once_func_caller, nullptr),
             static_cast<int>(thrd_success));
-  ASSERT_EQ(__llvm_libc::thrd_create(&t2, once_func_caller, nullptr),
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&t2, once_func_caller, nullptr),
             static_cast<int>(thrd_success));
 
   while (start_count.load() != 2)
@@ -98,20 +98,20 @@ void test_synchronization() {
   EXPECT_EQ(done_count.val, 0U);
 
   // Unlock the blocking mutex so that the once func blocks.
-  ASSERT_EQ(__llvm_libc::mtx_unlock(&once_func_blocker),
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&once_func_blocker),
             static_cast<int>(thrd_success));
 
   int retval;
-  ASSERT_EQ(__llvm_libc::thrd_join(t1, &retval),
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_join(t1, &retval),
             static_cast<int>(thrd_success));
   ASSERT_EQ(retval, 0);
-  ASSERT_EQ(__llvm_libc::thrd_join(t2, &retval),
+  ASSERT_EQ(LIBC_NAMESPACE::thrd_join(t2, &retval),
             static_cast<int>(thrd_success));
   ASSERT_EQ(retval, 0);
 
   ASSERT_EQ(done_count.val, 2U);
 
-  __llvm_libc::mtx_destroy(&once_func_blocker);
+  LIBC_NAMESPACE::mtx_destroy(&once_func_blocker);
 }
 
 TEST_MAIN() {

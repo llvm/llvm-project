@@ -22,7 +22,9 @@ class ExprCommandWithFixits(TestBase):
         self.assertEqual(
             result, lldb.eReturnStatusSuccessFinishResult, ret_val.GetError()
         )
-        self.assertIn("Fix-it applied", ret_val.GetError())
+        self.assertIn(
+            "Evaluated this expression after applying Fix-It(s):", ret_val.GetError()
+        )
 
     def test_with_target(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
@@ -99,7 +101,9 @@ class ExprCommandWithFixits(TestBase):
         )
         self.assertEqual(result, lldb.eReturnStatusFailed, ret_val.GetError())
 
-        self.assertIn("Fix-it applied, fixed expression was:", ret_val.GetError())
+        self.assertIn(
+            "Evaluated this expression after applying Fix-It(s):", ret_val.GetError()
+        )
         self.assertIn("null_pointer->first", ret_val.GetError())
 
     # The final function call runs into SIGILL on aarch64-linux.

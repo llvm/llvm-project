@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -15,7 +15,7 @@
 // explicit directory_entry(const path);
 // directory_entry(const path&, error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
@@ -23,6 +23,7 @@
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
 #include "test_convertible.h"
+namespace fs = std::filesystem;
 
 static void path_ctor() {
   using namespace fs;

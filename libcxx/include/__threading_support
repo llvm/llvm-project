@@ -48,7 +48,7 @@
 #if defined(_LIBCPP_HAS_THREAD_API_WIN32)
 #define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_EXPORTED_FROM_ABI
 #else
-#define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
+#define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_HIDE_FROM_ABI
 #endif
 
 typedef ::timespec __libcpp_timespec_t;
@@ -404,7 +404,7 @@ void __libcpp_thread_yield()
 
 void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
 {
-   __libcpp_timespec_t __ts = _VSTD::__convert_to_timespec<__libcpp_timespec_t>(__ns);
+   __libcpp_timespec_t __ts = std::__convert_to_timespec<__libcpp_timespec_t>(__ns);
    while (nanosleep(&__ts, &__ts) == -1 && errno == EINTR);
 }
 
@@ -561,7 +561,7 @@ void __libcpp_thread_yield()
 
 void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
 {
-   __libcpp_timespec_t __ts = _VSTD::__convert_to_timespec<__libcpp_timespec_t>(__ns);
+   __libcpp_timespec_t __ts = std::__convert_to_timespec<__libcpp_timespec_t>(__ns);
   thrd_sleep(&__ts, nullptr);
 }
 

@@ -10,6 +10,8 @@
 // constants for the GOFF file format.
 //
 // GOFF specifics can be found in MVS Program Management: Advanced Facilities.
+// See
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=facilities-generalized-object-file-format-goff
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,13 +21,24 @@
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+
 namespace GOFF {
 
+/// \brief Length of the parts of a physical GOFF record.
 constexpr uint8_t RecordLength = 80;
 constexpr uint8_t RecordPrefixLength = 3;
 constexpr uint8_t PayloadLength = 77;
+constexpr uint8_t RecordContentLength = RecordLength - RecordPrefixLength;
 
-// Prefix byte on every record. This indicates GOFF format.
+/// \brief Maximum data length before starting a new card for RLD and TXT data.
+///
+/// The maximum number of bytes that can be included in an RLD or TXT record and
+/// their continuations is a SIGNED 16 bit int despite what the spec says. The
+/// number of bytes we allow ourselves to attach to a card is thus arbitrarily
+/// limited to 32K-1 bytes.
+constexpr uint16_t MaxDataLength = 32 * 1024 - 1;
+
+/// \brief Prefix byte on every record. This indicates GOFF format.
 constexpr uint8_t PTVPrefix = 0x03;
 
 enum RecordType : uint8_t {
@@ -154,6 +167,7 @@ enum ENDEntryPointRequest : uint8_t {
 // \brief Subsections of the primary C_CODE section in the object file.
 enum SubsectionKind : uint8_t {
   SK_PPA1 = 2,
+  SK_PPA2 = 4,
 };
 } // end namespace GOFF
 

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 func.func @matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %out: memref<32x32xf32>) {
   %c8 = arith.constant 8 : index
@@ -33,11 +33,14 @@ func.func @matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %out: memref
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [16, 16, 8]
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [16, 16, 8]
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -90,9 +93,12 @@ func.func @gathered_matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %ou
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [8, 16, 4]
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.gpu.unroll_vectors_subgroup_mma [8, 16, 4]
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

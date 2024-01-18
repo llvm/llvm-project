@@ -539,6 +539,10 @@ struct FormatStyle {
 
   /// Control of trailing comments.
   ///
+  /// The alignment stops at closing braces after a line break, and only
+  /// followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  /// a semicolon.
+  ///
   /// \note
   ///  As of clang-format 16 this option is not a bool but can be set
   ///  to the options. Conventional bool options still can be parsed as before.
@@ -680,6 +684,25 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.6
   bool AllowShortCaseLabelsOnASingleLine;
+
+  /// Allow short compound requirement on a single line.
+  /// \code
+  ///   true:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     { x + 1 } -> std::same_as<int>;
+  ///   };
+  ///
+  ///   false:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     {
+  ///       x + 1
+  ///     } -> std::same_as<int>;
+  ///   };
+  /// \endcode
+  /// \version 18
+  bool AllowShortCompoundRequirementOnASingleLine;
 
   /// Allow short enums on a single line.
   /// \code
@@ -1401,33 +1424,103 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Break between adjacent string literals.
+  /// \code
+  ///    true:
+  ///    return "Code"
+  ///           "\0\52\26\55\55\0"
+  ///           "x013"
+  ///           "\02\xBA";
+  ///    false:
+  ///    return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+  /// \endcode
+  /// \version 18
+  bool BreakAdjacentStringLiterals;
+
   /// Different ways to break after attributes.
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
     /// \code
+    ///   [[maybe_unused]]
+    ///   const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]]
     ///   inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]]
+    ///   if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]]
+    ///   case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Always,
     /// Leave the line breaking after attributes as is.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Leave,
     /// Never break after attributes.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]] int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]] int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]] default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Never,
   };
 
-  /// Break after a group of C++11 attributes before a function
-  /// declaration/definition name.
+  /// Break after a group of C++11 attributes before variable or function
+  /// (including constructor/destructor) declaration/definition names or before
+  /// control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  /// ``default`` labels), ``for``, and ``while`` statements.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
@@ -2879,8 +2972,8 @@ struct FormatStyle {
     ///        });
     /// \endcode
     LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
+    /// For statements within block scope, align lambda body relative to the
+    /// indentation level of the outer scope the lambda signature resides in.
     /// \code
     ///    someMethod(
     ///        [](SomeReallyLongLambdaSignatureArgument foo) {
@@ -2941,7 +3034,9 @@ struct FormatStyle {
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
-  bool isProto() const { return Language == LK_Proto; }
+  bool isProto() const {
+    return Language == LK_Proto || Language == LK_TextProto;
+  }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -3168,6 +3263,29 @@ struct FormatStyle {
   /// \endcode
   /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
+
+  /// The order in which ObjC property attributes should appear.
+  ///
+  /// Attributes in code will be sorted in the order specified. Any attributes
+  /// encountered that are not mentioned in this array will be sorted last, in
+  /// stable order. Comments between attributes will leave the attributes
+  /// untouched.
+  /// \warning
+  ///  Using this option could lead to incorrect code formatting due to
+  ///  clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code{.yaml}
+  ///   ObjCPropertyAttributeOrder: [
+  ///       class, direct,
+  ///       atomic, nonatomic,
+  ///       assign, retain, strong, copy, weak, unsafe_unretained,
+  ///       readonly, readwrite, getter, setter,
+  ///       nullable, nonnull, null_resettable, null_unspecified
+  ///   ]
+  /// \endcode
+  /// \version 18
+  std::vector<std::string> ObjCPropertyAttributeOrder;
 
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
@@ -4128,6 +4246,28 @@ struct FormatStyle {
     ///    object.operator++ (10);                object.operator++(10);
     /// \endcode
     bool AfterOverloadedOperator;
+    /// Styles for adding spacing between ``new/delete`` operators and opening
+    /// parentheses.
+    enum AfterPlacementOperatorStyle : int8_t {
+      /// Remove space after ``new/delete`` operators and before ``(``.
+      /// \code
+      ///    new(buf) T;
+      ///    delete(buf) T;
+      /// \endcode
+      APO_Never,
+      /// Always add space after ``new/delete`` operators and before ``(``.
+      /// \code
+      ///    new (buf) T;
+      ///    delete (buf) T;
+      /// \endcode
+      APO_Always,
+      /// Leave placement ``new/delete`` expressions as they are.
+      APO_Leave,
+    };
+    /// Defines in which cases to put a space between ``new/delete`` operators
+    /// and opening parentheses.
+    /// \version 18
+    AfterPlacementOperatorStyle AfterPlacementOperator;
     /// If ``true``, put space between requires keyword in a requires clause and
     /// opening parentheses, if there is one.
     /// \code
@@ -4160,8 +4300,9 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterRequiresInClause(false),
-          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
+          AfterOverloadedOperator(false), AfterPlacementOperator(APO_Leave),
+          AfterRequiresInClause(false), AfterRequiresInExpression(false),
+          BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -4171,6 +4312,7 @@ struct FormatStyle {
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
+             AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&
              AfterRequiresInExpression == Other.AfterRequiresInExpression &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
@@ -4622,6 +4764,8 @@ struct FormatStyle {
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
+           AllowShortCompoundRequirementOnASingleLine ==
+               R.AllowShortCompoundRequirementOnASingleLine &&
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
@@ -4639,6 +4783,7 @@ struct FormatStyle {
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
+           BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
@@ -4699,6 +4844,7 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
+           ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
@@ -4836,6 +4982,8 @@ FormatStyle getGNUStyle();
 /// Returns a format style complying with Microsoft style guide:
 /// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017
 FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
+
+FormatStyle getClangFormatStyle();
 
 /// Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();

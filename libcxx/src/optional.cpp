@@ -8,6 +8,7 @@
 
 #include <__availability>
 #include <optional>
+#include <stdexcept>
 
 namespace std
 {

@@ -25,12 +25,12 @@ constexpr void test() {
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   std::array<int, 10> array{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  View view(Iterator(array.begin()), Sentinel(Iterator(array.end())));
+  View view(Iterator(array.data()), Sentinel(Iterator(array.data() + array.size())));
   Iterator iter = view.begin();
 
   FilterView filter_view(std::move(view), AlwaysTrue{});
   FilterIterator filter_iter(filter_view, std::move(iter));
-  assert(base(filter_iter.base()) == array.begin());
+  assert(base(filter_iter.base()) == array.data());
 }
 
 constexpr bool tests() {

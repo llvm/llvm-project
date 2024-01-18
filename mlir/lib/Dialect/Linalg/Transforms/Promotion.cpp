@@ -28,6 +28,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -48,7 +49,8 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
                          const LinalgPromotionOptions &options,
                          Type elementType, Value allocSize, DataLayout &layout,
                          std::optional<unsigned> alignment = std::nullopt) {
-  auto width = layout.getTypeSize(elementType);
+  llvm::TypeSize width = layout.getTypeSize(elementType);
+  assert(!width.isScalable() && "cannot allocate buffer for a scalable vector");
 
   IntegerAttr alignmentAttr;
   if (alignment.has_value())
@@ -60,8 +62,8 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
 
   // Static buffer.
   if (std::optional<int64_t> cst = getConstantIntValue(allocSize)) {
-    auto staticBufferType =
-        MemRefType::get(width * cst.value(), b.getIntegerType(8));
+    auto staticBufferType = MemRefType::get(width.getFixedValue() * cst.value(),
+                                            b.getIntegerType(8));
     staticBufferType =
         MemRefType::Builder(staticBufferType).setMemorySpace(memorySpaceAttr);
     if (options.useAlloca) {
@@ -142,6 +144,8 @@ struct LinalgOpInstancePromotionOptions {
                                    const LinalgPromotionOptions &options);
   /// SubViews to promote.
   MapVector<int64_t, Value> subViews;
+  /// Subviews operand numbers to copy in using copyInFn.
+  llvm::SmallSet<int64_t, 4> operandsNumbersToCopyIn;
   /// True if the full view should be used for the promoted buffer.
   DenseMap<Value, bool> useFullTileBuffers;
 
@@ -174,6 +178,11 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     Operation *op = opOperand.get().getDefiningOp();
     if (auto sv = dyn_cast_or_null<memref::SubViewOp>(op)) {
       subViews[operandNumber] = sv;
+      // In case of linalg generic, copy in only if subview is used in linalg
+      // payload.
+      if (!isa<linalg::GenericOp>(linalgOp) ||
+          linalgOp.payloadUsesValueFromOperand(&opOperand))
+        operandsNumbersToCopyIn.insert(operandNumber);
       useFullTileBuffers[sv] = vUseFullTileBuffers[operandNumber];
     }
   }
@@ -201,7 +210,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
   Location loc = linalgOp.getLoc();
   auto defaultCopyCallBack = [loc](OpBuilder &b, Value src,
                                    Value dst) -> LogicalResult {
-    b.create<memref::CopyOp>(loc, src, dst);
+    b.create<linalg::CopyOp>(loc, src, dst);
     return success();
   };
   copyInFn = (options.copyInFn ? *(options.copyInFn) : defaultCopyCallBack);
@@ -323,6 +332,8 @@ promoteSubViews(ImplicitLocOpBuilder &b,
   for (auto v : options.subViews) {
     auto info = promotionInfoMap.find(v.first);
     if (info == promotionInfoMap.end())
+      continue;
+    if (options.operandsNumbersToCopyIn.count(v.first) == 0)
       continue;
     if (failed(options.copyInFn(
             b, cast<memref::SubViewOp>(v.second.getDefiningOp()),

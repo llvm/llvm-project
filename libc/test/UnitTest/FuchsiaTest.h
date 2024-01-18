@@ -20,7 +20,7 @@
 #define EXPECT_DEATH(FUNC, SIG) ([&] { ASSERT_DEATH(FUNC, SIG); }())
 #endif
 
-namespace __llvm_libc::testing {
+namespace LIBC_NAMESPACE::testing {
 using Test = ::zxtest::Test;
 }
 

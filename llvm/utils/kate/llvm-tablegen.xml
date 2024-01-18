@@ -44,6 +44,7 @@
       <item> !ne </item>
       <item> !tolower </item>
       <item> !toupper </item>
+      <item> !repr </item>
     </list>
     <list name="objects">
       <item> class </item>
@@ -53,6 +54,8 @@
       <item> let </item>
       <item> defvar </item>
       <item> multiclass </item>
+      <item> assert </item>
+      <item> dump </item>
     </list>
     <list name="class-like">
       <item> class </item>

@@ -11,16 +11,16 @@ int test_global_1;
 // INDICATOR1-DAG: Added Global{{.*}} name=test_global_1{{.*}} odr_indicator={{0x0*[^0]+.*$}}
 
 static int test_global_2;
-// CHECK-DAG: Added Global{{.*}} name=test_global_2{{.*}} odr_indicator={{0xf+$}}
+// CHECK-DAG: Added Global{{.*}} name=test_global_2{{.*}} source={{.*}} module={{.*}}.cpp.tmp {{.*}} odr_indicator={{0xf+$}}
 
 namespace {
 static int test_global_3;
-// CHECK-DAG: Added Global{{.*}} name={{.*}}::test_global_3{{.*}} odr_indicator={{0xf+$}}
+// CHECK-DAG: Added Global{{.*}} name={{.*}}::test_global_3{{.*}} source={{.*}} module={{.*}}.cpp.tmp {{.*}} odr_indicator={{0xf+$}}
 } // namespace
 
 int main() {
   const char f[] = "%d %d %d\n";
-  // CHECK-DAG: Added Global{{.*}} name=__const.main.f{{.*}} odr_indicator={{0xf+$}}
+  // CHECK-DAG: Added Global{{.*}} name=__const.main.f{{.*}} source={{.*}} module={{.*}}.cpp.tmp {{.*}} odr_indicator={{0xf+$}}
   printf(f, test_global_1, test_global_2, test_global_3);
   return 0;
 }

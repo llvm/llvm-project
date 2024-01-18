@@ -13,6 +13,9 @@
 // RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -DNO_MM_MALLOC -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s
 
+// RUN: %clang -x c++ -S -emit-llvm -target powerpc64le-gnu-linux -mcpu=pwr8 -DNO_MM_MALLOC -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -fsyntax-only
+
 #include <pmmintrin.h>
 
 __m128d resd, md1, md2;

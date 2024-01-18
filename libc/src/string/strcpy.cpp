@@ -12,7 +12,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strcpy,
                    (char *__restrict dest, const char *__restrict src)) {
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(char *, strcpy,
   return dest;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

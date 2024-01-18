@@ -1,6 +1,6 @@
 ! Tests for control-flow
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! check the lowering of a RETURN in the body of a SUBROUTINE
 ! CHECK-LABEL one

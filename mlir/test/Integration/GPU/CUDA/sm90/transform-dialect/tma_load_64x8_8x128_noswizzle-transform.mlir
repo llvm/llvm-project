@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -transform-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
@@ -26,7 +26,7 @@
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
 
 // RUN: mlir-opt %s \
-// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -transform-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \
 // RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
 // RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
@@ -83,7 +83,7 @@ func.func @main() {
   %memref_1, %asyncToken_2 = gpu.alloc async [%0] () : memref<8x128xf32>
   %1 = gpu.memcpy async [%0] %memref, %alloc : memref<64x8xf32>, memref<64x8xf32>
   %2 = gpu.memcpy async [%0] %memref_1, %alloc_0 : memref<8x128xf32>, memref<8x128xf32>
-  
+
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
             threads(%tx, %ty, %tz) in (%block_x = %c128, %block_y = %c1, %block_z = %c1) {
     %out = memref.get_global @bufferLhsGlobal : memref<64x8xf32, 3>
@@ -101,14 +101,16 @@ func.func @main() {
     }
     gpu.terminator
   }
-  
+
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %copy = transform.structured.match ops{["linalg.copy"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.nvgpu.rewrite_copy_as_tma %copy 
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.nvgpu.rewrite_copy_as_tma %copy
+      : (!transform.any_op) -> ()
+      transform.yield
+  }
 }

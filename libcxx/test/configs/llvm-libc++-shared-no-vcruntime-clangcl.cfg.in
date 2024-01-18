@@ -6,10 +6,10 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', '--driver-mode=g++'))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX -D_HAS_EXCEPTIONS=0' + config.dbg_include
+    '-fms-runtime-lib=' + config.fms_runtime_lib + ' -nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_STDIO_ISO_WIDE_SPECIFIERS -DNOMINMAX -D_HAS_EXCEPTIONS=0' + config.dbg_include
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -L %%{lib} -lc++ -l%s -l%s -loldnames' % (config.crt_lib, config.cxx_lib)
+    '-nostdlib -L %{lib} -lc++ -l' + config.cxx_lib
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '

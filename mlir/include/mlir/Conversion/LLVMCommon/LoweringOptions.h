@@ -33,7 +33,6 @@ public:
   LowerToLLVMOptions(MLIRContext *ctx, const DataLayout &dl);
 
   bool useBarePtrCallConv = false;
-  bool useOpaquePointers = true;
 
   enum class AllocLowering {
     /// Use malloc for heap allocations.

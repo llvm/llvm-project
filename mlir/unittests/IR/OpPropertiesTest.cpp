@@ -38,33 +38,33 @@ bool operator==(const TestProperties &lhs, TestProperties &rhs) {
 /// parsing with the generic format.
 static LogicalResult
 setPropertiesFromAttribute(TestProperties &prop, Attribute attr,
-                           function_ref<InFlightDiagnostic &()> getDiag) {
+                           function_ref<InFlightDiagnostic()> emitError) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    getDiag() << "expected DictionaryAttr to set TestProperties";
+    emitError() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto aAttr = dict.getAs<IntegerAttr>("a");
   if (!aAttr) {
-    getDiag() << "expected IntegerAttr for key `a`";
+    emitError() << "expected IntegerAttr for key `a`";
     return failure();
   }
   auto bAttr = dict.getAs<FloatAttr>("b");
   if (!bAttr ||
       &bAttr.getValue().getSemantics() != &llvm::APFloatBase::IEEEsingle()) {
-    getDiag() << "expected FloatAttr for key `b`";
+    emitError() << "expected FloatAttr for key `b`";
     return failure();
   }
 
   auto arrayAttr = dict.getAs<DenseI64ArrayAttr>("array");
   if (!arrayAttr) {
-    getDiag() << "expected DenseI64ArrayAttr for key `array`";
+    emitError() << "expected DenseI64ArrayAttr for key `array`";
     return failure();
   }
 
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    getDiag() << "expected StringAttr for key `label`";
+    emitError() << "expected StringAttr for key `label`";
     return failure();
   }
 
@@ -127,7 +127,7 @@ public:
                                     NamedAttrList &attrs) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
-                      function_ref<InFlightDiagnostic()> getDiag) {
+                      function_ref<InFlightDiagnostic()> emitError) {
     return success();
   }
 };
@@ -257,15 +257,10 @@ TEST(OpPropertiesTest, FailedProperties) {
   attrs.push_back(b.getNamedAttr("a", b.getStringAttr("foo")));
   state.propertiesAttr = attrs.getDictionary(&context);
   {
-    std::unique_ptr<InFlightDiagnostic> diagnostic;
-    auto getDiag = [&]() -> InFlightDiagnostic & {
-      if (!diagnostic) {
-        diagnostic = std::make_unique<InFlightDiagnostic>(
-            op->emitError("setting properties failed: "));
-      }
-      return *diagnostic;
+    auto emitError = [&]() {
+      return op->emitError("setting properties failed: ");
     };
-    auto result = state.setProperties(op, getDiag);
+    auto result = state.setProperties(op, emitError);
     EXPECT_TRUE(result.failed());
   }
   EXPECT_STREQ("setting properties failed: expected IntegerAttr for key `a`",

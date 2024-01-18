@@ -156,6 +156,11 @@ public:
     return First->is(tok::comment) ? First->getNextNonComment() : First;
   }
 
+  FormatToken *getLastNonComment() const {
+    assert(Last);
+    return Last->is(tok::comment) ? Last->getPreviousNonComment() : Last;
+  }
+
   FormatToken *First;
   FormatToken *Last;
 

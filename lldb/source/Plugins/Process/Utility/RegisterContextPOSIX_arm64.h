@@ -57,6 +57,7 @@ protected:
   bool IsPAuth(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
   bool IsSME(unsigned reg) const;
+  bool IsMTE(unsigned reg) const;
 
   bool IsSVEZ(unsigned reg) const { return m_register_info_up->IsSVEZReg(reg); }
   bool IsSVEP(unsigned reg) const { return m_register_info_up->IsSVEPReg(reg); }

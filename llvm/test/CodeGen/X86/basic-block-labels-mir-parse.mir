@@ -136,7 +136,7 @@ body:             |
   
     MOV32mi $rbp, 1, $noreg, -8, $noreg, 0 :: (store (s32) into %ir.2)
   
-  bb.3 (%ir-block.9, bb_id 3):
+  bb.3 (%ir-block.9, bb_id 3 2):
     renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load (s32) from %ir.2)
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     frame-destroy CFI_INSTRUCTION def_cfa $rsp, 8

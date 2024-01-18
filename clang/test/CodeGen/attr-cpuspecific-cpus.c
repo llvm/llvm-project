@@ -84,3 +84,5 @@ ATTR(cpu_specific(arrowlake)) void CPU35(void){}
 ATTR(cpu_specific(arrowlake_s)) void CPU36(void){}
 ATTR(cpu_specific(lunarlake)) void CPU37(void){}
 ATTR(cpu_specific(gracemont)) void CPU38(void){}
+ATTR(cpu_specific(pantherlake)) void CPU39(void){}
+ATTR(cpu_specific(clearwaterforest)) void CPU40(void){}

@@ -16,8 +16,8 @@ defvar errs = !range(0, list_int);
 
 #ifdef ERR_TOO_MANY_ARGS
 // RUN: not llvm-tblgen %s -DERR_TOO_MANY_ARGS 2>&1 | FileCheck -DFILE=%s %s --check-prefix=ERR_TOO_MANY_ARGS
-// ERR_TOO_MANY_ARGS: [[FILE]]:[[@LINE+1]]:15: error: expected at most two values of integer
-defvar errs = !range(0, 42, 255);
+// ERR_TOO_MANY_ARGS: [[FILE]]:[[@LINE+1]]:34: error: expected at most three values of integer
+defvar errs = !range(0, 42, 255, 233);
 #endif
 
 #ifdef ERR_UNEXPECTED_TYPE_0

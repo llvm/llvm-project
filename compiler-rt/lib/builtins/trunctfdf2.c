@@ -14,6 +14,6 @@
 #define DST_DOUBLE
 #include "fp_trunc_impl.inc"
 
-COMPILER_RT_ABI double __trunctfdf2(long double a) { return __truncXfYf2__(a); }
+COMPILER_RT_ABI dst_t __trunctfdf2(src_t a) { return __truncXfYf2__(a); }
 
 #endif

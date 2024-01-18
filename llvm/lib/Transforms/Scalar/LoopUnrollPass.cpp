@@ -662,19 +662,16 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
            unsigned(*RolledDynamicCost.getValue())}};
 }
 
-/// ApproximateLoopSize - Approximate the size of the loop.
-InstructionCost llvm::ApproximateLoopSize(
-    const Loop *L, unsigned &NumCalls, bool &NotDuplicatable, bool &Convergent,
-    const TargetTransformInfo &TTI,
+UnrollCostEstimator::UnrollCostEstimator(
+    const Loop *L, const TargetTransformInfo &TTI,
     const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
     Metrics.analyzeBasicBlock(BB, TTI, EphValues);
-  NumCalls = Metrics.NumInlineCandidates;
+  NumInlineCandidates = Metrics.NumInlineCandidates;
   NotDuplicatable = Metrics.notDuplicatable;
   Convergent = Metrics.convergent;
-
-  InstructionCost LoopSize = Metrics.NumInsts;
+  LoopSize = Metrics.NumInsts;
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
@@ -685,8 +682,17 @@ InstructionCost llvm::ApproximateLoopSize(
   if (LoopSize.isValid() && LoopSize < BEInsns + 1)
     // This is an open coded max() on InstructionCost
     LoopSize = BEInsns + 1;
+}
 
-  return LoopSize;
+uint64_t UnrollCostEstimator::getUnrolledLoopSize(
+    const TargetTransformInfo::UnrollingPreferences &UP,
+    unsigned CountOverwrite) const {
+  unsigned LS = *LoopSize.getValue();
+  assert(LS >= UP.BEInsns && "LoopSize should not be less than BEInsns!");
+  if (CountOverwrite)
+    return static_cast<uint64_t>(LS - UP.BEInsns) * CountOverwrite + UP.BEInsns;
+  else
+    return static_cast<uint64_t>(LS - UP.BEInsns) * UP.Count + UP.BEInsns;
 }
 
 // Returns the loop hint metadata node with the given name (for example,
@@ -746,36 +752,10 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
     return MaxPercentThresholdBoost;
 }
 
-// Produce an estimate of the unrolled cost of the specified loop.  This
-// is used to a) produce a cost estimate for partial unrolling and b) to
-// cheaply estimate cost for full unrolling when we don't want to symbolically
-// evaluate all iterations.
-class UnrollCostEstimator {
-  const unsigned LoopSize;
-
-public:
-  UnrollCostEstimator(Loop &L, unsigned LoopSize) : LoopSize(LoopSize) {}
-
-  // Returns loop size estimation for unrolled loop, given the unrolling
-  // configuration specified by UP.
-  uint64_t
-  getUnrolledLoopSize(const TargetTransformInfo::UnrollingPreferences &UP,
-                      const unsigned CountOverwrite = 0) const {
-    assert(LoopSize >= UP.BEInsns &&
-           "LoopSize should not be less than BEInsns!");
-    if (CountOverwrite)
-      return static_cast<uint64_t>(LoopSize - UP.BEInsns) * CountOverwrite +
-             UP.BEInsns;
-    else
-      return static_cast<uint64_t>(LoopSize - UP.BEInsns) * UP.Count +
-             UP.BEInsns;
-  }
-};
-
 static std::optional<unsigned>
 shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
                    const unsigned TripMultiple, const unsigned TripCount,
-                   const UnrollCostEstimator UCE,
+                   unsigned MaxTripCount, const UnrollCostEstimator UCE,
                    const TargetTransformInfo::UnrollingPreferences &UP) {
 
   // Using unroll pragma
@@ -795,6 +775,10 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
 
   if (PInfo.PragmaFullUnroll && TripCount != 0)
     return TripCount;
+
+  if (PInfo.PragmaEnableUnroll && !TripCount && MaxTripCount &&
+      MaxTripCount <= UnrollMaxUpperBound)
+    return MaxTripCount;
 
   // if didn't return until here, should continue to other priorties
   return std::nullopt;
@@ -888,14 +872,14 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // refactored into it own function.
 bool llvm::computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    AssumptionCache *AC,
-    ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
+    AssumptionCache *AC, ScalarEvolution &SE,
+    const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned TripCount, unsigned MaxTripCount,
-    bool MaxOrZero, unsigned TripMultiple, unsigned LoopSize,
+    bool MaxOrZero, unsigned TripMultiple, const UnrollCostEstimator &UCE,
     TargetTransformInfo::UnrollingPreferences &UP,
     TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
 
-  UnrollCostEstimator UCE(*L, LoopSize);
+  unsigned LoopSize = UCE.getRolledLoopSize();
 
   const bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
   const bool PragmaFullUnroll = hasUnrollFullPragma(L);
@@ -922,7 +906,7 @@ bool llvm::computeUnrollCount(
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
   if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
-                                             UCE, UP)) {
+                                             MaxTripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
     if (UserUnrollCount || (PragmaCount > 0)) {
@@ -1177,9 +1161,6 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     return LoopUnrollResult::Unmodified;
 
   bool OptForSize = L->getHeader()->getParent()->hasOptSize();
-  unsigned NumInlineCandidates;
-  bool NotDuplicatable;
-  bool Convergent;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, SE, TTI, BFI, PSI, ORE, OptLevel, ProvidedThreshold, ProvidedCount,
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
@@ -1196,30 +1177,22 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 
-  InstructionCost LoopSizeIC =
-      ApproximateLoopSize(L, NumInlineCandidates, NotDuplicatable, Convergent,
-                          TTI, EphValues, UP.BEInsns);
-  LLVM_DEBUG(dbgs() << "  Loop Size = " << LoopSizeIC << "\n");
-
-  if (!LoopSizeIC.isValid()) {
+  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
+  if (!UCE.canUnroll()) {
     LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains instructions"
-                      << " with invalid cost.\n");
+                      << " which cannot be duplicated or have invalid cost.\n");
     return LoopUnrollResult::Unmodified;
   }
-  unsigned LoopSize = *LoopSizeIC.getValue();
 
-  if (NotDuplicatable) {
-    LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains non-duplicatable"
-                      << " instructions.\n");
-    return LoopUnrollResult::Unmodified;
-  }
+  unsigned LoopSize = UCE.getRolledLoopSize();
+  LLVM_DEBUG(dbgs() << "  Loop Size = " << LoopSize << "\n");
 
   // When optimizing for size, use LoopSize + 1 as threshold (we use < Threshold
   // later), to (fully) unroll loops, if it does not increase code size.
   if (OptForSize)
     UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
-  if (NumInlineCandidates != 0) {
+  if (UCE.NumInlineCandidates != 0) {
     LLVM_DEBUG(dbgs() << "  Not unrolling loop with inlinable calls.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -1261,7 +1234,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // Assuming n is the same on all threads, any kind of unrolling is
   // safe.  But currently llvm's notion of convergence isn't powerful
   // enough to express this.
-  if (Convergent)
+  if (UCE.Convergent)
     UP.AllowRemainder = false;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
@@ -1277,8 +1250,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // fully unroll the loop.
   bool UseUpperBound = false;
   bool IsCountSetExplicitly = computeUnrollCount(
-    L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount, MaxTripCount, MaxOrZero,
-      TripMultiple, LoopSize, UP, PP, UseUpperBound);
+      L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount, MaxTripCount,
+      MaxOrZero, TripMultiple, UCE, UP, PP, UseUpperBound);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
 

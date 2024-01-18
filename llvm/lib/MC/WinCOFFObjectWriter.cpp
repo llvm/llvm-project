@@ -260,7 +260,7 @@ void COFFSymbol::set_name_offset(uint32_t Offset) {
 
 WinCOFFWriter::WinCOFFWriter(WinCOFFObjectWriter &OWriter,
                              raw_pwrite_stream &OS, DwoMode Mode)
-    : OWriter(OWriter), W(OS, support::little), Mode(Mode) {
+    : OWriter(OWriter), W(OS, llvm::endianness::little), Mode(Mode) {
   Header.Machine = OWriter.TargetObjectWriter->getMachine();
   // Some relocations on ARM64 (the 21 bit ADRP relocations) have a slightly
   // limited range for the immediate offset (+/- 1 MB); create extra offset

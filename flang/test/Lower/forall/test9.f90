@@ -1,6 +1,6 @@
 ! Test forall lowering
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !*** This FORALL construct does present a potential loop-carried dependence if
 !*** implemented naively (and incorrectly). The final value of a(3) must be the

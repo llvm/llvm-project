@@ -167,7 +167,7 @@ typedef struct {} G;)raw",
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
   ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedE.TagType = TagTypeKind::TTK_Class;
+  ExpectedE.TagType = TagTypeKind::Class;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.Members.emplace_back(TypeInfo("int"), "value",
                                  AccessSpecifier::AS_public);
@@ -210,7 +210,7 @@ typedef struct {} G;)raw",
   RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
   ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedF.TagType = TagTypeKind::TTK_Struct;
+  ExpectedF.TagType = TagTypeKind::Struct;
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
@@ -253,7 +253,7 @@ typedef struct {} G;)raw",
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
   ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedG.TagType = TagTypeKind::TTK_Struct;
+  ExpectedG.TagType = TagTypeKind::Struct;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.IsTypeDef = true;
   CheckRecordInfo(&ExpectedG, G);
@@ -295,7 +295,7 @@ TEST(SerializeTest, emitUndefinedRecordInfo) {
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
   ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedE.TagType = TagTypeKind::TTK_Class;
+  ExpectedE.TagType = TagTypeKind::Class;
   ExpectedE.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedE, E);
 }
@@ -308,7 +308,7 @@ TEST(SerializeTest, emitRecordMemberInfo) {
   RecordInfo ExpectedE(EmptySID, /*Name=*/"E", /*Path=*/"GlobalNamespace");
   ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedE.TagType = TagTypeKind::TTK_Struct;
+  ExpectedE.TagType = TagTypeKind::Struct;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.Members.emplace_back(TypeInfo("int"), "I",
                                  AccessSpecifier::AS_public);
@@ -324,7 +324,7 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   ExpectedE.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedE.TagType = TagTypeKind::TTK_Class;
+  ExpectedE.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *G = InfoAsRecord(Infos[2].get());
@@ -332,7 +332,7 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   llvm::sys::path::native(ExpectedGPath);
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/ExpectedGPath);
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedG.TagType = TagTypeKind::TTK_Class;
+  ExpectedG.TagType = TagTypeKind::Class;
   ExpectedG.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
   ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
@@ -391,7 +391,7 @@ class J : public I<int> {} ;)raw",
   RecordInfo ExpectedF(EmptySID, /*Name=*/"F", /*Path=*/"GlobalNamespace");
   ExpectedF.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace, "");
-  ExpectedF.TagType = TagTypeKind::TTK_Class;
+  ExpectedF.TagType = TagTypeKind::Class;
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
@@ -399,7 +399,7 @@ class J : public I<int> {} ;)raw",
   RecordInfo ExpectedG(EmptySID, /*Name=*/"G", /*Path=*/"GlobalNamespace");
   ExpectedG.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedG.TagType = TagTypeKind::TTK_Class;
+  ExpectedG.TagType = TagTypeKind::Class;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.Members.emplace_back(TypeInfo("int"), "I",
                                  AccessSpecifier::AS_protected);
@@ -446,14 +446,14 @@ class J : public I<int> {} ;)raw",
   ExpectedE.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
                                               AccessSpecifier::AS_private);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedE.TagType = TagTypeKind::TTK_Class;
+  ExpectedE.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *H = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedH(EmptySID, /*Name=*/"H", /*Path=*/"GlobalNamespace");
   ExpectedH.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedH.TagType = TagTypeKind::TTK_Class;
+  ExpectedH.TagType = TagTypeKind::Class;
   ExpectedH.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedH.Parents.emplace_back(EmptySID, /*Name=*/"E", InfoType::IT_record,
                                  /*QualName=*/"E", /*Path=*/"GlobalNamespace");
@@ -500,7 +500,7 @@ class J : public I<int> {} ;)raw",
   RecordInfo ExpectedI(EmptySID, /*Name=*/"I", /*Path=*/"GlobalNamespace");
   ExpectedI.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                    InfoType::IT_namespace);
-  ExpectedI.TagType = TagTypeKind::TTK_Class;
+  ExpectedI.TagType = TagTypeKind::Class;
   ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedI, I);
 
@@ -514,7 +514,7 @@ class J : public I<int> {} ;)raw",
                                /*Path=*/"GlobalNamespace", false,
                                AccessSpecifier::AS_public, true);
   ExpectedJ.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedJ.TagType = TagTypeKind::TTK_Class;
+  ExpectedJ.TagType = TagTypeKind::Class;
   CheckRecordInfo(&ExpectedJ, J);
 }
 

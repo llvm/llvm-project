@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
@@ -32,7 +31,6 @@
 #include <cstring>
 #include <inttypes.h>
 #include <iostream>
-#include <map>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -213,14 +211,14 @@ static bool filterArch(MachOObjectFile &Obj) {
   Triple ObjTriple(Obj.getArchTriple());
   StringRef ObjArch = ObjTriple.getArchName();
 
-  for (auto Arch : ArchFilters) {
+  for (StringRef Arch : ArchFilters) {
     // Match name.
     if (Arch == ObjArch)
       return true;
 
     // Match architecture number.
     unsigned Value;
-    if (!StringRef(Arch).getAsInteger(0, Value))
+    if (!Arch.getAsInteger(0, Value))
       if (Value == getCPUType(Obj))
         return true;
   }
@@ -370,8 +368,9 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
     return Err;
 
   // Save the GSYM file to disk.
-  support::endianness Endian =
-      Obj.makeTriple().isLittleEndian() ? support::little : support::big;
+  llvm::endianness Endian = Obj.makeTriple().isLittleEndian()
+                                ? llvm::endianness::little
+                                : llvm::endianness::big;
 
   std::optional<uint64_t> OptSegmentSize;
   if (SegmentSize > 0)
@@ -469,10 +468,9 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
     error(DsymObjectsOrErr.takeError());
   }
 
-  for (auto Object : Objects) {
-    if (auto Err = handleFileConversionToGSYM(Object, OutFile))
+  for (StringRef Object : Objects)
+    if (Error Err = handleFileConversionToGSYM(Object, OutFile))
       return Err;
-  }
   return Error::success();
 }
 

@@ -1,6 +1,6 @@
 ! Test lowering of elemental calls with character argument
 ! with the VALUE attribute.
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -hlfir=false -o - %s | FileCheck %s
 
 
 module char_elem_byval
@@ -104,8 +104,7 @@ subroutine foo3(i, j)
 ! CHECK:   %[[VAL_59:.*]] = fir.insert_value %[[VAL_58]], %[[VAL_57]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:   %[[VAL_60:.*]] = fir.alloca !fir.char<1> {bindc_name = ".chrtmp"}
 ! CHECK:   fir.store %[[VAL_59]] to %[[VAL_60]] : !fir.ref<!fir.char<1>>
-! CHECK:   %[[VAL_61:.*]] = fir.convert %[[VAL_60]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:   %[[VAL_62:.*]] = fir.emboxchar %[[VAL_61]], %[[VAL_48]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:   %[[VAL_62:.*]] = fir.emboxchar %[[VAL_60]], %[[VAL_48]] : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
 ! CHECK:   %[[VAL_63:.*]] = fir.call @_QPelem(%[[VAL_62]], %[[VAL_54]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> i32
 ! CHECK:   %[[VAL_64:.*]] = fir.array_coor %[[VAL_65]](%[[VAL_49]]) %[[VAL_53]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 ! CHECK:   fir.store %[[VAL_63]] to %[[VAL_64]] : !fir.ref<i32>
@@ -143,8 +142,7 @@ subroutine foo4(i, j)
 ! CHECK:   %[[VAL_86:.*]] = arith.cmpi sgt, %[[VAL_85]], %[[VAL_70]] : index
 ! CHECK:   cond_br %[[VAL_86]], ^bb2, ^bb3
 ! CHECK: ^bb2:
-! CHECK:   %[[VAL_87:.*]] = fir.convert %[[VAL_80]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:   %[[VAL_88:.*]] = fir.emboxchar %[[VAL_87]], %[[VAL_71]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:   %[[VAL_88:.*]] = fir.emboxchar %[[VAL_80]], %[[VAL_71]] : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
 ! CHECK:   %[[VAL_89:.*]] = arith.addi %[[VAL_84]], %[[VAL_71]] : index
 ! CHECK:   %[[VAL_90:.*]] = fir.array_coor %[[VAL_74]](%[[VAL_72]]) %[[VAL_89]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 ! CHECK:   %[[VAL_91:.*]] = fir.call @_QPelem(%[[VAL_88]], %[[VAL_90]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> i32
@@ -181,8 +179,7 @@ subroutine foo5(i, j)
 ! CHECK:   %[[VAL_108:.*]] = arith.cmpi sgt, %[[VAL_107]], %[[VAL_98]] : index
 ! CHECK:   cond_br %[[VAL_108]], ^bb2, ^bb3
 ! CHECK: ^bb2:
-! CHECK:   %[[VAL_109:.*]] = fir.convert %[[VAL_102]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:   %[[VAL_110:.*]] = fir.emboxchar %[[VAL_109]], %[[VAL_95]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:   %[[VAL_110:.*]] = fir.emboxchar %[[VAL_102]], %[[VAL_95]] : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
 ! CHECK:   %[[VAL_111:.*]] = arith.addi %[[VAL_106]], %[[VAL_99]] : index
 ! CHECK:   %[[VAL_112:.*]] = fir.array_coor %[[VAL_113]](%[[VAL_100]]) %[[VAL_111]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 ! CHECK:   %[[VAL_114:.*]] = fir.call @_QPelem(%[[VAL_110]], %[[VAL_112]]) {{.*}}: (!fir.boxchar<1>, !fir.ref<i32>) -> i32

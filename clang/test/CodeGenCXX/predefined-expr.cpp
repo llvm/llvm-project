@@ -5,8 +5,6 @@
 // CHECK-DAG: private unnamed_addr constant [49 x i8] c"void functionTemplateExplicitSpecialization(int)\00"
 
 // CHECK-DAG: private unnamed_addr constant [95 x i8] c"void SpecializedClassTemplate<char>::memberFunctionTemplate(T, U) const [T = char, U = double]\00"
-// CHECK-DAG: private unnamed_addr constant [43 x i8] c"TestClass<class UnitTestNative>::TestClass\00"
-// CHECK-DAG: private unnamed_addr constant [10 x i8] c"TestClass\00"
 // CHECK-DAG: private unnamed_addr constant [85 x i8] c"void SpecializedClassTemplate<int>::memberFunctionTemplate(int, U) const [U = float]\00"
 // CHECK-DAG: private unnamed_addr constant [57 x i8] c"void NonTypeTemplateParam<42>::size() const [Count = 42]\00"
 // CHECK-DAG: private unnamed_addr constant [103 x i8] c"static void ClassWithTemplateTemplateParam<char>::staticMember() [T = char, Param = NS::ClassTemplate]\00"
@@ -103,7 +101,6 @@
 
 
 int printf(const char * _Format, ...);
-int strcmp(const char *, const char *);
 
 class ClassInTopLevelNamespace {
 public:
@@ -458,21 +455,6 @@ public:
   }
 };
 
-
-template <class T>
-class TestClass {
-public:
-   TestClass() {
-      const char* expected = "TestClass<class UnitTestNative>::TestClass";
-      if (strcmp(expected,__FUNCTION__)==0)
-        printf("PASSED\n");
-      else
-        printf("FAILED %s\n",__FUNCTION__);
-   }
-};
-
-class UnitTestNative {};
-
 int main() {
   ClassInAnonymousNamespace anonymousNamespace;
   anonymousNamespace.anonymousNamespaceFunction();
@@ -553,7 +535,6 @@ int main() {
   SpecializedClassTemplate<char> sct2;
   sct2.memberFunctionTemplate('0', 0.0);
 
-  TestClass<UnitTestNative> t;
   return 0;
 }
 

@@ -12,7 +12,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/threads/mutex.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace {
 
@@ -83,4 +83,4 @@ LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

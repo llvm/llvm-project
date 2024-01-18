@@ -27,6 +27,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
+  MCSymbol *PPA2Sym;
 
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
@@ -90,12 +91,15 @@ private:
   AssociatedDataAreaTable ADATable;
 
   void emitPPA1(MCSymbol *FnEndSym);
+  void emitPPA2(Module &M);
   void emitADASection();
+  void emitIDRLSection(Module &M);
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr), ADATable(TM.getPointerSize(0)) {}
+        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
+        ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
@@ -113,6 +117,7 @@ public:
   }
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
+  void emitStartOfAsmFile(Module &M) override;
 
 private:
   void emitCallInformation(CallType CT);

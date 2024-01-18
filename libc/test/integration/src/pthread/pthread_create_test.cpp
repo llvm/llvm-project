@@ -40,12 +40,12 @@ struct TestThreadArgs {
   pthread_attr_t attrs;
   void *ret;
 };
-static __llvm_libc::AllocChecker global_ac;
-static __llvm_libc::cpp::Atomic<long> global_thr_count = 0;
+static LIBC_NAMESPACE::AllocChecker global_ac;
+static LIBC_NAMESPACE::cpp::Atomic<long> global_thr_count = 0;
 
 static void *successThread(void *Arg) {
-  pthread_t th = __llvm_libc::pthread_self();
-  auto *thread = reinterpret_cast<__llvm_libc::Thread *>(&th);
+  pthread_t th = LIBC_NAMESPACE::pthread_self();
+  auto *thread = reinterpret_cast<LIBC_NAMESPACE::Thread *>(&th);
 
   ASSERT_EQ(libc_errno, 0);
   ASSERT_TRUE(thread);
@@ -59,22 +59,23 @@ static void *successThread(void *Arg) {
   size_t expec_stacksize, expec_guardsize, expec_stacksize2;
   int expec_detached;
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_getstack(expec_attrs, &expec_stack,
-                                               &expec_stacksize),
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getstack(expec_attrs, &expec_stack,
+                                                  &expec_stacksize),
             0);
   ASSERT_EQ(libc_errno, 0);
 
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_getstacksize(expec_attrs, &expec_stacksize2),
+      LIBC_NAMESPACE::pthread_attr_getstacksize(expec_attrs, &expec_stacksize2),
       0);
   ASSERT_EQ(libc_errno, 0);
 
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_getguardsize(expec_attrs, &expec_guardsize), 0);
+      LIBC_NAMESPACE::pthread_attr_getguardsize(expec_attrs, &expec_guardsize),
+      0);
   ASSERT_EQ(libc_errno, 0);
 
   ASSERT_EQ(
-      __llvm_libc::pthread_attr_getdetachstate(expec_attrs, &expec_detached),
+      LIBC_NAMESPACE::pthread_attr_getdetachstate(expec_attrs, &expec_detached),
       0);
   ASSERT_EQ(libc_errno, 0);
 
@@ -96,10 +97,10 @@ static void *successThread(void *Arg) {
 
   ASSERT_EQ(expec_detached == PTHREAD_CREATE_JOINABLE,
             thread->attrib->detach_state.load() ==
-                static_cast<uint32_t>(__llvm_libc::DetachState::JOINABLE));
+                static_cast<uint32_t>(LIBC_NAMESPACE::DetachState::JOINABLE));
   ASSERT_EQ(expec_detached == PTHREAD_CREATE_DETACHED,
             thread->attrib->detach_state.load() ==
-                static_cast<uint32_t>(__llvm_libc::DetachState::DETACHED));
+                static_cast<uint32_t>(LIBC_NAMESPACE::DetachState::DETACHED));
 
   {
     // Allocate some bytes on the stack on most of the stack and make sure we
@@ -123,7 +124,7 @@ static void *successThread(void *Arg) {
   // [stack - expec_guardsize, stack) is both mapped and has PROT_NONE
   // permissions. Maybe we can read from /proc/{self}/map?
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(expec_attrs), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(expec_attrs), 0);
   ASSERT_EQ(libc_errno, 0);
 
   // Arg is malloced, so free.
@@ -138,33 +139,33 @@ static void run_success_config(int detachstate, size_t guardsize,
   TestThreadArgs *th_arg = new (global_ac) TestThreadArgs{};
   pthread_attr_t *attr = &(th_arg->attrs);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(attr), 0);
   ASSERT_EQ(libc_errno, 0);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setdetachstate(attr, detachstate), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setdetachstate(attr, detachstate), 0);
   ASSERT_EQ(libc_errno, 0);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setguardsize(attr, guardsize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setguardsize(attr, guardsize), 0);
   ASSERT_EQ(libc_errno, 0);
 
   void *Stack = nullptr;
   if (customstack) {
-    Stack = __llvm_libc::mmap(nullptr, stacksize, PROT_READ | PROT_WRITE,
-                              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    Stack = LIBC_NAMESPACE::mmap(nullptr, stacksize, PROT_READ | PROT_WRITE,
+                                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     ASSERT_NE(Stack, MAP_FAILED);
     ASSERT_NE(Stack, static_cast<void *>(nullptr));
     ASSERT_EQ(libc_errno, 0);
 
-    ASSERT_EQ(__llvm_libc::pthread_attr_setstack(attr, Stack, stacksize), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setstack(attr, Stack, stacksize), 0);
     ASSERT_EQ(libc_errno, 0);
   } else {
-    ASSERT_EQ(__llvm_libc::pthread_attr_setstacksize(attr, stacksize), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setstacksize(attr, stacksize), 0);
     ASSERT_EQ(libc_errno, 0);
   }
 
   void *expec_ret = nullptr;
   if (detachstate == PTHREAD_CREATE_JOINABLE) {
-    ASSERT_EQ(__llvm_libc::getrandom(&expec_ret, sizeof(expec_ret), 0),
+    ASSERT_EQ(LIBC_NAMESPACE::getrandom(&expec_ret, sizeof(expec_ret), 0),
               static_cast<ssize_t>(sizeof(expec_ret)));
     ASSERT_EQ(libc_errno, 0);
   }
@@ -174,19 +175,19 @@ static void run_success_config(int detachstate, size_t guardsize,
 
   pthread_t tid;
   // th_arg and attr are cleanup by the thread.
-  ASSERT_EQ(__llvm_libc::pthread_create(&tid, attr, successThread,
-                                        reinterpret_cast<void *>(th_arg)),
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&tid, attr, successThread,
+                                           reinterpret_cast<void *>(th_arg)),
             0);
   ASSERT_EQ(libc_errno, 0);
 
   if (detachstate == PTHREAD_CREATE_JOINABLE) {
     void *th_ret;
-    ASSERT_EQ(__llvm_libc::pthread_join(tid, &th_ret), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, &th_ret), 0);
     ASSERT_EQ(libc_errno, 0);
     ASSERT_EQ(th_ret, expec_ret);
 
     if (customstack) {
-      ASSERT_EQ(__llvm_libc::munmap(Stack, stacksize), 0);
+      ASSERT_EQ(LIBC_NAMESPACE::munmap(Stack, stacksize), 0);
       ASSERT_EQ(libc_errno, 0);
     }
   } else {
@@ -197,7 +198,7 @@ static void run_success_config(int detachstate, size_t guardsize,
 static void run_success_tests() {
 
   // Test parameters
-  using __llvm_libc::cpp::array;
+  using LIBC_NAMESPACE::cpp::array;
 
   array<int, 2> detachstates = {PTHREAD_CREATE_DETACHED,
                                 PTHREAD_CREATE_JOINABLE};
@@ -253,27 +254,28 @@ static void *failure_thread(void *) {
 
 static void create_and_check_failure_thread(pthread_attr_t *attr) {
   pthread_t tid;
-  int result = __llvm_libc::pthread_create(&tid, attr, failure_thread, nullptr);
+  int result =
+      LIBC_NAMESPACE::pthread_create(&tid, attr, failure_thread, nullptr);
   // EINVAL if we caught on overflow or something of that nature. EAGAIN if it
   // was just really larger we failed mmap.
   ASSERT_TRUE(result == EINVAL || result == EAGAIN);
   // pthread_create should NOT set errno on error
   ASSERT_EQ(libc_errno, 0);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_destroy(attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(attr), 0);
   ASSERT_EQ(libc_errno, 0);
 }
 
 static void run_failure_config(size_t guardsize, size_t stacksize) {
   pthread_attr_t attr;
   guardsize &= -EXEC_PAGESIZE;
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setguardsize(&attr, guardsize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setguardsize(&attr, guardsize), 0);
   ASSERT_EQ(libc_errno, 0);
 
-  ASSERT_EQ(__llvm_libc::pthread_attr_setstacksize(&attr, stacksize), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setstacksize(&attr, stacksize), 0);
   ASSERT_EQ(libc_errno, 0);
 
   create_and_check_failure_thread(&attr);
@@ -298,32 +300,32 @@ static void run_failure_tests() {
   pthread_attr_t attr;
 
   // Stacksize too small.
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
   attr.__stacksize = PTHREAD_STACK_MIN - 16;
   create_and_check_failure_thread(&attr);
 
   // Stack misaligned.
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
   attr.__stack = reinterpret_cast<void *>(1);
   create_and_check_failure_thread(&attr);
 
   // Stack + stacksize misaligned.
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
   attr.__stacksize = PTHREAD_STACK_MIN + 1;
   attr.__stack = reinterpret_cast<void *>(16);
   create_and_check_failure_thread(&attr);
 
   // Guardsize misaligned.
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
   attr.__guardsize = EXEC_PAGESIZE / 2;
   create_and_check_failure_thread(&attr);
 
   // Detachstate is unknown.
-  ASSERT_EQ(__llvm_libc::pthread_attr_init(&attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
   ASSERT_EQ(libc_errno, 0);
   attr.__detachstate = -1;
   create_and_check_failure_thread(&attr);

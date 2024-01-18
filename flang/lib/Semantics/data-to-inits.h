@@ -11,6 +11,7 @@
 
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/interval.h"
+#include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/initial-image.h"
 #include <list>
 #include <map>
@@ -30,6 +31,21 @@ struct SymbolDataInitialization {
   using Range = common::Interval<common::ConstantSubscript>;
   explicit SymbolDataInitialization(std::size_t bytes) : image{bytes} {}
   SymbolDataInitialization(SymbolDataInitialization &&) = default;
+
+  void NoteInitializedRange(Range range) {
+    if (initializedRanges.empty() ||
+        !initializedRanges.back().AnnexIfPredecessor(range)) {
+      initializedRanges.emplace_back(range);
+    }
+  }
+  void NoteInitializedRange(
+      common::ConstantSubscript offset, std::size_t size) {
+    NoteInitializedRange(Range{offset, size});
+  }
+  void NoteInitializedRange(evaluate::OffsetSymbol offsetSymbol) {
+    NoteInitializedRange(offsetSymbol.offset(), offsetSymbol.size());
+  }
+
   evaluate::InitialImage image;
   std::list<Range> initializedRanges;
 };

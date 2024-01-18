@@ -11,13 +11,13 @@
 #
 # Required Packages:
 # * Fedora:
-#   * dnf install doxygen python3-sphinx texlive-epstopdf ghostscript \
+#   * dnf install doxygen texlive-epstopdf ghostscript \
 #                 ninja-build gcc-c++
-#   * pip install sphinx-markdown-tables
+#   * pip install --user -r ./llvm/docs/requirements.txt
 # * Ubuntu:
-#   * apt-get install doxygen sphinx-common python3-recommonmark \
+#   * apt-get install doxygen \
 #             ninja-build graphviz texlive-font-utils
-#   * pip install sphinx-markdown-tables
+#   * pip install --user -r ./llvm/docs/requirements.txt
 #===------------------------------------------------------------------------===#
 
 set -e

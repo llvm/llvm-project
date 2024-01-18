@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -verify=expected,omp51 -Wuninitialized -DOMP51
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -verify=expected,omp51 -Wuninitialized -DOMP51
+// RUN: %clang_cc1 -verify -fopenmp %s -verify=expected,omp51 -Wuninitialized -Wno-vla -DOMP51
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -verify=expected,omp51 -Wuninitialized -Wno-vla -DOMP51
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -Wno-vla -DOMP5
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -Wno-vla -DOMP5
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized -Wno-vla
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized -Wno-vla
 
 struct Bar {
   int a;

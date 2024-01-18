@@ -1,6 +1,7 @@
 ; Tests that sinked lifetime markers wouldn't provent optimization
 ; to convert a resuming call to a musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(ptr align 8)
 

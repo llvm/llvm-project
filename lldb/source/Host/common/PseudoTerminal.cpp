@@ -123,7 +123,7 @@ std::string PseudoTerminal::GetSecondaryName() const {
     char buf[PATH_MAX];
     buf[0] = '\0';
     int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
-    (void)r;
+    UNUSED_IF_ASSERT_DISABLED(r);
     assert(r == 0);
     return buf;
 #if defined(__APPLE__)

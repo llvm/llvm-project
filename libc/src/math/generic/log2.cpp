@@ -19,7 +19,7 @@
 #include "common_constants.h"
 #include "log_range_reduction.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -890,7 +890,7 @@ LLVM_LIBC_FUNCTION(double, log2, (double x)) {
   // Range reduction for log2(x_m):
   // For each x_m, we would like to find r such that:
   //   -2^-8 <= r * x_m - 1 < 2^-7
-  int shifted = x_u >> 45;
+  int shifted = static_cast<int>(x_u >> 45);
   int index = shifted & 0x7F;
   double r = RD[index];
 
@@ -954,4 +954,4 @@ LLVM_LIBC_FUNCTION(double, log2, (double x)) {
   return log2_accurate(x_e, index, u);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

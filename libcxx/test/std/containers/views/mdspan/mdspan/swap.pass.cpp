@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 
 template <class MDS>
 constexpr void test_swap(MDS a, MDS b) {
@@ -43,7 +43,7 @@ constexpr void test_swap(MDS a, MDS b) {
   }
   // This check uses a side effect of layout_wrapping_integral::swap to make sure
   // mdspan calls the underlying components' swap via ADL
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     if constexpr (std::is_same_v<typename MDS::layout_type, layout_wrapping_integral<4>>) {
       assert(MDS::mapping_type::swap_counter() > 0);
     }
@@ -60,7 +60,7 @@ constexpr bool test() {
     test_swap(a, b);
   }
   {
-    layout_wrapping_integral<4>::template mapping<extents_t> map_a(extents_t(12), not_extents_constructible_tag()),
+    layout_wrapping_integral<4>::mapping<extents_t> map_a(extents_t(12), not_extents_constructible_tag()),
         map_b(extents_t(5), not_extents_constructible_tag());
     std::mdspan a(data_a, map_a);
     std::mdspan b(data_b, map_b);

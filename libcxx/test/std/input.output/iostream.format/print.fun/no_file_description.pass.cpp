@@ -12,6 +12,9 @@
 // XFAIL: msvc, target={{.+}}-windows-gnu
 // XFAIL: availability-fp_to_chars-missing
 
+// fmemopen is available starting in Android M (API 23)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22)}}
+
 // <print>
 
 // The FILE returned by fmemopen does not have file descriptor.
@@ -66,7 +69,8 @@ static void test_vprint_unicode() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_unicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_unicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 
@@ -80,7 +84,8 @@ static void test_vprint_nonunicode() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::vprint_nonunicode(file, "hello world{}", std::make_format_args('!'));
+  char c = '!';
+  std::vprint_nonunicode(file, "hello world{}", std::make_format_args(c));
   long pos = std::ftell(file);
   std::fclose(file);
 

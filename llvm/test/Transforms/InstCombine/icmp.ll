@@ -3468,10 +3468,16 @@ define i1 @f9(i32 %val, i32 %lim) {
 
 define i1 @f10(i16 %p) {
 ; CHECK-LABEL: @f10(
-; CHECK-NEXT:    [[CMP580:%.*]] = icmp uge i16 [[P:%.*]], mul (i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16), i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16))
+; CHECK-NEXT:    [[EXT1:%.*]] = zext i8 ptrtoint (ptr @f10 to i8) to i16
+; CHECK-NEXT:    [[EXT2:%.*]] = zext i8 ptrtoint (ptr @f10 to i8) to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[EXT1]], [[EXT2]]
+; CHECK-NEXT:    [[CMP580:%.*]] = icmp ule i16 [[MUL]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP580]]
 ;
-  %cmp580 = icmp ule i16 mul (i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16), i16 zext (i8 ptrtoint (ptr @f10 to i8) to i16)), %p
+  %ext1 = zext i8 ptrtoint (ptr @f10 to i8) to i16
+  %ext2 = zext i8 ptrtoint (ptr @f10 to i8) to i16
+  %mul = mul i16 %ext1, %ext2
+  %cmp580 = icmp ule i16 %mul, %p
   ret i1 %cmp580
 }
 
@@ -3856,9 +3862,9 @@ define <8 x i1> @bitreverse_vec_ne(<8 x i16> %x, <8 x i16> %y) {
 define i1 @knownbits1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits1(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A2]], [[B2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -3873,9 +3879,9 @@ define i1 @knownbits1(i8 %a, i8 %b) {
 define i1 @knownbits2(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits2(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A2]], [[B2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -3890,9 +3896,9 @@ define i1 @knownbits2(i8 %a, i8 %b) {
 define i1 @knownbits3(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits3(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[B2]], [[A2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -3907,9 +3913,9 @@ define i1 @knownbits3(i8 %a, i8 %b) {
 define <2 x i1> @knownbits4(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @knownbits4(
 ; CHECK-NEXT:    [[A1:%.*]] = and <2 x i8> [[A:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[A2:%.*]] = or <2 x i8> [[A1]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint <2 x i8> [[A1]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[B1:%.*]] = and <2 x i8> [[B:%.*]], <i8 2, i8 2>
-; CHECK-NEXT:    [[B2:%.*]] = or <2 x i8> [[B1]], <i8 5, i8 5>
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint <2 x i8> [[B1]], <i8 5, i8 5>
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B2]], [[A2]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -3926,9 +3932,9 @@ define <2 x i1> @knownbits4(<2 x i8> %a, <2 x i8> %b) {
 define i1 @knownbits5(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits5(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A2]], [[B2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -3943,9 +3949,9 @@ define i1 @knownbits5(i8 %a, i8 %b) {
 define i1 @knownbits6(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits6(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A2]], [[B2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -3960,9 +3966,9 @@ define i1 @knownbits6(i8 %a, i8 %b) {
 define <2 x i1> @knownbits7(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @knownbits7(
 ; CHECK-NEXT:    [[A1:%.*]] = and <2 x i8> [[A:%.*]], <i8 -127, i8 -127>
-; CHECK-NEXT:    [[A2:%.*]] = or <2 x i8> [[A1]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint <2 x i8> [[A1]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[B1:%.*]] = and <2 x i8> [[B:%.*]], <i8 2, i8 2>
-; CHECK-NEXT:    [[B2:%.*]] = or <2 x i8> [[B1]], <i8 5, i8 5>
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint <2 x i8> [[B1]], <i8 5, i8 5>
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B2]], [[A2]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -3977,9 +3983,9 @@ define <2 x i1> @knownbits7(<2 x i8> %a, <2 x i8> %b) {
 define i1 @knownbits8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @knownbits8(
 ; CHECK-NEXT:    [[A1:%.*]] = and i8 [[A:%.*]], -127
-; CHECK-NEXT:    [[A2:%.*]] = or i8 [[A1]], 4
+; CHECK-NEXT:    [[A2:%.*]] = or disjoint i8 [[A1]], 4
 ; CHECK-NEXT:    [[B1:%.*]] = and i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[B2:%.*]] = or i8 [[B1]], 5
+; CHECK-NEXT:    [[B2:%.*]] = or disjoint i8 [[B1]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[B2]], [[A2]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -4441,9 +4447,9 @@ define i1 @redundant_sign_bit_count_ugt_31_30(i32 %x) {
 define i1 @zext_bool_and_eq0(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_eq0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    [[R1:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[R1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -4454,9 +4460,10 @@ define i1 @zext_bool_and_eq0(i1 %x, i8 %y) {
 
 define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 ; CHECK-LABEL: @zext_bool_and_eq0_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[P:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[TMP2]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[P:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[R1:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[NOT_X]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[R1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
@@ -4469,8 +4476,8 @@ define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_ne0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[X:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X:%.*]], i1 [[R1]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -4482,9 +4489,9 @@ define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 ; CHECK-LABEL: @zext_bool_and_ne1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP3]], true
+; CHECK-NEXT:    [[R1:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[R1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zx = zext i1 %x to i8
@@ -4495,8 +4502,8 @@ define i1 @zext_bool_and_ne1(i1 %x, i8 %y) {
 
 define <2 x i1> @zext_bool_and_eq1(<2 x i1> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @zext_bool_and_eq1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[Y:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = trunc <2 x i8> [[Y:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[R1]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zx = zext <2 x i1> %x to <2 x i8>
@@ -4541,8 +4548,8 @@ define i1 @zext_bool_and_eq0_use(i1 %x, i64 %y) {
 
 define i1 @zext_bool_and_ne0_use(i1 %x, i64 %y) {
 ; CHECK-LABEL: @zext_bool_and_ne0_use(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i1 [[X:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = and i64 [[ZX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[X:%.*]], i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    call void @use_i64(i64 [[A]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[R]]

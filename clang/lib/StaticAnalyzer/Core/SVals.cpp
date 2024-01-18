@@ -136,10 +136,10 @@ private:
 public:
   TypeRetrievingVisitor(const ASTContext &Context) : Context(Context) {}
 
-  QualType VisitLocMemRegionVal(loc::MemRegionVal MRV) {
+  QualType VisitMemRegionVal(loc::MemRegionVal MRV) {
     return Visit(MRV.getRegion());
   }
-  QualType VisitLocGotoLabel(loc::GotoLabel GL) {
+  QualType VisitGotoLabel(loc::GotoLabel GL) {
     return QualType{Context.VoidPtrTy};
   }
   template <class ConcreteInt> QualType VisitConcreteInt(ConcreteInt CI) {
@@ -148,13 +148,7 @@ public:
       return Context.BoolTy;
     return Context.getIntTypeForBitwidth(Value.getBitWidth(), Value.isSigned());
   }
-  QualType VisitLocConcreteInt(loc::ConcreteInt CI) {
-    return VisitConcreteInt(CI);
-  }
-  QualType VisitNonLocConcreteInt(nonloc::ConcreteInt CI) {
-    return VisitConcreteInt(CI);
-  }
-  QualType VisitNonLocLocAsInteger(nonloc::LocAsInteger LI) {
+  QualType VisitLocAsInteger(nonloc::LocAsInteger LI) {
     QualType NestedType = Visit(LI.getLoc());
     if (NestedType.isNull())
       return NestedType;
@@ -162,13 +156,13 @@ public:
     return Context.getIntTypeForBitwidth(LI.getNumBits(),
                                          NestedType->isSignedIntegerType());
   }
-  QualType VisitNonLocCompoundVal(nonloc::CompoundVal CV) {
+  QualType VisitCompoundVal(nonloc::CompoundVal CV) {
     return CV.getValue()->getType();
   }
-  QualType VisitNonLocLazyCompoundVal(nonloc::LazyCompoundVal LCV) {
+  QualType VisitLazyCompoundVal(nonloc::LazyCompoundVal LCV) {
     return LCV.getRegion()->getValueType();
   }
-  QualType VisitNonLocSymbolVal(nonloc::SymbolVal SV) {
+  QualType VisitSymbolVal(nonloc::SymbolVal SV) {
     return Visit(SV.getSymbol());
   }
   QualType VisitSymbolicRegion(const SymbolicRegion *SR) {
@@ -281,30 +275,33 @@ void SVal::printJson(raw_ostream &Out, bool AddQuotes) const {
 }
 
 void SVal::dumpToStream(raw_ostream &os) const {
-  switch (getBaseKind()) {
-    case UnknownValKind:
-      os << "Unknown";
-      break;
-    case NonLocKind:
-      castAs<NonLoc>().dumpToStream(os);
-      break;
-    case LocKind:
-      castAs<Loc>().dumpToStream(os);
-      break;
-    case UndefinedValKind:
-      os << "Undefined";
-      break;
+  if (isUndef()) {
+    os << "Undefined";
+    return;
   }
+  if (isUnknown()) {
+    os << "Unknown";
+    return;
+  }
+  if (NonLoc::classof(*this)) {
+    castAs<NonLoc>().dumpToStream(os);
+    return;
+  }
+  if (Loc::classof(*this)) {
+    castAs<Loc>().dumpToStream(os);
+    return;
+  }
+  llvm_unreachable("Unhandled SVal kind!");
 }
 
 void NonLoc::dumpToStream(raw_ostream &os) const {
-  switch (getSubKind()) {
-    case nonloc::ConcreteIntKind: {
-      const auto &Value = castAs<nonloc::ConcreteInt>().getValue();
-      os << Value << ' ' << (Value.isSigned() ? 'S' : 'U')
-         << Value.getBitWidth() << 'b';
-      break;
-    }
+  switch (getKind()) {
+  case nonloc::ConcreteIntKind: {
+    const auto &Value = castAs<nonloc::ConcreteInt>().getValue();
+    os << Value << ' ' << (Value.isSigned() ? 'S' : 'U') << Value.getBitWidth()
+       << 'b';
+    break;
+  }
     case nonloc::SymbolValKind:
       os << castAs<nonloc::SymbolVal>().getSymbol();
       break;
@@ -360,21 +357,21 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
     default:
       assert(false && "Pretty-printed not implemented for this NonLoc.");
       break;
-  }
+    }
 }
 
 void Loc::dumpToStream(raw_ostream &os) const {
-  switch (getSubKind()) {
-    case loc::ConcreteIntKind:
-      os << castAs<loc::ConcreteInt>().getValue().getZExtValue() << " (Loc)";
-      break;
-    case loc::GotoLabelKind:
-      os << "&&" << castAs<loc::GotoLabel>().getLabel()->getName();
-      break;
-    case loc::MemRegionValKind:
-      os << '&' << castAs<loc::MemRegionVal>().getRegion()->getString();
-      break;
-    default:
-      llvm_unreachable("Pretty-printing not implemented for this Loc.");
+  switch (getKind()) {
+  case loc::ConcreteIntKind:
+    os << castAs<loc::ConcreteInt>().getValue().getZExtValue() << " (Loc)";
+    break;
+  case loc::GotoLabelKind:
+    os << "&&" << castAs<loc::GotoLabel>().getLabel()->getName();
+    break;
+  case loc::MemRegionValKind:
+    os << '&' << castAs<loc::MemRegionVal>().getRegion()->getString();
+    break;
+  default:
+    llvm_unreachable("Pretty-printing not implemented for this Loc.");
   }
 }

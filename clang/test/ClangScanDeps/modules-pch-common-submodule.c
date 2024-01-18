@@ -94,7 +94,7 @@
 // CHECK-TU:            ],
 // CHECK-TU:            "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
-// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }

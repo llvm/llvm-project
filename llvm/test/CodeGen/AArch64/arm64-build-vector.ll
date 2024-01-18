@@ -24,7 +24,7 @@ define <4 x float>  @foo(float %a, float %b, float %c, float %d) nounwind {
 define <8 x i16> @build_all_zero(<8 x i16> %a) #1 {
 ; CHECK-LABEL: build_all_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #44672
+; CHECK-NEXT:    mov w8, #44672 // =0xae80
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
@@ -56,7 +56,7 @@ define <8 x i16> @concat_2_build_vector(<4 x i16> %in0) {
 define void @widen_f16_build_vector(ptr %addr) {
 ; CHECK-LABEL: widen_f16_build_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #13294
+; CHECK-NEXT:    mov w8, #13294 // =0x33ee
 ; CHECK-NEXT:    movk w8, #13294, lsl #16
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
@@ -68,7 +68,7 @@ define void @widen_f16_build_vector(ptr %addr) {
 define <1 x i64> @single_element_vector_i64(<1 x i64> %arg) {
 ; CHECK-LABEL: single_element_vector_i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    add d0, d0, d1
 ; CHECK-NEXT:    ret
@@ -94,7 +94,7 @@ define <1 x double> @convert_single_fp_vector_constant(i1 %cmp) {
 ; CHECK-LABEL: convert_single_fp_vector_constant:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    mov x8, #4607182418800017408
+; CHECK-NEXT:    mov x8, #4607182418800017408 // =0x3ff0000000000000
 ; CHECK-NEXT:    csetm x9, ne
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
@@ -120,7 +120,7 @@ define <2 x double> @poszero_v2f64(<2 x double> %a) {
 define <2 x double> @negzero_v2f64(<2 x double> %a) {
 ; CHECK-LABEL: negzero_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
@@ -141,7 +141,7 @@ define <1 x double> @poszero_v1f64(<1 x double> %a) {
 define <1 x double> @negzero_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: negzero_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret

@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 !CHECK-LABEL: omp.reduction.declare
 !CHECK-SAME: @[[RED_F32_NAME:.*]] : f32 init {

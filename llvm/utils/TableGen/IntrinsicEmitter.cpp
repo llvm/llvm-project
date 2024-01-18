@@ -12,7 +12,6 @@
 
 #include "CodeGenIntrinsics.h"
 #include "SequenceToOffsetTable.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -214,7 +213,7 @@ void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
      << "  size_t Count;\n"
      << "};\n";
   OS << "static constexpr IntrinsicTargetInfo TargetInfos[] = {\n";
-  for (auto Target : Ints.Targets)
+  for (const auto &Target : Ints.Targets)
     OS << "  {llvm::StringLiteral(\"" << Target.Name << "\"), " << Target.Offset
        << ", " << Target.Count << "},\n";
   OS << "};\n";

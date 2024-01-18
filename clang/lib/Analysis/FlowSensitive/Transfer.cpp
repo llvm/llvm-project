@@ -43,20 +43,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
-  if (!(State)) {
-    LLVM_DEBUG({
-      // State can be null when this block is unreachable from the block that
-      // called this method.
-      bool hasUnreachableEdgeFromPred = false;
-      for (auto B : BlockIt->getSecond()->preds())
-        if (!B) {
-          hasUnreachableEdgeFromPred = true;
-          break;
-        }
-      assert(hasUnreachableEdgeFromPred);
-    });
+  if (!(State))
     return nullptr;
-  }
   return &State->Env;
 }
 
@@ -526,8 +514,14 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      RecordStorageLocation *LocSrc = nullptr;
+      if (Arg1->isPRValue()) {
+        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+          LocSrc = &Val->getLoc();
+      } else {
+        LocSrc =
+            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      }
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
@@ -537,7 +531,9 @@ public:
       // The assignment operators are different from the type of the destination
       // in this model (i.e. in one of their base classes). This must be very
       // rare and we just bail.
-      if (Method->getThisObjectType().getCanonicalType().getUnqualifiedType() !=
+      if (Method->getFunctionObjectParameterType()
+              .getCanonicalType()
+              .getUnqualifiedType() !=
           LocDst->getType().getCanonicalType().getUnqualifiedType())
         return;
 
@@ -627,6 +623,10 @@ public:
     // FIXME: Revisit this once flow conditions are added to the framework. For
     // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
     // condition.
+    // When we do this, we will need to retrieve the values of the operands from
+    // the environments for the basic blocks they are computed in, in a similar
+    // way to how this is done for short-circuited logical operators in
+    // `getLogicOperatorSubExprValue()`.
     if (S->isGLValue())
       Env.setStorageLocation(*S, Env.createObject(S->getType()));
     else if (Value *Val = Env.createValue(S->getType()))
@@ -687,32 +687,34 @@ public:
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType() ||
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
           // The field's type is T&, and initializer is T
           (Field->getType()->isReferenceType() &&
-              Field->getType().getCanonicalType()->getPointeeType() ==
-              Init->getType().getCanonicalType()));
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }
 
-    LLVM_DEBUG({
-      // Check that we satisfy the invariant that a `RecordStorageLoation`
-      // contains exactly the set of modeled fields for that type.
-      // `ModeledFields` includes fields from all the bases, but only the
-      // modeled ones. However, if a class type is initialized with an
-      // `InitListExpr`, all fields in the class, including those from base
-      // classes, are included in the set of modeled fields. The code above
-      // should therefore populate exactly the modeled fields.
-      auto ModeledFields = Env.getDataflowAnalysisContext().getModeledFields(Type);
-      assert(ModeledFields.size() == FieldLocs.size());
-      for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-        assert(ModeledFields.contains(cast_or_null<FieldDecl>(Field)));
-    });
+    // Check that we satisfy the invariant that a `RecordStorageLoation`
+    // contains exactly the set of modeled fields for that type.
+    // `ModeledFields` includes fields from all the bases, but only the
+    // modeled ones. However, if a class type is initialized with an
+    // `InitListExpr`, all fields in the class, including those from base
+    // classes, are included in the set of modeled fields. The code above
+    // should therefore populate exactly the modeled fields.
+    assert(containsSameFields(
+        Env.getDataflowAnalysisContext().getModeledFields(Type), FieldLocs));
 
-    auto &Loc =
-        Env.getDataflowAnalysisContext().arena().create<RecordStorageLocation>(
-            Type, std::move(FieldLocs));
+    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
+    for (const auto &Entry :
+         Env.getDataflowAnalysisContext().getSyntheticFields(Type)) {
+      SyntheticFieldLocs.insert(
+          {Entry.getKey(), &Env.createObject(Entry.getValue())});
+    }
+
+    auto &Loc = Env.getDataflowAnalysisContext().createRecordStorageLocation(
+        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
     RecordValue &RecordVal = Env.create<RecordValue>(Loc);
 
     Env.setValue(Loc, RecordVal);

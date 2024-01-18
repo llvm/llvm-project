@@ -21,8 +21,11 @@ set -eu
 set -o pipefail
 
 # Environment variables script works with:
+
+# Fetch origin/main to have an up to date merge base for main...HEAD diff.
+git fetch origin main:main
 # List of files affected by this commit
-: ${MODIFIED_FILES:=$(git diff --name-only HEAD~1)}
+: ${MODIFIED_FILES:=$(git diff --name-only main...HEAD)}
 # Filter rules for generic windows tests
 : ${WINDOWS_AGENTS:='{"queue": "windows"}'}
 # Filter rules for generic linux tests

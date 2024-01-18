@@ -16,17 +16,17 @@
 #include <limits.h>
 #include <stddef.h>
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
 #else
 #define SELECT_CONST(_, __, val) val
 #endif
 
-class LlvmLibcStrToLDTest : public __llvm_libc::testing::Test {
+class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else
@@ -74,16 +74,16 @@ public:
     //         +-- 15 Exponent Bits
     char *str_end = nullptr;
 
-    __llvm_libc::fputil::FPBits<long double> expected_fp =
-        __llvm_libc::fputil::FPBits<long double>(expectedRawData);
+    LIBC_NAMESPACE::fputil::FPBits<long double> expected_fp =
+        LIBC_NAMESPACE::fputil::FPBits<long double>(expectedRawData);
     const int expected_errno = expectedErrno;
 
     libc_errno = 0;
-    long double result = __llvm_libc::strtold(inputString, &str_end);
+    long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 
-    __llvm_libc::fputil::FPBits<long double> actual_fp =
-        __llvm_libc::fputil::FPBits<long double>();
-    actual_fp = __llvm_libc::fputil::FPBits<long double>(result);
+    LIBC_NAMESPACE::fputil::FPBits<long double> actual_fp =
+        LIBC_NAMESPACE::fputil::FPBits<long double>();
+    actual_fp = LIBC_NAMESPACE::fputil::FPBits<long double>(result);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
 

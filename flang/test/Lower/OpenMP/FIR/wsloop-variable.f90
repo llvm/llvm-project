@@ -2,7 +2,7 @@
 ! types of loop iteration variable, lower bound, upper bound, and step.
 
 !REQUIRES: shell
-!RUN: bbc -fopenmp -emit-fir %s -o - 2>&1 | FileCheck %s
+!RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - 2>&1 | FileCheck %s
 
 !CHECK:  OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed into 64 bits.
 

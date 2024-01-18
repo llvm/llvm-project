@@ -111,13 +111,6 @@ public:
       return ((uintptr_t)ptr & (alignment - 1)) != 0;
     };
 
-    // Ensure the data buffer was sufficiently aligned in the first place.
-    if (LLVM_UNLIKELY(isUnaligned(buffer.begin()))) {
-      return emitError("expected bytecode buffer to be aligned to ", alignment,
-                       ", but got pointer: '0x" +
-                           llvm::utohexstr((uintptr_t)buffer.begin()) + "'");
-    }
-
     // Shift the reader position to the next alignment boundary.
     while (isUnaligned(dataIt)) {
       uint8_t padding;
@@ -319,7 +312,8 @@ private:
 
     // Parse in the remaining bytes of the value.
     llvm::support::ulittle64_t resultLE(result);
-    if (failed(parseBytes(numBytes, reinterpret_cast<uint8_t *>(&resultLE) + 1)))
+    if (failed(
+            parseBytes(numBytes, reinterpret_cast<uint8_t *>(&resultLE) + 1)))
       return failure();
 
     // Shift out the low-order bits that were used to mark how the value was

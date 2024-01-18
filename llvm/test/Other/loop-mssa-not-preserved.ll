@@ -1,4 +1,4 @@
-; RUN: not --crash opt -passes='loop-mssa(loop-unroll-full)' 2>&1 < %s | FileCheck %s
+; RUN: not opt -passes='loop-mssa(loop-unroll-full)' 2>&1 < %s | FileCheck %s
 
 ; CHECK: LLVM ERROR: Loop pass manager using MemorySSA contains a pass that does not preserve MemorySSA
 

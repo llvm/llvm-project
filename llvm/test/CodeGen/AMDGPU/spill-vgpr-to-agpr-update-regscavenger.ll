@@ -13,7 +13,7 @@ define void @test() {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; CHECK-NEXT:  .LBB0_1: ; %bb.1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_3

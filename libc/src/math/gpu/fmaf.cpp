@@ -9,10 +9,10 @@
 #include "src/math/fmaf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, fmaf, (float x, float y, float z)) {
   return __builtin_fmaf(x, y, z);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

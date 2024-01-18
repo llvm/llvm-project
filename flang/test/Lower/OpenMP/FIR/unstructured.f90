@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-fir -o "-" | FileCheck %s
+! RUN: bbc %s -fopenmp -emit-fir -hlfir=false -o "-" | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
 ! CHECK:   br ^bb1

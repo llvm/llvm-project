@@ -82,7 +82,7 @@ define void @test4(i32 %x, i32 %y) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 20
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 20
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 21
+; CHECK-NEXT:  Loop %loop: Trip multiple is 21
 ;
 entry:
   %Y = and i32 %y, 3

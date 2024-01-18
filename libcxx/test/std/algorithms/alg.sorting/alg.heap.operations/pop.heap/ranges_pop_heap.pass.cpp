@@ -28,7 +28,6 @@
 #include <ranges>
 
 #include "almost_satisfies_types.h"
-#include "boolean_testable.h"
 #include "test_iterators.h"
 
 // SFINAE tests.
@@ -61,7 +60,7 @@ static_assert(!HasPopHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sor
 template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
-  assert(base(last) == heapified.data() + heapified.size());
+  assert(std::to_address(base(last)) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end() - 1));
   assert(*std::max_element(heapified.begin(), heapified.end()) == heapified.back());
 }
@@ -130,7 +129,7 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::pop_heap(in.begin(), in.end(), comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
       assert(std::is_heap(in.begin(), in.end() - 1, comp));
     }
 
@@ -138,7 +137,7 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::pop_heap(in, comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
       assert(std::is_heap(in.begin(), in.end() - 1, comp));
     }
   }
@@ -186,22 +185,6 @@ constexpr bool test() {
     {
       auto in = input;
       auto last = std::ranges::pop_heap(in, &A::comparator, &A::projection);
-      verify_heap(in, last, expected);
-    }
-  }
-
-  { // The comparator can return any type that's convertible to `bool`.
-    const std::array input = {3, 1, 2};
-    std::array expected = {2, 1, 3};
-    {
-      auto in = input;
-      auto last = std::ranges::pop_heap(in.begin(), in.end(), [](int i, int j) { return BooleanTestable{i < j}; });
-      verify_heap(in, last, expected);
-    }
-
-    {
-      auto in = input;
-      auto last = std::ranges::pop_heap(in, [](int i, int j) { return BooleanTestable{i < j}; });
       verify_heap(in, last, expected);
     }
   }

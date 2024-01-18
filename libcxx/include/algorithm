@@ -1754,7 +1754,6 @@ template <class BidirectionalIterator, class Compare>
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <cstddef>
 #include <version>
 
 #include <__algorithm/adjacent_find.h>
@@ -1827,13 +1826,16 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_any_all_none_of.h>
 #include <__algorithm/pstl_copy.h>
 #include <__algorithm/pstl_count.h>
+#include <__algorithm/pstl_equal.h>
 #include <__algorithm/pstl_fill.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_generate.h>
 #include <__algorithm/pstl_is_partitioned.h>
 #include <__algorithm/pstl_merge.h>
+#include <__algorithm/pstl_move.h>
 #include <__algorithm/pstl_replace.h>
+#include <__algorithm/pstl_rotate_copy.h>
 #include <__algorithm/pstl_sort.h>
 #include <__algorithm/pstl_stable_sort.h>
 #include <__algorithm/pstl_transform.h>

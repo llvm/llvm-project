@@ -45,6 +45,7 @@ SwitchCG::getJumpTableNumCases(const SmallVectorImpl<unsigned> &TotalCases,
 
 void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
                                               const SwitchInst *SI,
+                                              std::optional<SDLoc> SL,
                                               MachineBasicBlock *DefaultMBB,
                                               ProfileSummaryInfo *PSI,
                                               BlockFrequencyInfo *BFI) {
@@ -87,7 +88,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
   // Cheap case: the whole range may be suitable for jump table.
   if (TLI->isSuitableForJumpTable(SI, NumCases, Range, PSI, BFI)) {
     CaseCluster JTCluster;
-    if (buildJumpTable(Clusters, 0, N - 1, SI, DefaultMBB, JTCluster)) {
+    if (buildJumpTable(Clusters, 0, N - 1, SI, SL, DefaultMBB, JTCluster)) {
       Clusters[0] = JTCluster;
       Clusters.resize(1);
       return;
@@ -177,7 +178,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
 
     CaseCluster JTCluster;
     if (NumClusters >= MinJumpTableEntries &&
-        buildJumpTable(Clusters, First, Last, SI, DefaultMBB, JTCluster)) {
+        buildJumpTable(Clusters, First, Last, SI, SL, DefaultMBB, JTCluster)) {
       Clusters[DstIndex++] = JTCluster;
     } else {
       for (unsigned I = First; I <= Last; ++I)
@@ -190,6 +191,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
 bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
                                               unsigned First, unsigned Last,
                                               const SwitchInst *SI,
+                                              const std::optional<SDLoc> &SL,
                                               MachineBasicBlock *DefaultMBB,
                                               CaseCluster &JTCluster) {
   assert(First <= Last);
@@ -251,7 +253,7 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
                      ->createJumpTableIndex(Table);
 
   // Set up the jump table info.
-  JumpTable JT(-1U, JTI, JumpTableMBB, nullptr);
+  JumpTable JT(-1U, JTI, JumpTableMBB, nullptr, SL);
   JumpTableHeader JTH(Clusters[First].Low->getValue(),
                       Clusters[Last].High->getValue(), SI->getCondition(),
                       nullptr, false);

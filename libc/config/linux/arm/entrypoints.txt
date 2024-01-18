@@ -88,10 +88,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
-
+    
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

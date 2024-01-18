@@ -1,18 +1,16 @@
-// RUN: mlir-opt %s -enable-arm-streaming=enable-za -convert-vector-to-llvm="enable-arm-sme" | FileCheck %s -check-prefix=ENABLE-ZA
-// RUN: mlir-opt %s -enable-arm-streaming -convert-vector-to-llvm="enable-arm-sme" | FileCheck %s -check-prefix=DISABLE-ZA
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sme" | FileCheck %s -check-prefix=NO-ARM-STREAMING
+// RUN: mlir-opt %s -enable-arm-streaming=za-mode=new-za -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=ENABLE-ZA
+// RUN: mlir-opt %s -enable-arm-streaming -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=DISABLE-ZA
+// RUN: mlir-opt %s -convert-arm-sme-to-llvm | FileCheck %s -check-prefix=NO-ARM-STREAMING
 
 // CHECK-LABEL: @declaration
 func.func private @declaration()
 
-// CHECK-LABEL: @arm_za
-func.func @arm_za() {
-  // ENABLE-ZA: arm_sme.intr.za.enable
-  // ENABLE-ZA-NEXT: arm_sme.intr.za.disable
-  // ENABLE-ZA-NEXT: return
-  // DISABLE-ZA-NOT: arm_sme.intr.za.enable
-  // DISABLE-ZA-NOT: arm_sme.intr.za.disable
-  // NO-ARM-STREAMING-NOT: arm_sme.intr.za.enable
-  // NO-ARM-STREAMING-NOT: arm_sme.intr.za.disable
-  return
-}
+// ENABLE-ZA-LABEL: @arm_new_za
+// ENABLE-ZA-SAME: attributes {arm_new_za, arm_streaming}
+// DISABLE-ZA-LABEL: @arm_new_za
+// DISABLE-ZA-NOT: arm_new_za
+// DISABLE-ZA-SAME: attributes {arm_streaming}
+// NO-ARM-STREAMING-LABEL: @arm_new_za
+// NO-ARM-STREAMING-NOT: arm_new_za
+// NO-ARM-STREAMING-NOT: arm_streaming
+func.func @arm_new_za() { return }

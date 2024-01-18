@@ -316,7 +316,7 @@ defm : ICXWriteResPair<WriteFRsqrtZ,[ICXPort0,ICXPort5],  9, [2,1], 3, 7>;
 defm : ICXWriteResPair<WriteFMA,  [ICXPort01],  4, [1], 1, 5>; // Fused Multiply Add.
 defm : ICXWriteResPair<WriteFMAX, [ICXPort01],  4, [1], 1, 6>;
 defm : ICXWriteResPair<WriteFMAY, [ICXPort01],  4, [1], 1, 7>;
-defm : ICXWriteResPair<WriteFMAZ, [ICXPort05],  4, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFMAZ, [ICXPort0],   4, [1], 1, 7>;
 defm : ICXWriteResPair<WriteDPPD, [ICXPort5,ICXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
 defm : ICXWriteResPair<WriteDPPS, [ICXPort5,ICXPort015], 13, [1,3], 4, 6>;
 defm : ICXWriteResPair<WriteDPPSY,[ICXPort5,ICXPort015], 13, [1,3], 4, 7>;

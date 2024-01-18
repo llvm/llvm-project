@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <limits>
 #include <new>
-#include <stdexcept>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

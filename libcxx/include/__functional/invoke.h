@@ -27,7 +27,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 invoke_result_t<_Fn, _Args..
 invoke(_Fn&& __f, _Args&&... __args)
     noexcept(is_nothrow_invocable_v<_Fn, _Args...>)
 {
-    return _VSTD::__invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
+    return std::__invoke(std::forward<_Fn>(__f), std::forward<_Args>(__args)...);
 }
 
 #endif // _LIBCPP_STD_VER >= 17

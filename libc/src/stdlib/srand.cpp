@@ -10,8 +10,8 @@
 #include "src/__support/common.h"
 #include "src/stdlib/rand_util.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) { rand_next = seed; }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

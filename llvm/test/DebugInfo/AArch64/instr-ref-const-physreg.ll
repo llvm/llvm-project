@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-before=finalize-isel -march=aarch64 -o - \
+; RUN: llc %s -stop-before=finalize-isel -mtriple=aarch64 -o - \
 ; RUN:     -experimental-debug-variable-locations | FileCheck %s
 
 ; Test that when an SSA Value becomes a constant-physreg copy, under the

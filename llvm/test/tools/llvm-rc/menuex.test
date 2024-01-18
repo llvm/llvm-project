@@ -1,0 +1,25 @@
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/menuex.rc
+; RUN: llvm-readobj %t | FileCheck %s
+
+CHECK:      Resource type (int): MENU (ID 4)
+CHECK-NEXT: Resource name (int): 101
+CHECK-NEXT: Data version: 0
+CHECK-NEXT: Memory flags: 0x1030
+CHECK-NEXT: Language ID: 1033
+CHECK-NEXT: Version (major): 0
+CHECK-NEXT: Version (minor): 0
+CHECK-NEXT: Characteristics: 0
+CHECK-NEXT: Data size: 164
+CHECK-NEXT: Data: (
+CHECK-NEXT:   0000: 01000400 00000000 00000000 00000000  |................|
+CHECK-NEXT:   0010: F69C0000 81004600 69006C00 65000000  |......F.i.l.e...|
+CHECK-NEXT:   0020: 00000000 00000000 00000000 4B9C0000  |............K...|
+CHECK-NEXT:   0030: 00004C00 6F006100 64000000 00080000  |..L.o.a.d.......|
+CHECK-NEXT:   0040: 00000000 00000000 00000000 00000000  |................|
+CHECK-NEXT:   0050: 00000000 FB9C0000 81005300 61007600  |..........S.a.v.|
+CHECK-NEXT:   0060: 65007300 74006100 74006500 20005300  |e.s.t.a.t.e. .S.|
+CHECK-NEXT:   0070: 6C006F00 74000000 00000000 00000000  |l.o.t...........|
+CHECK-NEXT:   0080: 00000000 A39C0000 00002600 31000000  |..........&.1...|
+CHECK-NEXT:   0090: 00000000 00000000 A49C0000 80002600  |..............&.|
+CHECK-NEXT:   00A0: 32000000                             |2...|
+CHECK-NEXT: )

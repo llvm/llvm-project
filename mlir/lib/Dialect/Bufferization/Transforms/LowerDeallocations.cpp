@@ -432,6 +432,7 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
   // Generate the func operation itself.
   auto helperFuncOp = func::FuncOp::create(
       loc, "dealloc_helper", builder.getFunctionType(argTypes, {}));
+  helperFuncOp.setVisibility(SymbolTable::Visibility::Private);
   symbolTable.insert(helperFuncOp);
   auto &block = helperFuncOp.getFunctionBody().emplaceBlock();
   block.addArguments(argTypes, SmallVector<Location>(argTypes.size(), loc));

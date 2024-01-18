@@ -22,12 +22,12 @@ static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename T>
-class RIntTestTemplate : public __llvm_libc::testing::Test {
+class RIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef T (*RIntFunc)(T);
 
 private:
-  using FPBits = __llvm_libc::fputil::FPBits<T>;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
 
   const T zero = T(FPBits::zero());
@@ -39,7 +39,7 @@ private:
 public:
   void testSpecialNumbers(RIntFunc func) {
     for (int mode : ROUNDING_MODES) {
-      __llvm_libc::fputil::set_round(mode);
+      LIBC_NAMESPACE::fputil::set_round(mode);
       ASSERT_FP_EQ(inf, func(inf));
       ASSERT_FP_EQ(neg_inf, func(neg_inf));
       ASSERT_FP_EQ(nan, func(nan));

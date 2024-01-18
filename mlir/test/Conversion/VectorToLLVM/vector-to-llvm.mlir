@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm='use-opaque-pointers=1' -split-input-file | FileCheck %s
-
+// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
 
 func.func @bitcast_f32_to_i32_vector_0d(%input: vector<f32>) -> vector<i32> {
   %0 = vector.bitcast %input : vector<f32> to vector<i32>
@@ -672,7 +671,7 @@ func.func @extract_element_index(%arg0: vector<16xf32>) -> f32 {
 // -----
 
 func.func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
-  %0 = vector.extract %arg0[15]: vector<16xf32>
+  %0 = vector.extract %arg0[15]: f32 from vector<16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_from_vec_1d
@@ -683,7 +682,7 @@ func.func @extract_element_from_vec_1d(%arg0: vector<16xf32>) -> f32 {
 // -----
 
 func.func @extract_index_element_from_vec_1d(%arg0: vector<16xindex>) -> index {
-  %0 = vector.extract %arg0[15]: vector<16xindex>
+  %0 = vector.extract %arg0[15]: index from vector<16xindex>
   return %0 : index
 }
 // CHECK-LABEL: @extract_index_element_from_vec_1d(
@@ -697,7 +696,7 @@ func.func @extract_index_element_from_vec_1d(%arg0: vector<16xindex>) -> index {
 // -----
 
 func.func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16xf32> {
-  %0 = vector.extract %arg0[0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0]: vector<3x16xf32> from vector<4x3x16xf32>
   return %0 : vector<3x16xf32>
 }
 // CHECK-LABEL: @extract_vec_2d_from_vec_3d
@@ -707,7 +706,7 @@ func.func @extract_vec_2d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<3x16x
 // -----
 
 func.func @extract_vec_1d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<16xf32> {
-  %0 = vector.extract %arg0[0, 0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0]: vector<16xf32> from vector<4x3x16xf32>
   return %0 : vector<16xf32>
 }
 // CHECK-LABEL: @extract_vec_1d_from_vec_3d
@@ -717,7 +716,7 @@ func.func @extract_vec_1d_from_vec_3d(%arg0: vector<4x3x16xf32>) -> vector<16xf3
 // -----
 
 func.func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
-  %0 = vector.extract %arg0[0, 0, 0]: vector<4x3x16xf32>
+  %0 = vector.extract %arg0[0, 0, 0]: f32 from vector<4x3x16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_from_vec_3d
@@ -729,7 +728,7 @@ func.func @extract_element_from_vec_3d(%arg0: vector<4x3x16xf32>) -> f32 {
 // -----
 
 func.func @extract_element_with_value_1d(%arg0: vector<16xf32>, %arg1: index) -> f32 {
-  %0 = vector.extract %arg0[%arg1]: vector<16xf32>
+  %0 = vector.extract %arg0[%arg1]: f32 from vector<16xf32>
   return %0 : f32
 }
 // CHECK-LABEL: @extract_element_with_value_1d
@@ -1065,6 +1064,20 @@ func.func @vector_print_scalar_f64(%arg0: f64) {
 // CHECK-SAME: %[[A:.*]]: f64)
 //       CHECK:    llvm.call @printF64(%[[A]]) : (f64) -> ()
 //       CHECK:    llvm.call @printNewline() : () -> ()
+
+// -----
+
+// CHECK-LABEL: module {
+// CHECK: llvm.func @printString(!llvm.ptr)
+// CHECK: llvm.mlir.global private constant @[[GLOBAL_STR:.*]]({{.*}})
+// CHECK: @vector_print_string
+//       CHECK-NEXT: %[[GLOBAL_ADDR:.*]] = llvm.mlir.addressof @[[GLOBAL_STR]] : !llvm.ptr
+//       CHECK-NEXT: %[[STR_PTR:.*]] = llvm.getelementptr %[[GLOBAL_ADDR]][0] : (!llvm.ptr) -> !llvm.ptr
+//       CHECK-NEXT: llvm.call @printString(%[[STR_PTR]]) : (!llvm.ptr) -> ()
+func.func @vector_print_string() {
+  vector.print str "Hello, World!"
+  return
+}
 
 // -----
 
@@ -2107,6 +2120,20 @@ func.func @gather_op(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3
 // CHECK: return %[[G]] : vector<3xf32>
 
 // -----
+
+func.func @gather_op_global_memory(%arg0: memref<?xf32, 1>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xf32>) -> vector<3xf32> {
+  %0 = arith.constant 0: index
+  %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 : memref<?xf32, 1>, vector<3xi32>, vector<3xi1>, vector<3xf32> into vector<3xf32>
+  return %1 : vector<3xf32>
+}
+
+// CHECK-LABEL: func @gather_op
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr<1>, vector<3xi32>) -> !llvm.vec<3 x ptr<1>>, f32
+// CHECK: %[[G:.*]] = llvm.intr.masked.gather %[[P]], %{{.*}}, %{{.*}} {alignment = 4 : i32} : (!llvm.vec<3 x ptr<1>>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+// CHECK: return %[[G]] : vector<3xf32>
+
+// -----
+
 
 func.func @gather_op_index(%arg0: memref<?xindex>, %arg1: vector<3xindex>, %arg2: vector<3xi1>, %arg3: vector<3xindex>) -> vector<3xindex> {
   %0 = arith.constant 0: index

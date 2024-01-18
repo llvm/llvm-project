@@ -33,6 +33,15 @@
 ; CHECK:    )
 ; CHECK:  }
 
+; CHECK:      InlineesSym {
+; CHECK-NEXT:   Kind: S_INLINEES (0x1168)
+; CHECK-NEXT:   Inlinees [
+; CHECK-NEXT:     FuncID: a (0x1002)
+; CHECK-NEXT:     FuncID: ab (0x1003)
+; CHECK-NEXT:     FuncID: abc (0x1004)
+; CHECK-NEXT:     FuncID: abcd (0x1005)
+; CHECK-NEXT:   ]
+
 ; C++ source used to generate the IR:
 ;
 ; extern volatile int x;

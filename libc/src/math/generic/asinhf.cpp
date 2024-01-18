@@ -15,7 +15,7 @@
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
@@ -104,4 +104,4 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
           x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0)))));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

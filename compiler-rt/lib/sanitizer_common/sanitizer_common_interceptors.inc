@@ -33,15 +33,16 @@
 //   COMMON_INTERCEPTOR_STRERROR
 //===----------------------------------------------------------------------===//
 
+#include <stdarg.h>
+
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
+#include "sanitizer_dl.h"
 #include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_tls_get_addr.h"
-
-#include <stdarg.h>
 
 #if SANITIZER_INTERCEPTOR_HOOKS
 #define CALL_WEAK_INTERCEPTOR_HOOK(f, ...) f(__VA_ARGS__);
@@ -445,11 +446,13 @@ INTERCEPTOR(char*, textdomain, const char *domainname) {
 #define INIT_TEXTDOMAIN
 #endif
 
-#if SANITIZER_INTERCEPT_STRCMP
+#if SANITIZER_INTERCEPT_STRCMP || SANITIZER_INTERCEPT_MEMCMP
 static inline int CharCmpX(unsigned char c1, unsigned char c2) {
   return (c1 == c2) ? 0 : (c1 < c2) ? -1 : 1;
 }
+#endif
 
+#if SANITIZER_INTERCEPT_STRCMP
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strcmp, uptr called_pc,
                               const char *s1, const char *s2, int result)
 
@@ -6305,7 +6308,36 @@ INTERCEPTOR(int, fclose, __sanitizer_FILE *fp) {
 INTERCEPTOR(void*, dlopen, const char *filename, int flag) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER_NOIGNORE(ctx, dlopen, filename, flag);
-  if (filename) COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+
+  if (filename) {
+    COMMON_INTERCEPTOR_READ_STRING(ctx, filename, 0);
+
+#  if !SANITIZER_DYNAMIC
+    // We care about a very specific use-case: dladdr on
+    // statically-linked ASan may return <main program>
+    // instead of the library.
+    // We therefore only take effect if the sanitizer is statically
+    // linked, and we don't bother canonicalizing paths because
+    // dladdr should return the same address both times (we assume
+    // the user did not canonicalize the result from dladdr).
+    if (common_flags()->test_only_replace_dlopen_main_program) {
+      VPrintf(1, "dlopen interceptor: filename: %s\n", filename);
+
+      const char *SelfFName = DladdrSelfFName();
+      VPrintf(1, "dlopen interceptor: DladdrSelfFName: %p %s\n",
+              (void *)SelfFName, SelfFName);
+
+      if (SelfFName && internal_strcmp(SelfFName, filename) == 0) {
+        // It's possible they copied the string from dladdr, so
+        // we do a string comparison rather than pointer comparison.
+        VPrintf(1, "dlopen interceptor: replacing %s because it matches %s\n",
+                filename, SelfFName);
+        filename = (char *)0;  // RTLD_DEFAULT
+      }
+    }
+#  endif  // !SANITIZER_DYNAMIC
+  }
+
   void *res = COMMON_INTERCEPTOR_DLOPEN(filename, flag);
   Symbolizer::GetOrInit()->InvalidateModuleList();
   COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, res);

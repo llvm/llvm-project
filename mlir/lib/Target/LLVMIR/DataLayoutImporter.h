@@ -73,10 +73,10 @@ private:
 
   /// Tries to parse an integer parameter and removes the integer from the
   /// beginning of the string.
-  FailureOr<unsigned> tryToParseInt(StringRef &token) const;
+  FailureOr<uint64_t> tryToParseInt(StringRef &token) const;
 
   /// Tries to parse an integer parameter array.
-  FailureOr<SmallVector<unsigned>> tryToParseIntList(StringRef token) const;
+  FailureOr<SmallVector<uint64_t>> tryToParseIntList(StringRef token) const;
 
   /// Tries to parse the parameters of a type alignment entry.
   FailureOr<DenseIntElementsAttr> tryToParseAlignment(StringRef token) const;

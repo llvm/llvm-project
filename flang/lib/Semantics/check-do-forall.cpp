@@ -650,9 +650,11 @@ private:
     for (auto &ls : localitySpecs) {
       if (std::holds_alternative<parser::LocalitySpec::DefaultNone>(ls.u)) {
         if (hasDefaultNone) {
-          // C1127, you can only have one DEFAULT(NONE)
-          context_.Say(currentStatementSourcePosition_,
-              "Only one DEFAULT(NONE) may appear"_port_en_US);
+          // F'2023 C1129, you can only have one DEFAULT(NONE)
+          if (context_.ShouldWarn(common::LanguageFeature::BenignRedundancy)) {
+            context_.Say(currentStatementSourcePosition_,
+                "Only one DEFAULT(NONE) may appear"_port_en_US);
+          }
           break;
         }
         hasDefaultNone = true;

@@ -185,7 +185,7 @@ func.func @_QPtest4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {f
 // CHECK-NOT:       hlfir.assign
 
 
-// TODO: LHS is a pointer, but RHS is a subroutine local,
+// LHS is a pointer, but RHS is a subroutine local,
 // so they cannot alias.
 func.func @_QPtest5(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "x"}) {
   %c0 = arith.constant 0 : index
@@ -220,13 +220,13 @@ func.func @_QPtest5(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fi
 }
 // CHECK-LABEL:   func.func @_QPtest5(
 // CHECK-NOT:       hlfir.assign
-// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : !fir.ref<!fir.array<3x3xf32>>, !fir.box<!fir.array<?x?xf32>>
+// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK-NOT:       hlfir.assign
-// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : !fir.ref<!fir.array<3x3xf32>>, !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
+// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK-NOT:       hlfir.assign
 
 
-// TODO: RHS is a pointer, but LHS is a subroutine local,
+// RHS is a pointer, but LHS is a subroutine local,
 // so they cannot alias.
 func.func @_QPtest6(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "x"}) {
   %c1 = arith.constant 1 : index
@@ -261,20 +261,14 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fi
 }
 // CHECK-LABEL:   func.func @_QPtest6(
 // CHECK-NOT:       hlfir.assign
-// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : !fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<3x3xf32>>
+// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK-NOT:       hlfir.assign
-// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : !fir.box<!fir.ptr<!fir.array<?x?xf32>>>, !fir.ref<!fir.array<3x3xf32>>
+// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK-NOT:       hlfir.assign
 
 
-// TODO: LHS and RHS do not alias, and the assignment cannot
+// LHS and RHS do not alias, and the assignment cannot
 // allocate/reallocate LHS, so we should be able to optimize.
-// The box load blocks alias analysis.
-// subroutine test7(x)
-//   real, allocatable :: x(:,:)
-//   real :: y(3,3)
-//   x(:,:) = y(:,:)
-// end subroutine test7
 func.func @_QPtest7(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {fir.bindc_name = "x"}) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -305,4 +299,6 @@ func.func @_QPtest7(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> {f
   return
 }
 // CHECK-LABEL:   func.func @_QPtest7(
-// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : !fir.ref<!fir.array<3x3xf32>>, !fir.box<!fir.array<?x?xf32>>
+// CHECK-NOT:       hlfir.assign
+// CHECK:           hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
+// CHECK-NOT:       hlfir.assign

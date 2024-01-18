@@ -398,6 +398,12 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.RemarksKeepAll =
       !Args.hasArg(OPT_remarks_drop_without_debug);
 
+  if (opt::Arg *BuildVariantSuffix = Args.getLastArg(OPT_build_variant_suffix))
+    Options.LinkOpts.BuildVariantSuffix = BuildVariantSuffix->getValue();
+
+  for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
+    Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
+
   if (Error E = verifyOptions(Options))
     return std::move(E);
   return Options;
@@ -670,15 +676,18 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
       if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
-                    Options.LinkOpts.PrependPath))
+                    Options.LinkOpts.DSYMSearchPaths,
+                    Options.LinkOpts.PrependPath,
+                    Options.LinkOpts.BuildVariantSuffix))
         return EXIT_FAILURE;
       continue;
     }
 
-    auto DebugMapPtrsOrErr =
-        parseDebugMap(Options.LinkOpts.VFS, InputFile, Options.Archs,
-                      Options.LinkOpts.PrependPath, Options.LinkOpts.Verbose,
-                      Options.InputIsYAMLDebugMap);
+    auto DebugMapPtrsOrErr = parseDebugMap(
+        Options.LinkOpts.VFS, InputFile, Options.Archs,
+        Options.LinkOpts.DSYMSearchPaths, Options.LinkOpts.PrependPath,
+        Options.LinkOpts.BuildVariantSuffix, Options.LinkOpts.Verbose,
+        Options.InputIsYAMLDebugMap);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile

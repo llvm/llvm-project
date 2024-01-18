@@ -186,6 +186,36 @@ func.func @static_loop_unroll_by_2(%arg0 : memref<?xf32>) {
 // UNROLL-BY-2-ANNOTATE:    memref.store %{{.*}}, %[[MEM:.*0]][%{{.*}}] {unrolled_iteration = 0 : ui32} : memref<?xf32>
 // UNROLL-BY-2-ANNOTATE:    memref.store %{{.*}}, %[[MEM]][%{{.*}}] {unrolled_iteration = 1 : ui32} : memref<?xf32>
 
+// Test that no epilogue clean-up loop is generated because the trip count
+// (taking into account the non-unit step size) is a multiple of the unroll
+// factor.
+func.func @static_loop_step_2_unroll_by_2(%arg0 : memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 19 : index
+  %step = arith.constant 2 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %arg0[%i0] : memref<?xf32>
+  }
+  return
+}
+
+// UNROLL-BY-2-LABEL: func @static_loop_step_2_unroll_by_2
+//  UNROLL-BY-2-SAME:  %[[MEM:.*0]]: memref<?xf32>
+//
+//   UNROLL-BY-2-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-2-DAG:  %[[C2:.*]] = arith.constant 2 : index
+//   UNROLL-BY-2-DAG:  %[[C19:.*]] = arith.constant 19 : index
+//   UNROLL-BY-2-DAG:  %[[C4:.*]] = arith.constant 4 : index
+//   UNROLL-BY-2:  scf.for %[[IV:.*]] = %[[C0]] to %[[C19]] step %[[C4]] {
+//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:    %[[C1_IV:.*]] = arith.constant 1 : index
+//  UNROLL-BY-2-NEXT:    %[[V0:.*]] = arith.muli %[[C2]], %[[C1_IV]] : index
+//  UNROLL-BY-2-NEXT:    %[[V1:.*]] = arith.addi %[[IV]], %[[V0]] : index
+//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:  }
+//  UNROLL-BY-2-NEXT:  return
+
 // Test that epilogue clean up loop is generated (trip count is not
 // a multiple of unroll factor).
 func.func @static_loop_unroll_by_3(%arg0 : memref<?xf32>) {

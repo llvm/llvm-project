@@ -1,6 +1,8 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror -pedantic
+!PORTABILITY: nonstandard usage: generalized COMPLEX constructor
 !PORTABILITY: Real part of complex constructor is not scalar
 complex, parameter :: z1(*) = ([1.,2.], 3.)
+!PORTABILITY: nonstandard usage: generalized COMPLEX constructor
 !PORTABILITY: Imaginary part of complex constructor is not scalar
 complex, parameter :: z2(*) = (4., [5.,6.])
 real, parameter :: aa(*) = [7.,8.]

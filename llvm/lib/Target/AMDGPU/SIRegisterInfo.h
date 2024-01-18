@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
+#include "llvm/ADT/BitVector.h"
+
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
 
@@ -89,6 +91,11 @@ public:
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
   const uint32_t *getNoPreservedMask() const override;
+
+  // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve calling
+  // conventions are free to use certain VGPRs without saving and restoring any
+  // lanes (not even inactive ones).
+  static bool isChainScratchRegister(Register VGPR);
 
   // Stack access is very expensive. CSRs are also the high registers, and we
   // want to minimize the number of used registers.

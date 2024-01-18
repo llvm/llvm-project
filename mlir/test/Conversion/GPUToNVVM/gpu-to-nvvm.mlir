@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-opaque-pointers=1' -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-transform-dialect-interpreter | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
 gpu.module @test_module_0 {
   // CHECK-LABEL: func @gpu_index_ops()
@@ -542,16 +542,15 @@ gpu.module @test_module_28 {
 gpu.module @test_module_29 {
   // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL0:[A-Za-z0-9_]+]]("Hello, world\0A\00")
   // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL1:[A-Za-z0-9_]+]]("Hello: %d\0A\00")
-  // CHECK-DAG: llvm.func @vprintf(!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+  // CHECK-DAG: llvm.func @vprintf(!llvm.ptr, !llvm.ptr) -> i32
 
   // CHECK-LABEL: func @test_const_printf
   gpu.func @test_const_printf() {
-    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr<array<14 x i8>>
-    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<14 x i8>>) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
     // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
-    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr<struct<()>>
-    // CHECK-NEXT: %[[ARGPTR:.*]] = llvm.bitcast %[[ALLOC]] : !llvm.ptr<struct<()>> to !llvm.ptr<i8>
-    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ARGPTR]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr
+    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello, world\n"
     gpu.return
   }
@@ -559,17 +558,16 @@ gpu.module @test_module_29 {
   // CHECK-LABEL: func @test_printf
   // CHECK: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: f32)
   gpu.func @test_printf(%arg0: i32, %arg1: f32) {
-    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr<array<11 x i8>>
-    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<11 x i8>>) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<11 x i8>
     // CHECK-NEXT: %[[EXT:.+]] = llvm.fpext %[[ARG1]] : f32 to f64
     // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
-    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr<struct<(i32, f64)>>
-    // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr<struct<(i32, f64)>>) -> !llvm.ptr<i32>
-    // CHECK-NEXT: llvm.store %[[ARG0]], %[[EL0]] : !llvm.ptr<i32>
-    // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr<struct<(i32, f64)>>) -> !llvm.ptr<f64>
-    // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : !llvm.ptr<f64>
-    // CHECK-NEXT: %[[ARGPTR:.*]] = llvm.bitcast %[[ALLOC]] : !llvm.ptr<struct<(i32, f64)>> to !llvm.ptr<i8>
-    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ARGPTR]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr
+    // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
+    // CHECK-NEXT: llvm.store %[[ARG0]], %[[EL0]] : i32, !llvm.ptr
+    // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
+    // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : f64, !llvm.ptr
+    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
     gpu.return
   }
@@ -584,22 +582,22 @@ gpu.module @test_module_30 {
     %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
+  // CHECK-LABEL: @subgroup_reduce_minsi
+  gpu.func @subgroup_reduce_minsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync min {{.*}}
+    %result = gpu.subgroup_reduce minsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL:  @subgroup_reduce_maxsi
+  gpu.func @subgroup_reduce_maxsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync max {{.*}}
+    %result = gpu.subgroup_reduce maxsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
   // CHECK-LABEL: func @subgroup_reduce_and
   gpu.func @subgroup_reduce_and(%arg0 : i32) {
     // CHECK: nvvm.redux.sync and {{.*}}
     %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL:  @subgroup_reduce_max
-  gpu.func @subgroup_reduce_max(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync max {{.*}}
-    %result = gpu.subgroup_reduce max %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL: @subgroup_reduce_min
-  gpu.func @subgroup_reduce_min(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync min {{.*}}
-    %result = gpu.subgroup_reduce min %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_or
@@ -629,38 +627,40 @@ gpu.module @test_module_31 {
   }
 }
 
-transform.sequence failures(propagate) {
-^bb1(%toplevel_module: !transform.any_op):
-  %gpu_module = transform.structured.match ops{["gpu.module"]} in %toplevel_module
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
+    %gpu_module = transform.structured.match ops{["gpu.module"]} in %toplevel_module
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.apply_patterns to %gpu_module {
-    transform.apply_patterns.gpu.gpu_rewrite_patterns
-  } : !transform.any_op
+    transform.apply_patterns to %gpu_module {
+      transform.apply_patterns.gpu.gpu_rewrite_patterns
+    } : !transform.any_op
 
-  transform.apply_conversion_patterns to %gpu_module {
-    transform.apply_conversion_patterns.dialect_to_llvm "arith"
-    transform.apply_conversion_patterns.dialect_to_llvm "cf"
-    transform.apply_conversion_patterns.vector.vector_to_llvm
-    transform.apply_conversion_patterns.func.func_to_llvm
-    transform.apply_conversion_patterns.dialect_to_llvm "memref"
-    transform.apply_conversion_patterns.gpu.gpu_to_nvvm
-    transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
-    transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm
-    transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
-  } with type_converter {
-    transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
-      {index_bitwidth = 64,
-       use_bare_ptr = true,
-       use_bare_ptr_memref_call_conv = true,
-       use_opaque_pointers = true}
-  } {
-    legal_dialects = ["llvm", "memref", "nvvm", "test"],
-    legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
-    illegal_dialects = ["gpu"],
-    illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
-                   "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2","llvm.pow",
-                   "llvm.sin", "llvm.sqrt"],
-    partial_conversion
-  } : !transform.any_op
+    transform.apply_conversion_patterns to %gpu_module {
+      transform.apply_conversion_patterns.dialect_to_llvm "arith"
+      transform.apply_conversion_patterns.dialect_to_llvm "cf"
+      transform.apply_conversion_patterns.vector.vector_to_llvm
+      transform.apply_conversion_patterns.func.func_to_llvm
+      transform.apply_conversion_patterns.dialect_to_llvm "memref"
+      transform.apply_conversion_patterns.gpu.gpu_to_nvvm
+      transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
+      transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm
+      transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
+    } with type_converter {
+      transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+        {index_bitwidth = 64,
+        use_bare_ptr = true,
+        use_bare_ptr_memref_call_conv = true,
+        use_opaque_pointers = true}
+    } {
+      legal_dialects = ["llvm", "memref", "nvvm", "test"],
+      legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
+      illegal_dialects = ["gpu"],
+      illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
+                    "llvm.ffloor", "llvm.log", "llvm.log10", "llvm.log2","llvm.pow",
+                    "llvm.sin", "llvm.sqrt"],
+      partial_conversion
+    } : !transform.any_op
+    transform.yield
+  }
 }

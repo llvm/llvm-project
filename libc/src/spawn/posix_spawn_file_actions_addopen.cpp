@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <spawn.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_addopen,
                    (posix_spawn_file_actions_t *__restrict actions, int fd,
@@ -34,4 +34,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn_file_actions_addopen,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

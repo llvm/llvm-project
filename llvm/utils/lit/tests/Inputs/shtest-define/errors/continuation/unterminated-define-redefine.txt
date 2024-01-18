@@ -10,4 +10,4 @@
 
 # CHECK: Test has unterminated '{{DEFINE}}:' directive (with '\') at line [[#@LINE-5]]
 
-# CHECK: Unresolved: 1
+# CHECK: Unresolved: 1 {{\([0-9]*.[0-9]*%\)}}

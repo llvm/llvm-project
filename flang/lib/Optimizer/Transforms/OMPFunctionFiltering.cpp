@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -33,6 +34,8 @@ public:
   OMPFunctionFilteringPass() = default;
 
   void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    OpBuilder opBuilder(context);
     auto op = dyn_cast<omp::OffloadModuleInterface>(getOperation());
     if (!op || !op.getIsTargetDevice())
       return;
@@ -46,8 +49,6 @@ public:
               ->walk<WalkOrder::PreOrder>(
                   [&](omp::TargetOp) { return WalkResult::interrupt(); })
               .wasInterrupted();
-      if (hasTargetRegion)
-        return;
 
       omp::DeclareTargetDeviceType declareType =
           omp::DeclareTargetDeviceType::host;
@@ -56,18 +57,31 @@ public:
       if (declareTargetOp && declareTargetOp.isDeclareTarget())
         declareType = declareTargetOp.getDeclareTargetDeviceType();
 
-      // Filtering a function here means removing its body and explicitly
-      // setting its omp.declare_target attribute, so that following
-      // translation/lowering/transformation passes will skip processing its
-      // contents, but preventing the calls to undefined symbols that could
-      // result if the function were deleted. The second stage of function
-      // filtering, at the MLIR to LLVM IR translation level, will remove these
-      // from the IR thanks to the mismatch between the omp.declare_target
-      // attribute and the target device.
+      // Filtering a function here means deleting it if it doesn't contain a
+      // target region. Else we explicitly set the omp.declare_target
+      // attribute. The second stage of function filtering at the MLIR to LLVM
+      // IR translation level will remove functions that contain the target
+      // region from the generated llvm IR.
       if (declareType == omp::DeclareTargetDeviceType::host) {
-        funcOp.eraseBody();
-        funcOp.setVisibility(SymbolTable::Visibility::Private);
-        if (declareTargetOp)
+        SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
+        for (SymbolTable::SymbolUse use : funcUses) {
+          Operation *callOp = use.getUser();
+          // If the callOp has users then replace them with Undef values.
+          if (!callOp->use_empty()) {
+            SmallVector<Value> undefResults;
+            for (Value res : callOp->getResults()) {
+              opBuilder.setInsertionPoint(callOp);
+              undefResults.emplace_back(
+                  opBuilder.create<fir::UndefOp>(res.getLoc(), res.getType()));
+            }
+            callOp->replaceAllUsesWith(undefResults);
+          }
+          // Remove the callOp
+          callOp->erase();
+        }
+        if (!hasTargetRegion)
+          funcOp.erase();
+        else if (declareTargetOp)
           declareTargetOp.setDeclareTarget(declareType,
                                            omp::DeclareTargetCaptureClause::to);
       }

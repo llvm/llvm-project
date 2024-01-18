@@ -35,7 +35,7 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 
 public:
   explicit WebAssemblyAsmBackend(bool Is64Bit, bool IsEmscripten)
-      : MCAsmBackend(support::little), Is64Bit(Is64Bit),
+      : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
   unsigned getNumFixupKinds() const override {

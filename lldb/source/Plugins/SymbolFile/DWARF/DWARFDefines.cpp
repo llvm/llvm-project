@@ -12,7 +12,8 @@
 #include <cstring>
 #include <string>
 
-namespace lldb_private {
+namespace lldb_private::plugin {
+namespace dwarf {
 
 const char *DW_TAG_value_to_name(uint32_t val) {
   static char invalid[100];
@@ -88,4 +89,5 @@ const char *DW_LNS_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin

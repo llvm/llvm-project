@@ -268,6 +268,11 @@ class OpFoldResult : public PointerUnion<Attribute, Value> {
 
 public:
   void dump() const { llvm::errs() << *this << "\n"; }
+
+  MLIRContext *getContext() const {
+    return is<Attribute>() ? get<Attribute>().getContext()
+                           : get<Value>().getContext();
+  }
 };
 
 // Temporarily exit the MLIR namespace to add casting support as later code in
@@ -1741,8 +1746,8 @@ public:
   template <typename PropertiesTy>
   static LogicalResult
   setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                        function_ref<InFlightDiagnostic &()> getDiag) {
-    return setPropertiesFromAttribute(prop, attr, getDiag);
+                        function_ref<InFlightDiagnostic()> emitError) {
+    return setPropertiesFromAttribute(prop, attr, emitError);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that

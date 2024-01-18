@@ -17,7 +17,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -27,45 +27,45 @@ enum class directory_options : unsigned char {
   skip_permission_denied = 2
 };
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator&(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) &
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator|(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) |
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator^(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) ^
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator~(directory_options __lhs) {
   return static_cast<directory_options>(~static_cast<unsigned char>(__lhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator&=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs & __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator|=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs | __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator^=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs ^ __rhs;
@@ -73,6 +73,6 @@ inline directory_options& operator^=(directory_options& __lhs,
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_DIRECTORY_OPTIONS_H

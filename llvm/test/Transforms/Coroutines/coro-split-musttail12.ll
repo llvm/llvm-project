@@ -1,5 +1,6 @@
 ; Tests that coro-split won't convert the cmp instruction prematurely.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(ptr)
 declare void @print()

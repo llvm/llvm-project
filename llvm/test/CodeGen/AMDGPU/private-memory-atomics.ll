@@ -134,10 +134,10 @@ define i32 @cmpxchg_private_i32(ptr addrspace(5) %ptr) {
 
 define i64 @cmpxchg_private_i64(ptr addrspace(5) %ptr) {
 ; IR-LABEL: @cmpxchg_private_i64(
-; IR-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(5) [[PTR:%.*]], align 4
+; IR-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(5) [[PTR:%.*]], align 8
 ; IR-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 1, i64 [[TMP1]]
-; IR-NEXT:    store i64 [[TMP3]], ptr addrspace(5) [[PTR]], align 4
+; IR-NEXT:    store i64 [[TMP3]], ptr addrspace(5) [[PTR]], align 8
 ; IR-NEXT:    [[TMP4:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP1]], 0
 ; IR-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } [[TMP4]], i1 [[TMP2]], 1
 ; IR-NEXT:    [[RESULT_0:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0

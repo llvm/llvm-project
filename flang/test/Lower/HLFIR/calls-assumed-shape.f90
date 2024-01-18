@@ -90,8 +90,8 @@ subroutine test_explicit_char_to_box(e)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_explicit_char_to_box(
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<20x!fir.char<1,10>>>
+! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]] {uniq_name = "_QFtest_explicit_char_to_boxEe"} : (!fir.ref<!fir.array<20x!fir.char<1,10>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<20x!fir.char<1,10>>>, !fir.ref<!fir.array<20x!fir.char<1,10>>>)
@@ -111,6 +111,6 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_explicit_by_val(
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_2:[a-z0-9]*]]) {uniq_name = "_QFtest_explicit_by_valEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:  %[[VAL_4:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<10xf32>>) -> !hlfir.expr<10xf32>
-! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
+! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
 ! CHECK:  fir.call @_QPtakes_explicit_by_value(%[[VAL_5]]#1) {{.*}} : (!fir.ref<!fir.array<10xf32>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_5]]#1, %[[VAL_5]]#2 : !fir.ref<!fir.array<10xf32>>, i1

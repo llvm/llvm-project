@@ -11,11 +11,11 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int snprintf(char *__restrict buffer, size_t buffsz,
              const char *__restrict format, ...);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SNPRINTF_H

@@ -49,7 +49,7 @@ static std::string getMArch(const Record &Rec) {
 
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
      << "#endif\n\n";
 
   // Iterate on all definition records.
@@ -60,9 +60,14 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     if (MArch.empty())
       MArch = getMArch(*Rec);
 
+    const bool FastUnalignedAccess =
+        any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
+          return Feature->getValueAsString("Name") == "fast-unaligned-access";
+        });
+
     OS << "PROC(" << Rec->getName() << ", "
        << "{\"" << Rec->getValueAsString("Name") << "\"}, "
-       << "{\"" << MArch << "\"})\n";
+       << "{\"" << MArch << "\"}, " << FastUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";

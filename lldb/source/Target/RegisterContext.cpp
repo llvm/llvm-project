@@ -109,6 +109,12 @@ uint64_t RegisterContext::GetPC(uint64_t fail_value) {
   return pc;
 }
 
+uint64_t RegisterContext::GetThreadPointer(uint64_t fail_value) {
+  uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
+                                                     LLDB_REGNUM_GENERIC_TP);
+  return ReadRegisterAsUnsigned(reg, fail_value);
+}
+
 bool RegisterContext::SetPC(uint64_t pc) {
   uint32_t reg = ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric,
                                                      LLDB_REGNUM_GENERIC_PC);

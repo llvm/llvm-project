@@ -35,12 +35,12 @@ def OpUsingAllOfThose : Op<Test_Dialect, "OpUsingAllOfThose"> {
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
 // CHECK:   if (attr && !((::llvm::isa<TopLevelAttrInterface>(attr))))
-// CHECK-NEXT:     return getDiag() << "attribute '" << attrName
+// CHECK-NEXT:     return emitError() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: TopLevelAttrInterface instance";
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
 // CHECK:   if (attr && !((::llvm::isa<test::AttrInterfaceInNamespace>(attr))))
-// CHECK-NEXT:    return getDiag() << "attribute '" << attrName
+// CHECK-NEXT:    return emitError() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: AttrInterfaceInNamespace instance";
 
 // CHECK: TopLevelAttrInterface OpUsingAllOfThose::getAttr1()

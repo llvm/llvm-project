@@ -1,0 +1,33 @@
+{
+  'version': 0,
+  'case-sensitive': 'false',
+  'roots': [
+    {
+      'type': 'directory',
+      'name': "DUMMY_DIR/build/A.framework/PrivateHeaders"
+      'contents': [
+        {
+          'type': 'file',
+          'name': "A.h",
+          'external-contents': "DUMMY_DIR/sources/A.h"
+        }
+      ]
+    },
+    {
+      'type': 'directory',
+      'name': "DUMMY_DIR/build/A.framework/Modules"
+      'contents': [
+        {
+          'type': 'file',
+          'name': "module.modulemap",
+          'external-contents': "DUMMY_DIR/build/module.modulemap"
+        },
+        {
+          'type': 'file',
+          'name': "module.private.modulemap",
+          'external-contents': "DUMMY_DIR/build/module.private.modulemap"
+        }
+      ]
+    }
+  ]
+}

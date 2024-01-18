@@ -9,10 +9,38 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <utility>
 
 using namespace llvm;
 
+namespace {
+struct CountCopyAndMove {
+  CountCopyAndMove() = default;
+  CountCopyAndMove(const CountCopyAndMove &) { copy = 1; }
+  CountCopyAndMove(CountCopyAndMove &&) { move = 1; }
+  void operator=(const CountCopyAndMove &) { ++copy; }
+  void operator=(CountCopyAndMove &&) { ++move; }
+  int copy = 0;
+  int move = 0;
+};
+
+struct A : CountCopyAndMove {
+  A(int v) : v(v) {}
+  int v;
+};
+} // namespace
+
+namespace llvm {
+template <> struct DenseMapInfo<A> {
+  static inline A getEmptyKey() { return 0x7fffffff; }
+  static inline A getTombstoneKey() { return -0x7fffffff - 1; }
+  static unsigned getHashValue(const A &Val) { return (unsigned)(Val.v * 37U); }
+  static bool isEqual(const A &LHS, const A &RHS) { return LHS.v == RHS.v; }
+};
+} // namespace llvm
+
+namespace {
 TEST(MapVectorTest, swap) {
   MapVector<int, int> MV1, MV2;
   std::pair<MapVector<int, int>::iterator, bool> R;
@@ -77,6 +105,87 @@ TEST(MapVectorTest, insert_pop) {
   EXPECT_EQ(MV.size(), 2u);
   EXPECT_EQ(MV[1], 2);
   EXPECT_EQ(MV[4], 7);
+}
+
+TEST(MapVectorTest, try_emplace) {
+  struct AAndU {
+    A a;
+    std::unique_ptr<int> b;
+    AAndU(A a, std::unique_ptr<int> b) : a(a), b(std::move(b)) {}
+  };
+  MapVector<A, AAndU> mv;
+
+  A zero(0);
+  auto try0 = mv.try_emplace(zero, zero, nullptr);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, try0.first->second.a.v);
+  EXPECT_EQ(1, try0.first->second.a.copy);
+  EXPECT_EQ(0, try0.first->second.a.move);
+
+  auto try1 = mv.try_emplace(zero, zero, nullptr);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, try1.first->second.a.v);
+  EXPECT_EQ(1, try1.first->second.a.copy);
+  EXPECT_EQ(0, try1.first->second.a.move);
+
+  EXPECT_EQ(try0.first, try1.first);
+  EXPECT_EQ(1, try1.first->first.copy);
+  EXPECT_EQ(0, try1.first->first.move);
+
+  A two(2);
+  auto try2 = mv.try_emplace(2, std::move(two), std::make_unique<int>(2));
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(2, try2.first->second.a.v);
+  EXPECT_EQ(0, try2.first->second.a.move);
+
+  std::unique_ptr<int> p(new int(3));
+  auto try3 = mv.try_emplace(std::move(two), 3, std::move(p));
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(2, try3.first->second.a.v);
+  EXPECT_EQ(1, try3.first->second.a.copy);
+  EXPECT_EQ(0, try3.first->second.a.move);
+
+  EXPECT_EQ(try2.first, try3.first);
+  EXPECT_EQ(0, try3.first->first.copy);
+  EXPECT_EQ(1, try3.first->first.move);
+  EXPECT_NE(nullptr, p);
+}
+
+TEST(MapVectorTest, insert_or_assign) {
+  MapVector<A, A> mv;
+
+  A zero(0);
+  auto try0 = mv.insert_or_assign(zero, zero);
+  EXPECT_TRUE(try0.second);
+  EXPECT_EQ(0, try0.first->second.v);
+  EXPECT_EQ(1, try0.first->second.copy);
+  EXPECT_EQ(0, try0.first->second.move);
+
+  auto try1 = mv.insert_or_assign(zero, zero);
+  EXPECT_FALSE(try1.second);
+  EXPECT_EQ(0, try1.first->second.v);
+  EXPECT_EQ(2, try1.first->second.copy);
+  EXPECT_EQ(0, try1.first->second.move);
+
+  EXPECT_EQ(try0.first, try1.first);
+  EXPECT_EQ(1, try1.first->first.copy);
+  EXPECT_EQ(0, try1.first->first.move);
+
+  A two(2);
+  auto try2 = mv.try_emplace(2, std::move(two));
+  EXPECT_TRUE(try2.second);
+  EXPECT_EQ(2, try2.first->second.v);
+  EXPECT_EQ(1, try2.first->second.move);
+
+  auto try3 = mv.insert_or_assign(std::move(two), 3);
+  EXPECT_FALSE(try3.second);
+  EXPECT_EQ(3, try3.first->second.v);
+  EXPECT_EQ(0, try3.first->second.copy);
+  EXPECT_EQ(2, try3.first->second.move);
+
+  EXPECT_EQ(try2.first, try3.first);
+  EXPECT_EQ(0, try3.first->first.copy);
+  EXPECT_EQ(1, try3.first->first.move);
 }
 
 TEST(MapVectorTest, erase) {
@@ -423,3 +532,4 @@ TEST(SmallMapVectorLargeTest, iteration_test) {
     count--;
   }
 }
+} // namespace

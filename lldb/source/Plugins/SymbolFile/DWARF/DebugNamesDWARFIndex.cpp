@@ -18,6 +18,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
@@ -36,19 +37,29 @@ llvm::DenseSet<dw_offset_t>
 DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   llvm::DenseSet<dw_offset_t> result;
   for (const DebugNames::NameIndex &ni : debug_names) {
-    for (uint32_t cu = 0; cu < ni.getCUCount(); ++cu)
+    const uint32_t num_cus = ni.getCUCount();
+    for (uint32_t cu = 0; cu < num_cus; ++cu)
       result.insert(ni.getCUOffset(cu));
+    const uint32_t num_tus = ni.getLocalTUCount();
+    for (uint32_t tu = 0; tu < num_tus; ++tu)
+      result.insert(ni.getLocalTUOffset(tu));
   }
   return result;
 }
 
 std::optional<DIERef>
 DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
-  std::optional<uint64_t> cu_offset = entry.getCUOffset();
-  if (!cu_offset)
-    return std::nullopt;
+  // Look for a DWARF unit offset (CU offset or local TU offset) as they are
+  // both offsets into the .debug_info section.
+  std::optional<uint64_t> unit_offset = entry.getCUOffset();
+  if (!unit_offset) {
+    unit_offset = entry.getLocalTUOffset();
+    if (!unit_offset)
+      return std::nullopt;
+  }
 
-  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
+  DWARFUnit *cu =
+      m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
   if (!cu)
     return std::nullopt;
 
@@ -128,8 +139,19 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
   uint64_t cu_offset = cu.GetOffset();
   bool found_entry_for_cu = false;
-  for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
-    for (DebugNames::NameTableEntry nte: ni) {
+  for (const DebugNames::NameIndex &ni : *m_debug_names_up) {
+    // Check if this name index contains an entry for the given CU.
+    bool cu_matches = false;
+    for (uint32_t i = 0; i < ni.getCUCount(); ++i) {
+      if (ni.getCUOffset(i) == cu_offset) {
+        cu_matches = true;
+        break;
+      }
+    }
+    if (!cu_matches)
+      continue;
+
+    for (DebugNames::NameTableEntry nte : ni) {
       uint64_t entry_offset = nte.getEntryOffset();
       llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
       for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {
@@ -227,7 +249,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    dwarf::Tag entry_tag = entry.tag();
+    lldb_private::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       if (!ProcessEntry(entry, callback))

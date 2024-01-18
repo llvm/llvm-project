@@ -9,7 +9,7 @@
 
 // YAML is based in the following assembly:
 
-  .equ val, 0x070b0f03  // we use constant that is not a valid instruction so that it can't be silently dissassembled
+  .equ val, 0x070b0f03  // we use constant that is not a valid instruction so that it can't be silently disassembled
   .text
 
 first:

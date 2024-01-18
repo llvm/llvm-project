@@ -342,21 +342,14 @@ define void @zip_v4i32(ptr %a, ptr %b) {
 define void @zip1_v8i32_undef(ptr %a) {
 ; CHECK-LABEL: zip1_v8i32_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    tbl z1.s, { z0.s }, z1.s
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    stp w8, w8, [sp, #8]
-; CHECK-NEXT:    stp w9, w9, [sp]
-; CHECK-NEXT:    ldr q1, [sp]
-; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    str q1, [x0, #16]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load  volatile <8 x i32>, ptr %a
   %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
@@ -389,41 +382,15 @@ define void @trn_v32i8(ptr %a, ptr %b) {
 define void @trn_v8i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: trn_v8i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    adrp x9, .LCPI8_1
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z1.h, z0.h[3]
-; CHECK-NEXT:    mov z2.h, z0.h[1]
-; CHECK-NEXT:    mov z3.h, z0.h[5]
-; CHECK-NEXT:    mov z4.h, z0.h[4]
-; CHECK-NEXT:    strh w8, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.h, z0.h[2]
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    mov z2.h, z0.h[6]
-; CHECK-NEXT:    mov z0.h, z0.h[7]
-; CHECK-NEXT:    fmov w10, s3
-; CHECK-NEXT:    fmov w11, s4
-; CHECK-NEXT:    fmov w12, s1
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w13, s2
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    strh w10, [sp, #10]
-; CHECK-NEXT:    strh w12, [sp, #4]
-; CHECK-NEXT:    fmov w12, s0
-; CHECK-NEXT:    strh w11, [sp, #8]
-; CHECK-NEXT:    strh w13, [sp, #6]
-; CHECK-NEXT:    strh w12, [sp, #2]
-; CHECK-NEXT:    strh w12, [sp, #28]
-; CHECK-NEXT:    strh w11, [sp, #26]
-; CHECK-NEXT:    strh w10, [sp, #22]
-; CHECK-NEXT:    strh w8, [sp, #20]
-; CHECK-NEXT:    strh w13, [sp, #18]
-; CHECK-NEXT:    strh w9, [sp, #16]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI8_1]
+; CHECK-NEXT:    tbl z1.h, { z0.h }, z1.h
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z2.h
+; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %a
   %tmp2 = load <8 x i16>, ptr %b
@@ -692,21 +659,14 @@ define void @zip2_v8i32(ptr %a, ptr %b) #0{
 define void @zip2_v8i32_undef(ptr %a) #0{
 ; CHECK-LABEL: zip2_v8i32_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    mov z1.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    tbl z1.s, { z0.s }, z1.s
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    stp w8, w8, [sp, #8]
-; CHECK-NEXT:    stp w9, w9, [sp]
-; CHECK-NEXT:    ldr q1, [sp]
-; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    str q1, [x0, #16]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load volatile <8 x i32>, ptr %a
   %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -921,26 +881,15 @@ define void @uzp_v32i8(ptr %a, ptr %b) #0{
 define void @uzp_v4i16(ptr %a, ptr %b) #0{
 ; CHECK-LABEL: uzp_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI19_0
+; CHECK-NEXT:    adrp x9, .LCPI19_1
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[3]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    strh w8, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fmov w10, s2
-; CHECK-NEXT:    fmov w11, s3
-; CHECK-NEXT:    strh w9, [sp, #6]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    strh w9, [sp, #8]
-; CHECK-NEXT:    strh w10, [sp, #4]
-; CHECK-NEXT:    strh w11, [sp, #2]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    ldp d0, d1, [sp]
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI19_1]
+; CHECK-NEXT:    tbl z1.h, { z0.h }, z1.h
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z2.h
+; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, ptr %a
   %tmp2 = load <4 x i16>, ptr %b
@@ -1071,11 +1020,12 @@ define void @uzp_v16i16(ptr %a, ptr %b) #0{
 define void @uzp_v8f32(ptr %a, ptr %b) #0{
 ; CHECK-LABEL: uzp_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    ldp q2, q0, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    adrp x8, .LCPI21_0
 ; CHECK-NEXT:    ldp q4, q1, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov z3.s, z0.s[2]
 ; CHECK-NEXT:    mov z5.s, z1.s[2]
 ; CHECK-NEXT:    stp s0, s3, [sp, #24]
@@ -1085,17 +1035,17 @@ define void @uzp_v8f32(ptr %a, ptr %b) #0{
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
 ; CHECK-NEXT:    stp s3, s1, [sp, #4]
 ; CHECK-NEXT:    mov z1.s, z2.s[1]
-; CHECK-NEXT:    stp s0, s5, [sp, #40]
-; CHECK-NEXT:    mov z5.s, z4.s[3]
-; CHECK-NEXT:    mov z4.s, z4.s[1]
+; CHECK-NEXT:    str s5, [sp, #44]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI21_0]
+; CHECK-NEXT:    str s0, [sp, #40]
 ; CHECK-NEXT:    ldp q3, q2, [sp]
+; CHECK-NEXT:    tbl z0.s, { z4.s }, z5.s
 ; CHECK-NEXT:    str s1, [sp, #32]
-; CHECK-NEXT:    stp s4, s5, [sp, #48]
-; CHECK-NEXT:    ldp q0, q1, [sp, #32]
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ldr q1, [sp, #32]
+; CHECK-NEXT:    fadd z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z3.s
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x float>, ptr %a
   %tmp2 = load <8 x float>, ptr %b

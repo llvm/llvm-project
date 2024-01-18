@@ -641,8 +641,9 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   // Check if the multiply could not overflow due to known ranges of the
   // input values.
   OverflowResult OR = computeOverflowForUnsignedMul(
-      FI.InnerTripCount, FI.OuterTripCount, DL, AC,
-      FI.OuterLoop->getLoopPreheader()->getTerminator(), DT);
+      FI.InnerTripCount, FI.OuterTripCount,
+      SimplifyQuery(DL, DT, AC,
+                    FI.OuterLoop->getLoopPreheader()->getTerminator()));
   if (OR != OverflowResult::MayOverflow)
     return OR;
 

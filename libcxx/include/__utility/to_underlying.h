@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr typename underlying_type<_Tp>::type
+_LIBCPP_HIDE_FROM_ABI constexpr typename underlying_type<_Tp>::type
 __to_underlying(_Tp __val) noexcept {
   return static_cast<typename underlying_type<_Tp>::type>(__val);
 }
@@ -29,9 +29,9 @@ __to_underlying(_Tp __val) noexcept {
 
 #if _LIBCPP_STD_VER >= 23
 template <class _Tp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY constexpr underlying_type_t<_Tp>
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr underlying_type_t<_Tp>
 to_underlying(_Tp __val) noexcept {
-  return _VSTD::__to_underlying(__val);
+  return std::__to_underlying(__val);
 }
 #endif
 

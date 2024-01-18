@@ -29,6 +29,7 @@ public:
     const FieldDecl *Decl;
     unsigned Offset;
     Descriptor *Desc;
+    bool isBitField() const { return Decl->isBitField(); }
   };
 
   /// Describes a base class.

@@ -10,7 +10,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -246,6 +245,19 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return printConstantOp(emitter, operation, value);
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::AssignOp assignOp) {
+  auto variableOp = cast<emitc::VariableOp>(assignOp.getVar().getDefiningOp());
+  OpResult result = variableOp->getResult(0);
+
+  if (failed(emitter.emitVariableAssignment(result)))
+    return failure();
+
+  emitter.ostream() << emitter.getOrCreateName(assignOp.getValue());
+
+  return success();
+}
+
 static LogicalResult printBinaryOperation(CppEmitter &emitter,
                                           Operation *operation,
                                           StringRef binaryOperator) {
@@ -400,25 +412,27 @@ static LogicalResult printOperation(CppEmitter &emitter, func::CallOp callOp) {
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::CallOpaqueOp callOpaqueOp) {
   raw_ostream &os = emitter.ostream();
-  Operation &op = *callOp.getOperation();
+  Operation &op = *callOpaqueOp.getOperation();
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << callOp.getCallee();
+  os << callOpaqueOp.getCallee();
 
   auto emitArgs = [&](Attribute attr) -> LogicalResult {
     if (auto t = dyn_cast<IntegerAttr>(attr)) {
       // Index attributes are treated specially as operand index.
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
-        if ((idx < 0) || (idx >= op.getNumOperands()))
-          return op.emitOpError("invalid operand index");
-        if (!emitter.hasValueInScope(op.getOperand(idx)))
+        Value operand = op.getOperand(idx);
+        auto literalDef =
+            dyn_cast_if_present<LiteralOp>(operand.getDefiningOp());
+        if (!literalDef && !emitter.hasValueInScope(operand))
           return op.emitOpError("operand ")
                  << idx << "'s value not defined in scope";
-        os << emitter.getOrCreateName(op.getOperand(idx));
+        os << emitter.getOrCreateName(operand);
         return success();
       }
     }
@@ -428,10 +442,10 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
     return success();
   };
 
-  if (callOp.getTemplateArgs()) {
+  if (callOpaqueOp.getTemplateArgs()) {
     os << "<";
-    if (failed(
-            interleaveCommaWithError(*callOp.getTemplateArgs(), os, emitArgs)))
+    if (failed(interleaveCommaWithError(*callOpaqueOp.getTemplateArgs(), os,
+                                        emitArgs)))
       return failure();
     os << ">";
   }
@@ -439,8 +453,8 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   os << "(";
 
   LogicalResult emittedArgs =
-      callOp.getArgs()
-          ? interleaveCommaWithError(*callOp.getArgs(), os, emitArgs)
+      callOpaqueOp.getArgs()
+          ? interleaveCommaWithError(*callOpaqueOp.getArgs(), os, emitArgs)
           : emitter.emitOperands(op);
   if (failed(emittedArgs))
     return failure();
@@ -489,29 +503,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, scf::ForOp forOp) {
+static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
 
   raw_indented_ostream &os = emitter.ostream();
-
-  OperandRange operands = forOp.getInitArgs();
-  Block::BlockArgListType iterArgs = forOp.getRegionIterArgs();
-  Operation::result_range results = forOp.getResults();
-
-  if (!emitter.shouldDeclareVariablesAtTop()) {
-    for (OpResult result : results) {
-      if (failed(emitter.emitVariableDeclaration(result,
-                                                 /*trailingSemicolon=*/true)))
-        return failure();
-    }
-  }
-
-  for (auto pair : llvm::zip(iterArgs, operands)) {
-    if (failed(emitter.emitType(forOp.getLoc(), std::get<0>(pair).getType())))
-      return failure();
-    os << " " << emitter.getOrCreateName(std::get<0>(pair)) << " = ";
-    os << emitter.getOrCreateName(std::get<1>(pair)) << ";";
-    os << "\n";
-  }
 
   os << "for (";
   if (failed(
@@ -535,106 +529,50 @@ static LogicalResult printOperation(CppEmitter &emitter, scf::ForOp forOp) {
   Region &forRegion = forOp.getRegion();
   auto regionOps = forRegion.getOps();
 
-  // We skip the trailing yield op because this updates the result variables
-  // of the for op in the generated code. Instead we update the iterArgs at
-  // the end of a loop iteration and set the result variables after the for
-  // loop.
+  // We skip the trailing yield op.
   for (auto it = regionOps.begin(); std::next(it) != regionOps.end(); ++it) {
     if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true)))
       return failure();
   }
 
-  Operation *yieldOp = forRegion.getBlocks().front().getTerminator();
-  // Copy yield operands into iterArgs at the end of a loop iteration.
-  for (auto pair : llvm::zip(iterArgs, yieldOp->getOperands())) {
-    BlockArgument iterArg = std::get<0>(pair);
-    Value operand = std::get<1>(pair);
-    os << emitter.getOrCreateName(iterArg) << " = "
-       << emitter.getOrCreateName(operand) << ";\n";
-  }
-
   os.unindent() << "}";
-
-  // Copy iterArgs into results after the for loop.
-  for (auto pair : llvm::zip(results, iterArgs)) {
-    OpResult result = std::get<0>(pair);
-    BlockArgument iterArg = std::get<1>(pair);
-    os << "\n"
-       << emitter.getOrCreateName(result) << " = "
-       << emitter.getOrCreateName(iterArg) << ";";
-  }
 
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, scf::IfOp ifOp) {
+static LogicalResult printOperation(CppEmitter &emitter, emitc::IfOp ifOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  if (!emitter.shouldDeclareVariablesAtTop()) {
-    for (OpResult result : ifOp.getResults()) {
-      if (failed(emitter.emitVariableDeclaration(result,
-                                                 /*trailingSemicolon=*/true)))
+  // Helper function to emit all ops except the last one, expected to be
+  // emitc::yield.
+  auto emitAllExceptLast = [&emitter](Region &region) {
+    Region::OpIterator it = region.op_begin(), end = region.op_end();
+    for (; std::next(it) != end; ++it) {
+      if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true)))
         return failure();
     }
-  }
+    assert(isa<emitc::YieldOp>(*it) &&
+           "Expected last operation in the region to be emitc::yield");
+    return success();
+  };
 
   os << "if (";
   if (failed(emitter.emitOperands(*ifOp.getOperation())))
     return failure();
   os << ") {\n";
   os.indent();
-
-  Region &thenRegion = ifOp.getThenRegion();
-  for (Operation &op : thenRegion.getOps()) {
-    // Note: This prints a superfluous semicolon if the terminating yield op has
-    // zero results.
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
-      return failure();
-  }
-
+  if (failed(emitAllExceptLast(ifOp.getThenRegion())))
+    return failure();
   os.unindent() << "}";
 
   Region &elseRegion = ifOp.getElseRegion();
   if (!elseRegion.empty()) {
     os << " else {\n";
     os.indent();
-
-    for (Operation &op : elseRegion.getOps()) {
-      // Note: This prints a superfluous semicolon if the terminating yield op
-      // has zero results.
-      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
-        return failure();
-    }
-
+    if (failed(emitAllExceptLast(elseRegion)))
+      return failure();
     os.unindent() << "}";
   }
-
-  return success();
-}
-
-static LogicalResult printOperation(CppEmitter &emitter, scf::YieldOp yieldOp) {
-  raw_ostream &os = emitter.ostream();
-  Operation &parentOp = *yieldOp.getOperation()->getParentOp();
-
-  if (yieldOp.getNumOperands() != parentOp.getNumResults()) {
-    return yieldOp.emitError("number of operands does not to match the number "
-                             "of the parent op's results");
-  }
-
-  if (failed(interleaveWithError(
-          llvm::zip(parentOp.getResults(), yieldOp.getOperands()),
-          [&](auto pair) -> LogicalResult {
-            auto result = std::get<0>(pair);
-            auto operand = std::get<1>(pair);
-            os << emitter.getOrCreateName(result) << " = ";
-
-            if (!emitter.hasValueInScope(operand))
-              return yieldOp.emitError("operand value not in scope");
-            os << emitter.getOrCreateName(operand);
-            return success();
-          },
-          [&]() { os << ";\n"; })))
-    return failure();
 
   return success();
 }
@@ -701,6 +639,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     // regions.
     WalkResult result =
         functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+          if (isa<emitc::LiteralOp>(op))
+            return WalkResult::skip();
           for (OpResult result : op->getResults()) {
             if (failed(emitter.emitVariableDeclaration(
                     result, /*trailingSemicolon=*/true))) {
@@ -741,12 +681,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
         return failure();
     }
     for (Operation &op : block.getOperations()) {
-      // When generating code for an scf.if or cf.cond_br op no semicolon needs
-      // to be printed after the closing brace.
-      // When generating code for an scf.for op, printing a trailing semicolon
+      // When generating code for an emitc.if or cf.cond_br op no semicolon
+      // needs to be printed after the closing brace.
+      // When generating code for an emitc.for op, printing a trailing semicolon
       // is handled within the printOperation function.
       bool trailingSemicolon =
-          !isa<cf::CondBranchOp, emitc::LiteralOp, scf::IfOp, scf::ForOp>(op);
+          !isa<cf::CondBranchOp, emitc::ForOp, emitc::IfOp, emitc::LiteralOp>(
+              op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -902,7 +843,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
-    if (!hasValueInScope(result))
+    auto literalDef = dyn_cast_if_present<LiteralOp>(result.getDefiningOp());
+    if (!literalDef && !hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
     os << getOrCreateName(result);
     return success();
@@ -1008,15 +950,14 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
-                emitc::CmpOp, emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp,
-                emitc::MulOp, emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
+                emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
+                emitc::ConstantOp, emitc::DivOp, emitc::ForOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::MulOp, emitc::RemOp, emitc::SubOp,
+                emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(
-              [&](auto op) { return printOperation(*this, op); })
-          // SCF ops.
-          .Case<scf::ForOp, scf::IfOp, scf::YieldOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops.
           .Case<arith::ConstantOp>(

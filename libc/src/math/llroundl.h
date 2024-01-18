@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LLROUNDL_H
 #define LLVM_LIBC_SRC_MATH_LLROUNDL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long long llroundl(long double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LLROUNDL_H

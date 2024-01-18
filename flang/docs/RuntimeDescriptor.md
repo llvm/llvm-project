@@ -8,9 +8,10 @@
 
 # Runtime Descriptors
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Concept

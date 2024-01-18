@@ -27,10 +27,11 @@ StringRef FrontendResource::getSourceType() {
   return cast<MDString>(Entry->getOperand(1))->getString();
 }
 
-uint32_t FrontendResource::FrontendResource::getResourceKind() {
-  return cast<ConstantInt>(
-             cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue())
-      ->getLimitedValue();
+ResourceKind FrontendResource::getResourceKind() {
+  return static_cast<ResourceKind>(
+      cast<ConstantInt>(
+          cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue())
+          ->getLimitedValue());
 }
 uint32_t FrontendResource::getResourceIndex() {
   return cast<ConstantInt>(

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_TOUPPER_H
 #define LLVM_LIBC_SRC_CTYPE_TOUPPER_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int toupper(int c);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif //  LLVM_LIBC_SRC_CTYPE_TOUPPER_H

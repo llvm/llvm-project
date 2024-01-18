@@ -26,6 +26,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -801,7 +802,7 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
 
 static ConstantRange getConstantRangeOrFull(const ValueLatticeElement &Val,
                                             Type *Ty, const DataLayout &DL) {
-  if (Val.isConstantRange())
+  if (Val.isConstantRange(/*UndefAllowed*/ false))
     return Val.getConstantRange();
   return ConstantRange::getFull(DL.getTypeSizeInBits(Ty));
 }
@@ -879,7 +880,7 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   Value *Cond = SI->getCondition();
   // If the value is undef, a different value may be chosen in
   // the select condition.
-  if (isGuaranteedNotToBeUndefOrPoison(Cond, AC)) {
+  if (isGuaranteedNotToBeUndef(Cond, AC)) {
     TrueVal = intersect(TrueVal,
                         getValueFromCondition(SI->getTrueValue(), Cond, true));
     FalseVal = intersect(
@@ -1083,6 +1084,26 @@ static ValueLatticeElement getValueFromSimpleICmpCondition(
   return ValueLatticeElement::getRange(TrueValues.subtract(Offset));
 }
 
+static std::optional<ConstantRange>
+getRangeViaSLT(CmpInst::Predicate Pred, APInt RHS,
+               function_ref<std::optional<ConstantRange>(const APInt &)> Fn) {
+  bool Invert = false;
+  if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
+    Pred = ICmpInst::getInversePredicate(Pred);
+    Invert = true;
+  }
+  if (Pred == ICmpInst::ICMP_SLE) {
+    Pred = ICmpInst::ICMP_SLT;
+    if (RHS.isMaxSignedValue())
+      return std::nullopt; // Could also return full/empty here, if we wanted.
+    ++RHS;
+  }
+  assert(Pred == ICmpInst::ICMP_SLT && "Must be signed predicate");
+  if (auto CR = Fn(RHS))
+    return Invert ? CR->inverse() : CR;
+  return std::nullopt;
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
@@ -1146,6 +1167,25 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     if (!CR.isEmptySet())
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
           CR.getUnsignedMin().zext(BitWidth), APInt(BitWidth, 0)));
+  }
+
+  // Recognize:
+  // icmp slt (ashr X, ShAmtC), C --> icmp slt X, C << ShAmtC
+  // Preconditions: (C << ShAmtC) >> ShAmtC == C
+  const APInt *ShAmtC;
+  if (CmpInst::isSigned(EdgePred) &&
+      match(LHS, m_AShr(m_Specific(Val), m_APInt(ShAmtC))) &&
+      match(RHS, m_APInt(C))) {
+    auto CR = getRangeViaSLT(
+        EdgePred, *C, [&](const APInt &RHS) -> std::optional<ConstantRange> {
+          APInt New = RHS << *ShAmtC;
+          if ((New.ashr(*ShAmtC)) != RHS)
+            return std::nullopt;
+          return ConstantRange::getNonEmpty(
+              APInt::getSignedMinValue(New.getBitWidth()), New);
+        });
+    if (CR)
+      return ValueLatticeElement::getRange(*CR);
   }
 
   return ValueLatticeElement::getOverdefined();
@@ -1679,7 +1719,7 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
       // If the value is undef, a different value may be chosen in
       // the select condition and at use.
-      if (!isGuaranteedNotToBeUndefOrPoison(SI->getCondition(), AC))
+      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
         break;
       if (CurrU->getOperandNo() == 1)
         CondVal = getValueFromCondition(V, SI->getCondition(), true);
@@ -1976,22 +2016,22 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 
 void LazyValueInfo::forgetValue(Value *V) {
   if (auto *Impl = getImpl())
-    getImpl()->forgetValue(V);
+    Impl->forgetValue(V);
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   if (auto *Impl = getImpl())
-    getImpl()->eraseBlock(BB);
+    Impl->eraseBlock(BB);
 }
 
 void LazyValueInfo::clear() {
   if (auto *Impl = getImpl())
-    getImpl()->clear();
+    Impl->clear();
 }
 
 void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (auto *Impl = getImpl())
-    getImpl()->printLVI(F, DTree, OS);
+    Impl->printLVI(F, DTree, OS);
 }
 
 // Print the LVI for the function arguments at the start of each basic block.
@@ -2047,36 +2087,11 @@ void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
 
 }
 
-namespace {
-// Printer class for LazyValueInfo results.
-class LazyValueInfoPrinter : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  LazyValueInfoPrinter() : FunctionPass(ID) {
-    initializeLazyValueInfoPrinterPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<LazyValueInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-
-  // Get the mandatory dominator tree analysis and pass this in to the
-  // LVIPrinter. We cannot rely on the LVI's DT, since it's optional.
-  bool runOnFunction(Function &F) override {
-    dbgs() << "LVI for function '" << F.getName() << "':\n";
-    auto &LVI = getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-    auto &DTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LVI.printLVI(F, DTree, dbgs());
-    return false;
-  }
-};
+PreservedAnalyses LazyValueInfoPrinterPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  OS << "LVI for function '" << F.getName() << "':\n";
+  auto &LVI = AM.getResult<LazyValueAnalysis>(F);
+  auto &DTree = AM.getResult<DominatorTreeAnalysis>(F);
+  LVI.printLVI(F, DTree, OS);
+  return PreservedAnalyses::all();
 }
-
-char LazyValueInfoPrinter::ID = 0;
-INITIALIZE_PASS_BEGIN(LazyValueInfoPrinter, "print-lazy-value-info",
-                "Lazy Value Info Printer Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
-INITIALIZE_PASS_END(LazyValueInfoPrinter, "print-lazy-value-info",
-                "Lazy Value Info Printer Pass", false, false)

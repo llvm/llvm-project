@@ -16,7 +16,7 @@
 #include <stddef.h>
 #include <sys/syscall.h>          // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // The POSIX definition of struct sigaction and the sigaction data structure
 // expected by the rt_sigaction syscall differ in their definition. So, we
@@ -96,15 +96,15 @@ LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
 
 LIBC_INLINE int block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return __llvm_libc::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
-                                        &set, sizeof(sigset_t));
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
+                                           &set, sizeof(sigset_t));
 }
 
 LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return __llvm_libc::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK, &set,
-                                        nullptr, sizeof(sigset_t));
+  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
+                                           &set, nullptr, sizeof(sigset_t));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SIGNAL_LINUX_SIGNAL_UTILS_H

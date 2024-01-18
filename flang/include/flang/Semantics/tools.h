@@ -44,7 +44,8 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 const Scope *FindModuleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
-const Scope *FindPureProcedureContaining(const Symbol &);
+const Scope *FindOpenACCConstructContaining(const Scope *);
+
 const Symbol *FindPointerComponent(const Scope &);
 const Symbol *FindPointerComponent(const DerivedTypeSpec &);
 const Symbol *FindPointerComponent(const DeclTypeSpec &);
@@ -143,6 +144,9 @@ inline bool IsPointer(const Symbol &symbol) {
 inline bool IsAllocatable(const Symbol &symbol) {
   return symbol.attrs().test(Attr::ALLOCATABLE);
 }
+inline bool IsValue(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::VALUE);
+}
 // IsAllocatableOrObjectPointer() may be the better choice
 inline bool IsAllocatableOrPointer(const Symbol &symbol) {
   return IsPointer(symbol) || IsAllocatable(symbol);
@@ -177,6 +181,12 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
 const Symbol *HasImpureFinal(const Symbol &);
+// Is this type finalizable or does it contain any polymorphic allocatable
+// ultimate components?
+bool MayRequireFinalization(const DerivedTypeSpec &derived);
+// Does this type have an allocatable direct component?
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived);
+
 bool IsInBlankCommon(const Symbol &);
 inline bool IsAssumedSizeArray(const Symbol &symbol) {
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -503,7 +513,7 @@ public:
       explicit ComponentPathNode(const DerivedTypeSpec &derived)
           : derived_{derived} {
         if constexpr (componentKind == ComponentKind::Scope) {
-          const Scope &scope{DEREF(derived.scope())};
+          const Scope &scope{DEREF(derived.GetScope())};
           nameIterator_ = scope.cbegin();
           nameEnd_ = scope.cend();
         } else {

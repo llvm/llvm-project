@@ -89,11 +89,11 @@ class __atomic_semaphore_base
     __atomic_base<ptrdiff_t> __a_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __atomic_semaphore_base(ptrdiff_t __count) : __a_(__count)
     {
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void release(ptrdiff_t __update = 1)
     {
         auto __old = __a_.fetch_add(__update, memory_order_release);
@@ -108,7 +108,7 @@ public:
         else
             __a_.notify_one();
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void acquire()
     {
         auto const __test_fn = [this]() -> bool {
@@ -118,7 +118,7 @@ public:
         __cxx_atomic_wait(&__a_.__a_, __test_fn);
     }
     template <class _Rep, class _Period>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time)
     {
         if (__rel_time == chrono::duration<_Rep, _Period>::zero())
@@ -126,7 +126,7 @@ public:
         auto const __test_fn = [this]() { return try_acquire(); };
         return std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     bool try_acquire()
     {
         auto __old = __a_.load(memory_order_acquire);
@@ -151,7 +151,7 @@ public:
         return __least_max_value;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore_(__count)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(
@@ -168,30 +168,30 @@ public:
     counting_semaphore(const counting_semaphore&) = delete;
     counting_semaphore& operator=(const counting_semaphore&) = delete;
 
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void release(ptrdiff_t __update = 1)
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(__update >= 0, "counting_semaphore:release called with a negative value");
         __semaphore_.release(__update);
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     void acquire()
     {
         __semaphore_.acquire();
     }
     template<class _Rep, class _Period>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time)
     {
         return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
     }
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     bool try_acquire()
     {
         return __semaphore_.try_acquire();
     }
     template <class _Clock, class _Duration>
-    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
     bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time)
     {
         auto const __current = _Clock::now();

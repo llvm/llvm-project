@@ -373,7 +373,8 @@ STREAM &BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Dump(STREAM &o) const {
   if (isNegative_) {
     o << '-';
   }
-  o << "10**(" << exponent_ << ") * ...\n";
+  o << "10**(" << exponent_ << ") * ...  (rounding "
+    << static_cast<int>(rounding_) << ")\n";
   for (int j{digits_}; --j >= 0;) {
     std::string str{std::to_string(digit_[j])};
     o << std::string(20 - str.size(), ' ') << str << " [" << j << ']';

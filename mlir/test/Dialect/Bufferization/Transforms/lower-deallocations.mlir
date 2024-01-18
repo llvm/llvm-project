@@ -120,7 +120,7 @@ func.func @conversion_dealloc_multiple_memrefs_and_retained(%arg0: memref<2xf32>
 //      CHECK: memref.dealloc [[RETAIN_CONDS]]
 //      CHECK: return [[OWNERSHIP0]], [[OWNERSHIP1]]
 
-//      CHECK: func @dealloc_helper
+//      CHECK: func private @dealloc_helper
 // CHECK-SAME: ([[TO_DEALLOC_MR:%.+]]: memref<?xindex>, [[TO_RETAIN_MR:%.+]]: memref<?xindex>,
 // CHECK-SAME: [[CONDS:%.+]]: memref<?xi1>, [[DEALLOC_CONDS_OUT:%.+]]: memref<?xi1>,
 // CHECK-SAME: [[RETAIN_CONDS_OUT:%.+]]: memref<?xi1>)

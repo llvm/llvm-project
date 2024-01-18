@@ -19,6 +19,8 @@
 #define FORTRAN_LOWER_HLFIRINTRINSICS_H
 
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <optional>
@@ -46,18 +48,71 @@ struct PreparedActualArgument {
   PreparedActualArgument(hlfir::Entity actual,
                          std::optional<mlir::Value> isPresent)
       : actual{actual}, isPresent{isPresent} {}
+  PreparedActualArgument(hlfir::ElementalAddrOp vectorSubscriptedActual)
+      : actual{vectorSubscriptedActual}, isPresent{std::nullopt} {}
   void setElementalIndices(mlir::ValueRange &indices) {
     oneBasedElementalIndices = &indices;
   }
-  hlfir::Entity getActual(mlir::Location loc,
-                          fir::FirOpBuilder &builder) const {
-    if (oneBasedElementalIndices)
-      return hlfir::getElementAt(loc, builder, actual,
-                                 *oneBasedElementalIndices);
-    return actual;
+
+  /// Get the prepared actual. If this is an array argument in an elemental
+  /// call, the current element value will be returned.
+  hlfir::Entity getActual(mlir::Location loc, fir::FirOpBuilder &builder) const;
+
+  void derefPointersAndAllocatables(mlir::Location loc,
+                                    fir::FirOpBuilder &builder) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      actual = hlfir::derefPointersAndAllocatables(loc, builder, *actualEntity);
   }
-  hlfir::Entity getOriginalActual() const { return actual; }
-  void setOriginalActual(hlfir::Entity newActual) { actual = newActual; }
+
+  void loadTrivialScalar(mlir::Location loc, fir::FirOpBuilder &builder) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      actual = hlfir::loadTrivialScalar(loc, builder, *actualEntity);
+  }
+
+  /// Ensure an array expression argument is fully evaluated in memory before
+  /// the call. Useful for impure elemental calls.
+  hlfir::AssociateOp associateIfArrayExpr(mlir::Location loc,
+                                          fir::FirOpBuilder &builder) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
+      if (!actualEntity->isVariable() && actualEntity->isArray()) {
+        mlir::Type storageType = actualEntity->getType();
+        hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+            loc, builder, *actualEntity, storageType, "adapt.impure_arg_eval");
+        actual = hlfir::Entity{associate};
+        return associate;
+      }
+    }
+    return {};
+  }
+
+  bool isArray() const {
+    return std::holds_alternative<hlfir::ElementalAddrOp>(actual) ||
+           std::get<hlfir::Entity>(actual).isArray();
+  }
+
+  mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      return hlfir::genShape(loc, builder, *actualEntity);
+    return std::get<hlfir::ElementalAddrOp>(actual).getShape();
+  }
+
+  mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder) {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      return hlfir::genCharLength(loc, builder, *actualEntity);
+    auto typeParams = std::get<hlfir::ElementalAddrOp>(actual).getTypeparams();
+    assert(typeParams.size() == 1 &&
+           "failed to retrieve vector subscripted character length");
+    return typeParams[0];
+  }
+
+  /// When the argument is polymorphic, get mold value with the same dynamic
+  /// type.
+  mlir::Value getPolymorphicMold(mlir::Location loc) const {
+    if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual))
+      return *actualEntity;
+    TODO(loc, "polymorphic vector subscripts");
+  }
+
   bool handleDynamicOptional() const { return isPresent.has_value(); }
   mlir::Value getIsPresent() const {
     assert(handleDynamicOptional() && "not a dynamic optional");
@@ -67,7 +122,7 @@ struct PreparedActualArgument {
   void resetOptionalAspect() { isPresent = std::nullopt; }
 
 private:
-  hlfir::Entity actual;
+  std::variant<hlfir::Entity, hlfir::ElementalAddrOp> actual;
   mlir::ValueRange *oneBasedElementalIndices{nullptr};
   // When the actual may be dynamically optional, "isPresent"
   // holds a boolean value indicating the presence of the

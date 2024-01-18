@@ -80,6 +80,7 @@ CAST_OPERATION(LValueToRValue)
 /// (possibly) adding qualifiers or removing noexcept.
 ///   int    -> int
 ///   char** -> const char * const *
+///   int[1] -> int[]
 ///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 

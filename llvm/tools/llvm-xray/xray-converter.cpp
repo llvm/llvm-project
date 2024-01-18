@@ -104,7 +104,7 @@ void TraceConverter::exportAsYAML(const Trace &Records, raw_ostream &OS) {
 void TraceConverter::exportAsRAWv1(const Trace &Records, raw_ostream &OS) {
   // First write out the file header, in the correct endian-appropriate format
   // (XRay assumes currently little endian).
-  support::endian::Writer Writer(OS, support::endianness::little);
+  support::endian::Writer Writer(OS, llvm::endianness::little);
   const auto &FH = Records.getFileHeader();
   Writer.write(FH.Version);
   Writer.write(FH.Type);
@@ -190,7 +190,7 @@ findSiblings(StackTrieNode *parent, int32_t FnId, uint32_t TId,
   SmallVector<StackTrieNode *, 4> Siblings{};
 
   if (parent == nullptr) {
-    for (auto map_iter : StackRootsByThreadId) {
+    for (const auto &map_iter : StackRootsByThreadId) {
       // Only look for siblings in other threads.
       if (map_iter.first != TId)
         for (auto node_iter : map_iter.second) {

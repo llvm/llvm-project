@@ -1293,7 +1293,8 @@ Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
 
 Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
   Value *V = expand(S->getOperand());
-  return Builder.CreateZExt(V, S->getType());
+  return Builder.CreateZExt(V, S->getType(), "",
+                            SE.isKnownNonNegative(S->getOperand()));
 }
 
 Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
@@ -1531,8 +1532,26 @@ Value *SCEVExpander::expand(const SCEV *S) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
   } else {
-    for (Instruction *I : DropPoisonGeneratingInsts)
+    for (Instruction *I : DropPoisonGeneratingInsts) {
       I->dropPoisonGeneratingFlagsAndMetadata();
+      // See if we can re-infer from first principles any of the flags we just
+      // dropped.
+      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+        if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+          auto *BO = cast<BinaryOperator>(I);
+          BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+          BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+        }
+      if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
+        auto *Src = NNI->getOperand(0);
+        if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
+                                    Constant::getNullValue(Src->getType()), I,
+                                    DL).value_or(false))
+          NNI->setNonNeg(true);
+      }
+    }
   }
   // Remember the expanded value for this SCEV at this location.
   //
@@ -2101,7 +2120,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     bool NeedPosCheck = !SE.isKnownNegative(Step);
     bool NeedNegCheck = !SE.isKnownPositive(Step);
 
-    if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
+    if (isa<PointerType>(ARTy)) {
       Value *NegMulV = Builder.CreateNeg(MulV);
       if (NeedPosCheck)
         Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);

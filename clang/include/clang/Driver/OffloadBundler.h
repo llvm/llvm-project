@@ -19,6 +19,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include <llvm/Support/MemoryBuffer.h>
 #include <string>
 #include <vector>
 
@@ -26,11 +27,15 @@ namespace clang {
 
 class OffloadBundlerConfig {
 public:
+  OffloadBundlerConfig();
+
   bool AllowNoHost = false;
   bool AllowMissingBundles = false;
   bool CheckInputArchive = false;
   bool PrintExternalCommands = false;
   bool HipOpenmpCompatible = false;
+  bool Compress = false;
+  bool Verbose = false;
 
   unsigned BundleAlignment = 1;
   unsigned HostInputIndex = ~0u;
@@ -61,7 +66,7 @@ public:
   llvm::Error UnbundleArchive();
 };
 
-/// Obtain the offload kind, real machine triple, and an optional GPUArch
+/// Obtain the offload kind, real machine triple, and an optional TargetID
 /// out of the target information specified by the user.
 /// Bundle Entry ID (or, Offload Target String) has following components:
 ///  * Offload Kind - Host, OpenMP, or HIP
@@ -82,6 +87,38 @@ struct OffloadTargetInfo {
   bool isTripleValid() const;
   bool operator==(const OffloadTargetInfo &Target) const;
   std::string str() const;
+};
+
+// CompressedOffloadBundle represents the format for the compressed offload
+// bundles.
+//
+// The format is as follows:
+// - Magic Number (4 bytes) - A constant "CCOB".
+// - Version (2 bytes)
+// - Compression Method (2 bytes) - Uses the values from
+// llvm::compression::Format.
+// - Uncompressed Size (4 bytes).
+// - Truncated MD5 Hash (8 bytes).
+// - Compressed Data (variable length).
+
+class CompressedOffloadBundle {
+private:
+  static inline const size_t MagicSize = 4;
+  static inline const size_t VersionFieldSize = sizeof(uint16_t);
+  static inline const size_t MethodFieldSize = sizeof(uint16_t);
+  static inline const size_t SizeFieldSize = sizeof(uint32_t);
+  static inline const size_t HashFieldSize = 8;
+  static inline const size_t HeaderSize = MagicSize + VersionFieldSize +
+                                          MethodFieldSize + SizeFieldSize +
+                                          HashFieldSize;
+  static inline const llvm::StringRef MagicNumber = "CCOB";
+  static inline const uint16_t Version = 1;
+
+public:
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  compress(const llvm::MemoryBuffer &Input, bool Verbose = false);
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  decompress(const llvm::MemoryBuffer &Input, bool Verbose = false);
 };
 
 } // namespace clang

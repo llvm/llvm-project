@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, __llvm_libc::rintf, ::rintf,
+SINGLE_INPUT_SINGLE_OUTPUT_DIFF(float, LIBC_NAMESPACE::rintf, ::rintf,
                                 "rintf_diff.log")

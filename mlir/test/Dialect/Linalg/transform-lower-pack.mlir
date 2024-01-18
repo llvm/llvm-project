@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -cse --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -cse --split-input-file | FileCheck %s
 
   // CHECK-LABEL: func.func @pack(
 func.func @pack(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<17x2x16x16x32x8xf32>) -> tensor<17x2x16x16x32x8xf32> {
@@ -18,12 +18,14 @@ func.func @pack(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<17x2x16x16x32x8xf
   return %pack : tensor<17x2x16x16x32x8xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -47,12 +49,14 @@ func.func @pack(%arg0: tensor<128x8xf32>, %arg1: tensor<8x8x16x1xf32>) -> tensor
   return %pack : tensor<8x8x16x1xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -79,12 +83,14 @@ func.func @pack_as_pad(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x13
   return %pack :  tensor<1x1x1x1x136x64x16x16xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -111,12 +117,14 @@ func.func @pack_not_a_pad(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x16x
   return %pack :  tensor<1x1x16x16x136x64xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -133,22 +141,24 @@ func.func @unpack(%arg0: tensor<17x2x16x16x32x8xf32>, %arg1: tensor<129x47x16x16
   // CHECK-SAME:   : tensor<17x8x2x32x16x16xf32> into tensor<136x64x16x16xf32>
   //      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0, 0, 0] [129, 47, 16, 16] [1, 1, 1, 1]
   // CHECK-SAME:   : tensor<136x64x16x16xf32> to tensor<129x47x16x16xf32>
-  //      CHECK: linalg.copy ins(%[[SLICE]] : tensor<129x47x16x16xf32>) 
+  //      CHECK: linalg.copy ins(%[[SLICE]] : tensor<129x47x16x16xf32>)
   // CHECK-SAME:        outs(%[[ARG1]] : tensor<129x47x16x16xf32>)
   %pack = tensor.unpack %arg0 inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg1
     : tensor<17x2x16x16x32x8xf32> -> tensor<129x47x16x16xf32>
   return %pack : tensor<129x47x16x16xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.unpack">
-  transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
-    -> (!transform.op<"tensor.empty">,
-        !transform.op<"linalg.transpose">,
-        !transform.op<"tensor.collapse_shape">,
-        !transform.op<"tensor.extract_slice">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
 }
 
 // -----
@@ -171,15 +181,17 @@ func.func @unpack_as_pad(%arg0: tensor<1x1x1x1x136x64x16x16xf32>, %arg1: tensor<
   return %pack : tensor<129x47x16x16xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.unpack">
-  transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
-    -> (!transform.op<"tensor.empty">,
-        !transform.op<"linalg.transpose">,
-        !transform.op<"tensor.collapse_shape">,
-        !transform.op<"tensor.extract_slice">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
 }
 
 // -----
@@ -204,12 +216,14 @@ func.func @pack_with_outer_dims_perm(%src: tensor<100x200x128x256xi32>,
   return %0 : tensor<200x4x16x100x16x32xi32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -234,12 +248,14 @@ func.func @pack_with_pad(%src: tensor<4225x12xf32>, %dest: tensor<265x16x16x1xf3
   return %0 : tensor<265x16x16x1xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -266,12 +282,14 @@ func.func @pack_with_pad_and_outer_dims_perm(%src: tensor<100x200x127x255xi32>,
   return %0 : tensor<200x4x16x100x16x32xi32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -320,12 +338,14 @@ func.func @dynamic_pack_pad_transpose_inner_and_outer_dims(%source: tensor<?x?xf
   return %pack : tensor<?x?x16x32xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -356,12 +376,14 @@ func.func @pack_as_pad_with_outer_dims_perm(%arg0: tensor<129x47x16x16xf32>, %ar
   return %pack :  tensor<1x1x1x1x136x64x16x16xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
 }
 
 // -----
@@ -390,10 +412,51 @@ func.func @pack_as_pad_with_unit_dims(%arg0: tensor<3x1x1x1xf32>, %arg1: tensor<
 }
 
 
-transform.sequence failures(propagate) {
-^bb1(%module_op: !transform.any_op):
-  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
-    : (!transform.any_op) -> !transform.op<"tensor.pack">
-  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
-    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
+}
+
+// -----
+
+// Check that we can lower unpack with dynamic dimensions in the destination.
+// CHECK-LABEL: func.func @unpack_with_dynamic_dest(
+// CHECK-SAME: %[[ARG0:.*]]: tensor<32x2x49x16x16xf32>, %[[ARG1:.*]]: tensor<32x?x?xf32>)
+//      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<32x2x16x49x16xf32>
+//      CHECK: %[[TRAN:.*]] = linalg.transpose
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<32x2x49x16x16xf32>)
+// CHECK-SAME:   outs(%[[EMPTY]] : tensor<32x2x16x49x16xf32>)
+// CHECK-SAME:   permutation = [0, 1, 3, 2, 4]
+//      CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0], [1, 2], [3, 4]]
+// CHECK-SAME:   : tensor<32x2x16x49x16xf32> into tensor<32x32x784xf32>
+//      CHECK:  %[[C1:.*]] = arith.constant 1 : index
+//      CHECK: %[[DIM1:.*]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<32x?x?xf32>
+//      CHECK: %[[C2:.*]] = arith.constant 2 : index
+//      CHECK: %[[DIM2:.*]] = tensor.dim %[[ARG1]], %[[C2]] : tensor<32x?x?xf32>
+//      CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0, 0] [32, %[[DIM1]], %[[DIM2]]] [1, 1, 1]
+// CHECK-SAME:   : tensor<32x32x784xf32> to tensor<32x?x?xf32>
+//      CHECK: linalg.copy ins(%[[SLICE]] : tensor<32x?x?xf32>)
+// CHECK-SAME:        outs(%[[ARG1]] : tensor<32x?x?xf32>)
+func.func @unpack_with_dynamic_dest(%arg0: tensor<32x2x49x16x16xf32>, %arg1: tensor<32x?x?xf32>) -> tensor<32x?x?xf32> {
+  %pack = tensor.unpack %arg0 inner_dims_pos = [1, 2] inner_tiles = [16, 16] into %arg1
+    : tensor<32x2x49x16x16xf32> -> tensor<32x?x?xf32>
+  return %pack : tensor<32x?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"tensor.unpack">
+    transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">)
+          transform.yield
+  }
 }

@@ -213,6 +213,17 @@ unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
 }
 
 unsigned
+TargetTransformInfo::getInliningCostBenefitAnalysisSavingsMultiplier() const {
+  return TTIImpl->getInliningCostBenefitAnalysisSavingsMultiplier();
+}
+
+unsigned
+TargetTransformInfo::getInliningCostBenefitAnalysisProfitableMultiplier()
+    const {
+  return TTIImpl->getInliningCostBenefitAnalysisProfitableMultiplier();
+}
+
+unsigned
 TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }
@@ -400,6 +411,10 @@ bool TargetTransformInfo::isLSRCostLess(const LSRCost &C1,
 
 bool TargetTransformInfo::isNumRegsMajorCostOfLSR() const {
   return TTIImpl->isNumRegsMajorCostOfLSR();
+}
+
+bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
+  return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
 }
 
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
@@ -1120,6 +1135,13 @@ void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
 bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
                                               const Function *Callee) const {
   return TTIImpl->areInlineCompatible(Caller, Callee);
+}
+
+unsigned
+TargetTransformInfo::getInlineCallPenalty(const Function *F,
+                                          const CallBase &Call,
+                                          unsigned DefaultCallPenalty) const {
+  return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
 }
 
 bool TargetTransformInfo::areTypesABICompatible(

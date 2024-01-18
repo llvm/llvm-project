@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -march=hexagon -rdf-opt=0 < %s -pipeliner-experimental-cg=true -hoist-const-loads=false | FileCheck %s
 
 ; Test that we fixup a pipelined loop correctly when the number of
 ; stages is greater than the compile-time loop trip count. In this

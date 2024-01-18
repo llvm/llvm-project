@@ -1010,10 +1010,7 @@ void Symtab::Finalize() {
   // Calculate the size of symbols inside InitAddressIndexes.
   InitAddressIndexes();
   // Shrink to fit the symbols so we don't waste memory
-  if (m_symbols.capacity() > m_symbols.size()) {
-    collection new_symbols(m_symbols.begin(), m_symbols.end());
-    m_symbols.swap(new_symbols);
-  }
+  m_symbols.shrink_to_fit();
   SaveToCache();
 }
 

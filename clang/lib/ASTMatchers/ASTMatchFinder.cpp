@@ -18,8 +18,10 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Timer.h"
@@ -651,11 +653,20 @@ public:
                           BoundNodesTreeBuilder *Builder,
                           bool Directly) override;
 
+private:
+  bool
+  classIsDerivedFromImpl(const CXXRecordDecl *Declaration,
+                         const Matcher<NamedDecl> &Base,
+                         BoundNodesTreeBuilder *Builder, bool Directly,
+                         llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited);
+
+public:
   bool objcClassIsDerivedFrom(const ObjCInterfaceDecl *Declaration,
                               const Matcher<NamedDecl> &Base,
                               BoundNodesTreeBuilder *Builder,
                               bool Directly) override;
 
+public:
   // Implements ASTMatchFinder::matchesChildOf.
   bool matchesChildOf(const DynTypedNode &Node, ASTContext &Ctx,
                       const DynTypedMatcher &Matcher,
@@ -1361,7 +1372,17 @@ bool MatchASTVisitor::classIsDerivedFrom(const CXXRecordDecl *Declaration,
                                          const Matcher<NamedDecl> &Base,
                                          BoundNodesTreeBuilder *Builder,
                                          bool Directly) {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+  return classIsDerivedFromImpl(Declaration, Base, Builder, Directly, Visited);
+}
+
+bool MatchASTVisitor::classIsDerivedFromImpl(
+    const CXXRecordDecl *Declaration, const Matcher<NamedDecl> &Base,
+    BoundNodesTreeBuilder *Builder, bool Directly,
+    llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited) {
   if (!Declaration->hasDefinition())
+    return false;
+  if (!Visited.insert(Declaration).second)
     return false;
   for (const auto &It : Declaration->bases()) {
     const Type *TypeNode = It.getType().getTypePtr();
@@ -1384,7 +1405,8 @@ bool MatchASTVisitor::classIsDerivedFrom(const CXXRecordDecl *Declaration,
       *Builder = std::move(Result);
       return true;
     }
-    if (!Directly && classIsDerivedFrom(ClassDecl, Base, Builder, Directly))
+    if (!Directly &&
+        classIsDerivedFromImpl(ClassDecl, Base, Builder, Directly, Visited))
       return true;
   }
   return false;

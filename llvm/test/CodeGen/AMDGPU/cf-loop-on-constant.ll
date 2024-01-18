@@ -36,7 +36,7 @@ define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN_DBG-NEXT:    s_add_u32 s12, s12, s11
 ; GCN_DBG-NEXT:    s_addc_u32 s13, s13, 0
-; GCN_DBG-NEXT:    ; implicit-def: $vgpr0
+; GCN_DBG-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
@@ -144,7 +144,7 @@ define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwi
 ; GCN_DBG-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN_DBG-NEXT:    s_add_u32 s12, s12, s11
 ; GCN_DBG-NEXT:    s_addc_u32 s13, s13, 0
-; GCN_DBG-NEXT:    ; implicit-def: $vgpr0
+; GCN_DBG-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
@@ -232,7 +232,7 @@ define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN_DBG-NEXT:    s_add_u32 s12, s12, s11
 ; GCN_DBG-NEXT:    s_addc_u32 s13, s13, 0
-; GCN_DBG-NEXT:    ; implicit-def: $vgpr0
+; GCN_DBG-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
@@ -321,7 +321,7 @@ define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounw
 ; GCN_DBG-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN_DBG-NEXT:    s_add_u32 s12, s12, s11
 ; GCN_DBG-NEXT:    s_addc_u32 s13, s13, 0
-; GCN_DBG-NEXT:    ; implicit-def: $vgpr0
+; GCN_DBG-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0
@@ -422,7 +422,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_mov_b32 s15, 0xe8f000
 ; GCN_DBG-NEXT:    s_add_u32 s12, s12, s11
 ; GCN_DBG-NEXT:    s_addc_u32 s13, s13, 0
-; GCN_DBG-NEXT:    ; implicit-def: $vgpr0
+; GCN_DBG-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN_DBG-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_writelane_b32 v0, s0, 0

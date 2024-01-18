@@ -21,7 +21,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstddef>
@@ -162,6 +161,50 @@ std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
 
 static inline Error defaultWarningHandler(const Twine &Msg) {
   return createError(Msg);
+}
+
+template <class ELFT>
+bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
+                         const typename ELFT::Shdr &Sec) {
+  // SHT_NOBITS sections don't need to have an offset inside the segment.
+  if (Sec.sh_type == ELF::SHT_NOBITS)
+    return true;
+
+  if (Sec.sh_offset < Phdr.p_offset)
+    return false;
+
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0)
+    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
+  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
+}
+
+// Check that an allocatable section belongs to a virtual address
+// space of a segment.
+template <class ELFT>
+bool checkSectionVMA(const typename ELFT::Phdr &Phdr,
+                     const typename ELFT::Shdr &Sec) {
+  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
+    return true;
+
+  if (Sec.sh_addr < Phdr.p_vaddr)
+    return false;
+
+  bool IsTbss =
+      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
+  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
+  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
+  // Only non-empty sections can be at the end of a segment.
+  if (Sec.sh_size == 0 || IsTbssInNonTLS)
+    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
+  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
+}
+
+template <class ELFT>
+bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
+                        const typename ELFT::Shdr &Sec) {
+  return checkSectionOffsets<ELFT>(Phdr, Sec) &&
+         checkSectionVMA<ELFT>(Phdr, Sec);
 }
 
 template <class ELFT>

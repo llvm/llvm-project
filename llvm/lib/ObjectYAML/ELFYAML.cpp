@@ -131,6 +131,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_HW_WATCH);
   ECase(NT_ARM_SVE);
   ECase(NT_ARM_PAC_MASK);
+  ECase(NT_ARM_TAGGED_ADDR_CTRL);
   ECase(NT_ARM_SSVE);
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
@@ -609,6 +610,8 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1103, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -716,6 +719,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     ECase(SHT_MSP430_ATTRIBUTES);
     break;
   case ELF::EM_AARCH64:
+    ECase(SHT_AARCH64_AUTH_RELR);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
     ECase(SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
     break;

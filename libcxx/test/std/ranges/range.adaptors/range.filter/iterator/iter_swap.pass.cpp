@@ -45,7 +45,7 @@ constexpr void test() {
 
   {
     std::array<int, 5> array{1, 2, 1, 4, 1};
-    FilterView view = make_filter_view(array.begin(), array.end(), IsEven{});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), IsEven{});
     FilterIterator const it1 = view.begin();
     FilterIterator const it2 = std::ranges::next(view.begin());
 

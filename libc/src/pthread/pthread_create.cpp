@@ -22,9 +22,9 @@
 #include <errno.h>
 #include <pthread.h> // For pthread_* type definitions.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
+static_assert(sizeof(pthread_t) == sizeof(LIBC_NAMESPACE::Thread),
               "Mismatch between pthread_t and internal Thread.");
 
 LLVM_LIBC_FUNCTION(int, pthread_create,
@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   pthread_attr_t default_attr;
   if (attr == nullptr) {
     // We failed to initialize attributes (should be impossible)
-    if (LIBC_UNLIKELY(__llvm_libc::pthread_attr_init(&default_attr) != 0))
+    if (LIBC_UNLIKELY(LIBC_NAMESPACE::pthread_attr_init(&default_attr) != 0))
       return EINVAL;
 
     attr = &default_attr;
@@ -46,21 +46,21 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
 
   // As of writing this all the `pthread_attr_get*` functions always succeed.
   if (LIBC_UNLIKELY(
-          __llvm_libc::pthread_attr_getstack(attr, &stack, &stacksize) != 0))
-    return EINVAL;
-
-  if (LIBC_UNLIKELY(__llvm_libc::pthread_attr_getguardsize(attr, &guardsize) !=
-                    0))
+          LIBC_NAMESPACE::pthread_attr_getstack(attr, &stack, &stacksize) != 0))
     return EINVAL;
 
   if (LIBC_UNLIKELY(
-          __llvm_libc::pthread_attr_getdetachstate(attr, &detachstate) != 0))
+          LIBC_NAMESPACE::pthread_attr_getguardsize(attr, &guardsize) != 0))
+    return EINVAL;
+
+  if (LIBC_UNLIKELY(
+          LIBC_NAMESPACE::pthread_attr_getdetachstate(attr, &detachstate) != 0))
     return EINVAL;
 
   if (attr == &default_attr)
     // Should we fail here? Its non-issue as the moment as pthread_attr_destroy
     // can only succeed.
-    if (LIBC_UNLIKELY(__llvm_libc::pthread_attr_destroy(&default_attr) != 0))
+    if (LIBC_UNLIKELY(LIBC_NAMESPACE::pthread_attr_destroy(&default_attr) != 0))
       return EINVAL;
 
   if (stacksize && stacksize < PTHREAD_STACK_MIN)
@@ -76,7 +76,7 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   // Thread::run will check validity of the `stack` argument (stack alignment is
   // universal, not sure a pthread requirement).
 
-  auto *thread = reinterpret_cast<__llvm_libc::Thread *>(th);
+  auto *thread = reinterpret_cast<LIBC_NAMESPACE::Thread *>(th);
   int result = thread->run(func, arg, stack, stacksize, guardsize,
                            detachstate == PTHREAD_CREATE_DETACHED);
   if (result != 0 && result != EPERM && result != EINVAL)
@@ -84,4 +84,4 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

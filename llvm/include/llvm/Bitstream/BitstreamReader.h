@@ -169,8 +169,7 @@ public:
     if (BitcodeBytes.size() >= NextChar + sizeof(word_t)) {
       BytesRead = sizeof(word_t);
       CurWord =
-          support::endian::read<word_t, support::little, support::unaligned>(
-              NextCharPtr);
+          support::endian::read<word_t, llvm::endianness::little>(NextCharPtr);
     } else {
       // Short read.
       BytesRead = BitcodeBytes.size() - NextChar;

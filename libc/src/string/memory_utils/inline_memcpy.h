@@ -28,14 +28,17 @@
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memcpy.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_byte_per_byte
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "src/string/memory_utils/generic/builtin.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY inline_memcpy_builtin
 #else
 #error "Unsupported architecture"
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
                                size_t count) {
@@ -43,6 +46,6 @@ LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
                                       reinterpret_cast<CPtr>(src), count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMCPY_H

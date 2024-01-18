@@ -243,7 +243,7 @@ define i8 @rev8_mul_and_lshr(i8 %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 139536
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP2]], 32800
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 558144
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i64 [[TMP7]], 65793
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i8

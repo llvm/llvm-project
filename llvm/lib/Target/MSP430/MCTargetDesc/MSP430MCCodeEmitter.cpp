@@ -94,7 +94,8 @@ void MSP430MCCodeEmitter::encodeInstruction(const MCInst &MI,
   size_t WordCount = Size / 2;
 
   while (WordCount--) {
-    support::endian::write(CB, (uint16_t)BinaryOpCode, support::little);
+    support::endian::write(CB, (uint16_t)BinaryOpCode,
+                           llvm::endianness::little);
     BinaryOpCode >>= 16;
   }
 }

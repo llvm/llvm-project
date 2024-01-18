@@ -24,7 +24,7 @@
 #include "linux_extension_signals.h"
 #endif
 
-namespace __llvm_libc::internal {
+namespace LIBC_NAMESPACE::internal {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS = []() {
   if constexpr (USE_LINUX_PLATFORM_SIGNALS) {
@@ -34,6 +34,6 @@ LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS = []() {
   }
 }();
 
-} // namespace __llvm_libc::internal
+} // namespace LIBC_NAMESPACE::internal
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_SIGNAL_TABLE_H

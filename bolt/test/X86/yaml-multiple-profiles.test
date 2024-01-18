@@ -5,7 +5,7 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o /dev/null --data %t/profile.yaml \
+# RUN: llvm-bolt %t.exe -o %t.null --data %t/profile.yaml \
 # RUN:   --profile-ignore-hash -v=1 2>&1 | FileCheck %s
 # CHECK: BOLT-WARNING: dropping duplicate profile for main_alias(*2)
 #--- main.s

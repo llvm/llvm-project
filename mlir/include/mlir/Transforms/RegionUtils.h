@@ -87,6 +87,9 @@ LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
 LogicalResult runRegionDCE(RewriterBase &rewriter,
                            MutableArrayRef<Region> regions);
 
+/// Get a topologically sorted list of blocks of the given region.
+SetVector<Block *> getTopologicallySortedBlocks(Region &region);
+
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_REGIONUTILS_H_

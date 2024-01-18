@@ -14,7 +14,7 @@
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/properties/architectures.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void quick_exit(int status) {
   // We want to first make sure the server is listening before we exit.
@@ -28,6 +28,6 @@ void quick_exit(int status) {
   gpu::end_program();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H

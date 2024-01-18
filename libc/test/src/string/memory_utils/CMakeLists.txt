@@ -8,7 +8,6 @@ add_libc_test(
     utils_test.cpp
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
-    -ffreestanding
   DEPENDS
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef

@@ -279,17 +279,34 @@ define <vscale x 2 x i32> @vpmerge_vid(<vscale x 2 x i32> %passthru, <vscale x 2
   ret <vscale x 2 x i32> %b
 }
 
-; Test riscv.viota
+; Test not combine VIOTA_M and VMERGE_VVM without true mask.
 declare <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i1>, i64)
 define <vscale x 2 x i32> @vpmerge_viota(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_viota:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
-; CHECK-NEXT:    viota.m v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test combine VIOTA_M and VMERGE_VVM with true mask.
+define <vscale x 2 x i32> @vpmerge_viota2(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_viota2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %true = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %true, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
 
@@ -730,8 +747,9 @@ define <vscale x 2 x i32> @vpselect_vid(<vscale x 2 x i32> %passthru, <vscale x 
 define <vscale x 2 x i32> @vpselect_viota(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_viota:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    viota.m v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
@@ -972,6 +990,98 @@ entry:
   %0 = tail call <vscale x 1 x i16> @llvm.riscv.vaaddu.nxv1i16.i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %var_11, i16 %var_9, i64 0, i64 3)
   %1 = tail call <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %var_0, <vscale x 1 x i16> %0, <vscale x 1 x i1> %var_5, i64 3)
   ret <vscale x 1 x i16> %1
+}
+
+; Test reductions don't have a vmerge folded into them, since the mask affects
+; the result.
+
+declare <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
+    <vscale x 2 x i32>,
+    <vscale x 2 x i32>,
+    <vscale x 2 x i32>,
+    i64)
+
+define <vscale x 2 x i32> @vredsum(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %vl) {
+; CHECK-LABEL: vredsum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vredsum.vs v11, v9, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %x,
+    <vscale x 2 x i32> %y,
+    i64 %vl)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i64 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+declare <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
+    <vscale x 2 x float>,
+    <vscale x 2 x float>,
+    <vscale x 2 x float>,
+    i64, i64)
+
+define <vscale x 2 x float> @vfredusum(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) {
+; CHECK-LABEL: vfredusum:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vfredusum.vs v11, v9, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
+    <vscale x 2 x float> %passthru,
+    <vscale x 2 x float> %x,
+    <vscale x 2 x float> %y,
+    i64 0, i64 %vl)
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; However we can fold it in if the mask is all ones.
+define <vscale x 2 x i32> @vredsum_allones_mask(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i64 %vl) {
+; CHECK-LABEL: vredsum_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vredsum.vs v8, v9, v10
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+
+  %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
+    <vscale x 2 x i32> %passthru,
+    <vscale x 2 x i32> %x,
+    <vscale x 2 x i32> %y,
+    i64 %vl)
+  %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, <vscale x 2 x i1> %mask, i64 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x float> @vfredusum_allones_mask(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, i64 %vl) {
+; CHECK-LABEL: vfredusum_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vfredusum.vs v8, v9, v10
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+
+  %a = call <vscale x 2 x float> @llvm.riscv.vfredusum.nxv2f32.nxv2f32(
+    <vscale x 2 x float> %passthru,
+    <vscale x 2 x float> %x,
+    <vscale x 2 x float> %y,
+    i64 0, i64 %vl)
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %mask, i64 %vl)
+  ret <vscale x 2 x float> %b
 }
 
 declare <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>* nocapture, i64)

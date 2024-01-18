@@ -57,7 +57,7 @@ int main() {
   // CHECK: addr=0x[[#%x,HOST_ADDR:]], size=[[#%u,SIZE:]]
   fprintf(stderr, "addr=%p, size=%ld\n", arr, sizeof arr);
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
 #pragma omp target data map(alloc : arr[LARGE])
   {
 #pragma omp target update CLAUSE(present : arr[SMALL])
@@ -66,8 +66,8 @@ int main() {
   // CHECK: arr is present
   fprintf(stderr, "arr is present\n");
 
-  // CHECK: Libomptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: omptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc : arr[SMALL])
   {
 #pragma omp target update CLAUSE(present : arr[LARGE])

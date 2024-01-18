@@ -5,7 +5,9 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
@@ -375,6 +377,25 @@ endif()
 if(MSVC)
   # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+
+  # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
+  # Since we're using CMAKE_MSVC_RUNTIME_LIBRARY (CMP0091 set to NEW),
+  # these options shouldn't be included in these flags variables. However,
+  # package managers that don't know which mechanism is used for passing
+  # CRT choice flags might be passing them both ways - which leads to
+  # duplicate CRT choice options. Thus make sure to strip out these flags
+  # from these variables, when we're forcing a CRT choice other than what
+  # the user requested here.
+  foreach(flag_var
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+    CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "[/-]M[DT]d" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]MD" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]D_DEBUG" "" ${flag_var} "${${flag_var}}")
+  endforeach()
+
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
 
@@ -657,9 +678,24 @@ endif()
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WSUGGEST_OVERRIDE_FLAG -Wno-suggest-override COMPILER_RT_UNITTEST_CFLAGS)
-
-if(MSVC)
-  # gtest use a lot of stuff marked as deprecated on Windows.
+# Detect if the compiler toolchain includes gcc-toolset-12.
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+                  RESULT_VARIABLE compiler_info_rc
+                  OUTPUT_VARIABLE compiler_info
+                  ERROR_VARIABLE compiler_info)
+  if(compiler_info MATCHES ".*gcc-toolset-12.*")
+    set(USING_GCC_TOOLSET_12 TRUE)
+  endif()
+endif()
+if(MSVC OR (LINUX AND DEFINED USING_GCC_TOOLSET_12 AND
+            CMAKE_CXX_STANDARD EQUAL 17))
+  # gtest use a lot of stuff marked as deprecated on Windows or if using
+  # gcc-toolset-12 in the compiler toolchain on Linux; all of the
+  # deprecated declarations in gcc-toolset-12 used in Google Tests have been
+  # observed to be _GLIBCXX17_DEPRECATED and should go away once
+  # CMAKE_CXX_STANDARD is greater than 17.
   list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
 

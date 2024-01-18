@@ -111,7 +111,7 @@ PreservedAnalyses SyntheticCountsPropagation::run(Module &M,
     // Now compute the callsite count from relative frequency and
     // entry count:
     BasicBlock *CSBB = CB.getParent();
-    Scaled64 EntryFreq(BFI.getEntryFreq(), 0);
+    Scaled64 EntryFreq(BFI.getEntryFreq().getFrequency(), 0);
     Scaled64 BBCount(BFI.getBlockFreq(CSBB).getFrequency(), 0);
     BBCount /= EntryFreq;
     BBCount *= Counts[Caller];

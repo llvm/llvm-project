@@ -370,6 +370,67 @@ define i64 @gep_diff_with_bitcast(ptr %p, i64 %idx) {
   ret i64 %i6
 }
 
+define i64 @sub_scalable(ptr noundef %val1) {
+; CHECK-LABEL: @sub_scalable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 1
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %gep1 to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  ret i64 %sub.ptr.sub.i
+}
+
+define i64 @sub_scalable2(ptr noundef %val1) {
+; CHECK-LABEL: @sub_scalable2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl i64 [[TMP2]], 5
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[TMP1]], [[GEP2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+entry:
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 1
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %gep1 to i64
+  %gep2 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 2
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %gep2 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  ret i64 %sub.ptr.sub.i
+}
+
+define i64 @nullptrtoint_scalable_c() {
+; CHECK-LABEL: @nullptrtoint_scalable_c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[TMP0]], 7
+; CHECK-NEXT:    ret i64 [[PTR_IDX]]
+;
+entry:
+  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 8
+  %ret = ptrtoint ptr %ptr to i64
+  ret i64 %ret
+}
+
+define i64 @nullptrtoint_scalable_x(i64 %x) {
+; CHECK-LABEL: @nullptrtoint_scalable_x(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[PTR_IDX:%.*]] = mul nsw i64 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i64 [[PTR_IDX]]
+;
+entry:
+  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 %x
+  %ret = ptrtoint ptr %ptr to i64
+  ret i64 %ret
+}
+
 define i1 @_gep_phi1(ptr noundef %str1) {
 ; CHECK-LABEL: @_gep_phi1(
 ; CHECK-NEXT:  entry:

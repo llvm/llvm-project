@@ -36,10 +36,9 @@ struct RemoteAllocGroup {
   RemoteAllocGroup(MemProt Prot, bool FinalizeLifetime)
       : Prot(Prot), FinalizeLifetime(FinalizeLifetime) {}
   RemoteAllocGroup(const AllocGroup &AG) : Prot(AG.getMemProt()) {
-    assert(AG.getMemLifetimePolicy() != orc::MemLifetimePolicy::NoAlloc &&
+    assert(AG.getMemLifetime() != orc::MemLifetime::NoAlloc &&
            "Cannot use no-alloc memory in a remote alloc request");
-    FinalizeLifetime =
-        AG.getMemLifetimePolicy() == orc::MemLifetimePolicy::Finalize;
+    FinalizeLifetime = AG.getMemLifetime() == orc::MemLifetime::Finalize;
   }
 
   MemProt Prot;

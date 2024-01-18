@@ -145,7 +145,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // ensures the filesystem isn't mutated until the cache is.
       if (std::error_code EC = sys::fs::create_directories(
               CacheDirectoryPath, /*IgnoreExisting=*/true))
-        return errorCodeToError(EC);
+        return createStringError(EC, Twine("can't create cache directory ") +
+                                         CacheDirectoryPath + ": " +
+                                         EC.message());
 
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;

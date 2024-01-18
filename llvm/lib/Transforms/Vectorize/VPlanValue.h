@@ -163,6 +163,13 @@ public:
 
   void replaceAllUsesWith(VPValue *New);
 
+  /// Go through the uses list for this VPValue and make each use point to \p
+  /// New if the callback ShouldReplace returns true for the given use specified
+  /// by a pair of (VPUser, the use index).
+  void replaceUsesWithIf(
+      VPValue *New,
+      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
+
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
   VPRecipeBase *getDefiningRecipe();
@@ -296,6 +303,14 @@ public:
            "Op must be an operand of the recipe");
     return false;
   }
+
+  /// Returns true if the VPUser only uses the first part of operand \p Op.
+  /// Conservatively returns false.
+  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return false;
+  }
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
@@ -325,7 +340,7 @@ class VPDef {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
-    erase_value(DefinedValues, V);
+    llvm::erase(DefinedValues, V);
     V->Def = nullptr;
   }
 

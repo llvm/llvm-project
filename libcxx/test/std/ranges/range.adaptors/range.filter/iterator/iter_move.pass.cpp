@@ -34,12 +34,12 @@ constexpr void test() {
 
   {
     std::array<int, 5> array{0, 1, 2, 3, 4};
-    FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
     FilterIterator const it = view.begin();
 
     int&& result = iter_move(it);
     static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
-    assert(&result == array.begin());
+    assert(&result == array.data());
   }
 }
 

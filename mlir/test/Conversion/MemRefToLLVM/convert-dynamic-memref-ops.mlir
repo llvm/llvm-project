@@ -1,6 +1,6 @@
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-aligned-alloc=1 use-opaque-pointers=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
-// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='index-bitwidth=32 use-opaque-pointers=1' %s | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
+// RUN: mlir-opt -split-input-file -finalize-memref-to-llvm='index-bitwidth=32' %s | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @mixed_alloc(
 //       CHECK:   %[[Marg:.*]]: index, %[[Narg:.*]]: index)
@@ -11,7 +11,7 @@ func.func @mixed_alloc(%arg0: index, %arg1: index) -> memref<?x42x?xf32> {
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %[[N]], %[[c42]] : i64
 //  CHECK-NEXT:  %[[sz:.*]] = llvm.mul %[[st0]], %[[M]] : i64
-//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (i64) -> !llvm.ptr
@@ -60,7 +60,7 @@ func.func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 //   CHECK-DAG:  %[[N:.*]] = builtin.unrealized_conversion_cast %[[Narg]]
 //  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 //  CHECK-NEXT:  %[[sz:.*]] = llvm.mul %[[N]], %[[M]] : i64
-//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 //  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[sz]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 //  CHECK-NEXT:  llvm.call @malloc(%[[sz_bytes]]) : (i64) -> !llvm.ptr
@@ -128,7 +128,7 @@ func.func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // ALIGNED-ALLOC-NEXT:  %[[sz2:.*]] = llvm.mlir.constant(18 : index) : i64
 // ALIGNED-ALLOC-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : i64
 // ALIGNED-ALLOC-NEXT:  %[[num_elems:.*]] = llvm.mlir.constant(576 : index) : i64
-// ALIGNED-ALLOC-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+// ALIGNED-ALLOC-NEXT:  %[[null:.*]] = llvm.mlir.zero : !llvm.ptr
 // ALIGNED-ALLOC-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[num_elems]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // ALIGNED-ALLOC-NEXT:  %[[bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 // ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : index) : i64
@@ -261,8 +261,8 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 // to set address spaces, so the constants below don't reflect the layout
 // Update this test once that data layout attribute works how we'd expect it to.
 module attributes { dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi32>>,
-  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi32>>> }  {
+  #dlti.dl_entry<!llvm.ptr, dense<[64, 64, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 32, 32]> : vector<3xi64>>> }  {
   // CHECK-LABEL: @memref_memory_space_cast
   func.func @memref_memory_space_cast(%input : memref<*xf32>) -> memref<*xf32, 1> {
     %cast = memref.memory_space_cast %input : memref<*xf32> to memref<*xf32, 1>
@@ -570,7 +570,7 @@ func.func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // ALIGNED-ALLOC-LABEL: @memref_of_memref
 func.func @memref_of_memref() {
   // Sizeof computation is as usual.
-  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null
+  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.zero
   // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
   // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
 
@@ -592,7 +592,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
   // ALIGNED-ALLOC-LABEL: @memref_of_memref_32
   func.func @memref_of_memref_32() {
     // Sizeof computation is as usual.
-    // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null
+    // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.zero
     // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
     // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
 
@@ -615,7 +615,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
 // ALIGNED-ALLOC-LABEL: @memref_of_memref_of_memref
 func.func @memref_of_memref_of_memref() {
   // Sizeof computation is as usual, also check the type.
-  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr
+  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
   // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
   // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
 
@@ -631,7 +631,7 @@ func.func @memref_of_memref_of_memref() {
 
 // ALIGNED-ALLOC-LABEL: @ranked_unranked
 func.func @ranked_unranked() {
-  // ALIGNED-ALLOC: llvm.mlir.null
+  // ALIGNED-ALLOC: llvm.mlir.zero
   // ALIGNED-ALLOC-SAME: !llvm.ptr
   // ALIGNED-ALLOC: llvm.getelementptr
   // ALIGNED-ALLOC: llvm.ptrtoint

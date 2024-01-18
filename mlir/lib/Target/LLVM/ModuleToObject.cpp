@@ -39,32 +39,34 @@ ModuleToObject::ModuleToObject(Operation &module, StringRef triple,
     : module(module), triple(triple), chip(chip), features(features),
       optLevel(optLevel) {}
 
+ModuleToObject::~ModuleToObject() = default;
+
 Operation &ModuleToObject::getOperation() { return module; }
 
-std::unique_ptr<llvm::TargetMachine> ModuleToObject::createTargetMachine() {
-  std::string error;
+std::optional<llvm::TargetMachine *>
+ModuleToObject::getOrCreateTargetMachine() {
+  if (targetMachine)
+    return targetMachine.get();
   // Load the target.
+  std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
-    getOperation().emitError() << "Failed to lookup target: " << error;
-    return {};
+    getOperation().emitError()
+        << "Failed to lookup target for triple '" << triple << "' " << error;
+    return std::nullopt;
   }
 
   // Create the target machine using the target.
-  llvm::TargetMachine *machine =
-      target->createTargetMachine(triple, chip, features, {}, {});
-  if (!machine) {
-    getOperation().emitError() << "Failed to create the target machine.";
-    return {};
-  }
-  return std::unique_ptr<llvm::TargetMachine>{machine};
+  targetMachine.reset(
+      target->createTargetMachine(triple, chip, features, {}, {}));
+  if (!targetMachine)
+    return std::nullopt;
+  return targetMachine.get();
 }
 
 std::unique_ptr<llvm::Module>
-ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context,
-                                llvm::TargetMachine &targetMachine,
-                                StringRef path) {
+ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context, StringRef path) {
   llvm::SMDiagnostic error;
   std::unique_ptr<llvm::Module> library =
       llvm::getLazyIRFileModule(path, error, context);
@@ -73,15 +75,14 @@ ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context,
                                << ", error: " << error.getMessage();
     return nullptr;
   }
-  if (failed(handleBitcodeFile(*library, targetMachine))) {
+  if (failed(handleBitcodeFile(*library))) {
     return nullptr;
   }
   return library;
 }
 
 LogicalResult ModuleToObject::loadBitcodeFilesFromList(
-    llvm::LLVMContext &context, llvm::TargetMachine &targetMachine,
-    ArrayRef<std::string> fileList,
+    llvm::LLVMContext &context, ArrayRef<std::string> fileList,
     SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
     bool failureOnError) {
   for (const std::string &str : fileList) {
@@ -93,7 +94,7 @@ LogicalResult ModuleToObject::loadBitcodeFilesFromList(
       return failure();
     }
     // Load the file or abort on error.
-    if (auto bcFile = loadBitcodeFile(context, targetMachine, pathRef))
+    if (auto bcFile = loadBitcodeFile(context, pathRef))
       llvmModules.push_back(std::move(bcFile));
     else if (failureOnError)
       return failure();
@@ -137,16 +138,22 @@ ModuleToObject::linkFiles(llvm::Module &module,
 }
 
 LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
-                                             llvm::TargetMachine &targetMachine,
+
                                              int optLevel) {
   if (optLevel < 0 || optLevel > 3)
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
+  std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  if (!targetMachine)
+    return getOperation().emitError()
+           << "Target Machine unavailable for triple " << triple
+           << ", can't optimize with LLVM\n";
+  (*targetMachine)->setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
-      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
+      makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, *targetMachine);
   auto error = transformer(&module);
   if (error) {
     InFlightDiagnostic mlirError = getOperation().emitError();
@@ -178,9 +185,19 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
   return stream.str();
 }
 
+void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
+  // Create the target machine.
+  std::optional<llvm::TargetMachine *> targetMachine =
+      getOrCreateTargetMachine();
+  if (targetMachine) {
+    // Set the data layout and target triple of the module.
+    module.setDataLayout((*targetMachine)->createDataLayout());
+    module.setTargetTriple((*targetMachine)->getTargetTriple().getTriple());
+  }
+}
+
 std::optional<SmallVector<char, 0>>
-ModuleToObject::moduleToObject(llvm::Module &llvmModule,
-                               llvm::TargetMachine &targetMachine) {
+ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   SmallVector<char, 0> binaryData;
   // Write the LLVM module bitcode to a buffer.
   llvm::raw_svector_ostream outputStream(binaryData);
@@ -196,32 +213,24 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     getOperation().emitError() << "Failed creating the llvm::Module.";
     return std::nullopt;
   }
-
-  // Create the target machine.
-  std::unique_ptr<llvm::TargetMachine> targetMachine = createTargetMachine();
-  if (!targetMachine)
-    return std::nullopt;
-
-  // Set the data layout and target triple of the module.
-  llvmModule->setDataLayout(targetMachine->createDataLayout());
-  llvmModule->setTargetTriple(targetMachine->getTargetTriple().getTriple());
+  setDataLayoutAndTriple(*llvmModule);
 
   // Link bitcode files.
-  handleModulePreLink(*llvmModule, *targetMachine);
+  handleModulePreLink(*llvmModule);
   {
-    auto libs = loadBitcodeFiles(*llvmModule, *targetMachine);
+    auto libs = loadBitcodeFiles(*llvmModule);
     if (!libs)
       return std::nullopt;
     if (!libs->empty())
       if (failed(linkFiles(*llvmModule, std::move(*libs))))
         return std::nullopt;
-    handleModulePostLink(*llvmModule, *targetMachine);
+    handleModulePostLink(*llvmModule);
   }
 
   // Optimize the module.
-  if (failed(optimizeModule(*llvmModule, *targetMachine, optLevel)))
+  if (failed(optimizeModule(*llvmModule, optLevel)))
     return std::nullopt;
 
   // Return the serialized object.
-  return moduleToObject(*llvmModule, *targetMachine);
+  return moduleToObject(*llvmModule);
 }

@@ -105,7 +105,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   SDValue FIPtr = DAG->CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
-  TypeSize Offset = TypeSize::Fixed(0);
+  TypeSize Offset = TypeSize::getFixed(0);
   SDValue Value = DAG->getConstant(0, Loc, VecVT);
   SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
@@ -128,7 +128,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObjectUnknownSize) {
   SDValue FIPtr = DAG->CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
-  TypeSize Offset = TypeSize::Fixed(0);
+  TypeSize Offset = TypeSize::getFixed(0);
   SDValue Value = DAG->getConstant(0, Loc, VecVT);
   SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
@@ -157,7 +157,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, noAliasingFrameObjects) {
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
   SDValue Value = DAG->getConstant(0, Loc, SubVecVT);
-  TypeSize Offset0 = TypeSize::Fixed(0);
+  TypeSize Offset0 = TypeSize::getFixed(0);
   TypeSize Offset1 = SubVecVT.getStoreSize();
   SDValue Index0 = DAG->getMemBasePlusOffset(FIPtr, Offset0, Loc);
   SDValue Index1 = DAG->getMemBasePlusOffset(FIPtr, Offset1, Loc);
@@ -216,7 +216,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, globalWithFrameObject) {
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
   SDValue Value = DAG->getConstant(0, Loc, VecVT);
-  TypeSize Offset = TypeSize::Fixed(0);
+  TypeSize Offset = TypeSize::getFixed(0);
   SDValue Index = DAG->getMemBasePlusOffset(FIPtr, Offset, Loc);
   SDValue Store = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index,
                                 PtrInfo.getWithOffset(Offset));
@@ -282,7 +282,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsWithinDiff) {
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
   SDValue Value0 = DAG->getConstant(0, Loc, SubFixedVecVT2xi8);
   SDValue Value1 = DAG->getConstant(0, Loc, SubVecVT);
-  TypeSize Offset0 = TypeSize::Fixed(0);
+  TypeSize Offset0 = TypeSize::getFixed(0);
   TypeSize Offset1 = SubFixedVecVT2xi8.getStoreSize();
   SDValue Index0 = DAG->getMemBasePlusOffset(FIPtr, Offset0, Loc);
   SDValue Index1 = DAG->getMemBasePlusOffset(FIPtr, Offset1, Loc);
@@ -323,7 +323,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, fixedSizeFrameObjectsOutOfDiff) {
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
   SDValue Value0 = DAG->getConstant(0, Loc, SubFixedVecVT4xi8);
   SDValue Value1 = DAG->getConstant(0, Loc, SubVecVT);
-  TypeSize Offset0 = TypeSize::Fixed(0);
+  TypeSize Offset0 = TypeSize::getFixed(0);
   TypeSize Offset1 = SubFixedVecVT2xi8.getStoreSize();
   SDValue Index0 = DAG->getMemBasePlusOffset(FIPtr, Offset0, Loc);
   SDValue Index1 = DAG->getMemBasePlusOffset(FIPtr, Offset1, Loc);
@@ -358,7 +358,7 @@ TEST_F(SelectionDAGAddressAnalysisTest, twoFixedStackObjects) {
   MachinePointerInfo PtrInfo1 = MachinePointerInfo::getFixedStack(*MF, FI1);
   SDValue Value0 = DAG->getConstant(0, Loc, FixedVecVT);
   SDValue Value1 = DAG->getConstant(0, Loc, VecVT);
-  TypeSize Offset0 = TypeSize::Fixed(0);
+  TypeSize Offset0 = TypeSize::getFixed(0);
   SDValue Index0 = DAG->getMemBasePlusOffset(FIPtr0, Offset0, Loc);
   SDValue Index1 = DAG->getMemBasePlusOffset(FIPtr1, Offset0, Loc);
   SDValue Store0 = DAG->getStore(DAG->getEntryNode(), Loc, Value0, Index0,

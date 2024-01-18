@@ -18,15 +18,6 @@
 namespace llvm {
 namespace bolt {
 
-/// Hashing a 64-bit integer to a 16-bit one.
-uint16_t hash_64_to_16(const uint64_t Hash) {
-  uint16_t Res = (uint16_t)(Hash & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 16) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 32) & 0xFFFF);
-  Res ^= (uint16_t)((Hash >> 48) & 0xFFFF);
-  return Res;
-}
-
 std::string hashInteger(uint64_t Value) {
   std::string HashString;
   if (Value == 0)
@@ -155,10 +146,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
     }
 
     std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
-    Mnemonic.erase(
-        std::remove_if(Mnemonic.begin(), Mnemonic.end(),
-                       [](unsigned char ch) { return std::isspace(ch); }),
-        Mnemonic.end());
+    llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
     Opcodes.insert(Mnemonic);
   }
 

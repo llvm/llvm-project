@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-windows | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 | FileCheck %s
 
 define dso_local i32 @func(i32 %in) {
 entry:
@@ -47,11 +47,11 @@ lbl4:
 
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #2
+; CHECK-NEXT: mov w0, #4
 
 ; CHECK:      .LBB0_4:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #4
+; CHECK-NEXT: mov w0, #2
 
 ; CHECK:      .LBB0_5:
 ; CHECK-NEXT: hint #36

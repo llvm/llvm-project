@@ -108,13 +108,6 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
-bool CompilerType::IsCStringType(uint32_t &length) const {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsCStringType(m_type, length);
-  return false;
-}
-
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -821,20 +814,6 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
 
 // Dumping types
 
-void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
-                             lldb::Format format, const DataExtractor &data,
-                             lldb::offset_t data_byte_offset,
-                             size_t data_byte_size, uint32_t bitfield_bit_size,
-                             uint32_t bitfield_bit_offset, bool show_types,
-                             bool show_summary, bool verbose, uint32_t depth) {
-  if (!IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpValue(m_type, exe_ctx, *s, format, data,
-                                data_byte_offset, data_byte_size,
-                                bitfield_bit_size, bitfield_bit_offset,
-                                show_types, show_summary, verbose, depth);
-}
-
 bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
                                  const DataExtractor &data,
                                  lldb::offset_t byte_offset, size_t byte_size,
@@ -847,16 +826,6 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
           m_type, *s, format, data, byte_offset, byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope);
   return false;
-}
-
-void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
-                               const DataExtractor &data,
-                               lldb::offset_t data_byte_offset,
-                               size_t data_byte_size) {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpSummary(m_type, exe_ctx, *s, data, data_byte_offset,
-                                  data_byte_size);
 }
 
 void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level) const {
@@ -980,6 +949,18 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     }
   }
   return false;
+}
+
+CompilerType::CompilerType(CompilerType::TypeSystemSPWrapper type_system,
+                           lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system.GetSharedPointer()), m_type(type) {
+  assert(Verify() && "verification failed");
+}
+
+CompilerType::CompilerType(lldb::TypeSystemWP type_system,
+                           lldb::opaque_compiler_type_t type)
+    : m_type_system(type_system), m_type(type) {
+  assert(Verify() && "verification failed");
 }
 
 #ifndef NDEBUG

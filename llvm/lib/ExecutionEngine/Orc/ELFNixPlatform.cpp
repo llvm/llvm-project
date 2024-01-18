@@ -40,29 +40,29 @@ public:
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
     unsigned PointerSize;
-    support::endianness Endianness;
+    llvm::endianness Endianness;
     jitlink::Edge::Kind EdgeKind;
     const auto &TT = ENP.getExecutionSession().getTargetTriple();
 
     switch (TT.getArch()) {
     case Triple::x86_64:
       PointerSize = 8;
-      Endianness = support::endianness::little;
+      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::x86_64::Pointer64;
       break;
     case Triple::aarch64:
       PointerSize = 8;
-      Endianness = support::endianness::little;
+      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::aarch64::Pointer64;
       break;
     case Triple::ppc64:
       PointerSize = 8;
-      Endianness = support::endianness::big;
+      Endianness = llvm::endianness::big;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     case Triple::ppc64le:
       PointerSize = 8;
-      Endianness = support::endianness::little;
+      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     default:

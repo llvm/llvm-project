@@ -118,10 +118,9 @@ exit:
 define i4 @and_compare_undef(i4 %N, i4 %step) {
 ; CHECK-LABEL: @and_compare_undef(
 ; CHECK-NEXT:  step.check:
-; CHECK-NEXT:    [[STEP_POS:%.*]] = icmp uge i4 [[STEP:%.*]], 0
 ; CHECK-NEXT:    [[B1:%.*]] = add i4 undef, -1
 ; CHECK-NEXT:    [[STEP_ULT_N:%.*]] = icmp ult i4 [[B1]], [[N:%.*]]
-; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 [[STEP_POS]], [[STEP_ULT_N]]
+; CHECK-NEXT:    [[AND_STEP:%.*]] = and i1 true, [[STEP_ULT_N]]
 ; CHECK-NEXT:    br i1 [[AND_STEP]], label [[PTR_CHECK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ptr.check:
 ; CHECK-NEXT:    br label [[EXIT]]

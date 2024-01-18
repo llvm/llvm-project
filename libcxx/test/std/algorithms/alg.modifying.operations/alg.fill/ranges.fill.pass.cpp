@@ -120,13 +120,13 @@ constexpr bool test() {
     {
       std::array<std::string, 10> a;
       auto ret = std::ranges::fill(a.begin(), a.end(), "long long string so no SSO");
-      assert(ret == a.data() + a.size());
+      assert(ret == a.end());
       assert(std::all_of(a.begin(), a.end(), [](auto& s) { return s == "long long string so no SSO"; }));
     }
     {
       std::array<std::string, 10> a;
       auto ret = std::ranges::fill(a, "long long string so no SSO");
-      assert(ret == a.data() + a.size());
+      assert(ret == a.end());
       assert(std::all_of(a.begin(), a.end(), [](auto& s) { return s == "long long string so no SSO"; }));
     }
   }

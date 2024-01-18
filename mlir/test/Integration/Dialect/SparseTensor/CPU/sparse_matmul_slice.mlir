@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -17,7 +17,7 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 
 // TODO: support lib path.
@@ -27,8 +27,7 @@
 }>
 
 #DCSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(0, 8, 1)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 #CSR = #sparse_tensor.encoding<{
@@ -36,8 +35,7 @@
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (0, 4, 1), (0, 8, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 1)>, d1 : #sparse_tensor<slice(0, 8, 1)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #COO = #sparse_tensor.encoding<{
@@ -45,33 +43,27 @@
 }>
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(0, 4, 1)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #DCSR_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(1, 4, 1)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 #COO_SLICE_1 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimSlices = [ (0, 4, 2), (0, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(0, 4, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #COO_SLICE_2 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
-  dimSlices = [ (0, 4, 2), (1, 4, 1) ]
+  map = (d0 : #sparse_tensor<slice(0, 4, 2)>, d1 : #sparse_tensor<slice(1, 4, 1)>) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR_SLICE_dyn = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, 4, ?)>, d1 : #sparse_tensor<slice(?, 4, ?)>) -> (d0 : dense, d1 : compressed)
 }>
 
 #DCSR_SLICE_dyn = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimSlices = [ (?, 4, ?), (?, 4, ?) ]
+  map = (d0 : #sparse_tensor<slice(?, 4, ?)>, d1 : #sparse_tensor<slice(?, 4, ?)>) -> (d0 : compressed, d1 : compressed)
 }>
 
 module {

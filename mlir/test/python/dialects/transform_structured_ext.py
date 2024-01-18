@@ -344,10 +344,10 @@ def testSplit(target):
 @run
 @create_sequence
 def testTileCompact(target):
-    structured.TileOp(target, sizes=[4, 8], interchange=[0, 1])
+    structured.TileUsingForOp(target, sizes=[4, 8], interchange=[0, 1])
     # CHECK-LABEL: TEST: testTileCompact
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for %{{.*}}[4, 8]
     # CHECK: interchange = [0, 1]
 
 
@@ -356,20 +356,20 @@ def testTileCompact(target):
 def testTileAttributes(target):
     attr = DenseI64ArrayAttr.get([4, 8])
     ichange = DenseI64ArrayAttr.get([0, 1])
-    structured.TileOp(target, sizes=attr, interchange=ichange)
+    structured.TileUsingForOp(target, sizes=attr, interchange=ichange)
     # CHECK-LABEL: TEST: testTileAttributes
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 8]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for %{{.*}}[4, 8]
     # CHECK: interchange = [0, 1]
 
 
 @run
 @create_sequence
 def testTileZero(target):
-    structured.TileOp(target, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
+    structured.TileUsingForOp(target, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
     # CHECK-LABEL: TEST: testTileZero
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, 0, 2, 0]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for %{{.*}}[4, 0, 2, 0]
     # CHECK: interchange = [0, 1, 2, 3]
 
 
@@ -387,20 +387,22 @@ def testTileDynamic():
             m2 = transform_pdl.PDLMatchOp(
                 pdl.OperationType.get(), sequence.bodyTarget, "second"
             )
-            structured.TileOp(sequence.bodyTarget, sizes=[m1, 3, m2, 0])
+            structured.TileUsingForOp(sequence.bodyTarget, sizes=[m1, 3, m2, 0])
             transform.YieldOp()
     # CHECK-LABEL: TEST: testTileDynamic
     # CHECK: %[[FIRST:.+]] = pdl_match
     # CHECK: %[[SECOND:.+]] = pdl_match
-    # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
+    # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile_using_for %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
 
 
 @run
 @create_sequence
 def testTileExplicitLoopTypeSingle(target):
-    structured.TileOp(transform.OperationType.get("scf.for"), target, sizes=[2, 3, 4])
+    structured.TileUsingForOp(
+        transform.OperationType.get("scf.for"), target, sizes=[2, 3, 4]
+    )
     # CHECK-LABEL: TEST: testTileExplicitLoopTypeSingle
-    # CHECK: = transform.structured.tile %{{.*}} : (!{{.*}}) ->
+    # CHECK: = transform.structured.tile_using_for %{{.*}} : (!{{.*}}) ->
     # CHECK-COUNT-3: !transform.op<"scf.for">
 
 
@@ -411,7 +413,7 @@ def testTileExplicitLoopTypeAll(target):
         transform.OperationType.get(x)
         for x in ["scf.for", "scf.parallel", "scf.forall"]
     ]
-    structured.TileOp(types, target, sizes=[2, 3, 4])
+    structured.TileUsingForOp(types, target, sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
     # CHECK: = transform.structured.tile
     # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
@@ -421,57 +423,57 @@ def testTileExplicitLoopTypeAll(target):
 @run
 @create_sequence
 def testTileScalable(target):
-    structured.TileOp(
+    structured.TileUsingForOp(
         target,
         sizes=[4, [2]],
     )
     # CHECK-LABEL: TEST: testTileScalable
     # CHECK: transform.sequence
-    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, [2]]
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile_using_for %{{.*}}[4, [2]]
 
 
 @run
 @create_sequence
 def testTileToForallCompact(target):
     matmul = transform.CastOp(transform.OperationType.get("linalg.matmul"), target)
-    structured.TileToForallOp(matmul, num_threads=[2, 3, 4])
+    structured.TileUsingForallOp(matmul, num_threads=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallCompact
-    # CHECK: = transform.structured.tile_to_forall_op
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
 
 @run
 @create_sequence
 def testTileToForallLoopsAndTileOpTypes(target):
-    structured.TileToForallOp(
+    structured.TileUsingForallOp(
         transform.OperationType.get("scf.forall"),  # loops_type
         transform.OperationType.get("linalg.matmul"),  # tiled_op_type
         target,
         num_threads=[2, 3, 4],
     )
     # CHECK-LABEL: TEST: testTileToForallLoopsAndTileOpTypes
-    # CHECK: = transform.structured.tile_to_forall_op
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.matmul">)
 
 
 @run
 @create_sequence
 def testTileToForallTileSizes(target):
-    structured.TileToForallOp(target, tile_sizes=[2, 3, 4])
+    structured.TileUsingForallOp(target, tile_sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallTileSizes
-    # CHECK: = transform.structured.tile_to_forall_op
-    # CHECK-SAME: num_threads [] tile_sizes [2, 3, 4]
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: tile_sizes [2, 3, 4]
 
 
 @run
 @create_sequence
 def testTileToForallMixedDynamic(target):
     n = structured.MatchOp.match_op_names(target, ["test.dummy"])
-    structured.TileToForallOp(target, num_threads=[n, 3, 4])
+    structured.TileUsingForallOp(target, num_threads=[n, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallMixedDynamic
-    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK: = transform.structured.tile_using_forall
     # CHECK-SAME: num_threads [%{{.*}} : !transform.any_op, 3, 4]
 
 
@@ -479,9 +481,9 @@ def testTileToForallMixedDynamic(target):
 @create_sequence
 def testTileToForallPackedDynamic(target):
     n = structured.MatchOp.match_op_names(target, ["test.dummy"])
-    structured.TileToForallOp(target, num_threads=n)
+    structured.TileUsingForallOp(target, num_threads=n)
     # CHECK-LABEL: TEST: testTileToForallPackedDynamic
-    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK: = transform.structured.tile_using_forall
     # CHECK-SAME: num_threads *(%0 : !transform.any_op)
 
 
@@ -489,9 +491,9 @@ def testTileToForallPackedDynamic(target):
 @create_sequence
 def testTileToForallMapping(target):
     mapping = Attribute.parse("[ #gpu.thread<y>, #gpu.thread<x> ]")
-    structured.TileToForallOp(target, num_threads=[2, 3], mapping=mapping)
+    structured.TileUsingForallOp(target, num_threads=[2, 3], mapping=mapping)
     # CHECK-LABEL: TEST: testTileToForallMapping
-    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK: = transform.structured.tile_using_forall
     # CHECK-SAME: mapping = [#gpu.thread<y>, #gpu.thread<x>]
 
 

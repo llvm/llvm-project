@@ -29,7 +29,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -409,6 +408,79 @@ bool Decl::isInStdNamespace() const {
 bool Decl::isFileContextDecl() const {
   const auto *DC = dyn_cast<DeclContext>(this);
   return DC && DC->isFileContext();
+}
+
+bool Decl::isFlexibleArrayMemberLike(
+    ASTContext &Ctx, const Decl *D, QualType Ty,
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+    bool IgnoreTemplateOrMacroSubstitution) {
+  // For compatibility with existing code, we treat arrays of length 0 or
+  // 1 as flexible array members.
+  const auto *CAT = Ctx.getAsConstantArrayType(Ty);
+  if (CAT) {
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+
+    llvm::APInt Size = CAT->getSize();
+    if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
+      return false;
+
+    // GCC extension, only allowed to represent a FAM.
+    if (Size.isZero())
+      return true;
+
+    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete && Size.uge(1))
+      return false;
+
+    if (StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete && Size.uge(2))
+      return false;
+  } else if (!Ctx.getAsIncompleteArrayType(Ty)) {
+    return false;
+  }
+
+  if (const auto *OID = dyn_cast_if_present<ObjCIvarDecl>(D))
+    return OID->getNextIvar() == nullptr;
+
+  const auto *FD = dyn_cast_if_present<FieldDecl>(D);
+  if (!FD)
+    return false;
+
+  if (CAT) {
+    // GCC treats an array memeber of a union as an FAM if the size is one or
+    // zero.
+    llvm::APInt Size = CAT->getSize();
+    if (FD->getParent()->isUnion() && (Size.isZero() || Size.isOne()))
+      return true;
+  }
+
+  // Don't consider sizes resulting from macro expansions or template argument
+  // substitution to form C89 tail-padded arrays.
+  if (IgnoreTemplateOrMacroSubstitution) {
+    TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+    while (TInfo) {
+      TypeLoc TL = TInfo->getTypeLoc();
+
+      // Look through typedefs.
+      if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
+        const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
+        TInfo = TDL->getTypeSourceInfo();
+        continue;
+      }
+
+      if (auto CTL = TL.getAs<ConstantArrayTypeLoc>()) {
+        if (const Expr *SizeExpr =
+                dyn_cast_if_present<IntegerLiteral>(CTL.getSizeExpr());
+            !SizeExpr || SizeExpr->getExprLoc().isMacroID())
+          return false;
+      }
+
+      break;
+    }
+  }
+
+  // Test that the field is the last in the structure.
+  RecordDecl::field_iterator FI(
+      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+  return ++FI == FD->getParent()->field_end();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
@@ -862,7 +934,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case BuiltinTemplate:
     case ClassTemplateSpecialization:
     case ClassTemplatePartialSpecialization:
-    case ClassScopeFunctionSpecialization:
     case VarTemplateSpecialization:
     case VarTemplatePartialSpecialization:
     case ObjCImplementation:
@@ -1003,9 +1074,7 @@ bool Decl::AccessDeclContextCheck() const {
       isa<ParmVarDecl>(this) ||
       // FIXME: a ClassTemplateSpecialization or CXXRecordDecl can have
       // AS_none as access specifier.
-      isa<CXXRecordDecl>(this) ||
-      isa<ClassScopeFunctionSpecializationDecl>(this) ||
-      isa<LifetimeExtendedTemporaryDecl>(this))
+      isa<CXXRecordDecl>(this) || isa<LifetimeExtendedTemporaryDecl>(this))
     return true;
 
   assert(Access != AS_none &&
@@ -1041,7 +1110,7 @@ bool Decl::isInAnotherModuleUnit() const {
   if (M->isGlobalModule())
     return false;
 
-  assert(M->isModulePurview() && "New module kind?");
+  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
 }
 
@@ -1248,7 +1317,7 @@ bool DeclContext::isTransparentContext() const {
 }
 
 static bool isLinkageSpecContext(const DeclContext *DC,
-                                 LinkageSpecDecl::LanguageIDs ID) {
+                                 LinkageSpecLanguageIDs ID) {
   while (DC->getDeclKind() != Decl::TranslationUnit) {
     if (DC->getDeclKind() == Decl::LinkageSpec)
       return cast<LinkageSpecDecl>(DC)->getLanguage() == ID;
@@ -1258,14 +1327,14 @@ static bool isLinkageSpecContext(const DeclContext *DC,
 }
 
 bool DeclContext::isExternCContext() const {
-  return isLinkageSpecContext(this, LinkageSpecDecl::lang_c);
+  return isLinkageSpecContext(this, LinkageSpecLanguageIDs::C);
 }
 
 const LinkageSpecDecl *DeclContext::getExternCContext() const {
   const DeclContext *DC = this;
   while (DC->getDeclKind() != Decl::TranslationUnit) {
     if (DC->getDeclKind() == Decl::LinkageSpec &&
-        cast<LinkageSpecDecl>(DC)->getLanguage() == LinkageSpecDecl::lang_c)
+        cast<LinkageSpecDecl>(DC)->getLanguage() == LinkageSpecLanguageIDs::C)
       return cast<LinkageSpecDecl>(DC);
     DC = DC->getLexicalParent();
   }
@@ -1273,7 +1342,7 @@ const LinkageSpecDecl *DeclContext::getExternCContext() const {
 }
 
 bool DeclContext::isExternCXXContext() const {
-  return isLinkageSpecContext(this, LinkageSpecDecl::lang_cxx);
+  return isLinkageSpecContext(this, LinkageSpecLanguageIDs::CXX);
 }
 
 bool DeclContext::Encloses(const DeclContext *DC) const {

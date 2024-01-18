@@ -12,7 +12,7 @@
 
 #include <stdio.h> // for EOF.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, btowc, (wint_t c)) {
   auto result = internal::btowc(c);
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, btowc, (wint_t c)) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

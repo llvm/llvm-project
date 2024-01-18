@@ -23,7 +23,7 @@ func.func @transfer_read_3d_and_extract(%A : memref<?x?x?x?xf32>,
   %f = vector.transfer_read %A[%o, %a, %b, %c], %fm42
       {in_bounds = [true, true, true]}
       : memref<?x?x?x?xf32>, vector<2x5x3xf32>
-  %sub = vector.extract %f[0] : vector<2x5x3xf32>
+  %sub = vector.extract %f[0] : vector<5x3xf32> from vector<2x5x3xf32>
   vector.print %sub: vector<5x3xf32>
   return
 }

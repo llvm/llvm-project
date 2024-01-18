@@ -247,7 +247,7 @@ class HeaderFileInfoTrait {
   const char *FrameworkStrings;
 
 public:
-  using external_key_type = const FileEntry *;
+  using external_key_type = FileEntryRef;
 
   struct internal_key_type {
     off_t Size;
@@ -267,7 +267,7 @@ public:
       : Reader(Reader), M(M), HS(HS), FrameworkStrings(FrameworkStrings) {}
 
   static hash_value_type ComputeHash(internal_key_ref ikey);
-  internal_key_type GetInternalKey(const FileEntry *FE);
+  internal_key_type GetInternalKey(external_key_type ekey);
   bool EqualKey(internal_key_ref a, internal_key_ref b);
 
   static std::pair<unsigned, unsigned>

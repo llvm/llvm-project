@@ -11,6 +11,7 @@
 
 #include "combined.h"
 #include "common.h"
+#include "condition_variable.h"
 #include "flags.h"
 #include "primary32.h"
 #include "primary64.h"
@@ -82,6 +83,14 @@ namespace scudo {
 //     // Defines the minimal & maximal release interval that can be set.
 //     static const s32 MinReleaseToOsIntervalMs = INT32_MIN;
 //     static const s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+//
+//     // Use condition variable to shorten the waiting time of refillment of
+//     // freelist. Note that this depends on the implementation of condition
+//     // variable on each platform and the performance may vary so that it
+//     // doesn't guarantee a performance benefit.
+//     // Note that both variables have to be defined to enable it.
+//     static const bool UseConditionVariable = true;
+//     using ConditionVariableT = ConditionVariableLinux;
 //   };
 //   // Defines the type of Primary allocator to use.
 //   template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;

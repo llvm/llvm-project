@@ -16,7 +16,7 @@
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 namespace internal {
@@ -49,7 +49,13 @@ template <typename T> struct Comparator {
     __builtin_unreachable();
   }
 
+  // The NVPTX backend cannot handle circular dependencies on global variables.
+  // We provide a constant dummy implementation to prevent this from occurring.
+#ifdef LIBC_TARGET_ARCH_IS_NVPTX
+  constexpr const char *str() { return ""; }
+#else
   const char *str() { return CompareMessage[static_cast<int>(cmp)]; }
+#endif
 };
 
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
@@ -164,6 +170,6 @@ returns(internal::Comparator<RetT> cmp) {
 } // namespace ErrnoSetterMatcher
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

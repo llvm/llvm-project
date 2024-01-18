@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 unsigned long long strtoull(const char *__restrict str,
                             char **__restrict str_end, int base);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRTOULL_H

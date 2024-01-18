@@ -8,16 +8,19 @@
 
 #include "OutputSections.h"
 #include "DWARFLinkerCompileUnit.h"
+#include "DWARFLinkerTypeUnit.h"
 #include "llvm/ADT/StringSwitch.h"
 
 namespace llvm {
 namespace dwarflinker_parallel {
 
 static constexpr StringLiteral SectionNames[SectionKindsNum] = {
-    "debug_info",     "debug_line",     "debug_frame",      "debug_ranges",
-    "debug_rnglists", "debug_loc",      "debug_loclists",   "debug_aranges",
-    "debug_abbrev",   "debug_macinfo",  "debug_macro",      "debug_addr",
-    "debug_str",      "debug_line_str", "debug_str_offsets"};
+    "debug_info",     "debug_line",     "debug_frame",       "debug_ranges",
+    "debug_rnglists", "debug_loc",      "debug_loclists",    "debug_aranges",
+    "debug_abbrev",   "debug_macinfo",  "debug_macro",       "debug_addr",
+    "debug_str",      "debug_line_str", "debug_str_offsets", "debug_pubnames",
+    "debug_pubtypes", "debug_names",    "apple_names",       "apple_namespac",
+    "apple_objc",     "apple_types"};
 
 const StringLiteral &getSectionName(DebugSectionKind SectionKind) {
   return SectionNames[static_cast<uint8_t>(SectionKind)];
@@ -56,6 +59,20 @@ std::optional<DebugSectionKind> parseDebugTableName(llvm::StringRef SecName) {
             DebugSectionKind::DebugLineStr)
       .Case(getSectionName(DebugSectionKind::DebugStrOffsets),
             DebugSectionKind::DebugStrOffsets)
+      .Case(getSectionName(DebugSectionKind::DebugPubNames),
+            DebugSectionKind::DebugPubNames)
+      .Case(getSectionName(DebugSectionKind::DebugPubTypes),
+            DebugSectionKind::DebugPubTypes)
+      .Case(getSectionName(DebugSectionKind::DebugNames),
+            DebugSectionKind::DebugNames)
+      .Case(getSectionName(DebugSectionKind::AppleNames),
+            DebugSectionKind::AppleNames)
+      .Case(getSectionName(DebugSectionKind::AppleNamespaces),
+            DebugSectionKind::AppleNamespaces)
+      .Case(getSectionName(DebugSectionKind::AppleObjC),
+            DebugSectionKind::AppleObjC)
+      .Case(getSectionName(DebugSectionKind::AppleTypes),
+            DebugSectionKind::AppleTypes)
       .Default(std::nullopt);
 
   return std::nullopt;
@@ -76,9 +93,36 @@ DebugULEB128DieRefPatch::DebugULEB128DieRefPatch(uint64_t PatchOffset,
       RefCU(RefCU, SrcCU->getUniqueID() == RefCU->getUniqueID()),
       RefDieIdxOrClonedOffset(RefIdx) {}
 
-void SectionDescriptor::erase() {
+DebugDieTypeRefPatch::DebugDieTypeRefPatch(uint64_t PatchOffset,
+                                           TypeEntry *RefTypeName)
+    : SectionPatch({PatchOffset}), RefTypeName(RefTypeName) {}
+
+DebugType2TypeDieRefPatch::DebugType2TypeDieRefPatch(uint64_t PatchOffset,
+                                                     DIE *Die,
+                                                     TypeEntry *TypeName,
+                                                     TypeEntry *RefTypeName)
+    : SectionPatch({PatchOffset}), Die(Die), TypeName(TypeName),
+      RefTypeName(RefTypeName) {}
+
+DebugTypeStrPatch::DebugTypeStrPatch(uint64_t PatchOffset, DIE *Die,
+                                     TypeEntry *TypeName, StringEntry *String)
+    : SectionPatch({PatchOffset}), Die(Die), TypeName(TypeName),
+      String(String) {}
+
+DebugTypeLineStrPatch::DebugTypeLineStrPatch(uint64_t PatchOffset, DIE *Die,
+                                             TypeEntry *TypeName,
+                                             StringEntry *String)
+    : SectionPatch({PatchOffset}), Die(Die), TypeName(TypeName),
+      String(String) {}
+
+DebugTypeDeclFilePatch::DebugTypeDeclFilePatch(DIE *Die, TypeEntry *TypeName,
+                                               StringEntry *Directory,
+                                               StringEntry *FilePath)
+    : Die(Die), TypeName(TypeName), Directory(Directory), FilePath(FilePath) {}
+
+void SectionDescriptor::clearAllSectionData() {
   StartOffset = 0;
-  Contents = OutSectionDataTy();
+  clearSectionContent();
   ListDebugStrPatch.erase();
   ListDebugLineStrPatch.erase();
   ListDebugRangePatch.erase();
@@ -86,7 +130,13 @@ void SectionDescriptor::erase() {
   ListDebugDieRefPatch.erase();
   ListDebugULEB128DieRefPatch.erase();
   ListDebugOffsetPatch.erase();
+  ListDebugType2TypeDieRefPatch.erase();
+  ListDebugTypeDeclFilePatch.erase();
+  ListDebugTypeLineStrPatch.erase();
+  ListDebugTypeStrPatch.erase();
 }
+
+void SectionDescriptor::clearSectionContent() { Contents = OutSectionDataTy(); }
 
 void SectionDescriptor::setSizesForSectionCreatedByAsmPrinter() {
   if (Contents.empty())
@@ -107,7 +157,6 @@ void SectionDescriptor::setSizesForSectionCreatedByAsmPrinter() {
       consumeError(SectNameOrErr.takeError());
       continue;
     }
-
     if (std::optional<DebugSectionKind> SectKind =
             parseDebugTableName(*SectNameOrErr)) {
       if (*SectKind == SectionKind) {
@@ -127,40 +176,13 @@ void SectionDescriptor::setSizesForSectionCreatedByAsmPrinter() {
   }
 }
 
-void SectionDescriptor::emitIntVal(uint64_t Val, unsigned Size) {
-  switch (Size) {
-  case 1: {
-    OS.write(static_cast<uint8_t>(Val));
-  } break;
-  case 2: {
-    uint16_t ShortVal = static_cast<uint16_t>(Val);
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
-      sys::swapByteOrder(ShortVal);
-    OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
-  } break;
-  case 4: {
-    uint32_t ShortVal = static_cast<uint32_t>(Val);
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
-      sys::swapByteOrder(ShortVal);
-    OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
-  } break;
-  case 8: {
-    if ((Endianess == support::endianness::little) != sys::IsLittleEndianHost)
-      sys::swapByteOrder(Val);
-    OS.write(reinterpret_cast<const char *>(&Val), Size);
-  } break;
-  default:
-    llvm_unreachable("Unsupported integer type size");
-  }
-}
-
 void SectionDescriptor::emitString(dwarf::Form StringForm,
                                    const char *StringVal) {
   assert(StringVal != nullptr);
 
   switch (StringForm) {
   case dwarf::DW_FORM_string: {
-    emitInplaceString(GlobalData.translateString(StringVal));
+    emitInplaceString(StringVal);
   } break;
   case dwarf::DW_FORM_strp: {
     notePatch(DebugStrPatch{
@@ -176,6 +198,33 @@ void SectionDescriptor::emitString(dwarf::Form StringForm,
     llvm_unreachable("Unsupported string form");
     break;
   };
+}
+
+void SectionDescriptor::emitIntVal(uint64_t Val, unsigned Size) {
+  switch (Size) {
+  case 1: {
+    OS.write(static_cast<uint8_t>(Val));
+  } break;
+  case 2: {
+    uint16_t ShortVal = static_cast<uint16_t>(Val);
+    if (Endianess != llvm::endianness::native)
+      sys::swapByteOrder(ShortVal);
+    OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
+  } break;
+  case 4: {
+    uint32_t ShortVal = static_cast<uint32_t>(Val);
+    if (Endianess != llvm::endianness::native)
+      sys::swapByteOrder(ShortVal);
+    OS.write(reinterpret_cast<const char *>(&ShortVal), Size);
+  } break;
+  case 8: {
+    if (Endianess != llvm::endianness::native)
+      sys::swapByteOrder(Val);
+    OS.write(reinterpret_cast<const char *>(&Val), Size);
+  } break;
+  default:
+    llvm_unreachable("Unsupported integer type size");
+  }
 }
 
 void SectionDescriptor::apply(uint64_t PatchOffset, dwarf::Form AttrForm,
@@ -313,12 +362,32 @@ void SectionDescriptor::applySLEB128(uint64_t PatchOffset, uint64_t Val) {
 void OutputSections::applyPatches(
     SectionDescriptor &Section,
     StringEntryToDwarfStringPoolEntryMap &DebugStrStrings,
-    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings) {
-
+    StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings,
+    TypeUnit *TypeUnitPtr) {
   Section.ListDebugStrPatch.forEach([&](DebugStrPatch &Patch) {
     DwarfStringPoolEntryWithExtString *Entry =
         DebugStrStrings.getExistingEntry(Patch.String);
     assert(Entry != nullptr);
+
+    Section.apply(Patch.PatchOffset, dwarf::DW_FORM_strp, Entry->Offset);
+  });
+  Section.ListDebugTypeStrPatch.forEach([&](DebugTypeStrPatch &Patch) {
+    assert(TypeUnitPtr != nullptr);
+    TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+    assert(TypeEntry &&
+           formatv("No data for type {0}", Patch.TypeName->getKey())
+               .str()
+               .c_str());
+
+    if (&TypeEntry->getFinalDie() != Patch.Die)
+      return;
+
+    DwarfStringPoolEntryWithExtString *Entry =
+        DebugStrStrings.getExistingEntry(Patch.String);
+    assert(Entry != nullptr);
+
+    Patch.PatchOffset +=
+        Patch.Die->getOffset() + getULEB128Size(Patch.Die->getAbbrevNumber());
 
     Section.apply(Patch.PatchOffset, dwarf::DW_FORM_strp, Entry->Offset);
   });
@@ -330,12 +399,32 @@ void OutputSections::applyPatches(
 
     Section.apply(Patch.PatchOffset, dwarf::DW_FORM_line_strp, Entry->Offset);
   });
+  Section.ListDebugTypeLineStrPatch.forEach([&](DebugTypeLineStrPatch &Patch) {
+    assert(TypeUnitPtr != nullptr);
+    TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+    assert(TypeEntry &&
+           formatv("No data for type {0}", Patch.TypeName->getKey())
+               .str()
+               .c_str());
+
+    if (&TypeEntry->getFinalDie() != Patch.Die)
+      return;
+
+    DwarfStringPoolEntryWithExtString *Entry =
+        DebugLineStrStrings.getExistingEntry(Patch.String);
+    assert(Entry != nullptr);
+
+    Patch.PatchOffset +=
+        Patch.Die->getOffset() + getULEB128Size(Patch.Die->getAbbrevNumber());
+
+    Section.apply(Patch.PatchOffset, dwarf::DW_FORM_line_strp, Entry->Offset);
+  });
 
   std::optional<SectionDescriptor *> RangeSection;
   if (Format.Version >= 5)
-    RangeSection = getSectionDescriptor(DebugSectionKind::DebugRngLists);
+    RangeSection = tryGetSectionDescriptor(DebugSectionKind::DebugRngLists);
   else
-    RangeSection = getSectionDescriptor(DebugSectionKind::DebugRange);
+    RangeSection = tryGetSectionDescriptor(DebugSectionKind::DebugRange);
 
   if (RangeSection) {
     Section.ListDebugRangePatch.forEach([&](DebugRangePatch &Patch) {
@@ -349,9 +438,9 @@ void OutputSections::applyPatches(
 
   std::optional<SectionDescriptor *> LocationSection;
   if (Format.Version >= 5)
-    LocationSection = getSectionDescriptor(DebugSectionKind::DebugLocLists);
+    LocationSection = tryGetSectionDescriptor(DebugSectionKind::DebugLocLists);
   else
-    LocationSection = getSectionDescriptor(DebugSectionKind::DebugLoc);
+    LocationSection = tryGetSectionDescriptor(DebugSectionKind::DebugLoc);
 
   if (LocationSection) {
     Section.ListDebugLocPatch.forEach([&](DebugLocPatch &Patch) {
@@ -367,17 +456,14 @@ void OutputSections::applyPatches(
     uint64_t FinalOffset = Patch.RefDieIdxOrClonedOffset;
     dwarf::Form FinalForm = dwarf::DW_FORM_ref4;
 
+    // Check whether it is local or inter-CU reference.
     if (!Patch.RefCU.getInt()) {
-      std::optional<SectionDescriptor *> ReferencedSectionDescriptor =
+      SectionDescriptor &ReferencedSectionDescriptor =
           Patch.RefCU.getPointer()->getSectionDescriptor(
               DebugSectionKind::DebugInfo);
-      if (!ReferencedSectionDescriptor) {
-        // Referenced section should be already created at this point.
-        llvm_unreachable("Referenced section does not exist");
-      }
 
       FinalForm = dwarf::DW_FORM_ref_addr;
-      FinalOffset += (*ReferencedSectionDescriptor)->StartOffset;
+      FinalOffset += ReferencedSectionDescriptor.StartOffset;
     }
 
     Section.apply(Patch.PatchOffset, FinalForm, FinalOffset);
@@ -390,8 +476,50 @@ void OutputSections::applyPatches(
                       Patch.RefDieIdxOrClonedOffset);
       });
 
+  Section.ListDebugDieTypeRefPatch.forEach([&](DebugDieTypeRefPatch &Patch) {
+    assert(TypeUnitPtr != nullptr);
+    assert(Patch.RefTypeName != nullptr);
+
+    TypeEntryBody *TypeEntry = Patch.RefTypeName->getValue().load();
+    assert(TypeEntry &&
+           formatv("No data for type {0}", Patch.RefTypeName->getKey())
+               .str()
+               .c_str());
+
+    Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref_addr,
+                  TypeEntry->getFinalDie().getOffset());
+  });
+
+  Section.ListDebugType2TypeDieRefPatch.forEach(
+      [&](DebugType2TypeDieRefPatch &Patch) {
+        assert(TypeUnitPtr != nullptr);
+        TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+        assert(TypeEntry &&
+               formatv("No data for type {0}", Patch.TypeName->getKey())
+                   .str()
+                   .c_str());
+
+        if (&TypeEntry->getFinalDie() != Patch.Die)
+          return;
+
+        Patch.PatchOffset += Patch.Die->getOffset() +
+                             getULEB128Size(Patch.Die->getAbbrevNumber());
+
+        assert(Patch.RefTypeName != nullptr);
+        TypeEntryBody *RefTypeEntry = Patch.RefTypeName->getValue().load();
+        assert(TypeEntry &&
+               formatv("No data for type {0}", Patch.RefTypeName->getKey())
+                   .str()
+                   .c_str());
+
+        Section.apply(Patch.PatchOffset, dwarf::DW_FORM_ref4,
+                      RefTypeEntry->getFinalDie().getOffset());
+      });
+
   Section.ListDebugOffsetPatch.forEach([&](DebugOffsetPatch &Patch) {
     uint64_t FinalValue = Patch.SectionPtr.getPointer()->StartOffset;
+
+    // Check whether we need to read value from the original location.
     if (Patch.SectionPtr.getInt())
       FinalValue +=
           Section.getIntVal(Patch.PatchOffset, Format.getDwarfOffsetByteSize());

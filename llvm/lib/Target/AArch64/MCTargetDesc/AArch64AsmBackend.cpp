@@ -40,7 +40,8 @@ protected:
 
 public:
   AArch64AsmBackend(const Target &T, const Triple &TT, bool IsLittleEndian)
-      : MCAsmBackend(IsLittleEndian ? support::little : support::big),
+      : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
+                                    : llvm::endianness::big),
         TheTriple(TT) {}
 
   unsigned getNumFixupKinds() const override {
@@ -99,7 +100,8 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 };
 
 } // end anonymous namespace
@@ -360,7 +362,7 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
 /// container involved in big endian or 0 if the item is little endian
 unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) const {
-  if (Endian == support::little)
+  if (Endian == llvm::endianness::little)
     return 0;
 
   switch (Kind) {
@@ -498,7 +500,8 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
-                                              const MCValue &Target) {
+                                              const MCValue &Target,
+                                              const MCSubtargetInfo *STI) {
   unsigned Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return true;

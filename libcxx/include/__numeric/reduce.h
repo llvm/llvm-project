@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator, class _Tp, class _BinaryOp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last,
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last,
                                                                    _Tp __init, _BinaryOp __b) {
   for (; __first != __last; ++__first)
     __init = __b(std::move(__init), *__first);
@@ -31,15 +31,15 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterato
 }
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last,
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp reduce(_InputIterator __first, _InputIterator __last,
                                                                    _Tp __init) {
-  return _VSTD::reduce(__first, __last, __init, _VSTD::plus<>());
+  return std::reduce(__first, __last, __init, std::plus<>());
 }
 
 template <class _InputIterator>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 typename iterator_traits<_InputIterator>::value_type
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename iterator_traits<_InputIterator>::value_type
 reduce(_InputIterator __first, _InputIterator __last) {
-  return _VSTD::reduce(__first, __last, typename iterator_traits<_InputIterator>::value_type{});
+  return std::reduce(__first, __last, typename iterator_traits<_InputIterator>::value_type{});
 }
 #endif
 

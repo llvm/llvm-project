@@ -10,7 +10,7 @@
 # RUN: echo "F G 6" >> %t.call_graph
 # RUN: echo "G H 5" >> %t.call_graph
 # RUN: echo "H I 4" >> %t.call_graph
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=hfsort -o %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
     .section    .text.A,"ax",@progbits

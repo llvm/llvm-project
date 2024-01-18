@@ -98,3 +98,21 @@ struct TestDefaultOperatorB {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
   // CHECK-FIXES: {{^}}  friend auto operator<(const TestDefaultOperatorB &, const TestDefaultOperatorB &) noexcept -> bool = default;{{$}}
 };
+
+namespace PR69863 {
+
+template <unsigned Len>
+struct CustomCompileTimeString {
+  constexpr CustomCompileTimeString(const char (&)[Len]) noexcept {}
+};
+
+template <CustomCompileTimeString Str>
+constexpr decltype(Str) operator""__csz() noexcept {
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}constexpr auto operator""__csz() noexcept -> decltype(Str) {
+  return Str;
+}
+
+inline constexpr CustomCompileTimeString SomeString = "This line will cause a crash"__csz;
+
+}

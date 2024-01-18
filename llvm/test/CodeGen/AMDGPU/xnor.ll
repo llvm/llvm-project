@@ -113,8 +113,7 @@ define amdgpu_kernel void @xnor_v_s_i32_one_use(ptr addrspace(1) %out, i32 %s) {
 ; GCN-LABEL: {{^}}xnor_i64_s_v_one_use
 ; GCN-NOT: s_xnor_b64
 ; GCN: s_not_b64
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: v_xor_b32_e32
 ; GCN-DL: v_xnor_b32
 ; GCN-DL: v_xnor_b32
 define amdgpu_kernel void @xnor_i64_s_v_one_use(
@@ -132,8 +131,7 @@ entry:
 ; GCN-LABEL: {{^}}xnor_i64_v_s_one_use
 ; GCN-NOT: s_xnor_b64
 ; GCN: s_not_b64
-; GCN: v_xor_b32
-; GCN: v_xor_b32
+; GCN: v_xor_b32_e32
 ; GCN-DL: v_xnor_b32
 ; GCN-DL: v_xnor_b32
 define amdgpu_kernel void @xnor_i64_v_s_one_use(

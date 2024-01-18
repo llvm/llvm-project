@@ -61,9 +61,6 @@ bool Ranks::isValid(DimLvlExpr expr) const {
   int64_t maxSym = -1, maxVar = -1;
   mlir::getMaxDimAndSymbol<ArrayRef<AffineExpr>>({{expr.getAffineExpr()}},
                                                  maxVar, maxSym);
-  // TODO(wrengr): We may want to add a call to `LLVM_DEBUG` like
-  // `willBeValidAffineMap` does.  And/or should return `InFlightDiagnostic`
-  // instead of bool.
   return maxSym < getSymRank() && maxVar < getRank(expr.getAllowedVarKind());
 }
 
@@ -72,10 +69,6 @@ bool Ranks::isValid(DimLvlExpr expr) const {
 //===----------------------------------------------------------------------===//
 
 VarSet::VarSet(Ranks const &ranks) {
-  // NOTE: We must not use `reserve` here, since that doesn't change
-  // the `size` of the bitvectors and therefore will result in unexpected
-  // OOB errors.  Either `resize` or copy/move-ctor work; we opt for the
-  // move-ctor since it should be (marginally) more efficient.
   for (const auto vk : everyVarKind)
     impl[vk] = llvm::SmallBitVector(ranks.getRank(vk));
   assert(getRanks() == ranks);
@@ -89,36 +82,6 @@ bool VarSet::contains(Var var) const {
   const llvm::SmallBitVector &bits = impl[var.getKind()];
   const auto num = var.getNum();
   return num < bits.size() && bits[num];
-}
-
-bool VarSet::occursIn(VarSet const &other) const {
-  for (const auto vk : everyVarKind)
-    if (impl[vk].anyCommon(other.impl[vk]))
-      return true;
-  return false;
-}
-
-bool VarSet::occursIn(DimLvlExpr expr) const {
-  if (!expr)
-    return false;
-  switch (expr.getAffineKind()) {
-  case AffineExprKind::Constant:
-    return false;
-  case AffineExprKind::SymbolId:
-    return contains(expr.castSymVar());
-  case AffineExprKind::DimId:
-    return contains(expr.castDimLvlVar());
-  case AffineExprKind::Add:
-  case AffineExprKind::Mul:
-  case AffineExprKind::Mod:
-  case AffineExprKind::FloorDiv:
-  case AffineExprKind::CeilDiv: {
-    const auto [lhs, op, rhs] = expr.unpackBinop();
-    (void)op;
-    return occursIn(lhs) || occursIn(rhs);
-  }
-  }
-  llvm_unreachable("unknown AffineExprKind");
 }
 
 void VarSet::add(Var var) {
@@ -180,9 +143,6 @@ void VarInfo::setNum(Var::Num n) {
 
 /// Helper function for `assertUsageConsistency` to better handle SMLoc
 /// mismatches.
-// TODO(wrengr): If we switch to the `LocatedVar` design, then there's
-// no need for anything like `minSMLoc` since `assertUsageConsistency`
-// won't need to do anything about locations.
 LLVM_ATTRIBUTE_UNUSED static llvm::SMLoc
 minSMLoc(AsmParser &parser, llvm::SMLoc sm1, llvm::SMLoc sm2) {
   const auto loc1 = parser.getEncodedSourceLoc(sm1).dyn_cast<FileLineColLoc>();
@@ -201,28 +161,13 @@ bool isInternalConsistent(VarEnv const &env, VarInfo::ID id, StringRef name) {
   return (var.getName() == name && var.getID() == id);
 }
 
-// NOTE(wrengr): if we can actually obtain an `AsmParser` for `minSMLoc`
-// (or find some other way to convert SMLoc to FileLineColLoc), then this
-// would no longer be `const VarEnv` (and couldn't be a free-function either).
 bool isUsageConsistent(VarEnv const &env, VarInfo::ID id, llvm::SMLoc loc,
                        VarKind vk) {
   const auto &var = env.access(id);
-  // Since the same variable can occur at several locations,
-  // it would not be appropriate to do `assert(var.getLoc() == loc)`.
-  /* TODO(wrengr):
-  const auto minLoc = minSMLoc(_, var.getLoc(), loc);
-  assert(minLoc && "Location mismatch/incompatibility");
-  var.loc = minLoc;
-  // */
   return var.getKind() == vk;
 }
 
 std::optional<VarInfo::ID> VarEnv::lookup(StringRef name) const {
-  // NOTE: `StringMap::lookup` will return a default-constructed value if
-  // the key isn't found; which for enums means zero, and therefore makes
-  // it impossible to distinguish between actual zero-VarInfo::ID vs not-found.
-  // Whereas `StringMap::at` asserts that the key is found, which we don't
-  // want either.
   const auto iter = ids.find(name);
   if (iter == ids.end())
     return std::nullopt;
@@ -277,22 +222,10 @@ Var VarEnv::bindUnusedVar(VarKind vk) { return Var(vk, nextNum[vk]++); }
 Var VarEnv::bindVar(VarInfo::ID id) {
   auto &info = access(id);
   const auto var = bindUnusedVar(info.getKind());
-  // NOTE: `setNum` already checks wellformedness of the `Var::Num`.
   info.setNum(var.getNum());
   return var;
 }
 
-// TODO(wrengr): Alternatively there's `mlir::emitError(Location, Twine const&)`
-// which is what `Operation::emitError` uses; though I'm not sure if
-// that's appropriate to use here...  But if it is, then that means
-// we can have `VarInfo` store `Location` rather than `SMLoc`, which
-// means we can use `FusedLoc` to handle the combination issue in
-// `VarEnv::lookupOrCreate`.
-//
-// TODO(wrengr): is there any way to combine multiple IFDs, so that
-// we can report all unbound variables instead of just the first one
-// encountered?
-//
 InFlightDiagnostic VarEnv::emitErrorIfAnyUnbound(AsmParser &parser) const {
   for (const auto &var : vars)
     if (!var.hasNum())

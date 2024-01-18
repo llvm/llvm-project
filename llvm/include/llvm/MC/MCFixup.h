@@ -24,6 +24,7 @@ enum MCFixupKind {
   FK_Data_2,      ///< A two-byte fixup.
   FK_Data_4,      ///< A four-byte fixup.
   FK_Data_8,      ///< A eight-byte fixup.
+  FK_Data_leb128, ///< A leb128 fixup.
   FK_PCRel_1,     ///< A one-byte pc relative fixup.
   FK_PCRel_2,     ///< A two-byte pc relative fixup.
   FK_PCRel_4,     ///< A four-byte pc relative fixup.

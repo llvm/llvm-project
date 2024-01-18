@@ -964,6 +964,28 @@ define i32 @PR57278_mul_assume(i32 %a) {
 
 declare void @llvm.assume(i1)
 
+define i32 @PR57278_or_disjoint_nuw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nuw i32 %add, 3
+  ret i32 %mul
+}
+
+define i32 @PR57278_or_disjoint_nsw(i32 %a) {
+; CHECK-LABEL: @PR57278_or_disjoint_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[TMP1]], 9
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = or disjoint i32 %a, 3
+  %mul = mul nsw i32 %add, 3
+  ret i32 %mul
+}
+
 ; https://alive2.llvm.org/ce/z/XYpv9q
 define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec(
@@ -981,8 +1003,8 @@ define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec_poison(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
-; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i32> [[SHL]], <i32 3, i32 poison>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[ADD]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = add nuw <2 x i32> [[TMP1]], <i32 9, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl = shl nuw <2 x i32> %v1, <i32 2, i32 poison>
@@ -1131,10 +1153,13 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[V:%.*]], shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
-; CHECK-NEXT:    ret i32 [[MUL]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
-  %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
+  %ext = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+  %shl = shl i32 1, %ext
+  %mul = mul i32 %V, %shl
   ret i32 %mul
 }
 
@@ -1762,7 +1787,7 @@ define <2 x i16> @sext_negpow2_vec(<2 x i8> %x) {
 define <2 x i16> @sext_negpow2_too_small_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sext_negpow2_too_small_vec(
 ; CHECK-NEXT:    [[SX:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[SX]], <i16 -128, i16 poison>
+; CHECK-NEXT:    [[R:%.*]] = mul nsw <2 x i16> [[SX]], <i16 -128, i16 poison>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %sx = sext <2 x i8> %x to <2 x i16>

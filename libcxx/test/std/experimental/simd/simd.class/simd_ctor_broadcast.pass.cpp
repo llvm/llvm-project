@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 // <experimental/simd>
 //
 // [simd.class]
 // template<class U> simd(U&& value) noexcept;
-
-// GCC returns __int128 unsigned with garbled data in higher 64 bits.
-// This is likely a bug in GCC implementation. Investigation needed.
-// XFAIL: gcc-13
 
 #include "../test_utils.h"
 

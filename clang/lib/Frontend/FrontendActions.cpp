@@ -258,6 +258,16 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
   return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
+std::unique_ptr<ASTConsumer>
+GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) {
+  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+
+  return GenerateModuleAction::CreateASTConsumer(CI, InFile);
+}
+
 std::unique_ptr<raw_pwrite_stream>
 GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
                                                 StringRef InFile) {
@@ -658,6 +668,21 @@ namespace {
                    "Use standard C++ include directories [-nostdinc++]");
       DUMP_BOOLEAN(HSOpts.UseLibcxx,
                    "Use libc++ (rather than libstdc++) [-stdlib=]");
+      return false;
+    }
+
+    bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                               bool Complain) override {
+      Out.indent(2) << "Header search paths:\n";
+      Out.indent(4) << "User entries:\n";
+      for (const auto &Entry : HSOpts.UserEntries)
+        Out.indent(6) << Entry.Path << "\n";
+      Out.indent(4) << "System header prefixes:\n";
+      for (const auto &Prefix : HSOpts.SystemHeaderPrefixes)
+        Out.indent(6) << Prefix.Prefix << "\n";
+      Out.indent(4) << "VFS overlay files:\n";
+      for (const auto &Overlay : HSOpts.VFSOverlayFiles)
+        Out.indent(6) << Overlay << "\n";
       return false;
     }
 

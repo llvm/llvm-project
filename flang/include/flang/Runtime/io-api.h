@@ -244,11 +244,6 @@ bool IONAME(SetSign)(Cookie, const char *, std::size_t);
 // and avoid the following items when they might crash.
 bool IONAME(OutputDescriptor)(Cookie, const Descriptor &);
 bool IONAME(InputDescriptor)(Cookie, const Descriptor &);
-// Contiguous transfers for unformatted I/O
-bool IONAME(OutputUnformattedBlock)(
-    Cookie, const char *, std::size_t, std::size_t elementBytes);
-bool IONAME(InputUnformattedBlock)(
-    Cookie, char *, std::size_t, std::size_t elementBytes);
 // Formatted (including list directed) I/O data items
 bool IONAME(OutputInteger8)(Cookie, std::int8_t);
 bool IONAME(OutputInteger16)(Cookie, std::int16_t);

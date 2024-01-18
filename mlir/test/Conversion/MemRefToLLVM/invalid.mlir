@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -finalize-memref-to-llvm -split-input-file 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -finalize-memref-to-llvm 2>&1 | FileCheck %s
 // Since the error is at an unknown location, we use FileCheck instead of
 // -veri-y-diagnostics here
 
@@ -10,5 +10,3 @@ func.func @bad_address_space(%a: memref<2xindex, "foo">) {
     memref.store %c0, %a[%c0] : memref<2xindex, "foo">
     return
 }
-
-// -----

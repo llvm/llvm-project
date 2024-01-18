@@ -46,18 +46,23 @@ typedef NS_ENUM(int, An_NS_ENUM_isdoxy1) { Red, Green, Blue };
 // attach unrelated comments in the following cases where tag decls are
 // embedded in declarators.
 
-#define DECLARE_FUNCTIONS(suffix) \
-    /** functionFromMacro IS_DOXYGEN_SINGLE */ \
-    void functionFromMacro(void) { \
-      typedef struct Struct_notdoxy Struct_notdoxy; \
-    } \
-    /** functionFromMacroWithSuffix IS_DOXYGEN_SINGLE */ \
-    void functionFromMacro##suffix(void) { \
-      typedef struct Struct_notdoxy Struct_notdoxy; \
-    }
+#define DECLARE_FUNCTIONS_COMMENTS_IN_MACRO(suffix) \
+  /** functionFromMacro IS_DOXYGEN_SINGLE */ \
+  void functionFromMacro(void) { \
+    typedef struct Struct_notdoxy Struct_notdoxy; \
+  } \
+  /** functionFromMacroWithSuffix IS_DOXYGEN_SINGLE */ \
+  void functionFromMacro##suffix(void) { \
+    typedef struct Struct_notdoxy Struct_notdoxy; \
+  }
 
-/// IS_DOXYGEN_NOT_ATTACHED
-DECLARE_FUNCTIONS(WithSuffix)
+DECLARE_FUNCTIONS_COMMENTS_IN_MACRO(WithSuffix)
+
+#define DECLARE_FUNCTIONS \
+  void functionFromMacroWithCommentFromExpansionSite(void) { typedef struct Struct_notdoxy Struct_notdoxy; }
+
+/// functionFromMacroWithCommentFromExpansionSite IS_DOXYGEN_SINGLE
+DECLARE_FUNCTIONS
 
 /// typedef_isdoxy1 IS_DOXYGEN_SINGLE
 typedef struct Struct_notdoxy *typedef_isdoxy1;
@@ -68,8 +73,13 @@ typedef struct Struct_notdoxy *typedef_isdoxy1;
   /** namedEnumFromMacro IS_DOXYGEN_SINGLE */ \
   enum name { B };
 
-/// IS_DOXYGEN_NOT_ATTACHED
 DECLARE_ENUMS(namedEnumFromMacro)
+
+#define MYENUM(name) enum name
+struct Foo {
+  /// Vehicles IS_DOXYGEN_SINGLE
+  MYENUM(Vehicles) { Car, Motorbike, Boat} a;
+};
 
 #endif
 
@@ -133,8 +143,10 @@ DECLARE_ENUMS(namedEnumFromMacro)
 // CHECK: annotate-comments-objc.m:41:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments-objc.m:41:22: TypedefDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments-objc.m:41:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:60:1: FunctionDecl=functionFromMacro:{{.*}} BriefComment=[functionFromMacro IS_DOXYGEN_SINGLE]
-// CHECK: annotate-comments-objc.m:60:1: FunctionDecl=functionFromMacroWithSuffix:{{.*}} BriefComment=[functionFromMacroWithSuffix IS_DOXYGEN_SINGLE]
-// CHECK: annotate-comments-objc.m:63:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:72:1: EnumDecl=enumFromMacro:{{.*}} BriefComment=[enumFromMacro IS_DOXYGEN_SINGLE]
-// CHECK: annotate-comments-objc.m:72:15: EnumDecl=namedEnumFromMacro:{{.*}} BriefComment=[namedEnumFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:59:1: FunctionDecl=functionFromMacro:{{.*}} BriefComment=[functionFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:59:1: FunctionDecl=functionFromMacroWithSuffix:{{.*}} BriefComment=[functionFromMacroWithSuffix IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:65:1: FunctionDecl=functionFromMacroWithCommentFromExpansionSite:{{.*}} BriefComment=[functionFromMacroWithCommentFromExpansionSite IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:68:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:76:1: EnumDecl=enumFromMacro:{{.*}} BriefComment=[enumFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:76:15: EnumDecl=namedEnumFromMacro:{{.*}} BriefComment=[namedEnumFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:81:10: EnumDecl=Vehicles:{{.*}} Vehicles IS_DOXYGEN_SINGLE

@@ -52,17 +52,17 @@ define void @shuffle_ext_byone_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
-; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x1, x8]
-; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.b, z2.b[31]
-; VBITS_GE_256-NEXT:    mov z0.b, z0.b[31]
-; VBITS_GE_256-NEXT:    fmov w9, s3
-; VBITS_GE_256-NEXT:    insr z1.b, w9
-; VBITS_GE_256-NEXT:    fmov w9, s0
-; VBITS_GE_256-NEXT:    insr z2.b, w9
-; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0, x8]
-; VBITS_GE_256-NEXT:    st1b { z2.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
+; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1, x8]
+; VBITS_GE_256-NEXT:    mov z2.b, z0.b[31]
+; VBITS_GE_256-NEXT:    mov z1.b, z1.b[31]
+; VBITS_GE_256-NEXT:    fmov w9, s2
+; VBITS_GE_256-NEXT:    insr z3.b, w9
+; VBITS_GE_256-NEXT:    fmov w9, s1
+; VBITS_GE_256-NEXT:    insr z0.b, w9
+; VBITS_GE_256-NEXT:    st1b { z3.b }, p0, [x0, x8]
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v64i8:
@@ -217,17 +217,17 @@ define void @shuffle_ext_byone_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.h, z2.h[15]
-; VBITS_GE_256-NEXT:    mov z0.h, z0.h[15]
-; VBITS_GE_256-NEXT:    fmov w9, s3
-; VBITS_GE_256-NEXT:    insr z1.h, w9
-; VBITS_GE_256-NEXT:    fmov w9, s0
-; VBITS_GE_256-NEXT:    insr z2.h, w9
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    mov z2.h, z0.h[15]
+; VBITS_GE_256-NEXT:    mov z1.h, z1.h[15]
+; VBITS_GE_256-NEXT:    fmov w9, s2
+; VBITS_GE_256-NEXT:    insr z3.h, w9
+; VBITS_GE_256-NEXT:    fmov w9, s1
+; VBITS_GE_256-NEXT:    insr z0.h, w9
+; VBITS_GE_256-NEXT:    st1h { z3.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v32i16:
@@ -353,17 +353,17 @@ define void @shuffle_ext_byone_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.s, z2.s[7]
-; VBITS_GE_256-NEXT:    mov z0.s, z0.s[7]
-; VBITS_GE_256-NEXT:    fmov w9, s3
-; VBITS_GE_256-NEXT:    insr z1.s, w9
-; VBITS_GE_256-NEXT:    fmov w9, s0
-; VBITS_GE_256-NEXT:    insr z2.s, w9
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov z2.s, z0.s[7]
+; VBITS_GE_256-NEXT:    mov z1.s, z1.s[7]
+; VBITS_GE_256-NEXT:    fmov w9, s2
+; VBITS_GE_256-NEXT:    insr z3.s, w9
+; VBITS_GE_256-NEXT:    fmov w9, s1
+; VBITS_GE_256-NEXT:    insr z0.s, w9
+; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v16i32:
@@ -465,17 +465,17 @@ define void @shuffle_ext_byone_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.d, z2.d[3]
-; VBITS_GE_256-NEXT:    mov z0.d, z0.d[3]
-; VBITS_GE_256-NEXT:    fmov x9, d3
-; VBITS_GE_256-NEXT:    insr z1.d, x9
-; VBITS_GE_256-NEXT:    fmov x9, d0
-; VBITS_GE_256-NEXT:    insr z2.d, x9
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    mov z2.d, z0.d[3]
+; VBITS_GE_256-NEXT:    mov z1.d, z1.d[3]
+; VBITS_GE_256-NEXT:    fmov x9, d2
+; VBITS_GE_256-NEXT:    insr z3.d, x9
+; VBITS_GE_256-NEXT:    fmov x9, d1
+; VBITS_GE_256-NEXT:    insr z0.d, x9
+; VBITS_GE_256-NEXT:    st1d { z3.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v8i64:
@@ -580,15 +580,15 @@ define void @shuffle_ext_byone_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.h, z2.h[15]
-; VBITS_GE_256-NEXT:    mov z0.h, z0.h[15]
-; VBITS_GE_256-NEXT:    insr z1.h, h3
-; VBITS_GE_256-NEXT:    insr z2.h, h0
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z2.h }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    mov z3.h, z0.h[15]
+; VBITS_GE_256-NEXT:    mov z1.h, z1.h[15]
+; VBITS_GE_256-NEXT:    insr z2.h, h3
+; VBITS_GE_256-NEXT:    insr z0.h, h1
+; VBITS_GE_256-NEXT:    st1h { z2.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v32f16:
@@ -712,15 +712,15 @@ define void @shuffle_ext_byone_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.s, z2.s[7]
-; VBITS_GE_256-NEXT:    mov z0.s, z0.s[7]
-; VBITS_GE_256-NEXT:    insr z1.s, s3
-; VBITS_GE_256-NEXT:    insr z2.s, s0
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov z3.s, z0.s[7]
+; VBITS_GE_256-NEXT:    mov z1.s, z1.s[7]
+; VBITS_GE_256-NEXT:    insr z2.s, s3
+; VBITS_GE_256-NEXT:    insr z0.s, s1
+; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v16f32:
@@ -820,15 +820,15 @@ define void @shuffle_ext_byone_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z3.d, z2.d[3]
-; VBITS_GE_256-NEXT:    mov z0.d, z0.d[3]
-; VBITS_GE_256-NEXT:    insr z1.d, d3
-; VBITS_GE_256-NEXT:    insr z2.d, d0
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z2.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    mov z3.d, z0.d[3]
+; VBITS_GE_256-NEXT:    mov z1.d, z1.d[3]
+; VBITS_GE_256-NEXT:    insr z2.d, d3
+; VBITS_GE_256-NEXT:    insr z0.d, d1
+; VBITS_GE_256-NEXT:    st1d { z2.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: shuffle_ext_byone_v8f64:
@@ -893,11 +893,11 @@ define void @shuffle_ext_byone_reverse(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_reverse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    mov z1.d, z1.d[3]
-; CHECK-NEXT:    insr z0.d, d1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, z0.d[3]
+; CHECK-NEXT:    insr z1.d, d0
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %op2 = load <4 x double>, ptr %b
@@ -918,13 +918,13 @@ define void @shuffle_ext_invalid(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    mov z2.d, z1.d[1]
-; CHECK-NEXT:    mov z3.d, z0.d[3]
-; CHECK-NEXT:    mov z0.d, z0.d[2]
-; CHECK-NEXT:    stp d1, d2, [sp, #16]
-; CHECK-NEXT:    stp d0, d3, [sp]
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z2.d, z0.d[1]
+; CHECK-NEXT:    mov z3.d, z1.d[3]
+; CHECK-NEXT:    mov z1.d, z1.d[2]
+; CHECK-NEXT:    stp d0, d2, [sp, #16]
+; CHECK-NEXT:    stp d1, d3, [sp]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29

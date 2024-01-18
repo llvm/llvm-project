@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -484,6 +483,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     PH.Flags = Phdr.p_flags;
     PH.VAddr = Phdr.p_vaddr;
     PH.PAddr = Phdr.p_paddr;
+    PH.Offset = Phdr.p_offset;
 
     // yaml2obj sets the alignment of a segment to 1 by default.
     // We do not print the default alignment to reduce noise in the output.

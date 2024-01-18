@@ -233,9 +233,8 @@ void ResourceBase::print(raw_ostream &OS, StringRef IDPrefix,
 }
 
 UAVResource::UAVResource(uint32_t I, FrontendResource R)
-    : ResourceBase(I, R),
-      Shape(static_cast<ResourceBase::Kinds>(R.getResourceKind())),
-      GloballyCoherent(false), HasCounter(false), IsROV(false), ExtProps() {
+    : ResourceBase(I, R), Shape(R.getResourceKind()), GloballyCoherent(false),
+      HasCounter(false), IsROV(false), ExtProps() {
   parseSourceType(R.getSourceType());
 }
 
@@ -260,20 +259,6 @@ void UAVResource::print(raw_ostream &OS) const {
 // https://github.com/llvm/llvm-project/issues/57991).
 void UAVResource::parseSourceType(StringRef S) {
   IsROV = S.startswith("RasterizerOrdered");
-  if (IsROV)
-    S = S.substr(strlen("RasterizerOrdered"));
-  if (S.startswith("RW"))
-    S = S.substr(strlen("RW"));
-
-  // Note: I'm deliberately not handling any of the Texture buffer types at the
-  // moment. I want to resolve the issue above before adding Texture or Sampler
-  // support.
-  Shape = StringSwitch<ResourceBase::Kinds>(S)
-              .StartsWith("Buffer<", Kinds::TypedBuffer)
-              .StartsWith("ByteAddressBuffer<", Kinds::RawBuffer)
-              .StartsWith("StructuredBuffer<", Kinds::StructuredBuffer)
-              .Default(Kinds::Invalid);
-  assert(Shape != Kinds::Invalid && "Unsupported buffer type");
 
   S = S.substr(S.find("<") + 1);
 

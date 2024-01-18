@@ -7,12 +7,12 @@ program openmp_parse_if
   ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NOT: DirectiveNameModifier
-  !$omp target update if(cond)
+  !$omp target update if(cond) to(i)
 
   ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: DirectiveNameModifier = TargetUpdate
-  !$omp target update if(target update: cond)
+  !$omp target update if(target update: cond) to(i)
 
   ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target enter data
   ! CHECK: OmpClause -> If -> OmpIfClause

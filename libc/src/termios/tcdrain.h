@@ -11,10 +11,10 @@
 
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int tcdrain(int fd);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H

@@ -17,6 +17,7 @@ include "mlir/Dialect/EmitC/IR/EmitCAttributes.td"
 include "mlir/Dialect/EmitC/IR/EmitCTypes.td"
 
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -91,11 +92,12 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_CallOp : EmitC_Op<"call", []> {
-  let summary = "Call operation";
+def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", []> {
+  let summary = "Opaque call operation";
   let description = [{
-    The `call` operation represents a C++ function call. The call allows
-    specifying order of operands and attributes in the call as follows:
+    The `call_opaque` operation represents a C++ function call. The callee
+    can be an arbitrary non-empty string. The call allows specifying order
+    of operands and attributes in the call as follows:
 
     - integer value of index type refers to an operand;
     - attribute which will get lowered to constant value in call;
@@ -104,10 +106,10 @@ def EmitC_CallOp : EmitC_Op<"call", []> {
 
     ```mlir
     // Custom form defining a call to `foo()`.
-    %0 = emitc.call "foo" () : () -> i32
+    %0 = emitc.call_opaque "foo" () : () -> i32
 
     // Generic form of the same operation.
-    %0 = "emitc.call"() {callee = "foo"} : () -> i32
+    %0 = "emitc.call_opaque"() {callee = "foo"} : () -> i32
     ```
   }];
   let arguments = (ins
@@ -243,6 +245,67 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
 
   let arguments = (ins FloatIntegerIndexOrOpaqueType, FloatIntegerIndexOrOpaqueType);
   let results = (outs FloatIntegerIndexOrOpaqueType);
+}
+
+def EmitC_ForOp : EmitC_Op<"for",
+      [AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+       SingleBlockImplicitTerminator<"emitc::YieldOp">,
+       RecursiveMemoryEffects]> {
+  let summary = "for operation";
+  let description = [{
+    The `emitc.for` operation represents a C loop of the following form:
+
+    ```c++
+    for (T i = lb; i < ub; i += step) { /* ... */ } // where T is typeof(lb)
+    ```
+
+    The operation takes 3 SSA values as operands that represent the lower bound,
+    upper bound and step respectively, and defines an SSA value for its
+    induction variable. It has one region capturing the loop body. The induction
+    variable is represented as an argument of this region. This SSA value is a
+    signless integer or index. The step is a value of same type.
+
+    This operation has no result. The body region must contain exactly one block
+    that terminates with `emitc.yield`. Calling ForOp::build will create such a
+    region and insert the terminator implicitly if none is defined, so will the
+    parsing even in cases when it is absent from the custom format. For example:
+
+    ```mlir
+    // Index case.
+    emitc.for %iv = %lb to %ub step %step {
+      ... // body
+    }
+    ...
+    // Integer case.
+    emitc.for %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
+      ... // body
+    }
+    ```
+  }];
+  let arguments = (ins IntegerIndexOrOpaqueType:$lowerBound,
+                       IntegerIndexOrOpaqueType:$upperBound,
+                       IntegerIndexOrOpaqueType:$step);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
+      CArg<"function_ref<void(OpBuilder &, Location, Value)>", "nullptr">)>
+  ];
+
+  let extraClassDeclaration = [{
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, Value)>;
+    Value getInductionVar() { return getBody()->getArgument(0); }
+    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
+    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
+    void setStep(Value step) { getOperation()->setOperand(2, step); }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
 }
 
 def EmitC_IncludeOp
@@ -392,7 +455,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %1 = "emitc.variable"() {value = 0 : i32} : () -> i32
     %2 = emitc.apply "&"(%0) : (i32) -> !emitc.ptr<i32>
     %3 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
-    emitc.call "write"(%2, %3) : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
+    emitc.call_opaque "write"(%2, %3)
+      : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
   }];
 
@@ -400,6 +464,105 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let results = (outs AnyType);
 
   let hasVerifier = 1;
+}
+
+def EmitC_AssignOp : EmitC_Op<"assign", []> {
+  let summary = "Assign operation";
+  let description = [{
+    The `assign` operation stores an SSA value to the location designated by an
+    EmitC variable. This operation doesn't return any value. The assigned value
+    must be of the same type as the variable being assigned. The operation is
+    emitted as a C/C++ '=' operator.
+
+    Example:
+
+    ```mlir
+    // Integer variable
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %1 = emitc.call_opaque "foo"() : () -> (i32)
+
+    // Assign emitted as `... = ...;`
+    "emitc.assign"(%0, %1) : (i32, i32) -> ()
+    ```
+  }];
+
+  let arguments = (ins AnyType:$var, AnyType:$value);
+  let results = (outs);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value `:` type($value) `to` $var `:` type($var) attr-dict";
+}
+
+def EmitC_YieldOp : EmitC_Op<"yield",
+      [Pure, Terminator, ParentOneOf<["IfOp", "ForOp"]>]> {
+  let summary = "block termination operation";
+  let description = [{
+    "yield" terminates blocks within EmitC control-flow operations. Since
+    control-flow constructs in C do not return values, this operation doesn't
+    take any arguments.
+  }];
+
+  let arguments = (ins);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+
+  let assemblyFormat = [{ attr-dict }];
+}
+
+def EmitC_IfOp : EmitC_Op<"if",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds",
+    "getEntrySuccessorRegions"]>, SingleBlock,
+    SingleBlockImplicitTerminator<"emitc::YieldOp">,
+    RecursiveMemoryEffects, NoRegionArguments]> {
+  let summary = "if-then-else operation";
+  let description = [{
+    The `if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand to an if operation
+    is a boolean value. For example:
+
+    ```mlir
+    emitc.if %b  {
+      ...
+    } else {
+      ...
+    }
+    ```
+
+    The "then" region has exactly 1 block. The "else" region may have 0 or 1
+    blocks. The blocks are always terminated with `emitc.yield`, which can be
+    left out to be inserted implicitly. This operation doesn't produce any
+    results.
+  }];
+  let arguments = (ins I1:$condition);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$thenRegion,
+                        MaxSizedRegion<1>:$elseRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$cond)>,
+    OpBuilder<(ins "Value":$cond, "bool":$addThenBlock, "bool":$addElseBlock)>,
+    OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
+    OpBuilder<(ins "Value":$cond,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "buildTerminatedBody">:$thenBuilder,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "nullptr">:$elseBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    OpBuilder getThenBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(0);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    OpBuilder getElseBodyBuilder(OpBuilder::Listener *listener = nullptr) {
+      Block* body = getBody(1);
+      return OpBuilder::atBlockEnd(body, listener);
+    }
+    Block* thenBlock();
+    Block* elseBlock();
+  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

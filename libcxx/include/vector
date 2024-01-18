@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_VECTOR
 #define _LIBCPP_VECTOR
 
+// clang-format off
+
 /*
     vector synopsis
 
@@ -300,6 +302,8 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 }  // std
 
 */
+
+// clang-format on
 
 #include <__algorithm/copy.h>
 #include <__algorithm/equal.h>
@@ -833,11 +837,11 @@ private:
 
     template <class _Up>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    inline void __push_back_slow_path(_Up&& __x);
+    inline pointer __push_back_slow_path(_Up&& __x);
 
     template <class... _Args>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    inline void __emplace_back_slow_path(_Args&&... __args);
+    inline pointer __emplace_back_slow_path(_Args&&... __args);
 
     // The following functions are no-ops outside of AddressSanitizer mode.
     // We call annotations for every allocator, unless explicitly disabled.
@@ -846,20 +850,19 @@ private:
     // __asan_annotate_container_with_allocator to false.
     // For more details, see the "Using libc++" documentation page or
     // the documentation for __sanitizer_annotate_contiguous_container.
-#ifndef _LIBCPP_HAS_NO_ASAN
-    _LIBCPP_CONSTEXPR_SINCE_CXX20
-    void __annotate_contiguous_container(const void *__beg, const void *__end,
-                                         const void *__old_mid,
-                                         const void *__new_mid) const
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+    void __annotate_contiguous_container([[__maybe_unused__]] const void *__beg,
+                                         [[__maybe_unused__]] const void *__end,
+                                         [[__maybe_unused__]] const void *__old_mid,
+                                         [[__maybe_unused__]] const void *__new_mid) const
     {
+#ifndef _LIBCPP_HAS_NO_ASAN
       if (!__libcpp_is_constant_evaluated() && __beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
         __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
-    }
-#else
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    void __annotate_contiguous_container(const void*, const void*, const void*,
-                                         const void*) const _NOEXCEPT {}
 #endif
+    }
+
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     void __annotate_new(size_type __current_size) const _NOEXCEPT {
       __annotate_contiguous_container(data(), data() + capacity(),
@@ -1609,7 +1612,7 @@ vector<_Tp, _Allocator>::shrink_to_fit() _NOEXCEPT
 template <class _Tp, class _Allocator>
 template <class _Up>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-void
+typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__push_back_slow_path(_Up&& __x)
 {
     allocator_type& __a = this->__alloc();
@@ -1618,6 +1621,7 @@ vector<_Tp, _Allocator>::__push_back_slow_path(_Up&& __x)
     __alloc_traits::construct(__a, std::__to_address(__v.__end_), std::forward<_Up>(__x));
     __v.__end_++;
     __swap_out_circular_buffer(__v);
+    return this->__end_;
 }
 
 template <class _Tp, class _Allocator>
@@ -1626,12 +1630,14 @@ inline _LIBCPP_HIDE_FROM_ABI
 void
 vector<_Tp, _Allocator>::push_back(const_reference __x)
 {
-    if (this->__end_ != this->__end_cap())
-    {
+    pointer __end = this->__end_;
+    if (__end < this->__end_cap()) {
         __construct_one_at_end(__x);
+        ++__end;
+    } else {
+        __end = __push_back_slow_path(__x);
     }
-    else
-        __push_back_slow_path(__x);
+    this->__end_ = __end;
 }
 
 template <class _Tp, class _Allocator>
@@ -1640,18 +1646,20 @@ inline _LIBCPP_HIDE_FROM_ABI
 void
 vector<_Tp, _Allocator>::push_back(value_type&& __x)
 {
-    if (this->__end_ < this->__end_cap())
-    {
+    pointer __end = this->__end_;
+    if (__end < this->__end_cap()) {
         __construct_one_at_end(std::move(__x));
+        ++__end;
+    } else {
+        __end = __push_back_slow_path(std::move(__x));
     }
-    else
-        __push_back_slow_path(std::move(__x));
+    this->__end_ = __end;
 }
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-void
+typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
 {
     allocator_type& __a = this->__alloc();
@@ -1660,6 +1668,7 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
     __alloc_traits::construct(__a, std::__to_address(__v.__end_), std::forward<_Args>(__args)...);
     __v.__end_++;
     __swap_out_circular_buffer(__v);
+    return this->__end_;
 }
 
 template <class _Tp, class _Allocator>
@@ -1673,14 +1682,16 @@ void
 #endif
 vector<_Tp, _Allocator>::emplace_back(_Args&&... __args)
 {
-    if (this->__end_ < this->__end_cap())
-    {
+    pointer __end = this->__end_;
+    if (__end < this->__end_cap()) {
         __construct_one_at_end(std::forward<_Args>(__args)...);
+        ++__end;
+    } else {
+        __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
     }
-    else
-        __emplace_back_slow_path(std::forward<_Args>(__args)...);
+    this->__end_ = __end;
 #if _LIBCPP_STD_VER >= 17
-    return this->back();
+    return *(__end - 1);
 #endif
 }
 

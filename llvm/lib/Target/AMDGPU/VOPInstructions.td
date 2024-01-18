@@ -1358,6 +1358,8 @@ let AssemblerPredicate = isGFX11Only,
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3OpSel_gfx11<op, ps.Pfl>;
     if !not(ps.Pfl.HasOpSel) then
+      let DecoderNamespace = !if(ps.Pfl.IsRealTrue16, "GFX11", "GFX11_FAKE16"),
+          AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, isGFX11Only) in
       def _e64_gfx11 :
         VOP3_Real<ps, SIEncodingFamily.GFX11>,
         VOP3e_gfx11<op, ps.Pfl>;
@@ -1388,7 +1390,9 @@ let AssemblerPredicate = isGFX11Only,
   multiclass VOP3_Real_dpp_with_name_gfx11<bits<10> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-    let AsmString = asmName # ps.Pfl.AsmVOP3DPP16, DecoderNamespace = "DPPGFX11" in {
+    let AsmString = asmName # ps.Pfl.AsmVOP3DPP16,
+        DecoderNamespace = !if(ps.Pfl.IsRealTrue16, "DPPGFX11", "DPPGFX11_FAKE16"),
+        AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, isGFX11Only) in {
       defm NAME : VOP3_Real_dpp_Base_gfx11<op, opName>;
     }
   }
@@ -1411,7 +1415,9 @@ let AssemblerPredicate = isGFX11Only,
   multiclass VOP3_Real_dpp8_with_name_gfx11<bits<10> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
-    let AsmString = asmName # ps.Pfl.AsmVOP3DPP8, DecoderNamespace = "DPP8GFX11"  in {
+    let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
+        DecoderNamespace = !if(ps.Pfl.IsRealTrue16, "DPP8GFX11", "DPP8GFX11_FAKE16"),
+        AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts, isGFX11Only) in {
       defm NAME : VOP3_Real_dpp8_Base_gfx11<op, opName>;
     }
   }

@@ -90,7 +90,7 @@ define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vredsum.vs v8, v10, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8

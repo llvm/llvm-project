@@ -14,7 +14,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 class ArgList {
@@ -61,6 +61,6 @@ public:
 };
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ARG_LIST_H

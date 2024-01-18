@@ -13,5 +13,5 @@
 using LlvmLibcHypotfTest = HypotTestTemplate<float>;
 
 TEST_F(LlvmLibcHypotfTest, SpecialNumbers) {
-  test_special_numbers(&__llvm_libc::hypotf);
+  test_special_numbers(&LIBC_NAMESPACE::hypotf);
 }

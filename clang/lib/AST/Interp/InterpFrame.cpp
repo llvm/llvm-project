@@ -72,6 +72,19 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
 InterpFrame::~InterpFrame() {
   for (auto &Param : Params)
     S.deallocate(reinterpret_cast<Block *>(Param.second.get()));
+
+  // When destroying the InterpFrame, call the Dtor for all block
+  // that haven't been destroyed via a destroy() op yet.
+  // This happens when the execution is interruped midway-through.
+  if (Func) {
+    for (auto &Scope : Func->scopes()) {
+      for (auto &Local : Scope.locals()) {
+        Block *B = localBlock(Local.Offset);
+        if (B->isInitialized())
+          B->invokeDtor();
+      }
+    }
+  }
 }
 
 void InterpFrame::destroy(unsigned Idx) {

@@ -22,7 +22,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct ExpBase {
   // Base = e
@@ -296,7 +296,7 @@ LIBC_INLINE static double log2_eval(double x) {
 
   // c0 = dx * (1.0 / ln(2)) + LOG_P1_LOG2[p1]
   double c0 = fputil::multiply_add(dx, 0x1.71547652b82fep+0, LOG_P1_LOG2[p1]);
-  result += __llvm_libc::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
+  result += LIBC_NAMESPACE::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
   return result;
 }
 
@@ -311,7 +311,8 @@ LIBC_INLINE static double log_eval(double x) {
 
   // p1 is the leading 7 bits of mx, i.e.
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
-  int p1 = (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - 7));
+  int p1 = static_cast<int>(bs.get_mantissa() >>
+                            (FPB::FloatProp::MANTISSA_WIDTH - 7));
 
   // Set bs to (1 + (mx - p1*2^(-7))
   bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
@@ -381,6 +382,6 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
   return cpp::nullopt;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

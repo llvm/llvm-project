@@ -10,21 +10,23 @@ define i32 @test(ptr %base) nounwind uwtable ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY_LR_PH_I:%.*]]
 ; CHECK:       while.body.lr.ph.i:
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 16
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
 ; CHECK-NEXT:    [[INDVARS_IV7_I:%.*]] = phi i64 [ 16, [[WHILE_BODY_LR_PH_I]] ], [ [[INDVARS_IV_NEXT8_I:%.*]], [[COND_TRUE29_I:%.*]] ]
 ; CHECK-NEXT:    [[I_05_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_LR_PH_I]] ], [ [[INDVARS_IV7_I]], [[COND_TRUE29_I]] ]
+; CHECK-NEXT:    [[LSR4:%.*]] = trunc i64 [[I_05_I]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[LSR4]] to i64
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i64 [[I_05_I]], 32
 ; CHECK-NEXT:    [[IDX_EXT_I:%.*]] = ashr exact i64 [[SEXT_I]], 32
 ; CHECK-NEXT:    [[ADD_PTR_SUM_I:%.*]] = add i64 [[IDX_EXT_I]], 16
 ; CHECK-NEXT:    br label [[FOR_BODY_I:%.*]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ 0, [[WHILE_BODY_I]] ], [ [[INDVARS_IV_NEXT_I:%.*]], [[FOR_BODY_I]] ]
-; CHECK-NEXT:    [[ADD_PTR_SUM:%.*]] = add i64 [[ADD_PTR_SUM_I]], [[INDVARS_IV_I]]
-; CHECK-NEXT:    [[ARRAYIDX22_I:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[ADD_PTR_SUM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX22_I]], align 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I]], 1
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[UGLYGEP3:%.*]], [[FOR_BODY_I]] ], [ [[UGLYGEP1]], [[WHILE_BODY_I]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[LSR_IV2]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = call i1 @check() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[UGLYGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_I:%.*]], label [[FOR_BODY_I]]
 ; CHECK:       for.end.i:
 ; CHECK-NEXT:    [[ADD_PTR_I144:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[ADD_PTR_SUM_I]]
@@ -93,18 +95,20 @@ define void @test2(i32 %n) nounwind uwtable {
 ; CHECK:       for.cond468.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND468:%.*]]
 ; CHECK:       for.cond468:
-; CHECK-NEXT:    [[INDVARS_IV1163:%.*]] = phi i64 [ [[INDVARS_IV_NEXT1164:%.*]], [[IF_THEN477:%.*]] ], [ 1, [[FOR_COND468_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV1163]] to i32
-; CHECK-NEXT:    [[CMP469:%.*]] = icmp slt i32 [[TMP0]], [[N:%.*]]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ 1, [[FOR_COND468_PREHEADER]] ], [ [[LSR_IV_NEXT:%.*]], [[IF_THEN477:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ getelementptr inbounds ([5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 0, i32 2), [[FOR_COND468_PREHEADER]] ], [ [[UGLYGEP:%.*]], [[IF_THEN477]] ]
+; CHECK-NEXT:    [[K_0:%.*]] = load i32, ptr [[LSR_IV]], align 4
+; CHECK-NEXT:    [[CMP469:%.*]] = icmp slt i32 [[LSR_IV1]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP469]], label [[FOR_BODY471:%.*]], label [[FOR_INC498_PREHEADER:%.*]]
 ; CHECK:       for.body471:
-; CHECK-NEXT:    [[FIRST:%.*]] = getelementptr inbounds [5000 x %struct.anon.7.91.199.307.415.475.559.643.751.835.943.1003.1111.1219.1351.1375.1399.1435.1471.1483.1519.1531.1651.1771], ptr @tags, i64 0, i64 [[INDVARS_IV1163]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FIRST]], align 4
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[LSR_IV]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[UGLYGEP2]], align 4
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN477]], label [[FOR_INC498_PREHEADER]]
 ; CHECK:       for.inc498.preheader:
 ; CHECK-NEXT:    br label [[FOR_INC498:%.*]]
 ; CHECK:       if.then477:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT1164]] = add i64 [[INDVARS_IV1163]], 1
+; CHECK-NEXT:    [[UGLYGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 12
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV1]], 1
 ; CHECK-NEXT:    br label [[FOR_COND468]]
 ; CHECK:       for.inc498:
 ; CHECK-NEXT:    br label [[FOR_INC498]]
@@ -154,27 +158,27 @@ define fastcc void @test3(double* nocapture %u) nounwind uwtable ssp {
 ; CHECK:       for.body3.us.i:
 ; CHECK-NEXT:    [[INDVARS_IV_I_SV_PHI:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], [[MESHBB]] ], [ 0, [[FOR_BODY3_LR_PH_US_I:%.*]] ]
 ; CHECK-NEXT:    [[OPQ_SA_CALC12:%.*]] = sub i32 undef, 227
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[INDVARS_IV_I_SV_PHI]], [[INDVARS_IV8_I_SV_PHI26:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[MUL_I_US_I:%.*]] = mul nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX5_US_I:%.*]] = getelementptr inbounds double, ptr [[U:%.*]], i64 [[INDVARS_IV_I_SV_PHI]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX5_US_I]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I_SV_PHI]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV:%.*]], [[INDVARS_IV_I_SV_PHI]]
+; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[MUL_I_US_I:%.*]] = mul nsw i32 0, [[TMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVARS_IV_I_SV_PHI]], 3
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[U:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[UGLYGEP]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[FOR_INC8_US_I:%.*]], label [[MESHBB]]
 ; CHECK:       for.body3.lr.ph.us.i.loopexit:
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US_I]]
 ; CHECK:       for.body3.lr.ph.us.i:
-; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI26]] = phi i64 [ undef, [[MESHBB1]] ], [ [[INDVARS_IV8_I_SV_PHI24:%.*]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, ptr undef, i64 [[INDVARS_IV8_I_SV_PHI26]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDVARS_IV8_I_SV_PHI26]], 1
+; CHECK-NEXT:    [[LSR_IV]] = phi i64 [ [[LSR_IV_NEXT]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ], [ undef, [[MESHBB1]] ]
+; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, ptr undef, i64 [[LSR_IV]]
 ; CHECK-NEXT:    br label [[FOR_BODY3_US_I:%.*]]
 ; CHECK:       for.inc8.us.i2:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       eval_At_times_u.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       meshBB:
-; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI24]] = phi i64 [ undef, [[FOR_BODY3_US_I]] ], [ [[TMP3]], [[FOR_INC8_US_I]] ]
 ; CHECK-NEXT:    [[MESHSTACKVARIABLE_PHI:%.*]] = phi i32 [ [[OPQ_SA_CALC12]], [[FOR_BODY3_US_I]] ], [ undef, [[FOR_INC8_US_I]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add i64 [[INDVARS_IV_I_SV_PHI]], 1
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY3_LR_PH_US_I_LOOPEXIT]], label [[FOR_BODY3_US_I]]
 ; CHECK:       meshBB1.loopexit:
 ; CHECK-NEXT:    br label [[MESHBB1]]

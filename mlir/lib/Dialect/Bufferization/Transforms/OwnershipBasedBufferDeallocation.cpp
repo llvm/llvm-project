@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -193,7 +194,7 @@ private:
       next = *result;
     }
     if (!next)
-      return nullptr;
+      return FailureOr<Operation *>(nullptr);
     return handleOp<InterfacesU...>(next);
   }
 
@@ -640,6 +641,8 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
     FailureOr<Operation *> result = handleAllInterfaces(&op);
     if (failed(result))
       return failure();
+    if (!*result)
+      continue;
 
     populateRemainingOwnerships(*result);
   }
@@ -803,7 +806,7 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   Operation *funcOp = op.resolveCallable(state.getSymbolTable());
   bool isPrivate = true;
   if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
-    isPrivate &= (symbol.getVisibility() == SymbolTable::Visibility::Private);
+    isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are
   // calling a private function, we need to add an additional `i1`
@@ -854,13 +857,32 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
 FailureOr<Operation *>
 BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
   auto *block = op->getBlock();
-
-  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref))
-    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value())
-      return op->emitError(
-          "memory free side-effect on MemRef value not supported!");
-
   OpBuilder builder = OpBuilder::atBlockBegin(block);
+
+  for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
+    if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
+      if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
+        return op->emitError(
+            "memory free side-effect on MemRef value not supported!");
+
+      // Buffers that were allocated under "manual deallocation" may be
+      // manually deallocated. We insert a runtime assertion to cover certain
+      // cases of invalid IR where an automatically managed buffer allocation
+      // is manually deallocated. This is not a bulletproof check!
+      OpBuilder::InsertionGuard g(builder);
+      builder.setInsertionPoint(op);
+      Ownership ownership = state.getOwnership(operand, block);
+      if (ownership.isUnique()) {
+        Value ownershipInverted = builder.create<arith::XOrIOp>(
+            op.getLoc(), ownership.getIndicator(),
+            buildBoolValue(builder, op.getLoc(), true));
+        builder.create<cf::AssertOp>(
+            op.getLoc(), ownershipInverted,
+            "expected that the block does not have ownership");
+      }
+    }
+  }
+
   for (auto res : llvm::make_filter_range(op->getResults(), isMemref)) {
     auto allocEffect = op.getEffectOnValue<MemoryEffects::Allocate>(res);
     if (allocEffect.has_value()) {
@@ -873,6 +895,15 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
         // `memref.alloc`. If we wouldn't set the ownership of the result here,
         // the default ownership population in `populateRemainingOwnerships`
         // would assume aliasing with the MemRef operand.
+        state.resetOwnerships(res, block);
+        state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
+        continue;
+      }
+
+      if (op->hasAttr(BufferizationDialect::kManualDeallocation)) {
+        // This allocation will be deallocated manually. Assign an ownership of
+        // "false", so that it will never be deallocated by the buffer
+        // deallocation pass.
         state.resetOwnerships(res, block);
         state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
         continue;
@@ -932,7 +963,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 bool BufferDeallocation::isFunctionWithoutDynamicOwnership(Operation *op) {
   auto funcOp = dyn_cast<FunctionOpInterface>(op);
   return funcOp && (!options.privateFuncDynamicOwnership ||
-                    funcOp.getVisibility() != SymbolTable::Visibility::Private);
+                    !funcOp.isPrivate() || funcOp.isExternal());
 }
 
 void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
@@ -942,16 +973,9 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
     if (!state.getOwnership(res, op->getBlock()).isUninitialized())
       continue;
 
-    // Don't take ownership of a returned memref if no allocate side-effect is
-    // present, relevant for memref.get_global, for example.
-    if (op->getNumOperands() == 0) {
-      OpBuilder builder(op);
-      state.updateOwnership(res, buildBoolValue(builder, op->getLoc(), false));
-      continue;
-    }
-
-    // Assume the result may alias with any operand and thus combine all their
-    // ownerships.
+    // The op does not allocate memory, otherwise, it would have been assigned
+    // an ownership during `handleInterface`. Assume the result may alias with
+    // any memref operand and thus combine all their ownerships.
     for (auto operand : op->getOperands()) {
       if (!isMemref(operand))
         continue;
@@ -959,6 +983,17 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
       state.updateOwnership(
           res, state.getOwnership(operand, operand.getParentBlock()),
           op->getBlock());
+    }
+
+    // If the ownership value is still uninitialized (e.g., because the op has
+    // no memref operands), assume that no ownership is taken. E.g., this is the
+    // case for "memref.get_global".
+    //
+    // Note: This can lead to memory leaks if memory side effects are not
+    // properly specified on the op.
+    if (state.getOwnership(res, op->getBlock()).isUninitialized()) {
+      OpBuilder builder(op);
+      state.updateOwnership(res, buildBoolValue(builder, op->getLoc(), false));
     }
   }
 }
@@ -981,12 +1016,17 @@ struct OwnershipBasedBufferDeallocationPass
     this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
   }
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    if (func.isExternal())
-      return;
+    auto status = getOperation()->walk([&](func::FuncOp func) {
+      if (func.isExternal())
+        return WalkResult::skip();
 
-    if (failed(
-            deallocateBuffersOwnershipBased(func, privateFuncDynamicOwnership)))
+      if (failed(deallocateBuffersOwnershipBased(func,
+                                                 privateFuncDynamicOwnership)))
+        return WalkResult::interrupt();
+
+      return WalkResult::advance();
+    });
+    if (status.wasInterrupted())
       signalPassFailure();
   }
 };

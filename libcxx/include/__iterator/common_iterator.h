@@ -51,7 +51,7 @@ template<input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
 class common_iterator {
   struct __proxy {
     _LIBCPP_HIDE_FROM_ABI constexpr const iter_value_t<_Iter>* operator->() const noexcept {
-      return _VSTD::addressof(__value_);
+      return std::addressof(__value_);
     }
     iter_value_t<_Iter> __value_;
   };
@@ -63,13 +63,16 @@ class common_iterator {
     iter_value_t<_Iter> __value_;
   };
 
-public:
   variant<_Iter, _Sent> __hold_;
+  template<input_or_output_iterator _OtherIter, sentinel_for<_OtherIter> _OtherSent>
+    requires (!same_as<_OtherIter, _OtherSent> && copyable<_OtherIter>)
+  friend class common_iterator;
 
+public:
   _LIBCPP_HIDE_FROM_ABI common_iterator() requires default_initializable<_Iter> = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Iter __i) : __hold_(in_place_type<_Iter>, _VSTD::move(__i)) {}
-  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Sent __s) : __hold_(in_place_type<_Sent>, _VSTD::move(__s)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Iter __i) : __hold_(in_place_type<_Iter>, std::move(__i)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr common_iterator(_Sent __s) : __hold_(in_place_type<_Sent>, std::move(__s)) {}
 
   template<class _I2, class _S2>
     requires convertible_to<const _I2&, _Iter> && convertible_to<const _S2&, _Sent>
@@ -78,8 +81,8 @@ public:
       _LIBCPP_ASSERT_UNCATEGORIZED(!__other.__hold_.valueless_by_exception(),
                                    "Attempted to construct from a valueless common_iterator");
       if (__other.__hold_.index() == 0)
-        return variant<_Iter, _Sent>{in_place_index<0>, _VSTD::__unchecked_get<0>(__other.__hold_)};
-      return variant<_Iter, _Sent>{in_place_index<1>, _VSTD::__unchecked_get<1>(__other.__hold_)};
+        return variant<_Iter, _Sent>{in_place_index<0>, std::__unchecked_get<0>(__other.__hold_)};
+      return variant<_Iter, _Sent>{in_place_index<1>, std::__unchecked_get<1>(__other.__hold_)};
     }()) {}
 
   template<class _I2, class _S2>
@@ -94,15 +97,15 @@ public:
 
     // If they're the same index, just assign.
     if (__idx == 0 && __other_idx == 0)
-      _VSTD::__unchecked_get<0>(__hold_) = _VSTD::__unchecked_get<0>(__other.__hold_);
+      std::__unchecked_get<0>(__hold_) = std::__unchecked_get<0>(__other.__hold_);
     else if (__idx == 1 && __other_idx == 1)
-      _VSTD::__unchecked_get<1>(__hold_) = _VSTD::__unchecked_get<1>(__other.__hold_);
+      std::__unchecked_get<1>(__hold_) = std::__unchecked_get<1>(__other.__hold_);
 
     // Otherwise replace with the oposite element.
     else if (__other_idx == 1)
-      __hold_.template emplace<1>(_VSTD::__unchecked_get<1>(__other.__hold_));
+      __hold_.template emplace<1>(std::__unchecked_get<1>(__other.__hold_));
     else if (__other_idx == 0)
-      __hold_.template emplace<0>(_VSTD::__unchecked_get<0>(__other.__hold_));
+      __hold_.template emplace<0>(std::__unchecked_get<0>(__other.__hold_));
 
     return *this;
   }
@@ -111,7 +114,7 @@ public:
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_Iter>(__hold_),
                                  "Attempted to dereference a non-dereferenceable common_iterator");
-    return *_VSTD::__unchecked_get<_Iter>(__hold_);
+    return *std::__unchecked_get<_Iter>(__hold_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
@@ -119,7 +122,7 @@ public:
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_Iter>(__hold_),
                                  "Attempted to dereference a non-dereferenceable common_iterator");
-    return *_VSTD::__unchecked_get<_Iter>(__hold_);
+    return *std::__unchecked_get<_Iter>(__hold_);
   }
 
   template<class _I2 = _Iter>
@@ -132,19 +135,19 @@ public:
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_Iter>(__hold_),
                                  "Attempted to dereference a non-dereferenceable common_iterator");
     if constexpr (is_pointer_v<_Iter> || requires(const _Iter& __i) { __i.operator->(); })    {
-      return _VSTD::__unchecked_get<_Iter>(__hold_);
+      return std::__unchecked_get<_Iter>(__hold_);
     } else if constexpr (is_reference_v<iter_reference_t<_Iter>>) {
-      auto&& __tmp = *_VSTD::__unchecked_get<_Iter>(__hold_);
-      return _VSTD::addressof(__tmp);
+      auto&& __tmp = *std::__unchecked_get<_Iter>(__hold_);
+      return std::addressof(__tmp);
     } else {
-      return __proxy{*_VSTD::__unchecked_get<_Iter>(__hold_)};
+      return __proxy{*std::__unchecked_get<_Iter>(__hold_)};
     }
   }
 
   _LIBCPP_HIDE_FROM_ABI common_iterator& operator++() {
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_Iter>(__hold_),
                                  "Attempted to increment a non-dereferenceable common_iterator");
-    ++_VSTD::__unchecked_get<_Iter>(__hold_); return *this;
+    ++std::__unchecked_get<_Iter>(__hold_); return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI decltype(auto) operator++(int) {
@@ -156,7 +159,7 @@ public:
       return __tmp;
     } else if constexpr (requires (_Iter& __i) { { *__i++ } -> __can_reference; } ||
                          !__can_use_postfix_proxy<_Iter>) {
-      return _VSTD::__unchecked_get<_Iter>(__hold_)++;
+      return std::__unchecked_get<_Iter>(__hold_)++;
     } else {
       auto __p = __postfix_proxy{**this};
       ++*this;
@@ -180,9 +183,9 @@ public:
       return true;
 
     if (__x_index == 0)
-      return _VSTD::__unchecked_get<_Iter>(__x.__hold_) == _VSTD::__unchecked_get<_S2>(__y.__hold_);
+      return std::__unchecked_get<_Iter>(__x.__hold_) == std::__unchecked_get<_S2>(__y.__hold_);
 
-    return _VSTD::__unchecked_get<_Sent>(__x.__hold_) == _VSTD::__unchecked_get<_I2>(__y.__hold_);
+    return std::__unchecked_get<_Sent>(__x.__hold_) == std::__unchecked_get<_I2>(__y.__hold_);
   }
 
   template<class _I2, sentinel_for<_Iter> _S2>
@@ -201,12 +204,12 @@ public:
       return true;
 
     if (__x_index == 0 && __y_index == 0)
-      return  _VSTD::__unchecked_get<_Iter>(__x.__hold_) ==  _VSTD::__unchecked_get<_I2>(__y.__hold_);
+      return  std::__unchecked_get<_Iter>(__x.__hold_) ==  std::__unchecked_get<_I2>(__y.__hold_);
 
     if (__x_index == 0)
-      return  _VSTD::__unchecked_get<_Iter>(__x.__hold_) == _VSTD::__unchecked_get<_S2>(__y.__hold_);
+      return  std::__unchecked_get<_Iter>(__x.__hold_) == std::__unchecked_get<_S2>(__y.__hold_);
 
-    return _VSTD::__unchecked_get<_Sent>(__x.__hold_) ==  _VSTD::__unchecked_get<_I2>(__y.__hold_);
+    return std::__unchecked_get<_Sent>(__x.__hold_) ==  std::__unchecked_get<_I2>(__y.__hold_);
   }
 
   template<sized_sentinel_for<_Iter> _I2, sized_sentinel_for<_Iter> _S2>
@@ -225,12 +228,12 @@ public:
       return 0;
 
     if (__x_index == 0 && __y_index == 0)
-      return  _VSTD::__unchecked_get<_Iter>(__x.__hold_) - _VSTD::__unchecked_get<_I2>(__y.__hold_);
+      return  std::__unchecked_get<_Iter>(__x.__hold_) - std::__unchecked_get<_I2>(__y.__hold_);
 
     if (__x_index == 0)
-      return  _VSTD::__unchecked_get<_Iter>(__x.__hold_) - _VSTD::__unchecked_get<_S2>(__y.__hold_);
+      return  std::__unchecked_get<_Iter>(__x.__hold_) - std::__unchecked_get<_S2>(__y.__hold_);
 
-    return _VSTD::__unchecked_get<_Sent>(__x.__hold_) - _VSTD::__unchecked_get<_I2>(__y.__hold_);
+    return std::__unchecked_get<_Sent>(__x.__hold_) - std::__unchecked_get<_I2>(__y.__hold_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr iter_rvalue_reference_t<_Iter> iter_move(const common_iterator& __i)
@@ -239,7 +242,7 @@ public:
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_Iter>(__i.__hold_),
                                  "Attempted to iter_move a non-dereferenceable common_iterator");
-    return ranges::iter_move( _VSTD::__unchecked_get<_Iter>(__i.__hold_));
+    return ranges::iter_move( std::__unchecked_get<_Iter>(__i.__hold_));
   }
 
   template<indirectly_swappable<_Iter> _I2, class _S2>
@@ -250,7 +253,7 @@ public:
                                  "Attempted to iter_swap a non-dereferenceable common_iterator");
     _LIBCPP_ASSERT_UNCATEGORIZED(std::holds_alternative<_I2>(__y.__hold_),
                                  "Attempted to iter_swap a non-dereferenceable common_iterator");
-    return ranges::iter_swap(_VSTD::__unchecked_get<_Iter>(__x.__hold_), _VSTD::__unchecked_get<_I2>(__y.__hold_));
+    return ranges::iter_swap(std::__unchecked_get<_Iter>(__x.__hold_), std::__unchecked_get<_I2>(__y.__hold_));
   }
 };
 

@@ -80,6 +80,8 @@ protected:
 
   SDValue lowerFEXPUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           SDNodeFlags Flags) const;
+  SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
+                            SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
@@ -372,9 +374,6 @@ public:
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
-  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                              LLT Ty2) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };
@@ -392,6 +391,7 @@ enum NodeType : unsigned {
   CALL,
   TC_RETURN,
   TC_RETURN_GFX,
+  TC_RETURN_CHAIN,
   TRAP,
 
   // Masked control flow nodes.

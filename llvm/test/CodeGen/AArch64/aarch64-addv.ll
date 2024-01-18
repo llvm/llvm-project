@@ -3,20 +3,35 @@
 ; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=aarch64-eabi -aarch64-neon-syntax=generic 2>&1 | FileCheck %s --check-prefixes=CHECK,GISEL
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
-declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
+declare i8 @llvm.vector.reduce.add.v2i8(<2 x i8>)
+declare i8 @llvm.vector.reduce.add.v3i8(<3 x i8>)
+declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
 declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
 declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.add.v32i8(<32 x i8>)
+declare i16 @llvm.vector.reduce.add.v2i16(<2 x i16>)
+declare i16 @llvm.vector.reduce.add.v3i16(<3 x i16>)
+declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.add.v3i32(<3 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
+declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.add.v3i64(<3 x i64>)
+declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
+declare i128 @llvm.vector.reduce.add.v2i128(<2 x i128>)
 
-; GISEL-NOT: Instruction selection used fallback path for add_B
-; GISEL-NOT: Instruction selection used fallback path for add_H
-; GISEL-NOT: Instruction selection used fallback path for add_S
-; GISEL-NOT: Instruction selection used fallback path for add_D
-; GISEL-NOT: Instruction selection used fallback path for oversized_ADDV_512
-; GISEL-NOT: Instruction selection used fallback path for addv_combine_i32
-; GISEL-NOT: Instruction selection used fallback path for addv_combine_i64
+; GISEL:        warning: Instruction selection used fallback path for addv_v2i8
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v3i8
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v4i8
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v2i16
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v3i16
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v3i32
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v3i64
+; GISEL-NEXT:   warning: Instruction selection used fallback path for addv_v2i128
+
 
 define i8 @add_B(ptr %arr)  {
 ; CHECK-LABEL: add_B:
@@ -66,7 +81,6 @@ define i64 @add_D(ptr %arr)  {
   ret i64 %r
 }
 
-declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 
 define i32 @oversized_ADDV_256(ptr noalias nocapture readonly %arg1, ptr noalias nocapture readonly %arg2) {
 ; SDAG-LABEL: oversized_ADDV_256:
@@ -144,12 +158,21 @@ define i32 @oversized_ADDV_512(ptr %arr)  {
 }
 
 define i8 @addv_combine_i8(<8 x i8> %a1, <8 x i8> %a2) {
-; CHECK-LABEL: addv_combine_i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: addv_combine_i8:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    add v0.8b, v0.8b, v1.8b
+; SDAG-NEXT:    addv b0, v0.8b
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: addv_combine_i8:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    addv b0, v0.8b
+; GISEL-NEXT:    addv b1, v1.8b
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    add w0, w9, w8, uxtb
+; GISEL-NEXT:    ret
 entry:
   %rdx.1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a1)
   %rdx.2 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a2)
@@ -158,12 +181,21 @@ entry:
 }
 
 define i16 @addv_combine_i16(<4 x i16> %a1, <4 x i16> %a2) {
-; CHECK-LABEL: addv_combine_i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    addv h0, v0.4h
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; SDAG-LABEL: addv_combine_i16:
+; SDAG:       // %bb.0: // %entry
+; SDAG-NEXT:    add v0.4h, v0.4h, v1.4h
+; SDAG-NEXT:    addv h0, v0.4h
+; SDAG-NEXT:    fmov w0, s0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: addv_combine_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    addv h0, v0.4h
+; GISEL-NEXT:    addv h1, v1.4h
+; GISEL-NEXT:    fmov w8, s0
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    add w0, w9, w8, uxth
+; GISEL-NEXT:    ret
 entry:
   %rdx.1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a1)
   %rdx.2 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a2)
@@ -216,3 +248,230 @@ entry:
   %r = add i64 %rdx.1, %rdx.2
   ret i64 %r
 }
+
+define i8 @addv_v2i8(<2 x i8> %a) {
+; CHECK-LABEL: addv_v2i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> %a)
+  ret i8 %arg1
+}
+
+define i8 @addv_v3i8(<3 x i8> %a) {
+; CHECK-LABEL: addv_v3i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.h[0], w0
+; CHECK-NEXT:    mov v0.h[1], w1
+; CHECK-NEXT:    mov v0.h[2], w2
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> %a)
+  ret i8 %arg1
+}
+
+define i8 @addv_v4i8(<4 x i8> %a) {
+; CHECK-LABEL: addv_v4i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %a)
+  ret i8 %arg1
+}
+
+define i8 @addv_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: addv_v8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %a)
+  ret i8 %arg1
+}
+
+define i8 @addv_v16i8(<16 x i8> %a) {
+; CHECK-LABEL: addv_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %a)
+  ret i8 %arg1
+}
+
+define i8 @addv_v32i8(<32 x i8> %a) {
+; CHECK-LABEL: addv_v32i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %a)
+  ret i8 %arg1
+}
+
+define i16 @addv_v2i16(<2 x i16> %a) {
+; CHECK-LABEL: addv_v2i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> %a)
+  ret i16 %arg1
+}
+
+define i16 @addv_v3i16(<3 x i16> %a) {
+; CHECK-LABEL: addv_v3i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.h[3], wzr
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v3i16(<3 x i16> %a)
+  ret i16 %arg1
+}
+
+define i16 @addv_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: addv_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> %a)
+  ret i16 %arg1
+}
+
+define i16 @addv_v8i16(<8 x i16> %a) {
+; CHECK-LABEL: addv_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %a)
+  ret i16 %arg1
+}
+
+define i16 @addv_v16i16(<16 x i16> %a) {
+; CHECK-LABEL: addv_v16i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %a)
+  ret i16 %arg1
+}
+
+define i32 @addv_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: addv_v2i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %a)
+  ret i32 %arg1
+}
+
+define i32 @addv_v3i32(<3 x i32> %a) {
+; CHECK-LABEL: addv_v3i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.s[3], wzr
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> %a)
+  ret i32 %arg1
+}
+
+define i32 @addv_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: addv_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
+  ret i32 %arg1
+}
+
+define i32 @addv_v8i32(<8 x i32> %a) {
+; CHECK-LABEL: addv_v8i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %a)
+  ret i32 %arg1
+}
+
+define i64 @addv_v2i64(<2 x i64> %a) {
+; CHECK-LABEL: addv_v2i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %a)
+  ret i64 %arg1
+}
+
+define i64 @addv_v3i64(<3 x i64> %a) {
+; CHECK-LABEL: addv_v3i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v2.d[1], xzr
+; CHECK-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i64 @llvm.vector.reduce.add.v3i64(<3 x i64> %a)
+  ret i64 %arg1
+}
+
+define i64 @addv_v4i64(<4 x i64> %a) {
+; CHECK-LABEL: addv_v4i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %a)
+  ret i64 %arg1
+}
+
+define i128 @addv_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: addv_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adds x0, x0, x2
+; CHECK-NEXT:    adc x1, x1, x3
+; CHECK-NEXT:    ret
+entry:
+  %arg1 = call i128 @llvm.vector.reduce.add.v2i128(<2 x i128> %a)
+  ret i128 %arg1
+}
+

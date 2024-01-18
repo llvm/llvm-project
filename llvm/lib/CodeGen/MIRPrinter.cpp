@@ -981,11 +981,29 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
+  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // in dbg.value format.
+  bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    const_cast<Module &>(M).convertFromNewDbgValues();
+
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
+
+  if (IsNewDbgInfoFormat)
+    const_cast<Module &>(M).convertToNewDbgValues();
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineFunction &MF) {
+  // RemoveDIs: as there's no textual form for DPValues yet, print debug-info
+  // in dbg.value format.
+  bool IsNewDbgInfoFormat = MF.getFunction().IsNewDbgInfoFormat;
+  if (IsNewDbgInfoFormat)
+    const_cast<Function &>(MF.getFunction()).convertFromNewDbgValues();
+
   MIRPrinter Printer(OS);
   Printer.print(MF);
+
+  if (IsNewDbgInfoFormat)
+    const_cast<Function &>(MF.getFunction()).convertToNewDbgValues();
 }

@@ -13,7 +13,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/stdlib/abort.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // A single-use lock to allow only a single thread to print the assertion.
 static cpp::Atomic<uint32_t> lock = 0;
@@ -32,8 +32,9 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
 
   // Only a single line should be printed if an assertion is hit.
   if (gpu::is_first_lane(mask))
-    __llvm_libc::report_assertion_failure(assertion, file, line, function);
-  __llvm_libc::abort();
+    LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
+  gpu::sync_lane(mask);
+  LIBC_NAMESPACE::abort();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -5,7 +5,7 @@
 func.func @affine_apply_operand_non_index(%arg0 : i32) {
   // Custom parser automatically assigns all arguments the `index` so we must
   // use the generic syntax here to exercise the verifier.
-  // expected-error@+1 {{op operand #0 must be index, but got 'i32'}}
+  // expected-error@+1 {{op operand #0 must be variadic of index, but got 'i32'}}
   %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (i32) -> (index)
   return
 }
@@ -55,7 +55,7 @@ func.func @affine_load_invalid_dim(%M : memref<10xi32>) {
   "unknown"() ({
   ^bb0(%arg: index):
     affine.load %M[%arg] : memref<10xi32>
-    // expected-error@-1 {{index must be a dimension or symbol identifier}}
+    // expected-error@-1 {{index must be a valid dimension or symbol identifier}}
     cf.br ^bb1
   ^bb1:
     cf.br ^bb1
@@ -297,6 +297,18 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = memref.alloc() : memref<100x100xi32>
+  //  expected-error@+1 {{result type cannot match reduction attribute}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minimumf") -> (i32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xi32>
+    affine.yield %2 : i32
+  }
+  return
+}
+
+// -----
+
 func.func @vector_load_invalid_vector_type() {
   %0 = memref.alloc() : memref<100xf32>
   affine.for %i0 = 0 to 16 step 8 {
@@ -509,7 +521,7 @@ func.func @dynamic_dimension_index() {
     %idx = "unknown.test"() : () -> (index)
     %memref = "unknown.test"() : () -> memref<?x?xf32>
     %dim = memref.dim %memref, %idx : memref<?x?xf32>
-    // expected-error @below {{op index must be a dimension or symbol identifier}}
+    // expected-error @below {{op index must be a valid dimension or symbol identifier}}
     affine.load %memref[%dim, %dim] : memref<?x?xf32>
     "unknown.terminator"() : () -> ()
   }) : () -> ()

@@ -642,7 +642,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
         IntExpr<1>(derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
     // Similarly, a flag to short-circuit finalization when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
-        IntExpr<1>(derivedTypeSpec && !IsFinalizable(*derivedTypeSpec)));
+        IntExpr<1>(
+            derivedTypeSpec && !MayRequireFinalization(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});

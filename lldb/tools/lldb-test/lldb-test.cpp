@@ -322,10 +322,10 @@ std::vector<CompilerContext> parseCompilerContext() {
     }
     result.push_back({kind, ConstString{value}});
   }
-  outs() << "Search context: {\n";
-  for (auto entry: result)
-    entry.Dump();
-  outs() << "}\n";
+  outs() << "Search context: {";
+  lldb_private::StreamString s;
+  llvm::interleaveComma(result, s, [&](auto &ctx) { ctx.Dump(s); });
+  outs() << s.GetString().str() << "}\n";
 
   return result;
 }

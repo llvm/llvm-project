@@ -1075,7 +1075,7 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
       RetType = CharSizeType;
     else {
       if (Size % 8 != 0)
-        Size = TypeSize::Fixed(Size + 8 - (Size % 8));
+        Size = TypeSize::getFixed(Size + 8 - (Size % 8));
 
       RetType = Builder.createArrayType(
           Size, Layout.getPrefTypeAlign(Ty).value(), CharSizeType,
@@ -1292,10 +1292,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   std::optional<FieldIDType> SwitchIndexFieldId;
 
   if (Shape.ABI == coro::ABI::Switch) {
-    auto *FramePtrTy = FrameTy->getPointerTo();
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                   /*IsVarArg=*/false);
-    auto *FnPtrTy = FnTy->getPointerTo();
+    auto *FnPtrTy = PointerType::getUnqual(C);
 
     // Add header fields for the resume and destroy functions.
     // We can rely on these being perfectly packed.
@@ -1682,15 +1679,6 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
   return CleanupRet;
 }
 
-static void createFramePtr(coro::Shape &Shape) {
-  auto *CB = Shape.CoroBegin;
-  IRBuilder<> Builder(CB->getNextNode());
-  StructType *FrameTy = Shape.FrameTy;
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
-  Shape.FramePtr =
-      cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
-}
-
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1702,7 +1690,6 @@ static void createFramePtr(coro::Shape &Shape) {
 // becomes:
 //
 //    %hdl = coro.begin(...)
-//    %FramePtr = bitcast i8* hdl to %f.frame*
 //    br label %AllocaSpillBB
 //
 //  AllocaSpillBB:
@@ -1781,8 +1768,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     Type *ByValTy = nullptr;
     if (auto *Arg = dyn_cast<Argument>(Def)) {
       // For arguments, we will place the store instruction right after
-      // the coroutine frame pointer instruction, i.e. bitcast of
-      // coro.begin from i8* to %f.frame*.
+      // the coroutine frame pointer instruction, i.e. coro.begin.
       InsertPt = Shape.getInsertPtAfterFramePtr()->getIterator();
 
       // If we're spilling an Argument, make sure we clear 'nocapture'
@@ -1987,16 +1973,12 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     // to the pointer in the frame.
     for (const auto &Alias : A.Aliases) {
       auto *FramePtr = GetFramePointer(Alloca);
-      auto *FramePtrRaw =
-          Builder.CreateBitCast(FramePtr, Type::getInt8PtrTy(C));
       auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtrRaw,
+      auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtr,
                                          ConstantInt::get(ITy, Value));
-      auto *AliasPtrTyped =
-          Builder.CreateBitCast(AliasPtr, Alias.first->getType());
       Alias.first->replaceUsesWithIf(
-          AliasPtrTyped, [&](Use &U) { return DT.dominates(CB, U); });
+          AliasPtr, [&](Use &U) { return DT.dominates(CB, U); });
     }
   }
 
@@ -2502,7 +2484,7 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
                                      coro::Shape &Shape) {
   // Make a fake function pointer as a sort of intrinsic.
   auto FnTy = FunctionType::get(ValueTy, {}, false);
-  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+  auto Fn = ConstantPointerNull::get(Builder.getPtrTy());
 
   auto Call = Builder.CreateCall(FnTy, Fn, {});
   Shape.SwiftErrorOps.push_back(Call);
@@ -2516,9 +2498,9 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
 static Value *emitSetSwiftErrorValue(IRBuilder<> &Builder, Value *V,
                                      coro::Shape &Shape) {
   // Make a fake function pointer as a sort of intrinsic.
-  auto FnTy = FunctionType::get(V->getType()->getPointerTo(),
+  auto FnTy = FunctionType::get(Builder.getPtrTy(),
                                 {V->getType()}, false);
-  auto Fn = ConstantPointerNull::get(FnTy->getPointerTo());
+  auto Fn = ConstantPointerNull::get(Builder.getPtrTy());
 
   auto Call = Builder.CreateCall(FnTy, Fn, { V });
   Shape.SwiftErrorOps.push_back(Call);
@@ -2769,17 +2751,8 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       // Sink lifetime.start markers to dominate block when they are
       // only used outside the region.
       if (Valid && Lifetimes.size() != 0) {
-        // May be AI itself, when the type of AI is i8*
-        auto *NewBitCast = [&](AllocaInst *AI) -> Value* {
-          if (isa<AllocaInst>(Lifetimes[0]->getOperand(1)))
-            return AI;
-          auto *Int8PtrTy = Type::getInt8PtrTy(F.getContext());
-          return CastInst::Create(Instruction::BitCast, AI, Int8PtrTy, "",
-                                  DomBB->getTerminator());
-        }(AI);
-
         auto *NewLifetime = Lifetimes[0]->clone();
-        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), NewBitCast);
+        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), AI);
         NewLifetime->insertBefore(DomBB->getTerminator());
 
         // All the outsided lifetime.start markers are no longer necessary.
@@ -2806,7 +2779,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 
   // The __coro_gro alloca should outlive the promise, make sure we
   // keep it outside the frame.
-  if (MDNode *MD = AI->getMetadata(LLVMContext::MD_coro_outside_frame))
+  if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions
@@ -2913,13 +2886,13 @@ void coro::salvageDebugInfo(
   // dbg.value since it does not have the same function wide guarantees that
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
-    Instruction *InsertPt = nullptr;
+    std::optional<BasicBlock::iterator> InsertPt;
     if (auto *I = dyn_cast<Instruction>(Storage))
       InsertPt = I->getInsertionPointAfterDef();
     else if (isa<Argument>(Storage))
-      InsertPt = &*F->getEntryBlock().begin();
+      InsertPt = F->getEntryBlock().begin();
     if (InsertPt)
-      DVI->moveBefore(InsertPt);
+      DVI->moveBefore(*(*InsertPt)->getParent(), *InsertPt);
   }
 }
 
@@ -3121,7 +3094,7 @@ void coro::buildCoroutineFrame(
       Shape.ABI == coro::ABI::Async)
     sinkSpillUsesAfterCoroBegin(F, FrameData, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, FrameData);
-  createFramePtr(Shape);
+  Shape.FramePtr = Shape.CoroBegin;
   // For now, this works for C++ programs only.
   buildFrameDebugInfo(F, Shape, FrameData);
   insertSpills(FrameData, Shape);

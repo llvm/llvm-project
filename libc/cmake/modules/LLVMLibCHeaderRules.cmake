@@ -177,9 +177,12 @@ function(add_gen_header target_name)
     ${target_name}
     HDRS
       ${out_file}
-    DEPENDS
-      ${generated_hdr_target}
   )
+
+  # We add the dependencies separately and not list under add_header_library's
+  # DEPENDS option above. This is because, deps of add_header_library are
+  # used with target_link_libraries.
+  add_dependencies(${fq_target_name} ${generated_hdr_target})
 
   set_target_properties(
     ${fq_target_name}
