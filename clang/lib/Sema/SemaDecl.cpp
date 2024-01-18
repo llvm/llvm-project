@@ -2026,8 +2026,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
   if (D->isPlaceholderVar(LangOpts))
     return false;
 
-  if (D->hasAttr<UnusedAttr>() || D->hasAttr<ObjCPreciseLifetimeAttr>() ||
-      D->hasAttr<CleanupAttr>())
+  if (D->hasAttr<UnusedAttr, ObjCPreciseLifetimeAttr, CleanupAttr>())
     return false;
 
   if (isa<LabelDecl>(D))
@@ -7331,8 +7330,8 @@ static bool isIncompleteDeclExternC(Sema &S, const T *D) {
       return false;
 
     // So do CUDA's host/device attributes.
-    if (S.getLangOpts().CUDA && (D->template hasAttr<CUDADeviceAttr>() ||
-                                 D->template hasAttr<CUDAHostAttr>()))
+    if (S.getLangOpts().CUDA &&
+        (D->template hasAttr<CUDADeviceAttr, CUDAHostAttr>()))
       return false;
   }
   return D->isExternC();
@@ -8035,8 +8034,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     // CUDA B.2.5: "__shared__ and __constant__ variables have implied static
     // storage [duration]."
     if (SC == SC_None && S->getFnParent() != nullptr &&
-        (NewVD->hasAttr<CUDASharedAttr>() ||
-         NewVD->hasAttr<CUDAConstantAttr>())) {
+        (NewVD->hasAttr<CUDASharedAttr, CUDAConstantAttr>())) {
       NewVD->setStorageClass(SC_Static);
     }
   }
@@ -8805,8 +8803,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   bool isVM = T->isVariablyModifiedType();
-  if (isVM || NewVD->hasAttr<CleanupAttr>() ||
-      NewVD->hasAttr<BlocksAttr>())
+  if (isVM || NewVD->hasAttr<CleanupAttr, BlocksAttr>())
     setFunctionHasBranchProtectedScope();
 
   if ((isVM && NewVD->hasLinkage()) ||
@@ -10797,8 +10794,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // in device-side CUDA code, unless someone passed
     // -fcuda-allow-variadic-functions.
     if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
+        (NewFD->hasAttr<CUDADeviceAttr, CUDAGlobalAttr>()) &&
         !(II && II->isStr("printf") && NewFD->isExternC() &&
           !D.isFunctionDefinition())) {
       Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
@@ -14617,8 +14613,7 @@ void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {
 
   // Find outermost function when VD is in lambda function.
   while (FD && !getDLLAttr(FD) &&
-         !FD->hasAttr<DLLExportStaticLocalAttr>() &&
-         !FD->hasAttr<DLLImportStaticLocalAttr>()) {
+         !FD->hasAttr<DLLExportStaticLocalAttr, DLLImportStaticLocalAttr>()) {
     FD = dyn_cast_or_null<FunctionDecl>(FD->getParentFunctionOrMethod());
   }
 
@@ -16675,7 +16670,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     if (Context.BuiltinInfo.isConst(BuiltinID) && !FD->hasAttr<ConstAttr>())
       FD->addAttr(ConstAttr::CreateImplicit(Context, FD->getLocation()));
     if (getLangOpts().CUDA && Context.BuiltinInfo.isTSBuiltin(BuiltinID) &&
-        !FD->hasAttr<CUDADeviceAttr>() && !FD->hasAttr<CUDAHostAttr>()) {
+        !FD->hasAttr<CUDADeviceAttr, CUDAHostAttr>()) {
       // Add the appropriate attribute, depending on the CUDA compilation mode
       // and which target the builtin belongs to. For example, during host
       // compilation, aux builtins are __device__, while the rest are __host__.
