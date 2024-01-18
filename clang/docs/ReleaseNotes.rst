@@ -227,6 +227,11 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
+  making unions (that have either no members or at least one literal member) literal types.
+  (`#77924: <https://github.com/llvm/llvm-project/issues/77924>`_).
+
+
 C Language Changes
 ------------------
 - ``structs``, ``unions``, and ``arrays`` that are const may now be used as
