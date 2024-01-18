@@ -104,7 +104,6 @@ void RedundantCastingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
-
   auto SimpleType = qualType(hasCanonicalType(
       qualType(anyOf(builtinType(), references(builtinType()),
                      references(pointsTo(qualType())), pointsTo(qualType())))));
