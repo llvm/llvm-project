@@ -1531,7 +1531,8 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
     case ABIArgInfo::Direct: {
       // FIXME: handle sseregparm someday...
       llvm::StructType *STy = dyn_cast<llvm::StructType>(AI.getCoerceToType());
-      if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
+      if (AI.isDirect() && AI.getCanBeFlattened() && STy &&
+          !STy->containsHomogeneousScalableVectorTypes()) {
         IRArgs.NumberOfArgs = STy->getNumElements();
       } else {
         IRArgs.NumberOfArgs = 1;
@@ -1713,7 +1714,8 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       // FCAs, so we flatten them if this is safe to do for this argument.
       llvm::Type *argType = ArgInfo.getCoerceToType();
       llvm::StructType *st = dyn_cast<llvm::StructType>(argType);
-      if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
+      if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened() &&
+          !st->containsHomogeneousScalableVectorTypes()) {
         assert(NumIRArgs == st->getNumElements());
         for (unsigned i = 0, e = st->getNumElements(); i != e; ++i)
           ArgTypes[FirstIRArg + i] = st->getElementType(i);
@@ -3206,6 +3208,25 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
+      llvm::TypeSize StructSize;
+      llvm::TypeSize PtrElementSize;
+      if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
+          STy->getNumElements() > 1) {
+        StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        PtrElementSize =
+            CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(Ty));
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(StructSize == PtrElementSize &&
+                 "Only allow non-fractional movement of structure with"
+                 "homogeneous scalable vector type");
+
+          ArgVals.push_back(ParamValue::forDirect(AI));
+          break;
+        }
+      }
+
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
                                      Arg->getName());
 
@@ -3214,53 +3235,29 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy = dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
           STy->getNumElements() > 1) {
-        llvm::TypeSize StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
-        llvm::TypeSize PtrElementSize =
-            CGM.getDataLayout().getTypeAllocSize(Ptr.getElementType());
-        if (StructSize.isScalable()) {
-          assert(STy->containsHomogeneousScalableVectorTypes() &&
-                 "ABI only supports structure with homogeneous scalable vector "
-                 "type");
-          assert(StructSize == PtrElementSize &&
-                 "Only allow non-fractional movement of structure with"
-                 "homogeneous scalable vector type");
-          assert(STy->getNumElements() == NumIRArgs);
+        uint64_t SrcSize = StructSize.getFixedValue();
+        uint64_t DstSize = PtrElementSize.getFixedValue();
 
-          llvm::Value *LoadedStructValue = llvm::PoisonValue::get(STy);
-          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-            auto *AI = Fn->getArg(FirstIRArg + i);
-            AI->setName(Arg->getName() + ".coerce" + Twine(i));
-            LoadedStructValue =
-                Builder.CreateInsertValue(LoadedStructValue, AI, i);
-          }
-
-          Builder.CreateStore(LoadedStructValue, Ptr);
+        Address AddrToStoreInto = Address::invalid();
+        if (SrcSize <= DstSize) {
+          AddrToStoreInto = Ptr.withElementType(STy);
         } else {
-          uint64_t SrcSize = StructSize.getFixedValue();
-          uint64_t DstSize = PtrElementSize.getFixedValue();
+          AddrToStoreInto =
+              CreateTempAlloca(STy, Alloca.getAlignment(), "coerce");
+        }
 
-          Address AddrToStoreInto = Address::invalid();
-          if (SrcSize <= DstSize) {
-            AddrToStoreInto = Ptr.withElementType(STy);
-          } else {
-            AddrToStoreInto =
-                CreateTempAlloca(STy, Alloca.getAlignment(), "coerce");
-          }
+        assert(STy->getNumElements() == NumIRArgs);
+        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+          auto AI = Fn->getArg(FirstIRArg + i);
+          AI->setName(Arg->getName() + ".coerce" + Twine(i));
+          Address EltPtr = Builder.CreateStructGEP(AddrToStoreInto, i);
+          Builder.CreateStore(AI, EltPtr);
+        }
 
-          assert(STy->getNumElements() == NumIRArgs);
-          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-            auto AI = Fn->getArg(FirstIRArg + i);
-            AI->setName(Arg->getName() + ".coerce" + Twine(i));
-            Address EltPtr = Builder.CreateStructGEP(AddrToStoreInto, i);
-            Builder.CreateStore(AI, EltPtr);
-          }
-
-          if (SrcSize > DstSize) {
-            Builder.CreateMemCpy(Ptr, AddrToStoreInto, DstSize);
-          }
+        if (SrcSize > DstSize) {
+          Builder.CreateMemCpy(Ptr, AddrToStoreInto, DstSize);
         }
       } else {
         // Simple case, just do a coerced store of the argument into the alloca.
@@ -5277,6 +5274,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         break;
       }
 
+      llvm::StructType *STy =
+          dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
+      llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
+      llvm::TypeSize SrcTypeSize;
+      llvm::TypeSize DstTypeSize;
+      if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
+        SrcTypeSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
+        DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
+        if (STy->containsHomogeneousScalableVectorTypes()) {
+          assert(SrcTypeSize == DstTypeSize &&
+                 "Only allow non-fractional movement of structure with "
+                 "homogeneous scalable vector type");
+
+          IRCallArgs[FirstIRArg] = I->getKnownRValue().getScalarVal();
+          break;
+        }
+      }
+
       // FIXME: Avoid the conversion through memory if possible.
       Address Src = Address::invalid();
       if (!I->isAggregate()) {
@@ -5292,54 +5307,30 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // Fast-isel and the optimizer generally like scalar values better than
       // FCAs, so we flatten them if this is safe to do for this argument.
-      llvm::StructType *STy =
-            dyn_cast<llvm::StructType>(ArgInfo.getCoerceToType());
       if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
-        llvm::Type *SrcTy = Src.getElementType();
-        llvm::TypeSize SrcTypeSize =
-            CGM.getDataLayout().getTypeAllocSize(SrcTy);
-        llvm::TypeSize DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
-        if (SrcTypeSize.isScalable()) {
-          assert(STy->containsHomogeneousScalableVectorTypes() &&
-                 "ABI only supports structure with homogeneous scalable vector "
-                 "type");
-          assert(SrcTypeSize == DstTypeSize &&
-                 "Only allow non-fractional movement of structure with "
-                 "homogeneous scalable vector type");
-          assert(NumIRArgs == STy->getNumElements());
+        uint64_t SrcSize = SrcTypeSize.getFixedValue();
+        uint64_t DstSize = DstTypeSize.getFixedValue();
 
-          llvm::Value *StoredStructValue =
-              Builder.CreateLoad(Src, Src.getName() + ".tuple");
-          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-            llvm::Value *Extract = Builder.CreateExtractValue(
-                StoredStructValue, i, Src.getName() + ".extract" + Twine(i));
-            IRCallArgs[FirstIRArg + i] = Extract;
-          }
+        // If the source type is smaller than the destination type of the
+        // coerce-to logic, copy the source value into a temp alloca the size
+        // of the destination type to allow loading all of it. The bits past
+        // the source value are left undef.
+        if (SrcSize < DstSize) {
+          Address TempAlloca = CreateTempAlloca(STy, Src.getAlignment(),
+                                                Src.getName() + ".coerce");
+          Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
+          Src = TempAlloca;
         } else {
-          uint64_t SrcSize = SrcTypeSize.getFixedValue();
-          uint64_t DstSize = DstTypeSize.getFixedValue();
+          Src = Src.withElementType(STy);
+        }
 
-          // If the source type is smaller than the destination type of the
-          // coerce-to logic, copy the source value into a temp alloca the size
-          // of the destination type to allow loading all of it. The bits past
-          // the source value are left undef.
-          if (SrcSize < DstSize) {
-            Address TempAlloca = CreateTempAlloca(STy, Src.getAlignment(),
-                                                  Src.getName() + ".coerce");
-            Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
-            Src = TempAlloca;
-          } else {
-            Src = Src.withElementType(STy);
-          }
-
-          assert(NumIRArgs == STy->getNumElements());
-          for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-            Address EltPtr = Builder.CreateStructGEP(Src, i);
-            llvm::Value *LI = Builder.CreateLoad(EltPtr);
-            if (ArgHasMaybeUndefAttr)
-              LI = Builder.CreateFreeze(LI);
-            IRCallArgs[FirstIRArg + i] = LI;
-          }
+        assert(NumIRArgs == STy->getNumElements());
+        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+          Address EltPtr = Builder.CreateStructGEP(Src, i);
+          llvm::Value *LI = Builder.CreateLoad(EltPtr);
+          if (ArgHasMaybeUndefAttr)
+            LI = Builder.CreateFreeze(LI);
+          IRCallArgs[FirstIRArg + i] = LI;
         }
       } else {
         // In the simple case, just pass the coerced loaded value.
