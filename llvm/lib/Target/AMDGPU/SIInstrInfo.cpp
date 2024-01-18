@@ -2492,7 +2492,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_MUL_U64));
     break;
 
-  case AMDGPU::S_GETPC_B64_PSEUDO:
+  case AMDGPU::S_GETPC_B64_pseudo:
     MI.setDesc(get(AMDGPU::S_GETPC_B64));
     if (ST.hasGetPCZeroExtension()) {
       Register Dst = MI.getOperand(0).getReg();
