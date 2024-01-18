@@ -371,6 +371,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX940:
       Features["gfx940-insts"] = true;
       Features["fp8-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;

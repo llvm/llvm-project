@@ -1580,12 +1580,6 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     break;
-  case RISCV::ADD:
-    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0)
-      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0)
-      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-    break;
   case RISCV::ADDI:
     // Operand 1 can be a frameindex but callers expect registers
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
@@ -2559,33 +2553,6 @@ std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
     return RegImmPair{MI.getOperand(1).getReg(), MI.getOperand(2).getImm()};
 
   return std::nullopt;
-}
-
-bool RISCVInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
-                                             const Register Reg,
-                                             int64_t &ImmVal) const {
-  // Handle moves of X0.
-  if (auto DestSrc = isCopyInstr(MI)) {
-    if (DestSrc->Source->getReg() != RISCV::X0)
-      return false;
-    const Register DstReg = DestSrc->Destination->getReg();
-    if (DstReg != Reg)
-      return false;
-    ImmVal = 0;
-    return true;
-  }
-
-  if (!(MI.getOpcode() == RISCV::ADDI || MI.getOpcode() == RISCV::ADDIW ||
-        MI.getOpcode() == RISCV::ORI))
-    return false;
-  if (MI.getOperand(0).getReg() != Reg)
-    return false;
-  if (!MI.getOperand(1).isReg() || MI.getOperand(1).getReg() != RISCV::X0)
-    return false;
-  if (!MI.getOperand(2).isImm())
-    return false;
-  ImmVal = MI.getOperand(2).getImm();
-  return true;
 }
 
 // MIR printer helper function to annotate Operands with a comment.

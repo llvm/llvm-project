@@ -354,7 +354,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
       // Directly replace the cycle with the blockArg such that
       // Deduplicate pattern can eliminate it along with unused yield.
       rewriter.replaceOp(cycleOp, outputArg);
-      rewriter.updateRootInPlace(genericOp, [] {});
+      rewriter.modifyOpInPlace(genericOp, [] {});
       hasRemovedCycles = true;
     }
 
@@ -404,7 +404,7 @@ struct FoldDuplicateInputBbArgs : public OpRewritePattern<GenericOp> {
       return failure();
 
     // Rewrite the op.
-    rewriter.updateRootInPlace(genericOp, [&]() {
+    rewriter.modifyOpInPlace(genericOp, [&]() {
       for (auto [before, after] : replacements) {
         BlockArgument bbArg = genericOp.getBody()->getArgument(before);
         BlockArgument replacement = genericOp.getBody()->getArgument(after);

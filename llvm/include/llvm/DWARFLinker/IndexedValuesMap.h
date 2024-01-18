@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DWARFLINKER_PARALLEL_INDEXEDVALUESMAP_H
-#define LLVM_LIB_DWARFLINKER_PARALLEL_INDEXEDVALUESMAP_H
+#ifndef LLVM_DWARFLINKER_INDEXEDVALUESMAP_H
+#define LLVM_DWARFLINKER_INDEXEDVALUESMAP_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -16,8 +16,8 @@
 
 namespace llvm {
 namespace dwarf_linker {
-namespace parallel {
 
+/// This class stores values sequentually and assigns index to the each value.
 template <typename T> class IndexedValuesMap {
 public:
   uint64_t getValueIndex(T Value) {
@@ -29,7 +29,7 @@ public:
     return It->second;
   }
 
-  const SmallVector<T> &getValues() { return Values; }
+  const SmallVector<T> &getValues() const { return Values; }
 
   void clear() {
     ValueToIndexMap.clear();
@@ -44,8 +44,7 @@ protected:
   SmallVector<T> Values;
 };
 
-} // end of namespace parallel
 } // end of namespace dwarf_linker
 } // end of namespace llvm
 
-#endif // LLVM_LIB_DWARFLINKER_PARALLEL_INDEXEDVALUESMAP_H
+#endif // LLVM_DWARFLINKER_INDEXEDVALUESMAP_H
