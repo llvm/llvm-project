@@ -1531,8 +1531,7 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
     case ABIArgInfo::Direct: {
       // FIXME: handle sseregparm someday...
       llvm::StructType *STy = dyn_cast<llvm::StructType>(AI.getCoerceToType());
-      if (AI.isDirect() && AI.getCanBeFlattened() && STy &&
-          !STy->containsHomogeneousScalableVectorTypes()) {
+      if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
         IRArgs.NumberOfArgs = STy->getNumElements();
       } else {
         IRArgs.NumberOfArgs = 1;
@@ -1714,8 +1713,7 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
       // FCAs, so we flatten them if this is safe to do for this argument.
       llvm::Type *argType = ArgInfo.getCoerceToType();
       llvm::StructType *st = dyn_cast<llvm::StructType>(argType);
-      if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened() &&
-          !st->containsHomogeneousScalableVectorTypes()) {
+      if (st && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
         assert(NumIRArgs == st->getNumElements());
         for (unsigned i = 0, e = st->getNumElements(); i != e; ++i)
           ArgTypes[FirstIRArg + i] = st->getElementType(i);
@@ -3212,7 +3210,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       llvm::TypeSize StructSize;
       llvm::TypeSize PtrElementSize;
-      if (ArgI.isDirect() && ArgI.getCanBeFlattened() && STy &&
+      if (ArgI.isDirect() && !ArgI.getCanBeFlattened() && STy &&
           STy->getNumElements() > 1) {
         StructSize = CGM.getDataLayout().getTypeAllocSize(STy);
         PtrElementSize =
@@ -5279,7 +5277,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       llvm::Type *SrcTy = ConvertTypeForMem(I->Ty);
       llvm::TypeSize SrcTypeSize;
       llvm::TypeSize DstTypeSize;
-      if (STy && ArgInfo.isDirect() && ArgInfo.getCanBeFlattened()) {
+      if (STy && ArgInfo.isDirect() && !ArgInfo.getCanBeFlattened()) {
         SrcTypeSize = CGM.getDataLayout().getTypeAllocSize(SrcTy);
         DstTypeSize = CGM.getDataLayout().getTypeAllocSize(STy);
         if (STy->containsHomogeneousScalableVectorTypes()) {
