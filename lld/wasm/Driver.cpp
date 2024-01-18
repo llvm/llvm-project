@@ -899,7 +899,7 @@ static void createOptionalSymbols() {
 
 static void processStubLibrariesPreLTO() {
   log("-- processStubLibrariesPreLTO");
-  for (auto &stub_file : symtab->stubFiles) {
+  for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
     for (auto [name, deps]: stub_file->symbolDependencies) {
@@ -924,7 +924,7 @@ static void processStubLibraries() {
   bool depsAdded = false;
   do {
     depsAdded = false;
-    for (auto &stub_file : symtab->stubFiles) {
+    for (auto &stub_file : ctx.stubFiles) {
       LLVM_DEBUG(llvm::dbgs()
                  << "processing stub file: " << stub_file->getName() << "\n");
       for (auto [name, deps]: stub_file->symbolDependencies) {
@@ -1075,7 +1075,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
   }
 
   // Update pointers in input files.
-  parallelForEach(symtab->objectFiles, [&](InputFile *file) {
+  parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i)
       if (Symbol *s = map.lookup(syms[i]))
@@ -1091,7 +1091,7 @@ static void splitSections() {
   // splitIntoPieces needs to be called on each MergeInputChunk
   // before calling finalizeContents().
   LLVM_DEBUG(llvm::dbgs() << "splitSections\n");
-  parallelForEach(symtab->objectFiles, [](ObjFile *file) {
+  parallelForEach(ctx.objectFiles, [](ObjFile *file) {
     for (InputChunk *seg : file->segments) {
       if (auto *s = dyn_cast<MergeInputChunk>(seg))
         s->splitIntoPieces();
@@ -1263,7 +1263,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // We only need to add libcall symbols to the link before LTO if the symbol's
   // definition is in bitcode. Any other required libcall symbols will be added
   // to the link after LTO when we add the LTO object file to the link.
-  if (!symtab->bitcodeFiles.empty())
+  if (!ctx.bitcodeFiles.empty())
     for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
       handleLibcall(s);
   if (errorCount())
