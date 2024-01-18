@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Test that the default verbose termination function aborts the program.
+// REQUIRES: libcpp-hardening-mode=debug
 
 #include <csignal>
 #include <cstdlib>

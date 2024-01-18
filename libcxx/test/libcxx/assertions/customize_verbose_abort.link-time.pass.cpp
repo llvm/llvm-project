@@ -11,6 +11,7 @@
 // We flag uses of the verbose termination function in older dylibs at compile-time to avoid runtime
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing
+// REQUIRES: libcpp-hardening-mode=debug
 
 #include <cstdlib>
 
