@@ -27,6 +27,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -2185,32 +2186,6 @@ static void createBodyOfOp(
     return undef.getDefiningOp();
   };
 
-  // Find the block where the OMP terminator should go. In simple cases
-  // it is the single block in the operation's region. When the region
-  // is more complicated, especially with unstructured control flow, there
-  // may be multiple blocks, and some of them may have non-OMP terminators
-  // resulting from lowering of the code contained within the operation.
-  // By OpenMP rules, there should be a single exit point from the region:
-  // here exit means transfering control to the code following the operation.
-  // STOP statement is allowed and does not count as exit for the purpose of
-  // inserting terminators.
-  auto findExitBlock = [&](mlir::Region &region) -> mlir::Block * {
-    auto isTerminated = [](mlir::Block &block) -> bool {
-      if (block.empty())
-        return false;
-      return block.back().hasTrait<mlir::OpTrait::IsTerminator>();
-    };
-
-    mlir::Block *exit = nullptr;
-    for (auto &block : region) {
-      if (!isTerminated(block)) {
-        assert(exit == nullptr && "Multiple exit block in OpenMP region");
-        exit = &block;
-      }
-    }
-    return exit;
-  };
-
   // If an argument for the region is provided then create the block with that
   // argument. Also update the symbol's address with the mlir argument value.
   // e.g. For loops the argument is the induction variable. And all further
@@ -2282,7 +2257,43 @@ static void createBodyOfOp(
     temp->erase();
   }
 
-  if (auto *exitBlock = findExitBlock(op.getRegion())) {
+  // Get or create a unique exiting block from the given region, or
+  // return nullptr if there is no exiting block.
+  auto getUniqueExit = [&](mlir::Region &region) -> mlir::Block * {
+    // Find the blocks where the OMP terminator should go. In simple cases
+    // it is the single block in the operation's region. When the region
+    // is more complicated, especially with unstructured control flow, there
+    // may be multiple blocks, and some of them may have non-OMP terminators
+    // resulting from lowering of the code contained within the operation.
+    // All the remaining blocks are potential exit points from the op's region.
+    //
+    // Explicit control flow cannot exit any OpenMP region (other than via
+    // STOP), and that is enforced by semantic checks prior to lowering. STOP
+    // statements are lowered to a function call.
+
+    // Collect unterminated blocks.
+    llvm::SmallVector<mlir::Block *> exits;
+    for (mlir::Block &b : region) {
+      if (b.empty() || !b.back().hasTrait<mlir::OpTrait::IsTerminator>())
+        exits.push_back(&b);
+    }
+
+    if (exits.empty())
+      return nullptr;
+    // If there already is a unique exiting block, do not create another one.
+    // Additionally, some ops (e.g. omp.sections) require onlt 1 block in
+    // its region.
+    if (exits.size() == 1)
+      return exits[0];
+    mlir::Block *exit = firOpBuilder.createBlock(&region);
+    for (mlir::Block *b : exits) {
+      firOpBuilder.setInsertionPointToEnd(b);
+      firOpBuilder.create<mlir::cf::BranchOp>(loc, exit);
+    }
+    return exit;
+  };
+
+  if (auto *exitBlock = getUniqueExit(op.getRegion())) {
     firOpBuilder.setInsertionPointToEnd(exitBlock);
     auto *term = Fortran::lower::genOpenMPTerminator(firOpBuilder,
                                                      op.getOperation(), loc);
