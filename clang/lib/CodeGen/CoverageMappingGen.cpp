@@ -573,6 +573,11 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
 /// creation.
 struct MCDCCoverageBuilder {
 
+  struct DecisionIDPair {
+    MCDCConditionID TrueID = 0;
+    MCDCConditionID FalseID = 0;
+  };
+
   /// The AST walk recursively visits nested logical-AND or logical-OR binary
   /// operator nodes and then visits their LHS and RHS children nodes.  As this
   /// happens, the algorithm will assign IDs to each operator's LHS and RHS side
@@ -663,16 +668,14 @@ struct MCDCCoverageBuilder {
 private:
   CodeGenModule &CGM;
 
-  struct DecisionIDPair {
-    MCDCConditionID TrueID = 0;
-    MCDCConditionID FalseID = 0;
-  };
-
-  llvm::SmallVector<DecisionIDPair, 1> DecisionStack;
+  llvm::SmallVector<DecisionIDPair, 6> DecisionStack;
   llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDs;
   llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
   MCDCConditionID NextID = 1;
   bool NotMapped = false;
+
+  /// Represent a sentinel value of [0,0] for the bottom of DecisionStack.
+  static constexpr DecisionIDPair DecisionIDPairSentinel{0, 0};
 
   /// Is this a logical-AND operation?
   bool isLAnd(const BinaryOperator *E) const {
@@ -683,17 +686,18 @@ public:
   MCDCCoverageBuilder(CodeGenModule &CGM,
                       llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDMap,
                       llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap)
-      : CGM(CGM), DecisionStack(1), CondIDs(CondIDMap),
+      : CGM(CGM), DecisionStack(1, DecisionIDPairSentinel), CondIDs(CondIDMap),
         MCDCBitmapMap(MCDCBitmapMap) {}
 
-  /// Return whether the control flow map is not presently being built. This
-  /// can be used to determine whether the flow is at the root node of an
-  /// expression if that expression is mapped.
-  bool isIdle() { return (NextID == 1 && !NotMapped); }
+  /// Return whether the build of the control flow map is at the top-level
+  /// (root) of a logical operator nest in a boolean expression prior to the
+  /// assignment of condition IDs.
+  bool isIdle() const { return (NextID == 1 && !NotMapped); }
 
-  /// Return whether the control flow map is in the process of being built for
-  /// a mapped expression.
-  bool isBuilding() { return (NextID > 1); }
+  /// Return whether any IDs have been assigned in the build of the control
+  /// flow map, indicating that the map is being generated for this boolean
+  /// expression.
+  bool isBuilding() const { return (NextID > 1); }
 
   /// Set the given condition's ID.
   void setCondID(const Expr *Cond, MCDCConditionID ID) {
@@ -709,11 +713,8 @@ public:
       return I->second;
   }
 
-  /// Return the LHS Decision ({0,0} if not set).
-  const DecisionIDPair &back() {
-    assert(DecisionStack.size() >= 1);
-    return DecisionStack.back();
-  }
+  /// Return the LHS Decision ([0,0] if not set).
+  const DecisionIDPair back() const { return DecisionStack.back(); }
 
   /// Push the binary operator statement to track the nest level and assign IDs
   /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
@@ -730,7 +731,6 @@ public:
     if (NotMapped)
       return;
 
-    assert(DecisionStack.size() >= 1);
     const DecisionIDPair &ParentDecision = DecisionStack.back();
 
     // If the operator itself has an assigned ID, this means it represents a
@@ -752,10 +752,8 @@ public:
       DecisionStack.push_back({ParentDecision.TrueID, RHSid});
   }
 
-  /// Pop and return the LHS Decision ({0,0} if not set).
+  /// Pop and return the LHS Decision ([0,0] if not set).
   DecisionIDPair pop() {
-    assert(DecisionStack.size() >= 1);
-
     if (!CGM.getCodeGenOpts().MCDCCoverage || NotMapped)
       return DecisionStack.front();
 
@@ -1013,13 +1011,15 @@ struct CounterCoverageMappingBuilder
     return (Cond->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext()));
   }
 
+  using MCDCDecisionIDPair = MCDCCoverageBuilder::DecisionIDPair;
+
   /// Create a Branch Region around an instrumentable condition for coverage
   /// and add it to the function's SourceRegions.  A branch region tracks a
   /// "True" counter and a "False" counter for boolean expressions that
   /// result in the generation of a branch.
-  void createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt,
-                          MCDCConditionID ID = 0, MCDCConditionID TrueID = 0,
-                          MCDCConditionID FalseID = 0) {
+  void
+  createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt,
+                     const MCDCDecisionIDPair &IDPair = MCDCDecisionIDPair()) {
     // Check for NULL conditions.
     if (!C)
       return;
@@ -1029,6 +1029,10 @@ struct CounterCoverageMappingBuilder
     // function's SourceRegions) because it doesn't apply to any other source
     // code other than the Condition.
     if (CodeGenFunction::isInstrumentedCondition(C)) {
+      MCDCConditionID ID = MCDCBuilder.getCondID(C);
+      MCDCConditionID TrueID = IDPair.TrueID;
+      MCDCConditionID FalseID = IDPair.FalseID;
+
       // If a condition can fold to true or false, the corresponding branch
       // will be removed.  Create a region with both counters hard-coded to
       // zero. This allows us to visualize them in a special way.
@@ -1834,7 +1838,7 @@ struct CounterCoverageMappingBuilder
     propagateCounts(getRegionCounter(E), E->getRHS());
 
     // Track RHS True/False Decision.
-    const auto &DecisionRHS = MCDCBuilder.back();
+    const auto DecisionRHS = MCDCBuilder.back();
 
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
@@ -1850,18 +1854,13 @@ struct CounterCoverageMappingBuilder
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();
 
-    MCDCConditionID LHSid = MCDCBuilder.getCondID(E->getLHS());
-    MCDCConditionID RHSid = MCDCBuilder.getCondID(E->getRHS());
-
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), RHSExecCnt,
-                       subtractCounters(ParentCnt, RHSExecCnt), LHSid,
-                       DecisionLHS.TrueID, DecisionLHS.FalseID);
+                       subtractCounters(ParentCnt, RHSExecCnt), DecisionLHS);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), RHSTrueCnt,
-                       subtractCounters(RHSExecCnt, RHSTrueCnt), RHSid,
-                       DecisionRHS.TrueID, DecisionRHS.FalseID);
+                       subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS);
   }
 
   // Determine whether the right side of OR operation need to be visited.
@@ -1892,7 +1891,7 @@ struct CounterCoverageMappingBuilder
     propagateCounts(getRegionCounter(E), E->getRHS());
 
     // Track RHS True/False Decision.
-    const auto &DecisionRHS = MCDCBuilder.back();
+    const auto DecisionRHS = MCDCBuilder.back();
 
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
@@ -1912,18 +1911,13 @@ struct CounterCoverageMappingBuilder
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();
 
-    MCDCConditionID LHSid = MCDCBuilder.getCondID(E->getLHS());
-    MCDCConditionID RHSid = MCDCBuilder.getCondID(E->getRHS());
-
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), subtractCounters(ParentCnt, RHSExecCnt),
-                       RHSExecCnt, LHSid, DecisionLHS.TrueID,
-                       DecisionLHS.FalseID);
+                       RHSExecCnt, DecisionLHS);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), subtractCounters(RHSExecCnt, RHSFalseCnt),
-                       RHSFalseCnt, RHSid, DecisionRHS.TrueID,
-                       DecisionRHS.FalseID);
+                       RHSFalseCnt, DecisionRHS);
   }
 
   void VisitLambdaExpr(const LambdaExpr *LE) {
