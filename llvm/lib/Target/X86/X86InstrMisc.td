@@ -1241,42 +1241,48 @@ let Predicates = [HasBMI, In64BitMode], Defs = [EFLAGS] in {
   defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_EVEX">, EVEX;
 }
 
-let Predicates = [HasBMI] in {
+multiclass Bls_Pats<string suffix> {
   // FIXME(1): patterns for the load versions are not implemented
   // FIXME(2): By only matching `add_su` and `ineg_su` we may emit
   // extra `mov` instructions if `src` has future uses. It may be better
   // to always match if `src` has more users.
   def : Pat<(and GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr GR32:$src)>;
+            (!cast<Instruction>(BLSR32rr#suffix) GR32:$src)>;
   def : Pat<(and GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr GR64:$src)>;
+            (!cast<Instruction>(BLSR64rr#suffix) GR64:$src)>;
 
   def : Pat<(xor GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr GR32:$src)>;
+            (!cast<Instruction>(BLSMSK32rr#suffix) GR32:$src)>;
   def : Pat<(xor GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr GR64:$src)>;
+            (!cast<Instruction>(BLSMSK64rr#suffix) GR64:$src)>;
 
   def : Pat<(and GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr GR32:$src)>;
+            (!cast<Instruction>(BLSI32rr#suffix) GR32:$src)>;
   def : Pat<(and GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr GR64:$src)>;
+            (!cast<Instruction>(BLSI64rr#suffix) GR64:$src)>;
 
   // Versions to match flag producing ops.
   def : Pat<(and_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSR32rr GR32:$src)>;
+            (!cast<Instruction>(BLSR32rr#suffix) GR32:$src)>;
   def : Pat<(and_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSR64rr GR64:$src)>;
+            (!cast<Instruction>(BLSR64rr#suffix) GR64:$src)>;
 
   def : Pat<(xor_flag_nocf GR32:$src, (add_su GR32:$src, -1)),
-            (BLSMSK32rr GR32:$src)>;
+            (!cast<Instruction>(BLSMSK32rr#suffix) GR32:$src)>;
   def : Pat<(xor_flag_nocf GR64:$src, (add_su GR64:$src, -1)),
-            (BLSMSK64rr GR64:$src)>;
+            (!cast<Instruction>(BLSMSK64rr#suffix) GR64:$src)>;
 
   def : Pat<(and_flag_nocf GR32:$src, (ineg_su GR32:$src)),
-            (BLSI32rr GR32:$src)>;
+            (!cast<Instruction>(BLSI32rr#suffix) GR32:$src)>;
   def : Pat<(and_flag_nocf GR64:$src, (ineg_su GR64:$src)),
-            (BLSI64rr GR64:$src)>;
+            (!cast<Instruction>(BLSI64rr#suffix) GR64:$src)>;
 }
+
+let Predicates = [HasBMI, NoEGPR] in
+  defm : Bls_Pats<"">;
+
+let Predicates = [HasBMI, HasEGPR] in
+  defm : Bls_Pats<"_EVEX">;
 
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {
@@ -1324,7 +1330,7 @@ def AndMask64 : ImmLeaf<i64, [{
 }]>;
 
 // Use BEXTR for 64-bit 'and' with large immediate 'mask'.
-let Predicates = [HasBMI, NoBMI2, NoTBM] in {
+let Predicates = [HasBMI, NoBMI2, NoTBM, NoEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BEXTR64rr GR64:$src,
               (SUBREG_TO_REG (i64 0),
@@ -1335,14 +1341,36 @@ let Predicates = [HasBMI, NoBMI2, NoTBM] in {
                              (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
 }
 
+let Predicates = [HasBMI, NoBMI2, NoTBM, HasEGPR] in {
+  def : Pat<(and GR64:$src, AndMask64:$mask),
+            (BEXTR64rr_EVEX GR64:$src,
+              (SUBREG_TO_REG (i64 0),
+                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+  def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
+            (BEXTR64rm_EVEX addr:$src,
+              (SUBREG_TO_REG (i64 0),
+                             (MOV32ri (BEXTRMaskXForm imm:$mask)), sub_32bit))>;
+}
+
 // Use BZHI for 64-bit 'and' with large immediate 'mask'.
-let Predicates = [HasBMI2, NoTBM] in {
+let Predicates = [HasBMI2, NoTBM, NoEGPR] in {
   def : Pat<(and GR64:$src, AndMask64:$mask),
             (BZHI64rr GR64:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
                              (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
   def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
             (BZHI64rm addr:$src,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                             (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
+}
+
+let Predicates = [HasBMI2, NoTBM, HasEGPR] in {
+  def : Pat<(and GR64:$src, AndMask64:$mask),
+            (BZHI64rr_EVEX GR64:$src,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                             (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
+  def : Pat<(and (loadi64 addr:$src), AndMask64:$mask),
+            (BZHI64rm_EVEX addr:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
                              (MOV8ri (CountTrailingOnes imm:$mask)), sub_8bit))>;
 }

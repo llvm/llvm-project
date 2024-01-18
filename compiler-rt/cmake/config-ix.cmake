@@ -479,11 +479,6 @@ if(APPLE)
     if(MIN_OSX_VERSION VERSION_LESS "10.7")
       message(FATAL_ERROR "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too old.")
     endif()
-    if(MIN_OSX_VERSION VERSION_GREATER ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
-      message(WARNING "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too new, setting to '${DEFAULT_SANITIZER_MIN_OSX_VERSION}' instead.")
-      set(MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
-    endif()
-
   endif()
 
   set(SANITIZER_MIN_OSX_VERSION "${MIN_OSX_VERSION}" CACHE STRING

@@ -69,6 +69,13 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_ASSERTION_HANDLER_FILE
+  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  CACHE STRING
+  "Specify the path to a header that contains a custom implementation of the
+   assertion handler that gets invoked when a hardening assertion fails. If
+   provided, this header will be included by the library, replacing the
+   default assertion handler.")
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have

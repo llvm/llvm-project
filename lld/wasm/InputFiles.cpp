@@ -320,7 +320,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   // it has an unexpected name or type, assume that it's not actually the
   // indirect function table.
   if (tableImport->Field != functionTableName ||
-      tableImport->Table.ElemType != uint8_t(ValType::FUNCREF)) {
+      tableImport->Table.ElemType != ValType::FUNCREF) {
     error(toString(this) + ": table import " + Twine(tableImport->Field) +
           " is missing a symbol table entry.");
     return;

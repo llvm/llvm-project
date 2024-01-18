@@ -6377,12 +6377,6 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (DiagnoseUnexpandedParameterPack(NameInfo, UPPC_DeclarationType))
     return nullptr;
 
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
-
   DeclContext *DC = CurContext;
   if (D.getCXXScopeSpec().isInvalid())
     D.setInvalidType();
@@ -6534,6 +6528,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // of a function declaration (C++ only).
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
+
+  // The scope passed in may not be a decl scope.  Zip up the scope tree until
+  // we find one that is.
+  while ((S->getFlags() & Scope::DeclScope) == 0 ||
+         (S->getFlags() & Scope::TemplateParamScope) != 0)
+    S = S->getParent();
 
   NamedDecl *New;
 
@@ -7068,8 +7068,7 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   if (WeakRefAttr *Attr = ND.getAttr<WeakRefAttr>()) {
     if (ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weakref_not_static);
-      ND.dropAttr<WeakRefAttr>();
-      ND.dropAttr<AliasAttr>();
+      ND.dropAttrs<WeakRefAttr, AliasAttr>();
     }
   }
 
