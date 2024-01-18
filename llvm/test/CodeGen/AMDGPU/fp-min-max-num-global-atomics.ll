@@ -31,7 +31,7 @@ define amdgpu_cs void @global_atomic_fmax_num_f32_rtn(ptr addrspace(1) %ptr, flo
 ; GFX12-LABEL: global_atomic_fmax_num_f32_rtn:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_atomic_max_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -45,7 +45,7 @@ define amdgpu_cs void @global_atomic_fmin_num_f32_rtn(ptr addrspace(1) %ptr, flo
 ; GFX12-LABEL: global_atomic_fmin_num_f32_rtn:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_atomic_min_num_f32 v0, v[0:1], v2, off th:TH_ATOMIC_RETURN
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
