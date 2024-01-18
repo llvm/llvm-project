@@ -130,7 +130,7 @@ public:
     SVML,             // Intel short vector math library.
     SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
     ArmPL,       // Arm Performance Libraries.
-    AMDLIBM
+    AMDLIBM           // AMD Math Vector library.
   };
 
   TargetLibraryInfoImpl();
