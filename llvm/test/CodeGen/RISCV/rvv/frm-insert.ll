@@ -56,36 +56,53 @@ entry:
   ret <vscale x 1 x float> %b
 }
 
-; Test restoring frm before function call and doing nothing with following
-; dynamic rounding mode operations.
 declare void @foo()
-define <vscale x 1 x float> @test3(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
-; CHECK-LABEL: test3:
+define <vscale x 1 x float> @just_call(<vscale x 1 x float> %0) nounwind {
+; CHECK-LABEL: just_call:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    fsrmi a0, 0
-; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    call foo
-; CHECK-NEXT:    vsetvli zero, s0, e32, mf2, ta, ma
-; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ret
+entry:
+  call void @foo()
+  ret <vscale x 1 x float> %0
+}
+
+define <vscale x 1 x float> @before_call1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: before_call1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    addi a1, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    call foo
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
@@ -94,27 +111,124 @@ entry:
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
   call void @foo()
-  %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
-    <vscale x 1 x float> undef,
-    <vscale x 1 x float> %a,
-    <vscale x 1 x float> %a,
-    i64 7, i64 %2)
-  ret <vscale x 1 x float> %b
+  ret <vscale x 1 x float> %a
 }
 
-; Test restoring frm before inline asm and doing nothing with following dynamic
-; rounding mode operations.
-define <vscale x 1 x float> @test4(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
-; CHECK-LABEL: test4:
+define <vscale x 1 x float> @before_call2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: before_call2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    call foo
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 7, i64 %2)
+  call void @foo()
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @after_call1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_call1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    addi a1, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    call foo
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 0, i64 %2)
+  call void @foo()
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @after_call2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_call2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    call foo
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 48
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 7, i64 %2)
+  call void @foo()
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @just_asm(<vscale x 1 x float> %0) nounwind {
+; CHECK-LABEL: just_asm:
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  call void asm sideeffect "", ""()
+  ret <vscale x 1 x float> %0
+}
+
+define <vscale x 1 x float> @before_asm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: before_asm1:
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
@@ -123,16 +237,68 @@ entry:
     <vscale x 1 x float> %1,
     i64 0, i64 %2)
   call void asm sideeffect "", ""()
-  %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @before_asm2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: before_asm2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
     <vscale x 1 x float> undef,
-    <vscale x 1 x float> %a,
-    <vscale x 1 x float> %a,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
     i64 7, i64 %2)
-  ret <vscale x 1 x float> %b
+  call void asm sideeffect "", ""()
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @after_asm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_asm1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 0
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 0, i64 %2)
+  call void asm sideeffect "", ""()
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @after_asm2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_asm2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 7, i64 %2)
+  call void asm sideeffect "", ""()
+  ret <vscale x 1 x float> %a
 }
 
 ; Test restoring frm before reading frm and doing nothing with following
 ; dynamic rounding mode operations.
+; TODO: The frrm could be elided.
 declare i32 @llvm.get.rounding()
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:
@@ -166,15 +332,32 @@ entry:
   ret <vscale x 1 x float> %b
 }
 
-; Test not set FRM for the two vfadd after WriteFRMImm.
+; Test not set FRM for vfadd with DYN after WriteFRMImm.
 declare void @llvm.set.rounding(i32)
-define <vscale x 1 x float> @test6(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
-; CHECK-LABEL: test6:
+define <vscale x 1 x float> @after_fsrm1(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_fsrm1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fsrmi 4
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.set.rounding(i32 4)
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> undef,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 7, i64 %2)
+  ret <vscale x 1 x float> %a
+}
+
+; Test not set FRM for vfadd with a known rm after WriteFRMImm with same rm.
+define <vscale x 1 x float> @after_fsrm2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_fsrm2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fsrmi 4
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
   call void @llvm.set.rounding(i32 4)
@@ -183,17 +366,32 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 4, i64 %2)
-  %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+  ret <vscale x 1 x float> %a
+}
+
+; Test not set FRM for vfadd with a known rm after WriteFRMImm with same rm.
+define <vscale x 1 x float> @after_fsrm3(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: after_fsrm3:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fsrmi 4
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    fsrmi a0, 5
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    ret
+entry:
+  call void @llvm.set.rounding(i32 4)
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
     <vscale x 1 x float> undef,
-    <vscale x 1 x float> %a,
-    <vscale x 1 x float> %a,
-    i64 7, i64 %2)
-  ret <vscale x 1 x float> %b
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 5, i64 %2)
+  ret <vscale x 1 x float> %a
 }
 
 ; Test not set FRM for the vfadd after WriteFRM.
-define <vscale x 1 x float> @test7(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i32 %rm, i64 %2) nounwind {
-; CHECK-LABEL: test7:
+define <vscale x 1 x float> @after_fsrm4(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i32 %rm, i64 %2) nounwind {
+; CHECK-LABEL: after_fsrm4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    srli a0, a0, 30
@@ -214,4 +412,3 @@ entry:
     i64 7, i64 %2)
   ret <vscale x 1 x float> %a
 }
-
