@@ -28,7 +28,7 @@
 #include "test_allocator.h"
 
 #if TEST_STD_VER < 11
-# error "C++11 or greater is required to use this header"
+#  error "C++11 or greater is required to use this header"
 #endif
 
 struct AssertionInfoMatcher {
@@ -36,14 +36,12 @@ struct AssertionInfoMatcher {
   // later.
   static constexpr const char* Marker = "###";
 
-  static const int any_line = -1;
+  static const int any_line             = -1;
   static constexpr const char* any_file = "*";
-  static constexpr const char* any_msg = "*";
+  static constexpr const char* any_msg  = "*";
 
   constexpr AssertionInfoMatcher()
-      : msg_(any_msg, __builtin_strlen(any_msg)),
-        file_(any_file, __builtin_strlen(any_file)),
-        line_(any_line) {}
+      : msg_(any_msg, __builtin_strlen(any_msg)), file_(any_file, __builtin_strlen(any_file)), line_(any_line) {}
   constexpr AssertionInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
       : is_empty_(false), msg_(msg, __builtin_strlen(msg)), file_(file, __builtin_strlen(file)), line_(line) {}
 
@@ -58,7 +56,7 @@ struct AssertionInfoMatcher {
     assert(match_result.size() == 5);
 
     const std::string& file = match_result[1];
-    int line         = std::stoi(match_result[2]);
+    int line                = std::stoi(match_result[2]);
     // Omitting `expression` in `match_result[3]`
     const std::string& failure_reason = match_result[4];
 
@@ -76,9 +74,9 @@ struct AssertionInfoMatcher {
 
   std::string FormatMatchingError(const std::string& file, int line, const std::string& message) const {
     std::stringstream output;
-    output //
-        << "Expected message:   '" << msg_.data() << "'\n" //
-        << "Actual message:     '" << message.c_str() << "'\n" //
+    output                                                                 //
+        << "Expected message:   '" << msg_.data() << "'\n"                 //
+        << "Actual message:     '" << message.c_str() << "'\n"             //
         << "Expected location:   " << FormatLocation(file_, line_) << "\n" //
         << "Actual location:     " << FormatLocation(file, line) << "\n";
     return output.str();
@@ -92,9 +90,7 @@ struct AssertionInfoMatcher {
   }
 
   bool empty() const { return is_empty_; }
-  bool IsAnyMatcher() const {
-    return msg_ == any_msg && file_ == any_file && line_ == any_line;
-  }
+  bool IsAnyMatcher() const { return msg_ == any_msg && file_ == any_file && line_ == any_line; }
 
 private:
   bool CheckLineMatches(int got_line) const {
@@ -133,7 +129,8 @@ private:
   }
 
 private:
-  bool is_empty_ = true;;
+  bool is_empty_ = true;
+  ;
   std::string_view msg_;
   std::string_view file_;
   int line_;
@@ -154,31 +151,29 @@ enum class DeathCause {
 
 bool IsValidCause(DeathCause cause) {
   switch (cause) {
-    case DeathCause::VerboseAbort:
-    case DeathCause::StdTerminate:
-    case DeathCause::Trap:
-      return true;
-    default:
-      return false;
+  case DeathCause::VerboseAbort:
+  case DeathCause::StdTerminate:
+  case DeathCause::Trap:
+    return true;
+  default:
+    return false;
   }
 }
 
 std::string ToString(DeathCause cause) {
   switch (cause) {
-    case DeathCause::VerboseAbort:
-      return "verbose abort";
-    case DeathCause::StdTerminate:
-      return "`std::terminate`";
-    case DeathCause::Trap:
-      return "trap";
-    default:
-      return "<invalid cause>";
+  case DeathCause::VerboseAbort:
+    return "verbose abort";
+  case DeathCause::StdTerminate:
+    return "`std::terminate`";
+  case DeathCause::Trap:
+    return "trap";
+  default:
+    return "<invalid cause>";
   }
 }
 
-TEST_NORETURN void StopChildProcess(DeathCause cause) {
-  std::exit(static_cast<int>(cause));
-}
+TEST_NORETURN void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
 
 DeathCause ConvertToDeathCause(int val) {
   if (val < static_cast<int>(DeathCause::VerboseAbort) || val > static_cast<int>(DeathCause::Unknown)) {
@@ -188,8 +183,8 @@ DeathCause ConvertToDeathCause(int val) {
 }
 
 struct DeathTest {
-  DeathTest() = default;
-  DeathTest(DeathTest const&) = delete;
+  DeathTest()                            = default;
+  DeathTest(DeathTest const&)            = delete;
   DeathTest& operator=(DeathTest const&) = delete;
 
   template <class Func>
@@ -199,8 +194,7 @@ struct DeathTest {
     pipe_res = pipe(stderr_pipe_fd_);
     assert(pipe_res != -1 && "failed to create pipe");
     pid_t child_pid = fork();
-    assert(child_pid != -1 &&
-        "failed to fork a process to perform a death test");
+    assert(child_pid != -1 && "failed to fork a process to perform a death test");
     child_pid_ = child_pid;
     if (child_pid_ == 0) {
       RunForChild(std::forward<Func>(f));
@@ -274,24 +268,17 @@ private:
     return DeathCause::Unknown;
   }
 
-  int GetStdOutReadFD() const {
-    return stdout_pipe_fd_[0];
-  }
+  int GetStdOutReadFD() const { return stdout_pipe_fd_[0]; }
 
-  int GetStdOutWriteFD() const {
-    return stdout_pipe_fd_[1];
-  }
+  int GetStdOutWriteFD() const { return stdout_pipe_fd_[1]; }
 
-  int GetStdErrReadFD() const {
-    return stderr_pipe_fd_[0];
-  }
+  int GetStdErrReadFD() const { return stderr_pipe_fd_[0]; }
 
-  int GetStdErrWriteFD() const {
-    return stderr_pipe_fd_[1];
-  }
+  int GetStdErrWriteFD() const { return stderr_pipe_fd_[1]; }
+
 private:
   pid_t child_pid_ = -1;
-  int exit_code_ = -1;
+  int exit_code_   = -1;
   int stdout_pipe_fd_[2];
   int stderr_pipe_fd_[2];
   std::string stdout_from_child_;
@@ -313,9 +300,7 @@ void std::__libcpp_verbose_abort(char const* format, ...) {
 }
 #endif // _LIBCPP_VERSION
 
-[[noreturn]] inline void terminate_handler() {
-  StopChildProcess(DeathCause::StdTerminate);
-}
+[[noreturn]] inline void terminate_handler() { StopChildProcess(DeathCause::StdTerminate); }
 
 template <class Func>
 inline bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, AssertionInfoMatcher matcher) {
@@ -350,32 +335,32 @@ inline bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func
   };
 
   switch (cause) {
-    case DeathCause::StdTerminate:
-    case DeathCause::Trap:
-      if (expected_cause != cause) {
-        return OnFailure(CauseMismatchMessage(expected_cause, cause));
-      }
-      return true;
-
-    case DeathCause::VerboseAbort: {
-      if (expected_cause != cause) {
-        return OnFailure(CauseMismatchMessage(expected_cause, cause));
-      }
-      std::string maybe_error;
-      if (matcher.CheckMatchInOutput(test_case.getChildStdErr(), maybe_error)) {
-        return true;
-      }
-      maybe_error = std::string("Child died, but with a different verbose abort message\n") + maybe_error;
-      return OnFailure(maybe_error);
+  case DeathCause::StdTerminate:
+  case DeathCause::Trap:
+    if (expected_cause != cause) {
+      return OnFailure(CauseMismatchMessage(expected_cause, cause));
     }
+    return true;
 
-    // Unexpected causes.
-    case DeathCause::SetupFailure:
-      return OnFailure("Child failed to set up test environment");
-    case DeathCause::Unknown:
-      return OnFailure("Cause unknown");
-    case DeathCause::DidNotDie:
-      return OnFailure("Child did not die");
+  case DeathCause::VerboseAbort: {
+    if (expected_cause != cause) {
+      return OnFailure(CauseMismatchMessage(expected_cause, cause));
+    }
+    std::string maybe_error;
+    if (matcher.CheckMatchInOutput(test_case.getChildStdErr(), maybe_error)) {
+      return true;
+    }
+    maybe_error = std::string("Child died, but with a different verbose abort message\n") + maybe_error;
+    return OnFailure(maybe_error);
+  }
+
+  // Unexpected causes.
+  case DeathCause::SetupFailure:
+    return OnFailure("Child failed to set up test environment");
+  case DeathCause::Unknown:
+    return OnFailure("Cause unknown");
+  case DeathCause::DidNotDie:
+    return OnFailure("Child did not die");
   }
 
   assert(false && "unreachable");
