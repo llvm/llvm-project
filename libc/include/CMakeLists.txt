@@ -350,8 +350,6 @@ add_header(
   HDR
     sys/queue.h
   DEPENDS
-    .llvm-libc-macros.null_macro
-    .llvm-libc-macros.containerof_macro
     .llvm-libc-macros.sys_queue_macros
 )
 

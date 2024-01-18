@@ -105,8 +105,8 @@
       SLIST_REMOVE_HEAD(head, field);                                          \
     } else {                                                                   \
       QUEUE_TYPEOF(type) *cur = SLIST_FIRST(head);                             \
-      while (SLIST_NEXT(elem, field) != (elem))                                \
-        cur = SLIST_NEXT(elem, field);                                         \
+      while (SLIST_NEXT(cur, field) != (elem))                                 \
+        cur = SLIST_NEXT(cur, field);                                          \
       SLIST_REMOVE_AFTER(cur, field);                                          \
     }                                                                          \
   } while (0)

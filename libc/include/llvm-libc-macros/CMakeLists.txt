@@ -139,6 +139,9 @@ add_macro_header(
   sys_queue_macros
   HDR
     sys-queue-macros.h
+  DEPENDS
+    .null_macro
+    .containerof_macro
 )
 
 add_macro_header(

@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_SYS_QUEUE_H
 #define LLVM_LIBC_SYS_QUEUE_H
 
-#include <__llvm-libc-common.h>
-
 #include <llvm-libc-macros/sys-queue-macros.h>
 
 #endif // LLVM_LIBC_SYS_QUEUE_H
+
