@@ -168,6 +168,9 @@ def is_modulemap_header(header):
     if header == "__config_site":
         return False
 
+    if header == "__assertion_handler":
+        return False
+
     # exclude libc++abi files
     if header in ["cxxabi.h", "__cxxabi_config.h"]:
         return False

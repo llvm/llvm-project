@@ -41,12 +41,11 @@ ConstraintVerifier::verify(function_ref<InFlightDiagnostic()> emitError,
   if (assigned[variable].has_value()) {
     if (attr == assigned[variable].value()) {
       return success();
-    } else {
-      if (emitError)
-        return emitError() << "expected '" << assigned[variable].value()
-                           << "' but got '" << attr << "'";
-      return failure();
     }
+    if (emitError)
+      return emitError() << "expected '" << assigned[variable].value()
+                         << "' but got '" << attr << "'";
+    return failure();
   }
 
   // Otherwise, check the constraint and assign the attribute to the variable.

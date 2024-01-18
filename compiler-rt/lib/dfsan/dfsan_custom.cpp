@@ -2792,7 +2792,7 @@ int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
   va_list ap;
   va_start(ap, ret_label);
 
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label, nullptr,
                           nullptr, ap);
   va_end(ap);
   return ret;
@@ -2806,8 +2806,8 @@ int __dfso_sprintf(char *str, const char *format, dfsan_label str_label,
                    dfsan_origin *ret_origin, ...) {
   va_list ap;
   va_start(ap, ret_origin);
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, va_origins,
-                          ret_origin, ap);
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label,
+                          va_origins, ret_origin, ap);
   va_end(ap);
   return ret;
 }
