@@ -522,8 +522,11 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     Op = GetPromotedFloat(Op);
     // If the promotion did the FP_EXTEND to the destination type for us,
     // there's nothing left to do here.
-    if (Op.getValueType() == N->getValueType(0))
+    if (Op.getValueType() == N->getValueType(0)) {
+      if (IsStrict)
+        ReplaceValueWith(SDValue(N, 1), Chain);
       return BitConvertToInteger(Op);
+    }
   }
 
   // There's only a libcall for f16 -> f32 and shifting is only valid for bf16
@@ -541,8 +544,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
     }
   }
 
-  if (Op.getValueType() == MVT::bf16)
+  if (Op.getValueType() == MVT::bf16) {
+    // FIXME: Need ReplaceValueWith on chain in strict case
     return SoftenFloatRes_BF16_TO_FP(N);
+  }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
