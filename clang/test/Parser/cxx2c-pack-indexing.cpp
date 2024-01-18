@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -Wno-c++26-extensions %s
+// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only %s
 
 template<typename... T>
 struct S {

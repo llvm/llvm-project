@@ -9829,9 +9829,10 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
     Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
 
   QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+
   if (!Type.isNull())
-    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::ext_pack_indexing
-                                        : diag::warn_cxx23_pack_indexing);
+    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
+                                        : diag::ext_pack_indexing);
   return Type;
 }
 
@@ -9845,7 +9846,6 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
   if (FullySubstituted && !IndexExpr->isValueDependent() &&
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
-    // TODO: do we need a new enumerator instead of CCEK_ArrayBound?
     ExprResult Res = CheckConvertedConstantExpression(
         IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
     if (!Res.isUsable())

@@ -1094,8 +1094,8 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
       BuildPackIndexingExpr(PackExpression, EllipsisLoc, IndexExpr, RSquareLoc);
   if (!Res.isInvalid())
     Diag(Res.get()->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::ext_pack_indexing
-                                       : diag::warn_cxx23_pack_indexing);
+                                       ? diag::warn_cxx23_pack_indexing
+                                       : diag::ext_pack_indexing);
   return Res;
 }
 
@@ -1107,7 +1107,7 @@ Sema::BuildPackIndexingExpr(Expr *PackExpression, SourceLocation EllipsisLoc,
   std::optional<int64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
-    // TODO: do we need a new enumerator instead of CCEK_ArrayBound?
+
     ExprResult Res = CheckConvertedConstantExpression(
         IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
     if (!Res.isUsable())

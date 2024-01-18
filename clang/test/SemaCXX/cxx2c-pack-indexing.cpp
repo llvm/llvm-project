@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -verify -Wno-c++26-extensions %s
+// RUN: %clang_cc1 -std=c++2c -verify %s
 
 struct NotAPack;
 template <typename T, auto V, template<typename> typename Tp>

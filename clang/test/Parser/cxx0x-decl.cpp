@@ -216,7 +216,8 @@ void NoMissingSemicolonHere(struct S
 template<int ...N> void NoMissingSemicolonHereEither(struct S... [N]);
 // expected-error@-1 {{'S' does not refer to the name of a parameter pack}} \
 // expected-error@-1 {{declaration of anonymous struct must be a definition}} \
-// expected-error@-1 {{expected parameter declarator}}
+// expected-error@-1 {{expected parameter declarator}} \
+// expected-warning@-1 {{pack indexing is a C++2c extension}} \
 
 
 
