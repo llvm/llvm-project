@@ -582,6 +582,27 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
   return MaxBitmapID + (SizeInBits / CHAR_BIT);
 }
 
+static void
+addMCDCBranches(unsigned FileID, const unsigned NumConds,
+                std::vector<const CounterMappingRegion *> &MCDCBranches,
+                const ArrayRef<CounterMappingRegion>::iterator &Begin,
+                const ArrayRef<CounterMappingRegion>::iterator &End) {
+  // Use the given iterator to scan to the end of the list of regions.
+  for (auto It = Begin; It != End; ++It)
+    if (It->FileID == FileID && MCDCBranches.size() < NumConds) {
+      if (It->Kind == CounterMappingRegion::MCDCBranchRegion)
+        // Gather BranchRegions associated within the given FileID until the
+        // NumConds limit is reached.
+        MCDCBranches.push_back(&*It);
+      else if (It->Kind == CounterMappingRegion::ExpansionRegion) {
+        // If an ExpansionRegion is encountered, recur to check that any
+        // BranchRegions associated with the ExpansionRegion are included.
+        assert(It->ExpandedFileID > It->FileID);
+        addMCDCBranches(It->ExpandedFileID, NumConds, MCDCBranches, It, End);
+      }
+    }
+}
+
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     IndexedInstrProfReader &ProfileReader) {
@@ -638,20 +659,56 @@ Error CoverageMapping::loadFunctionRecord(
       Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
     return Error::success();
 
-  unsigned NumConds = 0;
-  const CounterMappingRegion *MCDCDecision;
-  std::vector<const CounterMappingRegion *> MCDCBranches;
-
   FunctionRecord Function(OrigFuncName, Record.Filenames);
-  for (const auto &Region : Record.MappingRegions) {
+
+  const auto &RegionsBegin = Record.MappingRegions.begin();
+  const auto &RegionsEnd = Record.MappingRegions.end();
+  for (auto It = RegionsBegin; It != RegionsEnd; ++It) {
+    const auto &Region = *It;
+
     // If an MCDCDecisionRegion is seen, track the BranchRegions that follow
     // it according to Region.NumConditions.
     if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
-      assert(NumConds == 0);
-      MCDCDecision = &Region;
-      NumConds = Region.MCDCParams.NumConditions;
+      std::vector<const CounterMappingRegion *> MCDCBranches;
+      const unsigned NumConds = Region.MCDCParams.NumConditions;
+
+      // If a MCDCDecisionRegion was seen, use the current iterator to scan
+      // ahead to store the BranchRegions that correspond to it in a vector,
+      // according to the number of conditions recorded for the region (tracked
+      // by NumConds). Note that BranchRegions may be part of ExpansionRegions,
+      // which need to be followed recursively.
+      addMCDCBranches(It->FileID, NumConds, MCDCBranches, It, RegionsEnd);
+
+      // All of the corresponding BranchRegions ought to be accounted for.
+      assert(MCDCBranches.size() == NumConds);
+
+      // Evaluating the test vector bitmap for the decision region entails
+      // calculating precisely what bits are pertinent to this region alone.
+      // This is calculated based on the recorded offset into the global
+      // profile bitmap; the length is calculated based on the recorded
+      // number of conditions.
+      Expected<BitVector> ExecutedTestVectorBitmap =
+          Ctx.evaluateBitmap(&Region);
+      if (auto E = ExecutedTestVectorBitmap.takeError()) {
+        consumeError(std::move(E));
+        return Error::success();
+      }
+
+      // Since the bitmap identifies the executed test vectors for an MC/DC
+      // DecisionRegion, all of the information is now available to process.
+      // This is where the bulk of the MC/DC progressing takes place.
+      Expected<MCDCRecord> Record = Ctx.evaluateMCDCRegion(
+          Region, *ExecutedTestVectorBitmap, MCDCBranches);
+      if (auto E = Record.takeError()) {
+        consumeError(std::move(E));
+        return Error::success();
+      }
+
+      // Save the MC/DC Record so that it can be visualized later.
+      Function.pushMCDCRecord(*Record);
       continue;
     }
+
     Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
     if (auto E = ExecutionCount.takeError()) {
       consumeError(std::move(E));
@@ -663,44 +720,6 @@ Error CoverageMapping::loadFunctionRecord(
       return Error::success();
     }
     Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
-
-    // If a MCDCDecisionRegion was seen, store the BranchRegions that
-    // correspond to it in a vector, according to the number of conditions
-    // recorded for the region (tracked by NumConds).
-    if (NumConds > 0 && Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      MCDCBranches.push_back(&Region);
-
-      // As we move through all of the MCDCBranchRegions that follow the
-      // MCDCDecisionRegion, decrement NumConds to make sure we account for
-      // them all before we calculate the bitmap of executed test vectors.
-      if (--NumConds == 0) {
-        // Evaluating the test vector bitmap for the decision region entails
-        // calculating precisely what bits are pertinent to this region alone.
-        // This is calculated based on the recorded offset into the global
-        // profile bitmap; the length is calculated based on the recorded
-        // number of conditions.
-        Expected<BitVector> ExecutedTestVectorBitmap =
-            Ctx.evaluateBitmap(MCDCDecision);
-        if (auto E = ExecutedTestVectorBitmap.takeError()) {
-          consumeError(std::move(E));
-          return Error::success();
-        }
-
-        // Since the bitmap identifies the executed test vectors for an MC/DC
-        // DecisionRegion, all of the information is now available to process.
-        // This is where the bulk of the MC/DC progressing takes place.
-        Expected<MCDCRecord> Record = Ctx.evaluateMCDCRegion(
-            *MCDCDecision, *ExecutedTestVectorBitmap, MCDCBranches);
-        if (auto E = Record.takeError()) {
-          consumeError(std::move(E));
-          return Error::success();
-        }
-
-        // Save the MC/DC Record so that it can be visualized later.
-        Function.pushMCDCRecord(*Record);
-        MCDCBranches.clear();
-      }
-    }
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
