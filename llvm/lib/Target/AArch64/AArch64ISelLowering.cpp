@@ -16621,7 +16621,7 @@ static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
   if (A.getOpcode() != ISD::ADD)
     return SDValue();
   EVT VT = A.getValueType();
-  if (VT != MVT::v4i32)
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
     return SDValue();
   SDValue Op0 = A.getOperand(0);
   SDValue Op1 = A.getOperand(1);
@@ -16632,13 +16632,27 @@ static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
   EVT ExtVT0 = Ext0.getValueType();
   EVT ExtVT1 = Ext1.getValueType();
   // Check zext VTs are the same and 64-bit length.
-  if (ExtVT0 != ExtVT1 || !(ExtVT0 == MVT::v8i8 || ExtVT0 == MVT::v4i16))
+  if (ExtVT0 != ExtVT1 ||
+      !(ExtVT0 == MVT::v8i8 || ExtVT0 == MVT::v4i16 || ExtVT0 == MVT::v2i32))
     return SDValue();
   // Get VT for concat of zext sources.
   EVT PairVT = ExtVT0.getDoubleNumVectorElementsVT(*DAG.getContext());
   SDValue Concat =
       DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(A), PairVT, Ext0, Ext1);
-  return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v2i64:
+    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v2i64, Concat);
+  case MVT::v4i32:
+    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+  case MVT::v8i16: {
+    SDValue Uaddlv =
+        DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(A), MVT::v8i16, Uaddlv);
+  }
+  default:
+    return SDValue();
+  }
 }
 
 static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
