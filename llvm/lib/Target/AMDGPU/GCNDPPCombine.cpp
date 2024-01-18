@@ -40,9 +40,9 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineOperand.h"
 
 using namespace llvm;
 
@@ -208,6 +208,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            bool CombBCZ,
                                            bool IsShrinkable) const {
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
+         MovMI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
@@ -299,6 +300,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       else if (MovMod && MovMod->getImm() == SISrcMods::NEG &&
                Mod0->getImm() == SISrcMods::NEG)
         DPPInst.addImm(0);
+      else if (Mod0->getImm() == SISrcMods::NONE && MovMod)
+        DPPInst.addImm(MovMod->getImm());
       else
         DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
@@ -529,6 +532,7 @@ bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
 
 bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
+         MovMI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
   LLVM_DEBUG(dbgs() << "\nDPP combine: " << MovMI);
@@ -768,7 +772,9 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
-      if (MI.getOpcode() == AMDGPU::V_MOV_B32_dpp && combineDPPMov(MI)) {
+      if ((MI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
+           MI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp) &&
+          combineDPPMov(MI)) {
         Changed = true;
         ++NumDPPMovsCombined;
       } else if (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
