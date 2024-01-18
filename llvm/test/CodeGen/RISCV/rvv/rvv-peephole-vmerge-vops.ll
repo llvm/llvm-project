@@ -1151,11 +1151,8 @@ define <vscale x 2 x double> @vpmerge_vfwsub.w_tied(<vscale x 2 x double> %passt
 define <vscale x 2 x i32> @true_tied_dest_vmerge_implicit_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl) {
 ; CHECK-LABEL: true_tied_dest_vmerge_implicit_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vmacc.vv v11, v9, v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmacc.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vmacc.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i64 %avl, i64 0)
   %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
@@ -1168,16 +1165,11 @@ define <vscale x 2 x i32> @true_tied_dest_vmerge_implicit_passthru(<vscale x 2 x
   ret <vscale x 2 x i32> %b
 }
 
-; FIXME: We don't currently handle vmerge with an implicit passthru if the true
-; operand also has a tied dest, e.g. has a passthru since it's a masked
-; pseudo. This could be folded into a masked vadd with ta policy.
 define <vscale x 2 x i32> @true_mask_vmerge_implicit_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl) {
 ; CHECK-LABEL: true_mask_vmerge_implicit_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vadd.vv v11, v9, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 %avl, i64 0)
   %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(
