@@ -787,12 +787,9 @@ class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Bit, SDLoc(N), MVT::i1);
 }]>;
 
-def SIMM16bit : ImmLeaf <i32,
-  [{return isInt<16>(Imm);}]
->;
-
-def UIMM16bit : ImmLeaf <i32,
-  [{return isUInt<16>(Imm);}]
+def SIMM16bit : TImmLeaf <i32,
+  [{return isInt<16>(Imm) || isUInt<16>(Imm);}],
+  as_i16timm
 >;
 
 def i64imm_32bit : ImmLeaf<i64, [{
