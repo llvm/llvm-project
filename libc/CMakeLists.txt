@@ -7,10 +7,24 @@ endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-# `llvm-project/llvm/CMakeLists.txt` adds the following directive
-# `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-# We undo it to be able to precisely control what is getting included.
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
+if (LIBC_CMAKE_VERBOSE_LOGGING)
+  get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
+  foreach(OLD_DEF ${LIBC_OLD_PREPROCESSOR_DEFS})
+    message(STATUS "Undefining ${OLD_DEF}")
+  endforeach()
+endif()
+set_directory_properties(PROPERTIES
+  # `llvm-project/llvm/CMakeLists.txt` adds the following directive
+  # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})` We
+  # undo it to be able to precisely control what is getting included.
+  INCLUDE_DIRECTORIES ""
+  # `llvm/cmake/modules/HandleLLVMOptions.cmake` uses `add_compile_definitions`
+  # to set a few preprocessor defines which we do not want.
+  COMPILE_DEFINITIONS ""
+)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions("-D_DEBUG")
+endif()
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
