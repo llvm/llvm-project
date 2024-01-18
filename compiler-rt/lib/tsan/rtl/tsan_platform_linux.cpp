@@ -232,7 +232,7 @@ static void ReExecIfNeeded() {
             kMaxStackSize);
     SetStackSizeLimitInBytes(kMaxStackSize);
     reexec = true;
-    }
+  }
 
     if (!AddressSpaceIsUnlimited()) {
       Report(
