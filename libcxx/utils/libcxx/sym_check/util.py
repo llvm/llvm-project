@@ -149,6 +149,8 @@ def extract_object_sizes_from_map(mapfilename: str):
     maplines = maplines[symbols_start_index + 2 :]
     for line in maplines:
         components = line.split()
+        if len(components) != 5:
+            continue
         name = components[4]
         size = int(components[1], 16)
         if size != 0:

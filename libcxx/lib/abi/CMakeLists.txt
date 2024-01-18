@@ -14,7 +14,7 @@ cxx_abi_identifier(abi_list_identifier
 
 if (TARGET cxx_shared)
   set(abi_list_file "${CMAKE_CURRENT_SOURCE_DIR}/${abi_list_identifier}.abilist")
-  set(abi_map_file "${CMAKE_CURRENT_SOURCE_DIR}/${abi_list_identifier}.linker.map")
+  set(abi_map_file "${CMAKE_CURRENT_BINARY_DIR}/linker.map")
 
   if (EXISTS "${abi_list_file}")
     add_custom_target(check-cxx-abilist

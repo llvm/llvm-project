@@ -213,7 +213,7 @@ if (LIBCXX_ENABLE_SHARED)
       "${LIBCXX_ENABLE_EXCEPTIONS}"
       "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
     )
-    add_link_flags("-Wl,-map,${CMAKE_CURRENT_SOURCE_DIR}/../lib/abi/${abi_identifier}.linker.map")
+    add_link_flags("-Wl,-map,${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
   endif()
 
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
