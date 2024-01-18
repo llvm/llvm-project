@@ -178,10 +178,9 @@ public:
 #  if _LIBCPP_STD_VER >= 26 && (!defined(_LIBCPP_COMPILER_CLANG_BASED) || _LIBCPP_CLANG_VER >= 1800)
           return static_cast<_Context*>(__c)->arg(__id).visit(std::move(__visitor));
 #  else
-          _LIBCPP_DIAGNOSTIC_PUSH
-          _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+          _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           return std::visit_format_arg(std::move(__visitor), static_cast<_Context*>(__c)->arg(__id));
-          _LIBCPP_DIAGNOSTIC_POP
+          _LIBCPP_SUPPRESS_DEPRECATED_POP
 #  endif
         }) {
   }

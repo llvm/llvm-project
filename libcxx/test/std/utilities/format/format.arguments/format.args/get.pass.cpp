@@ -19,10 +19,6 @@
 #include "test_macros.h"
 #include "make_string.h"
 
-#if _LIBCPP_STD_VER >= 26
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
-#endif
-
 template <class Context, class To, class From>
 void test(From value) {
   auto store = std::make_format_args<Context>(value);
@@ -34,10 +30,11 @@ void test(From value) {
     else
       assert(false);
   };
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && defined(__cpp_explicit_this_parameter)
   format_args.get(0).visit(visitor);
-#endif
+#else
   std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 // Some types, as an extension, are stored in the variant. The Standard

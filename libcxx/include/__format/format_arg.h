@@ -144,7 +144,7 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
   __libcpp_unreachable();
 }
 
-#  if _LIBCPP_STD_VER >= 26 && (!defined(_LIBCPP_COMPILER_CLANG_BASED) || _LIBCPP_CLANG_VER >= 1800)
+#  if _LIBCPP_STD_VER >= 26 && defined(__cpp_explicit_this_parameter)
 
 template <class _Rp, class _Visitor, class _Context>
 _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
@@ -195,7 +195,7 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   __libcpp_unreachable();
 }
 
-#  endif // if _LIBCPP_STD_VER >= 26
+#  endif // if _LIBCPP_STD_VER >= 26  && defined(__cpp_explicit_this_parameter)
 
 /// Contains the values used in basic_format_arg.
 ///
@@ -280,7 +280,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
-#  if _LIBCPP_STD_VER >= 26 && (!defined(_LIBCPP_COMPILER_CLANG_BASED) || _LIBCPP_CLANG_VER >= 1800)
+#  if _LIBCPP_STD_VER >= 26 && defined(__cpp_explicit_this_parameter)
 
   // This function is user facing, so it must wrap the non-standard types of
   // the "variant" in a handle to stay conforming. See __arg_t for more details.
@@ -324,7 +324,7 @@ public:
     }
   }
 
-#  endif // if _LIBCPP_STD_VER >= 26
+#  endif // if _LIBCPP_STD_VER >= 26 && defined(__cpp_explicit_this_parameter)
 
 private:
   using char_type = typename _Context::char_type;
@@ -366,8 +366,11 @@ private:
 // This function is user facing, so it must wrap the non-standard types of
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
-_LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_HIDE_FROM_ABI decltype(auto)
-visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+#  ifdef __cpp_explicit_this_parameter
+_LIBCPP_DEPRECATED_IN_CXX26
+#  endif
+    _LIBCPP_HIDE_FROM_ABI decltype(auto)
+    visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
 #  ifndef _LIBCPP_HAS_NO_INT128
   case __format::__arg_t::__i128: {
