@@ -593,8 +593,16 @@ void VectorLegalizer::PromoteReduction(SDNode *Node,
           ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
       // promote the vector operand.
       if (Node->getOperand(j).getValueType().isFloatingPoint())
-        Operands[j] =
-            DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+        if (!ISD::isVPOpcode(Node->getOpcode()))
+          Operands[j] =
+              DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+        else {
+          auto MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+          auto EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+          Operands[j] =
+              DAG.getNode(ISD::VP_FP_EXTEND, DL, NewVecVT, Node->getOperand(j),
+                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+        }
       else
         Operands[j] =
             DAG.getNode(ISD::ANY_EXTEND, DL, NewVecVT, Node->getOperand(j));
@@ -756,7 +764,16 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
               .getVectorElementType()
               .isFloatingPoint() &&
           NVT.isVector() && NVT.getVectorElementType().isFloatingPoint())
-        Operands[j] = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        if (!ISD::isVPOpcode(Node->getOpcode()))
+          Operands[j] =
+              DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        else {
+          auto MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+          auto EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+          Operands[j] =
+              DAG.getNode(ISD::VP_FP_EXTEND, dl, NVT, Node->getOperand(j),
+                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+        }
       else
         Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Node->getOperand(j));
     else
