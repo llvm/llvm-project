@@ -15841,16 +15841,19 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
-bool Sema::IsGetReturnObject(const FunctionDecl *FD) {
+static bool methodHasName(const FunctionDecl* FD, StringRef Name) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
          FD->getDeclName().isIdentifier() &&
-         FD->getName().equals("get_return_object");
+         FD->getName().equals(Name);
 }
 
-bool Sema::IsGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
-  return FD->isStatic() && FD->param_empty() &&
-         FD->getDeclName().isIdentifier() &&
-         FD->getName().equals("get_return_object_on_allocation_failure");
+bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
+  return methodHasName(FD, "get_return_object");
+}
+
+bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
+  return FD->isStatic() &&
+         methodHasName(FD, "get_return_object_on_allocation_failure");
 }
 
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
@@ -15858,7 +15861,7 @@ void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
   // Allow some_promise_type::get_return_object().
-  if (IsGetReturnObject(FD) || IsGetReturnTypeOnAllocFailure(FD))
+  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;

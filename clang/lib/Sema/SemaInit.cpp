@@ -7591,7 +7591,7 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
       CheckCoroObjArg = false;
     // Allow `get_return_object()` as the object param (__promise) is not
     // lifetimebound.
-    if (Sema::IsGetReturnObject(Callee))
+    if (Sema::CanBeGetReturnObject(Callee))
       CheckCoroObjArg = false;
     if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
       VisitLifetimeBoundArg(Callee, ObjectArg);
