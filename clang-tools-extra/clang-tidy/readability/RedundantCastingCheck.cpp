@@ -49,31 +49,29 @@ static bool areTypesEqual(QualType TypeS, QualType TypeD,
                                             TypeD.getLocalUnqualifiedType());
 }
 
-static bool areBinaryOperatorOperandsTypesEqual(const Expr *E,
-                                                bool IgnoreTypeAliases) {
+static bool areBinaryOperatorOperandsTypesEqualToOperatorResultType(
+    const Expr *E, bool IgnoreTypeAliases) {
   if (!E)
-    return false;
+    return true;
   const Expr *WithoutImplicitAndParen = E->IgnoreParenImpCasts();
   if (!WithoutImplicitAndParen)
-    return false;
+    return true;
   if (const auto *B = dyn_cast<BinaryOperator>(WithoutImplicitAndParen)) {
     const QualType Type = WithoutImplicitAndParen->getType();
     if (Type.isNull())
-      return false;
+      return true;
 
     const QualType NonReferenceType = Type.getNonReferenceType();
     const QualType LHSType = B->getLHS()->IgnoreImplicit()->getType();
-    if (!LHSType.isNull() &&
-        !areTypesEqual(LHSType.getNonReferenceType(), NonReferenceType,
-                       IgnoreTypeAliases))
-      return true;
+    if (LHSType.isNull() || !areTypesEqual(LHSType.getNonReferenceType(),
+                                           NonReferenceType, IgnoreTypeAliases))
+      return false;
     const QualType RHSType = B->getRHS()->IgnoreImplicit()->getType();
-    if (!RHSType.isNull() &&
-        !areTypesEqual(RHSType.getNonReferenceType(), NonReferenceType,
-                       IgnoreTypeAliases))
-      return true;
+    if (RHSType.isNull() || !areTypesEqual(RHSType.getNonReferenceType(),
+                                           NonReferenceType, IgnoreTypeAliases))
+      return false;
   }
-  return false;
+  return true;
 }
 
 static const Decl *getSourceExprDecl(const Expr *SourceExpr) {
@@ -144,7 +142,8 @@ void RedundantCastingCheck::check(const MatchFinder::MatchResult &Result) {
   if (!areTypesEqual(TypeS, TypeD, IgnoreTypeAliases))
     return;
 
-  if (areBinaryOperatorOperandsTypesEqual(SourceExpr, IgnoreTypeAliases))
+  if (!areBinaryOperatorOperandsTypesEqualToOperatorResultType(
+          SourceExpr, IgnoreTypeAliases))
     return;
 
   const auto *CastExpr = Result.Nodes.getNodeAs<ExplicitCastExpr>("cast");
