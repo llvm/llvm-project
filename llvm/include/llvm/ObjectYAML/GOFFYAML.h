@@ -20,7 +20,6 @@
 #include <vector>
 
 namespace llvm {
-
 namespace GOFF {
 
 enum ESDFlags {
@@ -44,6 +43,7 @@ enum ESDBAFlags {
   ESD_BA_COMMON = 0x8,
   ESD_BA_Indirect = 0x10,
 };
+
 } // end namespace GOFF
 
 // The structure of the yaml files is not an exact 1:1 match to GOFF. In order
@@ -69,7 +69,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint64_t, GOFF_BAFLAGS)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, GOFF_TEXTRECORDSTYLE)
 
 struct RecordBase {
-  enum RecordBaseKind { RBK_Symbol};
+  enum RecordBaseKind { RBK_Symbol };
 
 private:
   const RecordBaseKind Kind;
@@ -80,7 +80,8 @@ protected:
 public:
   RecordBaseKind getKind() const { return Kind; }
 };
-typedef std::unique_ptr<RecordBase> RecordPtr;
+
+using RecordPtr = std::unique_ptr<RecordBase>;
 
 struct Symbol : public RecordBase {
   Symbol() : RecordBase(RBK_Symbol) {}

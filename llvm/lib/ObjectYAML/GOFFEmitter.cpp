@@ -258,11 +258,11 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
   SmallString<80> SymName;
   if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Sym.Name, SymName))
     reportError("conversion error on " + Sym.Name);
-  size_t SymLength = SymName.size();
-  if (SymLength > GOFF::MaxDataLength)
-    reportError("symbol name is too long: " + Twine(SymLength));
+  size_t SymNameLength = SymName.size();
+  if (SymNameLength > GOFF::MaxDataLength)
+    reportError("symbol name is too long: " + Twine(SymNameLength));
 
-  GW.makeNewRecord(GOFF::RT_ESD, 69 + SymLength);
+  GW.makeNewRecord(GOFF::RT_ESD, 69 + SymNameLength);
   GW << binaryBe(Sym.Type)          // Symbol type
      << binaryBe(Sym.ID)            // ESDID
      << binaryBe(Sym.OwnerID)       // Owner ESDID
@@ -294,7 +294,7 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
                          BIT(ESD_BA_Indirect, 3) | Sym.BindingScope))
      << binaryBe(uint8_t(Sym.LinkageType << 5 | Sym.Alignment))
      << zeros(3) // Behavioral attributes - Reserved
-     << binaryBe(static_cast<uint16_t>(SymLength)) // Name length
+     << binaryBe(static_cast<uint16_t>(SymNameLength)) // Name length
      << SymName.str();
 #undef BIT
 }
@@ -314,13 +314,11 @@ bool GOFFState::writeObject() {
   if (HasError)
     return false;
   // Iterate over all records.
-  for (auto &Rec : Doc.Records) {
-    if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get())) {
+  for (const std::unique_ptr<llvm::GOFFYAML::RecordBase> &Rec : Doc.Records)
+    if (const auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get()))
       writeSymbol(*Sym);
-    } else {
+    else
       reportError("Unknown record type");
-    }
-  }
   writeEnd();
   return true;
 }
