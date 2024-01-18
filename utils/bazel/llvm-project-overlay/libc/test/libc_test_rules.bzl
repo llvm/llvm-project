@@ -26,7 +26,6 @@ def libc_test(name, srcs, libc_function_deps = [], copts = [], deps = [], **kwar
       **kwargs: Attributes relevant for a libc_test. For example, name, srcs.
     """
     all_function_deps = libc_function_deps + ["//libc:errno"]
-    copts = copts + ["-frounding-math"]
     native.cc_test(
         name = name,
         srcs = srcs,
