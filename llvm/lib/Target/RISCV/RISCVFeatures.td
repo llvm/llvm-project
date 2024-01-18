@@ -750,8 +750,7 @@ def FeatureStdExtSsaia
 
 def FeatureStdExtSmepmp
     : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
-                       "'Smepmp' (PMP Enhancements for memory access and "
-                       "execution prevention on Machine mode)", []>;
+                       "'Smepmp' (Enhanced Physical Memory Protection)", []>;
 
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
