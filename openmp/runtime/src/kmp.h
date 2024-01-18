@@ -502,6 +502,11 @@ static inline kmp_sched_t __kmp_sched_without_mods(kmp_sched_t kind) {
 }
 
 /* Type to keep runtime schedule set via OMP_SCHEDULE or omp_set_schedule() */
+#if KMP_COMPILER_MSVC
+#pragma warning(push)
+// warning C4201: nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4201)
+#endif
 typedef union kmp_r_sched {
   struct {
     enum sched_type r_sched_type;
@@ -509,6 +514,9 @@ typedef union kmp_r_sched {
   };
   kmp_int64 sched;
 } kmp_r_sched_t;
+#if KMP_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 extern enum sched_type __kmp_sch_map[]; // map OMP 3.0 schedule types with our
 // internal schedule types
@@ -602,6 +610,8 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #pragma warning(push)
 #pragma warning(disable : 271 310)
 #endif
+// Don't include everything related to NT status code, we'll do that explicitely
+#define WIN32_NO_STATUS
 #include <windows.h>
 #if KMP_MSVC_COMPAT
 #pragma warning(pop)
@@ -1192,6 +1202,9 @@ extern void __kmp_init_target_task();
 // Minimum stack size for pthread for VE is 4MB.
 //   https://www.hpc.nec/documents/veos/en/glibc/Difference_Points_glibc.htm
 #define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
+#elif KMP_OS_AIX
+// The default stack size for worker threads on AIX is 4MB.
+#define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #else
 #define KMP_DEFAULT_STKSIZE ((size_t)(1024 * 1024))
 #endif
@@ -1352,6 +1365,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_WASI
 /* TODO: tune for KMP_OS_WASI */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_AIX
+/* TODO: tune for KMP_OS_AIX */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif
@@ -1890,12 +1907,20 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   // Because of parm1-4 are used together, performance seems to be better
   // if they are on the same cache line (not measured though).
 
+#if KMP_COMPILER_MSVC
+#pragma warning(push)
+// warning C4201: nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4201)
+#endif
   struct KMP_ALIGN(32) {
     kmp_int32 parm1;
     kmp_int32 parm2;
     kmp_int32 parm3;
     kmp_int32 parm4;
   };
+#if KMP_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
   kmp_uint32 pchunks;
@@ -1929,12 +1954,20 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   //    b) all parm1-4 are in the same cache line.
   // Because of parm1-4 are used together, performance seems to be better
   // if they are in the same line (not measured though).
+#if KMP_COMPILER_MSVC
+#pragma warning(push)
+// warning C4201: nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4201)
+#endif
   struct KMP_ALIGN(32) {
     kmp_int64 parm1;
     kmp_int64 parm2;
     kmp_int64 parm3;
     kmp_int64 parm4;
   };
+#if KMP_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
   kmp_uint64 pchunks;
@@ -2216,6 +2249,11 @@ union KMP_ALIGN_CACHE kmp_barrier_union {
 
 typedef union kmp_barrier_union kmp_balign_t;
 
+#if KMP_COMPILER_MSVC
+#pragma warning(push)
+// warning C4201: nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4201)
+#endif
 /* Team barrier needs only non-volatile arrived counter */
 union KMP_ALIGN_CACHE kmp_barrier_team_union {
   double b_align; /* use worst case alignment */
@@ -2232,6 +2270,9 @@ union KMP_ALIGN_CACHE kmp_barrier_team_union {
 #endif
   };
 };
+#if KMP_COMPILER_MSVC
+#pragma warning(pop)
+#endif
 
 typedef union kmp_barrier_team_union kmp_balign_team_t;
 

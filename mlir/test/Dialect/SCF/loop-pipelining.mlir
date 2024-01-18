@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-scf-pipelining -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-scf-pipelining -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -test-scf-pipelining=annotate -split-input-file | FileCheck %s --check-prefix ANNOTATE
 // RUN: mlir-opt %s -test-scf-pipelining=no-epilogue-peeling -split-input-file | FileCheck %s --check-prefix NOEPILOGUE
 
@@ -814,3 +814,35 @@ func.func @yield_constant_loop(%A: memref<?xf32>) -> f32 {
   return %r : f32
 }
 
+// -----
+
+func.func @invalid_schedule(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c4 step %c1 {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 0 } : f32
+    // expected-error@+1 {{operation scheduled before its operands}}
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+  }  { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+func.func @invalid_schedule2(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cf = arith.constant 1.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%idx = %c0) -> (index) {
+    // expected-error@+1 {{operation scheduled before its operands}}
+    %A_elem = memref.load %A[%idx] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    %idx1 = arith.addi %idx, %c1 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : index
+    memref.store %A_elem, %result[%idx] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    scf.yield %idx1 : index
+  }  { __test_pipelining_loop__ }
+  return
+}

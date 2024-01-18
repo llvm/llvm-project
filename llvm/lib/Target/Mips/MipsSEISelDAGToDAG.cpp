@@ -76,7 +76,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
 }
 
 unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
-  uint64_t RegNum = cast<ConstantSDNode>(RegIdx)->getZExtValue();
+  uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
 

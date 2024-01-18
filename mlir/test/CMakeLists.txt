@@ -166,6 +166,8 @@ if(LLVM_BUILD_EXAMPLES)
   list(APPEND MLIR_TEST_DEPENDS
     transform-opt-ch2
     transform-opt-ch3
+    transform-opt-ch4
+    mlir-minimal-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

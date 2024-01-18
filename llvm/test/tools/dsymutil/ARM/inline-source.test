@@ -2,6 +2,7 @@
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj -mtriple arm64-apple-darwin %p/../Inputs/inline.ll -o %t/inline.o
 # RUN: dsymutil -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+# RUN: dsymutil --linker=llvm -f -oso-prepend-path=%t -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 
 # Test inline source files.
 

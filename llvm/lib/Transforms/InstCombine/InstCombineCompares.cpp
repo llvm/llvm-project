@@ -1323,6 +1323,9 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
       return replaceInstUsesWith(Cmp, NewPhi);
     }
 
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&Cmp))
+    return R;
+
   return nullptr;
 }
 
@@ -4920,8 +4923,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     }
   }
 
-  if (BO0 && BO1 && BO0->getOpcode() == BO1->getOpcode() && BO0->hasOneUse() &&
-      BO1->hasOneUse() && BO0->getOperand(1) == BO1->getOperand(1)) {
+  if (BO0 && BO1 && BO0->getOpcode() == BO1->getOpcode() &&
+      (BO0->hasOneUse() || BO1->hasOneUse()) &&
+      BO0->getOperand(1) == BO1->getOperand(1)) {
     switch (BO0->getOpcode()) {
     default:
       break;

@@ -740,6 +740,93 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   return RetVal;
 }
 
+// If `I` has one Const operand and the other matches `(ctpop (not x))`,
+// replace `(ctpop (not x))` with `(sub nuw nsw BitWidth(x), (ctpop x))`.
+// This is only useful is the new subtract can fold so we only handle the
+// following cases:
+//    1) (add/sub/disjoint_or C, (ctpop (not x))
+//        -> (add/sub/disjoint_or C', (ctpop x))
+//    1) (cmp pred C, (ctpop (not x))
+//        -> (cmp pred C', (ctpop x))
+Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  unsigned ConstIdx = 1;
+  switch (Opc) {
+  default:
+    return nullptr;
+    // (ctpop (not x)) <-> (sub nuw nsw BitWidth(x) - (ctpop x))
+    // We can fold the BitWidth(x) with add/sub/icmp as long the other operand
+    // is constant.
+  case Instruction::Sub:
+    ConstIdx = 0;
+    break;
+  case Instruction::ICmp:
+    // Signed predicates aren't correct in some edge cases like for i2 types, as
+    // well since (ctpop x) is known [0, log2(BitWidth(x))] almost all signed
+    // comparisons against it are simplfied to unsigned.
+    if (cast<ICmpInst>(I)->isSigned())
+      return nullptr;
+    break;
+  case Instruction::Or:
+    if (!match(I, m_DisjointOr(m_Value(), m_Value())))
+      return nullptr;
+    [[fallthrough]];
+  case Instruction::Add:
+    break;
+  }
+
+  Value *Op;
+  // Find ctpop.
+  if (!match(I->getOperand(1 - ConstIdx),
+             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+    return nullptr;
+
+  Constant *C;
+  // Check other operand is ImmConstant.
+  if (!match(I->getOperand(ConstIdx), m_ImmConstant(C)))
+    return nullptr;
+
+  Type *Ty = Op->getType();
+  Constant *BitWidthC = ConstantInt::get(Ty, Ty->getScalarSizeInBits());
+  // Need extra check for icmp. Note if this check is true, it generally means
+  // the icmp will simplify to true/false.
+  if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality() &&
+      !ConstantExpr::getICmp(ICmpInst::ICMP_UGT, C, BitWidthC)->isZeroValue())
+    return nullptr;
+
+  // Check we can invert `(not x)` for free.
+  bool Consumes = false;
+  if (!isFreeToInvert(Op, Op->hasOneUse(), Consumes) || !Consumes)
+    return nullptr;
+  Value *NotOp = getFreelyInverted(Op, Op->hasOneUse(), &Builder);
+  assert(NotOp != nullptr &&
+         "Desync between isFreeToInvert and getFreelyInverted");
+
+  Value *CtpopOfNotOp = Builder.CreateIntrinsic(Ty, Intrinsic::ctpop, NotOp);
+
+  Value *R = nullptr;
+
+  // Do the transformation here to avoid potentially introducing an infinite
+  // loop.
+  switch (Opc) {
+  case Instruction::Sub:
+    R = Builder.CreateAdd(CtpopOfNotOp, ConstantExpr::getSub(C, BitWidthC));
+    break;
+  case Instruction::Or:
+  case Instruction::Add:
+    R = Builder.CreateSub(ConstantExpr::getAdd(C, BitWidthC), CtpopOfNotOp);
+    break;
+  case Instruction::ICmp:
+    R = Builder.CreateICmp(cast<ICmpInst>(I)->getSwappedPredicate(),
+                           CtpopOfNotOp, ConstantExpr::getSub(BitWidthC, C));
+    break;
+  default:
+    llvm_unreachable("Unhandled Opcode");
+  }
+  assert(R != nullptr);
+  return replaceInstUsesWith(*I, R);
+}
+
 // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
 //   IFF
 //    1) the logic_shifts match
@@ -3218,6 +3305,52 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
       Case.setValue(cast<ConstantInt>(NewCase));
     }
     return replaceOperand(SI, 0, Op0);
+  }
+
+  uint64_t ShiftAmt;
+  if (match(Cond, m_Shl(m_Value(Op0), m_ConstantInt(ShiftAmt))) &&
+      ShiftAmt < Op0->getType()->getScalarSizeInBits() &&
+      all_of(SI.cases(), [&](const auto &Case) {
+        return Case.getCaseValue()->getValue().countr_zero() >= ShiftAmt;
+      })) {
+    // Change 'switch (X << 2) case 4:' into 'switch (X) case 1:'.
+    OverflowingBinaryOperator *Shl = cast<OverflowingBinaryOperator>(Cond);
+    if (Shl->hasNoUnsignedWrap() || Shl->hasNoSignedWrap() ||
+        Shl->hasOneUse()) {
+      Value *NewCond = Op0;
+      if (!Shl->hasNoUnsignedWrap() && !Shl->hasNoSignedWrap()) {
+        // If the shift may wrap, we need to mask off the shifted bits.
+        unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+        NewCond = Builder.CreateAnd(
+            Op0, APInt::getLowBitsSet(BitWidth, BitWidth - ShiftAmt));
+      }
+      for (auto Case : SI.cases()) {
+        const APInt &CaseVal = Case.getCaseValue()->getValue();
+        APInt ShiftedCase = Shl->hasNoSignedWrap() ? CaseVal.ashr(ShiftAmt)
+                                                   : CaseVal.lshr(ShiftAmt);
+        Case.setValue(ConstantInt::get(SI.getContext(), ShiftedCase));
+      }
+      return replaceOperand(SI, 0, NewCond);
+    }
+  }
+
+  // Fold switch(zext/sext(X)) into switch(X) if possible.
+  if (match(Cond, m_ZExtOrSExt(m_Value(Op0)))) {
+    bool IsZExt = isa<ZExtInst>(Cond);
+    Type *SrcTy = Op0->getType();
+    unsigned NewWidth = SrcTy->getScalarSizeInBits();
+
+    if (all_of(SI.cases(), [&](const auto &Case) {
+          const APInt &CaseVal = Case.getCaseValue()->getValue();
+          return IsZExt ? CaseVal.isIntN(NewWidth)
+                        : CaseVal.isSignedIntN(NewWidth);
+        })) {
+      for (auto &Case : SI.cases()) {
+        APInt TruncatedCase = Case.getCaseValue()->getValue().trunc(NewWidth);
+        Case.setValue(ConstantInt::get(SI.getContext(), TruncatedCase));
+      }
+      return replaceOperand(SI, 0, Op0);
+    }
   }
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
