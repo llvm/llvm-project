@@ -972,9 +972,6 @@ Bug Fixes to C++ Support
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
 
-- Fixes CTAD for aggregates on nested template classes. Fixes:
-  (`#77599 <https://github.com/llvm/llvm-project/issues/77599>`_)
-
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
