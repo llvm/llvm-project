@@ -45,6 +45,7 @@ using namespace llvm::wasm;
 
 namespace lld::wasm {
 Configuration *config;
+Ctx ctx;
 
 namespace {
 
@@ -308,7 +309,7 @@ static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     // Currently we don't enable dynamic linking at all unless -shared or -pie
     // are used, so don't even look for .so files in that case..
-    if (config->isPic && !config->isStatic)
+    if (ctx.isPic && !config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
@@ -571,9 +572,9 @@ static void readConfigs(opt::InputArgList &args) {
 // This function initialize such members. See Config.h for the details
 // of these values.
 static void setConfigs() {
-  config->isPic = config->pie || config->shared;
+  ctx.isPic = config->pie || config->shared;
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     if (config->exportTable)
       error("-shared/-pie is incompatible with --export-table");
     config->importTable = true;
@@ -680,7 +681,7 @@ static void checkOptions(opt::InputArgList &args) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     if (config->globalBase)
       error("--global-base may not be used with -shared/-pie");
     if (config->tableBase)
@@ -705,9 +706,9 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
   sym->isUsedInRegularObj = true;
 
   if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    lazySym->fetch();
+    lazySym->extract();
     if (!config->whyExtract.empty())
-      config->whyExtractRecords.emplace_back(option, sym->getFile(), *sym);
+      ctx.whyExtractRecords.emplace_back(option, sym->getFile(), *sym);
   }
 
   return sym;
@@ -722,9 +723,8 @@ static void handleLibcall(StringRef name) {
     MemoryBufferRef mb = lazySym->getMemberBuffer();
     if (isBitcode(mb)) {
       if (!config->whyExtract.empty())
-        config->whyExtractRecords.emplace_back("<libcall>", sym->getFile(),
-                                               *sym);
-      lazySym->fetch();
+        ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
+      lazySym->extract();
     }
   }
 }
@@ -742,7 +742,7 @@ static void writeWhyExtract() {
   }
 
   os << "reference\textracted\tsymbol\n";
-  for (auto &entry : config->whyExtractRecords) {
+  for (auto &entry : ctx.whyExtractRecords) {
     os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
        << toString(std::get<2>(entry)) << '\n';
   }
@@ -811,7 +811,7 @@ static void createSyntheticSymbols() {
 
   bool is64 = config->is64.value_or(false);
 
-  if (config->isPic) {
+  if (ctx.isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.value_or(false)
                                                      ? &mutableGlobalTypeI64
@@ -850,7 +850,7 @@ static void createSyntheticSymbols() {
             "__wasm_init_tls"));
   }
 
-  if (config->isPic ||
+  if (ctx.isPic ||
       config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
     // For PIC code, or when dynamically importing addresses, we create
     // synthetic functions that apply relocations.  These get called from
@@ -871,7 +871,7 @@ static void createOptionalSymbols() {
   if (!config->shared)
     WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
-  if (!config->isPic) {
+  if (!ctx.isPic) {
     WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
     WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
@@ -965,10 +965,10 @@ static void processStubLibraries() {
             needed->forceExport = true;
             if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
               depsAdded = true;
-              lazy->fetch();
+              lazy->extract();
               if (!config->whyExtract.empty())
-                config->whyExtractRecords.emplace_back(stub_file->getName(),
-                                                       sym->getFile(), *sym);
+                ctx.whyExtractRecords.emplace_back(stub_file->getName(),
+                                                   sym->getFile(), *sym);
             }
           }
         }
@@ -1305,7 +1305,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       sym->forceExport = true;
   }
 
-  if (!config->relocatable && !config->isPic) {
+  if (!config->relocatable && !ctx.isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();
