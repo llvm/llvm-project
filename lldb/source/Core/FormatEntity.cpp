@@ -1098,9 +1098,8 @@ static void FormatInlinedBlock(Stream &out_stream, Block *block) {
     return;
   Block *inline_block = block->GetContainingInlinedBlock();
   if (inline_block) {
-    const InlineFunctionInfo *inline_info =
-        inline_block->GetInlinedFunctionInfo();
-    if (inline_info) {
+    if (const InlineFunctionInfo *inline_info =
+            inline_block->GetInlinedFunctionInfo()) {
       out_stream.PutCString(" [inlined] ");
       inline_info->GetName().Dump(&out_stream);
     }
