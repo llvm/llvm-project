@@ -17,7 +17,7 @@ SWIFTFLAGS+=-sdk "$(SWIFTSDKROOT)"
 
 $(EXE): objc_main.m A.o B.o
 	$(CC) $(CFLAGS) -c -I. $< -fobjc-arc -o $(BUILDDIR)/objc_main.o
-	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -o $@ $(BUILDDIR)/objc_main.o $(BUILDDIR)/A.o $(BUILDDIR)/B.o -L$(BUILDDIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule
+	$(SWIFTC) $(SWIFTFLAGS) -o $@ $(BUILDDIR)/objc_main.o $(BUILDDIR)/A.o $(BUILDDIR)/B.o -L$(BUILDDIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
