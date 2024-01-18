@@ -679,13 +679,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 
   // Simplify BinOps with their identity values first. They are no-ops and we
   // can always return the other value, including undef or poison values.
-  // FIXME: remove unnecessary duplicated identity patterns below.
-  // FIXME: Use AllowRHSConstant with getBinOpIdentity to handle additional ops,
-  //        like X << 0 = X.
-  Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, C1->getType());
-  if (Identity) {
+  if (Constant *Identity = ConstantExpr::getBinOpIdentity(
+          Opcode, C1->getType(), /*AllowRHSIdentity*/ false)) {
     if (C1 == Identity)
       return C2;
+    if (C2 == Identity)
+      return C1;
+  } else if (Constant *Identity = ConstantExpr::getBinOpIdentity(
+                 Opcode, C1->getType(), /*AllowRHSIdentity*/ true)) {
     if (C2 == Identity)
       return C1;
   }
@@ -734,9 +735,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X / 0 -> poison
       if (match(C2, m_CombineOr(m_Undef(), m_Zero())))
         return PoisonValue::get(C2->getType());
-      // undef / 1 -> undef
-      if (match(C2, m_One()))
-        return C1;
       // undef / X -> 0       otherwise
       return Constant::getNullValue(C1->getType());
     case Instruction::URem:
@@ -755,18 +753,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X >>l undef -> poison
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef >>l 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // undef >>l X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::AShr:
       // X >>a undef -> poison
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef >>a 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // TODO: undef >>a X -> poison if the shift is exact
       // undef >>a X -> 0
       return Constant::getNullValue(C1->getType());
@@ -774,9 +766,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X << undef -> undef
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef << 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // undef << X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::FSub:
@@ -810,21 +799,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
     switch (Opcode) {
-    case Instruction::Add:
-      if (CI2->isZero()) return C1;                             // X + 0 == X
-      break;
-    case Instruction::Sub:
-      if (CI2->isZero()) return C1;                             // X - 0 == X
-      break;
     case Instruction::Mul:
-      if (CI2->isZero()) return C2;                             // X * 0 == 0
-      if (CI2->isOne())
-        return C1;                                              // X * 1 == X
+      if (CI2->isZero())
+        return C2; // X * 0 == 0
       break;
     case Instruction::UDiv:
     case Instruction::SDiv:
-      if (CI2->isOne())
-        return C1;                                            // X / 1 == X
       if (CI2->isZero())
         return PoisonValue::get(CI2->getType());              // X / 0 == poison
       break;
@@ -836,9 +816,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return PoisonValue::get(CI2->getType());              // X % 0 == poison
       break;
     case Instruction::And:
-      if (CI2->isZero()) return C2;                           // X & 0 == 0
-      if (CI2->isMinusOne())
-        return C1;                                            // X & -1 == X
+      if (CI2->isZero())
+        return C2; // X & 0 == 0
 
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
@@ -880,16 +859,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       }
       break;
     case Instruction::Or:
-      if (CI2->isZero()) return C1;        // X | 0 == X
       if (CI2->isMinusOne())
-        return C2;                         // X | -1 == -1
+        return C2; // X | -1 == -1
       break;
     case Instruction::Xor:
-      if (CI2->isZero()) return C1;        // X ^ 0 == X
-
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         switch (CE1->getOpcode()) {
-        default: break;
+        default:
+          break;
         case Instruction::ICmp:
         case Instruction::FCmp:
           // cmp pred ^ true -> cmp !pred
