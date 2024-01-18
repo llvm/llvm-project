@@ -1047,7 +1047,7 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
                                                AMDGPUArg<LLVMMatchType<0>, "cmp">]>;
 
   defm int_amdgcn_image_atomic_pk_add_f16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_F16">;
-  defm int_amdgcn_image_atomic_pk_add_bf16 : AMDGPUImageDimAtomic<"ATOMIC_PK_ADD_BF16">;
+  defm int_amdgcn_image_atomic_pk_add_bf16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_BF16">;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1334,8 +1334,8 @@ def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyfloat_ty>;
 // gfx12+ intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
-  [llvm_v2i16_ty],
-  [llvm_v2i16_ty,
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
    llvm_v4i32_ty,
    llvm_i32_ty,
    llvm_i32_ty,
@@ -1343,8 +1343,8 @@ def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
  [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
  AMDGPURsrcIntrinsic<1, 0>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
-  [llvm_v2i16_ty],
-  [llvm_v2i16_ty,
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
    AMDGPUBufferRsrcTy,
    llvm_i32_ty,
    llvm_i32_ty,
@@ -1430,8 +1430,8 @@ def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloa
 def int_amdgcn_struct_ptr_buffer_atomic_fadd : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
 // gfx12 intrinsic
 def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
-  [llvm_v2i16_ty],
-  [llvm_v2i16_ty,
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
    llvm_v4i32_ty,
    llvm_i32_ty,
    llvm_i32_ty,
@@ -1440,8 +1440,8 @@ def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
   [ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1, 0>;
 def int_amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
-  [llvm_v2i16_ty],
-  [llvm_v2i16_ty,
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
    AMDGPUBufferRsrcTy,
    llvm_i32_ty,
    llvm_i32_ty,
@@ -2982,10 +2982,10 @@ class AMDGPU8bitFloatDot4Intrinsic :
     [IntrNoMem, IntrSpeculatable]
   >;
 
-def int_amdgcn_fdot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
-def int_amdgcn_fdot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
 
 //===----------------------------------------------------------------------===//
 // gfx908 intrinsics
