@@ -2041,6 +2041,10 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   }
 
+  // Add comments for values loaded from constant pool.
+  if (OutStreamer->isVerboseAsm())
+    addConstantComments(MI, *OutStreamer);
+
   // Add a comment about EVEX compression
   if (TM.Options.MCOptions.ShowMCEncoding) {
     if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_LEGACY)
@@ -2050,10 +2054,6 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_EVEX)
       OutStreamer->AddComment("EVEX TO EVEX Compression ", false);
   }
-
-  // Add comments for values loaded from constant pool.
-  if (OutStreamer->isVerboseAsm())
-    addConstantComments(MI, *OutStreamer);
 
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:
