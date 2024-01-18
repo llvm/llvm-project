@@ -306,10 +306,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
         DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
     } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src0_modifiers)) {
-      if (MovMod)
-        DPPInst.addImm(MovMod->getImm());
-      else
-        DPPInst.addImm(0);
+      DPPInst.addImm(MovMod ? MovMod->getImm() : 0);
       ++NumOperands;
     }
 
