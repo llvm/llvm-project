@@ -17,13 +17,13 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
-namespace llvm {
 
-static SmallVector<DenseMap<Value *, Value *>, 16> SimplifiedValuesVector;
-static unsigned TripCount = 0;
+typedef SmallVector<DenseMap<Value *, Value *>, 16> SimplifiedValuesVectorTy;
 
 /// Build loop info and scalar evolution for the function and run the analysis.
-static void runUnrollAnalyzer(Module &M, StringRef FuncName) {
+static void
+runUnrollAnalyzer(Module &M, StringRef FuncName,
+                  SimplifiedValuesVectorTy &SimplifiedValuesVector) {
   auto *F = M.getFunction(FuncName);
   ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
 
@@ -41,7 +41,7 @@ static void runUnrollAnalyzer(Module &M, StringRef FuncName) {
   BasicBlock *Exiting = L->getExitingBlock();
 
   SimplifiedValuesVector.clear();
-  TripCount = SE.getSmallConstantTripCount(L, Exiting);
+  unsigned TripCount = SE.getSmallConstantTripCount(L, Exiting);
   for (unsigned Iteration = 0; Iteration < TripCount; Iteration++) {
     DenseMap<Value *, Value *> SimplifiedValues;
     UnrolledInstAnalyzer Analyzer(Iteration, SimplifiedValues, SE, L);
@@ -78,7 +78,9 @@ TEST(UnrollAnalyzerTest, BasicSimplifications) {
       "}\n";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
-  runUnrollAnalyzer(*M, "propagate_loop_phis");
+  SimplifiedValuesVectorTy SimplifiedValuesVector;
+  runUnrollAnalyzer(*M, "propagate_loop_phis", SimplifiedValuesVector);
+  unsigned TripCount = SimplifiedValuesVector.size();
 
   // Perform checks
   Module::iterator MI = M->begin();
@@ -138,7 +140,8 @@ TEST(UnrollAnalyzerTest, OuterLoopSimplification) {
 
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
-  runUnrollAnalyzer(*M, "foo");
+  SimplifiedValuesVectorTy SimplifiedValuesVector;
+  runUnrollAnalyzer(*M, "foo", SimplifiedValuesVector);
 
   Module::iterator MI = M->begin();
   Function *F = &*MI++;
@@ -181,7 +184,8 @@ TEST(UnrollAnalyzerTest, CmpSimplifications) {
       "}\n";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
-  runUnrollAnalyzer(*M, "branch_iv_trunc");
+  SimplifiedValuesVectorTy SimplifiedValuesVector;
+  runUnrollAnalyzer(*M, "branch_iv_trunc", SimplifiedValuesVector);
 
   // Perform checks
   Module::iterator MI = M->begin();
@@ -226,7 +230,8 @@ TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
       "}\n";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
-  runUnrollAnalyzer(*M, "ptr_cmp");
+  SimplifiedValuesVectorTy SimplifiedValuesVector;
+  runUnrollAnalyzer(*M, "ptr_cmp", SimplifiedValuesVector);
 
   // Perform checks
   Module::iterator MI = M->begin();
@@ -270,7 +275,8 @@ TEST(UnrollAnalyzerTest, CastSimplifications) {
 
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
-  runUnrollAnalyzer(*M, "const_load_cast");
+  SimplifiedValuesVectorTy SimplifiedValuesVector;
+  runUnrollAnalyzer(*M, "const_load_cast", SimplifiedValuesVector);
 
   // Perform checks
   Module::iterator MI = M->begin();
@@ -298,5 +304,3 @@ TEST(UnrollAnalyzerTest, CastSimplifications) {
   EXPECT_TRUE(I3 != SimplifiedValuesVector[5].end());
   EXPECT_EQ(cast<ConstantInt>((*I3).second)->getZExtValue(), 3U);
 }
-
-} // end namespace llvm
