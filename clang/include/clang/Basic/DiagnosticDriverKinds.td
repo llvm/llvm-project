@@ -472,7 +472,7 @@ def warn_unsupported_branch_protection: Warning <
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<
-  "'%0' only applies to medium code model">,
+  "'%0' only applies to medium and large code models">,
   InGroup<UnusedCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
@@ -656,6 +656,13 @@ def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
 def err_drv_trivial_auto_var_init_stop_after_invalid_value : Error<
   "'-ftrivial-auto-var-init-stop-after=*' only accepts positive integers">;
 
+def err_drv_trivial_auto_var_init_max_size_missing_dependency : Error<
+  "'-ftrivial-auto-var-init-max-size=*' is used without "
+  "'-ftrivial-auto-var-init=zero' or '-ftrivial-auto-var-init=pattern'">;
+
+def err_drv_trivial_auto_var_init_max_size_invalid_value : Error<
+  "'-ftrivial-auto-var-init-max-size=*' only accepts positive integers (in bytes)">;
+
 def warn_drv_msp430_hwmult_unsupported : Warning<
   "the given MCU does not support hardware multiply, but '-mhwmult' is set to "
   "%0">, InGroup<InvalidCommandLineArgument>;
@@ -735,10 +742,10 @@ def err_drv_dxc_missing_target_profile : Error<
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
-  "shader %select{model|stage}0 is required in target '%1' for HLSL code generation">;
+  "%select{shader model|Vulkan environment|shader stage}0 is required as %select{OS|environment}1 in target '%2' for HLSL code generation">;
 
 def err_drv_hlsl_bad_shader_unsupported : Error<
-  "shader %select{model|stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
+  "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
     "Resulting DXIL will not be validated or signed for use in release environments.">,
     InGroup<DXILValidation>;

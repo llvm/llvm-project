@@ -48,7 +48,7 @@ LIBC_INLINE float exp10f(float x) {
       return 0.0f;
     }
     // x >= log10(2^128) or nan
-    if (!xbits.get_sign() && (x_u >= 0x421a'209bU)) {
+    if (xbits.is_pos() && (x_u >= 0x421a'209bU)) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();

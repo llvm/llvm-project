@@ -249,23 +249,23 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
     const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     // Equal offsets, hot fragments only.
     size_t EqualElems = 0;
-    APInt *BEBitMask(nullptr);
+    APInt BEBitMask;
     if (!Cold) {
       EqualElems = DE.getULEB128(&Offset, &Err);
       LLVM_DEBUG(dbgs() << formatv("Equal offsets: {0}, {1} bytes\n",
                                    EqualElems, getULEB128Size(EqualElems)));
       if (EqualElems) {
         const size_t BranchEntriesBytes = alignTo(EqualElems, 8) / 8;
-        BEBitMask = new APInt(alignTo(EqualElems, 8), 0);
+        BEBitMask = APInt(alignTo(EqualElems, 8), 0);
         LoadIntFromMemory(
-            *BEBitMask,
+            BEBitMask,
             reinterpret_cast<const uint8_t *>(
                 DE.getBytes(&Offset, BranchEntriesBytes, &Err).data()),
             BranchEntriesBytes);
         LLVM_DEBUG({
           dbgs() << "BEBitMask: ";
           SmallString<8> BitMaskStr;
-          BEBitMask->toString(BitMaskStr, 2, false);
+          BEBitMask.toString(BitMaskStr, 2, false);
           dbgs() << BitMaskStr << ", " << BranchEntriesBytes << " bytes\n";
         });
       }
@@ -282,7 +282,7 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
       PrevAddress = OutputAddress;
       int64_t InputDelta = 0;
       if (J < EqualElems) {
-        InputOffset = (OutputOffset << 1) | (*BEBitMask)[J];
+        InputOffset = (OutputOffset << 1) | BEBitMask[J];
       } else {
         InputDelta = DE.getSLEB128(&Offset, &Err);
         InputOffset += InputDelta;
@@ -295,8 +295,6 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
                             (J < EqualElems) ? 0 : getSLEB128Size(InputDelta),
                             OutputAddress));
     }
-    if (BEBitMask)
-      delete BEBitMask;
     Maps.insert(std::pair<uint64_t, MapTy>(Address, Map));
   }
 }

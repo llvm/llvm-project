@@ -45,16 +45,16 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=CUDA,CUDA-COFF
 
-//      CUDA: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".nv_fatbin"
-// CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
-// CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
-
 //      CUDA-ELF: @__start_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // CUDA-ELF-NEXT: @__stop_cuda_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // CUDA-ELF-NEXT: @__dummy.cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries"
 
 //      CUDA-COFF: @__start_cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OA"
 // CUDA-COFF-NEXT: @__stop_cuda_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "cuda_offloading_entries$OZ"
+
+//      CUDA: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".nv_fatbin"
+// CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
+// CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
 
 // CUDA: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.cuda.fatbin_reg, ptr null }]
 
@@ -121,11 +121,9 @@
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.surface:
-// CUDA-NEXT:   call void @__cudaRegisterSurface(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.texture:
-// CUDA-NEXT:   call void @__cudaRegisterTexture(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %normalized, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: if.end:
@@ -145,16 +143,16 @@
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-windows-gnu \
 // RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=HIP,HIP-COFF
 
-//      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
-// HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
-// HIP-NEXT: @.hip.binary_handle = internal global ptr null
-
 //      HIP-ELF: @__start_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-ELF-NEXT: @__stop_hip_offloading_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-ELF-NEXT: @__dummy.hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries"
 
 //      HIP-COFF: @__start_hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OA"
 // HIP-COFF-NEXT: @__stop_hip_offloading_entries = hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "hip_offloading_entries$OZ"
+
+//      HIP: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".hip_fatbin"
+// HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
+// HIP-NEXT: @.hip.binary_handle = internal global ptr null
 
 // HIP: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @.hip.fatbin_reg, ptr null }]
 
