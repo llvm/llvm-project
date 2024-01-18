@@ -281,6 +281,8 @@ Non-comprehensive list of changes in this release
 
 * Added ``#pragma clang fp reciprocal``.
 
+* The version of Unicode used by Clang (primarily to parse identifiers) has been updated to 15.1.
+
 New Compiler Flags
 ------------------
 
@@ -568,6 +570,31 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
+
+- Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
+  expressions on matrix types or builtin functions without an argument list) as placement-args
+  to new-expressions.
+
+  Before:
+
+  .. code-block:: text
+
+    error: no matching function for call to 'operator new'
+       13 |     new (__builtin_memset) S {};
+          |     ^   ~~~~~~~~~~~~~~~~~~
+
+    note: candidate function not viable: no known conversion from '<builtin fn type>' to 'int' for 2nd argument
+        5 |     void* operator new(__SIZE_TYPE__, int);
+          |           ^
+
+  After:
+
+  .. code-block:: text
+
+    error: builtin functions must be directly called
+       13 |     new (__builtin_memset) S {};
+          |          ^
 
 
 Improvements to Clang's time-trace
@@ -771,6 +798,12 @@ Bug Fixes in This Version
 - Fix assertion failure when call noreturn-attribute function with musttail
   attribute.
   Fixes (`#76631 <https://github.com/llvm/llvm-project/issues/76631>`_)
+  - The MS ``__noop`` builtin without an argument list is now accepted
+  in the placement-args of new-expressions, matching MSVC's behaviour.
+- Fix an issue that caused MS ``__decspec(property)`` accesses as well as
+  Objective-C++ property accesses to not be converted to a function call
+  to the getter in the placement-args of new-expressions.
+  Fixes (`#65053 <https://github.com/llvm/llvm-project/issues/65053>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -938,6 +971,10 @@ Bug Fixes to C++ Support
   parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
+- Fix a bug where clang would produce inconsistent values when
+  ``std::source_location::current()`` was used in a function template.
+  Fixes (`#78128 <https://github.com/llvm/llvm-project/issues/78128>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -93,7 +93,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4:       ; %bb.0: ; %entry
 ; VARIANT4-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; VARIANT4-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; VARIANT4-NEXT:    s_waitcnt lgkmcnt(0)
+; VARIANT4-NEXT:    s_wait_kmcnt 0x0
 ; VARIANT4-NEXT:    v_xad_u32 v1, v0, -1, s2
 ; VARIANT4-NEXT:    global_store_b32 v3, v0, s[0:1]
 ; VARIANT4-NEXT:    s_barrier_signal -1
@@ -105,7 +105,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT4-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT4-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v2, vcc_lo
 ; VARIANT4-NEXT:    global_load_b32 v0, v[1:2], off
-; VARIANT4-NEXT:    s_waitcnt vmcnt(0)
+; VARIANT4-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT4-NEXT:    global_store_b32 v3, v0, s[0:1]
 ; VARIANT4-NEXT:    s_nop 0
 ; VARIANT4-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -115,7 +115,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT5:       ; %bb.0: ; %entry
 ; VARIANT5-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; VARIANT5-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; VARIANT5-NEXT:    s_waitcnt lgkmcnt(0)
+; VARIANT5-NEXT:    s_wait_kmcnt 0x0
 ; VARIANT5-NEXT:    v_xad_u32 v1, v0, -1, s2
 ; VARIANT5-NEXT:    global_store_b32 v3, v0, s[0:1]
 ; VARIANT5-NEXT:    s_barrier_signal -1
@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT5-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT5-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, s1, v2, vcc_lo
 ; VARIANT5-NEXT:    global_load_b32 v0, v[1:2], off
-; VARIANT5-NEXT:    s_waitcnt vmcnt(0)
+; VARIANT5-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT5-NEXT:    global_store_b32 v3, v0, s[0:1]
 ; VARIANT5-NEXT:    s_nop 0
 ; VARIANT5-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -137,7 +137,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6:       ; %bb.0: ; %entry
 ; VARIANT6-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; VARIANT6-NEXT:    v_lshlrev_b32_e32 v5, 2, v0
-; VARIANT6-NEXT:    s_waitcnt lgkmcnt(0)
+; VARIANT6-NEXT:    s_wait_kmcnt 0x0
 ; VARIANT6-NEXT:    s_sub_co_i32 s2, s2, 1
 ; VARIANT6-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
 ; VARIANT6-NEXT:    v_sub_nc_u32_e32 v1, s2, v0
@@ -151,7 +151,7 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; VARIANT6-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v4, v2, vcc_lo
 ; VARIANT6-NEXT:    global_load_b32 v0, v[1:2], off
-; VARIANT6-NEXT:    s_waitcnt vmcnt(0)
+; VARIANT6-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT6-NEXT:    global_store_b32 v5, v0, s[0:1]
 ; VARIANT6-NEXT:    s_nop 0
 ; VARIANT6-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
