@@ -23,11 +23,13 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
+  const T inf = T(FPBits::inf(Sign::POS));
   const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero());
+  const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   StorageType get_random_bit_pattern() {
     StorageType bits{0};
