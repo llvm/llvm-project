@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
+// XFAIL: clang-16 || clang-17
+
 // <variant>
 
 // class variant;
@@ -19,8 +21,6 @@
 #include <variant>
 
 #include "test_macros.h"
-
-#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
 
 struct Incomplete;
 template <class T>
@@ -46,5 +46,3 @@ int main(int, char**) {
 
   return 0;
 }
-
-#endif // !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
