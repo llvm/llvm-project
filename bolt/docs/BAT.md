@@ -69,11 +69,15 @@ Header:
 
 The header is followed by Functions table with `NumFuncs` entries.
 Output binary addresses are delta encoded, meaning that only the difference with
-the previous output address is stored. Addresses implicitly start at zero.
+the last previous output address is stored. Addresses implicitly start at zero.
+Output addresses are continuous through function start addresses and function
+internal offsets, and between hot and cold fragments, to better spread deltas
+and save space.
+
 Hot indices are delta encoded, implicitly starting at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `Address` | Delta, ULEB128 | Function address in the output binary |
+| `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
 | `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 
@@ -82,10 +86,10 @@ function.
 
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
-entry is encoded. Offsets implicitly start at zero.
+entry is encoded. Input offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputOffset` | Delta, ULEB128 | Function offset in output binary |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
 | `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
