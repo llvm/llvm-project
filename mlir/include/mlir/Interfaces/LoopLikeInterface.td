@@ -263,7 +263,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*methodName=*/"yieldTiledValuesAndReplace",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
                     "::mlir::ValueRange":$newInitOperands,
-                    "const ::mlir::YieldTiledValuesFn &":$yieldTiledValuesFn),
+                    "::mlir::YieldTiledValuesFn":$yieldTiledValuesFn),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::failure();
