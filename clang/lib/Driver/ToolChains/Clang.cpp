@@ -2712,9 +2712,22 @@ static void EmitComplexRangeDiag(const Driver &D,
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
 
-static std::string RenderComplexRangeOption(std::string Range) {
+static std::string
+RenderComplexRangeOption(LangOptions::ComplexRangeKind Range) {
   std::string ComplexRangeStr = "-complex-range=";
-  ComplexRangeStr += Range;
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Full:
+    ComplexRangeStr += "full";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Limited:
+    ComplexRangeStr += "limited";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Fortran:
+    ComplexRangeStr += "fortran";
+    break;
+  case LangOptions::ComplexRangeKind::CX_None:
+    ComplexRangeStr = "";
+  }
   return ComplexRangeStr;
 }
 
@@ -2764,7 +2777,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
-  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_Full;
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
   std::string ComplexRangeStr = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
@@ -2781,24 +2794,20 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcx_limited_range: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
       Range = LangOptions::ComplexRangeKind::CX_Limited;
-      ComplexRangeStr = RenderComplexRangeOption("limited");
       break;
     }
     case options::OPT_fno_cx_limited_range:
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
       Range = LangOptions::ComplexRangeKind::CX_Full;
-      ComplexRangeStr = RenderComplexRangeOption("full");
       break;
     case options::OPT_fcx_fortran_rules: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
       Range = LangOptions::ComplexRangeKind::CX_Fortran;
-      ComplexRangeStr = RenderComplexRangeOption("fortran");
       break;
     }
     case options::OPT_fno_cx_fortran_rules:
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
       Range = LangOptions::ComplexRangeKind::CX_Full;
-      ComplexRangeStr = RenderComplexRangeOption("full");
       break;
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
@@ -3069,7 +3078,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SeenUnsafeMathModeOption = true;
       // ffast-math enables fortran rules for complex multiplication and
       // division.
-      ComplexRangeStr = RenderComplexRangeOption("limited");
+      Range = LangOptions::ComplexRangeKind::CX_Limited;
       break;
     }
     case options::OPT_fno_fast_math:
@@ -3226,6 +3235,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                    options::OPT_fstrict_float_cast_overflow, false))
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
 
+  if (Range != LangOptions::ComplexRangeKind::CX_None)
+    ComplexRangeStr = RenderComplexRangeOption(Range);
   if (!ComplexRangeStr.empty())
     CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
   if (Args.hasArg(options::OPT_fcx_limited_range))
