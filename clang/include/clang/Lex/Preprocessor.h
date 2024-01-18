@@ -2836,7 +2836,8 @@ public:
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
 
-    if (Identifier.getIdentifierInfo()->getName() == "INFINITY")
+    if (Identifier.getIdentifierInfo()->getName() == "INFINITY" ||
+        Identifier.getIdentifierInfo()->getName() == "NAN")
       emitRestrictInfNaNWarning(Identifier);
   }
 
