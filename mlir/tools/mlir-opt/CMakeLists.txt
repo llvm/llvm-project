@@ -35,6 +35,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestAnalysis
     MLIRTestDialect
     MLIRTestDynDialect
+    MLIRTestParametricDialect
     MLIRTestIR
     MLIRTestOneToNTypeConversionPass
     MLIRTestPass

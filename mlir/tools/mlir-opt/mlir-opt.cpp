@@ -125,6 +125,7 @@ void registerTestNextAccessPass();
 void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
 void registerTestPadFusion();
+void registerTestParametricSpecializationPass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
@@ -154,6 +155,9 @@ void registerTestDynDialect(DialectRegistry &);
 void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
 } // namespace test
+namespace testparametric {
+void registerTestParametricDialect(DialectRegistry &);
+} // namespace testparametric
 
 #ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
@@ -248,6 +252,7 @@ void registerTestPasses() {
   mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestPadFusion();
+  mlir::test::registerTestParametricSpecializationPass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestSCFWhileOpBuilderPass();
@@ -293,6 +298,7 @@ int main(int argc, char **argv) {
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
+  ::testparametric::registerTestParametricDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));

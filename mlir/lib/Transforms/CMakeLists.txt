@@ -10,6 +10,7 @@ add_mlir_library(MLIRTransforms
   LoopInvariantCodeMotion.cpp
   Mem2Reg.cpp
   OpStats.cpp
+  ParametricSpecialization.cpp
   PrintIR.cpp
   RemoveDeadValues.cpp
   SCCP.cpp
@@ -32,6 +33,7 @@ add_mlir_library(MLIRTransforms
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces
+  MLIRParametricSpecializationOpInterface
   MLIRPass
   MLIRRuntimeVerifiableOpInterface
   MLIRSideEffectInterfaces

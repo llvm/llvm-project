@@ -154,7 +154,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       "bool", "isDeclaration", (ins), [{}],
       /*defaultImplementation=*/[{
         // By default, assume that the operation defines a symbol.
-        return false;
+        return false; 
       }]
     >,
   ];

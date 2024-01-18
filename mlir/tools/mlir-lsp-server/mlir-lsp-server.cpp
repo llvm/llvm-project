@@ -20,6 +20,9 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
 } // namespace test
+namespace testparametric {
+void registerTestParametricDialect(DialectRegistry &);
+} // namespace testparametric
 #endif
 
 int main(int argc, char **argv) {
@@ -31,6 +34,7 @@ int main(int argc, char **argv) {
   ::test::registerTestDialect(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
+  ::testparametric::registerTestParametricDialect(registry);
 #endif
   return failed(MlirLspServerMain(argc, argv, registry));
 }

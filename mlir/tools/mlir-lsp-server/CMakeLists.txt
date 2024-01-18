@@ -18,6 +18,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestAnalysis
     MLIRTestDialect
     MLIRTestDynDialect
+    MLIRTestParametricDialect
     MLIRTestIR
     MLIRTestPass
     MLIRTestReducer

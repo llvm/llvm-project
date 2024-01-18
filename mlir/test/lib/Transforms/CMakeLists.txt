@@ -24,6 +24,7 @@ add_mlir_library(MLIRTestTransforms
   TestControlFlowSink.cpp
   TestInlining.cpp
   TestIntRangeInference.cpp
+  TestParametricSpecialization.cpp
   TestMakeIsolatedFromAbove.cpp
   TestTopologicalSort.cpp
   ${MLIRTestTransformsPDLSrc}
