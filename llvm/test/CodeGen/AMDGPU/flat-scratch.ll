@@ -259,7 +259,11 @@ define void @zero_init_foo() {
 ;
 ; GFX12-LABEL: zero_init_foo:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -344,7 +348,11 @@ define void @zero_init_foo() {
 ;
 ; GFX12-PAL-LABEL: zero_init_foo:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PAL-NEXT:    s_mov_b32 s1, s0
@@ -422,16 +430,16 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, 4
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, 4
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_kernel:
@@ -517,16 +525,16 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-PAL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-PAL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_add_co_i32 s0, s0, 4
 ; GFX12-PAL-NEXT:    s_add_co_i32 s1, s1, 4
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
@@ -595,10 +603,10 @@ define amdgpu_ps void @store_load_sindex_foo(i32 inreg %idx) {
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, 4
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, 4
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_foo:
@@ -681,10 +689,10 @@ define amdgpu_ps void @store_load_sindex_foo(i32 inreg %idx) {
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_add_co_i32 s0, s0, 4
 ; GFX12-PAL-NEXT:    s_add_co_i32 s1, s1, 4
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
@@ -743,10 +751,10 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v2, 4, v0
-; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:4 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_kernel:
@@ -816,10 +824,10 @@ define amdgpu_kernel void @store_load_vindex_kernel() {
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-PAL-NEXT:    v_sub_nc_u32_e32 v2, 4, v0
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:4 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
@@ -876,15 +884,19 @@ define void @store_load_vindex_foo(i32 %idx) {
 ;
 ; GFX12-LABEL: store_load_vindex_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_foo:
@@ -943,15 +955,19 @@ define void @store_load_vindex_foo(i32 %idx) {
 ;
 ; GFX12-PAL-LABEL: store_load_vindex_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
+; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = alloca [32 x float], align 4, addrspace(5)
@@ -988,7 +1004,11 @@ define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-LABEL: private_ptr_foo:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0x41200000
 ; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:4
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1025,7 +1045,11 @@ define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-PAL-LABEL: private_ptr_foo:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 0x41200000
 ; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:4
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
@@ -1097,8 +1121,8 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ;
 ; GFX12-LABEL: zero_init_small_offset_kernel:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -1228,8 +1252,8 @@ define amdgpu_kernel void @zero_init_small_offset_kernel() {
 ;
 ; GFX12-PAL-LABEL: zero_init_small_offset_kernel:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PAL-NEXT:    s_mov_b32 s1, s0
@@ -1312,9 +1336,13 @@ define void @zero_init_small_offset_foo() {
 ;
 ; GFX12-LABEL: zero_init_small_offset_foo:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX12-NEXT:    scratch_load_b32 v0, off, s32 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -1407,9 +1435,13 @@ define void @zero_init_small_offset_foo() {
 ;
 ; GFX12-PAL-LABEL: zero_init_small_offset_foo:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PAL-NEXT:    s_mov_b32 s1, s0
@@ -1495,19 +1527,19 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX12-LABEL: store_load_sindex_small_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_addk_co_i32 s0, 0x104
 ; GFX12-NEXT:    s_addk_co_i32 s1, 0x104
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_small_offset_kernel:
@@ -1629,19 +1661,19 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX12-PAL-LABEL: store_load_sindex_small_offset_kernel:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-PAL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-PAL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s0, 0x104
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s1, 0x104
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
@@ -1714,18 +1746,18 @@ define amdgpu_ps void @store_load_sindex_small_offset_foo(i32 inreg %idx) {
 ;
 ; GFX12-LABEL: store_load_sindex_small_offset_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX12-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_addk_co_i32 s0, 0x104
 ; GFX12-NEXT:    s_addk_co_i32 s1, 0x104
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_small_offset_foo:
@@ -1837,18 +1869,18 @@ define amdgpu_ps void @store_load_sindex_small_offset_foo(i32 inreg %idx) {
 ;
 ; GFX12-PAL-LABEL: store_load_sindex_small_offset_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX12-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-PAL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s0, 0x104
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s1, 0x104
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
@@ -1914,13 +1946,13 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ; GFX12-LABEL: store_load_vindex_small_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v2, 0x104, v0
-; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:260 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:260 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_small_offset_kernel:
@@ -2020,13 +2052,13 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel() {
 ; GFX12-PAL-LABEL: store_load_vindex_small_offset_kernel:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_sub_nc_u32_e32 v2, 0x104, v0
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:260 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:260 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
@@ -2095,17 +2127,20 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ;
 ; GFX12-LABEL: store_load_vindex_small_offset_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-NEXT:    s_add_co_i32 s0, s32, 0x100
-; GFX12-NEXT:    scratch_load_b32 v3, off, s32 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 offset:256 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_small_offset_foo:
@@ -2176,17 +2211,20 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ;
 ; GFX12-PAL-LABEL: store_load_vindex_small_offset_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-PAL-NEXT:    s_add_co_i32 s0, s32, 0x100
-; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, s32 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, s32 offset:256 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 offset:256 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %padding = alloca [64 x i32], align 4, addrspace(5)
@@ -2267,8 +2305,8 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ;
 ; GFX12-LABEL: zero_init_large_offset_kernel:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -2403,8 +2441,8 @@ define amdgpu_kernel void @zero_init_large_offset_kernel() {
 ;
 ; GFX12-PAL-LABEL: zero_init_large_offset_kernel:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PAL-NEXT:    s_mov_b32 s1, s0
@@ -2498,9 +2536,13 @@ define void @zero_init_large_offset_foo() {
 ;
 ; GFX12-LABEL: zero_init_large_offset_foo:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX12-NEXT:    scratch_load_b32 v0, off, s32 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -2634,9 +2676,13 @@ define void @zero_init_large_offset_foo() {
 ;
 ; GFX12-PAL-LABEL: zero_init_large_offset_foo:
 ; GFX12-PAL:       ; %bb.0:
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-PAL-NEXT:    s_mov_b32 s1, s0
@@ -2722,19 +2768,19 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX12-LABEL: store_load_sindex_large_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_addk_co_i32 s0, 0x4004
 ; GFX12-NEXT:    s_addk_co_i32 s1, 0x4004
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_large_offset_kernel:
@@ -2856,19 +2902,19 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX12-PAL-LABEL: store_load_sindex_large_offset_kernel:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v0, 15
-; GFX12-PAL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-PAL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s0, 0x4004
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s1, 0x4004
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
@@ -2941,18 +2987,18 @@ define amdgpu_ps void @store_load_sindex_large_offset_foo(i32 inreg %idx) {
 ;
 ; GFX12-LABEL: store_load_sindex_large_offset_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX12-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-NEXT:    s_addk_co_i32 s0, 0x4004
 ; GFX12-NEXT:    s_addk_co_i32 s1, 0x4004
-; GFX12-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_sindex_large_offset_foo:
@@ -3064,18 +3110,18 @@ define amdgpu_ps void @store_load_sindex_large_offset_foo(i32 inreg %idx) {
 ;
 ; GFX12-PAL-LABEL: store_load_sindex_large_offset_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX12-PAL-NEXT:    s_and_b32 s1, s0, 15
 ; GFX12-PAL-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX12-PAL-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s0, 0x4004
 ; GFX12-PAL-NEXT:    s_addk_co_i32 s1, 0x4004
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
@@ -3142,13 +3188,13 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ; GFX12-LABEL: store_load_vindex_large_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_nc_u32_e32 v2, 0x4004, v0
-; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:16388 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:16388 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_large_offset_kernel:
@@ -3250,13 +3296,13 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel() {
 ; GFX12-PAL-LABEL: store_load_vindex_large_offset_kernel:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_lshlrev_b32 v0, 2, v0
-; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, off offset:4 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_sub_nc_u32_e32 v2, 0x4004, v0
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:16388 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:16388 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v2, off offset:124 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
@@ -3326,17 +3372,20 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ;
 ; GFX12-LABEL: store_load_vindex_large_offset_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-NEXT:    s_add_co_i32 s0, s32, 0x4000
-; GFX12-NEXT:    scratch_load_b32 v3, off, s32 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:16384 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 v0, v2, s32 offset:16384 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v1, s32 offset:16384 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_vindex_large_offset_foo:
@@ -3409,17 +3458,20 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ;
 ; GFX12-PAL-LABEL: store_load_vindex_large_offset_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
-; GFX12-PAL-NEXT:    s_add_co_i32 s0, s32, 0x4000
-; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, s32 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
+; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-PAL-NEXT:    scratch_load_b32 v3, off, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 offset:16384 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v2, s32 offset:16384 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v1, s32 offset:16384 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %padding = alloca [4096 x i32], align 4, addrspace(5)
@@ -3485,12 +3537,12 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ; GFX12-LABEL: store_load_large_imm_offset_kernel:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
-; GFX12-NEXT:    scratch_store_b32 off, v0, off offset:4 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_store_b32 off, v1, off offset:16004 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:16004 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, off offset:4 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_store_b32 off, v1, off offset:16004 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, off offset:16004 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_large_imm_offset_kernel:
@@ -3590,12 +3642,12 @@ define amdgpu_kernel void @store_load_large_imm_offset_kernel() {
 ; GFX12-PAL-LABEL: store_load_large_imm_offset_kernel:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, off offset:4 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v1, off offset:16004 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:16004 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, off offset:4 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v1, off offset:16004 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, off offset:16004 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %i = alloca [4096 x i32], align 4, addrspace(5)
@@ -3656,14 +3708,18 @@ define void @store_load_large_imm_offset_foo() {
 ;
 ; GFX12-LABEL: store_load_large_imm_offset_foo:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
-; GFX12-NEXT:    scratch_store_b32 off, v0, s32 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:16000 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, off, s32 offset:16000 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:16000 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, off, s32 offset:16000 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_large_imm_offset_foo:
@@ -3727,14 +3783,18 @@ define void @store_load_large_imm_offset_foo() {
 ;
 ; GFX12-PAL-LABEL: store_load_large_imm_offset_foo:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s32 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_store_b32 off, v1, s32 offset:16000 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 offset:16000 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v0, s32 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_store_b32 off, v1, s32 offset:16000 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, off, s32 offset:16000 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = alloca [4096 x i32], align 4, addrspace(5)
@@ -3797,14 +3857,13 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ; GFX12-LABEL: store_load_vidx_sidx_offset:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_add_nc_u32 v0, s0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 2, 4
-; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:1024 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b32 v0, v0, off offset:1024 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_mov_b32_e32 v1, 15
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_add_lshl_u32 v0, s0, v0, 2
+; GFX12-NEXT:    scratch_store_b32 v0, v1, off offset:1028 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b32 v0, v0, off offset:1028 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX9-PAL-LABEL: store_load_vidx_sidx_offset:
@@ -3879,14 +3938,13 @@ define amdgpu_kernel void @store_load_vidx_sidx_offset(i32 %sidx) {
 ; GFX12-PAL-LABEL: store_load_vidx_sidx_offset:
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    s_load_b32 s0, s[0:1], 0x0
-; GFX12-PAL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_add_nc_u32 v0, s0, v0
-; GFX12-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, 4
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:1024 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b32 v0, v0, off offset:1024 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 15
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-PAL-NEXT:    v_add_lshl_u32 v0, s0, v0, 2
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:1028 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b32 v0, v0, off offset:1028 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
   %alloca = alloca [32 x i32], align 4, addrspace(5)
@@ -3934,12 +3992,16 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-LABEL: store_load_i64_aligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
-; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, off th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_i64_aligned:
@@ -3987,12 +4049,16 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-PAL-LABEL: store_load_i64_aligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
-; GFX12-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b64 v[0:1], v0, off th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b64 v[0:1], v0, off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   store volatile i64 15, ptr addrspace(5) %arg, align 8
@@ -4035,12 +4101,16 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-LABEL: store_load_i64_unaligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
-; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, off th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_i64_unaligned:
@@ -4088,12 +4158,16 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-PAL-LABEL: store_load_i64_unaligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
-; GFX12-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b64 v[0:1], v0, off th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b64 v[0:1], v0, off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   store volatile i64 15, ptr addrspace(5) %arg, align 1
@@ -4139,13 +4213,17 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-LABEL: store_load_v3i32_unaligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 3
-; GFX12-NEXT:    scratch_store_b96 v0, v[1:3], off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b96 v[0:2], v0, off th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b96 v0, v[1:3], off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b96 v[0:2], v0, off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_v3i32_unaligned:
@@ -4197,13 +4275,17 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-PAL-LABEL: store_load_v3i32_unaligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v3, 3
-; GFX12-PAL-NEXT:    scratch_store_b96 v0, v[1:3], off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b96 v[0:2], v0, off th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b96 v0, v[1:3], off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b96 v[0:2], v0, off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   store volatile <3 x i32> <i32 1, i32 2, i32 3>, ptr addrspace(5) %arg, align 1
@@ -4251,13 +4333,17 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-LABEL: store_load_v4i32_unaligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX12-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v4, 4
-; GFX12-NEXT:    scratch_store_b128 v0, v[1:4], off th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b128 v[0:3], v0, off th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b128 v[0:3], v0, off scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_v4i32_unaligned:
@@ -4312,13 +4398,17 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ;
 ; GFX12-PAL-LABEL: store_load_v4i32_unaligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v4, 4
-; GFX12-PAL-NEXT:    scratch_store_b128 v0, v[1:4], off th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b128 v[0:3], v0, off th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b128 v[0:3], v0, off scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %arg, align 1
@@ -4360,12 +4450,16 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ;
 ; GFX12-LABEL: store_load_i32_negative_unaligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 1
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:-1 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:-1 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:-1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:-1 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_i32_negative_unaligned:
@@ -4423,12 +4517,16 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ;
 ; GFX12-PAL-LABEL: store_load_i32_negative_unaligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 1
-; GFX12-PAL-NEXT:    scratch_store_b8 v0, v1, off offset:-1 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_u8 v0, v0, off offset:-1 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b8 v0, v1, off offset:-1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_u8 v0, v0, off offset:-1 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %ptr = getelementptr inbounds i8, ptr addrspace(5) %arg, i32 -1
@@ -4472,12 +4570,16 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ;
 ; GFX12-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 1
-; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:-4225 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:-4225 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b8 v0, v1, off offset:-4225 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:-4225 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: store_load_i32_large_negative_unaligned:
@@ -4536,12 +4638,16 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ;
 ; GFX12-PAL-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX12-PAL:       ; %bb.0: ; %bb
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-PAL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-PAL-NEXT:    s_wait_expcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-PAL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-PAL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 1
-; GFX12-PAL-NEXT:    scratch_store_b8 v0, v1, off offset:-4225 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_u8 v0, v0, off offset:-4225 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b8 v0, v1, off offset:-4225 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_u8 v0, v0, off offset:-4225 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %ptr = getelementptr inbounds i8, ptr addrspace(5) %arg, i32 -4225
@@ -4626,10 +4732,10 @@ define amdgpu_ps void @large_offset() {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v3, v0
-; GFX12-NEXT:    scratch_store_b128 off, v[0:3], off offset:3024 th:TH_STORE_NT_RT
-; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    scratch_load_b128 v[0:3], off, off offset:3024 th:TH_LOAD_RT_NT
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    scratch_store_b128 off, v[0:3], off offset:3024 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    scratch_load_b128 v[0:3], off, off offset:3024 scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, 16 :: v_dual_mov_b32 v1, 0x810
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use v0
@@ -4744,10 +4850,10 @@ define amdgpu_ps void @large_offset() {
 ; GFX12-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v3, v0
-; GFX12-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:3024 th:TH_STORE_NT_RT
-; GFX12-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-PAL-NEXT:    scratch_load_b128 v[0:3], off, off offset:3024 th:TH_LOAD_RT_NT
-; GFX12-PAL-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-PAL-NEXT:    scratch_store_b128 off, v[0:3], off offset:3024 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
+; GFX12-PAL-NEXT:    scratch_load_b128 v[0:3], off, off offset:3024 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    v_dual_mov_b32 v0, 16 :: v_dual_mov_b32 v1, 0x810
 ; GFX12-PAL-NEXT:    ;;#ASMSTART
 ; GFX12-PAL-NEXT:    ; use v0

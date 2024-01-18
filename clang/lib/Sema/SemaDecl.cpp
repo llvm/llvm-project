@@ -4390,8 +4390,8 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   mergeDeclAttributes(New, Old);
 
   // Merge "pure" flag.
-  if (Old->isPure())
-    New->setPure();
+  if (Old->isPureVirtual())
+    New->setIsPureVirtual();
 
   // Merge "used" flag.
   if (Old->getMostRecentDecl()->isUsed(false))
@@ -7068,8 +7068,7 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   if (WeakRefAttr *Attr = ND.getAttr<WeakRefAttr>()) {
     if (ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weakref_not_static);
-      ND.dropAttr<WeakRefAttr>();
-      ND.dropAttr<AliasAttr>();
+      ND.dropAttrs<WeakRefAttr, AliasAttr>();
     }
   }
 
@@ -9879,7 +9878,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (const CXXRecordDecl *Parent =
           dyn_cast<CXXRecordDecl>(NewFD->getDeclContext())) {
       if (Parent->isInterface() && cast<CXXMethodDecl>(NewFD)->isUserProvided())
-        NewFD->setPure(true);
+        NewFD->setIsPureVirtual(true);
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
@@ -15913,13 +15912,26 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
+  return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
+         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+}
+
+bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
+  return methodHasName(FD, "get_return_object");
+}
+
+bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
+  return FD->isStatic() &&
+         methodHasName(FD, "get_return_object_on_allocation_failure");
+}
+
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
-  // Allow `get_return_object()`.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName().equals("get_return_object") && FD->param_empty())
+  // Allow some_promise_type::get_return_object().
+  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
@@ -16000,7 +16012,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
-      if (getLangOpts().MicrosoftExt && FD->isPure() && !FD->isOutOfLine())
+      if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
+          !FD->isOutOfLine())
         Diag(FD->getLocation(), diag::ext_pure_function_definition);
 
       if (!FD->isInvalidDecl()) {

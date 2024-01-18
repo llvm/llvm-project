@@ -1281,9 +1281,9 @@ def SVUNDEF_2 : SInst<"svundef2_{d}", "2v", "csilUcUsUiUlhfd", MergeNone, "", [I
 def SVUNDEF_3 : SInst<"svundef3_{d}", "3v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 def SVUNDEF_4 : SInst<"svundef4_{d}", "4v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 
-def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate]>;
+def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
 
 let TargetGuard = "sve,bf16" in {
 def SVUNDEF_1_BF16 : SInst<"svundef_{d}",  "dv", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
@@ -1291,9 +1291,9 @@ def SVUNDEF_2_BF16 : SInst<"svundef2_{d}", "2v", "b", MergeNone, "", [IsUndef, I
 def SVUNDEF_3_BF16 : SInst<"svundef3_{d}", "3v", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 def SVUNDEF_4_BF16 : SInst<"svundef4_{d}", "4v", "b", MergeNone, "", [IsUndef, IsStreamingCompatible]>;
 
-def SVCREATE_2_BF16 : SInst<"svcreate2[_{d}]", "2dd",   "b", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "", [IsTupleCreate]>;
-def SVCREATE_4_BF16 : SInst<"svcreate4[_{d}]", "4dddd", "b", MergeNone, "", [IsTupleCreate]>;
+def SVCREATE_2_BF16 : SInst<"svcreate2[_{d}]", "2dd",   "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_3_BF16 : SInst<"svcreate3[_{d}]", "3ddd",  "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
+def SVCREATE_4_BF16 : SInst<"svcreate4[_{d}]", "4dddd", "b", MergeNone, "", [IsTupleCreate, IsStreamingCompatible]>;
 }
 
 let TargetGuard = "sve2p1|sme2" in {
@@ -1303,22 +1303,22 @@ let TargetGuard = "sve2p1|sme2" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector insertion and extraction
-def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
-def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
 let TargetGuard = "sve,bf16" in {
-def SVGET_2_BF16 : SInst<"svget2[_{d}]", "d2i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVGET_3_BF16 : SInst<"svget3[_{d}]", "d3i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVGET_4_BF16 : SInst<"svget4[_{d}]", "d4i", "b", MergeNone, "", [IsTupleGet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVGET_2_BF16 : SInst<"svget2[_{d}]", "d2i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVGET_3_BF16 : SInst<"svget3[_{d}]", "d3i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVGET_4_BF16 : SInst<"svget4[_{d}]", "d4i", "b", MergeNone, "", [IsTupleGet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 
-def SVSET_2_BF16 : SInst<"svset2[_{d}]", "22id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_1>]>;
-def SVSET_3_BF16 : SInst<"svset3[_{d}]", "33id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_2>]>;
-def SVSET_4_BF16 : SInst<"svset4[_{d}]", "44id", "b", MergeNone, "", [IsTupleSet], [ImmCheck<1, ImmCheck0_3>]>;
+def SVSET_2_BF16 : SInst<"svset2[_{d}]", "22id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_1>]>;
+def SVSET_3_BF16 : SInst<"svset3[_{d}]", "33id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_2>]>;
+def SVSET_4_BF16 : SInst<"svset4[_{d}]", "44id", "b", MergeNone, "", [IsTupleSet, IsStreamingCompatible], [ImmCheck<1, ImmCheck0_3>]>;
 }
 
 let TargetGuard = "sve2p1|sme2" in {

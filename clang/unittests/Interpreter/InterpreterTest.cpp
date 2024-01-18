@@ -248,28 +248,10 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 #endif // _WIN32
 }
 
-static void *AllocateObject(TypeDecl *TD, Interpreter &Interp) {
+static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
   std::string Name = TD->getQualifiedNameAsString();
-  const clang::Type *RDTy = TD->getTypeForDecl();
-  clang::ASTContext &C = Interp.getCompilerInstance()->getASTContext();
-  size_t Size = C.getTypeSize(RDTy);
-  void *Addr = malloc(Size);
-
-  // Tell the interpreter to call the default ctor with this memory. Synthesize:
-  // new (loc) ClassName;
-  static unsigned Counter = 0;
-  std::stringstream SS;
-  SS << "auto _v" << Counter++ << " = "
-     << "new ((void*)"
-     // Windows needs us to prefix the hexadecimal value of a pointer with '0x'.
-     << std::hex << std::showbase << (size_t)Addr << ")" << Name << "();";
-
-  auto R = Interp.ParseAndExecute(SS.str());
-  if (!R) {
-    free(Addr);
-    return nullptr;
-  }
-
+  Value Addr;
+  cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
   return Addr;
 }
 
@@ -317,7 +299,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   }
 
   TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
-  void *NewA = AllocateObject(TD, *Interp);
+  Value NewA = AllocateObject(TD, *Interp);
 
   // Find back the template specialization
   VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
@@ -328,8 +310,7 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   typedef int (*TemplateSpecFn)(void *);
   auto fn =
       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
-  EXPECT_EQ(42, fn(NewA));
-  free(NewA);
+  EXPECT_EQ(42, fn(NewA.getPtr()));
 }
 
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC

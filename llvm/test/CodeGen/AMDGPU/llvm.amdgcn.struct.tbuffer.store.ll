@@ -305,7 +305,7 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float> %vdata, i3
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_FLOAT] idxen
 ; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v5, s[0:3], null idxen
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], v6, s[0:3], null format:[BUF_FMT_8_8_8_8_UINT] idxen
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
