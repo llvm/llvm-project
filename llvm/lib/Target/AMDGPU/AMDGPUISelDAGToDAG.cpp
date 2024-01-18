@@ -1159,7 +1159,7 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(*Subtarget))
+  if (Subtarget->hasSignedScratchOffsets())
     return true;
 
   auto LHS = Addr.getOperand(0);
@@ -1184,6 +1184,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
   if (isNoUnsignedWrap(Addr))
     return true;
 
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (Subtarget->hasSignedScratchOffsets())
+    return true;
+
   auto LHS = Addr.getOperand(0);
   auto RHS = Addr.getOperand(1);
   return CurDAG->SignBitIsZero(RHS) && CurDAG->SignBitIsZero(LHS);
@@ -1192,6 +1197,11 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
 // of: SGPR + VGPR + Imm.
 bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSVImm(SDValue Addr) const {
+  // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
+  // values.
+  if (AMDGPU::isGFX12Plus(*Subtarget))
+    return true;
+
   auto Base = Addr.getOperand(0);
   auto *RHSImm = cast<ConstantSDNode>(Addr.getOperand(1));
   // If the immediate offset is negative and within certain range, the base
