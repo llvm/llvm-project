@@ -8,10 +8,6 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-/// Note: This is included in the SME tests rather than the SVE tests as it is
-/// safe to assume the SME tests will be ran on an emulator, so will be able to
-/// change the vector length.
-
 func.func @checkVScale() {
   %vscale = vector.vscale
   vector.print str "vscale"
