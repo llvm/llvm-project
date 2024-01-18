@@ -37,6 +37,7 @@
 /// \param __A
 ///    A 32-bit integer operand.
 /// \returns A 32-bit integer containing the bit number.
+/// \see _bit_scan_forward
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfd(int __A) {
   return __builtin_ctz((unsigned int)__A);
@@ -53,6 +54,7 @@ __bsfd(int __A) {
 /// \param __A
 ///    A 32-bit integer operand.
 /// \returns A 32-bit integer containing the bit number.
+/// \see _bit_scan_reverse
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrd(int __A) {
   return 31 - __builtin_clz((unsigned int)__A);
@@ -103,6 +105,7 @@ _bswap(int __A) {
 /// \param A
 ///    A 32-bit integer operand.
 /// \returns A 32-bit integer containing the bit number.
+/// \see __bsfd
 #define _bit_scan_forward(A) __bsfd((A))
 
 /// Find the first set bit starting from the msb. Result is undefined if
@@ -120,6 +123,7 @@ _bswap(int __A) {
 /// \param A
 ///    A 32-bit integer operand.
 /// \returns A 32-bit integer containing the bit number.
+/// \see __bsrd
 #define _bit_scan_reverse(A) __bsrd((A))
 
 #ifdef __x86_64__
@@ -165,6 +169,7 @@ __bsrq(long long __A) {
 /// \param __A
 ///    A 64-bit integer operand.
 /// \returns A 64-bit integer containing the swapped bytes.
+/// \see _bswap64
 static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapq(long long __A) {
   return (long long)__builtin_bswap64((unsigned long long)__A);
@@ -184,6 +189,7 @@ __bswapq(long long __A) {
 /// \param A
 ///    A 64-bit integer operand.
 /// \returns A 64-bit integer containing the swapped bytes.
+/// \see __bswapq
 #define _bswap64(A) __bswapq((A))
 #endif /* __x86_64__ */
 
@@ -198,6 +204,7 @@ __bswapq(long long __A) {
 ///    An unsigned 32-bit integer operand.
 /// \returns A 32-bit integer containing the number of bits with value 1 in the
 ///    source operand.
+/// \see _popcnt32
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntd(unsigned int __A)
 {
@@ -219,6 +226,7 @@ __popcntd(unsigned int __A)
 ///    An unsigned 32-bit integer operand.
 /// \returns A 32-bit integer containing the number of bits with value 1 in the
 ///    source operand.
+/// \see __popcntd
 #define _popcnt32(A) __popcntd((A))
 
 #ifdef __x86_64__
@@ -233,6 +241,7 @@ __popcntd(unsigned int __A)
 ///    An unsigned 64-bit integer operand.
 /// \returns A 64-bit integer containing the number of bits with value 1 in the
 ///    source operand.
+/// \see _popcnt64
 static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntq(unsigned long long __A)
 {
@@ -254,6 +263,7 @@ __popcntq(unsigned long long __A)
 ///    An unsigned 64-bit integer operand.
 /// \returns A 64-bit integer containing the number of bits with value 1 in the
 ///    source operand.
+/// \see __popcntq
 #define _popcnt64(A) __popcntq((A))
 #endif /* __x86_64__ */
 
@@ -471,6 +481,7 @@ __crc32q(unsigned long long __C, unsigned long long __D)
 /// \param __A
 ///    The performance counter to read.
 /// \returns The 64-bit value read from the performance counter.
+/// \see _rdpmc
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdpmc(int __A) {
   return __builtin_ia32_rdpmc(__A);
@@ -486,6 +497,7 @@ __rdpmc(int __A) {
 /// \param __A
 ///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
 /// \returns The 64-bit value of the time stamp counter.
+/// \see _rdtsc
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdtscp(unsigned int *__A) {
   return __builtin_ia32_rdtscp(__A);
@@ -505,6 +517,7 @@ __rdtscp(unsigned int *__A) {
 /// \param A
 ///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
 /// \returns The 64-bit value of the time stamp counter.
+/// \see __rdtscp
 #define _rdtsc(A) __rdtscp(A)
 
 /// Reads the specified performance monitoring counter. Refer to your
@@ -522,6 +535,7 @@ __rdtscp(unsigned int *__A) {
 /// \param A
 ///    The performance counter to read.
 /// \returns The 64-bit value read from the performance counter.
+/// \see __rdpmc
 #define _rdpmc(A) __rdpmc(A)
 
 static __inline__ void __DEFAULT_FN_ATTRS
@@ -578,6 +592,7 @@ __rorb(unsigned char __X, int __C) {
 /// \param __C
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see _rotwl
 static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolw(unsigned short __X, int __C) {
   return __builtin_rotateleft16(__X, __C);
@@ -596,6 +611,7 @@ __rolw(unsigned short __X, int __C) {
 /// \param __C
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see _rotwr
 static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorw(unsigned short __X, int __C) {
   return __builtin_rotateright16(__X, __C);
@@ -614,6 +630,7 @@ __rorw(unsigned short __X, int __C) {
 /// \param __C
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see _rotl
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rold(unsigned int __X, int __C) {
   return __builtin_rotateleft32(__X, (unsigned int)__C);
@@ -632,6 +649,7 @@ __rold(unsigned int __X, int __C) {
 /// \param __C
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see _rotr
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rord(unsigned int __X, int __C) {
   return __builtin_rotateright32(__X, (unsigned int)__C);
@@ -696,6 +714,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rolq
 #define _lrotl(a,b) __rolq((a), (b))
 
 /// Rotates a 64-bit value to the right by the specified number of bits.
@@ -715,6 +734,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rorq
 #define _lrotr(a,b) __rorq((a), (b))
 #else // __LP64__
 /// Rotates a 32-bit value to the left by the specified number of bits.
@@ -734,6 +754,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rold
 #define _lrotl(a,b) __rold((a), (b))
 
 /// Rotates a 32-bit value to the right by the specified number of bits.
@@ -753,6 +774,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rord
 #define _lrotr(a,b) __rord((a), (b))
 #endif // __LP64__
 
@@ -773,6 +795,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rold
 #define _rotl(a,b) __rold((a), (b))
 
 /// Rotates a 32-bit value to the right by the specified number of bits.
@@ -792,6 +815,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rord
 #define _rotr(a,b) __rord((a), (b))
 #endif // _MSC_VER
 
@@ -813,6 +837,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rolw
 #define _rotwl(a,b) __rolw((a), (b))
 
 /// Rotates a 16-bit value to the right by the specified number of bits.
@@ -832,6 +857,7 @@ __rorq(unsigned long long __X, int __C) {
 /// \param b
 ///    The number of bits to rotate the value.
 /// \returns The rotated value.
+/// \see __rorw
 #define _rotwr(a,b) __rorw((a), (b))
 
 #undef __DEFAULT_FN_ATTRS
