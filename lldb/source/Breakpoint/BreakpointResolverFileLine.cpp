@@ -293,9 +293,6 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
-      StreamString s;
-      cu_sp->GetDescription(&s, eDescriptionLevelBrief);
-      llvm::errs()<<s.GetString()<<"\n";
       if (filter.CompUnitPasses(*cu_sp))
         cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
                                     sc_list);
