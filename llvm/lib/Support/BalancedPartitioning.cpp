@@ -30,8 +30,13 @@ template <> struct format_provider<BPFunctionNode::UtilityNodeT> {
 } // namespace llvm
 
 void BPFunctionNode::dump(raw_ostream &OS) const {
-  OS << formatv("{{ID={0} Utilities={{{1:$[,]}} Bucket={2}}", Id,
-                make_range(UtilityNodes.begin(), UtilityNodes.end()), Bucket);
+  OS << "{ID=" << Id << " Utilities={";
+  for (auto &N : UtilityNodes)
+    OS << N.id << " ,";
+  OS << "}";
+  if (Bucket.has_value())
+    OS << " Bucket=" << Bucket.value();
+  OS << "}";
 }
 
 template <typename Func>
@@ -176,22 +181,24 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
-  DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
+  DenseMap<uint32_t, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      ++UtilityNodeIndex[UN];
+      ++UtilityNodeIndex[UN.id];
   // Remove utility nodes if they have just one edge or are connected to all
   // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
+      return UtilityNodeIndex[UN.id] == 1 ||
+             UtilityNodeIndex[UN.id] == NumNodes;
     });
 
   // Renumber utility nodes so they can be used to index into Signatures
   UtilityNodeIndex.clear();
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()}).first->second;
+      UN.id = UtilityNodeIndex.insert({UN.id, UtilityNodeIndex.size()})
+                  .first->second;
 
   // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());

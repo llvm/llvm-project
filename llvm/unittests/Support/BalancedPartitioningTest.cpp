@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BalancedPartitioning.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -39,13 +38,19 @@ protected:
     return Ids;
   }
 
-  static std::vector<std::pair<BPFunctionNode::IDT, uint32_t>>
-  getBuckets(std::vector<BPFunctionNode> &Nodes) {
-    std::vector<std::pair<BPFunctionNode::IDT, uint32_t>> Res;
-    for (auto &N : Nodes)
-      Res.emplace_back(std::make_pair(N.Id, *N.getBucket()));
-    return Res;
-  }
+  static testing::Matcher<BPFunctionNode> NodeIdIs(BPFunctionNode::IDT Id) {
+    return Field("Id", &BPFunctionNode::Id, Id);
+  };
+
+  static testing::Matcher<BPFunctionNode>
+  NodeBucketIs(std::optional<uint32_t> Bucket) {
+    return Field("Bucket", &BPFunctionNode::Bucket, Bucket);
+  };
+
+  static testing::Matcher<BPFunctionNode>
+  NodeIs(BPFunctionNode::IDT Id, std::optional<uint32_t> Bucket) {
+    return AllOf(NodeIdIs(Id), NodeBucketIs(Bucket));
+  };
 };
 
 TEST_F(BalancedPartitioningTest, Basic) {
@@ -56,11 +61,6 @@ TEST_F(BalancedPartitioningTest, Basic) {
   };
 
   Bp.run(Nodes);
-
-  auto NodeIs = [](BPFunctionNode::IDT Id, std::optional<uint32_t> Bucket) {
-    return AllOf(Field("Id", &BPFunctionNode::Id, Id),
-                 Field("Bucket", &BPFunctionNode::Bucket, Bucket));
-  };
 
   EXPECT_THAT(Nodes,
               UnorderedElementsAre(NodeIs(0, 0), NodeIs(1, 1), NodeIs(2, 2),
@@ -88,8 +88,7 @@ TEST_F(BalancedPartitioningTest, Large) {
 
   Bp.run(Nodes);
 
-  EXPECT_THAT(
-      Nodes, Each(Not(Field("Bucket", &BPFunctionNode::Bucket, std::nullopt))));
+  EXPECT_THAT(Nodes, Each(Not(NodeBucketIs(std::nullopt))));
   EXPECT_THAT(getIds(Nodes), UnorderedElementsAreArray(OrigIds));
 }
 
@@ -122,12 +121,14 @@ TEST_F(BalancedPartitioningTest, Weight1) {
 
   Bp.run(Nodes);
 
-  // Verify that the created groups are [(0,3) -- (1,4) -- (2,5)].
-  auto Res = getBuckets(Nodes);
-  llvm::sort(Res);
-  EXPECT_THAT(AbsoluteDifference(Res[0].second, Res[3].second), 1);
-  EXPECT_THAT(AbsoluteDifference(Res[1].second, Res[4].second), 1);
-  EXPECT_THAT(AbsoluteDifference(Res[2].second, Res[5].second), 1);
+  // Check that nodes that share important UNs are ordered together
+  auto NodesRef = ArrayRef(Nodes);
+  auto Groups = {NodesRef.slice(0, 2), NodesRef.slice(2, 2),
+                 NodesRef.slice(4, 2)};
+  EXPECT_THAT(Groups, UnorderedElementsAre(
+                          UnorderedElementsAre(NodeIdIs(0), NodeIdIs(3)),
+                          UnorderedElementsAre(NodeIdIs(1), NodeIdIs(4)),
+                          UnorderedElementsAre(NodeIdIs(2), NodeIdIs(5))));
 }
 
 TEST_F(BalancedPartitioningTest, Weight2) {
@@ -146,16 +147,13 @@ TEST_F(BalancedPartitioningTest, Weight2) {
 
   Bp.run(Nodes);
 
-  // Verify that the created groups are [(0,2,4) -- (1,3,5)].
-  auto Res = getBuckets(Nodes);
-  llvm::sort(Res);
-  EXPECT_LE(AbsoluteDifference(Res[0].second, Res[2].second), 2u);
-  EXPECT_LE(AbsoluteDifference(Res[0].second, Res[4].second), 2u);
-  EXPECT_LE(AbsoluteDifference(Res[2].second, Res[4].second), 2u);
-
-  EXPECT_LE(AbsoluteDifference(Res[1].second, Res[3].second), 2u);
-  EXPECT_LE(AbsoluteDifference(Res[1].second, Res[5].second), 2u);
-  EXPECT_LE(AbsoluteDifference(Res[3].second, Res[5].second), 2u);
+  // Check that nodes that share important UNs are ordered together
+  auto NodesRef = ArrayRef(Nodes);
+  auto Groups = {NodesRef.slice(0, 3), NodesRef.slice(3, 3)};
+  EXPECT_THAT(Groups,
+              UnorderedElementsAre(
+                  UnorderedElementsAre(NodeIdIs(0), NodeIdIs(2), NodeIdIs(4)),
+                  UnorderedElementsAre(NodeIdIs(1), NodeIdIs(3), NodeIdIs(5))));
 }
 
 } // end namespace llvm

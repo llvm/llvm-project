@@ -75,8 +75,6 @@ public:
 
   void dump(raw_ostream &OS) const;
 
-  std::optional<unsigned> getBucket() const { return Bucket; };
-
 protected:
   /// The list of utility nodes associated with this node
   SmallVector<UtilityNodeT, 4> UtilityNodes;
@@ -86,8 +84,7 @@ protected:
   uint64_t InputOrderIndex = 0;
 
   friend class BPFunctionNodeTest_Basic_Test;
-  friend class BalancedPartitioningTest_Basic_Test;
-  friend class BalancedPartitioningTest_Large_Test;
+  friend class BalancedPartitioningTest;
 };
 
 /// Algorithm parameters; default values are tuned on real-world binaries

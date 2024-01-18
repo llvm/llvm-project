@@ -929,15 +929,9 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   for (uint32_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
     auto &Trace = Traces[TraceIdx].FunctionNameRefs;
     for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-<<<<<<< HEAD
       for (int I = Log2_64(Timestamp + 1); I < N; I++) {
         auto FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
-=======
-      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
-        auto &FunctionId = Trace[Timestamp];
         UtilityNodeT GroupId(TraceIdx * N + I);
->>>>>>> 0c3051fa80e6 (addressing review)
         FuncGroups[FunctionId].push_back(GroupId);
       }
     }
