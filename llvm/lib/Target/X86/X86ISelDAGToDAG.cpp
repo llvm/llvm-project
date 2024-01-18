@@ -4237,40 +4237,43 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   printf("Not vector\n");
 
   unsigned OpSize;
-       if (VT == MVT::i64) OpSize = 64;
-  else if (VT == MVT::i32) OpSize = 32;
-  else if (VT == MVT::i16) OpSize = 16;
-  else if (VT == MVT::i8) return false; // i8 shift can't be truncated.
-  else llvm_unreachable("Unexpected shift size");
+  if (VT == MVT::i64)
+    OpSize = 64;
+  else if (VT == MVT::i32)
+    OpSize = 32;
+  else if (VT == MVT::i16)
+    OpSize = 16;
+  else if (VT == MVT::i8)
+    return false; // i8 shift can't be truncated.
+  else
+    llvm_unreachable("Unexpected shift size");
 
   printf("Good OpSize\n");
 
   unsigned TruncateSize = 0;
   // This only works when the result is truncated.
   for (const SDNode *User : N->uses()) {
-    //printf("Looking at a use. TargetOpcode is %u\n", User->isTargetOpcode());
     auto name = User->getOperationName(CurDAG);
-    printf("Looking at a thing %s %u %u\n", name.c_str(), User->getOpcode(), TargetOpcode::EXTRACT_SUBREG);
     if (User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return false;
-    printf("It's an EXTRACT_SUBREG\n");
     EVT TuncateType = User->getValueType(0);
-         if (TuncateType == MVT::i32) TruncateSize = std::max(TruncateSize, 32U);
-    else if (TuncateType == MVT::i16) TruncateSize = std::max(TruncateSize, 16U);
-    else if (TuncateType == MVT::i8)  TruncateSize = std::max(TruncateSize, 8U);
-    else return false;
+    if (TuncateType == MVT::i32)
+      TruncateSize = std::max(TruncateSize, 32U);
+    else if (TuncateType == MVT::i16)
+      TruncateSize = std::max(TruncateSize, 16U);
+    else if (TuncateType == MVT::i8)
+      TruncateSize = std::max(TruncateSize, 8U);
+    else
+      return false;
   }
-  printf("Truncates are fine\n");
   if (TruncateSize >= OpSize)
     return false;
-  printf("Truncate size works\n");
 
   // The shift must be by an immediate that wouldn't expose the zero or sign
   // extended result.
   auto *ShiftAmount = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!ShiftAmount || ShiftAmount->getZExtValue() > OpSize - TruncateSize)
     return false;
-  printf("Shift amount is good\n");
 
   // Only make the replacement when it avoids clobbering used flags. If it is
   // determined to be profitable in other situations in the future, add those
@@ -4279,11 +4282,13 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   // Make the replacement.
   SDLoc DL(N);
   MVT RotateSize = OpSize == 64 ? MVT::i64 : MVT::i32;
-  SDNode* Replacement = CurDAG->getNode(ISD::ROTR, DL, RotateSize, N->getOperand(0), N->getOperand(1)).getNode();
+  SDNode *Replacement = CurDAG
+                            ->getNode(ISD::ROTR, DL, RotateSize,
+                                      N->getOperand(0), N->getOperand(1))
+                            .getNode();
   ReplaceNode(N, Replacement);
   CurDAG->RemoveDeadNode(N);
   SelectCode(Replacement);
-  printf("Replacement made\n");
   return true;
 }
 
@@ -5306,7 +5311,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       return;
     [[fallthrough]];
   case ISD::SRA:
-    printf("Going to evaluate SRL or SRA");
     if (rightShiftUncloberFlags(Node))
       return;
     [[fallthrough]];
