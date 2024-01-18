@@ -11,6 +11,8 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
@@ -173,9 +175,13 @@ GetFileForModule(const ModuleSpec &module_spec,
       cache_key, url_path, cache_path, debuginfod_urls, timeout);
   if (result)
     return FileSpec(*result);
-  // An error here should be logged as a failure in the Debuginfod library,
-  // just consume it here.
-  consumeError(result.takeError());
+
+  Log *log = GetLog(LLDBLog::Symbols);
+  auto err_message = llvm::toString(result.takeError());
+  LLDB_LOGV(log,
+            "[Debuginfod] Failed to download symbol artifact {0} "
+            "with error {1}",
+            url_path, err_message);
   return {};
 }
 
