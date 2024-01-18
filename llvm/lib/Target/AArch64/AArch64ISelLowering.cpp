@@ -7678,7 +7678,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool ToggleZA = CallerAttrs.requiresZAToggle(CalleeAttrs);
 
   assert((!ToggleZA || !RequiresLazySave) &&
-       "Lazy-save should have PSTATE.SM=1 on entry to the function");
+         "Lazy-save should have PSTATE.SM=1 on entry to the function");
 
   if (ToggleZA)
     Chain = DAG.getNode(

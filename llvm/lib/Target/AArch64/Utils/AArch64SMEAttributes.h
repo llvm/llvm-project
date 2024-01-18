@@ -124,7 +124,6 @@ public:
   }
   bool requiresZAToggle(const SMEAttrs &Callee) const {
     return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface();
-
   }
 };
 
