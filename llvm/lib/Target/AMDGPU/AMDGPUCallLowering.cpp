@@ -712,7 +712,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   if (!MBB.empty())
     B.setInstr(*MBB.begin());
 
-  if (!IsEntryFunc && !IsGraphics) {
+  if (!IsEntryFunc) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
