@@ -58,6 +58,13 @@ def CastAndCallOp : Op<Transform_Dialect,
     operations are removed. Users are expected to run cleanup separately if
     desired.
 
+    Warning: The replacement of the uses of the outputs could invalidate certain
+    restricted value handle types (e.g. `transform.block_arg` if it existed, by
+    replacing the use with something not coming from a block argument). The
+    value will still exist in such cases but wouldn't verify against the type.
+    See the discussion here for more information:
+    https://github.com/llvm/llvm-project/pull/78398#discussion_r1455070087
+
     This transform will emit a silenceable failure if:
      - The set of outputs isn't unique
      - The handle for the insertion point does not include exactly one operation
