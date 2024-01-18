@@ -142,10 +142,9 @@ SymbolLocator *SymbolLocatorDebuginfod::CreateInstance() {
   return new SymbolLocatorDebuginfod();
 }
 
-+ static std::optional<FileSpec> +
-    GetFileForModule(
-        const ModuleSpec &module_spec,
-        std::function<std::string(llvm::object::BuildID)> UrlBuilder) {
+static std::optional<FileSpec>
+GetFileForModule(const ModuleSpec &module_spec,
+                 std::function<std::string(llvm::object::BuildID)> UrlBuilder) {
   const UUID &module_uuid = module_spec.GetUUID();
   // Don't bother if we don't have a valid UUID, Debuginfod isn't available,
   // or if the 'symbols.enable-external-lookup' setting is false
