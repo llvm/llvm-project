@@ -8283,7 +8283,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     Op.addRegOrImmWithFPInputModsOperands(Inst, 1); // src0
     // Add dummy src1
     Inst.addOperand(MCOperand::createImm(0));
-    Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+    Inst.addOperand(MCOperand::createReg(0));
   }
 
   for (unsigned E = Operands.size(); I != E; ++I) {
@@ -8821,7 +8821,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     if (IsVOP3CvtSrDpp) {
       if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
         Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+        Inst.addOperand(MCOperand::createReg(0));
       }
     }
 
@@ -8843,7 +8843,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
           Inst.getOpcode() != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12) {
         // Add dummy src1
         Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+        Inst.addOperand(MCOperand::createReg(0));
       }
     } else if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
@@ -8925,7 +8925,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
             Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
           // Add dummy src1
           Inst.addOperand(MCOperand::createImm(0));
-          Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+          Inst.addOperand(MCOperand::createReg(0));
         }
       } else if (Op.isDppFI()) {
         Fi = Op.getImm();
@@ -8943,7 +8943,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
             Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
           // Add dummy src1
           Inst.addOperand(MCOperand::createImm(0));
-          Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+          Inst.addOperand(MCOperand::createReg(0));
         }
       } else if (Op.isReg()) {
         Op.addRegOperands(Inst, 1);
