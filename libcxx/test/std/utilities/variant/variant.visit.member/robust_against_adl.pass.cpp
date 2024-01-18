@@ -20,6 +20,8 @@
 
 #include "test_macros.h"
 
+#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
+
 struct Incomplete;
 template <class T>
 struct Holder {
@@ -40,8 +42,9 @@ constexpr bool test(bool do_it) {
 
 int main(int, char**) {
   test(true);
-#if TEST_STD_VER > 17
   static_assert(test(true));
-#endif
+
   return 0;
 }
+
+#endif // !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800

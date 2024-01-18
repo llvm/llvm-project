@@ -25,6 +25,8 @@
 #include "test_macros.h"
 #include "variant_test_helpers.h"
 
+#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
+
 void test_call_operator_forwarding() {
   using Fn = ForwardingCallObject;
   Fn obj{};
@@ -78,7 +80,7 @@ void test_argument_forwarding() {
     std::move(cv).visit(obj);
     assert(Fn::check_call<const int&&>(val));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
+#  if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   { // single argument - lvalue reference
     using V = std::variant<int&>;
     int x   = 42;
@@ -110,7 +112,7 @@ void test_argument_forwarding() {
     std::move(cv).visit(obj);
     assert(Fn::check_call<int&&>(val));
   }
-#endif
+#  endif
 }
 
 void test_return_type() {
@@ -156,7 +158,7 @@ void test_constexpr() {
 }
 
 void test_exceptions() {
-#ifndef TEST_HAS_NO_EXCEPTIONS
+#  ifndef TEST_HAS_NO_EXCEPTIONS
   ReturnArity obj{};
 
   auto test = [&](auto&& v) {
@@ -176,7 +178,7 @@ void test_exceptions() {
 
     assert(test(v));
   }
-#endif
+#  endif
 }
 
 // See https://llvm.org/PR31916
@@ -253,3 +255,5 @@ int main(int, char**) {
 
   return 0;
 }
+
+#endif // !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800

@@ -25,6 +25,8 @@
 #include "test_macros.h"
 #include "variant_test_helpers.h"
 
+#if !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
+
 template <class... Ts>
 struct overloaded : Ts... {
   using Ts::operator()...;
@@ -353,3 +355,5 @@ int main(int, char**) {
 
   return 0;
 }
+
+#endif // !defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800
