@@ -88,7 +88,38 @@ _bswap(int __A) {
   return (int)__builtin_bswap32((unsigned int)__A);
 }
 
+/// Find the first set bit starting from the lsb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// int _bit_scan_forward(int A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c BSF instruction or the
+///    \c TZCNT instruction.
+///
+/// \param A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 #define _bit_scan_forward(A) __bsfd((A))
+
+/// Find the first set bit starting from the msb. Result is undefined if
+///    input is 0.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// int _bit_scan_reverse(int A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c BSR instruction or the
+///    \c LZCNT instruction and an \c XOR.
+///
+/// \param A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the bit number.
 #define _bit_scan_reverse(A) __bsrd((A))
 
 #ifdef __x86_64__
@@ -139,8 +170,22 @@ __bswapq(long long __A) {
   return (long long)__builtin_bswap64((unsigned long long)__A);
 }
 
+/// Swaps the bytes in the input. Converting little endian to big endian or
+///    vice versa.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// long long _bswap64(long long A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c BSWAP instruction.
+///
+/// \param A
+///    A 64-bit integer operand.
+/// \returns A 64-bit integer containing the swapped bytes.
 #define _bswap64(A) __bswapq((A))
-#endif
+#endif /* __x86_64__ */
 
 /// Counts the number of bits in the source operand having a value of 1.
 ///
@@ -159,6 +204,21 @@ __popcntd(unsigned int __A)
   return __builtin_popcount(__A);
 }
 
+/// Counts the number of bits in the source operand having a value of 1.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// int _popcnt32(int A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c POPCNT instruction or a
+///    a sequence of arithmetic and logic ops to calculate it.
+///
+/// \param A
+///    An unsigned 32-bit integer operand.
+/// \returns A 32-bit integer containing the number of bits with value 1 in the
+///    source operand.
 #define _popcnt32(A) __popcntd((A))
 
 #ifdef __x86_64__
@@ -179,6 +239,21 @@ __popcntq(unsigned long long __A)
   return __builtin_popcountll(__A);
 }
 
+/// Counts the number of bits in the source operand having a value of 1.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// long long _popcnt64(unsigned long long A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c POPCNT instruction or a
+///    a sequence of arithmetic and logic ops to calculate it.
+///
+/// \param A
+///    An unsigned 64-bit integer operand.
+/// \returns A 64-bit integer containing the number of bits with value 1 in the
+///    source operand.
 #define _popcnt64(A) __popcntq((A))
 #endif /* __x86_64__ */
 
@@ -416,8 +491,37 @@ __rdtscp(unsigned int *__A) {
   return __builtin_ia32_rdtscp(__A);
 }
 
-#define _rdtsc() __rdtsc()
+/// Reads the processor's time stamp counter and the \c IA32_TSC_AUX MSR
+///    \c (0xc0000103).
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned long long _rdtsc(unsigned int *A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c RDTSCP instruction.
+///
+/// \param A
+///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
+/// \returns The 64-bit value of the time stamp counter.
+#define _rdtsc(A) __rdtscp(A)
 
+/// Reads the specified performance monitoring counter. Refer to your
+///    processor's documentation to determine which performance counters are
+///    supported.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned long long _rdpmc(int A);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c RDPMC instruction.
+///
+/// \param A
+///    The performance counter to read.
+/// \returns The 64-bit value read from the performance counter.
 #define _rdpmc(A) __rdpmc(A)
 
 static __inline__ void __DEFAULT_FN_ATTRS
@@ -575,18 +679,159 @@ __rorq(unsigned long long __X, int __C) {
 /* These are already provided as builtins for MSVC. */
 /* Select the correct function based on the size of long. */
 #ifdef __LP64__
+/// Rotates a 64-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned long long _lrotl(unsigned long long a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param a
+///    The unsigned 64-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _lrotl(a,b) __rolq((a), (b))
+
+/// Rotates a 64-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned long long _lrotr(unsigned long long a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param a
+///    The unsigned 64-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _lrotr(a,b) __rorq((a), (b))
-#else
+#else // __LP64__
+/// Rotates a 32-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned int _lrotl(unsigned int a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param a
+///    The unsigned 32-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _lrotl(a,b) __rold((a), (b))
+
+/// Rotates a 32-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned int _lrotr(unsigned int a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param a
+///    The unsigned 32-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _lrotr(a,b) __rord((a), (b))
-#endif
+#endif // __LP64__
+
+/// Rotates a 32-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned int _rotl(unsigned int a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param a
+///    The unsigned 32-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _rotl(a,b) __rold((a), (b))
+
+/// Rotates a 32-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned int _rotr(unsigned int a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param a
+///    The unsigned 32-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _rotr(a,b) __rord((a), (b))
 #endif // _MSC_VER
 
 /* These are not builtins so need to be provided in all modes. */
+/// Rotates a 16-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned short _rotwl(unsigned short a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param a
+///    The unsigned 16-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _rotwl(a,b) __rolw((a), (b))
+
+/// Rotates a 16-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// unsigned short _rotwr(unsigned short a, int b);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param a
+///    The unsigned 16-bit value to be rotated.
+/// \param b
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 #define _rotwr(a,b) __rorw((a), (b))
 
 #undef __DEFAULT_FN_ATTRS
