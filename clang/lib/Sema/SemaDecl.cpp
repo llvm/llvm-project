@@ -15841,10 +15841,9 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
-static bool methodHasName(const FunctionDecl* FD, StringRef Name) {
+static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
-         FD->getDeclName().isIdentifier() &&
-         FD->getName().equals(Name);
+         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
 }
 
 bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
