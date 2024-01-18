@@ -6015,7 +6015,7 @@ bool CodeGenPrepare::tryToPromoteExts(
     // one extension but leave one. However, we optimistically keep going,
     // because the new extension may be removed too. Also avoid replacing a
     // single free extension with multiple extensions, as this increases the
-    // number of IR instructions while providing any savings.
+    // number of IR instructions while not providing any savings.
     long long TotalCreatedInstsCost = CreatedInstsCost + NewCreatedInstsCost;
     // FIXME: It would be possible to propagate a negative value instead of
     // conservatively ceiling it to 0.
