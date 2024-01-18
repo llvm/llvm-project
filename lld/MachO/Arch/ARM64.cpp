@@ -117,13 +117,24 @@ static constexpr uint32_t objcStubsFastCode[] = {
     0xd4200020, // brk   #0x1
 };
 
+static constexpr uint32_t objcStubsSmallCode[] = {
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x14000000, // b     _objc_msgSend
+};
+
 void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
                                  uint64_t stubOffset, uint64_t selrefsVA,
-                                 uint64_t selectorIndex, uint64_t gotAddr,
+                                 uint64_t selectorIndex, uint64_t msgSendAddr,
                                  uint64_t msgSendIndex) const {
-  ::writeObjCMsgSendStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
-                               stubOffset, selrefsVA, selectorIndex, gotAddr,
-                               msgSendIndex);
+  if (config->objcStubsMode == ObjCStubsMode::fast)
+    ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
+                                     stubOffset, selrefsVA, selectorIndex,
+                                     msgSendAddr, msgSendIndex);
+  else
+    ::writeObjCMsgSendSmallStub<LP64>(buf, objcStubsSmallCode, sym, stubsAddr,
+                                      stubOffset, selrefsVA, selectorIndex,
+                                      msgSendAddr, msgSendIndex);
 }
 
 // A thunk is the relaxed variation of stubCode. We don't need the
@@ -157,7 +168,9 @@ ARM64::ARM64() : ARM64Common(LP64()) {
   thunkSize = sizeof(thunkCode);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
-  objcStubsAlignment = 32;
+  objcStubsFastAlignment = 32;
+  objcStubsSmallSize = sizeof(objcStubsSmallCode);
+  objcStubsSmallAlignment = 4;
 
   // Branch immediate is two's complement 26 bits, which is implicitly
   // multiplied by 4 (since all functions are 4-aligned: The branch range

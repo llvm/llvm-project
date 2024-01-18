@@ -121,7 +121,9 @@ public:
   size_t stubHelperHeaderSize;
   size_t stubHelperEntrySize;
   size_t objcStubsFastSize;
-  size_t objcStubsAlignment;
+  size_t objcStubsSmallSize;
+  size_t objcStubsFastAlignment;
+  size_t objcStubsSmallAlignment;
   uint8_t p2WordSize;
   size_t wordSize;
 

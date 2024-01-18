@@ -214,7 +214,7 @@ X86_64::X86_64() : TargetInfo(LP64()) {
   stubHelperEntrySize = sizeof(stubHelperEntry);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
-  objcStubsAlignment = 1;
+  objcStubsFastAlignment = 1;
 
   relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }
