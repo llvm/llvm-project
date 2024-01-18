@@ -213,15 +213,15 @@ user is determined by the specific pattern driver.
 This method replaces an operation's results with a set of provided values, and
 erases the operation.
 
-*   Update an Operation in-place : `(start|cancel|finalize)RootUpdate`
+*   Update an Operation in-place : `(start|cancel|finalize)OpModification`
 
 This is a collection of methods that provide a transaction-like API for updating
 the attributes, location, operands, or successors of an operation in-place
 within a pattern. An in-place update transaction is started with
-`startRootUpdate`, and may either be canceled or finalized with
-`cancelRootUpdate` and `finalizeRootUpdate` respectively. A convenience wrapper,
-`updateRootInPlace`, is provided that wraps a `start` and `finalize` around a
-callback.
+`startOpModification`, and may either be canceled or finalized with
+`cancelOpModification` and `finalizeOpModification` respectively. A convenience
+wrapper, `modifyOpInPlace`, is provided that wraps a `start` and `finalize`
+around a callback.
 
 *   OpBuilder API
 

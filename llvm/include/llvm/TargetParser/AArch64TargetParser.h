@@ -27,6 +27,10 @@ namespace llvm {
 class Triple;
 
 namespace AArch64 {
+
+struct ArchInfo;
+struct CpuInfo;
+
 // Function Multi Versioning CPU features. They must be kept in sync with
 // compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
 // sentinel.
@@ -308,6 +312,107 @@ inline constexpr ExtensionInfo Extensions[] = {
 };
 // clang-format on
 
+struct ExtensionSet {
+  // Set of extensions which are currently enabled.
+  ExtensionBitset Enabled;
+  // Set of extensions which have been enabled or disabled at any point. Used
+  // to avoid cluttering the cc1 command-line with lots of unneeded features.
+  ExtensionBitset Touched;
+  // Base architecture version, which we need to know because some feature
+  // dependencies change depending on this.
+  const ArchInfo *BaseArch;
+
+  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
+
+  // Enable the given architecture extension, and any other extensions it
+  // depends on. Does not change the base architecture, or follow dependencies
+  // between features which are only related by required arcitecture versions.
+  void enable(ArchExtKind E);
+
+  // Disable the given architecture extension, and any other extensions which
+  // depend on it. Does not change the base architecture, or follow
+  // dependencies between features which are only related by required
+  // arcitecture versions.
+  void disable(ArchExtKind E);
+
+  // Add default extensions for the given CPU. Records the base architecture,
+  // to later resolve dependencies which depend on it.
+  void addCPUDefaults(const CpuInfo &CPU);
+
+  // Add default extensions for the given architecture version. Records the
+  // base architecture, to later resolve dependencies which depend on it.
+  void addArchDefaults(const ArchInfo &Arch);
+
+  // Add or remove a feature based on a modifier string. The string must be of
+  // the form "<name>" to enable a feature or "no<name>" to disable it. This
+  // will also enable or disable any features as required by the dependencies
+  // between them.
+  bool parseModifier(StringRef Modifier);
+
+  // Convert the set of enabled extension to an LLVM feature list, appending
+  // them to Features.
+  void toLLVMFeatureList(std::vector<StringRef> &Features) const;
+};
+
+// Represents a dependency between two architecture extensions. Later is the
+// feature which was added to the architecture after Earlier, and expands the
+// functionality provided by it. If Later is enabled, then Earlier will also be
+// enabled. If Earlier is disabled, then Later will also be disabled.
+struct ExtensionDependency {
+  ArchExtKind Earlier;
+  ArchExtKind Later;
+};
+
+// clang-format off
+// Each entry here is a link in the dependency chain starting from the
+// extension that was added to the architecture first.
+inline constexpr ExtensionDependency ExtensionDependencies[] = {
+  {AEK_FP, AEK_FP16},
+  {AEK_FP, AEK_SIMD},
+  {AEK_FP, AEK_JSCVT},
+  {AEK_FP, AEK_FP8},
+  {AEK_SIMD, AEK_CRYPTO},
+  {AEK_SIMD, AEK_AES},
+  {AEK_SIMD, AEK_SHA2},
+  {AEK_SIMD, AEK_SHA3},
+  {AEK_SIMD, AEK_SM4},
+  {AEK_SIMD, AEK_RDM},
+  {AEK_SIMD, AEK_DOTPROD},
+  {AEK_SIMD, AEK_FCMA},
+  {AEK_FP16, AEK_FP16FML},
+  {AEK_FP16, AEK_SVE},
+  {AEK_BF16, AEK_SME},
+  {AEK_BF16, AEK_B16B16},
+  {AEK_SVE, AEK_SVE2},
+  {AEK_SVE, AEK_F32MM},
+  {AEK_SVE, AEK_F64MM},
+  {AEK_SVE2, AEK_SVE2p1},
+  {AEK_SVE2, AEK_SVE2BITPERM},
+  {AEK_SVE2, AEK_SVE2AES},
+  {AEK_SVE2, AEK_SVE2SHA3},
+  {AEK_SVE2, AEK_SVE2SM4},
+  {AEK_SVE2, AEK_SMEFA64},
+  {AEK_SVE2, AEK_SMEFA64},
+  {AEK_SME, AEK_SME2},
+  {AEK_SME, AEK_SMEF16F16},
+  {AEK_SME, AEK_SMEF64F64},
+  {AEK_SME, AEK_SMEI16I64},
+  {AEK_SME, AEK_SMEFA64},
+  {AEK_SME2, AEK_SME2p1},
+  {AEK_SME2, AEK_SSVE_FP8FMA},
+  {AEK_SME2, AEK_SSVE_FP8DOT2},
+  {AEK_SME2, AEK_SSVE_FP8DOT4},
+  {AEK_SME2, AEK_SMEF8F16},
+  {AEK_SME2, AEK_SMEF8F32},
+  {AEK_FP8, AEK_SMEF8F16},
+  {AEK_FP8, AEK_SMEF8F32},
+  {AEK_LSE, AEK_LSE128},
+  {AEK_PREDRES, AEK_SPECRES2},
+  {AEK_RAS, AEK_RASv2},
+  {AEK_RCPC, AEK_RCPC3},
+};
+// clang-format on
+
 enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 
 // Information about a specific architecture, e.g. V8.1-A
@@ -329,9 +434,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //     v9.4a > v9.3a > v9.3a > v9.3a > v9a;
-  //       v       v       v       v       v
-  //     v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //             v       v       v       v       v
+  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -349,6 +454,12 @@ struct ArchInfo {
              Other.Version.getMinor().value_or(0);
     }
     return false;
+  }
+
+  // True if this architecture is a superset of Other (including being equal to
+  // it).
+  bool is_superset(const ArchInfo &Other) const {
+    return (*this == Other) || implies(Other);
   }
 
   // Return ArchFeature without the leading "+".
@@ -711,10 +822,10 @@ StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-std::optional<ArchInfo> getArchForCpu(StringRef CPU);
+const ArchInfo *getArchForCpu(StringRef CPU);
 
 // Parser
-std::optional<ArchInfo> parseArch(StringRef Arch);
+const ArchInfo *parseArch(StringRef Arch);
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);

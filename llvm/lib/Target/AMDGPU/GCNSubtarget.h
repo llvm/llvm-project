@@ -155,6 +155,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -297,12 +298,16 @@ public:
 
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
-    if (getGeneration() < GFX11) {
-      // 13-bit field in units of 256-dword.
-      return (256 * 4) * ((1 << 13) - 1);
+    if (getGeneration() >= GFX12) {
+      // 18-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 18) - 1);
     }
-    // 15-bit field in units of 64-dword.
-    return (64 * 4) * ((1 << 15) - 1);
+    if (getGeneration() == GFX11) {
+      // 15-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 15) - 1);
+    }
+    // 13-bit field in units of 256-dword.
+    return (256 * 4) * ((1 << 13) - 1);
   }
 
   /// Return the number of high bits known to be zero for a frame index.
@@ -424,6 +429,8 @@ public:
   bool hasScalarMulHiInsts() const {
     return GFX9Insts;
   }
+
+  bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -774,6 +781,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -995,6 +1004,8 @@ public:
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 

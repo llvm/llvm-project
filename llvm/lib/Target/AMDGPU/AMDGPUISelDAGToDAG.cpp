@@ -3186,10 +3186,11 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
   auto Ld = cast<LoadSDNode>(N);
 
-  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(Ld->getMemOperand()))
+  const MachineMemOperand *MMO = Ld->getMemOperand();
+  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(MMO))
     return false;
 
-  return Ld->getAlign() >= Align(4) &&
+  return Ld->getAlign() >= Align(std::min(MMO->getSize(), uint64_t(4))) &&
          ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
            Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
           (Subtarget->getScalarizeGlobalBehavior() &&
