@@ -59,12 +59,16 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc,
-           VD->getType()->isIntegralOrEnumerationType()
-               ? diag::note_constexpr_ltor_non_const_int
-               : diag::note_constexpr_ltor_non_constexpr,
-           1)
-      << VD;
+
+  if (VD->getType()->isIntegralOrEnumerationType())
+    S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
+  else
+    S.FFDiag(Loc,
+             S.getLangOpts().CPlusPlus11
+                 ? diag::note_constexpr_ltor_non_constexpr
+                 : diag::note_constexpr_ltor_non_integral,
+             1)
+        << VD << VD->getType();
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
@@ -231,12 +235,32 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   assert(Desc);
+
+  auto IsConstType = [&S](const VarDecl *VD) -> bool {
+    if (VD->isConstexpr())
+      return true;
+
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return false;
+
+    QualType T = VD->getType();
+    if (T.isConstQualified())
+      return true;
+
+    if (const auto *RT = T->getAs<ReferenceType>())
+      return RT->getPointeeType().isConstQualified();
+
+    if (const auto *PT = T->getAs<PointerType>())
+      return PT->getPointeeType().isConstQualified();
+
+    return false;
+  };
+
   if (const auto *D = Desc->asValueDecl()) {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->hasGlobalStorage() &&
-        !(VD->isConstexpr() || VD->getType().isConstQualified())) {
+        VD && VD->hasGlobalStorage() && !IsConstType(VD)) {
       diagnoseNonConstVariable(S, OpPC, VD);
-      return false;
+      return S.inConstantContext();
     }
   }
 
@@ -466,7 +490,7 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
 }
 
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPure())
+  if (!MD->isPureVirtual())
     return true;
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
