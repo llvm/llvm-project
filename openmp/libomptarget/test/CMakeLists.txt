@@ -12,6 +12,12 @@ else()
   set(LIBOMPTARGET_DEBUG False)
 endif()
 
+if (OPENMP_STANDALONE_BUILD)
+  set(LIBOMPTARGET_TEST_GPU_PGO False)
+else()
+  set(LIBOMPTARGET_TEST_GPU_PGO True)
+endif()
+
 # Replace the space from user's input with ";" in case that CMake add escape
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")

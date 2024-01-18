@@ -239,7 +239,7 @@ void GPUProfGlobals::dump() const {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
   llvm::outs() << ProfData.Name << " ";
 #include "llvm/ProfileData/InstrProfData.inc"
-    llvm::outs() << " }\n";
+    llvm::outs() << "}\n";
   }
 
   llvm::outs() << "======== Functions ========\n";
