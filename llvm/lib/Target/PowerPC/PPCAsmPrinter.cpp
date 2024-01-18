@@ -1592,10 +1592,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
              "addi, or load/stores with thread-pointer only expected with "
              "local-exec small TLS");
 
-      int64_t Offset = MO.getOffset();
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-      const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
+      const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
       if (Expr)
         TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
 
@@ -1622,19 +1621,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 // greater than 32KB, a new MCExpr is produced to accommodate this situation.
 const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
                                                       int64_t Offset) {
-  assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
-  const GlobalValue *GValue = MO.getGlobal();
-  TLSModel::Model Model = TM.getTLSModel(GValue);
-  assert(Model == TLSModel::LocalExec &&
-         "Only local-exec accesses are handled!");
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
-
   // Non-zero offsets (for loads, stores or `addi`) require additional handling.
   // When the offset is zero, there is no need to create an adjusted MCExpr.
   if (!Offset)
     return nullptr;
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(getSymbol(GValue), RefKind, OutContext);
+
+  assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
+  const GlobalValue *GValue = MO.getGlobal();
+  assert(TM.getTLSModel(GValue) == TLSModel::LocalExec &&
+         "Only local-exec accesses are handled!");
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
   // Find the GlobalVariable that corresponds to the particular TLS variable
@@ -1654,6 +1649,8 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
   // non-zero offset to the TLS variable address.
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
+  const MCExpr *Expr = MCSymbolRefExpr::create(
+      getSymbol(GValue), MCSymbolRefExpr::VK_PPC_AIX_TLSLE, OutContext);
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   if (FinalAddress >= 32768) {
@@ -2890,15 +2887,13 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   // For all TLS variables, calculate their corresponding addresses and store
   // them into TLSVarsToAddressMapping, which will be used to determine whether
   // or not local-exec TLS variables require special assembly printing.
-  uint64_t Address = 0;
   uint64_t TLSVarAddress = 0;
   auto DL = M.getDataLayout();
   for (const auto &G : M.globals()) {
     if (G.isThreadLocal() && !G.isDeclaration()) {
-      TLSVarAddress = alignTo(Address, getGVAlignment(&G, DL));
-      unsigned GVSize = DL.getTypeAllocSize(G.getValueType());
-      Address = TLSVarAddress + GVSize;
+      TLSVarAddress = alignTo(TLSVarAddress, getGVAlignment(&G, DL));
       TLSVarsToAddressMapping[&G] = TLSVarAddress;
+      TLSVarAddress += DL.getTypeAllocSize(G.getValueType());
     }
   }
 

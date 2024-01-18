@@ -7566,15 +7566,8 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
 }
 
 // Is an ADDI eligible for folding for non-TOC-based local-exec accesses?
-static bool isEligibleToFoldADDIForLocalExecAccesses(SDNode *N,
-                                                     SelectionDAG *DAG,
+static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
                                                      SDValue ADDIToFold) {
-  const PPCSubtarget &Subtarget =
-      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
-  // This optimization is only performed for non-TOC-based local-exec accesses.
-  if (!Subtarget.hasAIXSmallLocalExecTLS())
-    return false;
-
   // Check if ADDIToFold (the ADDI that we want to fold into local-exec
   // accesses), is truly an ADDI.
   if (!ADDIToFold.isMachineOpcode() ||
@@ -7586,6 +7579,8 @@ static bool isEligibleToFoldADDIForLocalExecAccesses(SDNode *N,
   // addi is the thread pointer.
   SDValue TPRegNode = ADDIToFold.getOperand(0);
   RegisterSDNode *TPReg = dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
+  const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
   if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
     return false;
 
@@ -7622,7 +7617,7 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   // we want optimized out.
   SDValue InitialADDI = N->getOperand(0);
 
-  if (!isEligibleToFoldADDIForLocalExecAccesses(N, DAG, InitialADDI))
+  if (!isEligibleToFoldADDIForLocalExecAccesses(DAG, InitialADDI))
     return;
 
   // At this point, InitialADDI can be folded into a non-TOC-based local-exec
@@ -7661,6 +7656,9 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
 
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+  const PPCSubtarget &Subtarget =
+      CurDAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
@@ -7671,7 +7669,9 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     if (isVSXSwap(SDValue(N, 0)))
       reduceVSXSwap(N, CurDAG);
 
-    foldADDIForLocalExecAccesses(N, CurDAG);
+    // This optimization is performed for non-TOC-based local-exec accesses.
+    if (HasAIXSmallLocalExecTLS)
+      foldADDIForLocalExecAccesses(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
@@ -7829,7 +7829,9 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
                                             ImmOpnd.getValueType());
       } else if (Offset != 0) {
-        if (isEligibleToFoldADDIForLocalExecAccesses(N, CurDAG, Base)) {
+        // This optimization is performed for non-TOC-based local-exec accesses.
+        if (HasAIXSmallLocalExecTLS &&
+            isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
           // Add the non-zero offset information into the load or store
           // instruction to be used for non-TOC-based local-exec accesses.
           GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
