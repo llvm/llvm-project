@@ -84,8 +84,6 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       Cost += VL;
       break;
     }
-    case RISCV::VMV_S_X:
-      // FIXME: VMV_S_X doesn't use LMUL, the cost should be 1
     default:
       Cost += LMULCost;
     }
@@ -443,10 +441,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vsetivli     zero, 8, e8, mf2, ta, ma (ignored)
     // vmv.s.x      v0, a0
     // vmerge.vvm   v8, v9, v8, v0
+    // We use 2 for the cost of the mask materialization as this is the true
+    // cost for small masks and most shuffles are small.  At worst, this cost
+    // should be a very small constant for the constant pool load.  As such,
+    // we may bias towards large selects slightly more than truely warranted.
     return LT.first *
-           (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for li
-            getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
-                                    LT.second, CostKind));
+           (2 + getRISCVInstructionCost({RISCV::VMERGE_VVM},
+                                        LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==

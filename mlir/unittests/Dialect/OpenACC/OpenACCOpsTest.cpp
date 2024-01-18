@@ -347,3 +347,61 @@ TEST_F(OpenACCOpsTest, loopOpGangVectorWorkerTest) {
   }
   op->removeVectorAttr();
 }
+
+TEST_F(OpenACCOpsTest, routineOpTest) {
+  OwningOpRef<RoutineOp> op =
+      b.create<RoutineOp>(loc, TypeRange{}, ValueRange{});
+
+  EXPECT_FALSE(op->hasSeq());
+  EXPECT_FALSE(op->hasVector());
+  EXPECT_FALSE(op->hasWorker());
+
+  for (auto d : dtypes) {
+    EXPECT_FALSE(op->hasSeq(d));
+    EXPECT_FALSE(op->hasVector(d));
+    EXPECT_FALSE(op->hasWorker(d));
+  }
+
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  op->setSeqAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasSeq());
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->hasSeq(d));
+  op->removeSeqAttr();
+
+  op->setVectorAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasVector());
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->hasVector(d));
+  op->removeVectorAttr();
+
+  op->setWorkerAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasWorker());
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->hasWorker(d));
+  op->removeWorkerAttr();
+
+  op->setGangAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasGang());
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->hasGang(d));
+  op->removeGangAttr();
+
+  op->setGangDimDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
+  op->setGangDimAttr(b.getArrayAttr({b.getIntegerAttr(b.getI64Type(), 8)}));
+  EXPECT_TRUE(op->getGangDimValue().has_value());
+  EXPECT_EQ(op->getGangDimValue().value(), 8);
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->getGangDimValue(d).has_value());
+  op->removeGangDimDeviceTypeAttr();
+  op->removeGangDimAttr();
+
+  op->setBindNameDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
+  op->setBindNameAttr(b.getArrayAttr({b.getStringAttr("fname")}));
+  EXPECT_TRUE(op->getBindNameValue().has_value());
+  EXPECT_EQ(op->getBindNameValue().value(), "fname");
+  for (auto d : dtypesWithoutNone)
+    EXPECT_FALSE(op->getBindNameValue(d).has_value());
+  op->removeBindNameDeviceTypeAttr();
+  op->removeBindNameAttr();
+}

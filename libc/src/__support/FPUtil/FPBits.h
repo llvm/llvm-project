@@ -31,6 +31,32 @@ enum class FPType {
   X86_Binary80,
 };
 
+// A type to interact with floating point type signs.
+// This may be moved outside of 'fputil' if useful.
+struct Sign {
+  LIBC_INLINE constexpr bool is_pos() const { return !is_negative; }
+  LIBC_INLINE constexpr bool is_neg() const { return is_negative; }
+
+  LIBC_INLINE friend constexpr bool operator==(Sign a, Sign b) {
+    return a.is_negative == b.is_negative;
+  }
+  LIBC_INLINE friend constexpr bool operator!=(Sign a, Sign b) {
+    return !(a == b);
+  }
+
+  static const Sign POS;
+  static const Sign NEG;
+
+private:
+  LIBC_INLINE constexpr explicit Sign(bool is_negative)
+      : is_negative(is_negative) {}
+
+  bool is_negative;
+};
+
+LIBC_INLINE_VAR constexpr Sign Sign::NEG = Sign(true);
+LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
+
 // The classes hierarchy is as follows:
 //
 //             ┌───────────────────┐
@@ -273,9 +299,9 @@ protected:
     return encode(exp) | encode(sig);
   }
 
-  LIBC_INLINE static constexpr StorageType encode(bool sign, BiasedExponent exp,
+  LIBC_INLINE static constexpr StorageType encode(Sign sign, BiasedExponent exp,
                                                   Significand sig) {
-    if (sign)
+    if (sign.is_neg())
       return SIGN_MASK | encode(exp, sig);
     return encode(exp, sig);
   }
@@ -309,12 +335,12 @@ protected:
   StorageType bits = 0;
 
 public:
-  LIBC_INLINE constexpr bool get_sign() const {
-    return (bits & SIGN_MASK) != 0;
+  LIBC_INLINE constexpr Sign sign() const {
+    return (bits & SIGN_MASK) ? Sign::NEG : Sign::POS;
   }
 
-  LIBC_INLINE constexpr void set_sign(bool signVal) {
-    if (get_sign() != signVal)
+  LIBC_INLINE constexpr void set_sign(Sign signVal) {
+    if (sign() != signVal)
       bits ^= SIGN_MASK;
   }
 
@@ -363,6 +389,9 @@ public:
   LIBC_INLINE constexpr bool is_zero() const {
     return (bits & EXP_SIG_MASK) == 0;
   }
+
+  LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }
+  LIBC_INLINE constexpr bool is_pos() const { return sign().is_pos(); }
 };
 
 namespace internal {
@@ -421,35 +450,37 @@ public:
     return is_finite() && !is_subnormal();
   }
 
-  LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType zero(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
   }
-  LIBC_INLINE static constexpr StorageType one(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType one(Sign sign = Sign::POS) {
     return encode(sign, Exponent::ZERO(), Significand::ZERO());
   }
-  LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType
+  min_subnormal(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::LSB());
   }
-  LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType
+  max_subnormal(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(),
                   Significand::BITS_ALL_ONES());
   }
-  LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType min_normal(Sign sign = Sign::POS) {
     return encode(sign, Exponent::MIN(), Significand::ZERO());
   }
-  LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType max_normal(Sign sign = Sign::POS) {
     return encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES());
   }
-  LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType inf(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(), Significand::ZERO());
   }
-  LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
+  LIBC_INLINE static constexpr StorageType build_nan(Sign sign = Sign::POS,
                                                      StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   (v ? Significand(v) : (Significand::MSB() >> 1)));
   }
-  LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
-                                                           StorageType v = 0) {
+  LIBC_INLINE static constexpr StorageType
+  build_quiet_nan(Sign sign = Sign::POS, StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   Significand::MSB() | Significand(v));
   }
@@ -539,36 +570,38 @@ public:
     return get_implicit_bit();
   }
 
-  LIBC_INLINE static constexpr StorageType zero(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType zero(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
   }
-  LIBC_INLINE static constexpr StorageType one(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType one(Sign sign = Sign::POS) {
     return encode(sign, Exponent::ZERO(), Significand::MSB());
   }
-  LIBC_INLINE static constexpr StorageType min_subnormal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType
+  min_subnormal(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::LSB());
   }
-  LIBC_INLINE static constexpr StorageType max_subnormal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType
+  max_subnormal(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ZEROES(),
                   Significand::BITS_ALL_ONES() ^ Significand::MSB());
   }
-  LIBC_INLINE static constexpr StorageType min_normal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType min_normal(Sign sign = Sign::POS) {
     return encode(sign, Exponent::MIN(), Significand::MSB());
   }
-  LIBC_INLINE static constexpr StorageType max_normal(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType max_normal(Sign sign = Sign::POS) {
     return encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES());
   }
-  LIBC_INLINE static constexpr StorageType inf(bool sign = false) {
+  LIBC_INLINE static constexpr StorageType inf(Sign sign = Sign::POS) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(), Significand::MSB());
   }
-  LIBC_INLINE static constexpr StorageType build_nan(bool sign = false,
+  LIBC_INLINE static constexpr StorageType build_nan(Sign sign = Sign::POS,
                                                      StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   Significand::MSB() |
                       (v ? Significand(v) : (Significand::MSB() >> 2)));
   }
-  LIBC_INLINE static constexpr StorageType build_quiet_nan(bool sign = false,
-                                                           StorageType v = 0) {
+  LIBC_INLINE static constexpr StorageType
+  build_quiet_nan(Sign sign = Sign::POS, StorageType v = 0) {
     return encode(sign, BiasedExponent::BITS_ALL_ONES(),
                   Significand::MSB() | (Significand::MSB() >> 1) |
                       Significand(v));
@@ -642,10 +675,10 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
 
   // Constants.
   static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
-  static constexpr StorageType MIN_NORMAL = UP::min_normal(false);
-  static constexpr StorageType MAX_NORMAL = UP::max_normal(false);
-  static constexpr StorageType MIN_SUBNORMAL = UP::min_subnormal(false);
-  static constexpr StorageType MAX_SUBNORMAL = UP::max_subnormal(false);
+  static constexpr StorageType MIN_NORMAL = UP::min_normal(Sign::POS);
+  static constexpr StorageType MAX_NORMAL = UP::max_normal(Sign::POS);
+  static constexpr StorageType MIN_SUBNORMAL = UP::min_subnormal(Sign::POS);
+  static constexpr StorageType MAX_SUBNORMAL = UP::max_subnormal(Sign::POS);
 
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
@@ -675,45 +708,46 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
 
   // Methods below this are used by tests.
 
-  LIBC_INLINE static constexpr T zero(bool sign = false) {
+  LIBC_INLINE static constexpr T one(Sign sign = Sign::POS) {
+    return FPBits(UP::one(sign)).get_val();
+  }
+
+  LIBC_INLINE static constexpr T zero(Sign sign = Sign::POS) {
     return FPBits(UP::zero(sign)).get_val();
   }
 
-  LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
-
-  LIBC_INLINE static constexpr T inf(bool sign = false) {
+  LIBC_INLINE static constexpr T inf(Sign sign = Sign::POS) {
     return FPBits(UP::inf(sign)).get_val();
   }
 
-  LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
-
   LIBC_INLINE static constexpr T min_normal() {
-    return FPBits(UP::min_normal(false)).get_val();
+    return FPBits(UP::min_normal(Sign::POS)).get_val();
   }
 
   LIBC_INLINE static constexpr T max_normal() {
-    return FPBits(UP::max_normal(false)).get_val();
+    return FPBits(UP::max_normal(Sign::POS)).get_val();
   }
 
   LIBC_INLINE static constexpr T min_denormal() {
-    return FPBits(UP::min_subnormal(false)).get_val();
+    return FPBits(UP::min_subnormal(Sign::POS)).get_val();
   }
 
   LIBC_INLINE static constexpr T max_denormal() {
-    return FPBits(UP::max_subnormal(false)).get_val();
+    return FPBits(UP::max_subnormal(Sign::POS)).get_val();
   }
 
   LIBC_INLINE static constexpr T build_nan(StorageType v) {
-    return FPBits(UP::build_nan(false, v)).get_val();
+    return FPBits(UP::build_nan(Sign::POS, v)).get_val();
   }
 
-  LIBC_INLINE static constexpr T build_quiet_nan(StorageType v) {
-    return FPBits(UP::build_quiet_nan(false, v)).get_val();
+  LIBC_INLINE static constexpr T build_quiet_nan(StorageType v,
+                                                 Sign sign = Sign::POS) {
+    return FPBits(UP::build_quiet_nan(sign, v)).get_val();
   }
 
   // TODO: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr FPBits<T>
-  create_value(bool sign, StorageType biased_exp, StorageType mantissa) {
+  create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {
     static_assert(get_fp_type<T>() != FPType::X86_Binary80,
                   "This function is not tested for X86 Extended Precision");
     return FPBits(UP::encode(

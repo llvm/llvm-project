@@ -1245,6 +1245,11 @@ let SubtargetPredicate = isGFX12Plus in {
 defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_cond_sub_u32", VGPR_32, i32
 >;
+
+let FPAtomic = 1 in
+defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_pk_add_bf16", VGPR_32, v2bf16
+>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1711,6 +1716,7 @@ let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
 
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
@@ -1781,14 +1787,22 @@ let OtherPredicates = [HasAtomicFaddNoRtnInsts] in
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["noret"]>;
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in {
+  let SubtargetPredicate = isGFX9Only in
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16", ["noret"]>;
+
+  let SubtargetPredicate = isGFX12Plus in
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16_VBUFFER", ["noret"]>;
 } // End OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts]
 
 let OtherPredicates = [HasAtomicFaddRtnInsts] in
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32, "BUFFER_ATOMIC_ADD_F32", ["ret"]>;
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in {
+  let SubtargetPredicate = isGFX9Only in
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16", ["ret"]>;
+
+  let SubtargetPredicate = isGFX12Plus in
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16_VBUFFER", ["ret"]>;
 } // End OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts]
 
 let OtherPredicates = [isGFX90APlus] in {
@@ -2645,6 +2659,8 @@ defm BUFFER_ATOMIC_SWAP           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x033,
 defm BUFFER_ATOMIC_SWAP_X2        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x041, "buffer_atomic_swap_b64">;
 defm BUFFER_ATOMIC_XOR            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x03E, "buffer_atomic_xor_b32">;
 defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x04B, "buffer_atomic_xor_b64">;
+defm BUFFER_ATOMIC_PK_ADD_F16     : MUBUF_Real_Atomic_gfx12<0x059>;
+defm BUFFER_ATOMIC_PK_ADD_BF16    : MUBUF_Real_Atomic_gfx12<0x05a>;
 
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX10.

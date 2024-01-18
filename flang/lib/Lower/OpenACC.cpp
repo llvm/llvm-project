@@ -3469,6 +3469,72 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   llvm_unreachable("unsupported declarative directive");
 }
 
+static bool hasDeviceType(llvm::SmallVector<mlir::Attribute> &arrayAttr,
+                          mlir::acc::DeviceType deviceType) {
+  for (auto attr : arrayAttr) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    if (deviceTypeAttr.getValue() == deviceType)
+      return true;
+  }
+  return false;
+}
+
+template <typename RetTy, typename AttrTy>
+static std::optional<RetTy>
+getAttributeValueByDeviceType(llvm::SmallVector<mlir::Attribute> &attributes,
+                              llvm::SmallVector<mlir::Attribute> &deviceTypes,
+                              mlir::acc::DeviceType deviceType) {
+  assert(attributes.size() == deviceTypes.size() &&
+         "expect same number of attributes");
+  for (auto it : llvm::enumerate(deviceTypes)) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(it.value());
+    if (deviceTypeAttr.getValue() == deviceType) {
+      if constexpr (std::is_same_v<mlir::StringAttr, AttrTy>) {
+        auto strAttr = mlir::dyn_cast<AttrTy>(attributes[it.index()]);
+        return strAttr.getValue();
+      } else if constexpr (std::is_same_v<mlir::IntegerAttr, AttrTy>) {
+        auto intAttr =
+            mlir::dyn_cast<mlir::IntegerAttr>(attributes[it.index()]);
+        return intAttr.getInt();
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+static bool compareDeviceTypeInfo(
+    mlir::acc::RoutineOp op,
+    llvm::SmallVector<mlir::Attribute> &bindNameArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &bindNameDeviceTypeArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &gangArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &gangDimArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypeArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &seqArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &workerArrayAttr,
+    llvm::SmallVector<mlir::Attribute> &vectorArrayAttr) {
+  for (uint32_t dtypeInt = 0;
+       dtypeInt != mlir::acc::getMaxEnumValForDeviceType(); ++dtypeInt) {
+    auto dtype = static_cast<mlir::acc::DeviceType>(dtypeInt);
+    if (op.getBindNameValue(dtype) !=
+        getAttributeValueByDeviceType<llvm::StringRef, mlir::StringAttr>(
+            bindNameArrayAttr, bindNameDeviceTypeArrayAttr, dtype))
+      return false;
+    if (op.hasGang(dtype) != hasDeviceType(gangArrayAttr, dtype))
+      return false;
+    if (op.getGangDimValue(dtype) !=
+        getAttributeValueByDeviceType<int64_t, mlir::IntegerAttr>(
+            gangDimArrayAttr, gangDimDeviceTypeArrayAttr, dtype))
+      return false;
+    if (op.hasSeq(dtype) != hasDeviceType(seqArrayAttr, dtype))
+      return false;
+    if (op.hasWorker(dtype) != hasDeviceType(workerArrayAttr, dtype))
+      return false;
+    if (op.hasVector(dtype) != hasDeviceType(vectorArrayAttr, dtype))
+      return false;
+  }
+  return true;
+}
+
 static void attachRoutineInfo(mlir::func::FuncOp func,
                               mlir::SymbolRefAttr routineAttr) {
   llvm::SmallVector<mlir::SymbolRefAttr> routines;
@@ -3518,17 +3584,23 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       funcName = funcOp.getName();
     }
   }
-  bool hasSeq = false, hasGang = false, hasWorker = false, hasVector = false,
-       hasNohost = false;
-  std::optional<std::string> bindName = std::nullopt;
-  std::optional<int64_t> gangDim = std::nullopt;
+  bool hasNohost = false;
+
+  llvm::SmallVector<mlir::Attribute> seqDeviceTypes, vectorDeviceTypes,
+      workerDeviceTypes, bindNameDeviceTypes, bindNames, gangDeviceTypes,
+      gangDimDeviceTypes, gangDimValues;
+
+  // device_type attribute is set to `none` until a device_type clause is
+  // encountered.
+  auto crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None);
 
   for (const Fortran::parser::AccClause &clause : clauses.v) {
     if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      hasSeq = true;
+      seqDeviceTypes.push_back(crtDeviceTypeAttr);
     } else if (const auto *gangClause =
                    std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-      hasGang = true;
+
       if (gangClause->v) {
         const Fortran::parser::AccGangArgList &x = *gangClause->v;
         for (const Fortran::parser::AccGangArg &gangArg : x.v) {
@@ -3539,21 +3611,27 @@ void Fortran::lower::genOpenACCRoutineConstruct(
             if (!dimValue)
               mlir::emitError(loc,
                               "dim value must be a constant positive integer");
-            gangDim = *dimValue;
+            gangDimValues.push_back(
+                builder.getIntegerAttr(builder.getI64Type(), *dimValue));
+            gangDimDeviceTypes.push_back(crtDeviceTypeAttr);
           }
         }
+      } else {
+        gangDeviceTypes.push_back(crtDeviceTypeAttr);
       }
     } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-      hasVector = true;
+      vectorDeviceTypes.push_back(crtDeviceTypeAttr);
     } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-      hasWorker = true;
+      workerDeviceTypes.push_back(crtDeviceTypeAttr);
     } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
       hasNohost = true;
     } else if (const auto *bindClause =
                    std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
       if (const auto *name =
               std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-        bindName = converter.mangleName(*name->symbol);
+        bindNames.push_back(
+            builder.getStringAttr(converter.mangleName(*name->symbol)));
+        bindNameDeviceTypes.push_back(crtDeviceTypeAttr);
       } else if (const auto charExpr =
                      std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
                          &bindClause->v.u)) {
@@ -3562,8 +3640,18 @@ void Fortran::lower::genOpenACCRoutineConstruct(
                                                           *charExpr);
         if (!name)
           mlir::emitError(loc, "Could not retrieve the bind name");
-        bindName = *name;
+        bindNames.push_back(builder.getStringAttr(*name));
+        bindNameDeviceTypes.push_back(crtDeviceTypeAttr);
       }
+    } else if (const auto *deviceTypeClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceType>(
+                       &clause.u)) {
+      const Fortran::parser::AccDeviceTypeExprList &deviceTypeExprList =
+          deviceTypeClause->v;
+      assert(deviceTypeExprList.v.size() == 1 &&
+             "expect only one device_type expr");
+      crtDeviceTypeAttr = mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), getDeviceType(deviceTypeExprList.v.front().v));
     }
   }
 
@@ -3575,12 +3663,11 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     if (routineOp.getFuncName().str().compare(funcName) == 0) {
       // If the routine is already specified with the same clauses, just skip
       // the operation creation.
-      if (routineOp.getBindName() == bindName &&
-          routineOp.getGang() == hasGang &&
-          routineOp.getWorker() == hasWorker &&
-          routineOp.getVector() == hasVector && routineOp.getSeq() == hasSeq &&
-          routineOp.getNohost() == hasNohost &&
-          routineOp.getGangDim() == gangDim)
+      if (compareDeviceTypeInfo(routineOp, bindNames, bindNameDeviceTypes,
+                                gangDeviceTypes, gangDimValues,
+                                gangDimDeviceTypes, seqDeviceTypes,
+                                workerDeviceTypes, vectorDeviceTypes) &&
+          routineOp.getNohost() == hasNohost)
         return;
       mlir::emitError(loc, "Routine already specified with different clauses");
     }
@@ -3588,10 +3675,19 @@ void Fortran::lower::genOpenACCRoutineConstruct(
 
   modBuilder.create<mlir::acc::RoutineOp>(
       loc, routineOpName.str(), funcName,
-      bindName ? builder.getStringAttr(*bindName) : mlir::StringAttr{}, hasGang,
-      hasWorker, hasVector, hasSeq, hasNohost, /*implicit=*/false,
-      gangDim ? builder.getIntegerAttr(builder.getIntegerType(32), *gangDim)
-              : mlir::IntegerAttr{});
+      bindNames.empty() ? nullptr : builder.getArrayAttr(bindNames),
+      bindNameDeviceTypes.empty() ? nullptr
+                                  : builder.getArrayAttr(bindNameDeviceTypes),
+      workerDeviceTypes.empty() ? nullptr
+                                : builder.getArrayAttr(workerDeviceTypes),
+      vectorDeviceTypes.empty() ? nullptr
+                                : builder.getArrayAttr(vectorDeviceTypes),
+      seqDeviceTypes.empty() ? nullptr : builder.getArrayAttr(seqDeviceTypes),
+      hasNohost, /*implicit=*/false,
+      gangDeviceTypes.empty() ? nullptr : builder.getArrayAttr(gangDeviceTypes),
+      gangDimValues.empty() ? nullptr : builder.getArrayAttr(gangDimValues),
+      gangDimDeviceTypes.empty() ? nullptr
+                                 : builder.getArrayAttr(gangDimDeviceTypes));
 
   if (funcOp)
     attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpName.str()));
