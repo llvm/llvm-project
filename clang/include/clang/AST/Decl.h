@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_DECL_H
 #define LLVM_CLANG_AST_DECL_H
 
-#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -3252,16 +3251,15 @@ public:
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
-class EnumConstantDecl : public ValueDecl,
-                         public Mergeable<EnumConstantDecl>,
-                         public APIntStorage {
+class EnumConstantDecl : public ValueDecl, public Mergeable<EnumConstantDecl> {
   Stmt *Init; // an integer constant expression
-  bool IsUnsigned;
+  llvm::APSInt Val; // The value.
 
 protected:
-  EnumConstantDecl(const ASTContext &C, DeclContext *DC, SourceLocation L,
+  EnumConstantDecl(DeclContext *DC, SourceLocation L,
                    IdentifierInfo *Id, QualType T, Expr *E,
-                   const llvm::APSInt &V);
+                   const llvm::APSInt &V)
+    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt*)E), Val(V) {}
 
 public:
   friend class StmtIteratorBase;
@@ -3274,15 +3272,10 @@ public:
 
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
-  llvm::APSInt getInitVal() const {
-    return llvm::APSInt(getValue(), IsUnsigned);
-  }
+  const llvm::APSInt &getInitVal() const { return Val; }
 
   void setInitExpr(Expr *E) { Init = (Stmt*) E; }
-  void setInitVal(const ASTContext &C, const llvm::APSInt &V) {
-    setValue(C, V);
-    IsUnsigned = V.isUnsigned();
-  }
+  void setInitVal(const llvm::APSInt &V) { Val = V; }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
