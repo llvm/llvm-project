@@ -281,7 +281,7 @@ static LogicalResult applyTilingToAll(
            cast<scf::ForallOp>(tiledResults->loops[0]).getRank() == numLoops &&
            "Mismatched number of loops, tile and fuse transform should have "
            "failed");
-    loopOps[0].push_back({tiledResults->loops[0]});
+    loopOps[0] = {tiledResults->loops[0]};
   }
 
   transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
