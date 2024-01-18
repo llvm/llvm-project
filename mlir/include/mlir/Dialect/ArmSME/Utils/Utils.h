@@ -51,10 +51,10 @@ LogicalResult verifyOperationHasValidTileId(Operation *);
 
 /// Generates a for loop over ZA tile slices where the induction variable is
 /// the tile slice index and each iteration yields a new tile. Loop body is
-/// built via the callback, which returns the next tile value.
+/// built via `makeLoopBody`, which returns the next tile value.
 scf::ForOp createLoopOverTileSlices(
     PatternRewriter &rewriter, Location loc, Value initTile,
-    std::function<Value(OpBuilder &, Location, Value, Value)> callback);
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody);
 
 } // namespace mlir::arm_sme
 

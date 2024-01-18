@@ -239,8 +239,8 @@ struct BroadcastOpToArmSMELowering
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
-    auto callback = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
-                        Value currentTile) {
+    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                            Value currentTile) {
       // Create 'arm_sme.move_vector_to_tile_slice' to broadcast the value
       // to each tile slice.
       auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
@@ -249,7 +249,8 @@ struct BroadcastOpToArmSMELowering
     };
 
     // Create a loop over ZA tile slices.
-    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, callback);
+    auto forOp =
+        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
 
     rewriter.replaceOp(broadcastOp, forOp.getResult(0));
 
@@ -299,8 +300,8 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
-    auto callback = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
-                        Value currentTile) {
+    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                            Value currentTile) {
       auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
           loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
@@ -308,7 +309,8 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     // Next, create a loop over ZA tile slices and "move" the generated 1-d
     // vector to each slice.
-    auto forOp = createLoopOverTileSlices(rewriter, loc, initTile, callback);
+    auto forOp =
+        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
 
     rewriter.replaceOp(splatOp, forOp.getResult(0));
 

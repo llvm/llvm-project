@@ -77,16 +77,16 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
     auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
 
     auto initTile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
-    auto callback = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
-                        Value currentTile) {
+    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
+                            Value currentTile) {
       // Create 'arm_sme.move_vector_to_tile_slice' to write vector to tile
       // slice.
       auto nextTile = b.create<arm_sme::MoveVectorToTileSliceOp>(
           loc, tileType, constantOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
-    auto forOp = mlir::arm_sme::createLoopOverTileSlices(rewriter, loc,
-                                                         initTile, callback);
+    auto forOp = mlir::arm_sme::createLoopOverTileSlices(
+        rewriter, loc, initTile, makeLoopBody);
     rewriter.replaceOp(constantOp, forOp.getResult(0));
 
     return success();
