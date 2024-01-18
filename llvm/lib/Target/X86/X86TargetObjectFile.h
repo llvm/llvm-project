@@ -51,9 +51,7 @@ namespace llvm {
   /// X86ELFTargetObjectFile for commonalities with 32-bit targets.
   class X86_64ELFTargetObjectFile : public X86ELFTargetObjectFile {
   public:
-    X86_64ELFTargetObjectFile() {
-      SupportIndirectSymViaGOTPCRel = true;
-    }
+    X86_64ELFTargetObjectFile() { SupportIndirectSymViaGOTPCRel = true; }
 
     const MCExpr *
     getIndirectSymViaGOTPCRel(const GlobalValue *GV, const MCSymbol *Sym,
