@@ -2,12 +2,20 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
+// RUN: touch %t/libc++.so
 // RUN: split-file %s %t
 // RUN: cd %t
 
 // RUN: %clang -print-library-module-manifest-path \
 // RUN:     -stdlib=libc++ \
-// RUN:     --sysroot=%S/Inputs/cxx23_modules \
+// RUN:     --sysroot=%t \
+// RUN:     --target=x86_64-linux-gnu 2>&1 \
+// RUN:   | FileCheck libcxx-no-module-json.cpp
+
+// RUN: touch %t/modules.json
+// RUN: %clang -print-library-module-manifest-path \
+// RUN:     -stdlib=libc++ \
+// RUN:     --sysroot=%t \
 // RUN:     --target=x86_64-linux-gnu 2>&1 \
 // RUN:   | FileCheck libcxx.cpp
 
@@ -15,12 +23,17 @@
 // RUN:     -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/cxx23_modules \
 // RUN:     --target=x86_64-linux-gnu 2>&1 \
-// RUN:   | FileCheck -- libstdcxx.cpp
+// RUN:   | FileCheck libstdcxx.cpp
+
+//--- libcxx-no-module-json.cpp
+
+// The final path separator differs on Windows and Linux.
+// CHECK: <NOT PRESENT>
 
 //--- libcxx.cpp
 
 // The final path separator differs on Windows and Linux.
-// CHECK: {{.*}}/Inputs/cxx23_modules/usr/lib/x86_64-linux-gnu{{[\/]}}.modules.json
+// CHECK: modules.json
 
 //--- libstdcxx.cpp
 
