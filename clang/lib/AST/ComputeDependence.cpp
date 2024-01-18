@@ -373,13 +373,11 @@ ExprDependence clang::computeDependence(PackIndexingExpr *E) {
          ~ExprDependence::UnexpandedPack;
   else if (!E->getIndexExpr()->isInstantiationDependent()) {
     std::optional<unsigned> Index = E->getSelectedIndex();
-    assert(Index && *Index < Exprs.size() &&
-           "pack index out of bound");
+    assert(Index && *Index < Exprs.size() && "pack index out of bound");
     D |= Exprs[*Index]->getDependence();
   }
   return D;
 }
-
 
 ExprDependence clang::computeDependence(SubstNonTypeTemplateParmExpr *E) {
   return E->getReplacement()->getDependence();

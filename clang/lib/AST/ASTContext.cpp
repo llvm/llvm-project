@@ -5719,8 +5719,8 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       void *Mem = Allocate(
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
-      Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         Expansions);
+      Canon = new (Mem)
+          PackIndexingType(*this, QualType(), Pattern, IndexExpr, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);

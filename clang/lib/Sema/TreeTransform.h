@@ -15391,7 +15391,8 @@ QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E, SourceLocation) {
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::RebuildPackIndexingType(QualType Pattern, Expr *IndexExpr, SourceLocation Loc,
+QualType TreeTransform<Derived>::RebuildPackIndexingType(
+    QualType Pattern, Expr *IndexExpr, SourceLocation Loc,
     SourceLocation EllipsisLoc, bool FullySubstituted,
     ArrayRef<QualType> Expansions) {
   return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc,

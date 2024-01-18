@@ -4361,7 +4361,7 @@ class PackIndexingExpr final
                             Exprs);
 
     setDependence(computeDependence(this));
-    if(!isInstantiationDependent())
+    if (!isInstantiationDependent())
       setValueKind(getSelectedExpr()->getValueKind());
   }
 
@@ -4399,11 +4399,10 @@ public:
 
   Expr *getIndexExpr() const { return cast<Expr>(SubExprs[1]); }
 
-
   std::optional<unsigned> getSelectedIndex() const {
     if (isInstantiationDependent())
       return std::nullopt;
-    ConstantExpr* CE = cast<ConstantExpr>(getIndexExpr());
+    ConstantExpr *CE = cast<ConstantExpr>(getIndexExpr());
     auto Index = CE->getResultAsAPSInt();
     assert(Index.isNonNegative() && "Invalid index");
     return static_cast<unsigned>(Index.getExtValue());
