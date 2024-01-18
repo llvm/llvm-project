@@ -14,7 +14,7 @@
 // CHECK-NEXT: LoopHintAttr
 // CHECK-SAME: line:10:9
 
-extern int f() __attribute__((const));
+extern char f() __attribute__((const));
 
 struct S;
 

@@ -59,7 +59,7 @@ int f12(int arg) {
 
 // CHECK: define{{.*}} int @f13() [[NUW_OS_RN:#[0-9]+]]
 int f13(void) __attribute__((const));
-int f13(void){}
+int f13(void){ return 0; }
 
 
 // [irgen] clang isn't setting the optsize bit on functions
