@@ -84,10 +84,10 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
       }
       // Normalize denormal inputs.
-      xbits.set_val(xbits.get_val() * 0x1.0p23f);
+      xbits = FPBits(xbits.get_val() * 0x1.0p23f);
       m -= 23;
       x_u = xbits.uintval();
     }
@@ -117,9 +117,9 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
       }
-      if (xbits.get_sign() && !xbits.is_nan()) {
+      if (xbits.is_neg() && !xbits.is_nan()) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);

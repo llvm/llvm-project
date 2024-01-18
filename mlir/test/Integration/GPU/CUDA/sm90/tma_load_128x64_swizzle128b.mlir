@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  -gpu-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
+// RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

@@ -66,7 +66,7 @@ bool test_has_sme(void) __arm_streaming_compatible {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svundef_za(void) __arm_streaming_compatible __arm_shared_za {
+void test_svundef_za(void) __arm_streaming_compatible __arm_out("za") {
   svundef_za();
 }
 

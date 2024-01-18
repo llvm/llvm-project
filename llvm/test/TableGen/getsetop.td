@@ -8,6 +8,7 @@
 // RUN: not llvm-tblgen -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
 // RUN: not llvm-tblgen -DERROR8 %s 2>&1 | FileCheck --check-prefix=ERROR8 %s
 // RUN: not llvm-tblgen -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
+// RUN: not llvm-tblgen -DERROR10 %s 2>&1 | FileCheck --check-prefix=ERROR10 %s
 
 // !setop and !getop are deprecated in favor of !setdagop and !getdagop.
 // Two tests retain the old names just to be sure they are still supported.
@@ -148,3 +149,32 @@ def test {
   dag orig_out_of_range = !setdagarg(orig, foo, (foo qux:$a));
 #endif
 }
+
+// Copy a list (Predicates) that is a field in a dag operator
+// (TestInstruction), which is defined in the same multiclass
+// (TestInstructionAndPattern) as the destination of the copy
+// (TestPattern::Predicates).
+class TestInstruction<list<int> _Predicates> {
+  list<int> Predicates = _Predicates;
+}
+#ifdef ERROR10
+class OtherTestInstruction<list<int> _Predicates> {
+  list<int> Predicates = _Predicates;
+}
+// ERROR10: error: Expected type 'OtherTestInstruction', got 'TestInstruction'
+class TestPattern<dag D> {
+  list<int> Predicates = !getdagop<OtherTestInstruction>(D).Predicates;
+}
+#else
+class TestPattern<dag D> {
+  list<int> Predicates = !getdagop<TestInstruction>(D).Predicates;
+}
+#endif
+
+multiclass TestInstructionAndPattern<list<int> Predicates> {
+  def NAME : TestInstruction<Predicates>;
+  def : TestPattern<(!cast<TestInstruction>(NAME) foo)>;
+}
+// CHECK: def testInst0 { // TestInstruction
+// CHECK-NEXT: list<int> Predicates = [7];
+defm testInst0 : TestInstructionAndPattern<[7]>;

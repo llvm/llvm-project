@@ -43,7 +43,7 @@ LIBC_INLINE long double sqrt(long double x) {
   FPBits<long double> bits(x);
 
   if (bits.is_inf_or_nan()) {
-    if (bits.get_sign() && (bits.get_mantissa() == 0)) {
+    if (bits.is_neg() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
       return LDBits::build_quiet_nan(ONE >> 1);
     } else {
@@ -55,7 +55,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // sqrt(+0) = +0
     // sqrt(-0) = -0
     return x;
-  } else if (bits.get_sign()) {
+  } else if (bits.is_neg()) {
     // sqrt( negative numbers ) = NaN
     return LDBits::build_quiet_nan(ONE >> 1);
   } else {
@@ -131,7 +131,7 @@ LIBC_INLINE long double sqrt(long double x) {
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
-    return out;
+    return out.get_val();
   }
 }
 #endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80

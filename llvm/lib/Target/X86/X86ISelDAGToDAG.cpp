@@ -2355,8 +2355,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
-        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        uint64_t Offset = (uint64_t)AddVal->getZExtValue();
+        uint64_t Offset = Src.getConstantOperandVal(1);
         if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
           SDValue Res;
@@ -2852,7 +2851,7 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
                                        SDValue &Index, SDValue &Disp,
                                        SDValue &Segment) {
   X86ISelAddressMode AM;
-  AM.Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+  AM.Scale = ScaleOp->getAsZExtVal();
 
   // Attempt to match index patterns, as long as we're not relying on implicit
   // sign-extension, which is performed BEFORE scale.
@@ -4087,14 +4086,17 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   SDValue Control;
   unsigned ROpc, MOpc;
 
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
   if (!PreferBEXTR) {
     assert(Subtarget->hasBMI2() && "We must have BMI2's BZHI then.");
     // If we can't make use of BEXTR then we can't fuse shift+mask stages.
     // Let's perform the mask first, and apply shift later. Note that we need to
     // widen the mask to account for the fact that we'll apply shift afterwards!
     Control = CurDAG->getTargetConstant(Shift + MaskSize, dl, NVT);
-    ROpc = NVT == MVT::i64 ? X86::BZHI64rr : X86::BZHI32rr;
-    MOpc = NVT == MVT::i64 ? X86::BZHI64rm : X86::BZHI32rm;
+    ROpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BZHI64rr)
+                           : GET_EGPR_IF_ENABLED(X86::BZHI32rr);
+    MOpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BZHI64rm)
+                           : GET_EGPR_IF_ENABLED(X86::BZHI32rm);
     unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
     Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
   } else {
@@ -4109,8 +4111,10 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     } else {
       assert(Subtarget->hasBMI() && "We must have BMI1's BEXTR then.");
       // BMI requires the immediate to placed in a register.
-      ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
-      MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+      ROpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BEXTR64rr)
+                             : GET_EGPR_IF_ENABLED(X86::BEXTR32rr);
+      MOpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BEXTR64rm)
+                             : GET_EGPR_IF_ENABLED(X86::BEXTR32rm);
       unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
       Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
     }
@@ -5483,25 +5487,30 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     case MVT::i32:
-      Opc  = UseMULXHi ? X86::MULX32Hrr :
-             UseMULX ? X86::MULX32rr :
-             IsSigned ? X86::IMUL32r : X86::MUL32r;
-      MOpc = UseMULXHi ? X86::MULX32Hrm :
-             UseMULX ? X86::MULX32rm :
-             IsSigned ? X86::IMUL32m : X86::MUL32m;
+      Opc = UseMULXHi  ? X86::MULX32Hrr
+            : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rr)
+            : IsSigned ? X86::IMUL32r
+                       : X86::MUL32r;
+      MOpc = UseMULXHi  ? X86::MULX32Hrm
+             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rm)
+             : IsSigned ? X86::IMUL32m
+                        : X86::MUL32m;
       LoReg = UseMULX ? X86::EDX : X86::EAX;
       HiReg = X86::EDX;
       break;
     case MVT::i64:
-      Opc  = UseMULXHi ? X86::MULX64Hrr :
-             UseMULX ? X86::MULX64rr :
-             IsSigned ? X86::IMUL64r : X86::MUL64r;
-      MOpc = UseMULXHi ? X86::MULX64Hrm :
-             UseMULX ? X86::MULX64rm :
-             IsSigned ? X86::IMUL64m : X86::MUL64m;
+      Opc = UseMULXHi  ? X86::MULX64Hrr
+            : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX64rr)
+            : IsSigned ? X86::IMUL64r
+                       : X86::MUL64r;
+      MOpc = UseMULXHi  ? X86::MULX64Hrm
+             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX64rm)
+             : IsSigned ? X86::IMUL64m
+                        : X86::MUL64m;
       LoReg = UseMULX ? X86::RDX : X86::RAX;
       HiReg = X86::RDX;
       break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;

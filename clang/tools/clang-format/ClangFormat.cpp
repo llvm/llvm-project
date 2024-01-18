@@ -573,7 +573,7 @@ static int dumpConfig(bool IsSTDIN) {
 
 using String = SmallString<128>;
 static String IgnoreDir;             // Directory of .clang-format-ignore file.
-static StringRef PrevDir;            // Directory of previous `FilePath`.
+static String PrevDir;               // Directory of previous `FilePath`.
 static SmallVector<String> Patterns; // Patterns in .clang-format-ignore file.
 
 // Check whether `FilePath` is ignored according to the nearest

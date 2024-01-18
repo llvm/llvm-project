@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1

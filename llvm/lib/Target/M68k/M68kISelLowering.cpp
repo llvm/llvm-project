@@ -2375,7 +2375,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == M68kISD::SUB) {
-    unsigned CondCode = cast<ConstantSDNode>(CC)->getZExtValue();
+    unsigned CondCode = CC->getAsZExtVal();
 
     if ((CondCode == M68k::COND_CC || CondCode == M68k::COND_CS) &&
         (isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
@@ -2491,7 +2491,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       Cond = Cmp;
       AddTest = false;
     } else {
-      switch (cast<ConstantSDNode>(CC)->getZExtValue()) {
+      switch (CC->getAsZExtVal()) {
       default:
         break;
       case M68k::COND_VS:

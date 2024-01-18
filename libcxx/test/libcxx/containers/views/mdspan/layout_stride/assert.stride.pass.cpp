@@ -30,7 +30,7 @@ int main(int, char**) {
     std::layout_stride::mapping<std::dextents<int, 3>> m(
         std::dextents<int, 3>(100, 100, 100), std::array<int, 3>{1, 100, 10000});
 
-    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "invalid rank index");
+    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "layout_stride::mapping::stride(): invalid rank index");
   }
   return 0;
 }

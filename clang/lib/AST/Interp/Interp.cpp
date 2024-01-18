@@ -53,6 +53,25 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   return true;
 }
 
+static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
+                                     const ValueDecl *VD) {
+  if (!S.getLangOpts().CPlusPlus)
+    return;
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+
+  if (VD->getType()->isIntegralOrEnumerationType())
+    S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
+  else
+    S.FFDiag(Loc,
+             S.getLangOpts().CPlusPlus11
+                 ? diag::note_constexpr_ltor_non_constexpr
+                 : diag::note_constexpr_ltor_non_integral,
+             1)
+        << VD << VD->getType();
+  S.Note(VD->getLocation(), diag::note_declared_at);
+}
+
 static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         AccessKinds AK) {
   if (Ptr.isActive())
@@ -134,6 +153,18 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   if (CurFunc->isUnevaluatedBuiltin())
     return;
 
+  // Some builtin functions require us to only look at the call site, since
+  // the classified parameter types do not match.
+  if (CurFunc->isBuiltin()) {
+    const auto *CE =
+        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
+    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
+      const Expr *A = CE->getArg(I);
+      popArg(S, A);
+    }
+    return;
+  }
+
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.
@@ -159,9 +190,7 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_ltor_non_constexpr, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
+    diagnoseNonConstVariable(S, OpPC, VD);
   }
   return false;
 }
@@ -202,6 +231,44 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   return true;
+}
+
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+  assert(Desc);
+
+  auto IsConstType = [&S](const VarDecl *VD) -> bool {
+    if (VD->isConstexpr())
+      return true;
+
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return false;
+
+    QualType T = VD->getType();
+    if (T.isConstQualified())
+      return true;
+
+    if (const auto *RT = T->getAs<ReferenceType>())
+      return RT->getPointeeType().isConstQualified();
+
+    if (const auto *PT = T->getAs<PointerType>())
+      return PT->getPointeeType().isConstQualified();
+
+    return false;
+  };
+
+  if (const auto *D = Desc->asValueDecl()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->hasGlobalStorage() && !IsConstType(VD)) {
+      diagnoseNonConstVariable(S, OpPC, VD);
+      return S.inConstantContext();
+    }
+  }
+
+  return true;
+}
+
+static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -290,9 +357,12 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckDummy(S, OpPC, Ptr))
-    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckConstant(S, OpPC, Ptr))
+    return false;
+
+  if (!CheckDummy(S, OpPC, Ptr))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
@@ -420,7 +490,7 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
 }
 
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPure())
+  if (!MD->isPureVirtual())
     return true;
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
@@ -593,13 +663,7 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
     }
   } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getType().isConstQualified()) {
-      S.FFDiag(E,
-               VD->getType()->isIntegralOrEnumerationType()
-                   ? diag::note_constexpr_ltor_non_const_int
-                   : diag::note_constexpr_ltor_non_constexpr,
-               1)
-          << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+      diagnoseNonConstVariable(S, OpPC, VD);
       return false;
     }
 

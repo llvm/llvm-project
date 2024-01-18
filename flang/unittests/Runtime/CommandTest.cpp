@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
 #include <cstddef>
@@ -49,6 +50,17 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
   if (descriptor->Allocate() != 0) {
     return nullptr;
   }
+  return descriptor;
+}
+
+template <int kind = sizeof(std::int64_t)>
+static OwningPtr<Descriptor> IntDescriptor(const int &value) {
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
+      kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  if (descriptor->Allocate() != 0) {
+    return nullptr;
+  }
+  std::memcpy(descriptor->OffsetElement<int>(), &value, sizeof(int));
   return descriptor;
 }
 
@@ -220,6 +232,62 @@ protected:
   NoArgv() : CommandFixture(0, nullptr) {}
 };
 
+#if _WIN32 || _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || \
+    _SVID_SOURCE || defined(_POSIX_SOURCE)
+TEST_F(NoArgv, FdateGetDate) {
+  char input[]{"24LengthCharIsJustRight"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  // Tue May 26 21:51:03 2015\n\0
+  // index at 3, 7, 10, 19 should be space
+  // when date is less than two digit, index 8 would be space
+  // Tue May  6 21:51:03 2015\n\0
+  for (std::size_t i{0}; i < charLen; i++) {
+    if (i == 8)
+      continue;
+    if (i == 3 || i == 7 || i == 10 || i == 19) {
+      EXPECT_EQ(input[i], ' ');
+      continue;
+    }
+    EXPECT_NE(input[i], ' ');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDateTooShort) {
+  char input[]{"TooShortAllPadSpace"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  for (std::size_t i{0}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
+TEST_F(NoArgv, FdateGetDatePadSpace) {
+  char input[]{"All char after 23 pad spaces"};
+  const std::size_t charLen = sizeof(input);
+
+  FORTRAN_PROCEDURE_NAME(fdate)(input, charLen);
+
+  for (std::size_t i{24}; i < charLen; i++) {
+    EXPECT_EQ(input[i], ' ');
+  }
+}
+
+#else
+TEST_F(NoArgv, FdateNotSupported) {
+  char input[]{"No change due to crash"};
+
+  EXPECT_DEATH(FORTRAN_PROCEDURE_NAME(fdate)(input, sizeof(input)),
+      "fdate is not supported.");
+
+  CheckCharEqStr(input, "No change due to crash");
+}
+#endif
+
 // TODO: Test other intrinsics with this fixture.
 
 TEST_F(NoArgv, GetCommand) { CheckMissingCommandValue(); }
@@ -239,6 +307,102 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 }
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
+
+TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  std::string spaces(cmdMsg->ElementBytes(), ' ');
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+#endif
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No Change")};
+
+#ifdef _WIN32
+  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+      "Invalid command quit with exit status code: 1");
+#else
+  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
+                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+      "Invalid command quit with exit status code: 127");
+#endif
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqStr(cmdMsg.get(), "No Change");
+}
+
+TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  bool wait{false};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  bool wait{false};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
+
+  CheckDescriptorEqInt(exitStat.get(), 404);
+  CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
@@ -517,22 +681,23 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
 TEST_F(EnvironmentVariables, GetlogGetName) {
   const int charLen{3};
   char input[charLen]{"\0\0"};
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
-
+  FORTRAN_PROCEDURE_NAME(getlog)(input, charLen);
   EXPECT_NE(input[0], '\0');
 }
 
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
 TEST_F(EnvironmentVariables, GetlogPadSpace) {
   // guarantee 1 char longer than max, last char should be pad space
-  const int charLen{LOGIN_NAME_MAX + 2};
-  char input[charLen];
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
-
+  int charLen;
+#ifdef LOGIN_NAME_MAX
+  charLen = LOGIN_NAME_MAX + 2;
+#else
+  charLen = sysconf(_SC_LOGIN_NAME_MAX) + 2;
+  if (charLen == -1)
+    charLen = _POSIX_LOGIN_NAME_MAX + 2;
+#endif
+  std::vector<char> input(charLen);
+  FORTRAN_PROCEDURE_NAME(getlog)(input.data(), charLen);
   EXPECT_EQ(input[charLen - 1], ' ');
 }
 #endif
@@ -544,8 +709,7 @@ TEST_F(EnvironmentVariables, GetlogEnvGetName) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName");
   }
@@ -557,8 +721,7 @@ TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginN");
   }
@@ -570,8 +733,7 @@ TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName ");
   }

@@ -114,6 +114,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingCast: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
@@ -121,6 +123,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToFloating: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     if (!FromT)
       return false;
@@ -135,6 +139,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_FloatingToBoolean:
   case CK_FloatingToIntegral: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     std::optional<PrimType> ToT = classify(CE->getType());
 
     if (!ToT)
@@ -279,6 +286,10 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     return true;
   }
+
+  case CK_IntegralComplexToReal:
+  case CK_FloatingComplexToReal:
+    return this->emitComplexReal(SubExpr);
 
   case CK_ToVoid:
     return discard(SubExpr);
@@ -2023,7 +2034,7 @@ bool ByteCodeExprGen<Emitter>::dereference(
   }
 
   if (LV->getType()->isAnyComplexType())
-    return visit(LV);
+    return this->delegate(LV);
 
   return false;
 }
@@ -2330,7 +2341,7 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
     if (VarT) {
-      if (!this->emitGetGlobal(*VarT, *GlobalIndex, VD))
+      if (!this->emitGetGlobalUnchecked(*VarT, *GlobalIndex, VD))
         return false;
     } else {
       if (!this->emitGetPtrGlobal(*GlobalIndex, VD))
@@ -2760,23 +2771,16 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
-  case UO_Real: { // __real x
-    assert(!T);
-    if (!this->visit(SubExpr))
-      return false;
-    if (!this->emitConstUint8(0, E))
-      return false;
-    if (!this->emitArrayElemPtrPopUint8(E))
-      return false;
-
-    // Since our _Complex implementation does not map to a primitive type,
-    // we sometimes have to do the lvalue-to-rvalue conversion here manually.
-    if (!SubExpr->isLValue())
-      return this->emitLoadPop(classifyPrim(E->getType()), E);
-    return true;
-  }
+  case UO_Real: // __real x
+    if (T)
+      return this->delegate(SubExpr);
+    return this->emitComplexReal(SubExpr);
   case UO_Imag: { // __imag x
-    assert(!T);
+    if (T) {
+      if (!this->discard(SubExpr))
+        return false;
+      return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+    }
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(1, E))
@@ -2941,10 +2945,32 @@ bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
   return false;
 }
 
+/// Emits __real(SubExpr)
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
+  assert(SubExpr->getType()->isAnyComplexType());
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitConstUint8(0, SubExpr))
+    return false;
+  if (!this->emitArrayElemPtrPopUint8(SubExpr))
+    return false;
+
+  // Since our _Complex implementation does not map to a primitive type,
+  // we sometimes have to do the lvalue-to-rvalue conversion here manually.
+  if (!SubExpr->isLValue())
+    return this->emitLoadPop(*classifyComplexElementType(SubExpr->getType()),
+                             SubExpr);
+  return true;
+}
+
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
-/// FIXME: Handle virtual destructors.
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   assert(Desc);

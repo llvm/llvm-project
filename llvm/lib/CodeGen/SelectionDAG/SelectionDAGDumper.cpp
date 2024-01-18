@@ -149,7 +149,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned OpNo = getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 0 : 1;
-    unsigned IID = cast<ConstantSDNode>(getOperand(OpNo))->getZExtValue();
+    unsigned IID = getOperand(OpNo)->getAsZExtVal();
     if (IID < Intrinsic::num_intrinsics)
       return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
     if (!G)

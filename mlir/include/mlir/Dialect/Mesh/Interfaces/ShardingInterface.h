@@ -25,13 +25,13 @@ struct ShardingOption {
   // An array of int array. The sub-array at the i-th position signifies the
   // mesh axes the i-th loop will be sharded on.
   ShardingArray shardingArray = {};
-  SymbolRefAttr cluster = nullptr;
+  FlatSymbolRefAttr cluster = nullptr;
   // `empty` being true indicates that no sharding information can be inferred
   // at present. Note that it is different from the case where an operation is
   // not sharded.
   bool empty = false;
   ShardingOption() = default;
-  ShardingOption(ShardingArray shardingArray, SymbolRefAttr cluster)
+  ShardingOption(ShardingArray shardingArray, FlatSymbolRefAttr cluster)
       : shardingArray(std::move(shardingArray)), cluster(cluster) {}
 };
 

@@ -356,6 +356,7 @@ enum {
   ELFOSABI_AROS = 15,          // AROS
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
+  ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
@@ -786,6 +787,8 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50 = 0x050,
   // clang-format on
 
   // First/last AMDGCN-based processors.

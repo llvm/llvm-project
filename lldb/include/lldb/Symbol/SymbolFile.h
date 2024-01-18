@@ -197,7 +197,7 @@ public:
     return false;
   }
   virtual bool ParseSupportFiles(CompileUnit &comp_unit,
-                                 FileSpecList &support_files) = 0;
+                                 SupportFileList &support_files) = 0;
   virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
   virtual bool ParseIsOptimized(CompileUnit &comp_unit) { return false; }
 

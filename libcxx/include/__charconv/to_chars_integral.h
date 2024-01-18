@@ -246,7 +246,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value) {
 
 template <typename _Tp>
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value, unsigned __base) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__value >= 0, "The function requires a non-negative value.");
+  _LIBCPP_ASSERT_INTERNAL(__value >= 0, "The function requires a non-negative value.");
 
   unsigned __base_2 = __base * __base;
   unsigned __base_3 = __base_2 * __base;

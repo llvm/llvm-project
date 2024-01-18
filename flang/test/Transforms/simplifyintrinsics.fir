@@ -2115,13 +2115,13 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
 // CHECK-NOT:         fir.call @_FortranAMinlocInteger4x1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
 
 // -----
-// Check Minloc is simplified when DIM arg is set so long as the result is scalar
+// Check Minloc is not simplified when DIM arg is set
 
-func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
+func.func @_QPtestminloc_doesntwork1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
   %0 = fir.alloca !fir.box<!fir.heap<i32>>
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
-  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_1d_dim", uniq_name = "_QFtestminloc_1d_dimEtestminloc_1d_dim"}
+  %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_doesntwork1d_dim", uniq_name = "_QFtestminloc_doesntwork1d_dimEtestminloc_doesntwork1d_dim"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
   %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
@@ -2156,65 +2156,11 @@ func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_n
   %21 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %21 : !fir.array<1xi32>
 }
-// CHECK-LABEL:   func.func @_QPtestminloc_1d_dim(
+// CHECK-LABEL:   func.func @_QPtestminloc_doesntwork1d_dim(
 // CHECK-SAME:                                             %[[ARR:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> !fir.array<1xi32> {
-// CHECK:             fir.call @_FortranAMinlocDimx1_i32_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
-
-// CHECK-LABEL:  func.func private @_FortranAMinlocDimx1_i32_i32_contract_simplified(%arg0: !fir.ref<!fir.box<none>>, %arg1: !fir.box<none>, %arg2: !fir.box<none>) attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
-// CHECK-NEXT:    %[[V0:.*]] = fir.alloca i32
-// CHECK-NEXT:    %c0_i32 = arith.constant 0 : i32
-// CHECK-NEXT:    %c1 = arith.constant 1 : index
-// CHECK-NEXT:    %[[V1:.*]] = fir.allocmem !fir.array<1xi32>
-// CHECK-NEXT:    %[[V2:.*]] = fir.shape %c1 : (index) -> !fir.shape<1>
-// CHECK-NEXT:    %[[V3:.*]] = fir.embox %[[V1]](%[[V2]]) : (!fir.heap<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<1xi32>>>
-// CHECK-NEXT:    %c0 = arith.constant 0 : index
-// CHECK-NEXT:    %[[V4:.*]] = fir.coordinate_of %[[V3]], %c0 : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:    fir.store %c0_i32 to %[[V4]] : !fir.ref<i32>
-// CHECK-NEXT:    %c0_0 = arith.constant 0 : index
-// CHECK-NEXT:    %[[V5:.*]] = fir.convert %arg1 : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
-// CHECK-NEXT:    %c1_i32 = arith.constant 1 : i32
-// CHECK-NEXT:    %c0_i32_1 = arith.constant 0 : i32
-// CHECK-NEXT:    fir.store %c0_i32_1 to %[[V0]] : !fir.ref<i32>
-// CHECK-NEXT:    %c2147483647_i32 = arith.constant 2147483647 : i32
-// CHECK-NEXT:    %c1_2 = arith.constant 1 : index
-// CHECK-NEXT:    %c0_3 = arith.constant 0 : index
-// CHECK-NEXT:    %[[V6:.*]]:3 = fir.box_dims %[[V5]], %c0_3 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK-NEXT:    %[[V7:.*]] = arith.subi %[[V6]]#1, %c1_2 : index
-// CHECK-NEXT:    %[[V8:.*]] = fir.do_loop %arg3 = %c0_0 to %[[V7]] step %c1_2 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
-// CHECK-NEXT:      fir.store %c1_i32 to %[[V0]] : !fir.ref<i32>
-// CHECK-NEXT:      %[[V12:.*]] = fir.coordinate_of %[[V5]], %arg3 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:      %[[V13:.*]] = fir.load %[[V12]] : !fir.ref<i32>
-// CHECK-NEXT:      %[[V14:.*]] = arith.cmpi slt, %[[V13]], %arg4 : i32
-// CHECK-NEXT:      %[[V15:.*]] = fir.if %[[V14]] -> (i32) {
-// CHECK-NEXT:        %c1_i32_4 = arith.constant 1 : i32
-// CHECK-NEXT:        %c0_5 = arith.constant 0 : index
-// CHECK-NEXT:        %[[V16:.*]] = fir.coordinate_of %[[V3]], %c0_5 : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:        %[[V17:.*]] = fir.convert %arg3 : (index) -> i32
-// CHECK-NEXT:        %[[V18:.*]] = arith.addi %[[V17]], %c1_i32_4 : i32
-// CHECK-NEXT:        fir.store %[[V18]] to %[[V16]] : !fir.ref<i32>
-// CHECK-NEXT:        fir.result %[[V13]] : i32
-// CHECK-NEXT:      } else {
-// CHECK-NEXT:        fir.result %arg4 : i32
-// CHECK-NEXT:      }
-// CHECK-NEXT:      fir.result %[[V15]] : i32
-// CHECK-NEXT:    }
-// CHECK-NEXT:    %[[V9:.*]] = fir.load %[[V0]] : !fir.ref<i32>
-// CHECK-NEXT:    %[[V10:.*]] = arith.cmpi eq, %[[V9]], %c1_i32 : i32
-// CHECK-NEXT:    fir.if %[[V10]] {
-// CHECK-NEXT:      %c2147483647_i32_4 = arith.constant 2147483647 : i32
-// CHECK-NEXT:      %[[V12]] = arith.cmpi eq, %c2147483647_i32_4, %[[V8]] : i32
-// CHECK-NEXT:      fir.if %[[V12]] {
-// CHECK-NEXT:        %c0_5 = arith.constant 0 : index
-// CHECK-NEXT:        %[[V13]] = fir.coordinate_of %[[V3]], %c0_5 : (!fir.box<!fir.heap<!fir.array<1xi32>>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:        fir.store %c1_i32 to %[[V13]] : !fir.ref<i32>
-// CHECK-NEXT:      }
-// CHECK-NEXT:    }
-// CHECK-NEXT:    %[[V11:.*]] = fir.convert %arg0 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
-// CHECK-NEXT:    fir.store %[[V3]] to %[[V11]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1xi32>>>>
-// CHECK-NEXT:    return
-// CHECK-NEXT:  }
-
-
+// CHECK-NOT:         fir.call @_FortranAMinlocDimx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
+// CHECK:             fir.call @_FortranAMinlocDim({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NOT:         fir.call @_FortranAMinlocDimx1_i32_contract_simplified({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>) -> ()
 
 // -----
 // Check Minloc is not simplified when dimension of inputArr is unknown
