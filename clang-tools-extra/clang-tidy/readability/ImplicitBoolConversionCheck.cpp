@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ImplicitBoolConversionCheck.h"
+#include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -61,31 +62,6 @@ bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-bool areParensNeededForOverloadedOperator(OverloadedOperatorKind OperatorKind) {
-  switch (OperatorKind) {
-  case OO_New:
-  case OO_Delete: // Fall-through on purpose.
-  case OO_Array_New:
-  case OO_Array_Delete:
-  case OO_ArrowStar:
-  case OO_Arrow:
-  case OO_Call:
-  case OO_Subscript:
-    return false;
-
-  default:
-    return true;
-  }
-}
-
-bool areParensNeededForStatement(const Stmt *Statement) {
-  if (const auto *OperatorCall = dyn_cast<CXXOperatorCallExpr>(Statement)) {
-    return areParensNeededForOverloadedOperator(OperatorCall->getOperator());
-  }
-
-  return isa<BinaryOperator>(Statement) || isa<UnaryOperator>(Statement);
-}
-
 void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
                               const ImplicitCastExpr *Cast, const Stmt *Parent,
                               ASTContext &Context) {
@@ -105,9 +81,10 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens = areParensNeededForStatement(SubExpr);
+  bool NeedInnerParens =
+      SubExpr != nullptr && utils::fixit::areParensNeededForStatement(*SubExpr);
   bool NeedOuterParens =
-      Parent != nullptr && areParensNeededForStatement(Parent);
+      Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 
   std::string StartLocInsertion;
 
@@ -364,7 +341,7 @@ void ImplicitBoolConversionCheck::handleCastToBool(const ImplicitCastExpr *Cast,
     return;
   }
 
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> bool")
+  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion %0 -> 'bool'")
               << Cast->getSubExpr()->getType();
 
   StringRef EquivalentLiteral =
@@ -381,7 +358,7 @@ void ImplicitBoolConversionCheck::handleCastFromBool(
     ASTContext &Context) {
   QualType DestType =
       NextImplicitCast ? NextImplicitCast->getType() : Cast->getType();
-  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion bool -> %0")
+  auto Diag = diag(Cast->getBeginLoc(), "implicit conversion 'bool' -> %0")
               << DestType;
 
   if (const auto *BoolLiteral =
