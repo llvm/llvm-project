@@ -64,6 +64,19 @@ public:
     UtilityNodeT(uint32_t Id, uint32_t Weight = 1) : Id(Id), Weight(Weight) {}
     uint32_t Id;
     uint32_t Weight;
+
+    // Deduplicate utility nodes for a given function.
+    // TODO: One may experiment with accumulating the weights of duplicates.
+    static void sortAndDeduplicate(SmallVector<UtilityNodeT, 4> &UNs) {
+      llvm::sort(UNs, [](const UtilityNodeT &L, const UtilityNodeT &R) {
+        return L.Id < R.Id;
+      });
+      UNs.erase(std::unique(UNs.begin(), UNs.end(),
+                            [](const UtilityNodeT &L, const UtilityNodeT &R) {
+                              return L.Id == R.Id;
+                            }),
+                UNs.end());
+    }
   };
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)

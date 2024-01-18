@@ -905,20 +905,6 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
-// Deduplicate utility nodes for a given function.
-// TODO: One may experiment with accumulating the weights of duplicates.
-void sortAndDeduplicate(SmallVector<BPFunctionNode::UtilityNodeT, 4> &UNs) {
-  using UtilityNodeT = BPFunctionNode::UtilityNodeT;
-  llvm::sort(UNs, [](const UtilityNodeT &L, const UtilityNodeT &R) {
-    return L.Id < R.Id;
-  });
-  UNs.erase(std::unique(UNs.begin(), UNs.end(),
-                        [](const UtilityNodeT &L, const UtilityNodeT &R) {
-                          return L.Id == R.Id;
-                        }),
-            UNs.end());
-}
-
 std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
     ArrayRef<TemporalProfTraceTy> Traces) {
   using IDT = BPFunctionNode::IDT;
@@ -954,7 +940,7 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   std::vector<BPFunctionNode> Nodes;
   for (auto Id : FunctionIds) {
     auto &UNs = FuncGroups[Id];
-    sortAndDeduplicate(UNs);
+    UtilityNodeT::sortAndDeduplicate(UNs);
     Nodes.emplace_back(Id, UNs);
   }
   return Nodes;

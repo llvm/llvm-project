@@ -203,9 +203,8 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
         Signatures[UN.Id].RightCount++;
       // Identical utility nodes (having the same UN.Id) have the same weight
       // (unless there are hash collisions mapping utilities to the same Id);
-      // thus, we can get a new weight only when the signature is uninitialized.
-      if (Signatures[UN.Id].Weight != UN.Weight)
-        Signatures[UN.Id].Weight = UN.Weight;
+      // thus, we get a new weight only when the signature is uninitialized.
+      Signatures[UN.Id].Weight = UN.Weight;
     }
   }
 
