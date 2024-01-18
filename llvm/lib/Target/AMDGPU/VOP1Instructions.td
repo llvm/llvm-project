@@ -397,18 +397,13 @@ def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
 // to be a src operand. The custom inserter must add a tied implicit
 // def and use of the super register since there seems to be no way to
 // add an implicit def of a virtual register in tablegen.
-class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, untyped]> {
+class VOP_MOVREL<RegisterOperand Src1RC, InputMods SrcModRC> : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Src0RC32 = VOPDstOperand<VGPR_32>;
   let Src0RC64 = VOPDstOperand<VGPR_32>;
 
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
-
-  let Ins64 = !con((ins Src0RC64:$vdst),
-                   !if(!eq(Src1RC, VSrc_b32), (ins FP32InputMods:$src0_modifiers),
-                       (ins FPVRegInputMods:$src0_modifiers)),
-                   (ins Src1RC:$src0, clampmod0:$clamp));
-
+  let Ins64 = (ins Src0RC64:$vdst, SrcModRC:$src0_modifiers, Src1RC:$src0, clampmod0:$clamp);
   let Asm32 = getAsm32<1, 1>.ret;
 
   let OutsSDWA = (outs Src0RC32:$vdst);
@@ -446,12 +441,12 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let HasModifiers = 1;
   let HasClamp = 1;
 
-  let Src0Mod = !if(!eq(Src1RC, VSrc_b32), FP32InputMods, FPVRegInputMods);
+  let Src0Mod = SrcModRC;
   let Src0ModVOP3DPP = FPVRegInputMods;
 }
 
-def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
-def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
+def VOP_MOVRELD : VOP_MOVREL<VSrc_b32, FP32InputMods>;
+def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32, FPVRegInputMods>;
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // v_movreld_b32 is a special case because the destination output
@@ -1416,9 +1411,8 @@ def : GCNPat <
 
 let OtherPredicates = [isGFX12Only] in {
 def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp8 (i32(VOP3Mods i32:$src, i32:$src0_modifiers)),
-                            timm:$dpp8)),
-  (V_MOV_B32_dpp8_gfx12 VGPR_32:$src, i32:$src0_modifiers, VGPR_32:$src,
+   (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
+   (V_MOV_B32_dpp8_gfx12 VGPR_32:$src, SRCMODS.NONE, VGPR_32:$src,
                         (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))
 >;
 } // End OtherPredicates = [isGFX12Only]
