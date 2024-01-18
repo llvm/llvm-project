@@ -135,6 +135,7 @@ void ScalarEnumerationTraits<XCOFF::SymbolType>::enumeration(
   ECase(XTY_LD);
   ECase(XTY_CM);
 #undef ECase
+  IO.enumFallback<Hex8>(Value);
 }
 
 void ScalarEnumerationTraits<XCOFFYAML::AuxSymbolType>::enumeration(

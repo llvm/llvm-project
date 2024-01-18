@@ -535,8 +535,15 @@ bool XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
     }
     SymAlignAndType = *AuxSym.SymbolAlignmentAndType;
   } else {
-    if (AuxSym.SymbolType)
-      SymAlignAndType = *AuxSym.SymbolType;
+    if (AuxSym.SymbolType) {
+      uint8_t SymbolType = *AuxSym.SymbolType;
+      if (SymbolType & ~XCOFFCsectAuxRef::SymbolTypeMask) {
+        ErrHandler("symbol type must be less than " +
+                   Twine(1 + XCOFFCsectAuxRef::SymbolTypeMask));
+        return false;
+      }
+      SymAlignAndType = SymbolType;
+    }
     if (AuxSym.SymbolAlignment) {
       const uint8_t ShiftedSymbolAlignmentMask =
           XCOFFCsectAuxRef::SymbolAlignmentMask >>

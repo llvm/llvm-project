@@ -54,6 +54,7 @@ Symbols:
 ## Ensure that SymbolAlignment is in range.
 # RUN: not yaml2obj %s --docnum=2 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR1
 # ERROR1: symbol alignment must be less than 32
+
 --- !XCOFF
 FileHeader:
   MagicNumber:     0x1F7
@@ -70,6 +71,7 @@ Symbols:
 ## SymbolAlignmentAndType is specified.
 # RUN: not yaml2obj %s --docnum=3 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
 # ERROR2: cannot specify SymbolType or SymbolAlignment if SymbolAlignmentAndType is specified
+
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1DF
@@ -83,6 +85,7 @@ Symbols:
         SectionOrLength: 4
 
 # RUN: not yaml2obj %s --docnum=4 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
+
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1DF
@@ -97,6 +100,7 @@ Symbols:
         SectionOrLength: 4
 
 # RUN: not yaml2obj %s --docnum=5 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
+
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1F7
