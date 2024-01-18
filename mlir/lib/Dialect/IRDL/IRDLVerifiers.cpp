@@ -68,6 +68,39 @@ LogicalResult IsConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
   return failure();
 }
 
+LogicalResult
+BaseAttrConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Attribute attr, ConstraintVerifier &context) const {
+  if (attr.getTypeID() == baseTypeID)
+    return success();
+
+  if (emitError)
+    return emitError() << "expected base attribute '" << baseName
+                       << "' but got '" << attr.getAbstractAttribute().getName()
+                       << "'";
+  return failure();
+}
+
+LogicalResult
+BaseTypeConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Attribute attr, ConstraintVerifier &context) const {
+  auto typeAttr = dyn_cast<TypeAttr>(attr);
+  if (!typeAttr) {
+    if (emitError)
+      return emitError() << "expected type, got attribute '" << attr;
+    return failure();
+  }
+
+  Type type = typeAttr.getValue();
+  if (type.getTypeID() == baseTypeID)
+    return success();
+
+  if (emitError)
+    return emitError() << "expected base type '" << baseName << "' but got '"
+                       << type.getAbstractType().getName() << "'";
+  return failure();
+}
+
 LogicalResult DynParametricAttrConstraint::verify(
     function_ref<InFlightDiagnostic()> emitError, Attribute attr,
     ConstraintVerifier &context) const {
