@@ -777,33 +777,32 @@ getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T>
-static void filterFunctions(T &ProfileMap) {
+template <typename T> static void filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
-  if (hasFilter || hasNegativeFilter) {
-    size_t Count = ProfileMap.size();
+  if (!hasFilter && !hasNegativeFilter)
+    return;
 
-    llvm::Regex Pattern(FuncNameFilter);
-    llvm::Regex NegativePattern(FuncNameNegativeFilter);
-    std::string Error;
-    if (hasFilter && !Pattern.isValid(Error))
-      exitWithError(Error);
-    if (hasNegativeFilter && !NegativePattern.isValid(Error))
-      exitWithError(Error);
+  size_t Count = ProfileMap.size();
+  llvm::Regex Pattern(FuncNameFilter);
+  llvm::Regex NegativePattern(FuncNameNegativeFilter);
+  std::string Error;
+  if (hasFilter && !Pattern.isValid(Error))
+    exitWithError(Error);
+  if (hasNegativeFilter && !NegativePattern.isValid(Error))
+    exitWithError(Error);
 
-    for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-      auto Tmp = I++;
-      const auto &FuncName = getFuncName(*Tmp);
-      // Negative filter has higher precedence than positive filter.
-      if ((hasNegativeFilter && NegativePattern.match(FuncName)) ||
-          (hasFilter && !Pattern.match(FuncName)))
-        ProfileMap.erase(Tmp);
-    }
-
-    llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions"
-                 << " in the original profile are filtered.\n";
+  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+    auto Tmp = I++;
+    const auto &FuncName = getFuncName(*Tmp);
+    // Negative filter has higher precedence than positive filter.
+    if ((hasNegativeFilter && NegativePattern.match(FuncName)) ||
+        (hasFilter && !Pattern.match(FuncName)))
+      ProfileMap.erase(Tmp);
   }
+
+  llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
+               << "in the original profile are filtered.\n";
 }
 
 static void writeInstrProfile(StringRef OutputFilename,
