@@ -160,8 +160,6 @@ define <vscale x 16 x i1> @uzp1_to_svbool(<vscale x 4 x i32> %v0, <vscale x 4 x 
 ; CHECK-NEXT:    cmphi p1.s, p0/z, z2.s, z0.s
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z2.s, z1.s
 ; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %cmp0 = icmp ult <vscale x 4 x i32> %v0, %x
   %cmp1 = icmp ult <vscale x 4 x i32> %v1, %x
@@ -199,14 +197,9 @@ define <vscale x 16 x i1> @chainedReinterpted_uzp1_to_svbool(<vscale x 2 x i64> 
 ; CHECK-LABEL: chainedReinterpted_uzp1_to_svbool:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
+; CHECK-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
-; CHECK-NEXT:    and p2.b, p2/z, p2.b, p1.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    uzp1 p0.h, p2.h, p0.h
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
 ; CHECK-NEXT:    ret
   %cmp0 = icmp ult <vscale x 2 x i64> %v0, %x
   %cmp1 = icmp ult <vscale x 2 x i64> %v1, %x
@@ -233,10 +226,7 @@ define <vscale x 16 x i1> @chainedUzp1_to_svbool(<vscale x 4 x i32> %v0, <vscale
 ; CHECK-NEXT:    cmphi p3.s, p0/z, z4.s, z2.s
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z4.s, z3.s
 ; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
-; CHECK-NEXT:    ptrue p2.h
 ; CHECK-NEXT:    uzp1 p0.h, p3.h, p0.h
-; CHECK-NEXT:    and p1.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
 ; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-NEXT:    ret
   %cmp0 = icmp ult <vscale x 4 x i32> %v0, %x

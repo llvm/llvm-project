@@ -283,6 +283,24 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     switch (Op.getConstantOperandVal(0)) {
     default:
       return false;
+
+    case Intrinsic::aarch64_sve_uzp1:
+      return isZeroingInactiveLanes(Op.getOperand(1)) &&
+             isZeroingInactiveLanes(Op.getOperand(2));
+    case Intrinsic::aarch64_sve_convert_from_svbool: {
+      // Inactive lanes are zero if the svbool was constructed in a way that the
+      // initial type had same or fewer lanes than the current op and the
+      // inactive lanes were cleared on construction.
+      SDValue Op1 = Op.getOperand(1);
+      if (Op1.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+          Op1.getConstantOperandVal(0) ==
+              Intrinsic::aarch64_sve_convert_to_svbool) {
+        SDValue ConstrOp = Op1.getOperand(1);
+        return ConstrOp.getValueType().bitsLE(Op.getValueType()) &&
+               isZeroingInactiveLanes(ConstrOp);
+      }
+      return false;
+    }
     case Intrinsic::aarch64_sve_ptrue:
     case Intrinsic::aarch64_sve_pnext:
     case Intrinsic::aarch64_sve_cmpeq:
