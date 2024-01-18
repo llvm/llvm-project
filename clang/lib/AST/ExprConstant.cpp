@@ -5839,7 +5839,7 @@ static const CXXMethodDecl *HandleVirtualDispatch(
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
   //   undefined
-  if (Callee->isPure()) {
+  if (Callee->isPureVirtual()) {
     Info.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << Callee;
     Info.Note(Callee->getLocation(), diag::note_declared_at);
     return nullptr;

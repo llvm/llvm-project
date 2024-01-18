@@ -510,6 +510,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = fputil::Sign;
 
   StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
@@ -522,7 +523,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   T float_mantissa;
   if constexpr (cpp::is_same_v<StorageType, cpp::UInt<128>>) {
     float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
-        false, 0,
+        Sign::POS, 0,
         fputil::DyadicFloat<128>::MantissaType(
             {uint64_t(mantissa), uint64_t(mantissa >> 64)})));
   } else {

@@ -427,7 +427,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       // Special case: virtual void ^method() = 0: jump to all overrides.
       // FIXME: extend it to ^virtual, unfortunately, virtual location is not
       // saved in the AST.
-      if (CMD->isPure()) {
+      if (CMD->isPureVirtual()) {
         if (TouchedIdentifier && SM.getSpellingLoc(CMD->getLocation()) ==
                                      TouchedIdentifier->location()) {
           VirtualMethods.insert(getSymbolID(CMD));

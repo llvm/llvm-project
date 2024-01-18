@@ -4390,8 +4390,8 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   mergeDeclAttributes(New, Old);
 
   // Merge "pure" flag.
-  if (Old->isPure())
-    New->setPure();
+  if (Old->isPureVirtual())
+    New->setIsPureVirtual();
 
   // Merge "used" flag.
   if (Old->getMostRecentDecl()->isUsed(false))
@@ -9878,7 +9878,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (const CXXRecordDecl *Parent =
           dyn_cast<CXXRecordDecl>(NewFD->getDeclContext())) {
       if (Parent->isInterface() && cast<CXXMethodDecl>(NewFD)->isUserProvided())
-        NewFD->setPure(true);
+        NewFD->setIsPureVirtual(true);
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
@@ -16012,7 +16012,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
-      if (getLangOpts().MicrosoftExt && FD->isPure() && !FD->isOutOfLine())
+      if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
+          !FD->isOutOfLine())
         Diag(FD->getLocation(), diag::ext_pure_function_definition);
 
       if (!FD->isInvalidDecl()) {

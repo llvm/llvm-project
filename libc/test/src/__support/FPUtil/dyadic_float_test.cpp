@@ -15,9 +15,10 @@
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
+using Sign = LIBC_NAMESPACE::fputil::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
-  Float128 x(/*sign*/ false, /*exponent*/ 0,
+  Float128 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float128::MantissaType(1));
   volatile float xf = float(x);
   volatile double xd = double(x);
@@ -37,7 +38,7 @@ TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
-  Float192 x(/*sign*/ false, /*exponent*/ 0,
+  Float192 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float192::MantissaType(0x123456));
   volatile double xd = double(x);
   ASSERT_FP_EQ(0x1.23456p20, xd);
@@ -52,7 +53,7 @@ TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickMul) {
-  Float256 x(/*sign*/ false, /*exponent*/ 0,
+  Float256 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float256::MantissaType(0x123456));
   volatile double xd = double(x);
   ASSERT_FP_EQ(0x1.23456p20, xd);
