@@ -19704,6 +19704,12 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
   }
 }
 
+static DeclContext *ignoreReuquiresBodyDecl(DeclContext *DC) {
+  if (isa_and_present<RequiresExprBodyDecl>(DC))
+    return DC->getParent();
+  return DC;
+}
+
 bool Sema::tryCaptureVariable(
     ValueDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
     SourceLocation EllipsisLoc, bool BuildAndDiagnose, QualType &CaptureType,
@@ -19711,14 +19717,14 @@ bool Sema::tryCaptureVariable(
   // An init-capture is notionally from the context surrounding its
   // declaration, but its parent DC is the lambda class.
   DeclContext *VarDC = Var->getDeclContext();
-  DeclContext *DC = CurContext;
-
   // tryCaptureVariable is called every time a DeclRef is formed,
   // it can therefore have non-negigible impact on performances.
   // For local variables and when there is no capturing scope,
   // we can bailout early.
-  if (CapturingFunctionScopes == 0 && (!BuildAndDiagnose || VarDC == DC))
+  if (CapturingFunctionScopes == 0 && (!BuildAndDiagnose || VarDC == CurContext))
     return true;
+
+  DeclContext *DC = ignoreReuquiresBodyDecl(CurContext);
 
   const auto *VD = dyn_cast<VarDecl>(Var);
   if (VD) {
@@ -19789,11 +19795,10 @@ bool Sema::tryCaptureVariable(
 
     // Only block literals, captured statements, and lambda expressions can
     // capture; other scopes don't work.
-    DeclContext *ParentDC =
-        !IsInScopeDeclarationContext
-            ? DC->getParent()
-            : getParentOfCapturingContextOrNull(DC, Var, ExprLoc,
-                                                BuildAndDiagnose, *this);
+    DeclContext *ParentDC = IsInScopeDeclarationContext
+                                ? getParentOfCapturingContextOrNull(
+                                      DC, Var, ExprLoc, BuildAndDiagnose, *this)
+                                : DC->getParent();
     // We need to check for the parent *first* because, if we *have*
     // private-captured a global variable, we need to recursively capture it in
     // intermediate blocks, lambdas, etc.
