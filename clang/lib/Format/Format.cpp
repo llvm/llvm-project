@@ -1054,6 +1054,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.PenaltyBreakFirstLessLess);
     IO.mapOptional("PenaltyBreakOpenParenthesis",
                    Style.PenaltyBreakOpenParenthesis);
+    IO.mapOptional("PenaltyBreakScopeResolution",
+                   Style.PenaltyBreakScopeResolution);
     IO.mapOptional("PenaltyBreakString", Style.PenaltyBreakString);
     IO.mapOptional("PenaltyBreakTemplateDeclaration",
                    Style.PenaltyBreakTemplateDeclaration);
@@ -1602,6 +1604,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;
+  LLVMStyle.PenaltyBreakScopeResolution = 500;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
 
@@ -1698,8 +1701,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
           /*BasedOnStyle=*/"google",
       },
   };
-  GoogleStyle.AttributeMacros.push_back("GUARDED_BY");
-  GoogleStyle.AttributeMacros.push_back("ABSL_GUARDED_BY");
 
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;

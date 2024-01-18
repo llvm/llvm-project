@@ -405,6 +405,9 @@ struct VariableDescription {
   /// Create a JSON object that represents these extensions to the DAP variable
   /// response.
   llvm::json::Object GetVariableExtensionsJSON();
+
+  /// Returns a description of the value appropriate for the specified context.
+  std::string GetResult(llvm::StringRef context);
 };
 
 /// Create a "Variable" object for a LLDB thread object.

@@ -63,23 +63,6 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
 }
 
-static const Constant *getConstantFromPool(const MachineInstr &MI,
-                                           const MachineOperand &Op) {
-  if (!Op.isCPI() || Op.getOffset() != 0)
-    return nullptr;
-
-  ArrayRef<MachineConstantPoolEntry> Constants =
-      MI.getParent()->getParent()->getConstantPool()->getConstants();
-  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
-
-  // Bail if this is a machine constant pool entry, we won't be able to dig out
-  // anything useful.
-  if (ConstantEntry.isMachineConstantPoolEntry())
-    return nullptr;
-
-  return ConstantEntry.Val.ConstVal;
-}
-
 // Attempt to extract the full width of bits data from the constant.
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
@@ -244,7 +227,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
            "Unexpected number of operands!");
 
     MachineOperand &CstOp = MI.getOperand(OperandNo + X86::AddrDisp);
-    if (auto *C = getConstantFromPool(MI, CstOp)) {
+    if (auto *C = X86::getConstantFromPool(MI, CstOp)) {
       // Attempt to detect a suitable splat from increasing splat widths.
       std::pair<unsigned, unsigned> Broadcasts[] = {
           {8, OpBcst8},   {16, OpBcst16},   {32, OpBcst32},

@@ -69,8 +69,8 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
     %main_loop, %remainder = transform.loop.peel %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
     // Make sure 
-    transform.test_print_remark_at_operand %main_loop, "main loop" : !transform.op<"scf.for">
-    transform.test_print_remark_at_operand %remainder, "remainder loop" : !transform.op<"scf.for">
+    transform.debug.emit_remark_at %main_loop, "main loop" : !transform.op<"scf.for">
+    transform.debug.emit_remark_at %remainder, "remainder loop" : !transform.op<"scf.for">
     transform.yield
   }
 }
@@ -137,7 +137,7 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
     %2 = transform.loop.pipeline %1 : (!transform.op<"scf.for">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %2, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %2, "transformed" : !transform.any_op
     transform.yield
   }
 }
@@ -185,7 +185,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
-    transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
+    transform.debug.emit_remark_at %1, "affine for loop" : !transform.op<"affine.for">
     transform.loop.unroll %1 { factor = 4, affine = true } : !transform.op<"affine.for">
     transform.yield
   }
@@ -212,7 +212,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {op_name = "affine.for"} : (!transform.any_op) -> !transform.op<"affine.for">
-    transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
+    transform.debug.emit_remark_at %1, "affine for loop" : !transform.op<"affine.for">
     transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
     transform.yield
   }

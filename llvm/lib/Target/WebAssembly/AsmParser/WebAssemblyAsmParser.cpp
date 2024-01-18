@@ -851,7 +851,7 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      wasm::WasmTableType Type = {uint8_t(*ElemType), Limits};
+      wasm::WasmTableType Type = {*ElemType, Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");

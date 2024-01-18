@@ -347,7 +347,7 @@ constexpr ProcInfo Processors[] = {
   // Tigerlake microarchitecture based processors.
   { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
+  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Alderlake microarchitecture based processors.
   { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Raptorlake microarchitecture based processors.
@@ -369,12 +369,12 @@ constexpr ProcInfo Processors[] = {
   // Grandridge microarchitecture based processors.
   { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Granite Rapids microarchitecture based processors.
-  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
+  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512FP16, FeaturesGraniteRapids, 'n', false },
   // Granite Rapids D microarchitecture based processors.
-  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
-  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
+  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
+  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512FP16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
   // Emerald Rapids microarchitecture based processors.
-  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
+  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
   // Knights Landing processor.

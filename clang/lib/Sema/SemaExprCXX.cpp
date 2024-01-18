@@ -1931,7 +1931,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
     }
   }
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, /*Scope=*/nullptr);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType AllocType = TInfo->getType();
   if (D.isInvalidType())
     return ExprError();
@@ -2285,6 +2285,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
   bool PassAlignment = getLangOpts().AlignedAllocation &&
                        Alignment > NewAlignment;
+
+  if (CheckArgsForPlaceholders(PlacementArgs))
+    return ExprError();
 
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
   if (!AllocType->isDependentType() &&
