@@ -1200,7 +1200,10 @@ const char *const AArch64TargetInfo::GCCRegNames[] = {
 
     // SVE predicate-as-counter registers
     "pn0",  "pn1",  "pn2",  "pn3",  "pn4",  "pn5",  "pn6",  "pn7",  "pn8",
-    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15"
+    "pn9",  "pn10", "pn11", "pn12", "pn13", "pn14", "pn15",
+
+    // SME registers
+    "za", "zt0",
 };
 
 ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
