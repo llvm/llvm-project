@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftCoreGraphicsTypes(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipUnlessDarwin
     def test_swift_coregraphics_types(self):

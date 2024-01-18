@@ -20,9 +20,6 @@ import unittest2
 
 
 class SwiftDynamicValueTest(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_dynamic_value(self):
         """Tests that dynamic values work correctly for Swift"""

@@ -10,9 +10,6 @@ import unittest2
 
 
 class TestSwiftBridgedMetatype(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipUnlessFoundation
     def test_swift_bridged_metatype(self):

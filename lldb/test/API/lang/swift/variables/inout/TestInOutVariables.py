@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestInOutVariables(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""

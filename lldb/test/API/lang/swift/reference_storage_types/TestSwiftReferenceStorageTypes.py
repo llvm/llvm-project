@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftReferenceStorageTypes(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @decorators.skipIf(archs=['ppc64le']) #SR-10215
     @swiftTest
     @skipIf(oslist=["linux"], bugnumber="rdar://76592966")

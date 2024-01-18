@@ -32,9 +32,6 @@ def execute_command(command):
 
 
 class TestNonREPLPlayground(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     @skipIf(

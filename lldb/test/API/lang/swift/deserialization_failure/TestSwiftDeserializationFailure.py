@@ -6,9 +6,6 @@ import unittest2
 
 
 class TestSwiftDeserializationFailure(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def prepare(self):
         import shutil
         copied_source = self.getBuildArtifact("main.swift")

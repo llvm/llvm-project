@@ -33,9 +33,6 @@ def execute_command(command):
 
 
 class TestUnitTests(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]), bugnumber="This test is building a dSYM")
     @expectedFailureAll(

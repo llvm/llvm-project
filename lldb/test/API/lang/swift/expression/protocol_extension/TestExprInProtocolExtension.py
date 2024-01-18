@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftExprInProtocolExtension(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)

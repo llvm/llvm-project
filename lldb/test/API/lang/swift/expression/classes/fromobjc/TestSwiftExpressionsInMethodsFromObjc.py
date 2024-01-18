@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestExpressionsInSwiftMethodsFromObjC(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_swift_expressions_from_objc(self):

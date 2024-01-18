@@ -13,9 +13,6 @@ import json
 
 
 class MTCSwiftPropertyTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(bugnumber="rdar://60396797",
                         setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin

@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestIndirectEnumVariables(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_indirect_cases_variables(self):
         """Tests that indirect Enum variables display correctly when cases are indirect"""

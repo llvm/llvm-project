@@ -19,9 +19,6 @@ import unittest2
 import shutil
 
 class TestSwiftHeadermapConflict(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(bugnumber="rdar://60396797",
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))

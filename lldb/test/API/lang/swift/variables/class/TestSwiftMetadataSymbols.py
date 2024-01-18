@@ -20,9 +20,6 @@ import os
 
 
 class TestSwiftMetadataSymbols(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @expectedFailureAll(bugnumber="<rdar://problem/31066543>")
     def test_swift_metadata_symbols(self):

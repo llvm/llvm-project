@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestDefiningOverloadedFunctions(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_simple_overload_expressions(self):
         """Test defining overloaded functions"""

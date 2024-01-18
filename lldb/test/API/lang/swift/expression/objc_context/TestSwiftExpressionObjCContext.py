@@ -18,9 +18,6 @@ import os
 import unittest2
 
 class TestSwiftExpressionObjCContext(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test(self):

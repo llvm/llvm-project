@@ -6,9 +6,6 @@ import os
 import unittest2
 
 class TestSwiftRewriteClangPaths(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @swiftTest

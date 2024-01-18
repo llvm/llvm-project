@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftNoProcess(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"

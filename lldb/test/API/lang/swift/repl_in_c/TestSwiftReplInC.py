@@ -15,7 +15,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftReplInC(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest

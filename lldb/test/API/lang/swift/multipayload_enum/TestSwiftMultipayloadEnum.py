@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftMultipayloadEnum(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_multipayload_enum(self):
         """Test that LLDB understands generic enums with more than one payload type"""

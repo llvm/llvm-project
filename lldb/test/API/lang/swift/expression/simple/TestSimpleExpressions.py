@@ -22,9 +22,6 @@ import unittest2
 
 
 class TestSimpleSwiftExpressions(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_simple_swift_expressions(self):
         """Tests that we can run simple Swift expressions correctly"""

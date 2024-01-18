@@ -20,9 +20,6 @@ import os
 
 
 class TestFilePrivate(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.a_source = "a.swift"

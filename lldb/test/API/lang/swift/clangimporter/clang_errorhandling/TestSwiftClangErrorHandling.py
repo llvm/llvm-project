@@ -6,8 +6,6 @@ import unittest2
 
 class TestSwiftExtraClangFlags(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
     
     def setUp(self):

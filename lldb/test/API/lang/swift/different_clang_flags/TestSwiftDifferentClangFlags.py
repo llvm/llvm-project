@@ -36,9 +36,6 @@ def execute_command(command):
 
 
 class TestSwiftDifferentClangFlags(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     @skipIf(
