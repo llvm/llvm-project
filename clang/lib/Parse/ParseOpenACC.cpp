@@ -183,7 +183,7 @@ bool isTokenIdentifierOrKeyword(Parser &P, Token Tok) {
 /// Return 'true' if the special token was matched, false if no special token,
 /// or an invalid special token was found.
 template <typename DirOrClauseTy>
-bool tryParseAndConsumeSpecialTokenKind(Parser &P, OpenACCSpecialTokenKind Kind,
+bool TryParseAndConsumeSpecialTokenKind(Parser &P, OpenACCSpecialTokenKind Kind,
                                         DirOrClauseTy DirOrClause) {
   Token IdentTok = P.getCurToken();
   // If this is an identifier-like thing followed by ':', it is one of the
@@ -713,7 +713,7 @@ void Parser::ParseOpenACCCacheVarList() {
   // The VarList is an optional `readonly:` followed by a list of a variable
   // specifications. Consume something that looks like a 'tag', and diagnose if
   // it isn't 'readonly'.
-  if (tryParseAndConsumeSpecialTokenKind(*this,
+  if (TryParseAndConsumeSpecialTokenKind(*this,
                                          OpenACCSpecialTokenKind::ReadOnly,
                                          OpenACCDirectiveKind::Cache)) {
     // FIXME: Record that this is a 'readonly' so that we can use that during
