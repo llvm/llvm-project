@@ -3310,14 +3310,11 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
     return true;
-  case AMDGPU::V_MOV_B32_e64:
-    if (MI
-            .getOperand(AMDGPU::getNamedOperandIdx(
-                AMDGPU::V_MOV_B32_e64, AMDGPU::OpName::src0_modifiers))
-            .getImm() == 0)
-      return true;
-    else
-      return false;
+  case AMDGPU::V_MOV_B32_e64: {
+    int16_t Idx = AMDGPU::getNamedOperandIdx(AMDGPU::V_MOV_B32_e64,
+                                             AMDGPU::OpName::src0_modifiers);
+    return MI.getOperand(Idx).getImm() == SISrcMods::NONE;
+  }
   default:
     return false;
   }
