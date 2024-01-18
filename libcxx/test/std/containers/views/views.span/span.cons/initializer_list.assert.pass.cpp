@@ -22,17 +22,11 @@
 
 #include "check_assertion.h"
 
-bool test() {
+int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
       (std::span<const int, 4>({1, 2, 3, 9084, 5})), "Size mismatch in span's constructor _Extent != __il.size().");
   TEST_LIBCPP_ASSERT_FAILURE((std::span<const int, 4>(std::initializer_list<int>{1, 2, 3, 9084, 5})),
                              "Size mismatch in span's constructor _Extent != __il.size().");
-
-  return true;
-}
-
-int main(int, char**) {
-  assert(test());
 
   return 0;
 }
