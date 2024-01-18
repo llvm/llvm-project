@@ -9114,7 +9114,7 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   if (BuiltinID == Builtin::BI__builtin_isunordered &&
       TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs())
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << TheCall->getSourceRange();
+        << 1 << 0 << TheCall->getSourceRange();
 
   ExprResult OrigArg0 = TheCall->getArg(0);
   ExprResult OrigArg1 = TheCall->getArg(1);
@@ -9160,12 +9160,12 @@ bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
                                BuiltinID == Builtin::BI__builtin_isinf ||
                                BuiltinID == Builtin::BI__builtin_isinf_sign))
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 0 << TheCall->getSourceRange();
+        << 0 << 0 << TheCall->getSourceRange();
 
   if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
                                BuiltinID == Builtin::BI__builtin_isunordered))
     Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << TheCall->getSourceRange();
+        << 1 << 0 << TheCall->getSourceRange();
 
   bool IsFPClass = NumArgs == 2;
 
@@ -12920,13 +12920,13 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
        (Call->getBuiltinCallee() == Builtin::BI__builtin_nanf)) &&
       FPO.getNoHonorNaNs())
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 1 << Call->getSourceRange();
+        << 1 << 0 << Call->getSourceRange();
   else if ((IsStdFunction(FDecl, "isinf") ||
             (IsStdFunction(FDecl, "isfinite") ||
              (FDecl->getIdentifier() && FDecl->getName() == "infinity"))) &&
            FPO.getNoHonorInfs())
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-        << 0 << Call->getSourceRange();
+        << 0 << 0 << Call->getSourceRange();
 }
 
 // Warn when using the wrong abs() function.

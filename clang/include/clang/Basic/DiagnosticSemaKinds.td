@@ -6784,10 +6784,6 @@ def warn_pointer_sub_null_ptr : Warning<
 def warn_floatingpoint_eq : Warning<
   "comparing floating point with == or != is unsafe">,
   InGroup<DiagGroup<"float-equal">>, DefaultIgnore;
-def warn_fp_nan_inf_when_disabled : Warning<
-  "use of %select{infinity|NaN}0 results in undefined behavior due to the "
-  "currently enabled floating-point options">,
-  InGroup<DiagGroup<"nan-and-infinity-disabled">>;
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "

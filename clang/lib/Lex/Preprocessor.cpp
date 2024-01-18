@@ -1459,7 +1459,7 @@ void Preprocessor::emitRestrictExpansionWarning(const Token &Identifier) const {
 
 void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier) const {
   if (getLangOpts().NoHonorInfs)
-    Diag(Identifier, diag::warn_infinity_defined_in_macro);
+    Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << 0 << 1;
 }
 
 void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
