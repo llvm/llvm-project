@@ -123,6 +123,7 @@ recordState(Elements=1, Branches=0, Joins=0)
 enterElement(b (ImplicitCastExpr, LValueToRValue, _Bool))
 transfer()
 recordState(Elements=2, Branches=0, Joins=0)
+recordState(Elements=2, Branches=0, Joins=0)
 
 enterBlock(3, false)
 transferBranch(0)
