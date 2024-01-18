@@ -35,6 +35,8 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
     return aarch32::Data_Pointer32;
+  case ELF::R_ARM_GOT_PREL:
+    return aarch32::Data_RequestGOTAndTransformToDelta32;
   case ELF::R_ARM_REL32:
     return aarch32::Data_Delta32;
   case ELF::R_ARM_CALL:
@@ -71,6 +73,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_REL32;
   case aarch32::Data_Pointer32:
     return ELF::R_ARM_ABS32;
+  case aarch32::Data_RequestGOTAndTransformToDelta32:
+    return ELF::R_ARM_GOT_PREL;
   case aarch32::Arm_Call:
     return ELF::R_ARM_CALL;
   case aarch32::Arm_Jump24:
@@ -222,6 +226,9 @@ Error buildTables_ELF_aarch32(LinkGraph &G) {
 
   StubsManagerType StubsManager;
   visitExistingEdges(G, StubsManager);
+  aarch32::GOTBuilder GOT;
+  visitExistingEdges(G, GOT);
+
   return Error::success();
 }
 
