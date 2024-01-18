@@ -23,12 +23,12 @@ func.func @test_gemm_bf16(%a : memref<1024x1024xbf16>, %b: memref<1024x1024xbf16
 
   scf.for %i= %c0 to %c1024 step %c8 {
     scf.for %j= %c0 to %c1024 step %c16 {
-      // CHECK: xegpu.create_nd_tdesc
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[%{{arg[0-9]}}, %{{c[0-9]}}]
       // CHECK-SAME: memref<1024x1024xbf16>
       // CHECK-SAME: -> !xegpu.tensor_desc<8x16xbf16, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [1, 2]>>
       %1 = xegpu.create_nd_tdesc %a[%i, %c0] : memref<1024x1024xbf16> -> !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>
 
-      // CHECK: xegpu.create_nd_tdesc
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[%{{c[0-9]}}, %{{arg[0-9]}}]
       // CHECK-SAME: memref<1024x1024xbf16>
       // CHECK-SAME: -> !xegpu.tensor_desc<16x16xbf16, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
       %2 = xegpu.create_nd_tdesc %b[%c0, %j] : memref<1024x1024xbf16> -> !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>
@@ -37,33 +37,35 @@ func.func @test_gemm_bf16(%a : memref<1024x1024xbf16>, %b: memref<1024x1024xbf16
 
       %tmp0, %tmp1, %result = scf.for %k= %c0 to %c1024 step %c16 iter_args(%subA = %1, %subB = %2, %subC = %3)
               -> (!xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>, !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>, vector<8x1xf32>) {
-        // CHECK: xegpu.load_nd
-        // CHECK-SAME: vector<4x1x2xbf16>
+        // CHECK: xegpu.load_nd %{{arg[0-9]}} {vnni_axis = 1 : i64} 
+        // CHECK-SAME: !xegpu.tensor_desc<8x16xbf16, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [1, 2]>> -> vector<4x1x2xbf16>
         %4 = xegpu.load_nd %subA {vnni_axis = 1} : !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a> -> vector<4x1x2xbf16>
 
-        // CHECK: xegpu.load_nd
-        // CHECK-SAME: vector<8x1x2xbf16>
+        // CHECK: xegpu.load_nd %{{arg[0-9]}} {vnni_axis = 0 : i64}
+        // CHECK-SAME: !xegpu.tensor_desc<16x16xbf16, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>> -> vector<8x1x2xbf16>
         %5 = xegpu.load_nd %subB {vnni_axis = 0} : !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b> -> vector<8x1x2xbf16>
 
-        // CHECK: xegpu.dpas
+        // CHECK: xegpu.dpas %{{[0-9]}}, %{{[0-9]}}, %{{arg[0-9]}}
         // CHECK-SAME: vector<4x1x2xbf16>, vector<8x1x2xbf16>, vector<8x1xf32> -> vector<8x1xf32>
         %6 = xegpu.dpas %4, %5, %subC  : vector<4x1x2xbf16>, vector<8x1x2xbf16>, vector<8x1xf32> -> vector<8x1xf32>
 
-        %7 = xegpu.update_nd_offset %subA, [%c0, %c16] : !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>
-            -> !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>
+        // CHECK: xegpu.update_nd_offset %{{arg[0-9]}}, [%{{c[0-9]}}, %{{c[0-9]+}}]
+        // CHECK-SAME: !xegpu.tensor_desc<8x16xbf16, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [1, 2]>> -> !xegpu.tensor_desc<8x16xbf16, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [1, 2]>>
+        %7 = xegpu.update_nd_offset %subA, [%c0, %c16] : !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a> -> !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>
 
-        %8 = xegpu.update_nd_offset %subB, [%c16, %c0] : !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>
-            -> !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>
+        // CHECK: xegpu.update_nd_offset %{{arg[0-9]}}, [%{{c[0-9]+}}, %{{c[0-9]}}]
+        // CHECK-SAME: !xegpu.tensor_desc<16x16xbf16, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>> -> !xegpu.tensor_desc<16x16xbf16, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+        %8 = xegpu.update_nd_offset %subB, [%c16, %c0] : !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b> -> !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>
 
         scf.yield %7, %8, %6: !xegpu.tensor_desc<8x16xbf16, #sg_map_fp16_a>, !xegpu.tensor_desc<16x16xbf16, #sg_map_fp16_b>, vector<8x1xf32>
       }
 
-      // CHECK: xegpu.create_nd_tdesc
-      // CHECK-SAME: memref<1024x1024xf32>
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[{{%arg[0-9]}}, %{{arg[0-9]}}]
+      // CHECK-SAME: memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
       %9 = xegpu.create_nd_tdesc %c[%i, %j] : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32, #sg_map_fp16_c>
 
-      // CHECK: xegpu.store_nd
-      // CHECK-SAME: vector<8x1xf32>
+      // CHECK: xegpu.store_nd %{{[0-9]#2}}, %{{[0-9]}}
+      // CHECK-SAME: vector<8x1xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
       xegpu.store_nd %result, %9 : vector<8x1xf32>, !xegpu.tensor_desc<8x16xf32, #sg_map_fp16_c>
     }
   }

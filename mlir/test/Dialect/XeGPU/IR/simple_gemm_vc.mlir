@@ -20,11 +20,11 @@ func.func @test_gemm_vc_bf16(%a : memref<1024x1024xbf16>, %b: memref<1024x1024xb
 
   scf.for %i= %c0 to %c1024 step %c8 {
     scf.for %j= %c0 to %c1024 step %c16 {
-      // CHECK: xegpu.create_nd_tdesc
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[%{{arg[0-9]}}, %{{c[0-9]}}] {mode = #xegpu<mode_kind vc>}
       // CHECK-SAME: memref<1024x1024xbf16> -> !xegpu.tensor_desc<8x16xbf16>
       %1 = xegpu.create_nd_tdesc %a[%i, %c0] {mode = vc} : memref<1024x1024xbf16> -> !xegpu.tensor_desc<8x16xbf16>
 
-      // CHECK: xegpu.create_nd_tdesc
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[%{{c[0-9]}}, %{{arg[0-9]}}] {mode = #xegpu<mode_kind vc>}
       // CHECK-SAME: memref<1024x1024xbf16> -> !xegpu.tensor_desc<16x16xbf16>
       %2 = xegpu.create_nd_tdesc %b[%c0, %j] {mode = vc} : memref<1024x1024xbf16> -> !xegpu.tensor_desc<16x16xbf16>
 
@@ -33,30 +33,34 @@ func.func @test_gemm_vc_bf16(%a : memref<1024x1024xbf16>, %b: memref<1024x1024xb
       %tmp0, %tmp1, %result = scf.for %k= %c0 to %c1024 step %c16
                                 iter_args(%subA = %1, %subB = %2, %subC = %3)
                                   -> (!xegpu.tensor_desc<8x16xbf16>, !xegpu.tensor_desc<16x16xbf16>, vector<8x16xf32>) {
-        // CHECK: xegpu.load_nd
+        // CHECK: xegpu.load_nd %{{arg[0-9]}} {mode = #xegpu<mode_kind vc>, vnni_axis = 1 : i64}
         // CHECK-SAME: !xegpu.tensor_desc<8x16xbf16> -> vector<8x8x2xbf16>
         %4 = xegpu.load_nd %subA {mode = vc, vnni_axis = 1} : !xegpu.tensor_desc<8x16xbf16> -> vector<8x8x2xbf16>
 
-        // CHECK: xegpu.load_nd
+        // CHECK: xegpu.load_nd %{{arg[0-9]}} {mode = #xegpu<mode_kind vc>, vnni_axis = 0 : i64}
         // CHECK-SAME: !xegpu.tensor_desc<16x16xbf16> -> vector<8x16x2xbf16>
         %5 = xegpu.load_nd %subB {mode = vc, vnni_axis = 0} : !xegpu.tensor_desc<16x16xbf16> -> vector<8x16x2xbf16>
 
-        // CHECK: xegpu.dpas
+        // CHECK: xegpu.dpas %{{[0-9]}}, %{{[0-9]}}, %{{arg[0-9]}} {mode = #xegpu<mode_kind vc>}
         // CHECK-SAME: vector<8x8x2xbf16>, vector<8x16x2xbf16>, vector<8x16xf32> -> vector<8x16xf32>
         %6 = xegpu.dpas %4, %5, %subC {mode = vc} : vector<8x8x2xbf16>, vector<8x16x2xbf16>, vector<8x16xf32> -> vector<8x16xf32>
 
+        // CHECK: xegpu.update_nd_offset %{{arg[0-9]}}, [%{{c[0-9]}}, %{{c[0-9]+}}] {mode = #xegpu<mode_kind vc>}
+        // CHECK-SAME: !xegpu.tensor_desc<8x16xbf16> -> !xegpu.tensor_desc<8x16xbf16>
         %7 = xegpu.update_nd_offset %subA, [%c0, %c16] {mode = vc} : !xegpu.tensor_desc<8x16xbf16> -> !xegpu.tensor_desc<8x16xbf16>
 
+        // CHECK: xegpu.update_nd_offset %{{arg[0-9]}}, [%{{c[0-9]+}}, %{{c[0-9]}}] {mode = #xegpu<mode_kind vc>} 
+        // CHECK-SAME: !xegpu.tensor_desc<16x16xbf16> -> !xegpu.tensor_desc<16x16xbf16>
         %8 = xegpu.update_nd_offset %subB, [%c16, %c0] {mode = vc} : !xegpu.tensor_desc<16x16xbf16> -> !xegpu.tensor_desc<16x16xbf16>
 
         scf.yield %7, %8, %6: !xegpu.tensor_desc<8x16xbf16>, !xegpu.tensor_desc<16x16xbf16>, vector<8x16xf32>
       }
 
-      // CHECK: xegpu.create_nd_tdesc
+      // CHECK: xegpu.create_nd_tdesc %{{arg[0-9]}}[{{%arg[0-9]}}, %{{arg[0-9]}}] {mode = #xegpu<mode_kind vc>}
       // CHECK-SAME: memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
       %9 = xegpu.create_nd_tdesc %c[%i, %j] {mode = vc} : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
 
-      // CHECK: xegpu.store_nd
+      // CHECK: xegpu.store_nd %{{[0-9]#2}}, %{{[0-9]}} {mode = #xegpu<mode_kind vc>}
       // CHECK-SAME: vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
       xegpu.store_nd %result, %9 {mode = vc}: vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
     }
