@@ -7741,10 +7741,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                   Op <= AtomicExpr::AO__opencl_atomic_store;
   bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_compare_exchange_strong &&
                Op <= AtomicExpr::AO__hip_atomic_store;
-  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_load &&
-                  Op <= AtomicExpr::AO__scoped_atomic_fetch_max;
+  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_add_fetch &&
+                  Op <= AtomicExpr::AO__scoped_atomic_xor_fetch;
   bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_compare_exchange_strong &&
-               Op <= AtomicExpr::AO__c11_atomic_store) ||
+                Op <= AtomicExpr::AO__c11_atomic_store) ||
                IsOpenCL;
   bool IsN = Op == AtomicExpr::AO__atomic_load_n ||
              Op == AtomicExpr::AO__atomic_store_n ||

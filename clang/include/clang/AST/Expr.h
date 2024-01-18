@@ -6571,11 +6571,14 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    if (Op >= AO__opencl_atomic_compare_exchange_strong && Op <= AO__opencl_atomic_store)
+    // FIXME: Allow grouping of builtins to be able to only check >= and <=
+    if (Op >= AO__opencl_atomic_compare_exchange_strong &&
+        Op <= AO__opencl_atomic_store && Op != AO__opencl_atomic_init)
       return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
-    else if (Op >= AO__hip_atomic_compare_exchange_strong && Op <= AO__hip_atomic_store)
+    if (Op >= AO__hip_atomic_compare_exchange_strong &&
+        Op <= AO__hip_atomic_store)
       return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
-    else if (Op >= AO__scoped_atomic_load && Op <= AO__scoped_atomic_fetch_max)
+    if (Op >= AO__scoped_atomic_add_fetch && Op <= AO__scoped_atomic_xor_fetch)
       return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
     return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }

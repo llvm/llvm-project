@@ -599,6 +599,27 @@ def IsNormal : Builtin {
   let Prototype = "int(...)";
 }
 
+def IsSubnormal : Builtin {
+  let Spellings = ["__builtin_issubnormal"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
+def IsZero : Builtin {
+  let Spellings = ["__builtin_iszero"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
+def IsSignaling : Builtin {
+  let Spellings = ["__builtin_issignaling"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
 def IsFPClass : Builtin {
   let Spellings = ["__builtin_isfpclass"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -752,12 +773,6 @@ def BuiltinAssumeAligned : Builtin {
   let Spellings = ["__builtin_assume_aligned"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void*(void const*, size_t, ...)";
-}
-
-def BuiltinBcopy : Builtin {
-  let Spellings = ["__builtin_bcopy"];
-  let Attributes = [NoThrow];
-  let Prototype = "void(void*, void*, size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -1824,6 +1839,151 @@ def AtomicIsLockFree : Builtin {
   let Spellings = ["__atomic_is_lock_free"];
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "bool(size_t, void const volatile*)";
+}
+
+// GNU atomic builtins with atomic scopes.
+def ScopedAtomicLoad : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_load"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicLoadN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_load_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicStore : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_store"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicStoreN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_store_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicExchange : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_exchange"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicExchangeN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_exchange_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicCompareExchange : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_compare_exchange"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicCompareExchangeN : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_compare_exchange_n"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchAdd : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_add"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchSub : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_sub"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchAnd : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_and"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchOr : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_or"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchXor : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_xor"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchNand : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_nand"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchMin : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_min"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchMax : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_max"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicAddFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_add_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicSubFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_sub_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicAndFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_and_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicOrFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_or_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicXorFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_xor_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicNandFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_nand_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicMinFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_min_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicMaxFetch : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_max_fetch"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // OpenCL 2.0 atomic builtins.
@@ -2954,6 +3114,13 @@ def BZero : GNULibBuiltin<"strings.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+def Bcopy : GNULibBuiltin<"strings.h"> {
+  let Spellings = ["bcopy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void const*, void*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
 // FIXME: This should be part of BCmp.
 def BuiltinBCmp : Builtin {
   let Spellings = ["__builtin_bcmp"];
@@ -3931,19 +4098,19 @@ class SOverflowTemplate :
     Template<["int",          "long int",          "long long int"],
              ["_overflow",    "l_overflow",        "ll_overflow"]>;
 
-def SaddOverflow : Builtin, UOverflowTemplate {
+def SaddOverflow : Builtin, SOverflowTemplate {
   let Spellings = ["__builtin_sadd"];
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "bool(T const, T const, T*)";
 }
 
-def SsubOverflow : Builtin, UOverflowTemplate {
+def SsubOverflow : Builtin, SOverflowTemplate {
   let Spellings = ["__builtin_ssub"];
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "bool(T const, T const, T*)";
 }
 
-def SmulOverflow : Builtin, UOverflowTemplate {
+def SmulOverflow : Builtin, SOverflowTemplate {
   let Spellings = ["__builtin_smul"];
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "bool(T const, T const, T*)";
