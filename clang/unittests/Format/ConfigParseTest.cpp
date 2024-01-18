@@ -255,6 +255,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               PenaltyBreakTemplateDeclaration, 1234u);
   CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
               1234u);
+  CHECK_PARSE("PenaltyBreakScopeResolution: 1234", PenaltyBreakScopeResolution,
+              1234u);
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
   CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
               PenaltyReturnTypeOnItsOwnLine, 1234u);
@@ -994,6 +996,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BBNSS_OnlyWithParen);
   CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Never",
               AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+  CHECK_PARSE("SeparateDefinitionBlocks: Always", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Always);
+  CHECK_PARSE("SeparateDefinitionBlocks: Leave", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Leave);
+  CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

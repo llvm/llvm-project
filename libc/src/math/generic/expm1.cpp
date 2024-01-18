@@ -275,9 +275,10 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
 
-  bool x_sign = xbits.get_sign();
+  bool x_is_neg = xbits.is_neg();
   uint64_t x_u = xbits.uintval();
 
   // Upper bound: max normal number = 2^1023 * (2 - 2^-52)
@@ -392,11 +393,11 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   // -2^(-hi)
   double one_scaled =
-      FPBits::create_value(true, FPBits::EXP_BIAS - hi, 0).get_val();
+      FPBits::create_value(Sign::NEG, FPBits::EXP_BIAS - hi, 0).get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
-  DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
-                                : fputil::exact_add(exp_mid.hi, one_scaled);
+  DoubleDouble hi_part = x_is_neg ? fputil::exact_add(one_scaled, exp_mid.hi)
+                                  : fputil::exact_add(exp_mid.hi, one_scaled);
 
   hi_part.lo += exp_mid.lo;
 
@@ -437,7 +438,9 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, hi_part.lo);
 
-  uint64_t err = x_sign ? (static_cast<uint64_t>(-hi) << 52) : 0;
+  // TODO: The following line leaks encoding abstraction. Use FPBits methods
+  // instead.
+  uint64_t err = x_is_neg ? (static_cast<uint64_t>(-hi) << 52) : 0;
 
   double err_d = cpp::bit_cast<double>(ERR_D + err);
 

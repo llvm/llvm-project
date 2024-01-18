@@ -209,7 +209,7 @@ namespace dr1815 { // dr1815: no
   // FIXME: needs codegen test
   struct A { int &&r = 0; }; // #dr1815-A 
   A a = {};
-  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}} FIXME
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
   //   since-cxx14-note@#dr1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #dr1815-B

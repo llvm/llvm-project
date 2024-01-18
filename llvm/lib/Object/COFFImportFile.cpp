@@ -33,6 +33,25 @@ using namespace llvm;
 namespace llvm {
 namespace object {
 
+StringRef COFFImportFile::getFileFormatName() const {
+  switch (getMachine()) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    return "COFF-import-file-i386";
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    return "COFF-import-file-x86-64";
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    return "COFF-import-file-ARM";
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    return "COFF-import-file-ARM64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "COFF-import-file-ARM64EC";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "COFF-import-file-ARM64X";
+  default:
+    return "COFF-import-file-<unknown arch>";
+  }
+}
+
 static uint16_t getImgRelRelocation(MachineTypes Machine) {
   switch (Machine) {
   default:
