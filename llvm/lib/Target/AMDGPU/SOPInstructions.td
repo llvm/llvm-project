@@ -292,8 +292,11 @@ def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
 
+def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
+// PSEUDO includes a workaround for a hardware anomaly where some ASICs
+// zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
@@ -1597,6 +1600,13 @@ def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
 // that doesn't access memory.
 def S_WAITCNT_soft : SOPP_Pseudo <"s_soft_waitcnt" , (ins SWaitCnt:$simm16), "$simm16">;
 def S_WAITCNT_VSCNT_soft : SOPK_WAITCNT<"s_soft_waitcnt_vscnt">;
+let SubtargetPredicate = isGFX12Plus in {
+  def S_WAIT_LOADCNT_soft : SOPP_Pseudo <"s_soft_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT_soft : SOPP_Pseudo <"s_soft_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_SAMPLECNT_soft : SOPP_Pseudo <"s_soft_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_BVHCNT_soft : SOPP_Pseudo <"s_soft_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_DSCNT_soft : SOPP_Pseudo <"s_soft_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+}
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;

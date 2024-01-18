@@ -20,7 +20,11 @@ define float @v_rsq_clamp_f32(float %src) #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_f32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f32_e32 v0, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0xff7fffff
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
@@ -47,7 +51,11 @@ define float @v_rsq_clamp_fabs_f32(float %src) #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_fabs_f32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f32_e64 v0, |v0|
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0xff7fffff
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
@@ -78,7 +86,11 @@ define double @v_rsq_clamp_f64(double %src) #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_f64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
 ; GFX12-NEXT:    s_mov_b32 s0, -1
 ; GFX12-NEXT:    s_mov_b32 s1, 0x7fefffff
@@ -112,7 +124,11 @@ define double @v_rsq_clamp_fabs_f64(double %src) #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_fabs_f64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f64_e64 v[0:1], |v[0:1]|
 ; GFX12-NEXT:    s_mov_b32 s0, -1
 ; GFX12-NEXT:    s_mov_b32 s1, 0x7fefffff
@@ -144,7 +160,11 @@ define float @v_rsq_clamp_undef_f32() #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_undef_f32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_s_rsq_f32 s0, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0xff7fffff
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
@@ -174,7 +194,11 @@ define double @v_rsq_clamp_undef_f64() #0 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_undef_f64:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], s[0:1]
 ; GFX12-NEXT:    s_mov_b32 s0, -1
 ; GFX12-NEXT:    s_mov_b32 s1, 0x7fefffff
@@ -205,7 +229,11 @@ define float @v_rsq_clamp_f32_non_ieee(float %src) #2 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_f32_non_ieee:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f32_e32 v0, v0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0xff7fffff
 ; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
@@ -235,7 +263,11 @@ define double @v_rsq_clamp_f64_non_ieee(double %src) #2 {
 ;
 ; GFX12-LABEL: v_rsq_clamp_f64_non_ieee:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_rsq_f64_e32 v[0:1], v[0:1]
 ; GFX12-NEXT:    s_mov_b32 s0, -1
 ; GFX12-NEXT:    s_mov_b32 s1, 0x7fefffff
