@@ -150,9 +150,122 @@ define <vscale x 16 x i1> @chained_reinterpret() {
   ret <vscale x 16 x i1> %out
 }
 
+; Convert two nxv4i1 to nxv8i1 and combine them using uzp1 and then cast to svbool.
+; Icmp zeros the lanes so the uzp'd result also has zeroed lanes. There should
+; be no need to manually zero the lanes.
+define <vscale x 16 x i1> @uzp1_to_svbool(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %x) {
+; CHECK-LABEL: uzp1_to_svbool:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmphi p1.s, p0/z, z2.s, z0.s
+; CHECK-NEXT:    cmphi p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp0 = icmp ult <vscale x 4 x i32> %v0, %x
+  %cmp1 = icmp ult <vscale x 4 x i32> %v1, %x
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp0)
+  %2 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp1)
+  %4 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %3)
+  %uz1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.uzp1.nxv8i1(<vscale x 8 x i1> %2, <vscale x 8 x i1> %4)
+  %uz1_svbool = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %uz1)
+  ret <vscale x 16 x i1> %uz1_svbool
+}
+
+; Negative test. cmp0 has 8 lanes so we need to zero.
+define <vscale x 16 x i1> @uzp1_to_svbool_neg(<vscale x 8 x i16> %v0, <vscale x 4 x i32> %v1, <vscale x 8 x i16> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: uzp1_to_svbool_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cmphi p0.h, p0/z, z2.h, z0.h
+; CHECK-NEXT:    cmphi p2.s, p1/z, z3.s, z1.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p2.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp0 = icmp ult <vscale x 8 x i16> %v0, %x
+  %cmp1 = icmp ult <vscale x 4 x i32> %v1, %y
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %cmp0)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %uz1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.uzp1.nxv4i1(<vscale x 4 x i1> %2, <vscale x 4 x i1> %cmp1)
+  %uz1_svbool = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %uz1)
+  ret <vscale x 16 x i1> %uz1_svbool
+}
+
+; Test with chained reinterprets.
+define <vscale x 16 x i1> @chainedReinterpted_uzp1_to_svbool(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %x) {
+; CHECK-LABEL: chainedReinterpted_uzp1_to_svbool:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
+; CHECK-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    and p2.b, p2/z, p2.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp0 = icmp ult <vscale x 2 x i64> %v0, %x
+  %cmp1 = icmp ult <vscale x 2 x i64> %v1, %x
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %cmp0)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %cmp1)
+  %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %3)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+  %6 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %5)
+  %7 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %4)
+  %8 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %7)
+  %uz1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.uzp1.nxv8i1(<vscale x 8 x i1> %6, <vscale x 8 x i1> %8)
+  %uz1_svbool = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %uz1)
+  ret <vscale x 16 x i1> %uz1_svbool
+}
+
+; Test with chained uzp1s.
+define <vscale x 16 x i1> @chainedUzp1_to_svbool(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i32> %v3, <vscale x 4 x i32> %x) {
+; CHECK-LABEL: chainedUzp1_to_svbool:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmphi p1.s, p0/z, z4.s, z0.s
+; CHECK-NEXT:    cmphi p2.s, p0/z, z4.s, z1.s
+; CHECK-NEXT:    cmphi p3.s, p0/z, z4.s, z2.s
+; CHECK-NEXT:    cmphi p0.s, p0/z, z4.s, z3.s
+; CHECK-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-NEXT:    ptrue p2.h
+; CHECK-NEXT:    uzp1 p0.h, p3.h, p0.h
+; CHECK-NEXT:    and p1.b, p1/z, p1.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-NEXT:    ret
+  %cmp0 = icmp ult <vscale x 4 x i32> %v0, %x
+  %cmp1 = icmp ult <vscale x 4 x i32> %v1, %x
+  %cmp2 = icmp ult <vscale x 4 x i32> %v2, %x
+  %cmp3 = icmp ult <vscale x 4 x i32> %v3, %x
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp0)
+  %2 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp1)
+  %4 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %3)
+  %uz1_1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.uzp1.nxv8i1(<vscale x 8 x i1> %2, <vscale x 8 x i1> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp2)
+  %6 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %5)
+  %7 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %cmp3)
+  %8 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %7)
+  %uz1_2 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.uzp1.nxv8i1(<vscale x 8 x i1> %6, <vscale x 8 x i1> %8)
+  %9 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %uz1_1)
+  %10 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %uz1_2)
+  %uz3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.uzp1.nxv16i1(<vscale x 16 x i1> %9, <vscale x 16 x i1> %10)
+  ret <vscale x 16 x i1> %uz3
+}
+
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpgt.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+
+declare <vscale x 4 x i1> @llvm.aarch64.sve.uzp1.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.uzp1.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.uzp1.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv16i1(<vscale x 16 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
