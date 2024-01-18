@@ -95,11 +95,16 @@ static std::optional<StringRef> findLibrary(StringRef name) {
               findPathCombination("lib" + name, config->librarySearchPaths,
                                   {".tbd", ".dylib", ".so"}))
         return path;
-      return findPathCombination("lib" + name, config->librarySearchPaths,
-                                 {".a"});
+      else if (std::optional<StringRef> path = findPathCombination(
+                   "lib" + name, config->librarySearchPaths, {".a"}))
+        return path;
+      return findPathCombination(name, config->librarySearchPaths, {""});
     }
-    return findPathCombination("lib" + name, config->librarySearchPaths,
-                               {".tbd", ".dylib", ".so", ".a"});
+    if (std::optional<StringRef> path =
+            findPathCombination("lib" + name, config->librarySearchPaths,
+                                {".tbd", ".dylib", ".so", ".a"}))
+      return path;
+    return findPathCombination(name, config->librarySearchPaths, {""});
   };
 
   std::optional<StringRef> path = doFind();
