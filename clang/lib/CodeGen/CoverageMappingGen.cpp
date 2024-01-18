@@ -668,14 +668,14 @@ struct MCDCCoverageBuilder {
 private:
   CodeGenModule &CGM;
 
-  llvm::SmallVector<DecisionIDPair, 6> DecisionStack;
+  llvm::SmallVector<DecisionIDPair> DecisionStack;
   llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDs;
   llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
   MCDCConditionID NextID = 1;
   bool NotMapped = false;
 
   /// Represent a sentinel value of [0,0] for the bottom of DecisionStack.
-  static constexpr DecisionIDPair DecisionIDPairSentinel{0, 0};
+  static constexpr DecisionIDPair DecisionStackSentinel{0, 0};
 
   /// Is this a logical-AND operation?
   bool isLAnd(const BinaryOperator *E) const {
@@ -686,7 +686,7 @@ public:
   MCDCCoverageBuilder(CodeGenModule &CGM,
                       llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDMap,
                       llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap)
-      : CGM(CGM), DecisionStack(1, DecisionIDPairSentinel), CondIDs(CondIDMap),
+      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), CondIDs(CondIDMap),
         MCDCBitmapMap(MCDCBitmapMap) {}
 
   /// Return whether the build of the control flow map is at the top-level
@@ -714,7 +714,7 @@ public:
   }
 
   /// Return the LHS Decision ([0,0] if not set).
-  const DecisionIDPair back() const { return DecisionStack.back(); }
+  const DecisionIDPair &back() const { return DecisionStack.back(); }
 
   /// Push the binary operator statement to track the nest level and assign IDs
   /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
@@ -1831,7 +1831,7 @@ struct CounterCoverageMappingBuilder
     handleFileExit(getEnd(E->getLHS()));
 
     // Track LHS True/False Decision.
-    auto DecisionLHS = MCDCBuilder.pop();
+    const auto DecisionLHS = MCDCBuilder.pop();
 
     // Counter tracks the right hand side of a logical and operator.
     extendRegion(E->getRHS());
@@ -1884,7 +1884,7 @@ struct CounterCoverageMappingBuilder
     handleFileExit(getEnd(E->getLHS()));
 
     // Track LHS True/False Decision.
-    auto DecisionLHS = MCDCBuilder.pop();
+    const auto DecisionLHS = MCDCBuilder.pop();
 
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
