@@ -8405,81 +8405,31 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
   case Intrinsic::riscv_mopr: {
-    unsigned mopr_id = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
-    switch (mopr_id) {
-#define RISCV_MOPR_64_CASE(MOPR_ID, OPCODE)                                    \
-  case MOPR_ID: {                                                              \
-    if (RV64LegalI32 && Subtarget.is64Bit() &&                                 \
-        Op.getValueType() == MVT::i32) {                                       \
-      SDValue NewOp =                                                          \
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));        \
-      SDValue Res = DAG.getNode(OPCODE, DL, MVT::i64, NewOp);                  \
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);                    \
-    }                                                                          \
-    return DAG.getNode(OPCODE, DL, XLenVT, Op.getOperand(1));                  \
-  }
-      RISCV_MOPR_64_CASE(0, RISCVISD::MOPR0)
-      RISCV_MOPR_64_CASE(1, RISCVISD::MOPR1)
-      RISCV_MOPR_64_CASE(2, RISCVISD::MOPR2)
-      RISCV_MOPR_64_CASE(3, RISCVISD::MOPR3)
-      RISCV_MOPR_64_CASE(4, RISCVISD::MOPR4)
-      RISCV_MOPR_64_CASE(5, RISCVISD::MOPR5)
-      RISCV_MOPR_64_CASE(6, RISCVISD::MOPR6)
-      RISCV_MOPR_64_CASE(7, RISCVISD::MOPR7)
-      RISCV_MOPR_64_CASE(8, RISCVISD::MOPR8)
-      RISCV_MOPR_64_CASE(9, RISCVISD::MOPR9)
-      RISCV_MOPR_64_CASE(10, RISCVISD::MOPR10)
-      RISCV_MOPR_64_CASE(11, RISCVISD::MOPR11)
-      RISCV_MOPR_64_CASE(12, RISCVISD::MOPR12)
-      RISCV_MOPR_64_CASE(13, RISCVISD::MOPR13)
-      RISCV_MOPR_64_CASE(14, RISCVISD::MOPR14)
-      RISCV_MOPR_64_CASE(15, RISCVISD::MOPR15)
-      RISCV_MOPR_64_CASE(16, RISCVISD::MOPR16)
-      RISCV_MOPR_64_CASE(17, RISCVISD::MOPR17)
-      RISCV_MOPR_64_CASE(18, RISCVISD::MOPR18)
-      RISCV_MOPR_64_CASE(19, RISCVISD::MOPR19)
-      RISCV_MOPR_64_CASE(20, RISCVISD::MOPR20)
-      RISCV_MOPR_64_CASE(21, RISCVISD::MOPR21)
-      RISCV_MOPR_64_CASE(22, RISCVISD::MOPR22)
-      RISCV_MOPR_64_CASE(23, RISCVISD::MOPR23)
-      RISCV_MOPR_64_CASE(24, RISCVISD::MOPR24)
-      RISCV_MOPR_64_CASE(25, RISCVISD::MOPR25)
-      RISCV_MOPR_64_CASE(26, RISCVISD::MOPR26)
-      RISCV_MOPR_64_CASE(27, RISCVISD::MOPR27)
-      RISCV_MOPR_64_CASE(28, RISCVISD::MOPR28)
-      RISCV_MOPR_64_CASE(29, RISCVISD::MOPR29)
-      RISCV_MOPR_64_CASE(30, RISCVISD::MOPR30)
-      RISCV_MOPR_64_CASE(31, RISCVISD::MOPR31)
-#undef RISCV_MOPR_64_CASE
+    if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
+      SDValue NewOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          DAG.getTargetConstant(Op.getConstantOperandVal(2), DL, MVT::i64));
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);
     }
+    return DAG.getNode(RISCVISD::MOPR, DL, XLenVT, Op.getOperand(1),
+                       Op.getOperand(2));
   }
+
   case Intrinsic::riscv_moprr: {
-    unsigned moprr_id = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-    switch (moprr_id) {
-#define RISCV_MOPRR_64_CASE(MOPRR_ID, OPCODE)                                  \
-  case MOPRR_ID: {                                                             \
-    if (RV64LegalI32 && Subtarget.is64Bit() &&                                 \
-        Op.getValueType() == MVT::i32) {                                       \
-      SDValue NewOp0 =                                                         \
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));        \
-      SDValue NewOp1 =                                                         \
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(2));        \
-      SDValue Res = DAG.getNode(OPCODE, DL, MVT::i64, NewOp0, NewOp1);         \
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);                    \
-    }                                                                          \
-    return DAG.getNode(OPCODE, DL, XLenVT, Op.getOperand(1),                   \
-                       Op.getOperand(2));                                      \
-  }
-      RISCV_MOPRR_64_CASE(0, RISCVISD::MOPRR0)
-      RISCV_MOPRR_64_CASE(1, RISCVISD::MOPRR1)
-      RISCV_MOPRR_64_CASE(2, RISCVISD::MOPRR2)
-      RISCV_MOPRR_64_CASE(3, RISCVISD::MOPRR3)
-      RISCV_MOPRR_64_CASE(4, RISCVISD::MOPRR4)
-      RISCV_MOPRR_64_CASE(5, RISCVISD::MOPRR5)
-      RISCV_MOPRR_64_CASE(6, RISCVISD::MOPRR6)
-      RISCV_MOPRR_64_CASE(7, RISCVISD::MOPRR7)
-#undef RISCV_MOPRR_64_CASE
+    if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(1));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op.getOperand(2));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          DAG.getTargetConstant(Op.getConstantOperandVal(3), DL, MVT::i64));
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res);
     }
+    return DAG.getNode(RISCVISD::MOPRR, DL, XLenVT, Op.getOperand(1),
+                       Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::riscv_clmul:
     if (RV64LegalI32 && Subtarget.is64Bit() && Op.getValueType() == MVT::i32) {
@@ -11872,79 +11822,28 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::riscv_mopr: {
-      unsigned mopr_id = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
-      switch (mopr_id) {
-#define RISCV_MOPR_CASE(MOPR_ID, OPCODE)                                       \
-  case MOPR_ID: {                                                              \
-    if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)                \
-      return;                                                                  \
-    SDValue NewOp =                                                            \
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));          \
-    SDValue Res = DAG.getNode(OPCODE, DL, MVT::i64, NewOp);                    \
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));          \
-    return;                                                                    \
-  }
-        RISCV_MOPR_CASE(0, RISCVISD::MOPR0)
-        RISCV_MOPR_CASE(1, RISCVISD::MOPR1)
-        RISCV_MOPR_CASE(2, RISCVISD::MOPR2)
-        RISCV_MOPR_CASE(3, RISCVISD::MOPR3)
-        RISCV_MOPR_CASE(4, RISCVISD::MOPR4)
-        RISCV_MOPR_CASE(5, RISCVISD::MOPR5)
-        RISCV_MOPR_CASE(6, RISCVISD::MOPR6)
-        RISCV_MOPR_CASE(7, RISCVISD::MOPR7)
-        RISCV_MOPR_CASE(8, RISCVISD::MOPR8)
-        RISCV_MOPR_CASE(9, RISCVISD::MOPR9)
-        RISCV_MOPR_CASE(10, RISCVISD::MOPR10)
-        RISCV_MOPR_CASE(11, RISCVISD::MOPR11)
-        RISCV_MOPR_CASE(12, RISCVISD::MOPR12)
-        RISCV_MOPR_CASE(13, RISCVISD::MOPR13)
-        RISCV_MOPR_CASE(14, RISCVISD::MOPR14)
-        RISCV_MOPR_CASE(15, RISCVISD::MOPR15)
-        RISCV_MOPR_CASE(16, RISCVISD::MOPR16)
-        RISCV_MOPR_CASE(17, RISCVISD::MOPR17)
-        RISCV_MOPR_CASE(18, RISCVISD::MOPR18)
-        RISCV_MOPR_CASE(19, RISCVISD::MOPR19)
-        RISCV_MOPR_CASE(20, RISCVISD::MOPR20)
-        RISCV_MOPR_CASE(21, RISCVISD::MOPR21)
-        RISCV_MOPR_CASE(22, RISCVISD::MOPR22)
-        RISCV_MOPR_CASE(23, RISCVISD::MOPR23)
-        RISCV_MOPR_CASE(24, RISCVISD::MOPR24)
-        RISCV_MOPR_CASE(25, RISCVISD::MOPR25)
-        RISCV_MOPR_CASE(26, RISCVISD::MOPR26)
-        RISCV_MOPR_CASE(27, RISCVISD::MOPR27)
-        RISCV_MOPR_CASE(28, RISCVISD::MOPR28)
-        RISCV_MOPR_CASE(29, RISCVISD::MOPR29)
-        RISCV_MOPR_CASE(30, RISCVISD::MOPR30)
-        RISCV_MOPR_CASE(31, RISCVISD::MOPR31)
-#undef RISCV_MOPR_CASE
-      }
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      SDValue NewOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPR, DL, MVT::i64, NewOp,
+          DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
     }
     case Intrinsic::riscv_moprr: {
-      unsigned moprr_id =
-          cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
-      switch (moprr_id) {
-#define RISCV_MOPRR_CASE(MOPRR_ID, OPCODE)                                     \
-  case MOPRR_ID: {                                                             \
-    if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)                \
-      return;                                                                  \
-    SDValue NewOp0 =                                                           \
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));          \
-    SDValue NewOp1 =                                                           \
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));          \
-    SDValue Res = DAG.getNode(OPCODE, DL, MVT::i64, NewOp0, NewOp1);           \
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));          \
-    return;                                                                    \
-  }
-        RISCV_MOPRR_CASE(0, RISCVISD::MOPRR0)
-        RISCV_MOPRR_CASE(1, RISCVISD::MOPRR1)
-        RISCV_MOPRR_CASE(2, RISCVISD::MOPRR2)
-        RISCV_MOPRR_CASE(3, RISCVISD::MOPRR3)
-        RISCV_MOPRR_CASE(4, RISCVISD::MOPRR4)
-        RISCV_MOPRR_CASE(5, RISCVISD::MOPRR5)
-        RISCV_MOPRR_CASE(6, RISCVISD::MOPRR6)
-        RISCV_MOPRR_CASE(7, RISCVISD::MOPRR7)
-#undef RISCV_MOPRR_CASE
-      }
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = DAG.getNode(
+          RISCVISD::MOPRR, DL, MVT::i64, NewOp0, NewOp1,
+          DAG.getTargetConstant(N->getConstantOperandVal(3), DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
     }
     case Intrinsic::riscv_clmul: {
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
@@ -18701,46 +18600,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CLMUL)
   NODE_NAME_CASE(CLMULH)
   NODE_NAME_CASE(CLMULR)
-  NODE_NAME_CASE(MOPR0)
-  NODE_NAME_CASE(MOPR1)
-  NODE_NAME_CASE(MOPR2)
-  NODE_NAME_CASE(MOPR3)
-  NODE_NAME_CASE(MOPR4)
-  NODE_NAME_CASE(MOPR5)
-  NODE_NAME_CASE(MOPR6)
-  NODE_NAME_CASE(MOPR7)
-  NODE_NAME_CASE(MOPR8)
-  NODE_NAME_CASE(MOPR9)
-  NODE_NAME_CASE(MOPR10)
-  NODE_NAME_CASE(MOPR11)
-  NODE_NAME_CASE(MOPR12)
-  NODE_NAME_CASE(MOPR13)
-  NODE_NAME_CASE(MOPR14)
-  NODE_NAME_CASE(MOPR15)
-  NODE_NAME_CASE(MOPR16)
-  NODE_NAME_CASE(MOPR17)
-  NODE_NAME_CASE(MOPR18)
-  NODE_NAME_CASE(MOPR19)
-  NODE_NAME_CASE(MOPR20)
-  NODE_NAME_CASE(MOPR21)
-  NODE_NAME_CASE(MOPR22)
-  NODE_NAME_CASE(MOPR23)
-  NODE_NAME_CASE(MOPR24)
-  NODE_NAME_CASE(MOPR25)
-  NODE_NAME_CASE(MOPR26)
-  NODE_NAME_CASE(MOPR27)
-  NODE_NAME_CASE(MOPR28)
-  NODE_NAME_CASE(MOPR29)
-  NODE_NAME_CASE(MOPR30)
-  NODE_NAME_CASE(MOPR31)
-  NODE_NAME_CASE(MOPRR0)
-  NODE_NAME_CASE(MOPRR1)
-  NODE_NAME_CASE(MOPRR2)
-  NODE_NAME_CASE(MOPRR3)
-  NODE_NAME_CASE(MOPRR4)
-  NODE_NAME_CASE(MOPRR5)
-  NODE_NAME_CASE(MOPRR6)
-  NODE_NAME_CASE(MOPRR7)
+  NODE_NAME_CASE(MOPR)
+  NODE_NAME_CASE(MOPRR)
   NODE_NAME_CASE(SHA256SIG0)
   NODE_NAME_CASE(SHA256SIG1)
   NODE_NAME_CASE(SHA256SUM0)
