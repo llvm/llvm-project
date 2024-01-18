@@ -50,7 +50,7 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   constexpr DyadicFloat(bool s, int e, MantissaType m)
-      : sign(Sign(s)), exponent(e), mantissa(m) {
+      : sign(s ? Sign::NEG : Sign::POS), exponent(e), mantissa(m) {
     normalize();
   }
 

@@ -617,7 +617,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf(Sign(out_is_neg));
+        return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS);
       }
       // pow(0, positive number) = 0
       return out_is_neg ? -0.0f : 0.0f;
@@ -628,7 +628,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       if (y_u >= FloatBits::SIGN_MASK) {
         return out_is_neg ? -0.0f : 0.0f;
       }
-      return FloatBits::inf(Sign(out_is_neg));
+      return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS);
     }
     }
 

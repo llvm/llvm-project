@@ -36,7 +36,7 @@ LIBC_INLINE T fmin(T x, T y) {
     // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
-    return ((bitx.is_neg()) ? x : y);
+    return (bitx.is_neg()) ? x : y;
   } else {
     return (x < y ? x : y);
   }

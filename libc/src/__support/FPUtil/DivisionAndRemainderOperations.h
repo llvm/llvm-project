@@ -43,7 +43,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     return x;
   }
 
-  bool result_sign = (xbits.is_neg() == ybits.is_neg() ? false : true);
+  const Sign result_sign = (xbits.sign() == ybits.sign() ? Sign::POS : Sign::NEG);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
@@ -72,7 +72,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
     mx = n - my;
     if (mx == 0) {
-      q = result_sign ? -q : q;
+      q = result_sign.is_neg() ? -q : q;
       return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
     }
   }
@@ -107,7 +107,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
       native_remainder = -native_remainder;
   }
 
-  q = result_sign ? -q : q;
+  q = result_sign.is_neg() ? -q : q;
   if (native_remainder == T(0.0))
     return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   return native_remainder;

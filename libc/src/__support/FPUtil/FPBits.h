@@ -34,9 +34,6 @@ enum class FPType {
 // A type to interact with floating point type signs.
 // This may be moved outside of 'fputil' if useful.
 struct Sign {
-  LIBC_INLINE constexpr explicit Sign(bool is_negative)
-      : is_negative(is_negative) {}
-
   LIBC_INLINE constexpr bool is_pos() const { return !is_negative; }
   LIBC_INLINE constexpr bool is_neg() const { return is_negative; }
 
@@ -51,6 +48,9 @@ struct Sign {
   static const Sign NEG;
 
 private:
+  LIBC_INLINE constexpr explicit Sign(bool is_negative)
+      : is_negative(is_negative) {}
+
   bool is_negative;
 };
 

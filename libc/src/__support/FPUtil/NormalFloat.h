@@ -47,7 +47,7 @@ template <typename T> struct NormalFloat {
   Sign sign = Sign::POS;
 
   LIBC_INLINE NormalFloat(int32_t e, StorageType m, bool s)
-      : exponent(e), mantissa(m), sign(Sign(s)) {
+      : exponent(e), mantissa(m), sign(s ? Sign::NEG : Sign::POS) {
     if (mantissa >= ONE)
       return;
 
