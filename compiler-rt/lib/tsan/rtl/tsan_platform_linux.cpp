@@ -234,63 +234,63 @@ static void ReExecIfNeeded() {
     reexec = true;
   }
 
-    if (!AddressSpaceIsUnlimited()) {
-      Report(
-          "WARNING: Program is run with limited virtual address space,"
-          " which wouldn't work with ThreadSanitizer.\n");
-      Report("Re-execing with unlimited virtual address space.\n");
-      SetAddressSpaceUnlimited();
-      reexec = true;
-    }
+  if (!AddressSpaceIsUnlimited()) {
+    Report(
+        "WARNING: Program is run with limited virtual address space,"
+        " which wouldn't work with ThreadSanitizer.\n");
+    Report("Re-execing with unlimited virtual address space.\n");
+    SetAddressSpaceUnlimited();
+    reexec = true;
+  }
 
-    // ASLR personality check.
-    int old_personality = personality(0xffffffff);
-    bool aslr_on =
-        (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
+  // ASLR personality check.
+  int old_personality = personality(0xffffffff);
+  bool aslr_on =
+      (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
 
 #    if SANITIZER_ANDROID && (defined(__aarch64__) || defined(__x86_64__))
-    // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
-    // linux kernel, the random gap between stack and mapped area is increased
-    // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
-    // this big range, we should disable randomized virtual space on aarch64.
-    if (aslr_on) {
-      VReport(1,
-              "WARNING: Program is run with randomized virtual address "
-              "space, which wouldn't work with ThreadSanitizer on Android.\n"
-              "Re-execing with fixed virtual address space.\n");
-      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
-      reexec = true;
-    }
+  // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
+  // linux kernel, the random gap between stack and mapped area is increased
+  // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
+  // this big range, we should disable randomized virtual space on aarch64.
+  if (aslr_on) {
+    VReport(1,
+            "WARNING: Program is run with randomized virtual address "
+            "space, which wouldn't work with ThreadSanitizer on Android.\n"
+            "Re-execing with fixed virtual address space.\n");
+    CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+    reexec = true;
+  }
 #    endif
 
-    if (reexec) {
-      // Don't check the address space since we're going to re-exec anyway.
-    } else if (!CheckAndProtect(false, false, false)) {
-      if (aslr_on) {
-        // Disable ASLR if the memory layout was incompatible.
-        // Alternatively, we could just keep re-execing until we get lucky
-        // with a compatible randomized layout, but the risk is that if it's
-        // not an ASLR-related issue, we will be stuck in an infinite loop of
-        // re-execing (unless we change ReExec to pass a parameter of the
-        // number of retries allowed.)
-        VReport(1,
-                "WARNING: ThreadSanitizer: memory layout is incompatible, "
-                "possibly due to high-entropy ASLR.\n"
-                "Re-execing with fixed virtual address space.\n"
-                "N.B. reducing ASLR entropy is preferable.\n");
-        CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
-        reexec = true;
-      } else {
-        VReport(1,
-                "FATAL: ThreadSanitizer: memory layout is incompatible, "
-                "even though ASLR is disabled.\n"
-                "Please file a bug.\n");
-        Die();
-      }
+  if (reexec) {
+    // Don't check the address space since we're going to re-exec anyway.
+  } else if (!CheckAndProtect(false, false, false)) {
+    if (aslr_on) {
+      // Disable ASLR if the memory layout was incompatible.
+      // Alternatively, we could just keep re-execing until we get lucky
+      // with a compatible randomized layout, but the risk is that if it's
+      // not an ASLR-related issue, we will be stuck in an infinite loop of
+      // re-execing (unless we change ReExec to pass a parameter of the
+      // number of retries allowed.)
+      VReport(1,
+              "WARNING: ThreadSanitizer: memory layout is incompatible, "
+              "possibly due to high-entropy ASLR.\n"
+              "Re-execing with fixed virtual address space.\n"
+              "N.B. reducing ASLR entropy is preferable.\n");
+      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+      reexec = true;
+    } else {
+      VReport(1,
+              "FATAL: ThreadSanitizer: memory layout is incompatible, "
+              "even though ASLR is disabled.\n"
+              "Please file a bug.\n");
+      Die();
     }
+  }
 
-    if (reexec)
-      ReExec();
+  if (reexec)
+    ReExec();
 }
 #  endif
 
