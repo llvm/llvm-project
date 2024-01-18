@@ -227,16 +227,17 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         this loop is moved over to the new loop.
 
         This method is similar to `replaceWithAdditionalYields` but instead of
-        returning the value that is actually yielded, this returns the tiles of
-        the values that are yielded. This allows for unified handling of opreations
-        like `scf.forall` which dont yield a value from the loop, but instead
-        the terminator specifies where to insert the tile yielded by the body of
+        yielding a value from within the loop, it allows each loop construct
+        implementing this method to handle the result of each iteration
+        appropriately. This allows for unified handling of operations
+        like `scf.forall` which don't yield a value from the loop, but instead
+        the terminator specifies where to insert the tile computed by the body of
         the loop. For example,
         
         ```mlir
         %0 = scf.forall ... shared_outs(%arg0 = %arg1) {
           ...
-          %tiled_value
+          %tiled_value = ...
           scf.forall.in_parallel {
             tensor.parallel_insert_slice %tiled_value into %arg0[%o1, %o2]...
           }
@@ -247,13 +248,13 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         ```mlir
         %0 = scf.for ... iter_args(%arg0 = %arg1) {
           ...
-          %tiled_value
+          %tiled_value = ...
           %insert = tensor.insert_slice %tiled_value into %arg0[%o1, %o2]...
           scf.yield %insert
         }
         ```
 
-        So for the caller, the tiled value (`%tiled_values`) and the offsets
+        So for the caller, the tiled value (`%tiled_value`) and the offsets
         `(%o1, %o2)` and sizes (not shown) are generated the same way, but
         the implementation method for the different loop constructs handles
         the difference in representation.
