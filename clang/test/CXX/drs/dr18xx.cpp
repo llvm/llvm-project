@@ -335,6 +335,9 @@ struct S {
   operator const auto&() const { return char(); }
   // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
   template <typename T>
+  operator const auto*() const { return long(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
   operator decltype(auto)() const { return unsigned(); }
   // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
 #if __cplusplus >= 202002L

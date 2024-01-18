@@ -11323,13 +11323,13 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
 
   if (FunctionTemplateDecl *ConversionTemplate =
           Conversion->getDescribedFunctionTemplate()) {
+    if (const auto *ConvTypePtr = ConvType->getAs<PointerType>()) {
+      ConvType = ConvTypePtr->getPointeeType();
+    }
     if (ConvType->isUndeducedAutoType()) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
           << getReturnTypeLoc(Conversion).getSourceRange()
-          << llvm::to_underlying(Conversion->getConversionType()
-                                     ->getContainedDeducedType()
-                                     ->getAs<AutoType>()
-                                     ->getKeyword())
+          << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
           << /* in declaration of conversion function template */ 24;
     }
 
