@@ -340,9 +340,8 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   CheckOptions["test.BoolIFalseValue"] = "0";
   CheckOptions["test.BoolTrueValue"] = "true";
   CheckOptions["test.BoolFalseValue"] = "false";
-// FIXME: SWDEV-268185.
-//  CheckOptions["test.BoolTrueShort"] = "Y";
-//  CheckOptions["test.BoolFalseShort"] = "N";
+  CheckOptions["test.BoolTrueShort"] = "Y";
+  CheckOptions["test.BoolFalseShort"] = "N";
   CheckOptions["test.BoolUnparseable"] = "Nothing";
 
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
@@ -364,9 +363,8 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolIFalseValue"), false);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueValue"), true);
   CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseValue"), false);
-// FIXME: SWDEV-268185.
-//  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueShort"), true);
-//  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseShort"), false);
+  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolTrueShort"), true);
+  CHECK_VAL(TestCheck.getIntLocal<bool>("BoolFalseShort"), false);
   EXPECT_FALSE(TestCheck.getIntLocal<bool>("BoolUnparseable"));
 
   EXPECT_THAT(

@@ -419,9 +419,8 @@ TEST(YAMLParser, ParsesBools) {
   expectCanParseBool("TRUE", true);
   expectCanParseBool("True", true);
   expectCanParseBool("true", true);
-// FIXME: SWDEV-268185.
-//  expectCanParseBool("Y", true);
-//  expectCanParseBool("y", true);
+  expectCanParseBool("Y", true);
+  expectCanParseBool("y", true);
   expectCanParseBool("YES", true);
   expectCanParseBool("Yes", true);
   expectCanParseBool("yes", true);
@@ -431,9 +430,8 @@ TEST(YAMLParser, ParsesBools) {
   expectCanParseBool("FALSE", false);
   expectCanParseBool("False", false);
   expectCanParseBool("false", false);
-// FIXME: SWDEV-268185.
-//  expectCanParseBool("N", false);
-//  expectCanParseBool("n", false);
+  expectCanParseBool("N", false);
+  expectCanParseBool("n", false);
   expectCanParseBool("NO", false);
   expectCanParseBool("No", false);
   expectCanParseBool("no", false);
