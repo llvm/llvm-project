@@ -104,7 +104,7 @@ namespace {
 
     if (is_style_windows(style)) {
       if (pos == StringRef::npos)
-        pos = str.find_last_of(':', str.size() - 2);
+        pos = str.find_last_of(':', str.size() - 1);
     }
 
     if (pos == StringRef::npos || (pos == 1 && is_separator(str[0], style)))
