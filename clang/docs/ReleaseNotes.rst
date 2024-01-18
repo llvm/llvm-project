@@ -807,6 +807,7 @@ Bug Fixes in This Version
 - Fix an issue with missing symbol definitions when the first coroutine
   statement is part of an disabled branch of ``if constexpr``.
   Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
