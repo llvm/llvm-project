@@ -11808,17 +11808,16 @@ static void CheckFunctionDeclarationAttributesUsage(Sema &S,
 
   if (IsPure && IsConst) {
     S.Diag(NewFD->getLocation(), diag::warn_const_attr_with_pure_attr);
-    NewFD->dropAttr<PureAttr>();
+    NewFD->dropAttrs<PureAttr>();
   }
-  if (IsPure || IsConst) {
-    // Constructors and destructors are functions which return void, so are
-    // handled here as well.
-    if (NewFD->getReturnType()->isVoidType()) {
-      S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
-          << IsConst;
-      NewFD->dropAttr<PureAttr>();
-      NewFD->dropAttr<ConstAttr>();
-    }
+  if (!IsPure && !IsConst)
+    return;
+  // Constructors and destructors are functions which return void, so are
+  // handled here as well.
+  if (NewFD->getReturnType()->isVoidType()) {
+    S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
+        << IsConst;
+    NewFD->dropAttrs<PureAttr, ConstAttr>();
   }
 }
 
