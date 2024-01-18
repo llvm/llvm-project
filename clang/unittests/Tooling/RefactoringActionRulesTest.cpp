@@ -211,9 +211,9 @@ TEST_F(RefactoringActionRulesTest, ReturnSymbolOccurrences) {
     Expected<SymbolOccurrences>
     findSymbolOccurrences(RefactoringRuleContext &) override {
       SymbolOccurrences Occurrences;
-      Occurrences.push_back(SymbolOccurrence(SymbolName("test"),
-                                             SymbolOccurrence::MatchingSymbol,
-                                             Selection.getBegin()));
+      Occurrences.push_back(SymbolOccurrence(
+          SymbolName("test", /*IsObjectiveCSelector=*/false),
+          SymbolOccurrence::MatchingSymbol, Selection.getBegin()));
       return std::move(Occurrences);
     }
   };

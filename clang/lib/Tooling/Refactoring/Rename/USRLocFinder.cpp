@@ -60,8 +60,8 @@ public:
                                    const ASTContext &Context)
       : RecursiveSymbolVisitor(Context.getSourceManager(),
                                Context.getLangOpts()),
-        USRSet(USRs.begin(), USRs.end()), PrevName(PrevName), Context(Context) {
-  }
+        USRSet(USRs.begin(), USRs.end()),
+        PrevName(PrevName, /*IsObjectiveCSelector=*/false), Context(Context) {}
 
   bool visitSymbolOccurrence(const NamedDecl *ND,
                              ArrayRef<SourceRange> NameRanges) {

@@ -82,7 +82,7 @@ RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
   if (!Occurrences)
     return Occurrences.takeError();
   // FIXME: Verify that the new name is valid.
-  SymbolName Name(NewName);
+  SymbolName Name(NewName, /*IsObjectiveCSelector=*/false);
   return createRenameReplacements(
       *Occurrences, Context.getASTContext().getSourceManager(), Name);
 }
@@ -219,7 +219,7 @@ public:
     }
     // FIXME: Support multi-piece names.
     // FIXME: better error handling (propagate error out).
-    SymbolName NewNameRef(NewName);
+    SymbolName NewNameRef(NewName, /*IsObjectiveCSelector=*/false);
     Expected<std::vector<AtomicChange>> Change =
         createRenameReplacements(Occurrences, SourceMgr, NewNameRef);
     if (!Change) {
@@ -273,6 +273,100 @@ std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
 
 std::unique_ptr<ASTConsumer> QualifiedRenamingAction::newASTConsumer() {
   return std::make_unique<USRSymbolRenamer>(NewNames, USRList, FileToReplaces);
+}
+
+static bool isMatchingSelectorName(const syntax::Token &Tok,
+                                   const syntax::Token &Next,
+                                   StringRef NamePiece,
+                                   const SourceManager &SrcMgr) {
+  if (NamePiece.empty())
+    return Tok.kind() == tok::colon;
+  return (Tok.kind() == tok::identifier || Tok.kind() == tok::raw_identifier) &&
+         Next.kind() == tok::colon && Tok.text(SrcMgr) == NamePiece;
+}
+
+Error findObjCSymbolSelectorPieces(ArrayRef<syntax::Token> AllTokens,
+                                   const SourceManager &SM,
+                                   SourceLocation RenameLoc,
+                                   const SymbolName &OldName,
+                                   ObjCSymbolSelectorKind Kind,
+                                   SmallVectorImpl<SourceLocation> &Result) {
+  ArrayRef<syntax::Token> Tokens =
+      AllTokens.drop_while([RenameLoc](syntax::Token Tok) -> bool {
+        return Tok.location() != RenameLoc;
+      });
+  assert(!Tokens.empty() && "no tokens");
+  assert(OldName.getNamePieces()[0].empty() ||
+         Tokens[0].text(SM) == OldName.getNamePieces()[0]);
+  assert(OldName.getNamePieces().size() > 1);
+
+  Result.push_back(Tokens[0].location());
+
+  // We have to track square brackets, parens and braces as we want to skip the
+  // tokens inside them. This ensures that we don't use identical selector
+  // pieces in inner message sends, blocks, lambdas and @selector expressions.
+  unsigned SquareCount = 0;
+  unsigned ParenCount = 0;
+  unsigned BraceCount = 0;
+
+  // Start looking for the next selector piece.
+  unsigned Last = Tokens.size() - 1;
+  // Skip the ':' or any other token after the first selector piece token.
+  for (unsigned Index = OldName.getNamePieces()[0].empty() ? 1 : 2;
+       Index < Last; ++Index) {
+    const auto &Tok = Tokens[Index];
+
+    bool NoScoping = SquareCount == 0 && BraceCount == 0 && ParenCount == 0;
+    if (NoScoping &&
+        isMatchingSelectorName(Tok, Tokens[Index + 1],
+                               OldName.getNamePieces()[Result.size()], SM)) {
+      if (!OldName.getNamePieces()[Result.size()].empty()) {
+        // Skip the ':' after the name. This ensures that it won't match a
+        // follow-up selector piece with an empty name.
+        ++Index;
+      }
+      Result.push_back(Tok.location());
+      // All the selector pieces have been found.
+      if (Result.size() == OldName.getNamePieces().size())
+        return Error::success();
+    } else if (Tok.kind() == tok::r_square) {
+      // Stop scanning at the end of the message send.
+      // Also account for spurious ']' in blocks or lambdas.
+      if (Kind == ObjCSymbolSelectorKind::MessageSend && !SquareCount &&
+          !BraceCount)
+        break;
+      if (SquareCount)
+        --SquareCount;
+    } else if (Tok.kind() == tok::l_square) {
+      ++SquareCount;
+    } else if (Tok.kind() == tok::l_paren) {
+      ++ParenCount;
+    } else if (Tok.kind() == tok::r_paren) {
+      if (!ParenCount)
+        break;
+      --ParenCount;
+    } else if (Tok.kind() == tok::l_brace) {
+      // Stop scanning at the start of the of the method's body.
+      // Also account for any spurious blocks inside argument parameter types
+      // or parameter attributes.
+      if (Kind == ObjCSymbolSelectorKind::MethodDecl && !BraceCount &&
+          !ParenCount)
+        break;
+      ++BraceCount;
+    } else if (Tok.kind() == tok::r_brace) {
+      if (!BraceCount)
+        break;
+      --BraceCount;
+    }
+    // Stop scanning at the end of the method's declaration.
+    if (Kind == ObjCSymbolSelectorKind::MethodDecl && NoScoping &&
+        (Tok.kind() == tok::semi || Tok.kind() == tok::minus ||
+         Tok.kind() == tok::plus))
+      break;
+  }
+  return llvm::make_error<llvm::StringError>(
+      "failed to find all selector pieces in the source code",
+      inconvertibleErrorCode());
 }
 
 } // end namespace tooling

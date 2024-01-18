@@ -12,6 +12,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -34,8 +35,12 @@ struct RenameOptions {
 };
 
 struct RenameInputs {
-  Position Pos; // the position triggering the rename
-  llvm::StringRef NewName;
+  /// The position triggering the rename
+  Position Pos;
+
+  /// The new name to give to the symbol or `nullopt` to perform a fake rename
+  /// that checks if rename is possible.
+  std::optional<llvm::StringRef> NewName;
 
   ParsedAST &AST;
   llvm::StringRef MainFilePath;
@@ -51,12 +56,14 @@ struct RenameInputs {
 };
 
 struct RenameResult {
-  // The range of the symbol that the user can attempt to rename.
+  /// The range of the symbol that the user can attempt to rename.
   Range Target;
-  // Rename occurrences for the current main file.
+  /// The current name of the declaration at the cursor.
+  std::string OldName;
+  /// Rename occurrences for the current main file.
   std::vector<Range> LocalChanges;
-  // Complete edits for the rename, including LocalChanges.
-  // If the full set of changes is unknown, this field is empty.
+  /// Complete edits for the rename, including LocalChanges.
+  /// If the full set of changes is unknown, this field is empty.
   FileEdits GlobalChanges;
 };
 
@@ -66,13 +73,19 @@ struct RenameResult {
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs);
 
 /// Generates rename edits that replaces all given occurrences with the
-/// NewName.
+/// `NewName`.
+///
+/// `OldName` and `Tokens` are used to to find the argument labels of
+/// Objective-C selectors.
+///
 /// Exposed for testing only.
+///
 /// REQUIRED: Occurrences is sorted and doesn't have duplicated ranges.
-llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
-                                     llvm::StringRef InitialCode,
-                                     std::vector<Range> Occurrences,
-                                     llvm::StringRef NewName);
+llvm::Expected<Edit>
+buildRenameEdit(llvm::StringRef AbsFilePath, llvm::StringRef InitialCode,
+                std::vector<Range> Occurrences, tooling::SymbolName OldName,
+                tooling::SymbolName NewName,
+                const syntax::UnexpandedTokenBuffer &Tokens);
 
 /// Adjusts indexed occurrences to match the current state of the file.
 ///
@@ -85,8 +98,8 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 /// occurrence has the same length).
 /// REQUIRED: Indexed is sorted.
 std::optional<std::vector<Range>>
-adjustRenameRanges(llvm::StringRef DraftCode, llvm::StringRef Identifier,
-                   std::vector<Range> Indexed, const LangOptions &LangOpts);
+adjustRenameRanges(const syntax::UnexpandedTokenBuffer &Tokens,
+                   llvm::StringRef Identifier, std::vector<Range> Indexed);
 
 /// Calculates the lexed occurrences that the given indexed occurrences map to.
 /// Returns std::nullopt if we don't find a mapping.

@@ -78,6 +78,7 @@ set(LIBS
   clangSerialization
   clangTooling
   clangToolingRefactor
+  clangToolingSyntax
 )
 
 if (CLANG_ENABLE_ARCMT)

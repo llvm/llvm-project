@@ -24,7 +24,6 @@ add_clang_library(clangToolingRefactor
   StmtUtils.cpp
   SymbolOperation.cpp
   SymbolOccurrenceFinder.cpp
-  SymbolName.cpp
   SymbolUSRFinder.cpp
   TypeUtils.cpp
   USRFinder.cpp

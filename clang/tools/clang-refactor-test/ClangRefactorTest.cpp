@@ -14,7 +14,7 @@
 #include "clang-c/Refactor.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
-#include "clang/Tooling/Refactor/SymbolName.h"
+#include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -362,8 +362,8 @@ static int apply(ArrayRef<CXRefactoringReplacement> Replacements,
 /// this occurrence.
 static std::string
 occurrenceToString(const CXSymbolOccurrence &Occurrence, bool IsLocal,
-                   const tooling::OldSymbolName &NewName,
-                   const tooling::OldSymbolName &ExpectedReplacementStrings,
+                   const tooling::SymbolName &NewName,
+                   const tooling::SymbolName &ExpectedReplacementStrings,
                    StringRef Filename) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
@@ -374,15 +374,16 @@ occurrenceToString(const CXSymbolOccurrence &Occurrence, bool IsLocal,
     OS << '"' << Filename << "\" ";
 
   bool FirstRange = true;
-  assert(NewName.size() >= Occurrence.NumNamePieces &&
+  assert(NewName.getNamePieces().size() >= Occurrence.NumNamePieces &&
          "new name doesn't match the number of pieces");
   for (unsigned J = 0; J != Occurrence.NumNamePieces; ++J) {
     if (!FirstRange) // TODO
       OS << ", ";
 
     // Print the replacement string if it doesn't match the expected string.
-    if (NewName[J] != ExpectedReplacementStrings[J])
-      OS << '"' << NewName[J] << "\" ";
+    if (NewName.getNamePieces()[J] !=
+        ExpectedReplacementStrings.getNamePieces()[J])
+      OS << '"' << NewName.getNamePieces()[J] << "\" ";
 
     CXFileRange Range = Occurrence.NamePieces[J];
     OS << Range.Begin.Line << ":" << Range.Begin.Column << " -> "
@@ -437,7 +438,7 @@ parseIndexedOccurrence(StringRef IndexedOccurrence,
 static bool compareOccurrences(ArrayRef<std::string> ExpectedReplacements,
                                CXSymbolOccurrencesResult Occurrences,
                                bool IsLocal,
-                               const tooling::OldSymbolName &NewSymbolName,
+                               const tooling::SymbolName &NewSymbolName,
                                bool PrintFilenames) {
   unsigned NumFiles = clang_SymbolOccurrences_getNumFiles(Occurrences);
   size_t ExpectedReplacementIndex = 0;
@@ -594,7 +595,7 @@ int rename(CXTranslationUnit TU, CXIndex CIdx, ArrayRef<const char *> Args) {
     // FIXME: This is a hack
     LangOptions LangOpts;
     LangOpts.ObjC = true;
-    tooling::OldSymbolName NewSymbolName(opts::rename::NewName, LangOpts);
+    tooling::SymbolName NewSymbolName(opts::rename::NewName, LangOpts);
 
     if (ExpectedReplacements.empty()) {
       if (opts::Apply) {
@@ -729,7 +730,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
 
   LangOptions LangOpts;
   LangOpts.ObjC = true;
-  tooling::OldSymbolName ExpectedReplacementStrings(
+  tooling::SymbolName ExpectedReplacementStrings(
       opts::rename::IndexedNewNames[0], LangOpts);
 
   // Print the occurrences.
@@ -750,7 +751,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
               .c_str();
       LangOptions LangOpts;
       LangOpts.ObjC = true;
-      tooling::OldSymbolName NewSymbolName(NewName, LangOpts);
+      tooling::SymbolName NewSymbolName(NewName, LangOpts);
 
       outs() << occurrenceToString(FileResult.Occurrences[I], /*IsLocal*/ false,
                                    NewSymbolName, ExpectedReplacementStrings,

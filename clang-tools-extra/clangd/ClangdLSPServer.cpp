@@ -844,14 +844,15 @@ void ClangdLSPServer::onWorkspaceSymbol(
 }
 
 void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
-                                      Callback<std::optional<Range>> Reply) {
+                                      Callback<PrepareRenameResult> Reply) {
   Server->prepareRename(
       Params.textDocument.uri.file(), Params.position, /*NewName*/ std::nullopt,
       Opts.Rename,
       [Reply = std::move(Reply)](llvm::Expected<RenameResult> Result) mutable {
         if (!Result)
           return Reply(Result.takeError());
-        return Reply(std::move(Result->Target));
+        PrepareRenameResult PrepareResult{Result->Target, Result->OldName};
+        return Reply(std::move(PrepareResult));
       });
 }
 

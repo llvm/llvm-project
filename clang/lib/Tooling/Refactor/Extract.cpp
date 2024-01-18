@@ -1488,7 +1488,7 @@ ExtractOperation::performExpressionExtraction(ASTContext &Context,
                                                E->getType(), PP, Context);
   StringRef VarName = "extractedExpr";
   auto CreatedSymbol = std::make_unique<RefactoringResultAssociatedSymbol>(
-      OldSymbolName(VarName));
+      SymbolName(VarName, /*IsObjectiveCSelector=*/false));
 
   SourceRange ExtractedTokenRange = CandidateExtractionInfo[0].Range;
   SourceRange ExtractedCharRange = SourceRange(
@@ -1808,7 +1808,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   }
   std::unique_ptr<RefactoringResultAssociatedSymbol> CreatedSymbol =
       std::make_unique<RefactoringResultAssociatedSymbol>(
-          OldSymbolName(ExtractedNamePieces));
+          SymbolName(ExtractedNamePieces));
 
   SourceLocation FunctionExtractionLoc = computeFunctionExtractionLocation(
       FunctionLikeParentDecl, isMethodExtraction());
