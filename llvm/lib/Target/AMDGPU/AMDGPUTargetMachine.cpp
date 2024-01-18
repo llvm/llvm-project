@@ -965,7 +965,6 @@ public:
 
   void addPreRegAlloc() override;
   bool addPreRewrite() override;
-  void addPreStackSlotColoring() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -1353,10 +1352,6 @@ bool GCNPassConfig::addPreRewrite() {
   return true;
 }
 
-void GCNPassConfig::addPreStackSlotColoring() {
-  addPass(&AMDGPUMarkLastScratchLoadID);
-}
-
 FunctionPass *GCNPassConfig::createSGPRAllocPass(bool Optimized) {
   // Initialize the global default.
   llvm::call_once(InitializeDefaultSGPRRegisterAllocatorFlag,
@@ -1434,6 +1429,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPreRewrite();
   addPass(&VirtRegRewriterID);
+
+  addPass(&AMDGPUMarkLastScratchLoadID);
 
   return true;
 }
