@@ -1215,20 +1215,23 @@ struct EmboxCharOpConversion : public FIROpConversion<fir::EmboxCharOp> {
 } // namespace
 
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
-static mlir::LLVM::LLVMFuncOp
+static mlir::SymbolRefAttr
 getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+  static constexpr char mallocName[] = "malloc";
   auto module = op->getParentOfType<mlir::ModuleOp>();
-  if (mlir::LLVM::LLVMFuncOp mallocFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("malloc"))
-    return mallocFunc;
+  if (auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
+    return mlir::SymbolRefAttr::get(mallocFunc);
+  if (auto userMalloc = module.lookupSymbol<mlir::func::FuncOp>(mallocName))
+    return mlir::SymbolRefAttr::get(userMalloc);
   mlir::OpBuilder moduleBuilder(
       op->getParentOfType<mlir::ModuleOp>().getBodyRegion());
   auto indexType = mlir::IntegerType::get(op.getContext(), 64);
-  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
-      rewriter.getUnknownLoc(), "malloc",
+  auto mallocDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      op.getLoc(), mallocName,
       mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
                                         indexType,
                                         /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(mallocDecl);
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1276,7 +1279,6 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
   matchAndRewrite(fir::AllocMemOp heap, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type heapTy = heap.getType();
-    mlir::LLVM::LLVMFuncOp mallocFunc = getMalloc(heap, rewriter);
     mlir::Location loc = heap.getLoc();
     auto ity = lowerTy().indexType();
     mlir::Type dataTy = fir::unwrapRefType(heapTy);
@@ -1289,7 +1291,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
-    heap->setAttr("callee", mlir::SymbolRefAttr::get(mallocFunc));
+    heap->setAttr("callee", getMalloc(heap, rewriter));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size, heap->getAttrs());
     return mlir::success();
@@ -1307,19 +1309,25 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
 } // namespace
 
 /// Return the LLVMFuncOp corresponding to the standard free call.
-static mlir::LLVM::LLVMFuncOp
-getFree(fir::FreeMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+static mlir::SymbolRefAttr getFree(fir::FreeMemOp op,
+                                   mlir::ConversionPatternRewriter &rewriter) {
+  static constexpr char freeName[] = "free";
   auto module = op->getParentOfType<mlir::ModuleOp>();
-  if (mlir::LLVM::LLVMFuncOp freeFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free"))
-    return freeFunc;
+  // Check if free already defined in the module.
+  if (auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(freeName))
+    return mlir::SymbolRefAttr::get(freeFunc);
+  if (auto freeDefinedByUser =
+          module.lookupSymbol<mlir::func::FuncOp>(freeName))
+    return mlir::SymbolRefAttr::get(freeDefinedByUser);
+  // Create llvm declaration for free.
   mlir::OpBuilder moduleBuilder(module.getBodyRegion());
   auto voidType = mlir::LLVM::LLVMVoidType::get(op.getContext());
-  return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
-      rewriter.getUnknownLoc(), "free",
+  auto freeDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
+      rewriter.getUnknownLoc(), freeName,
       mlir::LLVM::LLVMFunctionType::get(voidType,
                                         getLlvmPtrType(op.getContext()),
                                         /*isVarArg=*/false));
+  return mlir::SymbolRefAttr::get(freeDecl);
 }
 
 static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
@@ -1339,9 +1347,8 @@ struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FreeMemOp freemem, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::LLVM::LLVMFuncOp freeFunc = getFree(freemem, rewriter);
     mlir::Location loc = freemem.getLoc();
-    freemem->setAttr("callee", mlir::SymbolRefAttr::get(freeFunc));
+    freemem->setAttr("callee", getFree(freemem, rewriter));
     rewriter.create<mlir::LLVM::CallOp>(loc, mlir::TypeRange{},
                                         mlir::ValueRange{adaptor.getHeapref()},
                                         freemem->getAttrs());
