@@ -88,7 +88,7 @@ TEST(NamelistTests, BasicSanity) {
   ASSERT_EQ(outStatus1, 0) << "Failed namelist output sanity, status "
                            << static_cast<int>(outStatus1);
 
-  static const std::string expect{"&GROUP1 INTS= 1 -2 4 -8 16 -32  "
+  static const std::string expect{" &GROUP1 INTS= 1 -2 4 -8 16 -32 "
                                   " 64 -128 256 -512 1024 -2048    "
                                   " 4096 -8192 16384 -32768 65536  "
                                   " -131072 262144 -524288,REALS=  "
@@ -157,7 +157,7 @@ TEST(NamelistTests, Subscripts) {
       << "Failed namelist output subscripts rewrite, status "
       << static_cast<int>(outStatus);
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 0 2 0 0 0 1/                  "};
+  static const std::string expect{" &JUSTA A= 0 2 0 0 0 1/                 "};
   EXPECT_EQ(got, expect);
 }
 
@@ -213,7 +213,7 @@ TEST(NamelistTests, ScalarSubstring) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 'aBCDEfgh'/           "};
+  static const std::string expect{" &JUSTA A= 'aBCDEfgh'/          "};
   EXPECT_EQ(got, expect);
 }
 
@@ -242,7 +242,7 @@ TEST(NamelistTests, ArraySubstring) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&JUSTA A= 'aBCDEfgh' 'iJKLMnop'/        "};
+  static const std::string expect{" &JUSTA A= 'aBCDEfgh' 'iJKLMnop'/       "};
   EXPECT_EQ(got, expect);
 }
 
@@ -270,7 +270,7 @@ TEST(NamelistTests, Skip) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&NML J= 123/        "};
+  static const std::string expect{" &NML J= 123/       "};
   EXPECT_EQ(got, expect);
 }
 
@@ -301,7 +301,7 @@ TEST(NamelistTests, Comma) {
   ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
-  static const std::string expect{"&NML Z= (-1,;2,) (-3,;,5)/    "};
+  static const std::string expect{" &NML Z= (-1,;2,) (-3,;,5)/   "};
   EXPECT_EQ(got, expect);
 }
 

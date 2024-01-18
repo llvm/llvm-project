@@ -196,30 +196,22 @@ Partial mesh::getPartialTypeFromReduction(IteratorType iType) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ClusterOp::verify() {
-  ArrayRef<int64_t> dimSizes = getDimSizes();
-  uint64_t rank = getRank();
+  int64_t rank = getRank();
 
-  if (rank == 0)
+  if (rank <= 0)
     return emitOpError("rank of cluster is expected to be a positive integer");
 
-  if (dimSizes.size() > rank)
+  if (getShape().size() > size_t(rank))
     return emitOpError(
-        "rank of dim_sizes is not expected to be larger than rank of cluster");
+        "rank of shape is not expected to be larger than rank of cluster");
 
-  for (int64_t dimSize : dimSizes) {
+  for (int64_t dimSize : getShape()) {
     if (dimSize < 0 && !ShapedType::isDynamic(dimSize))
       return emitOpError("dimension size of a mesh cluster is expected to be "
                          "non-negative or dynamic");
   }
 
   return success();
-}
-
-SmallVector<int64_t> ClusterOp::canonicalDimSizes() {
-  SmallVector<int64_t> result;
-  canonicalDimSizes(std::back_inserter(result));
-  result.reserve(getRank());
-  return result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -614,7 +606,7 @@ AllGatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto gatherAxis = getGatherAxis().getSExtValue();
   return verifyGatherOperandAndResultShape(getOperand(), getResult(),
                                            gatherAxis, getMeshAxes(),
-                                           mesh.value().canonicalDimSizes());
+                                           mesh.value().getShape());
 }
 
 void AllGatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -648,8 +640,7 @@ LogicalResult AllToAllOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   return verifyAllToAllOperandAndResultShape(
       getOperand(), getResult(), getSplitAxis().getSExtValue(),
-      getConcatAxis().getSExtValue(), getMeshAxes(),
-      mesh.value().canonicalDimSizes());
+      getConcatAxis().getSExtValue(), getMeshAxes(), mesh.value().getShape());
 }
 
 void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -667,9 +658,9 @@ BroadcastOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
   if (failed(verifyInGroupDevice(getLoc(), getRootAttrName(), getRoot(),
-                                 getRootDynamic(), getMeshAxes(), meshShape))) {
+                                 getRootDynamic(), getMeshAxes(),
+                                 mesh.value().getShape()))) {
     return failure();
   }
 
@@ -690,16 +681,16 @@ LogicalResult GatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
   if (failed(verifyInGroupDevice(getLoc(), getRootAttrName(), getRoot(),
-                                 getRootDynamic(), getMeshAxes(), meshShape))) {
+                                 getRootDynamic(), getMeshAxes(),
+                                 mesh.value().getShape()))) {
     return failure();
   }
 
   auto gatherAxis = getGatherAxis().getSExtValue();
   return verifyGatherOperandAndResultShape(getInput(), getResult(), gatherAxis,
                                            getMeshAxes(),
-                                           mesh.value().canonicalDimSizes());
+                                           mesh.value().getShape());
 }
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -716,10 +707,10 @@ LogicalResult RecvOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
-  if (getSource() && failed(verifyInGroupDevice(
-                         getLoc(), getSourceAttrName(), getSource().value(),
-                         getSourceDynamic(), getMeshAxes(), meshShape))) {
+  if (getSource() &&
+      failed(verifyInGroupDevice(getLoc(), getSourceAttrName(),
+                                 getSource().value(), getSourceDynamic(),
+                                 getMeshAxes(), mesh.value().getShape()))) {
     return failure();
   }
   return success();
@@ -739,9 +730,9 @@ LogicalResult ReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
   if (failed(verifyInGroupDevice(getLoc(), getRootAttrName(), getRoot(),
-                                 getRootDynamic(), getMeshAxes(), meshShape))) {
+                                 getRootDynamic(), getMeshAxes(),
+                                 mesh.value().getShape()))) {
     return failure();
   }
 
@@ -766,7 +757,7 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   return verifyScatterOperandAndResultShape(
       getOperand(), getResult(), getScatterAxis().getSExtValue(), getMeshAxes(),
-      mesh.value().canonicalDimSizes());
+      mesh.value().getShape());
 }
 
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -783,16 +774,16 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
   if (failed(verifyInGroupDevice(getLoc(), getRootAttrName(), getRoot(),
-                                 getRootDynamic(), getMeshAxes(), meshShape))) {
+                                 getRootDynamic(), getMeshAxes(),
+                                 mesh.value().getShape()))) {
     return failure();
   }
 
   auto scatterAxis = getScatterAxis().getSExtValue();
   return verifyScatterOperandAndResultShape(getInput(), getResult(),
                                             scatterAxis, getMeshAxes(),
-                                            mesh.value().canonicalDimSizes());
+                                            mesh.value().getShape());
 }
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -809,10 +800,9 @@ LogicalResult SendOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (failed(mesh)) {
     return failure();
   }
-  auto meshShape = mesh.value().canonicalDimSizes();
   if (failed(verifyInGroupDevice(getLoc(), getDestinationAttrName(),
                                  getDestination(), getDestinationDynamic(),
-                                 getMeshAxes(), meshShape))) {
+                                 getMeshAxes(), mesh.value().getShape()))) {
     return failure();
   }
   return success();

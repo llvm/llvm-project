@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -128,7 +129,7 @@ private:
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
     Scratch->clear();
     {
       auto PS = ET.withSavedState();
@@ -311,7 +312,7 @@ private:
     if (!CounterOrError)
       return CounterOrError.takeError();
 
-    pfm::Counter *Counter = CounterOrError.get().get();
+    pfm::CounterGroup *Counter = CounterOrError.get().get();
 
     close(PipeFiles[0]);
 
@@ -615,9 +616,9 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     // Scale the measurements by instruction.
     BM.PerInstructionValue /= BenchmarkResult.NumRepetitions;
     // Scale the measurements by snippet.
-    BM.PerSnippetValue *=
-        static_cast<double>(BenchmarkResult.Key.Instructions.size()) /
-        BenchmarkResult.NumRepetitions;
+    BM.PerSnippetValue /=
+        std::ceil(BenchmarkResult.NumRepetitions /
+                  static_cast<double>(BenchmarkResult.Key.Instructions.size()));
   }
   BenchmarkResult.Measurements = std::move(*NewMeasurements);
 

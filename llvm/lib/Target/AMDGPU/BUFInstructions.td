@@ -780,9 +780,8 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
 
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
                                         RegisterClass vdataClass,
-                                        ValueType vdataType,
-                                        bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in {
+                                        ValueType vdataType> {
+  let FPAtomic = vdataType.isFP in {
     def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
                   MUBUFAddr64Table <0, NAME>;
     def _ADDR64 : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0>,
@@ -804,9 +803,8 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      RegisterClass vdataClass,
                                      ValueType vdataType,
-                                     SDPatternOperator atomic,
-                                     bit isFP = isFloatType<vdataType>.ret> {
-  let FPAtomic = isFP in {
+                                     SDPatternOperator atomic> {
+  let FPAtomic = vdataType.isFP in {
     def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
       [(set vdataType:$vdata,
        (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
@@ -1242,6 +1240,12 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
   "buffer_atomic_pk_add_f16", VGPR_32, v2f16, null_frag
 >;
+
+let SubtargetPredicate = isGFX12Plus in {
+defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_cond_sub_u32", VGPR_32, i32
+>;
+}
 
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
@@ -1705,6 +1709,13 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
 
 let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
+}
 
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f32, "BUFFER_ATOMIC_FMIN">;
@@ -2609,6 +2620,7 @@ defm BUFFER_ATOMIC_AND_X2         : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x049,
 defm BUFFER_ATOMIC_CMPSWAP        : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x034, "buffer_atomic_cmpswap_b32">;
 defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x042, "buffer_atomic_cmpswap_b64">;
 defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11_Renamed<0x050, "buffer_atomic_cmpswap_f32">;
+defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
 defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12_Renamed_gfx12_Renamed<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
 def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
 defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12_Renamed<0x040, "buffer_atomic_dec_u32">;
