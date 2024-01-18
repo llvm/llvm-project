@@ -1187,6 +1187,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    performs subtraction only if the memory value is greater than or
                                                    equal to the data value.
 
+  llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
+                                                   sign-extended from the width of the underlying PC hardware register even on
+                                                   processors where the s_getpc_b64 instruction returns a zero-extended value.
+
   ==============================================   ==========================================================
 
 .. TODO::
