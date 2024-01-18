@@ -2381,18 +2381,24 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-/// Returns whether \p I is a known math library call that has memory write-only
-/// attribute set.
+/// Returns whether \p I is a known math library call that has attribute
+/// 'memory(argmem: write)' set.
 static bool isMathLibCallMemWriteOnly(const TargetLibraryInfo *TLI,
                                       const Instruction &I) {
   auto *Call = dyn_cast<CallInst>(&I);
   if (!Call)
     return false;
 
+  Function *F = Call->getCalledFunction();
+  if (!F->hasFnAttribute(Attribute::AttrKind::Memory))
+    return false;
+
+  auto ME = F->getFnAttribute(Attribute::AttrKind::Memory).getMemoryEffects();
   LibFunc Func;
   TLI->getLibFunc(*Call, Func);
-  return Func == LibFunc::LibFunc_modf || Func == LibFunc::LibFunc_modff ||
-         Func == LibFunc::LibFunc_frexp || Func == LibFunc::LibFunc_frexpf;
+  return ME.onlyWritesMemory() && ME.onlyAccessesArgPointees() &&
+         (Func == LibFunc::LibFunc_modf || Func == LibFunc::LibFunc_modff ||
+          Func == LibFunc::LibFunc_frexp || Func == LibFunc::LibFunc_frexpf);
 }
 
 void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
