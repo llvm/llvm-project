@@ -12,11 +12,11 @@
 define void @avoid_promotion_1_and(ptr nocapture noundef %arg, ptr %p) {
 ; CHECK-LABEL: avoid_promotion_1_and:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    ldr w8, [x0, #52]
-; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    mov w8, #10 ; =0xa
+; CHECK-NEXT:    ldr w9, [x0, #52]
 ; CHECK-NEXT:  LBB0_1: ; %bb8
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmp w8, #3
+; CHECK-NEXT:    cmp w9, #3
 ; CHECK-NEXT:    b.lo LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
@@ -24,9 +24,9 @@ define void @avoid_promotion_1_and(ptr nocapture noundef %arg, ptr %p) {
 ; CHECK-NEXT:    ldr w11, [x1, #76]
 ; CHECK-NEXT:    ldr w12, [x1]
 ; CHECK-NEXT:    eor w10, w10, w11
-; CHECK-NEXT:    and x10, x10, x12
+; CHECK-NEXT:    and w10, w10, w12
 ; CHECK-NEXT:    str w10, [x0, #32]
-; CHECK-NEXT:    strh w9, [x1, x10, lsl #1]
+; CHECK-NEXT:    strh w8, [x1, w10, uxtw #1]
 ; CHECK-NEXT:    b LBB0_1
 bb:
   %gep = getelementptr inbounds %struct.zot, ptr %arg, i64 0, i32 9
@@ -63,8 +63,8 @@ define void @avoid_promotion_2_and(ptr nocapture noundef %arg) {
 ; CHECK-NEXT:    b LBB1_2
 ; CHECK-NEXT:  LBB1_1: ; %latch
 ; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    cmp w9, #2
 ; CHECK-NEXT:    add x8, x8, #56
+; CHECK-NEXT:    cmp w9, #2
 ; CHECK-NEXT:    b.ls LBB1_4
 ; CHECK-NEXT:  LBB1_2: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -73,22 +73,22 @@ define void @avoid_promotion_2_and(ptr nocapture noundef %arg) {
 ; CHECK-NEXT:    b.lo LBB1_1
 ; CHECK-NEXT:  ; %bb.3: ; %then
 ; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    ldp w13, w12, [x8, #12]
-; CHECK-NEXT:    ldr w10, [x8]
+; CHECK-NEXT:    ldp w13, w10, [x8, #12]
 ; CHECK-NEXT:    ldr x11, [x0]
+; CHECK-NEXT:    ldr w12, [x8]
 ; CHECK-NEXT:    ldr w14, [x8, #8]
-; CHECK-NEXT:    lsl w10, w10, w13
-; CHECK-NEXT:    ldrb w11, [x11, x12]
-; CHECK-NEXT:    eor w10, w10, w11
-; CHECK-NEXT:    ldur w11, [x8, #-24]
-; CHECK-NEXT:    and x10, x10, x14
+; CHECK-NEXT:    ldrb w11, [x11, x10]
+; CHECK-NEXT:    lsl w12, w12, w13
+; CHECK-NEXT:    eor w11, w12, w11
+; CHECK-NEXT:    ldur w12, [x8, #-24]
+; CHECK-NEXT:    and w11, w11, w14
 ; CHECK-NEXT:    ldp x15, x14, [x8, #-16]
-; CHECK-NEXT:    lsl x13, x10, #1
-; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    and x10, x11, x12
-; CHECK-NEXT:    ldrh w11, [x14, x13]
-; CHECK-NEXT:    strh w11, [x15, x10, lsl #1]
-; CHECK-NEXT:    strh w12, [x14, x13]
+; CHECK-NEXT:    ubfiz x13, x11, #1, #32
+; CHECK-NEXT:    str w11, [x8]
+; CHECK-NEXT:    and w11, w12, w10
+; CHECK-NEXT:    ldrh w12, [x14, x13]
+; CHECK-NEXT:    strh w12, [x15, w11, uxtw #1]
+; CHECK-NEXT:    strh w10, [x14, x13]
 ; CHECK-NEXT:    b LBB1_1
 ; CHECK-NEXT:  LBB1_4: ; %exit
 ; CHECK-NEXT:    ret
