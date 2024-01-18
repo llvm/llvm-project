@@ -267,13 +267,22 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
   auto scopeLoc = getLoc(S.getSourceRange());
   auto res = mlir::success();
 
+  // This scope represents the higher level try {} statement.
   builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         CIRGenFunction::LexicalScope lexScope{*this, loc,
                                               builder.getInsertionBlock()};
+        // Allocate space for our exception info that might be passed down
+        // to `cir.try_call` everytime a call happens.
+        auto exceptionInfo = buildAlloca(
+            "__exception_ptr",
+            mlir::cir::PointerType::get(
+                b.getContext(), b.getType<::mlir::cir::ExceptionInfoType>()),
+            loc, CharUnits::One());
 
-        // Create the skeleton for the catch statements.
+        // Create the skeleton for the catch statements to be further populated
+        // by cir::CIRGenFunction::buildLandingPad.
         auto catchOp = builder.create<mlir::cir::CatchOp>(
             tryLoc, // FIXME(cir): we can do better source location here.
             [&](mlir::OpBuilder &b, mlir::Location loc,
@@ -284,7 +293,9 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
                 builder.createBlock(r);
               }
             });
+        ExceptionInfoRAIIObject ehx{*this, {exceptionInfo, catchOp}};
 
+        // Do actual emission.
         enterCXXTryStmt(S, catchOp);
 
         if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed()) {
@@ -390,7 +401,7 @@ static bool isNonEHScope(const EHScope &S) {
   llvm_unreachable("Invalid EHScope Kind!");
 }
 
-mlir::Block *CIRGenFunction::buildLandingPad() {
+mlir::Operation *CIRGenFunction::buildLandingPad() {
   assert(EHStack.requiresLandingPad());
   assert(!CGM.getLangOpts().IgnoreExceptions &&
          "LandingPad should not be emitted when -fignore-exceptions are in "
@@ -403,26 +414,164 @@ mlir::Block *CIRGenFunction::buildLandingPad() {
   case EHScope::Catch:
   case EHScope::Cleanup:
   case EHScope::Filter:
-    llvm_unreachable("NYI");
     if (auto *lpad = innermostEHScope.getCachedLandingPad())
       return lpad;
   }
 
+  auto catchOp = currExceptionInfo.catchOp;
+  assert(catchOp && "Should be valid");
   {
     // Save the current CIR generation state.
     mlir::OpBuilder::InsertionGuard guard(builder);
-
     assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
-    // FIXME(cir): handle CIR relevant landing pad bits, there's no good
-    // way to assert here right now and leaving one in break important
-    // testcases. Work to fill this in is coming soon.
+
+    // Traditional LLVM codegen creates the lpad basic block, extract
+    // values, landing pad instructions, etc.
+
+    // Accumulate all the handlers in scope.
+    bool hasCatchAll = false;
+    bool hasCleanup = false;
+    bool hasFilter = false;
+    SmallVector<mlir::Value, 4> filterTypes;
+    llvm::SmallPtrSet<mlir::Attribute, 4> catchTypes;
+    SmallVector<mlir::Attribute, 4> clauses;
+
+    for (EHScopeStack::iterator I = EHStack.begin(), E = EHStack.end(); I != E;
+         ++I) {
+
+      switch (I->getKind()) {
+      case EHScope::Cleanup:
+        // If we have a cleanup, remember that.
+        llvm_unreachable("NYI");
+        continue;
+
+      case EHScope::Filter: {
+        llvm_unreachable("NYI");
+      }
+
+      case EHScope::Terminate:
+        // Terminate scopes are basically catch-alls.
+        // assert(!hasCatchAll);
+        // hasCatchAll = true;
+        // goto done;
+        llvm_unreachable("NYI");
+
+      case EHScope::Catch:
+        break;
+      }
+
+      EHCatchScope &catchScope = cast<EHCatchScope>(*I);
+      for (unsigned hi = 0, he = catchScope.getNumHandlers(); hi != he; ++hi) {
+        EHCatchScope::Handler handler = catchScope.getHandler(hi);
+        assert(handler.Type.Flags == 0 &&
+               "landingpads do not support catch handler flags");
+
+        // If this is a catch-all, register that and abort.
+        if (!handler.Type.RTTI) {
+          assert(!hasCatchAll);
+          hasCatchAll = true;
+          goto done;
+        }
+
+        // Check whether we already have a handler for this type.
+        if (catchTypes.insert(handler.Type.RTTI).second) {
+          // If not, keep track to later add to catch op.
+          clauses.push_back(handler.Type.RTTI);
+        }
+      }
+    }
+
+  done:
+    // If we have a catch-all, add null to the landingpad.
+    assert(!(hasCatchAll && hasFilter));
+    if (hasCatchAll) {
+      llvm_unreachable("NYI");
+
+      // If we have an EH filter, we need to add those handlers in the
+      // right place in the landingpad, which is to say, at the end.
+    } else if (hasFilter) {
+      // Create a filter expression: a constant array indicating which filter
+      // types there are. The personality routine only lands here if the filter
+      // doesn't match.
+      llvm_unreachable("NYI");
+
+      // Otherwise, signal that we at least have cleanups.
+    } else if (hasCleanup) {
+      llvm_unreachable("NYI");
+    }
+
+    assert((clauses.size() > 0 || hasCleanup) && "CatchOp has no clauses!");
+
+    // Add final array of clauses into catchOp.
+    catchOp.setCatchersAttr(
+        mlir::ArrayAttr::get(builder.getContext(), clauses));
+
+    // In traditional LLVM codegen. this tells the backend how to generate the
+    // landing pad by generating a branch to the dispatch block. In CIR the same
+    // function is called to gather some state, but this block info it's not
+    // useful per-se.
+    (void)getEHDispatchBlock(EHStack.getInnermostEHScope());
   }
 
-  llvm_unreachable("NYI");
-  return nullptr;
+  return catchOp;
 }
 
-mlir::Block *CIRGenFunction::getInvokeDestImpl() {
+// Differently from LLVM traditional codegen, there are no dispatch blocks
+// to look at given cir.try_call does not jump to blocks like invoke does.
+// However, we keep this around since other parts of CIRGen use
+// getCachedEHDispatchBlock to infer state.
+mlir::Block *
+CIRGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si) {
+  if (EHPersonality::get(*this).usesFuncletPads())
+    llvm_unreachable("NYI");
+
+  // The dispatch block for the end of the scope chain is a block that
+  // just resumes unwinding.
+  if (si == EHStack.stable_end())
+    llvm_unreachable("NYI");
+
+  // Otherwise, we should look at the actual scope.
+  EHScope &scope = *EHStack.find(si);
+
+  auto *dispatchBlock = scope.getCachedEHDispatchBlock();
+  if (!dispatchBlock) {
+    switch (scope.getKind()) {
+    case EHScope::Catch: {
+      // Apply a special case to a single catch-all.
+      EHCatchScope &catchScope = cast<EHCatchScope>(scope);
+      if (catchScope.getNumHandlers() == 1 &&
+          catchScope.getHandler(0).isCatchAll()) {
+        dispatchBlock = catchScope.getHandler(0).Block;
+
+        // Otherwise, make a dispatch block.
+      } else {
+        // As said in the function comment, just signal back we
+        // have something - even though the block value doesn't
+        // have any real meaning.
+        dispatchBlock = catchScope.getHandler(0).Block;
+        assert(dispatchBlock && "find another approach to signal");
+      }
+      break;
+    }
+
+    case EHScope::Cleanup:
+      llvm_unreachable("NYI");
+      break;
+
+    case EHScope::Filter:
+      llvm_unreachable("NYI");
+      break;
+
+    case EHScope::Terminate:
+      llvm_unreachable("NYI");
+      break;
+    }
+    scope.setCachedEHDispatchBlock(dispatchBlock);
+  }
+  return dispatchBlock;
+}
+
+mlir::Operation *CIRGenFunction::getInvokeDestImpl() {
   assert(EHStack.requiresLandingPad());
   assert(!EHStack.empty());
 
