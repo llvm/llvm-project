@@ -523,7 +523,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         } else {
           assert(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3);
 
-          if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
+          if (AMDGPU::isCvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
             // Add omod and clamp modifiers.
             insertNamedMCOperand(MI, MCOperand::createImm(0),
                                  AMDGPU::OpName::omod);
@@ -701,7 +701,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
                         Address, CS);
     if (Res) {
-      if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
+      if (AMDGPU::isCvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
         // Add omod and clamp modifiers.
         insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::omod);
         insertNamedMCOperand(MI, MCOperand::createImm(0),
@@ -962,7 +962,7 @@ void AMDGPUDisassembler::convertMacDPPInst(MCInst &MI) const {
 DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
   unsigned Opc = MI.getOpcode();
 
-  if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(Opc)) {
+  if (AMDGPU::isCvt_F32_Fp8_Bf8_e64(Opc)) {
     // Add omod and clamp modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::omod);
     insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::clamp);
