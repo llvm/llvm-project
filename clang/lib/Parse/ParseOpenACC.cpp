@@ -393,10 +393,12 @@ enum ClauseParensKind {
   Required
 };
 
-ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
+ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
+                                     OpenACCClauseKind Kind) {
   switch (Kind) {
   case OpenACCClauseKind::Self:
-    return ClauseParensKind::Optional;
+    return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
+                                                   : ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
@@ -433,12 +435,14 @@ ClauseParensKind getClauseParensKind(OpenACCClauseKind Kind) {
   llvm_unreachable("Unhandled clause kind");
 }
 
-bool ClauseHasOptionalParens(OpenACCClauseKind Kind) {
-  return getClauseParensKind(Kind) == ClauseParensKind::Optional;
+bool ClauseHasOptionalParens(OpenACCDirectiveKind DirKind,
+                             OpenACCClauseKind Kind) {
+  return getClauseParensKind(DirKind, Kind) == ClauseParensKind::Optional;
 }
 
-bool ClauseHasRequiredParens(OpenACCClauseKind Kind) {
-  return getClauseParensKind(Kind) == ClauseParensKind::Required;
+bool ClauseHasRequiredParens(OpenACCDirectiveKind DirKind,
+                             OpenACCClauseKind Kind) {
+  return getClauseParensKind(DirKind, Kind) == ClauseParensKind::Required;
 }
 
 ExprResult ParseOpenACCConditionalExpr(Parser &P) {
@@ -465,7 +469,7 @@ void SkipUntilEndOfDirective(Parser &P) {
 // a pqr-list is a comma-separated list of pdr items. The one exception is a
 // clause-list, which is a list of one or more clauses optionally separated by
 // commas.
-void Parser::ParseOpenACCClauseList() {
+void Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
   bool FirstClause = true;
   while (getCurToken().isNot(tok::annot_pragma_openacc_end)) {
     // Comma is optional in a clause-list.
@@ -475,7 +479,7 @@ void Parser::ParseOpenACCClauseList() {
 
     // Recovering from a bad clause is really difficult, so we just give up on
     // error.
-    if (ParseOpenACCClause()) {
+    if (ParseOpenACCClause(DirKind)) {
       SkipUntilEndOfDirective(*this);
       return;
     }
@@ -508,7 +512,7 @@ bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
 // really have its owner grammar and each individual one has its own definition.
 // However, they all are named with a single-identifier (or auto/default!)
 // token, followed in some cases by either braces or parens.
-bool Parser::ParseOpenACCClause() {
+bool Parser::ParseOpenACCClause(OpenACCDirectiveKind DirKind) {
   // A number of clause names are actually keywords, so accept a keyword that
   // can be converted to a name.
   if (expectIdentifierOrKeyword(*this))
@@ -523,14 +527,15 @@ bool Parser::ParseOpenACCClause() {
   // Consume the clause name.
   ConsumeToken();
 
-  return ParseOpenACCClauseParams(Kind);
+  return ParseOpenACCClauseParams(DirKind, Kind);
 }
 
-bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
+bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                      OpenACCClauseKind Kind) {
   BalancedDelimiterTracker Parens(*this, tok::l_paren,
                                   tok::annot_pragma_openacc_end);
 
-  if (ClauseHasRequiredParens(Kind)) {
+  if (ClauseHasRequiredParens(DirKind, Kind)) {
     if (Parens.expectAndConsume()) {
       // We are missing a paren, so assume that the person just forgot the
       // parameter.  Return 'false' so we try to continue on and parse the next
@@ -576,6 +581,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
+    case OpenACCClauseKind::Self:
+      // The 'self' clause is a var-list instead of a 'condition' in the case of
+      // the 'update' clause, so we have to handle it here.  U se an assert to
+      // make sure we get the right differentiator.
+      assert(DirKind == OpenACCDirectiveKind::Update);
+      LLVM_FALLTHROUGH;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::Delete:
@@ -598,10 +609,11 @@ bool Parser::ParseOpenACCClauseParams(OpenACCClauseKind Kind) {
     }
 
     return Parens.consumeClose();
-  } else if (ClauseHasOptionalParens(Kind)) {
+  } else if (ClauseHasOptionalParens(DirKind, Kind)) {
     if (!Parens.consumeOpen()) {
       switch (Kind) {
       case OpenACCClauseKind::Self: {
+        assert(DirKind != OpenACCDirectiveKind::Update);
         ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
         // An invalid expression can be just about anything, so just give up on
         // this clause list.
@@ -817,7 +829,7 @@ void Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present.
-  ParseOpenACCClauseList();
+  ParseOpenACCClauseList(DirKind);
 
   Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
