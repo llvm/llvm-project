@@ -2913,9 +2913,10 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
 // EXECUTE_COMMAND_LINE
 void IntrinsicLibrary::genExecuteCommandLine(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Optional arguments: wait, exitstat, cmdstat, cmdmsg.
-  assert(args.size() >= 1 && args.size() <= 5);
+  assert(args.size() == 5);
+
   mlir::Value command = fir::getBase(args[0]);
+  // Optional arguments: wait, exitstat, cmdstat, cmdmsg.
   const fir::ExtendedValue &wait = args[1];
   const fir::ExtendedValue &exitstat = args[2];
   const fir::ExtendedValue &cmdstat = args[3];
