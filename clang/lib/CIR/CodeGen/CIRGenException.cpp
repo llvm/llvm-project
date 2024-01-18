@@ -330,7 +330,28 @@ static void buildCatchDispatchBlock(CIRGenFunction &CGF,
     return;
   }
 
-  llvm_unreachable("NYI");
+  // In traditional LLVM codegen, the right handler is selected (with calls to
+  // eh_typeid_for) and the selector value is loaded. After that, blocks get
+  // connected for later codegen. In CIR, these are all implicit behaviors of
+  // cir.catch - not a lot of work to do.
+  //
+  // Test against each of the exception types we claim to catch.
+  for (unsigned i = 0, e = catchScope.getNumHandlers();; ++i) {
+    assert(i < e && "ran off end of handlers!");
+    const EHCatchScope::Handler &handler = catchScope.getHandler(i);
+
+    auto typeValue = handler.Type.RTTI;
+    assert(handler.Type.Flags == 0 && "catch handler flags not supported");
+    assert(typeValue && "fell into catch-all case!");
+    // Check for address space mismatch: if (typeValue->getType() != argTy)
+    assert(!UnimplementedFeature::addressSpace());
+
+    // If this is the last handler, we're at the end, and the next
+    // block is the block for the enclosing EH scope. Make sure to call
+    // getEHDispatchBlock for caching it.
+    if (i + 1 == e)
+      (void)CGF.getEHDispatchBlock(catchScope.getEnclosingEHScope());
+  }
 }
 
 void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &S,
