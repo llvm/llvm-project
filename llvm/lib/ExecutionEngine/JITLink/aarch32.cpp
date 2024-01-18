@@ -685,7 +685,7 @@ const uint8_t Thumbv7ABS[] = {
 };
 
 template <>
-Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target) {
+Symbol &StubsManager<StubsFlavor::v7>::createEntry(LinkGraph &G, Symbol &Target) {
   constexpr uint64_t Alignment = 4;
   Block &B = addStub(G, Thumbv7ABS, Alignment);
   LLVM_DEBUG({
