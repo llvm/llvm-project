@@ -592,7 +592,7 @@ FailureOr<LoopLikeOpInterface> ForOp::yieldTiledValuesAndReplace(
 
   auto inits = llvm::to_vector(getInitArgs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
+  auto newLoop = rewriter.create<ForOp>(
       getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {});
 
