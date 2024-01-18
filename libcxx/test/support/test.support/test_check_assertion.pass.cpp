@@ -98,7 +98,6 @@ int main(int, char**) {
 #endif
   }
 
-
   { // Invalid cause -- child did not die.
     TEST_DEATH_TEST(Outcome::InvalidCause, DeathCause::DidNotDie, ((void)0));
   }

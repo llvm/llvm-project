@@ -207,33 +207,31 @@ std::string ToString(Outcome outcome) {
 }
 
 class DeathTestResult {
-  public:
-    DeathTestResult() = default;
-    DeathTestResult(Outcome set_outcome, DeathCause set_cause, const std::string& set_failure_description = "")
-        : outcome_(set_outcome), cause_(set_cause), failure_description_(set_failure_description) {}
+public:
+  DeathTestResult() = default;
+  DeathTestResult(Outcome set_outcome, DeathCause set_cause, const std::string& set_failure_description = "")
+      : outcome_(set_outcome), cause_(set_cause), failure_description_(set_failure_description) {}
 
-    bool success() const { return outcome() == Outcome::Success; }
-    Outcome outcome() const { return outcome_; }
-    DeathCause cause() const { return cause_; }
-    const std::string& failure_description() const { return failure_description_; }
+  bool success() const { return outcome() == Outcome::Success; }
+  Outcome outcome() const { return outcome_; }
+  DeathCause cause() const { return cause_; }
+  const std::string& failure_description() const { return failure_description_; }
 
-  private:
-    Outcome outcome_ = Outcome::Success;
-    DeathCause cause_ = DeathCause::Unknown;
-    std::string failure_description_;
+private:
+  Outcome outcome_  = Outcome::Success;
+  DeathCause cause_ = DeathCause::Unknown;
+  std::string failure_description_;
 };
 
 class DeathTest {
-  public:
+public:
   DeathTest()                            = default;
   DeathTest(DeathTest const&)            = delete;
   DeathTest& operator=(DeathTest const&) = delete;
 
   template <class Func>
   DeathTestResult Run(DeathCause expected_cause, Func&& func, const AssertionInfoMatcher& matcher) {
-    std::set_terminate([] {
-      StopChildProcess(DeathCause::StdTerminate);
-    });
+    std::set_terminate([] { StopChildProcess(DeathCause::StdTerminate); });
 
     DeathCause cause = Run(func);
 
