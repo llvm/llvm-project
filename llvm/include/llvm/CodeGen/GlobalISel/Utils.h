@@ -33,6 +33,7 @@ class BlockFrequencyInfo;
 class GISelKnownBits;
 class MachineFunction;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
@@ -246,6 +247,24 @@ MachineInstr *getDefIgnoringCopies(Register Reg,
 ///
 /// Also walks through hints such as G_ASSERT_ZEXT.
 Register getSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
+
+/// Helper function to split a wide generic register into bitwise blocks with
+/// the given Type (which implies the number of blocks needed). The generic
+/// registers created are appended to Ops, starting at bit 0 of Reg.
+void extractParts(Register Reg, LLT Ty, int NumParts,
+                  SmallVectorImpl<Register> &VRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular splits.
+bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+                  SmallVectorImpl<Register> &VRegs,
+                  SmallVectorImpl<Register> &LeftoverVRegs,
+                  MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
+
+/// Version which handles irregular sub-vector splits.
+void extractVectorParts(Register Reg, unsigned NumElts,
+                        SmallVectorImpl<Register> &VRegs,
+                        MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI);
 
 // Templated variant of getOpcodeDef returning a MachineInstr derived T.
 /// See if Reg is defined by an single def instruction of type T

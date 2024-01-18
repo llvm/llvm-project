@@ -736,6 +736,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
+  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" &&
       !ToolChain.getTriple().isOSOpenBSD()) {
@@ -765,7 +767,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   } else {
     // Tell LLD to find and use .llvm.lto section in regular relocatable object
     // files
-    if (Args.hasArg(options::OPT_ffat_lto_objects))
+    if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
   }
 
@@ -825,7 +827,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
   // LowerMatrixIntrinsicsPass, which is transitively called by
   // buildThinLTODefaultPipeline under EnableMatrix.
-  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+  if ((IsThinLTO || IsFatLTO || IsUnifiedLTO) &&
+        Args.hasArg(options::OPT_fenable_matrix))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 

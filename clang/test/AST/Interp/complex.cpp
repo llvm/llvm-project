@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -Wno-unused-value %s
+// RUN: %clang_cc1 -verify=ref -Wno-unused-value %s
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -36,6 +36,24 @@ static_assert(__imag(D1) == 0, "");
 constexpr _Complex int I2 = {};
 static_assert(__real(I2) == 0, "");
 static_assert(__imag(I2) == 0, "");
+
+static_assert(__real(4.0) == 4.0, "");
+static_assert(__real(12u) == 12u, "");
+static_assert(__imag(4.0) == 0.0, "");
+static_assert(__imag(13) == 0, "");
+
+constexpr int ignoredCast() {
+  I2;
+  (int)I2;
+  (float)I2;
+  D1;
+  (int)D1;
+  (double)D1;
+  return 0;
+}
+static_assert(ignoredCast() == 0, "");
+static_assert((int)I1 == 1, "");
+static_assert((float)D == 1.0f, "");
 
 
 /// Standalone complex expressions.

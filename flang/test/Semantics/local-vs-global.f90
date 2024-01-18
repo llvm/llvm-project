@@ -74,6 +74,7 @@ program test
   call block_data_before_2
   call explicit_before_1(1.)
   !ERROR: References to the procedure 'explicit_before_2' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call explicit_before_2(1.)
   !WARNING: If the procedure's interface were explicit, this reference would be in error
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
@@ -83,6 +84,7 @@ program test
   call implicit_before_2
   print *, explicit_func_before_1(1.)
   !ERROR: References to the procedure 'explicit_func_before_2' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   print *, explicit_func_before_2(1.)
   !WARNING: If the procedure's interface were explicit, this reference would be in error
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
@@ -96,6 +98,7 @@ program test
   call block_data_after_2
   call explicit_after_1(1.)
   !ERROR: References to the procedure 'explicit_after_2' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   call explicit_after_2(1.)
   !WARNING: If the procedure's interface were explicit, this reference would be in error
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
@@ -105,6 +108,7 @@ program test
   call implicit_after_2
   print *, explicit_func_after_1(1.)
   !ERROR: References to the procedure 'explicit_func_after_2' require an explicit interface
+  !BECAUSE: a dummy argument has the allocatable, asynchronous, optional, pointer, target, value, or volatile attribute
   print *, explicit_func_after_2(1.)
   !WARNING: If the procedure's interface were explicit, this reference would be in error
   !BECAUSE: Dummy argument 'a=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference

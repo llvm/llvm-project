@@ -43,7 +43,9 @@
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -948,11 +950,21 @@ static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
   }
 }
 
-static bool hasClangPchSignature(const Driver &D, StringRef Path) {
-  if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MemBuf =
-          D.getVFS().getBufferForFile(Path))
-    return (*MemBuf)->getBuffer().starts_with("CPCH");
-  return false;
+static bool maybeHasClangPchSignature(const Driver &D, StringRef Path) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MemBuf =
+      D.getVFS().getBufferForFile(Path);
+  if (!MemBuf)
+    return false;
+  llvm::file_magic Magic = llvm::identify_magic((*MemBuf)->getBuffer());
+  if (Magic == llvm::file_magic::unknown)
+    return false;
+  // Return true for both raw Clang AST files and object files which may
+  // contain a __clangast section.
+  if (Magic == llvm::file_magic::clang_ast)
+    return true;
+  Expected<std::unique_ptr<llvm::object::ObjectFile>> Obj =
+      llvm::object::ObjectFile::createObjectFile(**MemBuf, Magic);
+  return !Obj.takeError();
 }
 
 static bool gchProbe(const Driver &D, StringRef Path) {
@@ -964,14 +976,14 @@ static bool gchProbe(const Driver &D, StringRef Path) {
     std::error_code EC;
     for (llvm::vfs::directory_iterator DI = D.getVFS().dir_begin(Path, EC), DE;
          !EC && DI != DE; DI = DI.increment(EC)) {
-      if (hasClangPchSignature(D, DI->path()))
+      if (maybeHasClangPchSignature(D, DI->path()))
         return true;
     }
     D.Diag(diag::warn_drv_pch_ignoring_gch_dir) << Path;
     return false;
   }
 
-  if (hasClangPchSignature(D, Path))
+  if (maybeHasClangPchSignature(D, Path))
     return true;
   D.Diag(diag::warn_drv_pch_ignoring_gch_file) << Path;
   return false;
@@ -3523,6 +3535,20 @@ static void RenderTrivialAutoVarInitOptions(const Driver &D,
     CmdArgs.push_back(
         Args.MakeArgString("-ftrivial-auto-var-init-stop-after=" + Val));
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_ftrivial_auto_var_init_max_size)) {
+    if (!Args.hasArg(options::OPT_ftrivial_auto_var_init) ||
+        StringRef(
+            Args.getLastArg(options::OPT_ftrivial_auto_var_init)->getValue()) ==
+            "uninitialized")
+      D.Diag(diag::err_drv_trivial_auto_var_init_max_size_missing_dependency);
+    A->claim();
+    StringRef Val = A->getValue();
+    if (std::stoi(Val.str()) <= 0)
+      D.Diag(diag::err_drv_trivial_auto_var_init_max_size_invalid_value);
+    CmdArgs.push_back(
+        Args.MakeArgString("-ftrivial-auto-var-init-max-size=" + Val));
+  }
 }
 
 static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -5752,20 +5778,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
-    if (!Triple.isX86()) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getOption().getName() << TripleStr;
-    } else {
-      bool IsMediumCM = false;
-      if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ))
-        IsMediumCM = StringRef(A->getValue()) == "medium";
-      if (!IsMediumCM) {
+  if (Triple.getArch() == llvm::Triple::x86_64) {
+    bool IsMediumCM = false;
+    bool IsLargeCM = false;
+    if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
+      IsMediumCM = StringRef(A->getValue()) == "medium";
+      IsLargeCM = StringRef(A->getValue()) == "large";
+    }
+    if (Arg *A = Args.getLastArg(options::OPT_mlarge_data_threshold_EQ)) {
+      if (!IsMediumCM && !IsLargeCM) {
         D.Diag(diag::warn_drv_large_data_threshold_invalid_code_model)
             << A->getOption().getRenderName();
       } else {
         A->render(Args, CmdArgs);
       }
+    } else if (IsMediumCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=65536");
+    } else if (IsLargeCM) {
+      CmdArgs.push_back("-mlarge-data-threshold=0");
     }
   }
 
@@ -8684,7 +8714,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + TC->getTripleString(),
-        "arch=" + getProcessorFromTargetID(TC->getTriple(), Arch).str(),
+        "arch=" + Arch.str(),
         "kind=" + Kind.str(),
     };
 
