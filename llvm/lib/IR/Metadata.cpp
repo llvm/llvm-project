@@ -152,26 +152,47 @@ DPValue *DebugValueUser::getUser() { return static_cast<DPValue *>(this); }
 const DPValue *DebugValueUser::getUser() const {
   return static_cast<const DPValue *>(this);
 }
-void DebugValueUser::handleChangedValue(Metadata *NewMD) {
-  getUser()->handleChangedLocation(NewMD);
+
+void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
+  // NOTE: We could inform the "owner" that a value has changed through
+  // getOwner, if needed.
+  auto OldMD = static_cast<Metadata **>(Old);
+  ptrdiff_t Idx = std::distance(DebugValues.begin(), OldMD);
+  resetDebugValue(Idx, New);
 }
 
-void DebugValueUser::trackDebugValue() {
-  if (DebugValue)
-    MetadataTracking::track(&DebugValue, *DebugValue, *this);
+void DebugValueUser::trackDebugValue(size_t Idx) {
+  assert(Idx < 3 && "Invalid debug value index.");
+  Metadata *&MD = DebugValues[Idx];
+  if (MD)
+    MetadataTracking::track(&MD, *MD, *this);
 }
 
-void DebugValueUser::untrackDebugValue() {
-  if (DebugValue)
-    MetadataTracking::untrack(DebugValue);
+void DebugValueUser::trackDebugValues() {
+  for (Metadata *&MD : DebugValues)
+    if (MD)
+      MetadataTracking::track(&MD, *MD, *this);
 }
 
-void DebugValueUser::retrackDebugValue(DebugValueUser &X) {
-  assert(DebugValue == X.DebugValue && "Expected values to match");
-  if (X.DebugValue) {
-    MetadataTracking::retrack(X.DebugValue, DebugValue);
-    X.DebugValue = nullptr;
-  }
+void DebugValueUser::untrackDebugValue(size_t Idx) {
+  assert(Idx < 3 && "Invalid debug value index.");
+  Metadata *&MD = DebugValues[Idx];
+  if (MD)
+    MetadataTracking::untrack(MD);
+}
+
+void DebugValueUser::untrackDebugValues() {
+  for (Metadata *&MD : DebugValues)
+    if (MD)
+      MetadataTracking::untrack(MD);
+}
+
+void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
+  assert(DebugValueUser::operator==(X) && "Expected values to match");
+  for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
+    if (XMD)
+      MetadataTracking::retrack(XMD, MD);
+  X.DebugValues.fill(nullptr);
 }
 
 bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
@@ -362,7 +383,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
     }
 
     if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->getUser()->handleChangedLocation(MD);
+      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
       continue;
     }
 
