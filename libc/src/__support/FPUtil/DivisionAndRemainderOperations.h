@@ -43,7 +43,8 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     return x;
   }
 
-  const Sign result_sign = (xbits.sign() == ybits.sign() ? Sign::POS : Sign::NEG);
+  const Sign result_sign =
+      (xbits.sign() == ybits.sign() ? Sign::POS : Sign::NEG);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
