@@ -223,6 +223,12 @@ global_load_lds_ubyte v[2:3], off
 global_load_lds_ushort v[2:3], off
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+global_load_tr_b128 v[1:4], v5, s[2:3]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_load_tr_b64 v[1:2], v[3:4], off
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 image_atomic_fcmpswap v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
