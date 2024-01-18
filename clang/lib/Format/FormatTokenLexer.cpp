@@ -93,8 +93,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
-    if (Style.isTableGen())
+    if (Style.isTableGen()) {
       handleTableGenMultilineString();
+      handleTableGenNumericLikeIdentifier();
+    }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -802,6 +804,46 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   // ColumnWidth holds only the width of the first line.
   MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
       FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+}
+
+void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
+  FormatToken *Tok = Tokens.back();
+  // TableGen identifiers can begin with digits. Such tokens are lexed as
+  // numeric_constant now.
+  if (Tok->isNot(tok::numeric_constant))
+    return;
+  StringRef Text = Tok->TokenText;
+  // Identifiers cannot begin with + or -.
+  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+    return;
+  // The following check is based on llvm::TGLexer::LexToken.
+  if (isdigit(Text[0])) {
+    size_t I = 0;
+    char NextChar = (char)0;
+    // Identifiers in TalbleGen may begin with digits. Skip to first non-digit.
+    do {
+      NextChar = Text[I++];
+    } while (I < Text.size() && isdigit(NextChar));
+    // All the characters are digits.
+    if (I >= Text.size())
+      return;
+    // Base character. But it does not check the first 0 and that the base is
+    // the second character.
+    if (NextChar == 'x' || NextChar == 'b') {
+      char NextNextChar = Text[I];
+      // This is regarded as binary number.
+      if (isxdigit(NextNextChar)) {
+        if (NextChar == 'b' && (NextNextChar == '0' || NextNextChar == '1'))
+          return;
+        // Regarded as hex number or decimal number.
+        if (NextChar == 'x' || isdigit(NextNextChar))
+          return;
+      }
+    }
+  }
+  // Otherwise, this is actually a identifier.
+  Tok->Tok.setKind(tok::identifier);
+  Tok->Tok.setIdentifierInfo(nullptr);
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
