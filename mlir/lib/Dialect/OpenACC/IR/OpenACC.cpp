@@ -359,7 +359,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
     if (constAttr.getInt())
-      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+      rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       rewriter.eraseOp(op);
 
@@ -398,7 +398,7 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
     if (constAttr.getInt())
-      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+      rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
 
@@ -541,12 +541,10 @@ static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
                                 mlir::OperandRange operands,
                                 mlir::TypeRange types,
                                 std::optional<mlir::ArrayAttr> attributes) {
-  for (unsigned i = 0, e = attributes->size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << (*attributes)[i] << " -> " << operands[i] << " : "
-      << operands[i].getType();
-  }
+  llvm::interleaveComma(llvm::zip(*attributes, operands), p, [&](auto it) {
+    p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
+      << std::get<1>(it).getType();
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -852,27 +850,27 @@ static ParseResult parseNumGangs(
   return success();
 }
 
+static void printSingleDeviceType(mlir::OpAsmPrinter &p, mlir::Attribute attr) {
+  auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+  if (deviceTypeAttr.getValue() != mlir::acc::DeviceType::None)
+    p << " [" << attr << "]";
+}
+
 static void printNumGangs(mlir::OpAsmPrinter &p, mlir::Operation *op,
                           mlir::OperandRange operands, mlir::TypeRange types,
                           std::optional<mlir::ArrayAttr> deviceTypes,
                           std::optional<mlir::DenseI32ArrayAttr> segments) {
   unsigned opIdx = 0;
-  for (unsigned i = 0; i < deviceTypes->size(); ++i) {
-    if (i != 0)
-      p << ", ";
+  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
     p << "{";
-    for (int32_t j = 0; j < (*segments)[i]; ++j) {
-      if (j != 0)
-        p << ", ";
-      p << operands[opIdx] << " : " << operands[opIdx].getType();
-      ++opIdx;
-    }
+    llvm::interleaveComma(
+        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+          p << operands[opIdx] << " : " << operands[opIdx].getType();
+          ++opIdx;
+        });
     p << "}";
-    auto deviceTypeAttr =
-        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[i]);
-    if (deviceTypeAttr.getValue() != mlir::acc::DeviceType::None)
-      p << " [" << (*deviceTypes)[i] << "]";
-  }
+    printSingleDeviceType(p, it.value());
+  });
 }
 
 static ParseResult parseDeviceTypeOperandsWithSegment(
@@ -921,30 +919,21 @@ static ParseResult parseDeviceTypeOperandsWithSegment(
   return success();
 }
 
-static void printSingleDeviceType(mlir::OpAsmPrinter &p, mlir::Attribute attr) {
-  auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-  if (deviceTypeAttr.getValue() != mlir::acc::DeviceType::None)
-    p << " [" << attr << "]";
-}
-
 static void printDeviceTypeOperandsWithSegment(
     mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::OperandRange operands,
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::DenseI32ArrayAttr> segments) {
   unsigned opIdx = 0;
-  for (unsigned i = 0; i < deviceTypes->size(); ++i) {
-    if (i != 0)
-      p << ", ";
+  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
     p << "{";
-    for (int32_t j = 0; j < (*segments)[i]; ++j) {
-      if (j != 0)
-        p << ", ";
-      p << operands[opIdx] << " : " << operands[opIdx].getType();
-      ++opIdx;
-    }
+    llvm::interleaveComma(
+        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+          p << operands[opIdx] << " : " << operands[opIdx].getType();
+          ++opIdx;
+        });
     p << "}";
-    printSingleDeviceType(p, (*deviceTypes)[i]);
-  }
+    printSingleDeviceType(p, it.value());
+  });
 }
 
 static ParseResult parseDeviceTypeOperands(
@@ -977,12 +966,10 @@ static void
 printDeviceTypeOperands(mlir::OpAsmPrinter &p, mlir::Operation *op,
                         mlir::OperandRange operands, mlir::TypeRange types,
                         std::optional<mlir::ArrayAttr> deviceTypes) {
-  for (unsigned i = 0, e = deviceTypes->size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << operands[i] << " : " << operands[i].getType();
-    printSingleDeviceType(p, (*deviceTypes)[i]);
-  }
+  llvm::interleaveComma(llvm::zip(*deviceTypes, operands), p, [&](auto it) {
+    p << std::get<1>(it) << " : " << std::get<1>(it).getType();
+    printSingleDeviceType(p, std::get<0>(it));
+  });
 }
 
 static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
@@ -1056,14 +1043,10 @@ static void printDeviceTypes(mlir::OpAsmPrinter &p,
                              std::optional<mlir::ArrayAttr> deviceTypes) {
   if (!hasDeviceTypeValues(deviceTypes))
     return;
+
   p << "[";
-  for (unsigned i = 0; i < deviceTypes.value().size(); ++i) {
-    if (i != 0)
-      p << ", ";
-    auto deviceTypeAttr =
-        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[i]);
-    p << deviceTypeAttr;
-  }
+  llvm::interleaveComma(*deviceTypes, p,
+                        [&](mlir::Attribute attr) { p << attr; });
   p << "]";
 }
 
@@ -1081,19 +1064,11 @@ static void printDeviceTypeOperandsWithKeywordOnly(
   }
 
   p << "(";
-
   printDeviceTypes(p, keywordOnlyDeviceTypes);
-
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
     p << ", ";
-
-  for (unsigned i = 0, e = deviceTypes->size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << operands[i] << " : " << operands[i].getType();
-    printSingleDeviceType(p, (*deviceTypes)[i]);
-  }
+  printDeviceTypeOperands(p, op, operands, types, deviceTypes);
   p << ")";
 }
 
@@ -1483,17 +1458,7 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
   }
 
   p << "(";
-  if (hasDeviceTypeValues(gangOnlyDeviceTypes)) {
-    p << "[";
-    for (unsigned i = 0; i < gangOnlyDeviceTypes.value().size(); ++i) {
-      if (i != 0)
-        p << ", ";
-      auto deviceTypeAttr =
-          mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[i]);
-      p << deviceTypeAttr;
-    }
-    p << "]";
-  }
+  printDeviceTypes(p, gangOnlyDeviceTypes);
 
   if (hasDeviceTypeValues(gangOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1501,31 +1466,25 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
 
   if (deviceTypes) {
     unsigned opIdx = 0;
-    for (unsigned i = 0; i < deviceTypes->size(); ++i) {
-      if (i != 0)
-        p << ", ";
+    llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
       p << "{";
-      for (int32_t j = 0; j < (*segments)[i]; ++j) {
-        if (j != 0)
-          p << ", ";
-        auto gangArgTypeAttr =
-            mlir::dyn_cast<mlir::acc::GangArgTypeAttr>((*gangArgTypes)[opIdx]);
-        if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Num)
-          p << LoopOp::getGangNumKeyword();
-        else if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Dim)
-          p << LoopOp::getGangDimKeyword();
-        else if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Static)
-          p << LoopOp::getGangStaticKeyword();
-        p << "=" << operands[opIdx] << " : " << operands[opIdx].getType();
-        ++opIdx;
-      }
-
+      llvm::interleaveComma(
+          llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+            auto gangArgTypeAttr = mlir::dyn_cast<mlir::acc::GangArgTypeAttr>(
+                (*gangArgTypes)[opIdx]);
+            if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Num)
+              p << LoopOp::getGangNumKeyword();
+            else if (gangArgTypeAttr.getValue() == mlir::acc::GangArgType::Dim)
+              p << LoopOp::getGangDimKeyword();
+            else if (gangArgTypeAttr.getValue() ==
+                     mlir::acc::GangArgType::Static)
+              p << LoopOp::getGangStaticKeyword();
+            p << "=" << operands[opIdx] << " : " << operands[opIdx].getType();
+            ++opIdx;
+          });
       p << "}";
-      auto deviceTypeAttr =
-          mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[i]);
-      if (deviceTypeAttr.getValue() != mlir::acc::DeviceType::None)
-        p << " [" << (*deviceTypes)[i] << "]";
-    }
+      printSingleDeviceType(p, it.value());
+    });
   }
   p << ")";
 }
