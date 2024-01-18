@@ -15,6 +15,10 @@ on:
       os_list:
         required: false
         default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
   workflow_call:
     inputs:
       build_target:
@@ -37,6 +41,11 @@ on:
         # We're using a specific version of macOS due to:
         # https://github.com/actions/virtual-environments/issues/5900
         default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -67,7 +76,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ inputs.python_version }}
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,

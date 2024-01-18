@@ -16,6 +16,7 @@
 #include "CoroutineStmtBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
