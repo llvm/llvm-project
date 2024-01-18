@@ -1041,8 +1041,7 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case HexagonISD::D2P:           return SelectD2P(N);
   case HexagonISD::Q2V:           return SelectQ2V(N);
   case HexagonISD::V2Q:           return SelectV2Q(N);
-  case ISD::FDIV:
-    return SelectFDiv(N);
+  case ISD::FDIV:                 return SelectFDiv(N);
   }
 
   SelectCode(N);
