@@ -730,16 +730,21 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
     return SOT;
 
   if (!Options.WholeObjectSize && AllocaTy) {
+    // At this point, SOT.Size is the size of the whole struct. However, we
+    // want the size of the sub-object.
     const StructLayout &SL = *DL.getStructLayout(
         const_cast<StructType *>(AllocaTy));
 
     unsigned Idx = SL.getElementContainingOffset(Offset.getLimitedValue());
 
+    // Get the size of the sub-object.
     TypeSize ElemSize = DL.getTypeAllocSize(AllocaTy->getTypeAtIndex(Idx));
     APInt Size(InitialIntTyBits, ElemSize.getKnownMinValue());
 
+    // Adjust the offset to reflect the sub-object's offset.
     TypeSize ElemOffset = SL.getElementOffset(Idx);
     Offset -= ElemOffset.getKnownMinValue();
+
     SOT = SizeOffsetAPInt(Size, Offset);
   }
 
@@ -753,7 +758,6 @@ SizeOffsetAPInt ObjectSizeOffsetVisitor::computeImpl(Value *V) {
         !::CheckedZextOrTrunc(SOT.Offset, InitialIntTyBits))
       SOT.Offset = APInt();
   }
-
   // If the computed offset is "unknown" we cannot add the stripped offset.
   return {SOT.Size,
           SOT.Offset.getBitWidth() > 1 ? SOT.Offset + Offset : SOT.Offset};
