@@ -2,6 +2,7 @@
 #include "Inputs/std-coroutine.h"
 
 // Github issue: https://github.com/llvm/llvm-project/issues/78290
+namespace GH78290 {
 class Gen {
    public:
     class promise_type {
@@ -30,5 +31,4 @@ Gen CoroutineBody() {
     }
     co_await Gen{};
 }
-
-int main() { return 0; }
+} // namespace GH78290
