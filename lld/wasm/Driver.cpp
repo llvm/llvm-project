@@ -705,7 +705,7 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
   sym->isUsedInRegularObj = true;
 
   if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    lazySym->fetch();
+    lazySym->extract();
     if (!config->whyExtract.empty())
       config->whyExtractRecords.emplace_back(option, sym->getFile(), *sym);
   }
@@ -724,7 +724,7 @@ static void handleLibcall(StringRef name) {
       if (!config->whyExtract.empty())
         config->whyExtractRecords.emplace_back("<libcall>", sym->getFile(),
                                                *sym);
-      lazySym->fetch();
+      lazySym->extract();
     }
   }
 }
@@ -965,7 +965,7 @@ static void processStubLibraries() {
             needed->forceExport = true;
             if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
               depsAdded = true;
-              lazy->fetch();
+              lazy->extract();
               if (!config->whyExtract.empty())
                 config->whyExtractRecords.emplace_back(stub_file->getName(),
                                                        sym->getFile(), *sym);
