@@ -155,22 +155,22 @@ GetFileForModule(const ModuleSpec &module_spec,
   // Grab LLDB's Debuginfod overrides from the
   // plugin.symbol-locator.debuginfod.* settings.
   PluginProperties &plugin_props = GetGlobalPluginProperties();
-  llvm::Expected<llvm::StringRef> CacheDirectoryPathOrErr =
+  llvm::Expected<llvm::StringRef> cache_path_or_err =
       plugin_props.GetCachePath();
   // A cache location is *required*.
-  if (!CacheDirectoryPathOrErr)
+  if (!cache_path_or_err)
     return {};
-  llvm::StringRef CacheDirectoryPath = *CacheDirectoryPathOrErr;
-  llvm::SmallVector<llvm::StringRef> DebuginfodUrls =
+  llvm::StringRef cache_path = *cache_path_or_err;
+  llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
-  std::chrono::milliseconds Timeout = plugin_props.GetTimeout();
+  std::chrono::milliseconds timeout = plugin_props.GetTimeout();
 
   // We're ready to ask the Debuginfod library to find our file.
   llvm::object::BuildID build_id(module_uuid.GetBytes());
-  std::string UrlPath = UrlBuilder(build_id);
-  std::string CacheKey = llvm::getDebuginfodCacheKey(UrlPath);
+  std::string url_path = UrlBuilder(build_id);
+  std::string cache_key = llvm::getDebuginfodCacheKey(url_path);
   llvm::Expected<std::string> result = llvm::getCachedOrDownloadArtifact(
-      CacheKey, UrlPath, CacheDirectoryPath, DebuginfodUrls, Timeout);
+      cache_key, url_path, cache_path, debuginfod_urls, timeout);
   if (result)
     return FileSpec(*result);
   // An error here should be logged as a failure in the Debuginfod library,
