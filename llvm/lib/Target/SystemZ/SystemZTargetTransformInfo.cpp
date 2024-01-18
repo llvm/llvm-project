@@ -467,8 +467,6 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     }
   }
 
-  unsigned ImmLoadCost = 0;
-
   if (!Ty->isVectorTy()) {
     // These FP operations are supported with a dedicated instruction for
     // float, double and fp128 (base implementation assumes float generally
@@ -480,13 +478,6 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     // There is no native support for FRem.
     if (Opcode == Instruction::FRem)
       return LIBCALL_COST;
-
-    // Most i128 immediates must be loaded from the constant pool.
-    if (Ty->isIntegerTy(128))
-      for (const Value *A : Args)
-        if (auto *C = dyn_cast<ConstantInt>(A))
-          if (Opcode != Instruction::Xor || !C->isAllOnesValue())
-            ImmLoadCost++;
 
     // Give discount for some combined logical operations if supported.
     if (Args.size() == 2) {
@@ -500,7 +491,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
               if ((ScalarBits <= 64 && ST->hasMiscellaneousExtensions3()) ||
                   (isInt128InVR(Ty) &&
                    (I->getOpcode() == Instruction::Or || ST->hasVectorEnhancements1())))
-                return 0 + ImmLoadCost;
+                return 0;
         }
       }
       else if (Opcode == Instruction::And || Opcode == Instruction::Or) {
@@ -510,14 +501,14 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
                 ((ScalarBits <= 64 && ST->hasMiscellaneousExtensions3()) ||
                  (isInt128InVR(Ty) &&
                   (Opcode == Instruction::And || ST->hasVectorEnhancements1()))))
-              return 0 + ImmLoadCost;
+              return 0;
         }
       }
     }
 
     // Or requires one instruction, although it has custom handling for i64.
     if (Opcode == Instruction::Or)
-      return 1 + ImmLoadCost;
+      return 1;
 
     if (Opcode == Instruction::Xor && ScalarBits == 1) {
       if (ST->hasLoadStoreOnCond2())
@@ -605,7 +596,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CxtI) + ImmLoadCost;
+                                       Args, CxtI);
 }
 
 InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
@@ -990,21 +981,11 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       unsigned Cost = 1;
       if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
         Cost += (I != nullptr ? getOperandsExtensionCost(I) : 2);
-      if (isInt128InVR(ValTy) && I != nullptr &&
-          isa<ConstantInt>(I->getOperand(1)))
-        Cost++;
       return Cost;
     }
     case Instruction::Select:
-      if (ValTy->isFloatingPointTy())
-        return 4; // No load on condition for FP - costs a conditional jump.
-      if (I != nullptr && isInt128InVR(ValTy)) {
-        unsigned ImmLoadCost = 0;
-        if (isa<ConstantInt>(I->getOperand(1)) ||
-            isa<ConstantInt>(I->getOperand(2)))
-          ImmLoadCost++;
-        return 4 + ImmLoadCost;
-      }
+      if (ValTy->isFloatingPointTy() || isInt128InVR(ValTy))
+        return 4; // No LOC for FP / i128 - costs a conditional jump.
       return 1; // Load On Condition / Select Register.
     }
   }
@@ -1216,11 +1197,6 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (TLI->getValueType(DL, Src, true) == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
-
-  // Storing an i128 constant requires load from Constant Pool.
-  if (isInt128InVR(Src) && Opcode == Instruction::Store && I != nullptr &&
-      isa<ConstantInt>(I->getOperand(0)))
-    return 2;
 
   // FP128 is a legal type but kept in a register pair on older CPUs.
   if (Src->isFP128Ty() && !ST->hasVectorEnhancements1())

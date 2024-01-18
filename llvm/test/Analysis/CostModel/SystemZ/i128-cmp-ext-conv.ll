@@ -31,25 +31,6 @@ define i128 @fun3(i128 %val1, i128 %val2,
   ret i128 %sel
 }
 
-
-define i128 @fun3_b(i128 %val1) {
-; CHECK-LABEL: 'fun3_b'
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %cmp = icmp eq i128 %val1, 123
-; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %sel = select i1 %cmp, i128 %val1, i128 456
-  %cmp = icmp eq i128 %val1, 123
-  %sel = select i1 %cmp, i128 %val1, i128 456
-  ret i128 %sel
-}
-
-define i128 @fun3_c(i128 %val1) {
-; CHECK-LABEL: 'fun3_c'
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %cmp = icmp eq i128 %val1, 123
-; CHECK: Cost Model: Found an estimated cost of 5 for instruction:   %sel = select i1 %cmp, i128 567, i128 456
-  %cmp = icmp eq i128 %val1, 123
-  %sel = select i1 %cmp, i128 567, i128 456
-  ret i128 %sel
-}
-
 define i128 @fun4(ptr %src) {
 ; CHECK-LABEL: 'fun4'
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res = sext i64 %v to i128
@@ -158,28 +139,5 @@ define void @fun13() {
   %v9 = uitofp i128 undef to fp128
   %v10 = uitofp i128 undef to double
   %v11 = uitofp i128 undef to float
-  ret void
-}
-
-; All i128 immediates (big and small) are loaded from the constant pool.
-define void @fun14(ptr %dst) {
-; CHECK-LABEL: 'fun14'
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   store i128 166153499473114484112, ptr %dst, align 8
-  store i128 166153499473114484112, ptr %dst, align 8
-  ret void
-}
-
-define void @fun15(ptr %dst) {
-; CHECK-LABEL: 'fun15'
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   store i128 123, ptr %dst, align 8
-  store i128 123, ptr %dst, align 8
-  ret void
-}
-
-define void @fun16(ptr %dst, i128 %val1) {
-; CHECK-LABEL: 'fun16'
-; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %res = add i128 %val1, 123
-  %res = add i128 %val1, 123
-  store i128 %res, ptr %dst, align 8
   ret void
 }
