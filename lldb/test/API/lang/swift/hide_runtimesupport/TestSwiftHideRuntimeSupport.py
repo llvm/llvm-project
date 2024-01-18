@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftHideRuntimeSupport(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_hide_runtime_support(self):
         """Test that we hide runtime support values"""

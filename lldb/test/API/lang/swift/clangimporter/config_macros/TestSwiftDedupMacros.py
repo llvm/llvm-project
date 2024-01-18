@@ -18,9 +18,6 @@ import os
 import unittest2
 
 class TestSwiftDedupMacros(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'true'))

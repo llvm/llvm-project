@@ -27,8 +27,6 @@ import unittest2
 
 
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""

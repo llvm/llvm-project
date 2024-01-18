@@ -9,9 +9,6 @@ import os
 
 
 class TestMultilangFormatterCategories(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipUnlessDarwin
     def test_multilang_formatter_categories(self):

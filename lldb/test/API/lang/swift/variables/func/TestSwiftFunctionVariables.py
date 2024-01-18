@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestFunctionVariables(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_function_variables(self):
         """Tests that function type variables display correctly"""

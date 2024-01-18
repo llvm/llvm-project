@@ -20,9 +20,6 @@ import os
 
 
 class TestSwiftSubmoduleImport(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     # Have to find some submodule that is present on both Darwin & Linux for this
     # test to run on both systems...
 

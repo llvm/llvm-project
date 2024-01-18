@@ -7,8 +7,6 @@ from lldbsuite.test.decorators import *
 
 
 class TestDefaultProtocolExtensionNoSelfReference(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_protocol_default_extension_no_self_reference(self):
         """

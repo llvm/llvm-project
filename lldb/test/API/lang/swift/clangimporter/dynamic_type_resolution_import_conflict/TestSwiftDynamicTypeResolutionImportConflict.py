@@ -19,9 +19,6 @@ import unittest2
 import shutil
 
 class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin

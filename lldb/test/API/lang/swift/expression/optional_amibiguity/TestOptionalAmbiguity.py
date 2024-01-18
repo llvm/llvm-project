@@ -15,9 +15,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestOptionalAmbiguity(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_sample_rename_this(self):
         self.build()

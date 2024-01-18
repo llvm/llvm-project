@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftOptionalType(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_optional_type(self):
         """Check formatting for T? and T!"""

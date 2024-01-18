@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftBool(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_bool(self):
         """Test that we can inspect various Swift bools"""

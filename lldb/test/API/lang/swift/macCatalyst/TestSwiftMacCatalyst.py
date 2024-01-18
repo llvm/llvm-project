@@ -7,9 +7,6 @@ import unittest2
 
 
 class TestSwiftMacCatalyst(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin

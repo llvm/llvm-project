@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftMixAnyObjectType(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_any_object_type(self):

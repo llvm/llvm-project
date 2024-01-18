@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftAtObjCIvars(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_foo(self, theFoo):
         x = theFoo.GetChildMemberWithName("x")
         y = theFoo.GetChildMemberWithName("y")

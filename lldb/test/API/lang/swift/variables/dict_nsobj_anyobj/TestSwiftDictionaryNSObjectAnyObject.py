@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestDictionaryNSObjectAnyObject(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_dictionary_nsobject_any_object(self):

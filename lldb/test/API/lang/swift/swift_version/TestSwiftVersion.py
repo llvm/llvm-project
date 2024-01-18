@@ -22,9 +22,6 @@ import time
 import unittest2
 
 class TestSwiftVersion(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_cross_module_extension(self):

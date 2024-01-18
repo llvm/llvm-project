@@ -24,9 +24,6 @@ import unittest2
 
 
 class TestSwiftBridgedStringVariables(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @swiftTest
     def test_swift_bridged_string_variables(self):

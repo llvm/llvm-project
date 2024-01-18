@@ -17,8 +17,6 @@ from lldbsuite.test import lldbtest, lldbutil
 
 class SwiftStaticLinkingMacOSTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def expect_self_var_available_at_breakpoint(

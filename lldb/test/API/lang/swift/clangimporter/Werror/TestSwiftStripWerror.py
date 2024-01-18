@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftWerror(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # Don't run ClangImporter tests if Clangimporter is disabled.

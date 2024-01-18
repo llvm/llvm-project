@@ -22,9 +22,6 @@ import unittest2
 
 
 class TestSwiftStructChangeRerun(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""

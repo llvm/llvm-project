@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftObjCOptionalType(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     @skipUnlessDarwin
     def test_swift_objc_optional_type(self):

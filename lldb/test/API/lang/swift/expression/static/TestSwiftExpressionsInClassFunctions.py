@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftExpressionsInClassFunctions(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""

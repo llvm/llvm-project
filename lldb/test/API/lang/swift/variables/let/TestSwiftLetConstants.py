@@ -6,8 +6,6 @@ import unittest2
 
 
 class TestSwiftLetConstants(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_let_constants(self):
         """Test that let constants aren't writeable"""

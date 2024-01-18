@@ -36,9 +36,6 @@ def execute_command(command):
 
 
 class TestSwiftPlaygrounds(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def get_build_triple(self):
         """We want to build the file with a deployment target earlier than the
            availability set in the source file."""

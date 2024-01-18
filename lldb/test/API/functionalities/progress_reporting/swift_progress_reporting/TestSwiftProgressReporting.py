@@ -9,9 +9,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 class TestSwiftProgressReporting(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.broadcaster = self.dbg.GetBroadcaster()

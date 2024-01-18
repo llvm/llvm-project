@@ -21,9 +21,6 @@ import unittest2
 
 
 class TestSwiftArchetypeResolution(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_archetype_resolution(self):
         """Test that archetype-typed objects get resolved to their proper location in memory"""

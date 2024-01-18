@@ -22,9 +22,6 @@ import time
 import unittest2
 
 class TestLibraryIndirect(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     def launch_info(self):
         info = self.target.GetLaunchInfo()
 

@@ -8,7 +8,6 @@ import unittest2
 class TestSwiftHealthCheck(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
     @skipIfDarwinEmbedded

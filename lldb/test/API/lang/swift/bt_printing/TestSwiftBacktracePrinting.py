@@ -20,9 +20,6 @@ import unittest2
 
 
 class TestSwiftBacktracePrinting(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
-
     @swiftTest
     def test_swift_backtrace_printing(self):
         """Test printing Swift backtrace"""
