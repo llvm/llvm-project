@@ -804,7 +804,18 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
+static unsigned computeVLMAX(unsigned VLEN, unsigned SEW,
+                             RISCVII::VLMUL VLMul) {
+  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMul);
+  if (Fractional)
+    VLEN = VLEN / LMul;
+  else
+    VLEN = VLEN * LMul;
+  return VLEN/SEW;
+}
+
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
+                                       const RISCVSubtarget &ST,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
 
@@ -846,8 +857,15 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
       // Conver the VLMax sentintel to X0 register.
-      if (Imm == RISCV::VLMaxSentinel)
-        InstrInfo.setAVLReg(RISCV::X0);
+      if (Imm == RISCV::VLMaxSentinel) {
+        // If we know the exact VLEN, see if we can use the constant encoding
+        // for the VLMAX instead.  This reduces register pressure slightly.
+        const unsigned VLMAX = computeVLMAX(ST.getRealMaxVLen(), SEW, VLMul);
+        if (ST.getRealMinVLen() == ST.getRealMaxVLen() && VLMAX <= 31)
+          InstrInfo.setAVLImm(VLMAX);
+        else
+          InstrInfo.setAVLReg(RISCV::X0);
+      }
       else
         InstrInfo.setAVLImm(Imm);
     } else {
@@ -983,7 +1001,7 @@ static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, MRI));
+  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, *ST, MRI));
 
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
@@ -1071,7 +1089,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (!RISCVII::hasSEWOp(TSFlags))
     return;
 
-  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, *ST, MRI);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;

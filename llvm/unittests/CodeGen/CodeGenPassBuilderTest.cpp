@@ -138,4 +138,45 @@ TEST_F(CodeGenPassBuilderTest, basic) {
   EXPECT_EQ(MIRPipeline, ExpectedMIRPipeline);
 }
 
+// TODO: Move this to lit test when llc support new pm.
+TEST_F(CodeGenPassBuilderTest, start_stop) {
+  static const char *argv[] = {
+      "test",
+      "-start-after=no-op-module",
+      "-stop-before=no-op-function,2",
+  };
+  int argc = std::size(argv);
+  cl::ParseCommandLineOptions(argc, argv);
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  PassInstrumentationCallbacks PIC;
+  DummyCodeGenPassBuilder CGPB(*TM, getCGPassBuilderOption(), &PIC);
+  PipelineTuningOptions PTO;
+  PassBuilder PB(TM.get(), PTO, std::nullopt, &PIC);
+
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  MachineFunctionPassManager MFPM;
+
+  Error Err =
+      CGPB.buildPipeline(MPM, MFPM, outs(), nullptr, CodeGenFileType::Null);
+  EXPECT_FALSE(Err);
+  std::string IRPipeline;
+  raw_string_ostream IROS(IRPipeline);
+  MPM.printPipeline(IROS, [&PIC](StringRef Name) {
+    auto PassName = PIC.getPassNameForClassName(Name);
+    return PassName.empty() ? Name : PassName;
+  });
+  EXPECT_EQ(IRPipeline, "function(no-op-function)");
+}
+
 } // namespace

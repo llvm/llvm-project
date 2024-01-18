@@ -2,7 +2,7 @@
 ; Note update_mir_test_checks does not support generating checks for
 ; the frame info, so some functions have manually added stack object
 ; checks.
-; RUN: llc -march=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
 ; FIXME: pre-VI should have same ABI without legal i16 operations.
 
 define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
@@ -2780,9 +2780,9 @@ define void @vector_ptr_in_struct_arg({ <2 x ptr addrspace(1)>, <2 x ptr addrspa
 define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i1_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s1), [[DEF]](p1) :: (store (s1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2794,9 +2794,9 @@ define void @void_func_i1_inreg(i1 inreg %arg0) #0 {
 define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i8_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[TRUNC]](s16)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -2809,9 +2809,9 @@ define void @void_func_i8_inreg(i8 inreg %arg0) #0 {
 define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2823,9 +2823,9 @@ define void @void_func_i16_inreg(i16 inreg %arg0) #0 {
 define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -2836,10 +2836,10 @@ define void @void_func_i32_inreg(i32 inreg %arg0) #0 {
 define void @void_func_i48_inreg(i48 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i48_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[MV]](s64)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
@@ -2852,10 +2852,10 @@ define void @void_func_i48_inreg(i48 inreg %arg0) #0 {
 define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i64_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2867,11 +2867,11 @@ define void @void_func_i64_inreg(i64 inreg %arg0) #0 {
 define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i96_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) undef`, align 8, addrspace 1)
@@ -2883,12 +2883,12 @@ define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
 define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_i128_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
@@ -2900,9 +2900,9 @@ define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
 define void @void_func_f16_inreg(half inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_f16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2914,9 +2914,9 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
 define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_bf16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2928,9 +2928,9 @@ define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
 define void @void_func_f32_inreg(float inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_f32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -2941,10 +2941,10 @@ define void @void_func_f32_inreg(float inreg %arg0) #0 {
 define void @void_func_f64_inreg(double inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_f64_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](s64), [[DEF]](p1) :: (store (s64) into `ptr addrspace(1) undef`, addrspace 1)
@@ -2956,11 +2956,11 @@ define void @void_func_f64_inreg(double inreg %arg0) #0 {
 define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2i1_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s16>)
@@ -2975,11 +2975,11 @@ define void @void_func_v2i1_inreg(<2 x i1> inreg %arg0) #0 {
 define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2i8_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; CHECK-NEXT:   [[TRUNC2:%[0-9]+]]:_(<2 x s8>) = G_TRUNC [[BUILD_VECTOR]](<2 x s16>)
@@ -2993,9 +2993,9 @@ define void @void_func_v2i8_inreg(<2 x i8> inreg %arg0) #0 {
 define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2i16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -3006,9 +3006,9 @@ define void @void_func_v2i16_inreg(<2 x i16> inreg %arg0) #0 {
 define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2f16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -3019,9 +3019,9 @@ define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
 define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2bf16_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BITCAST]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3033,10 +3033,10 @@ define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
 define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3048,10 +3048,10 @@ define void @void_func_v2i32_inreg(<2 x i32> inreg %arg0) #0 {
 define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2f32_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s32>), [[DEF]](p1) :: (store (<2 x s32>) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3063,12 +3063,12 @@ define void @void_func_v2f32_inreg(<2 x float> inreg %arg0) #0 {
 define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2i64_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
@@ -3082,12 +3082,12 @@ define void @void_func_v2i64_inreg(<2 x i64> inreg %arg0) #0 {
 define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2f64_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
@@ -3112,10 +3112,10 @@ define void @void_func_v2f64_inreg(<2 x double> inreg %arg0) #0 {
 define void @void_func_p0_inreg(ptr inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_p0_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](p0), [[DEF]](p1) :: (store (p0) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3127,10 +3127,10 @@ define void @void_func_p0_inreg(ptr inreg %arg0) #0 {
 define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_p1_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](p1), [[DEF]](p1) :: (store (p1) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3142,9 +3142,9 @@ define void @void_func_p1_inreg(ptr addrspace(1) inreg %arg0) #0 {
 define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_p3_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](p3), [[DEF]](p1) :: (store (p3) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -3155,9 +3155,9 @@ define void @void_func_p3_inreg(ptr addrspace(3) inreg %arg0) #0 {
 define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_p5_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[COPY]](p5), [[DEF]](p1) :: (store (p5) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
@@ -3168,10 +3168,10 @@ define void @void_func_p5_inreg(ptr addrspace(5) inreg %arg0) #0 {
 define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_p999_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p999) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[MV]](p999), [[DEF]](p1) :: (store (p999) into `ptr addrspace(1) undef`, addrspace 1)
@@ -3183,12 +3183,12 @@ define void @void_func_p999_inreg(ptr addrspace(999) inreg %arg0) #0 {
 define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2p0_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[MV]](p0), [[MV1]](p0)
@@ -3202,12 +3202,12 @@ define void @void_func_v2p0_inreg(<2 x ptr> inreg %arg0) #0 {
 define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2p1_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[MV]](p1), [[MV1]](p1)
@@ -3221,10 +3221,10 @@ define void @void_func_v2p1_inreg(<2 x ptr addrspace(1)> inreg %arg0) #0 {
 define void @void_func_v2p3_inreg(<2 x ptr addrspace(3)> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2p3_inreg
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
+  ; CHECK-NEXT:   liveins: $sgpr16, $sgpr17
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p3) = COPY $sgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p3) = COPY $sgpr17
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY]](p3), [[COPY1]](p3)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p1) :: (store (<2 x p3>) into `ptr addrspace(1) undef`, addrspace 1)
