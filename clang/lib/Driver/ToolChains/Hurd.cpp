@@ -30,13 +30,21 @@ using tools::addPathIfExists;
 std::string Hurd::getMultiarchTriple(const Driver &D,
                                      const llvm::Triple &TargetTriple,
                                      StringRef SysRoot) const {
-  if (TargetTriple.getArch() == llvm::Triple::x86) {
+  switch (TargetTriple.getArch()) {
+  default:
+    break;
+
+  case llvm::Triple::x86:
     // We use the existence of '/lib/<triple>' as a directory to detect some
     // common hurd triples that don't quite match the Clang triple for both
     // 32-bit and 64-bit targets. Multiarch fixes its install triples to these
     // regardless of what the actual target triple is.
     if (D.getVFS().exists(SysRoot + "/lib/i386-gnu"))
       return "i386-gnu";
+    break;
+
+  case llvm::Triple::x86_64:
+    return "x86_64-gnu";
   }
 
   // For most architectures, just use whatever we have rather than trying to be
@@ -126,8 +134,14 @@ Tool *Hurd::buildAssembler() const {
 }
 
 std::string Hurd::getDynamicLinker(const ArgList &Args) const {
-  if (getArch() == llvm::Triple::x86)
+  switch (getArch()) {
+  case llvm::Triple::x86:
     return "/lib/ld.so";
+  case llvm::Triple::x86_64:
+    return "/lib/ld-x86-64.so.1";
+  default:
+    break;
+  }
 
   llvm_unreachable("unsupported architecture");
 }

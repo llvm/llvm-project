@@ -104,7 +104,7 @@ namespace {
 
     if (is_style_windows(style)) {
       if (pos == StringRef::npos)
-        pos = str.find_last_of(':', str.size() - 2);
+        pos = str.find_last_of(':', str.size() - 1);
     }
 
     if (pos == StringRef::npos || (pos == 1 && is_separator(str[0], style)))
@@ -1145,7 +1145,7 @@ void directory_entry::replace_filename(const Twine &Filename, file_type Type,
                                        basic_file_status Status) {
   SmallString<128> PathStr = path::parent_path(Path);
   path::append(PathStr, Filename);
-  this->Path = std::string(PathStr.str());
+  this->Path = std::string(PathStr);
   this->Type = Type;
   this->Status = Status;
 }

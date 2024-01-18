@@ -3856,11 +3856,13 @@ def G_AMDGPU_BUFFER_ATOMIC_UMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_SMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_UMAX : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_AND : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_OR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FADD_BF16 : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 

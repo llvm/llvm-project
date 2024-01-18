@@ -437,6 +437,12 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   let has_gds = 0;
 }
 
+class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
+  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+  let AddedComplexity = complexity;
+}
+
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
 defm DS_SUB_U32       : DS_1A1D_NORET_mc<"ds_sub_u32">;
 defm DS_RSUB_U32      : DS_1A1D_NORET_mc<"ds_rsub_u32">;
@@ -486,10 +492,10 @@ let SubtargetPredicate = isGFX90APlus in {
 } // End SubtargetPredicate = isGFX90APlus
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
-  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16", VGPR_32, "ds_pk_add_f16">;
-  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
-  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16", VGPR_32, "ds_pk_add_bf16">;
+  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
+  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc<"ds_pk_add_rtn_f16", VGPR_32, "ds_pk_add_f16">;
+  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc<"ds_pk_add_bf16">;
+  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc<"ds_pk_add_rtn_bf16", VGPR_32, "ds_pk_add_bf16">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
@@ -732,9 +738,22 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 let SubtargetPredicate = isGFX12Plus in {
 
+defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
+defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32, "ds_cond_sub_u32">;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
 defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32, "ds_sub_clamp_u32">;
 
+multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                  ValueType vt, string frag> {
+  def : DSAtomicRetPat<inst, vt,
+                        !cast<PatFrag>(frag#"_local_addrspace")>;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+    def : DSAtomicRetPat<noRetInst, vt,
+                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
+}
+
+defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
@@ -953,12 +972,6 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 } // End SubtargetPredicate = isGFX7Plus
 
 } // End AddedComplexity = 100
-
-class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
-  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
-  let AddedComplexity = complexity;
-}
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
@@ -1237,8 +1250,14 @@ defm DS_MIN_NUM_F64       : DS_Real_Renamed_gfx12<0x052, DS_MIN_F64, "ds_min_num
 defm DS_MAX_NUM_F64       : DS_Real_Renamed_gfx12<0x053, DS_MAX_F64, "ds_max_num_f64">;
 defm DS_MIN_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x072, DS_MIN_RTN_F64, "ds_min_num_rtn_f64">;
 defm DS_MAX_NUM_RTN_F64   : DS_Real_Renamed_gfx12<0x073, DS_MAX_RTN_F64, "ds_max_num_rtn_f64">;
+defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
 defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
+defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
 defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12<0x0a9>;
+defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
+defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
+defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
+defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

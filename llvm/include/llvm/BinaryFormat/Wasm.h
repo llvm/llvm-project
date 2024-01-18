@@ -31,213 +31,6 @@ const uint32_t WasmMetadataVersion = 0x2;
 // Wasm uses a 64k page size
 const uint32_t WasmPageSize = 65536;
 
-struct WasmObjectHeader {
-  StringRef Magic;
-  uint32_t Version;
-};
-
-struct WasmDylinkImportInfo {
-  StringRef Module;
-  StringRef Field;
-  uint32_t Flags;
-};
-
-struct WasmDylinkExportInfo {
-  StringRef Name;
-  uint32_t Flags;
-};
-
-struct WasmDylinkInfo {
-  uint32_t MemorySize; // Memory size in bytes
-  uint32_t MemoryAlignment;  // P2 alignment of memory
-  uint32_t TableSize;  // Table size in elements
-  uint32_t TableAlignment;  // P2 alignment of table
-  std::vector<StringRef> Needed; // Shared library dependencies
-  std::vector<WasmDylinkImportInfo> ImportInfo;
-  std::vector<WasmDylinkExportInfo> ExportInfo;
-};
-
-struct WasmProducerInfo {
-  std::vector<std::pair<std::string, std::string>> Languages;
-  std::vector<std::pair<std::string, std::string>> Tools;
-  std::vector<std::pair<std::string, std::string>> SDKs;
-};
-
-struct WasmFeatureEntry {
-  uint8_t Prefix;
-  std::string Name;
-};
-
-struct WasmExport {
-  StringRef Name;
-  uint8_t Kind;
-  uint32_t Index;
-};
-
-struct WasmLimits {
-  uint8_t Flags;
-  uint64_t Minimum;
-  uint64_t Maximum;
-};
-
-struct WasmTableType {
-  uint8_t ElemType;
-  WasmLimits Limits;
-};
-
-struct WasmTable {
-  uint32_t Index;
-  WasmTableType Type;
-  StringRef SymbolName; // from the "linking" section
-};
-
-struct WasmInitExprMVP {
-  uint8_t Opcode;
-  union {
-    int32_t Int32;
-    int64_t Int64;
-    uint32_t Float32;
-    uint64_t Float64;
-    uint32_t Global;
-  } Value;
-};
-
-struct WasmInitExpr {
-  uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
-                    // one instruction)
-  WasmInitExprMVP Inst;
-  ArrayRef<uint8_t> Body;
-};
-
-struct WasmGlobalType {
-  uint8_t Type;
-  bool Mutable;
-};
-
-struct WasmGlobal {
-  uint32_t Index;
-  WasmGlobalType Type;
-  WasmInitExpr InitExpr;
-  StringRef SymbolName; // from the "linking" section
-};
-
-struct WasmTag {
-  uint32_t Index;
-  uint32_t SigIndex;
-  StringRef SymbolName; // from the "linking" section
-};
-
-struct WasmImport {
-  StringRef Module;
-  StringRef Field;
-  uint8_t Kind;
-  union {
-    uint32_t SigIndex;
-    WasmGlobalType Global;
-    WasmTableType Table;
-    WasmLimits Memory;
-  };
-};
-
-struct WasmLocalDecl {
-  uint8_t Type;
-  uint32_t Count;
-};
-
-struct WasmFunction {
-  uint32_t Index;
-  uint32_t SigIndex;
-  std::vector<WasmLocalDecl> Locals;
-  ArrayRef<uint8_t> Body;
-  uint32_t CodeSectionOffset;
-  uint32_t Size;
-  uint32_t CodeOffset;  // start of Locals and Body
-  std::optional<StringRef> ExportName; // from the "export" section
-  StringRef SymbolName; // from the "linking" section
-  StringRef DebugName;  // from the "name" section
-  uint32_t Comdat;      // from the "comdat info" section
-};
-
-struct WasmDataSegment {
-  uint32_t InitFlags;
-  // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
-  uint32_t MemoryIndex;
-  // Present if InitFlags & WASM_DATA_SEGMENT_IS_PASSIVE == 0.
-  WasmInitExpr Offset;
-
-  ArrayRef<uint8_t> Content;
-  StringRef Name; // from the "segment info" section
-  uint32_t Alignment;
-  uint32_t LinkingFlags;
-  uint32_t Comdat; // from the "comdat info" section
-};
-
-struct WasmElemSegment {
-  uint32_t Flags;
-  uint32_t TableNumber;
-  uint8_t ElemKind;
-  WasmInitExpr Offset;
-  std::vector<uint32_t> Functions;
-};
-
-// Represents the location of a Wasm data symbol within a WasmDataSegment, as
-// the index of the segment, and the offset and size within the segment.
-struct WasmDataReference {
-  uint32_t Segment;
-  uint64_t Offset;
-  uint64_t Size;
-};
-
-struct WasmRelocation {
-  uint8_t Type;    // The type of the relocation.
-  uint32_t Index;  // Index into either symbol or type index space.
-  uint64_t Offset; // Offset from the start of the section.
-  int64_t Addend;  // A value to add to the symbol.
-};
-
-struct WasmInitFunc {
-  uint32_t Priority;
-  uint32_t Symbol;
-};
-
-struct WasmSymbolInfo {
-  StringRef Name;
-  uint8_t Kind;
-  uint32_t Flags;
-  // For undefined symbols the module of the import
-  std::optional<StringRef> ImportModule;
-  // For undefined symbols the name of the import
-  std::optional<StringRef> ImportName;
-  // For symbols to be exported from the final module
-  std::optional<StringRef> ExportName;
-  union {
-    // For function, table, or global symbols, the index in function, table, or
-    // global index space.
-    uint32_t ElementIndex;
-    // For a data symbols, the address of the data relative to segment.
-    WasmDataReference DataRef;
-  };
-};
-
-enum class NameType {
-  FUNCTION,
-  GLOBAL,
-  DATA_SEGMENT,
-};
-
-struct WasmDebugName {
-  NameType Type;
-  uint32_t Index;
-  StringRef Name;
-};
-
-struct WasmLinkingData {
-  uint32_t Version;
-  std::vector<WasmInitFunc> InitFunctions;
-  std::vector<StringRef> Comdats;
-  std::vector<WasmSymbolInfo> SymbolTable;
-};
-
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,     // Custom / User-defined section
   WASM_SEC_TYPE = 1,       // Function signature declarations
@@ -422,6 +215,11 @@ enum : unsigned {
 
 #undef WASM_RELOC
 
+struct WasmObjectHeader {
+  StringRef Magic;
+  uint32_t Version;
+};
+
 // Subset of types that a value can have
 enum class ValType {
   I32 = WASM_TYPE_I32,
@@ -431,6 +229,208 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
+};
+
+struct WasmDylinkImportInfo {
+  StringRef Module;
+  StringRef Field;
+  uint32_t Flags;
+};
+
+struct WasmDylinkExportInfo {
+  StringRef Name;
+  uint32_t Flags;
+};
+
+struct WasmDylinkInfo {
+  uint32_t MemorySize; // Memory size in bytes
+  uint32_t MemoryAlignment;  // P2 alignment of memory
+  uint32_t TableSize;  // Table size in elements
+  uint32_t TableAlignment;  // P2 alignment of table
+  std::vector<StringRef> Needed; // Shared library dependencies
+  std::vector<WasmDylinkImportInfo> ImportInfo;
+  std::vector<WasmDylinkExportInfo> ExportInfo;
+};
+
+struct WasmProducerInfo {
+  std::vector<std::pair<std::string, std::string>> Languages;
+  std::vector<std::pair<std::string, std::string>> Tools;
+  std::vector<std::pair<std::string, std::string>> SDKs;
+};
+
+struct WasmFeatureEntry {
+  uint8_t Prefix;
+  std::string Name;
+};
+
+struct WasmExport {
+  StringRef Name;
+  uint8_t Kind;
+  uint32_t Index;
+};
+
+struct WasmLimits {
+  uint8_t Flags;
+  uint64_t Minimum;
+  uint64_t Maximum;
+};
+
+struct WasmTableType {
+  ValType ElemType;
+  WasmLimits Limits;
+};
+
+struct WasmTable {
+  uint32_t Index;
+  WasmTableType Type;
+  StringRef SymbolName; // from the "linking" section
+};
+
+struct WasmInitExprMVP {
+  uint8_t Opcode;
+  union {
+    int32_t Int32;
+    int64_t Int64;
+    uint32_t Float32;
+    uint64_t Float64;
+    uint32_t Global;
+  } Value;
+};
+
+struct WasmInitExpr {
+  uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
+                    // one instruction)
+  WasmInitExprMVP Inst;
+  ArrayRef<uint8_t> Body;
+};
+
+struct WasmGlobalType {
+  uint8_t Type; // TODO: make this a ValType?
+  bool Mutable;
+};
+
+struct WasmGlobal {
+  uint32_t Index;
+  WasmGlobalType Type;
+  WasmInitExpr InitExpr;
+  StringRef SymbolName; // from the "linking" section
+};
+
+struct WasmTag {
+  uint32_t Index;
+  uint32_t SigIndex;
+  StringRef SymbolName; // from the "linking" section
+};
+
+struct WasmImport {
+  StringRef Module;
+  StringRef Field;
+  uint8_t Kind;
+  union {
+    uint32_t SigIndex;
+    WasmGlobalType Global;
+    WasmTableType Table;
+    WasmLimits Memory;
+  };
+};
+
+struct WasmLocalDecl {
+  uint8_t Type;
+  uint32_t Count;
+};
+
+struct WasmFunction {
+  uint32_t Index;
+  uint32_t SigIndex;
+  std::vector<WasmLocalDecl> Locals;
+  ArrayRef<uint8_t> Body;
+  uint32_t CodeSectionOffset;
+  uint32_t Size;
+  uint32_t CodeOffset;  // start of Locals and Body
+  std::optional<StringRef> ExportName; // from the "export" section
+  StringRef SymbolName; // from the "linking" section
+  StringRef DebugName;  // from the "name" section
+  uint32_t Comdat;      // from the "comdat info" section
+};
+
+struct WasmDataSegment {
+  uint32_t InitFlags;
+  // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
+  uint32_t MemoryIndex;
+  // Present if InitFlags & WASM_DATA_SEGMENT_IS_PASSIVE == 0.
+  WasmInitExpr Offset;
+
+  ArrayRef<uint8_t> Content;
+  StringRef Name; // from the "segment info" section
+  uint32_t Alignment;
+  uint32_t LinkingFlags;
+  uint32_t Comdat; // from the "comdat info" section
+};
+
+struct WasmElemSegment {
+  uint32_t Flags;
+  uint32_t TableNumber;
+  ValType ElemKind;
+  WasmInitExpr Offset;
+  std::vector<uint32_t> Functions;
+};
+
+// Represents the location of a Wasm data symbol within a WasmDataSegment, as
+// the index of the segment, and the offset and size within the segment.
+struct WasmDataReference {
+  uint32_t Segment;
+  uint64_t Offset;
+  uint64_t Size;
+};
+
+struct WasmRelocation {
+  uint8_t Type;    // The type of the relocation.
+  uint32_t Index;  // Index into either symbol or type index space.
+  uint64_t Offset; // Offset from the start of the section.
+  int64_t Addend;  // A value to add to the symbol.
+};
+
+struct WasmInitFunc {
+  uint32_t Priority;
+  uint32_t Symbol;
+};
+
+struct WasmSymbolInfo {
+  StringRef Name;
+  uint8_t Kind;
+  uint32_t Flags;
+  // For undefined symbols the module of the import
+  std::optional<StringRef> ImportModule;
+  // For undefined symbols the name of the import
+  std::optional<StringRef> ImportName;
+  // For symbols to be exported from the final module
+  std::optional<StringRef> ExportName;
+  union {
+    // For function, table, or global symbols, the index in function, table, or
+    // global index space.
+    uint32_t ElementIndex;
+    // For a data symbols, the address of the data relative to segment.
+    WasmDataReference DataRef;
+  };
+};
+
+enum class NameType {
+  FUNCTION,
+  GLOBAL,
+  DATA_SEGMENT,
+};
+
+struct WasmDebugName {
+  NameType Type;
+  uint32_t Index;
+  StringRef Name;
+};
+
+struct WasmLinkingData {
+  uint32_t Version;
+  std::vector<WasmInitFunc> InitFunctions;
+  std::vector<StringRef> Comdats;
+  std::vector<WasmSymbolInfo> SymbolTable;
 };
 
 struct WasmSignature {
