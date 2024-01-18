@@ -68,6 +68,10 @@ private:
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
 
+  Error setSizeLimit(std::optional<uint64_t> SizeLimit) final;
+  Expected<std::optional<uint64_t>> getStorageSize() const final;
+  Error pruneStorageData() final;
+
   OnDiskCAS(std::unique_ptr<ondisk::OnDiskGraphDB> DB_)
       : OwnedDB(std::move(DB_)), DB(OwnedDB.get()) {}
 
@@ -136,6 +140,17 @@ Error OnDiskCAS::forEachRef(ObjectHandle Node,
   }
   return Error::success();
 }
+
+Error OnDiskCAS::setSizeLimit(std::optional<uint64_t> SizeLimit) {
+  UniDB->setSizeLimit(SizeLimit);
+  return Error::success();
+}
+
+Expected<std::optional<uint64_t>> OnDiskCAS::getStorageSize() const {
+  return UniDB->getStorageSize();
+}
+
+Error OnDiskCAS::pruneStorageData() { return UniDB->collectGarbage(); }
 
 Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
   Expected<std::unique_ptr<ondisk::OnDiskGraphDB>> DB =

@@ -58,14 +58,20 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedReplayResult, CXCASReplayResult)
 
 } // anonymous namespace
 
+static void passAsCXError(Error &&E, CXError *OutError) {
+  if (OutError)
+    *OutError = cxerror::create(std::move(E));
+  else
+    llvm::consumeError(std::move(E));
+}
+
 CXCASCachedCompilation WrappedCachedCompilation::fromResultID(
     Expected<std::optional<CASID>> ResultID, CASID CacheKey,
     const std::shared_ptr<llvm::cas::ObjectStore> &CAS,
     const std::shared_ptr<llvm::cas::ActionCache> &AC, CXError *OutError) {
 
   auto failure = [OutError](Error &&E) -> CXCASCachedCompilation {
-    if (OutError)
-      *OutError = cxerror::create(std::move(E));
+    passAsCXError(std::move(E), OutError);
     return nullptr;
   };
 
@@ -139,6 +145,57 @@ void clang_experimental_cas_Databases_dispose(CXCASDatabases CDBs) {
   delete unwrap(CDBs);
 }
 
+int64_t clang_experimental_cas_Databases_get_storage_size(CXCASDatabases CDBs,
+                                                          CXError *OutError) {
+  // Commonly used ObjectStore implementations (on-disk and plugin) combine a
+  // CAS and action-cache into a single directory managing the storage
+  // holistically for both, so calling the ObjectStore API is sufficient.
+  // FIXME: For completeness we should figure out how to deal with potential
+  // implementations that use separate directories for CAS and action-cache.
+  std::optional<uint64_t> Size;
+  if (Error E = unwrap(CDBs)->CAS->getStorageSize().moveInto(Size)) {
+    passAsCXError(std::move(E), OutError);
+    return -2;
+  }
+  if (!Size)
+    return -1;
+  return *Size;
+}
+
+CXError clang_experimental_cas_Databases_set_size_limit(CXCASDatabases CDBs,
+                                                        int64_t size_limit) {
+  // Commonly used ObjectStore implementations (on-disk and plugin) combine a
+  // CAS and action-cache into a single directory managing the storage
+  // holistically for both, so calling the ObjectStore API is sufficient.
+  // FIXME: For completeness we should figure out how to deal with potential
+  // implementations that use separate directories for CAS and action-cache.
+  std::optional<uint64_t> SizeLimit;
+  if (size_limit < 0) {
+    return cxerror::create(llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "invalid size limit passed to "
+        "clang_experimental_cas_Databases_set_size_limit"));
+  }
+  if (size_limit > 0) {
+    SizeLimit = size_limit;
+  }
+  if (Error E = unwrap(CDBs)->CAS->setSizeLimit(SizeLimit))
+    return cxerror::create(std::move(E));
+  return nullptr;
+}
+
+CXError
+clang_experimental_cas_Databases_prune_ondisk_data(CXCASDatabases CDBs) {
+  // Commonly used ObjectStore implementations (on-disk and plugin) combine a
+  // CAS and action-cache into a single directory managing the storage
+  // holistically for both, so calling the ObjectStore API is sufficient.
+  // FIXME: For completeness we should figure out how to deal with potential
+  // implementations that use separate directories for CAS and action-cache.
+  if (Error E = unwrap(CDBs)->CAS->pruneStorageData())
+    return cxerror::create(std::move(E));
+  return nullptr;
+}
+
 CXCASObject clang_experimental_cas_loadObjectByString(CXCASDatabases CDBs,
                                                       const char *PrintedID,
                                                       CXError *OutError) {
@@ -149,8 +206,7 @@ CXCASObject clang_experimental_cas_loadObjectByString(CXCASDatabases CDBs,
     *OutError = nullptr;
 
   auto failure = [OutError](Error &&E) -> CXCASObject {
-    if (OutError)
-      *OutError = cxerror::create(std::move(E));
+    passAsCXError(std::move(E), OutError);
     return nullptr;
   };
 
@@ -311,8 +367,7 @@ clang_experimental_cas_getCachedCompilation(CXCASDatabases CDBs,
     *OutError = nullptr;
 
   auto failure = [OutError](Error &&E) -> CXCASCachedCompilation {
-    if (OutError)
-      *OutError = cxerror::create(std::move(E));
+    passAsCXError(std::move(E), OutError);
     return nullptr;
   };
 
@@ -441,10 +496,7 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
                     std::move(Invok), WorkingDirectory, WComp.CacheKey,
                     WComp.CachedResult, DiagText)
                     .moveInto(Ret)) {
-    if (OutError)
-      *OutError = cxerror::create(std::move(E));
-    else
-      llvm::consumeError(std::move(E));
+    passAsCXError(std::move(E), OutError);
     return nullptr;
   }
 
