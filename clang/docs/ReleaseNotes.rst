@@ -917,6 +917,9 @@ Bug Fixes to C++ Support
   (`#64607 <https://github.com/llvm/llvm-project/issues/64607>`_)
   (`#64086 <https://github.com/llvm/llvm-project/issues/64086>`_)
 
+- Fixed a crash where we lost uninstantiated constraints on placeholder NTTP packs. Fixes:
+  (`#63837 <https://github.com/llvm/llvm-project/issues/63837>`_)
+
 - Fixed a regression where clang forgets how to substitute into constraints on template-template
   parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
