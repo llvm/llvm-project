@@ -8903,7 +8903,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + TC->getTripleString(),
-        "arch=" + getProcessorFromTargetID(TC->getTriple(), Arch).str(),
+        "arch=" + Arch.str(),
         "kind=" + Kind.str(),
     };
 
@@ -9027,7 +9027,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
         SmallVector<std::string> Parts{
             "file=" + std::string(UnpackagedFileName),
             "triple=" + TheTriple.str(),
-            "arch=" + getProcessorFromTargetID(TheTriple, TargetID).str(),
+            "arch=" + TargetID.str(),
             "kind=openmp",
         };
 
