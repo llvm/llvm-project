@@ -1,8 +1,10 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s readability-redundant-casting %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-redundant-casting %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++11-or-later -check-suffix=,MACROS %s readability-redundant-casting %t -- \
-// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}'
+// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}' \
+// RUN:   -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++11-or-later -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
-// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}'
+// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
+// RUN:   -- -fno-delayed-template-parsing
 
 struct A {};
 struct B : A {};
