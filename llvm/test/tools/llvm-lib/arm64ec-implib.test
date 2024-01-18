@@ -26,19 +26,19 @@ READOBJ-NEXT: Arch: aarch64
 READOBJ-NEXT: AddressSize: 64bit
 READOBJ-EMPTY:
 READOBJ-NEXT: File: test.lib(test.dll)
-READOBJ-NEXT: Format: COFF-ARM64
+READOBJ-NEXT: Format: COFF-ARM64EC
 READOBJ-NEXT: Arch: aarch64
 READOBJ-NEXT: AddressSize: 64bit
 READOBJ-EMPTY:
 READOBJ-NEXT: File: test.dll
-READOBJ-NEXT: Format: COFF-import-file
+READOBJ-NEXT: Format: COFF-import-file-ARM64EC
 READOBJ-NEXT: Type: code
 READOBJ-NEXT: Name type: name
 READOBJ-NEXT: Symbol: __imp_funcexp
 READOBJ-NEXT: Symbol: funcexp
 READOBJ-EMPTY:
 READOBJ-NEXT: File: test.dll
-READOBJ-NEXT: Format: COFF-import-file
+READOBJ-NEXT: Format: COFF-import-file-ARM64EC
 READOBJ-NEXT: Type: data
 READOBJ-NEXT: Name type: name
 READOBJ-NEXT: Symbol: __imp_dataexp

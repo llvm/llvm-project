@@ -216,6 +216,7 @@ defm SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
 defm SIbuffer_atomic_fadd : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
 defm SIbuffer_atomic_fmin : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMIN">;
 defm SIbuffer_atomic_fmax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_FMAX">;
+defm SIbuffer_atomic_cond_sub_u32 : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
@@ -786,12 +787,9 @@ class bitextract_imm<int bitnum> : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(Bit, SDLoc(N), MVT::i1);
 }]>;
 
-def SIMM16bit : ImmLeaf <i32,
-  [{return isInt<16>(Imm);}]
->;
-
-def UIMM16bit : ImmLeaf <i32,
-  [{return isUInt<16>(Imm);}]
+def SIMM16bit : TImmLeaf <i32,
+  [{return isInt<16>(Imm) || isUInt<16>(Imm);}],
+  as_i16timm
 >;
 
 def i64imm_32bit : ImmLeaf<i64, [{

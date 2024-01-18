@@ -1336,6 +1336,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -2783,15 +2784,16 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (!IsGraphics) {
     // For the fixed ABI, pass workitem IDs in the last argument register.
     allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
+
+    // FIXME: Sink this into allocateSpecialInputSGPRs
+    if (!Subtarget->enableFlatScratch())
+      CCInfo.AllocateReg(Info->getScratchRSrcReg());
+
+    allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
-    if (!IsGraphics && !Subtarget->enableFlatScratch()) {
-      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
-                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
-                              4);
-    }
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
 
@@ -2991,13 +2993,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   }
 
   // Start adding system SGPRs.
-  if (IsEntryFunc) {
+  if (IsEntryFunc)
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);
-  } else {
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    if (!IsGraphics)
-      allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
-  }
 
   auto &ArgUsageInfo =
     DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
@@ -8707,6 +8704,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
@@ -8748,6 +8748,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
 
   case Intrinsic::amdgcn_buffer_atomic_cmpswap: {
     unsigned Slc = Op.getConstantOperandVal(7);

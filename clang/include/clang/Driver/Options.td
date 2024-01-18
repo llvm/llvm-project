@@ -6298,6 +6298,11 @@ def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
 
+// OS-specific options
+let Flags = [TargetSpecific] in {
+defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
+} // let Flags = [TargetSpecific]
+
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
 //===----------------------------------------------------------------------===//

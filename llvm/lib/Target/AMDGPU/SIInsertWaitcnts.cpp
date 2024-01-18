@@ -31,6 +31,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
@@ -121,8 +122,13 @@ enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
-  EXTRA_VGPR_LDS = 0,     // An artificial register to track LDS writes.
+  NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
+  // Artificial register slots to track LDS writes into specific LDS locations
+  // if a location is known. When slots are exhausted or location is
+  // unknown use the first slot. The first slot is also always updated in
+  // addition to known location's slot to properly generate waits if dependent
+  // instruction's location is unknown.
+  EXTRA_VGPR_LDS = 0,
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
@@ -297,6 +303,10 @@ public:
     PendingEvents |= WaitEventMaskForInst[VS_CNT];
   }
 
+  ArrayRef<const MachineInstr *> getLDSDMAStores() const {
+    return LDSDMAStores;
+  }
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -359,6 +369,9 @@ private:
   // Bitmask of the VmemTypes of VMEM instructions that might have a pending
   // write to each vgpr.
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
+  // Store representative LDS DMA operations. The only useful info here is
+  // alias info. One store is kept per unique AAInfo.
+  SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -373,6 +386,7 @@ private:
   DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
+  AliasAnalysis *AA = nullptr;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -415,6 +429,8 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
     AU.addRequired<MachinePostDominatorTree>();
+    AU.addUsedIfAvailable<AAResultsWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -707,7 +723,40 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         (TII->isDS(Inst) || TII->mayWriteLDSThroughDMA(Inst))) {
       // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
       // written can be accessed. A load from LDS to VMEM does not need a wait.
-      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
+      unsigned Slot = 0;
+      for (const auto *MemOp : Inst.memoperands()) {
+        if (!MemOp->isStore() ||
+            MemOp->getAddrSpace() != AMDGPUAS::LOCAL_ADDRESS)
+          continue;
+        // Comparing just AA info does not guarantee memoperands are equal
+        // in general, but this is so for LDS DMA in practice.
+        auto AAI = MemOp->getAAInfo();
+        // Alias scope information gives a way to definitely identify an
+        // original memory object and practically produced in the module LDS
+        // lowering pass. If there is no scope available we will not be able
+        // to disambiguate LDS aliasing as after the module lowering all LDS
+        // is squashed into a single big object. Do not attempt to use one of
+        // the limited LDSDMAStores for something we will not be able to use
+        // anyway.
+        if (!AAI || !AAI.Scope)
+          break;
+        for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
+          for (const auto *MemOp : LDSDMAStores[I]->memoperands()) {
+            if (MemOp->isStore() && AAI == MemOp->getAAInfo()) {
+              Slot = I + 1;
+              break;
+            }
+          }
+        }
+        if (Slot || LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+          break;
+        LDSDMAStores.push_back(&Inst);
+        Slot = LDSDMAStores.size();
+        break;
+      }
+      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
+      if (Slot)
+        setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
 }
@@ -1183,9 +1232,27 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         // No need to wait before load from VMEM to LDS.
         if (TII->mayWriteLDSThroughDMA(MI))
           continue;
-        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+
         // VM_CNT is only relevant to vgpr or LDS.
-        ScoreBrackets.determineWait(VM_CNT, RegNo, Wait);
+        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        bool FoundAliasingStore = false;
+        // Only objects with alias scope info were added to LDSDMAScopes array.
+        // In the absense of the scope info we will not be able to disambiguate
+        // aliasing here. There is no need to try searching for a corresponding
+        // store slot. This is conservatively correct because in that case we
+        // will produce a wait using the first (general) LDS DMA wait slot which
+        // will wait on all of them anyway.
+        if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
+          const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
+          for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              FoundAliasingStore = true;
+              ScoreBrackets.determineWait(VM_CNT, RegNo + I + 1, Wait);
+            }
+          }
+        }
+        if (!FoundAliasingStore)
+          ScoreBrackets.determineWait(VM_CNT, RegNo, Wait);
         if (Memop->isStore()) {
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
         }
@@ -1834,6 +1901,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
+  if (auto AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAR->getAAResults();
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
