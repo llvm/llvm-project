@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -77,9 +78,15 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
   };
 
   for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    if (CI->getOperandBundleAt(Idx).Inputs.size() > ABA_WasOn &&
-        CI->getOperandBundleAt(Idx).getTagName() != IgnoreBundleTag)
-      AddAffected(CI->getOperandBundleAt(Idx).Inputs[ABA_WasOn], Idx);
+    OperandBundleUse Bundle = CI->getOperandBundleAt(Idx);
+    if (Bundle.getTagName() == "separate_storage") {
+      assert(Bundle.Inputs.size() == 2 &&
+             "separate_storage must have two args");
+      AddAffected(getUnderlyingObject(Bundle.Inputs[0]), Idx);
+      AddAffected(getUnderlyingObject(Bundle.Inputs[1]), Idx);
+    } else if (Bundle.Inputs.size() > ABA_WasOn &&
+               Bundle.getTagName() != IgnoreBundleTag)
+      AddAffected(Bundle.Inputs[ABA_WasOn], Idx);
   }
 
   Value *Cond = CI->getArgOperand(0), *A, *B;

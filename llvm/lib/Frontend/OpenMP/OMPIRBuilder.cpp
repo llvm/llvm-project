@@ -5213,10 +5213,13 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    auto *GV = new GlobalVariable(
-        M, Ty, /*IsConstant=*/false, GlobalValue::CommonLinkage,
-        Constant::getNullValue(Ty), Elem.first(),
-        /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal, AddressSpace);
+    auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
+                       ? GlobalValue::ExternalLinkage
+                       : GlobalValue::CommonLinkage;
+    auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
+                                  Constant::getNullValue(Ty), Elem.first(),
+                                  /*InsertBefore=*/nullptr,
+                                  GlobalValue::NotThreadLocal, AddressSpace);
     const DataLayout &DL = M.getDataLayout();
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
     const llvm::Align PtrAlign = DL.getPointerABIAlignment(AddressSpace);
@@ -6023,6 +6026,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
     bool IsFailOnly) {
 
+  AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
+  return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
+                             IsPostfixUpdate, IsFailOnly, Failure);
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
+    const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+    AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+    omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+    bool IsFailOnly, AtomicOrdering Failure) {
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -6037,7 +6051,6 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   bool IsInteger = E->getType()->isIntegerTy();
 
   if (Op == OMPAtomicCompareOp::EQ) {
-    AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     AtomicCmpXchgInst *Result = nullptr;
     if (!IsInteger) {
       IntegerType *IntCastTy =

@@ -240,6 +240,12 @@ enum NodeType : unsigned {
   TexUnifiedCubeArrayS32FloatLevel,
   TexUnifiedCubeArrayU32Float,
   TexUnifiedCubeArrayU32FloatLevel,
+  TexUnifiedCubeFloatFloatGrad,
+  TexUnifiedCubeS32FloatGrad,
+  TexUnifiedCubeU32FloatGrad,
+  TexUnifiedCubeArrayFloatFloatGrad,
+  TexUnifiedCubeArrayS32FloatGrad,
+  TexUnifiedCubeArrayU32FloatGrad,
   Tld4UnifiedR2DFloatFloat,
   Tld4UnifiedG2DFloatFloat,
   Tld4UnifiedB2DFloatFloat,
@@ -512,6 +518,8 @@ public:
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,

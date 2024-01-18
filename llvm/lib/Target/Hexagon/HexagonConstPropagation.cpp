@@ -2860,8 +2860,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   // For each defined register, if it is a constant, create an instruction
   //   NewR = const
   // and replace all uses of the defined register with NewR.
-  for (unsigned i = 0, n = DefRegs.size(); i < n; ++i) {
-    unsigned R = DefRegs[i];
+  for (unsigned R : DefRegs) {
     const LatticeCell &L = Inputs.get(R);
     if (L.isBottom())
       continue;

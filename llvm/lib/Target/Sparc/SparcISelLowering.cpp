@@ -2050,7 +2050,7 @@ static void LookThroughSetCC(SDValue &LHS, SDValue &RHS,
          LHS.getOperand(3).getOpcode() == SPISD::CMPFCC_V9))) &&
       isOneConstant(LHS.getOperand(0)) && isNullConstant(LHS.getOperand(1))) {
     SDValue CMPCC = LHS.getOperand(3);
-    SPCC = cast<ConstantSDNode>(LHS.getOperand(2))->getZExtValue();
+    SPCC = LHS.getConstantOperandVal(2);
     LHS = CMPCC.getOperand(0);
     RHS = CMPCC.getOperand(1);
   }
@@ -3186,7 +3186,7 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
 
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.

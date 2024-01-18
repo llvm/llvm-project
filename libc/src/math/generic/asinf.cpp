@@ -108,8 +108,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x +
-           FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+    return x + FPBits::build_nan(FPBits::FRACTION_MASK);
   }
 
   // Check for exceptional values

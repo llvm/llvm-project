@@ -50,52 +50,8 @@ endif()
 ################################################################################
 # Looking for libffi...
 ################################################################################
-find_package(PkgConfig)
-
-pkg_check_modules(LIBOMPTARGET_SEARCH_LIBFFI QUIET libffi)
-
-find_path (
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR
-  NAMES
-    ffi.h
-  HINTS
-    ${LIBOMPTARGET_SEARCH_LIBFFI_INCLUDEDIR}
-    ${LIBOMPTARGET_SEARCH_LIBFFI_INCLUDE_DIRS}
-  PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
-    ENV CPATH)
-
-# Don't bother look for the library if the header files were not found.
-if (LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR)
-  find_library (
-      LIBOMPTARGET_DEP_LIBFFI_LIBRARIES
-    NAMES
-      ffi
-    HINTS
-      ${LIBOMPTARGET_SEARCH_LIBFFI_LIBDIR}
-      ${LIBOMPTARGET_SEARCH_LIBFFI_LIBRARY_DIRS}
-    PATHS
-      /usr/lib
-      /usr/local/lib
-      /opt/local/lib
-      /sw/lib
-      ENV LIBRARY_PATH
-      ENV LD_LIBRARY_PATH)
-endif()
-
-set(LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR})
-find_package_handle_standard_args(
-  LIBOMPTARGET_DEP_LIBFFI
-  DEFAULT_MSG
-  LIBOMPTARGET_DEP_LIBFFI_LIBRARIES
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS)
-
-mark_as_advanced(
-  LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_LIBFFI_LIBRARIES)
+find_package(FFI QUIET)
+set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
 # Looking for CUDA...

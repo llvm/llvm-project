@@ -510,16 +510,18 @@ struct VectorOuterProductToArmSMELowering
     // We don't yet support lowering AXPY operations to SME. These could be
     // lowered by masking out all but the first element of the LHS.
     if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
-      return outerProductOp.emitError("AXPY operations not supported");
+      return rewriter.notifyMatchFailure(outerProductOp,
+                                         "AXPY operations not supported");
 
     if (!arm_sme::isValidSMETileVectorType(
             outerProductOp.getResultVectorType()))
-      return outerProductOp.emitError(
-          "outer product does not fit into SME tile");
+      return rewriter.notifyMatchFailure(
+          outerProductOp, "outer product does not fit into SME tile");
 
     auto kind = outerProductOp.getKind();
     if (kind != vector::CombiningKind::ADD)
-      return outerProductOp.emitError(
+      return rewriter.notifyMatchFailure(
+          outerProductOp,
           "unsupported kind (lowering to SME only supports ADD at the moment)");
 
     Value lhsMask = {};

@@ -140,8 +140,7 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
   if (!II)   // if no identifier, not a simple C function
     return;
   StringRef Name = II->getName();
-  if (Name.starts_with("__builtin_"))
-    Name = Name.substr(10);
+  Name.consume_front("__builtin_");
 
   // Set the evaluation function by switching on the callee name.
   FnCheck evalFunction =
@@ -763,8 +762,7 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   enum { DEPR_ONLY = -1, UNKNOWN_CALL = -2 };
 
   StringRef Name = FD->getIdentifier()->getName();
-  if (Name.starts_with("__builtin_"))
-    Name = Name.substr(10);
+  Name.consume_front("__builtin_");
 
   int ArgIndex =
       llvm::StringSwitch<int>(Name)

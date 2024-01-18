@@ -516,20 +516,17 @@ define i8 @sminv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-LABEL: sminv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w12, v0.h[3]
+; CHECK-GI-NEXT:    sxtb w11, w8
+; CHECK-GI-NEXT:    cmp w11, w9, sxtb
+; CHECK-GI-NEXT:    sxtb w11, w10
+; CHECK-GI-NEXT:    csel w8, w8, w9, lt
+; CHECK-GI-NEXT:    cmp w11, w12, sxtb
 ; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    cmp w9, w10, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w11
-; CHECK-GI-NEXT:    csel w8, w8, w10, lt
-; CHECK-GI-NEXT:    fmov w10, s3
-; CHECK-GI-NEXT:    cmp w9, w10, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    csel w10, w11, w10, lt
+; CHECK-GI-NEXT:    csel w10, w10, w12, lt
 ; CHECK-GI-NEXT:    cmp w9, w10, sxtb
 ; CHECK-GI-NEXT:    csel w0, w8, w10, lt
 ; CHECK-GI-NEXT:    ret
@@ -611,19 +608,16 @@ define i16 @sminv_v3i16(<3 x i16> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    sxth w8, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
+; CHECK-GI-NEXT:    smov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[0]
+; CHECK-GI-NEXT:    umov w10, v0.h[1]
+; CHECK-GI-NEXT:    smov w11, v0.h[2]
+; CHECK-GI-NEXT:    umov w13, v0.h[2]
 ; CHECK-GI-NEXT:    fmov w12, s1
-; CHECK-GI-NEXT:    cmp w8, w10, sxth
-; CHECK-GI-NEXT:    sxth w8, w11
-; CHECK-GI-NEXT:    fmov w10, s2
-; CHECK-GI-NEXT:    csel w9, w9, w12, lt
-; CHECK-GI-NEXT:    cmp w8, w9, sxth
-; CHECK-GI-NEXT:    csel w0, w9, w10, gt
+; CHECK-GI-NEXT:    cmp w8, w12, sxth
+; CHECK-GI-NEXT:    csel w8, w9, w10, lt
+; CHECK-GI-NEXT:    cmp w11, w8, sxth
+; CHECK-GI-NEXT:    csel w0, w8, w13, gt
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.smin.v3i16(<3 x i16> %a)
@@ -887,20 +881,17 @@ define i8 @smaxv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-LABEL: smaxv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w12, v0.h[3]
+; CHECK-GI-NEXT:    sxtb w11, w8
+; CHECK-GI-NEXT:    cmp w11, w9, sxtb
+; CHECK-GI-NEXT:    sxtb w11, w10
+; CHECK-GI-NEXT:    csel w8, w8, w9, gt
+; CHECK-GI-NEXT:    cmp w11, w12, sxtb
 ; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    cmp w9, w10, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w11
-; CHECK-GI-NEXT:    csel w8, w8, w10, gt
-; CHECK-GI-NEXT:    fmov w10, s3
-; CHECK-GI-NEXT:    cmp w9, w10, sxtb
-; CHECK-GI-NEXT:    sxtb w9, w8
-; CHECK-GI-NEXT:    csel w10, w11, w10, gt
+; CHECK-GI-NEXT:    csel w10, w10, w12, gt
 ; CHECK-GI-NEXT:    cmp w9, w10, sxtb
 ; CHECK-GI-NEXT:    csel w0, w8, w10, gt
 ; CHECK-GI-NEXT:    ret
@@ -982,19 +973,16 @@ define i16 @smaxv_v3i16(<3 x i16> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    sxth w8, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
+; CHECK-GI-NEXT:    smov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[0]
+; CHECK-GI-NEXT:    umov w10, v0.h[1]
+; CHECK-GI-NEXT:    smov w11, v0.h[2]
+; CHECK-GI-NEXT:    umov w13, v0.h[2]
 ; CHECK-GI-NEXT:    fmov w12, s1
-; CHECK-GI-NEXT:    cmp w8, w10, sxth
-; CHECK-GI-NEXT:    sxth w8, w11
-; CHECK-GI-NEXT:    fmov w10, s2
-; CHECK-GI-NEXT:    csel w9, w9, w12, gt
-; CHECK-GI-NEXT:    cmp w8, w9, sxth
-; CHECK-GI-NEXT:    csel w0, w9, w10, lt
+; CHECK-GI-NEXT:    cmp w8, w12, sxth
+; CHECK-GI-NEXT:    csel w8, w9, w10, gt
+; CHECK-GI-NEXT:    cmp w11, w8, sxth
+; CHECK-GI-NEXT:    csel w0, w8, w13, lt
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.smax.v3i16(<3 x i16> %a)
@@ -1256,19 +1244,16 @@ define i8 @uminv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-LABEL: uminv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    fmov w12, s3
-; CHECK-GI-NEXT:    and w9, w8, #0xff
-; CHECK-GI-NEXT:    cmp w9, w10, uxtb
-; CHECK-GI-NEXT:    and w9, w11, #0xff
-; CHECK-GI-NEXT:    csel w8, w8, w10, lo
-; CHECK-GI-NEXT:    cmp w9, w12, uxtb
-; CHECK-GI-NEXT:    csel w9, w11, w12, lo
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    and w12, w8, #0xff
+; CHECK-GI-NEXT:    cmp w12, w9, uxtb
+; CHECK-GI-NEXT:    and w12, w10, #0xff
+; CHECK-GI-NEXT:    csel w8, w8, w9, lo
+; CHECK-GI-NEXT:    cmp w12, w11, uxtb
+; CHECK-GI-NEXT:    csel w9, w10, w11, lo
 ; CHECK-GI-NEXT:    and w10, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w10, w9, uxtb
 ; CHECK-GI-NEXT:    csel w0, w8, w9, lo
@@ -1351,19 +1336,16 @@ define i16 @uminv_v3i16(<3 x i16> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[0]
+; CHECK-GI-NEXT:    umov w10, v0.h[1]
+; CHECK-GI-NEXT:    umov w11, v0.h[2]
+; CHECK-GI-NEXT:    umov w13, v0.h[2]
 ; CHECK-GI-NEXT:    fmov w12, s1
-; CHECK-GI-NEXT:    cmp w8, w10, uxth
-; CHECK-GI-NEXT:    uxth w8, w11
-; CHECK-GI-NEXT:    fmov w10, s2
-; CHECK-GI-NEXT:    csel w9, w9, w12, lo
-; CHECK-GI-NEXT:    cmp w8, w9, uxth
-; CHECK-GI-NEXT:    csel w0, w9, w10, hi
+; CHECK-GI-NEXT:    cmp w8, w12, uxth
+; CHECK-GI-NEXT:    csel w8, w9, w10, lo
+; CHECK-GI-NEXT:    cmp w11, w8, uxth
+; CHECK-GI-NEXT:    csel w0, w8, w13, hi
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.umin.v3i16(<3 x i16> %a)
@@ -1625,19 +1607,16 @@ define i8 @umaxv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-LABEL: umaxv_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    fmov w12, s3
-; CHECK-GI-NEXT:    and w9, w8, #0xff
-; CHECK-GI-NEXT:    cmp w9, w10, uxtb
-; CHECK-GI-NEXT:    and w9, w11, #0xff
-; CHECK-GI-NEXT:    csel w8, w8, w10, hi
-; CHECK-GI-NEXT:    cmp w9, w12, uxtb
-; CHECK-GI-NEXT:    csel w9, w11, w12, hi
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    and w12, w8, #0xff
+; CHECK-GI-NEXT:    cmp w12, w9, uxtb
+; CHECK-GI-NEXT:    and w12, w10, #0xff
+; CHECK-GI-NEXT:    csel w8, w8, w9, hi
+; CHECK-GI-NEXT:    cmp w12, w11, uxtb
+; CHECK-GI-NEXT:    csel w9, w10, w11, hi
 ; CHECK-GI-NEXT:    and w10, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w10, w9, uxtb
 ; CHECK-GI-NEXT:    csel w0, w8, w9, hi
@@ -1719,19 +1698,16 @@ define i16 @umaxv_v3i16(<3 x i16> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    uxth w8, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[0]
+; CHECK-GI-NEXT:    umov w10, v0.h[1]
+; CHECK-GI-NEXT:    umov w11, v0.h[2]
+; CHECK-GI-NEXT:    umov w13, v0.h[2]
 ; CHECK-GI-NEXT:    fmov w12, s1
-; CHECK-GI-NEXT:    cmp w8, w10, uxth
-; CHECK-GI-NEXT:    uxth w8, w11
-; CHECK-GI-NEXT:    fmov w10, s2
-; CHECK-GI-NEXT:    csel w9, w9, w12, hi
-; CHECK-GI-NEXT:    cmp w8, w9, uxth
-; CHECK-GI-NEXT:    csel w0, w9, w10, lo
+; CHECK-GI-NEXT:    cmp w8, w12, uxth
+; CHECK-GI-NEXT:    csel w8, w9, w10, hi
+; CHECK-GI-NEXT:    cmp w11, w8, uxth
+; CHECK-GI-NEXT:    csel w0, w8, w13, lo
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = call i16 @llvm.vector.reduce.umax.v3i16(<3 x i16> %a)

@@ -111,6 +111,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslX32, T.getEnvironment());
 
+  T = Triple("x86_64-pc-hurd-gnu");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
+
   T = Triple("arm-unknown-linux-android16");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1746,6 +1752,42 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_EQ(Triple::dxil, T.getLittleEndianArchVariant().getArch());
 }
 
+TEST(TripleTest, XROS) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm64-apple-xros");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "xros");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(0), Version);
+
+  T = Triple("arm64-apple-visionos1.2");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "visionos1.2");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1, 2), Version);
+
+  T = Triple("arm64-apple-xros1-simulator");
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isSimulatorEnvironment());
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1), Version);
+  Version = T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(17), Version);
+}
+
 TEST(TripleTest, getOSVersion) {
   Triple T;
   VersionTuple Version;
@@ -2037,6 +2079,13 @@ TEST(TripleTest, FileFormat) {
   T.setObjectFormat(Triple::SPIRV);
   EXPECT_EQ(Triple::SPIRV, T.getObjectFormat());
   EXPECT_EQ("spirv", Triple::getObjectFormatTypeName(T.getObjectFormat()));
+
+  EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {

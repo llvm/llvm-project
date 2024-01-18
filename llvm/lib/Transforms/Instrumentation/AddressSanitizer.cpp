@@ -174,6 +174,8 @@ const char kAsanAllocasUnpoison[] = "__asan_allocas_unpoison";
 
 const char kAMDGPUAddressSharedName[] = "llvm.amdgcn.is.shared";
 const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
+const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
+const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
 
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
@@ -214,7 +216,7 @@ static cl::opt<bool> ClInstrumentWrites(
     cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
-    ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(false),
+    ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
                      cl::Hidden, cl::desc("Use Stack Safety analysis results"),
                      cl::Optional);
 
@@ -699,6 +701,8 @@ struct AddressSanitizer {
                                        Instruction *InsertBefore, Value *Addr,
                                        uint32_t TypeStoreSize, bool IsWrite,
                                        Value *SizeArgument);
+  Instruction *genAMDGPUReportBlock(IRBuilder<> &IRB, Value *Cond,
+                                    bool Recover);
   void instrumentUnusualSizeOrAlignment(Instruction *I,
                                         Instruction *InsertBefore, Value *Addr,
                                         TypeSize TypeStoreSize, bool IsWrite,
@@ -1586,8 +1590,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
       InstrumentedAddress = IRB.CreateExtractElement(Addr, Index);
     } else if (Stride) {
       Index = IRB.CreateMul(Index, Stride);
-      Addr = IRB.CreateBitCast(Addr, PointerType::getUnqual(*C));
-      InstrumentedAddress = IRB.CreateGEP(Type::getInt8Ty(*C), Addr, {Index});
+      InstrumentedAddress = IRB.CreatePtrAdd(Addr, Index);
     } else {
       InstrumentedAddress = IRB.CreateGEP(VTy, Addr, {Zero, Index});
     }
@@ -1721,6 +1724,30 @@ Instruction *AddressSanitizer::instrumentAMDGPUAddress(
   return InsertBefore;
 }
 
+Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
+                                                    Value *Cond, bool Recover) {
+  Module &M = *IRB.GetInsertBlock()->getModule();
+  Value *ReportCond = Cond;
+  if (!Recover) {
+    auto Ballot = M.getOrInsertFunction(kAMDGPUBallotName, IRB.getInt64Ty(),
+                                        IRB.getInt1Ty());
+    ReportCond = IRB.CreateIsNotNull(IRB.CreateCall(Ballot, {Cond}));
+  }
+
+  auto *Trm =
+      SplitBlockAndInsertIfThen(ReportCond, &*IRB.GetInsertPoint(), false,
+                                MDBuilder(*C).createBranchWeights(1, 100000));
+  Trm->getParent()->setName("asan.report");
+
+  if (Recover)
+    return Trm;
+
+  Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
+  IRB.SetInsertPoint(Trm);
+  return IRB.CreateCall(
+      M.getOrInsertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {});
+}
+
 void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
                                          Instruction *InsertBefore, Value *Addr,
                                          MaybeAlign Alignment,
@@ -1772,7 +1799,15 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   size_t Granularity = 1ULL << Mapping.Scale;
   Instruction *CrashTerm = nullptr;
 
-  if (ClAlwaysSlowPath || (TypeStoreSize < 8 * Granularity)) {
+  bool GenSlowPath = (ClAlwaysSlowPath || (TypeStoreSize < 8 * Granularity));
+
+  if (TargetTriple.isAMDGCN()) {
+    if (GenSlowPath) {
+      auto *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
+      Cmp = IRB.CreateAnd(Cmp, Cmp2);
+    }
+    CrashTerm = genAMDGPUReportBlock(IRB, Cmp, Recover);
+  } else if (GenSlowPath) {
     // We use branch weights for the slow path check, to indicate that the slow
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -2042,6 +2077,8 @@ bool ModuleAddressSanitizer::ShouldUseMachOGlobalsSection() const {
   if (TargetTriple.isWatchOS() && !TargetTriple.isOSVersionLT(2))
     return true;
   if (TargetTriple.isDriverKit())
+    return true;
+  if (TargetTriple.isXROS())
     return true;
 
   return false;
@@ -2737,7 +2774,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   // the shadow memory.
   // We cannot just ignore these methods, because they may call other
   // instrumented functions.
-  if (F.getName().find(" load]") != std::string::npos) {
+  if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
     IRBuilder<> IRB(&F.front(), F.front().begin());
@@ -3505,7 +3542,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);
-      if (StackMallocIdx <= 4) {
+      if (ASan.MaxInlinePoisoningSize != 0 && StackMallocIdx <= 4) {
         int ClassSize = kMinStackMallocSize << StackMallocIdx;
         ShadowAfterReturn.resize(ClassSize / L.Granularity,
                                  kAsanStackUseAfterReturnMagic);
@@ -3629,10 +3666,14 @@ bool AddressSanitizer::isSafeAccess(ObjectSizeOffsetVisitor &ObjSizeVis,
     // TODO: We can use vscale_range to convert a scalable value to an
     // upper bound on the access size.
     return false;
-  SizeOffsetType SizeOffset = ObjSizeVis.compute(Addr);
-  if (!ObjSizeVis.bothKnown(SizeOffset)) return false;
-  uint64_t Size = SizeOffset.first.getZExtValue();
-  int64_t Offset = SizeOffset.second.getSExtValue();
+
+  SizeOffsetAPInt SizeOffset = ObjSizeVis.compute(Addr);
+  if (!SizeOffset.bothKnown())
+    return false;
+
+  uint64_t Size = SizeOffset.Size.getZExtValue();
+  int64_t Offset = SizeOffset.Offset.getSExtValue();
+
   // Three checks are required to ensure safety:
   // . Offset >= 0  (since the offset is given from the base ptr)
   // . Size >= Offset  (unsigned)

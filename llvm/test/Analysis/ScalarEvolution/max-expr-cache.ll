@@ -229,21 +229,21 @@ define void @umax(i32 %tmp3) {
 ; CHECK-NEXT:    %tmp48 = select i1 %tmp47, i32 %tmp44, i32 %tmp46
 ; CHECK-NEXT:    --> ((7 + (256 umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umax (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin (1 + (256 umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>))<nuw><nsw> umin {%tmp3,+,-256}<%bb4>)) U: [7,264) S: [7,264) Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp49 = ashr i32 %tmp48, 3
-; CHECK-NEXT:    --> %tmp49 U: [0,128) S: [0,128) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
+; CHECK-NEXT:    --> %tmp49 U: [-268435456,268435456) S: [-268435456,268435456) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp51 = select i1 %tmp50, i32 %tmp49, i32 0
-; CHECK-NEXT:    --> %tmp49 U: [0,128) S: [0,128) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
+; CHECK-NEXT:    --> %tmp49 U: [-268435456,268435456) S: [-268435456,268435456) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp52 = zext i32 %tmp51 to i64
-; CHECK-NEXT:    --> (zext i32 %tmp49 to i64) U: [0,128) S: [0,128) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
+; CHECK-NEXT:    --> (zext i32 %tmp49 to i64) U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb4: Variant, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp54 = phi i64 [ undef, %bb4 ], [ %tmp59, %bb53 ]
 ; CHECK-NEXT:    --> {undef,+,1}<nsw><%bb53> U: full-set S: full-set Exits: (-1 + (zext i32 %tmp49 to i64))<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp55 = trunc i64 %tmp54 to i32
 ; CHECK-NEXT:    --> {(trunc i64 undef to i32),+,1}<%bb53> U: full-set S: full-set Exits: (-1 + %tmp49)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp56 = shl nsw i32 %tmp55, 3
-; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * %tmp49)<nuw><nsw>)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> {(8 * (trunc i64 undef to i32)),+,8}<%bb53> U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * %tmp49)<nsw>) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp57 = sext i32 %tmp56 to i64
-; CHECK-NEXT:    --> (sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (zext i32 %tmp49 to i64))<nuw><nsw>)<nsw> LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> (sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) U: [0,-7) S: [-2147483648,2147483641) Exits: (sext i32 (-8 + (8 * %tmp49)<nsw>) to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp58 = getelementptr inbounds i8, ptr null, i64 %tmp57
-; CHECK-NEXT:    --> ((sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) + null) U: [0,-7) S: [-2147483648,2147483641) Exits: (-8 + (8 * (zext i32 %tmp49 to i64))<nuw><nsw> + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
+; CHECK-NEXT:    --> ((sext i32 {(8 * (trunc i64 undef to i32)),+,8}<%bb53> to i64) + null) U: [0,-7) S: [-2147483648,2147483641) Exits: ((sext i32 (-8 + (8 * %tmp49)<nsw>) to i64) + null) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp59 = add nsw i64 %tmp54, 1
 ; CHECK-NEXT:    --> {(1 + undef),+,1}<nsw><%bb53> U: full-set S: full-set Exits: (zext i32 %tmp49 to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp62 = add nuw nsw i64 %tmp5, 1

@@ -49,10 +49,20 @@ typedef uintptr_t ArgcType;
 typedef uintptr_t ArgVEntryType;
 
 typedef uintptr_t EnvironType;
-typedef uintptr_t AuxEntryType;
 #else
 #error "argc and argv types are not defined for the target platform."
 #endif
+
+// Linux manpage on `proc(5)` says that the aux vector is an array of
+// unsigned long pairs.
+// (see: https://man7.org/linux/man-pages/man5/proc.5.html)
+using AuxEntryType = unsigned long;
+// Using the naming convention from `proc(5)`.
+// TODO: Would be nice to use the aux entry structure from elf.h when available.
+struct AuxEntry {
+  AuxEntryType id;
+  AuxEntryType value;
+};
 
 struct Args {
   ArgcType argc;
@@ -78,6 +88,9 @@ struct AppProperties {
 
   // Environment data.
   EnvironType *env_ptr;
+
+  // Auxiliary vector data.
+  AuxEntry *auxv_ptr;
 };
 
 extern AppProperties app;
@@ -105,6 +118,9 @@ void init_tls(TLSDescriptor &tls);
 
 // Cleanup the TLS area as described in |tls_descriptor|.
 void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
+
+// Set the thread pointer for the current thread.
+bool set_thread_ptr(uintptr_t val);
 
 } // namespace LIBC_NAMESPACE
 

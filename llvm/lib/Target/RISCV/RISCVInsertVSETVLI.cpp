@@ -149,6 +149,13 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+static bool isNonZeroLoadImmediate(MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::ADDI &&
+    MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
+    MI.getOperand(1).getReg() == RISCV::X0 &&
+    MI.getOperand(2).getImm() != 0;
+}
+
 /// Return true if this is an operation on mask registers.  Note that
 /// this includes both arithmetic/logical ops and load/store (vlm/vsm).
 static bool isMaskRegOp(const MachineInstr &MI) {
@@ -501,10 +508,7 @@ public:
       if (getAVLReg() == RISCV::X0)
         return true;
       if (MachineInstr *MI = MRI.getVRegDef(getAVLReg());
-          MI && MI->getOpcode() == RISCV::ADDI &&
-          MI->getOperand(1).isReg() && MI->getOperand(2).isImm() &&
-          MI->getOperand(1).getReg() == RISCV::X0 &&
-          MI->getOperand(2).getImm() != 0)
+          MI && isNonZeroLoadImmediate(*MI))
         return true;
       return false;
     }
@@ -800,7 +804,18 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
+static unsigned computeVLMAX(unsigned VLEN, unsigned SEW,
+                             RISCVII::VLMUL VLMul) {
+  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMul);
+  if (Fractional)
+    VLEN = VLEN / LMul;
+  else
+    VLEN = VLEN * LMul;
+  return VLEN/SEW;
+}
+
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
+                                       const RISCVSubtarget &ST,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
 
@@ -842,8 +857,15 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
       // Conver the VLMax sentintel to X0 register.
-      if (Imm == RISCV::VLMaxSentinel)
-        InstrInfo.setAVLReg(RISCV::X0);
+      if (Imm == RISCV::VLMaxSentinel) {
+        // If we know the exact VLEN, see if we can use the constant encoding
+        // for the VLMAX instead.  This reduces register pressure slightly.
+        const unsigned VLMAX = computeVLMAX(ST.getRealMaxVLen(), SEW, VLMul);
+        if (ST.getRealMinVLen() == ST.getRealMaxVLen() && VLMAX <= 31)
+          InstrInfo.setAVLImm(VLMAX);
+        else
+          InstrInfo.setAVLReg(RISCV::X0);
+      }
       else
         InstrInfo.setAVLImm(Imm);
     } else {
@@ -979,7 +1001,7 @@ static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
-  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, MRI));
+  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, *ST, MRI));
 
   if (!CurInfo.isValid() || CurInfo.isUnknown() || CurInfo.hasSEWLMULRatioOnly())
     return true;
@@ -1067,7 +1089,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   if (!RISCVII::hasSEWOp(TSFlags))
     return;
 
-  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, *ST, MRI);
   assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;
@@ -1377,6 +1399,11 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (!UnavailablePred || !AvailableInfo.isValid())
     return;
 
+  // If we don't know the exact VTYPE, we can't copy the vsetvli to the exit of
+  // the unavailable pred.
+  if (AvailableInfo.hasSEWLMULRatioOnly())
+    return;
+
   // Critical edge - TODO: consider splitting?
   if (UnavailablePred->succ_size() != 1)
     return;
@@ -1455,18 +1482,12 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-static bool isNonZeroAVL(const MachineOperand &MO) {
-  if (MO.isReg())
-    return RISCV::X0 == MO.getReg();
-  assert(MO.isImm());
-  return 0 != MO.getImm();
-}
-
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
                                  const MachineInstr &MI,
-                                 const DemandedFields &Used) {
+                                 const DemandedFields &Used,
+                                 const MachineRegisterInfo &MRI) {
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
@@ -1474,21 +1495,26 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLAny)
       return false;
 
-    // We don't bother to handle the equally zero case here as it's largely
-    // uninteresting.
     if (Used.VLZeroness) {
       if (isVLPreservingConfig(PrevMI))
         return false;
-      if (!isNonZeroAVL(MI.getOperand(1)) ||
-          !isNonZeroAVL(PrevMI.getOperand(1)))
+      if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
+                                                       MRI))
         return false;
     }
 
-    // TODO: Track whether the register is defined between
-    // PrevMI and MI.
-    if (MI.getOperand(1).isReg() &&
-        RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
+    auto &AVL = MI.getOperand(1);
+    auto &PrevAVL = PrevMI.getOperand(1);
+    assert(MRI.isSSA());
+
+    // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
+    // For now just check that PrevMI uses the same virtual register.
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
+      if (AVL.getReg().isPhysical())
+        return false;
+      if (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg())
+        return false;
+    }
   }
 
   if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
@@ -1524,14 +1550,23 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
+      } else if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);
+          Register OldVLReg;
+          if (MI.getOperand(1).isReg())
+            OldVLReg = MI.getOperand(1).getReg();
           if (NextMI->getOperand(1).isImm())
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+          if (OldVLReg) {
+            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
+            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
+                MRI->use_nodbg_empty(OldVLReg))
+              VLOpDef->eraseFromParent();
+          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());

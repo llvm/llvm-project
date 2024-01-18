@@ -51,7 +51,7 @@ struct ConditionVariableState {
 
 template <typename Config>
 struct ConditionVariableState<Config, decltype(Config::UseConditionVariable)> {
-  static constexpr bool enabled() { return true; }
+  static constexpr bool enabled() { return Config::UseConditionVariable; }
   using ConditionVariableT = typename Config::ConditionVariableT;
 };
 

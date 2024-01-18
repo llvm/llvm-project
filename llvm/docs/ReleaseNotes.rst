@@ -73,6 +73,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Minimum Clang version to build LLVM in C++20 configuration has been updated to clang-17.0.6.
+
 Changes to building LLVM
 ------------------------
 
@@ -115,6 +117,7 @@ Changes to the ARM Backend
 --------------------------
 
 * Added support for Cortex-M52 CPUs.
+* Added execute-only support for Armv6-M.
 
 Changes to the AVR Backend
 --------------------------
@@ -140,6 +143,20 @@ Changes to the RISC-V Backend
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 * Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
+* Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f for RV64.
+* The Zvbb, Zvbc, Zvkb, Zvkg, Zvkn, Zvknc, Zvkned, Zvkng, Zvknha, Zvknhb, Zvks,
+  Zvksc, Zvksed, Zvksg, Zvksh, and Zvkt extension version was upgraded to 1.0
+  and is no longer experimental.  However, the C intrinsics for these extensions
+  are still experimental.  To use the C intrinsics for these extensions,
+  ``-menable-experimental-extensions`` needs to be passed to Clang.
+* XSfcie extension and SiFive CSRs and instructions that were associated with
+  it have been removed. None of these CSRs and instructions were part of
+  "SiFive Custom Instruction Extension" as SiFive defines it. The LLVM project
+  needs to work with SiFive to define and document real extension names for
+  individual CSRs and instructions.
+* ``-mcpu=sifive-p450`` was added.
+* CodeGen of RV32E/RV64E was supported experimentally.
+* CodeGen of ilp32e/lp64e was supported experimentally.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -166,6 +183,11 @@ Changes to the X86 Backend
 * Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
 * ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 * ``-mapxf`` is supported.
+* Marking global variables with ``code_model = "small"/"large"`` in the IR now
+  overrides the global code model to allow 32-bit relocations or require 64-bit
+  relocations to the global variable.
+* The medium code model's code generation was audited to be more similar to the
+  small code model where possible.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -269,6 +291,9 @@ Changes to the LLVM tools
   debugging information to print symbols' filenames and line numbers.
 
 * llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
+
+* llvm-objcopy now supports ``--gap-fill`` and ``--pad-to`` options, for
+  ELF input and binary output files only.
 
 Changes to LLDB
 ---------------------------------

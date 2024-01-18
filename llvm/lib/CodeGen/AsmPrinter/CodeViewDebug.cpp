@@ -1397,6 +1397,12 @@ void CodeViewDebug::calculateRanges(
     if (Location->Register == 0 || Location->LoadChain.size() > 1)
       continue;
 
+    // Codeview can only express byte-aligned offsets, ensure that we have a
+    // byte-boundaried location.
+    if (Location->FragmentInfo)
+      if (Location->FragmentInfo->OffsetInBits % 8)
+        continue;
+
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
     DR.InMemory = !Location->LoadChain.empty();

@@ -818,6 +818,8 @@ enum : uint64_t {
   /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
+  /// LEGACY - encoding using REX/REX2 or w/o opcode prefix.
+  LEGACY = 0 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
   /// XOP - Opcode prefix used by XOP instructions.
@@ -870,7 +872,10 @@ enum : uint64_t {
   ExplicitVEXPrefix = 2ULL << ExplicitOpPrefixShift,
   /// For instructions that are promoted to EVEX space for EGPR.
   ExplicitEVEXPrefix = 3ULL << ExplicitOpPrefixShift,
-  ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift
+  ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift,
+  /// EVEX_NF - Set if this instruction has EVEX.NF field set.
+  EVEX_NFShift = ExplicitOpPrefixShift + 2,
+  EVEX_NF = 1ULL << EVEX_NFShift
 };
 
 /// \returns true if the instruction with given opcode is a prefix.
@@ -992,6 +997,12 @@ inline unsigned getOperandBias(const MCInstrDesc &Desc) {
   }
 }
 
+/// \returns true if the instruction has a NDD (new data destination).
+inline bool hasNewDataDest(uint64_t TSFlags) {
+  return (TSFlags & X86II::OpMapMask) == X86II::T_MAP4 &&
+         (TSFlags & X86II::EVEX_B) && (TSFlags & X86II::VEX_4V);
+}
+
 /// \returns operand # for the first field of the memory operand or -1 if no
 /// memory operands.
 /// NOTE: This ignores tied operands.  If there is a tied register which is
@@ -1018,7 +1029,7 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
     return -1;
   case X86II::MRMDestMem:
   case X86II::MRMDestMemFSIB:
-    return 0;
+    return hasNewDataDest(TSFlags);
   case X86II::MRMSrcMem:
   case X86II::MRMSrcMemFSIB:
     // Start from 1, skip any registers encoded in VEX_VVVV or I8IMM, or a

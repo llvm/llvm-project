@@ -2138,45 +2138,45 @@ static void commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
 // commuted.
 static bool isCommutableVPERMV3Instruction(unsigned Opcode) {
 #define VPERM_CASES(Suffix)                                                    \
-  case X86::VPERMI2##Suffix##128rr:                                            \
-  case X86::VPERMT2##Suffix##128rr:                                            \
-  case X86::VPERMI2##Suffix##256rr:                                            \
-  case X86::VPERMT2##Suffix##256rr:                                            \
-  case X86::VPERMI2##Suffix##rr:                                               \
-  case X86::VPERMT2##Suffix##rr:                                               \
-  case X86::VPERMI2##Suffix##128rm:                                            \
-  case X86::VPERMT2##Suffix##128rm:                                            \
-  case X86::VPERMI2##Suffix##256rm:                                            \
-  case X86::VPERMT2##Suffix##256rm:                                            \
-  case X86::VPERMI2##Suffix##rm:                                               \
-  case X86::VPERMT2##Suffix##rm:                                               \
-  case X86::VPERMI2##Suffix##128rrkz:                                          \
-  case X86::VPERMT2##Suffix##128rrkz:                                          \
-  case X86::VPERMI2##Suffix##256rrkz:                                          \
-  case X86::VPERMT2##Suffix##256rrkz:                                          \
-  case X86::VPERMI2##Suffix##rrkz:                                             \
-  case X86::VPERMT2##Suffix##rrkz:                                             \
-  case X86::VPERMI2##Suffix##128rmkz:                                          \
-  case X86::VPERMT2##Suffix##128rmkz:                                          \
-  case X86::VPERMI2##Suffix##256rmkz:                                          \
-  case X86::VPERMT2##Suffix##256rmkz:                                          \
-  case X86::VPERMI2##Suffix##rmkz:                                             \
-  case X86::VPERMT2##Suffix##rmkz:
+  case X86::VPERMI2##Suffix##Z128rr:                                           \
+  case X86::VPERMT2##Suffix##Z128rr:                                           \
+  case X86::VPERMI2##Suffix##Z256rr:                                           \
+  case X86::VPERMT2##Suffix##Z256rr:                                           \
+  case X86::VPERMI2##Suffix##Zrr:                                              \
+  case X86::VPERMT2##Suffix##Zrr:                                              \
+  case X86::VPERMI2##Suffix##Z128rm:                                           \
+  case X86::VPERMT2##Suffix##Z128rm:                                           \
+  case X86::VPERMI2##Suffix##Z256rm:                                           \
+  case X86::VPERMT2##Suffix##Z256rm:                                           \
+  case X86::VPERMI2##Suffix##Zrm:                                              \
+  case X86::VPERMT2##Suffix##Zrm:                                              \
+  case X86::VPERMI2##Suffix##Z128rrkz:                                         \
+  case X86::VPERMT2##Suffix##Z128rrkz:                                         \
+  case X86::VPERMI2##Suffix##Z256rrkz:                                         \
+  case X86::VPERMT2##Suffix##Z256rrkz:                                         \
+  case X86::VPERMI2##Suffix##Zrrkz:                                            \
+  case X86::VPERMT2##Suffix##Zrrkz:                                            \
+  case X86::VPERMI2##Suffix##Z128rmkz:                                         \
+  case X86::VPERMT2##Suffix##Z128rmkz:                                         \
+  case X86::VPERMI2##Suffix##Z256rmkz:                                         \
+  case X86::VPERMT2##Suffix##Z256rmkz:                                         \
+  case X86::VPERMI2##Suffix##Zrmkz:                                            \
+  case X86::VPERMT2##Suffix##Zrmkz:
 
 #define VPERM_CASES_BROADCAST(Suffix)                                          \
   VPERM_CASES(Suffix)                                                          \
-  case X86::VPERMI2##Suffix##128rmb:                                           \
-  case X86::VPERMT2##Suffix##128rmb:                                           \
-  case X86::VPERMI2##Suffix##256rmb:                                           \
-  case X86::VPERMT2##Suffix##256rmb:                                           \
-  case X86::VPERMI2##Suffix##rmb:                                              \
-  case X86::VPERMT2##Suffix##rmb:                                              \
-  case X86::VPERMI2##Suffix##128rmbkz:                                         \
-  case X86::VPERMT2##Suffix##128rmbkz:                                         \
-  case X86::VPERMI2##Suffix##256rmbkz:                                         \
-  case X86::VPERMT2##Suffix##256rmbkz:                                         \
-  case X86::VPERMI2##Suffix##rmbkz:                                            \
-  case X86::VPERMT2##Suffix##rmbkz:
+  case X86::VPERMI2##Suffix##Z128rmb:                                          \
+  case X86::VPERMT2##Suffix##Z128rmb:                                          \
+  case X86::VPERMI2##Suffix##Z256rmb:                                          \
+  case X86::VPERMT2##Suffix##Z256rmb:                                          \
+  case X86::VPERMI2##Suffix##Zrmb:                                             \
+  case X86::VPERMT2##Suffix##Zrmb:                                             \
+  case X86::VPERMI2##Suffix##Z128rmbkz:                                        \
+  case X86::VPERMT2##Suffix##Z128rmbkz:                                        \
+  case X86::VPERMI2##Suffix##Z256rmbkz:                                        \
+  case X86::VPERMT2##Suffix##Z256rmbkz:                                        \
+  case X86::VPERMI2##Suffix##Zrmbkz:                                           \
+  case X86::VPERMT2##Suffix##Zrmbkz:
 
   switch (Opcode) {
   default:
@@ -2197,45 +2197,45 @@ static bool isCommutableVPERMV3Instruction(unsigned Opcode) {
 // from the I opcode to the T opcode and vice versa.
 static unsigned getCommutedVPERMV3Opcode(unsigned Opcode) {
 #define VPERM_CASES(Orig, New)                                                 \
-  case X86::Orig##128rr:                                                       \
-    return X86::New##128rr;                                                    \
-  case X86::Orig##128rrkz:                                                     \
-    return X86::New##128rrkz;                                                  \
-  case X86::Orig##128rm:                                                       \
-    return X86::New##128rm;                                                    \
-  case X86::Orig##128rmkz:                                                     \
-    return X86::New##128rmkz;                                                  \
-  case X86::Orig##256rr:                                                       \
-    return X86::New##256rr;                                                    \
-  case X86::Orig##256rrkz:                                                     \
-    return X86::New##256rrkz;                                                  \
-  case X86::Orig##256rm:                                                       \
-    return X86::New##256rm;                                                    \
-  case X86::Orig##256rmkz:                                                     \
-    return X86::New##256rmkz;                                                  \
-  case X86::Orig##rr:                                                          \
-    return X86::New##rr;                                                       \
-  case X86::Orig##rrkz:                                                        \
-    return X86::New##rrkz;                                                     \
-  case X86::Orig##rm:                                                          \
-    return X86::New##rm;                                                       \
-  case X86::Orig##rmkz:                                                        \
-    return X86::New##rmkz;
+  case X86::Orig##Z128rr:                                                      \
+    return X86::New##Z128rr;                                                   \
+  case X86::Orig##Z128rrkz:                                                    \
+    return X86::New##Z128rrkz;                                                 \
+  case X86::Orig##Z128rm:                                                      \
+    return X86::New##Z128rm;                                                   \
+  case X86::Orig##Z128rmkz:                                                    \
+    return X86::New##Z128rmkz;                                                 \
+  case X86::Orig##Z256rr:                                                      \
+    return X86::New##Z256rr;                                                   \
+  case X86::Orig##Z256rrkz:                                                    \
+    return X86::New##Z256rrkz;                                                 \
+  case X86::Orig##Z256rm:                                                      \
+    return X86::New##Z256rm;                                                   \
+  case X86::Orig##Z256rmkz:                                                    \
+    return X86::New##Z256rmkz;                                                 \
+  case X86::Orig##Zrr:                                                         \
+    return X86::New##Zrr;                                                      \
+  case X86::Orig##Zrrkz:                                                       \
+    return X86::New##Zrrkz;                                                    \
+  case X86::Orig##Zrm:                                                         \
+    return X86::New##Zrm;                                                      \
+  case X86::Orig##Zrmkz:                                                       \
+    return X86::New##Zrmkz;
 
 #define VPERM_CASES_BROADCAST(Orig, New)                                       \
   VPERM_CASES(Orig, New)                                                       \
-  case X86::Orig##128rmb:                                                      \
-    return X86::New##128rmb;                                                   \
-  case X86::Orig##128rmbkz:                                                    \
-    return X86::New##128rmbkz;                                                 \
-  case X86::Orig##256rmb:                                                      \
-    return X86::New##256rmb;                                                   \
-  case X86::Orig##256rmbkz:                                                    \
-    return X86::New##256rmbkz;                                                 \
-  case X86::Orig##rmb:                                                         \
-    return X86::New##rmb;                                                      \
-  case X86::Orig##rmbkz:                                                       \
-    return X86::New##rmbkz;
+  case X86::Orig##Z128rmb:                                                     \
+    return X86::New##Z128rmb;                                                  \
+  case X86::Orig##Z128rmbkz:                                                   \
+    return X86::New##Z128rmbkz;                                                \
+  case X86::Orig##Z256rmb:                                                     \
+    return X86::New##Z256rmb;                                                  \
+  case X86::Orig##Z256rmbkz:                                                   \
+    return X86::New##Z256rmbkz;                                                \
+  case X86::Orig##Zrmb:                                                        \
+    return X86::New##Zrmb;                                                     \
+  case X86::Orig##Zrmbkz:                                                      \
+    return X86::New##Zrmbkz;
 
   switch (Opcode) {
     VPERM_CASES(VPERMI2B, VPERMT2B)
@@ -3461,6 +3461,57 @@ bool X86::isX87Instruction(MachineInstr &MI) {
       return true;
   }
   return false;
+}
+
+int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
+  auto IsMemOp = [](const MCOperandInfo &OpInfo) {
+    return OpInfo.OperandType == MCOI::OPERAND_MEMORY;
+  };
+
+  const MCInstrDesc &Desc = MI.getDesc();
+
+  // Directly invoke the MC-layer routine for real (i.e., non-pseudo)
+  // instructions (fast case).
+  if (!X86II::isPseudo(Desc.TSFlags)) {
+    int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+    if (MemRefIdx >= 0)
+      return MemRefIdx + X86II::getOperandBias(Desc);
+#ifdef EXPENSIVE_CHECKS
+    assert(none_of(Desc.operands(), IsMemOp) &&
+           "Got false negative from X86II::getMemoryOperandNo()!");
+#endif
+    return -1;
+  }
+
+  // Otherwise, handle pseudo instructions by examining the type of their
+  // operands (slow case). An instruction cannot have a memory reference if it
+  // has fewer than AddrNumOperands (= 5) explicit operands.
+  unsigned NumOps = Desc.getNumOperands();
+  if (NumOps < X86::AddrNumOperands) {
+#ifdef EXPENSIVE_CHECKS
+    assert(none_of(Desc.operands(), IsMemOp) &&
+           "Expected no operands to have OPERAND_MEMORY type!");
+#endif
+    return -1;
+  }
+
+  // The first operand with type OPERAND_MEMORY indicates the start of a memory
+  // reference. We expect the following AddrNumOperand-1 operands to also have
+  // OPERAND_MEMORY type.
+  for (unsigned I = 0, E = NumOps - X86::AddrNumOperands; I != E; ++I) {
+    if (IsMemOp(Desc.operands()[I])) {
+#ifdef EXPENSIVE_CHECKS
+      assert(std::all_of(Desc.operands().begin() + I,
+                         Desc.operands().begin() + I + X86::AddrNumOperands,
+                         IsMemOp) &&
+             "Expected all five operands in the memory reference to have "
+             "OPERAND_MEMORY type!");
+#endif
+      return I;
+    }
+  }
+
+  return -1;
 }
 
 bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
@@ -8263,8 +8314,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
 
     DebugLoc DL;
     MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc), Reg);
-    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
-      MIB.add(AddrOps[i]);
+    for (const MachineOperand &AddrOp : AddrOps)
+      MIB.add(AddrOp);
     MIB.setMemRefs(MMOs);
     NewMIs.push_back(MIB);
 
@@ -8341,8 +8392,8 @@ bool X86InstrInfo::unfoldMemoryOperand(
     unsigned Opc = getStoreRegOpcode(Reg, DstRC, isAligned, Subtarget);
     DebugLoc DL;
     MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
-    for (unsigned i = 0, e = AddrOps.size(); i != e; ++i)
-      MIB.add(AddrOps[i]);
+    for (const MachineOperand &AddrOp : AddrOps)
+      MIB.add(AddrOp);
     MIB.addReg(Reg, RegState::Kill);
     MIB.setMemRefs(MMOs);
     NewMIs.push_back(MIB);

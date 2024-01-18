@@ -130,7 +130,7 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   // prefix.
   sys::path::native(MyAbsExe, sys::path::Style::windows_backslash);
   std::string MyExe;
-  if (!StringRef(MyAbsExe).startswith("\\\\?\\"))
+  if (!StringRef(MyAbsExe).starts_with("\\\\?\\"))
     MyExe.append("\\\\?\\");
   MyExe.append(std::string(MyAbsExe.begin(), MyAbsExe.end()));
 

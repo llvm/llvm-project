@@ -140,8 +140,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   case CombiningKind::OR:
   case CombiningKind::XOR:
     return elementType.isIntOrIndex();
-  case CombiningKind::MINF:
-  case CombiningKind::MAXF:
+  case CombiningKind::MINNUMF:
+  case CombiningKind::MAXNUMF:
   case CombiningKind::MINIMUMF:
   case CombiningKind::MAXIMUMF:
     return llvm::isa<FloatType>(elementType);
@@ -507,8 +507,9 @@ struct ElideUnitDimsInMultiDimReduction
                                                 zeroIdx);
     }
 
-    Value result = vector::makeArithReduction(
-        rewriter, loc, reductionOp.getKind(), acc, cast, mask);
+    Value result =
+        vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), acc,
+                                   cast, /*fastmath=*/nullptr, mask);
     rewriter.replaceOp(rootOp, result);
     return success();
   }
@@ -650,7 +651,8 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
 
     if (Value acc = reductionOp.getAcc())
       result = vector::makeArithReduction(rewriter, loc, reductionOp.getKind(),
-                                          result, acc, mask);
+                                          result, acc,
+                                          reductionOp.getFastmathAttr(), mask);
 
     rewriter.replaceOp(rootOp, result);
     return success();
@@ -1600,9 +1602,10 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     return llvm::isa<VectorType>(type) ? llvm::cast<VectorType>(type).getRank()
                                        : 0;
   };
+
   // If splat or broadcast from a scalar, just return the source scalar.
   unsigned broadcastSrcRank = getRank(source.getType());
-  if (broadcastSrcRank == 0)
+  if (broadcastSrcRank == 0 && source.getType() == extractOp.getType())
     return source;
 
   unsigned extractResultRank = getRank(extractOp.getType());
@@ -4413,7 +4416,7 @@ public:
         writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
-        rewriter.updateRootInPlace(writeToModify, [&]() {
+        rewriter.modifyOpInPlace(writeToModify, [&]() {
           writeToModify.getSourceMutable().assign(defWrite.getSource());
         });
         return success();
@@ -4530,7 +4533,7 @@ public:
         transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
         transferOp.getIndices(), transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
-    rewriter.updateRootInPlace(insertOp, [&]() {
+    rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
     });
     return success();
@@ -5657,30 +5660,76 @@ LogicalResult CreateMaskOp::verify() {
 
 namespace {
 
-// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
+/// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
+///
+/// Ex 1:
+///   %c2 = arith.constant 2 : index
+///   %c3 = arith.constant 3 : index
+///   %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
+/// Becomes:
+///    vector.constant_mask [3, 2] : vector<4x3xi1>
+///
+/// Ex 2:
+///   %c_neg_1 = arith.constant -1 : index
+///   %0 = vector.create_mask %c_neg_1 : vector<[8]xi1>
+/// becomes:
+///   vector.constant_mask [0] : vector<[8]xi1>
+///
+/// Ex 3:
+///   %c8 = arith.constant 8 : index
+///   %c16 = arith.constant 16 : index
+///   %0 = vector.vscale
+///   %1 = arith.muli %0, %c16 : index
+///   %10 = vector.create_mask %c8, %1 : vector<8x[16]xi1>
+/// becomes:
+///   %0 = vector.constant_mask [8, 16] : vector<8x[16]xi1>
 class CreateMaskFolder final : public OpRewritePattern<CreateMaskOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
-    // Return if any of 'createMaskOp' operands are not defined by a constant.
-    auto isNotDefByConstant = [](Value operand) {
-      return !getConstantIntValue(operand).has_value();
-    };
-    if (llvm::any_of(createMaskOp.getOperands(), isNotDefByConstant))
-      return failure();
+    VectorType retTy = createMaskOp.getResult().getType();
+    bool isScalable = retTy.isScalable();
 
-    // CreateMaskOp for scalable vectors can be folded only if all dimensions
-    // are negative or zero.
-    if (auto vType = llvm::dyn_cast<VectorType>(createMaskOp.getType())) {
-      if (vType.isScalable())
-        for (auto opDim : createMaskOp.getOperands()) {
-          APInt intVal;
-          if (matchPattern(opDim, m_ConstantInt(&intVal)) &&
-              intVal.isStrictlyPositive())
-            return failure();
-        }
+    // Check every mask operand
+    for (auto [opIdx, operand] : llvm::enumerate(createMaskOp.getOperands())) {
+      if (auto cst = getConstantIntValue(operand)) {
+        // Most basic case - this operand is a constant value. Note that for
+        // scalable dimensions, CreateMaskOp can be folded only if the
+        // corresponding operand is negative or zero.
+        if (retTy.getScalableDims()[opIdx] && *cst > 0)
+          return failure();
+
+        continue;
+      }
+
+      // Non-constant operands are not allowed for non-scalable vectors.
+      if (!isScalable)
+        return failure();
+
+      // For scalable vectors, "arith.muli %vscale, %dimSize" means an "all
+      // true" mask, so can also be treated as constant.
+      auto mul = operand.getDefiningOp<arith::MulIOp>();
+      if (!mul)
+        return failure();
+      auto mulLHS = mul.getRhs();
+      auto mulRHS = mul.getLhs();
+      bool isOneOpVscale =
+          (isa<vector::VectorScaleOp>(mulLHS.getDefiningOp()) ||
+           isa<vector::VectorScaleOp>(mulRHS.getDefiningOp()));
+
+      auto isConstantValMatchingDim =
+          [=, dim = retTy.getShape()[opIdx]](Value operand) {
+            auto constantVal = getConstantIntValue(operand);
+            return (constantVal.has_value() && constantVal.value() == dim);
+          };
+
+      bool isOneOpConstantMatchingDim =
+          isConstantValMatchingDim(mulLHS) || isConstantValMatchingDim(mulRHS);
+
+      if (!isOneOpVscale || !isOneOpConstantMatchingDim)
+        return failure();
     }
 
     // Gather constant mask dimension sizes.
@@ -5688,18 +5737,25 @@ public:
     maskDimSizes.reserve(createMaskOp->getNumOperands());
     for (auto [operand, maxDimSize] : llvm::zip_equal(
              createMaskOp.getOperands(), createMaskOp.getType().getShape())) {
-      int64_t dimSize = getConstantIntValue(operand).value();
-      dimSize = std::min(dimSize, maxDimSize);
+      std::optional dimSize = getConstantIntValue(operand);
+      if (!dimSize) {
+        // Although not a constant, it is safe to assume that `operand` is
+        // "vscale * maxDimSize".
+        maskDimSizes.push_back(maxDimSize);
+        continue;
+      }
+      int64_t dimSizeVal = std::min(dimSize.value(), maxDimSize);
       // If one of dim sizes is zero, set all dims to zero.
       if (dimSize <= 0) {
         maskDimSizes.assign(createMaskOp.getType().getRank(), 0);
         break;
       }
-      maskDimSizes.push_back(dimSize);
+      maskDimSizes.push_back(dimSizeVal);
     }
+
     // Replace 'createMaskOp' with ConstantMaskOp.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        createMaskOp, createMaskOp.getResult().getType(),
+        createMaskOp, retTy,
         vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
     return success();
   }
@@ -6212,6 +6268,7 @@ bool WarpExecuteOnLane0Op::areTypesCompatible(Type lhs, Type rhs) {
 
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
                                        CombiningKind kind, Value v1, Value acc,
+                                       arith::FastMathFlagsAttr fastmath,
                                        Value mask) {
   Type t1 = getElementTypeOrSelf(v1.getType());
   Type tAcc = getElementTypeOrSelf(acc.getType());
@@ -6222,7 +6279,7 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     if (t1.isIntOrIndex() && tAcc.isIntOrIndex())
       result = b.createOrFold<arith::AddIOp>(loc, v1, acc);
     else if (llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc))
-      result = b.createOrFold<arith::AddFOp>(loc, v1, acc);
+      result = b.createOrFold<arith::AddFOp>(loc, v1, acc, fastmath);
     else
       llvm_unreachable("invalid value types for ADD reduction");
     break;
@@ -6230,17 +6287,25 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
     result = b.createOrFold<arith::AndIOp>(loc, v1, acc);
     break;
-  case CombiningKind::MAXF:
+  case CombiningKind::MAXNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MaxNumFOp>(loc, v1, acc, fastmath);
+    break;
   case CombiningKind::MAXIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
-    result = b.createOrFold<arith::MaximumFOp>(loc, v1, acc);
+    result = b.createOrFold<arith::MaximumFOp>(loc, v1, acc, fastmath);
     break;
-  case CombiningKind::MINF:
+  case CombiningKind::MINNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MinNumFOp>(loc, v1, acc, fastmath);
+    break;
   case CombiningKind::MINIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
-    result = b.createOrFold<arith::MinimumFOp>(loc, v1, acc);
+    result = b.createOrFold<arith::MinimumFOp>(loc, v1, acc, fastmath);
     break;
   case CombiningKind::MAXSI:
     assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");
@@ -6262,7 +6327,7 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     if (t1.isIntOrIndex() && tAcc.isIntOrIndex())
       result = b.createOrFold<arith::MulIOp>(loc, v1, acc);
     else if (llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc))
-      result = b.createOrFold<arith::MulFOp>(loc, v1, acc);
+      result = b.createOrFold<arith::MulFOp>(loc, v1, acc, fastmath);
     else
       llvm_unreachable("invalid value types for MUL reduction");
     break;

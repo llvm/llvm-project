@@ -59,6 +59,7 @@ def gi_cimm9 : GICustomOperandRenderer<"renderImm">;
 def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def Z : OperandWithDefaultOps <i32, (ops R0)>;
 def m1Z : OperandWithDefaultOps <i32, (ops (i32 -1), R0)>;
+def mb : OperandWithDefaultOps <i32, (ops (i32 0b1101))>;
 
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
@@ -295,9 +296,9 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/1, // src2b
 // R19C-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src2a
 // R19C-NEXT:    GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
-// R19C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R19C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// R19C-NEXT:    // GIR_Coverage, 19,
+// R19C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// R19C-NEXT:    // GIR_Coverage, 20,
 // R19C-NEXT:    GIR_Done,
 // R19C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
@@ -330,12 +331,12 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // R21O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 //
-// R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 19 //
+// R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 20 //
 // R21C-NOT:     GIR_Done,
-// R21C:         // GIR_Coverage, 19,
+// R21C:         // GIR_Coverage, 20,
 // R21C-NEXT:    GIR_Done,
 // R21C-NEXT:  // Label [[PREV_NUM]]: @[[PREV]]
-// R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 21 //
+// R21C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 22 //
 //
 // R21O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // R21O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
@@ -364,9 +365,9 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R21C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(1),
 // R21C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0),
 // R21C-NEXT:    GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/1, /*MergeInsnID's*/0
-// R21C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R21C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// R21C-NEXT:    // GIR_Coverage, 21,
+// R21C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// R21C-NEXT:    // GIR_Coverage, 22,
 // R21C-NEXT:    GIR_Done,
 // R21C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
@@ -390,10 +391,10 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // R20O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
-// R20N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 21 //
+// R20N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 22 //
 // R20N:       // Label [[PREV_NUM]]: @[[PREV]]
 //
-// R20C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 20 //
+// R20C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 21 //
 //
 // R20N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // R20N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
@@ -413,9 +414,9 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // R20C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // R20C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
 // R20C-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/GIMT_Encode2(0),
-// R20C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R20C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// R20C-NEXT:    // GIR_Coverage, 20,
+// R20C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// R20C-NEXT:    // GIR_Coverage, 21,
 // R20C-NEXT:    GIR_Done,
 // R20C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 //
@@ -455,7 +456,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // R00O-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 //
-// R00C:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 20 //
+// R00C:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 21 //
 // R00C:       // Label [[PREV_NUM]]: @[[PREV]]
 //
 // R00C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 0 //
@@ -506,8 +507,8 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
 // R00C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src4
-// R00C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R00C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// R00C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R00C-NEXT:    // GIR_Coverage, 0,
 // R00C-NEXT:    GIR_Done,
 // R00C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -517,7 +518,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1978 bytes
+// R00O-NEXT:  }; // Size: 2019 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -557,8 +558,8 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01C-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOV),
 // R01C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // R01C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
-// R01C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R01C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// R01C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R01C-NEXT:    // GIR_Coverage, 1,
 // R01C-NEXT:    GIR_Done,
 // R01C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -606,8 +607,8 @@ def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // R02C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // R02C-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/uint8_t(-1),
 // R02C-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// R02C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R02C-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// R02C-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // R02C-NEXT:    // GIR_Coverage, 2,
 // R02C-NEXT:    GIR_Done,
 // R02C-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -638,8 +639,8 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    // GIR_Coverage, 3,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -668,8 +669,8 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/uint8_t(-1),
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    // GIR_Coverage, 4,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -699,8 +700,8 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    // GIR_Coverage, 5,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -708,6 +709,35 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // The -5 is just to distinguish it from the other cases.
 def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1),
                         [(set GPR32:$dst, (xor GPR32:$src1, -5))]>;
+
+//===- Test a simple pattern with a default bits operand. -----------------===//
+//
+// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
+// NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_XOR),
+// NOOPT-NEXT:    // MIs[0] DstI[dst]
+// NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] src1
+// NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:    // MIs[0] Operand 2
+// NOOPT-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:    GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-6)
+// NOOPT-NEXT:    // (xor:{ *:[i32] } GPR32:{ *:[i32] }:$src1, -6:{ *:[i32] }) => (XORIb:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
+// NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::XORIb),
+// NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
+// NOOPT-NEXT:    GIR_AddImm8, /*InsnID*/0, /*Imm*/13,
+// NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 6,
+// NOOPT-NEXT:    GIR_Done,
+// NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+// The -6 is just to distinguish it from the other cases.
+def XORIb : I<(outs GPR32:$dst), (ins mb:$src2, GPR32:$src1),
+              [(set GPR32:$dst, (xor GPR32:$src1, -6))]>;
 
 //===- Test a simple pattern with constant immediate operands. ------------===//
 //
@@ -731,9 +761,9 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::R0),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // Wm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 22,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 23,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -772,9 +802,9 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src3
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 6,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 7,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -810,9 +840,9 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 27,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 28,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -834,9 +864,9 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // NOOPT-NEXT:    // 1:{ *:[i32] }  =>  (MOV1:{ *:[i32] })
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOV1),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 7,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 8,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -857,9 +887,9 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm8),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 8,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 9,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -881,9 +911,9 @@ def MOVimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm8:$i
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm9),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 9,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 10,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -905,9 +935,9 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVcimm8),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GIMT_Encode2(GICR_renderImm), // imm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 10,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 11,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -928,9 +958,9 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVfpimmz),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyFConstantAsFPImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 17,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 18,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -950,7 +980,7 @@ def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>> => (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 11,
+// NOOPT-NEXT:    // GIR_Coverage, 12,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -973,7 +1003,7 @@ def LOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 23,
+// NOOPT-NEXT:    // GIR_Coverage, 24,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -996,7 +1026,7 @@ def : Pat<(load GPR32:$src),
 // NOOPT-NEXT:    // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_sextload>><<P:Predicate_sextloadi16>>  =>  (SEXTLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src1)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::SEXTLOAD),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 12,
+// NOOPT-NEXT:    // GIR_Coverage, 13,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1020,7 +1050,7 @@ def SEXTLOAD : I<(outs GPR32:$dst), (ins GPR32:$src1),
 // NOOPT-NEXT:    // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ADD),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 13,
+// NOOPT-NEXT:    // GIR_Coverage, 14,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1044,9 +1074,9 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::DOUBLE),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 14,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 15,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1073,7 +1103,7 @@ def DOUBLE : I<(outs GPR32:$dst), (ins GPR32:$src), [(set GPR32:$dst, (add GPR32
 // NOOPT-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$samename, i32:{ *:[i32] }:$othername)  =>  (InsnWithSpeciallyNamedDef:{ *:[i32] } i32:{ *:[i32] }:$samename, i32:{ *:[i32] }:$othername)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::InsnWithSpeciallyNamedDef),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 24,
+// NOOPT-NEXT:    // GIR_Coverage, 25,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1096,7 +1126,7 @@ def : Pat<(add i32:$samename, i32:$othername),
 // NOOPT-NEXT:    // (add:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2) => (ADD:{ *:[i32] } i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ADD),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 25,
+// NOOPT-NEXT:    // GIR_Coverage, 26,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1123,9 +1153,9 @@ def : Pat<(add i32:$src1, i32:$src2),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 15,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 16,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1148,7 +1178,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // NOOPT-NEXT:    // (bitconvert:{ *:[i32] } FPR32:{ *:[f32] }:$src1) => (COPY_TO_REGCLASS:{ *:[i32] } FPR32:{ *:[f32] }:$src1, GPR32:{ *:[i32] })
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // NOOPT-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:    // GIR_Coverage, 26,
+// NOOPT-NEXT:    // GIR_Coverage, 27,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1169,9 +1199,9 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVimm),
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, //  DstI[dst]
 // NOOPT-NEXT:    GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/0, // imm
-// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 16,
+// NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// NOOPT-NEXT:    // GIR_Coverage, 17,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1190,7 +1220,7 @@ def MOVfpimmz : I<(outs FPR32:$dst), (ins f32imm:$imm), [(set FPR32:$dst, fpimmz
 // NOOPT-NEXT:    // (br (bb:{ *:[Other] }):$target) => (BR (bb:{ *:[Other] }):$target)
 // NOOPT-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::BR),
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// NOOPT-NEXT:    // GIR_Coverage, 18,
+// NOOPT-NEXT:    // GIR_Coverage, 19,
 // NOOPT-NEXT:    GIR_Done,
 // NOOPT-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 
@@ -1198,5 +1228,5 @@ def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
 
 // NOOPT-NEXT:    GIM_Reject,
-// NOOPT-NEXT:  }; // Size: 1680 bytes
+// NOOPT-NEXT:  }; // Size: 1738 bytes
 // NOOPT-NEXT:  return MatchTable0;

@@ -2053,6 +2053,9 @@ private:
     LLVM_DEBUG(dbgs() << "[Attributor] Done with " << SCC.size()
                       << " functions, result: " << Changed << ".\n");
 
+    if (Changed == ChangeStatus::CHANGED)
+      OMPInfoCache.invalidateAnalyses();
+
     return Changed == ChangeStatus::CHANGED;
   }
 
@@ -3763,7 +3766,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     ConstantInt *ExecModeC =
         KernelInfo::getExecModeFromKernelEnvironment(KernelEnvC);
     ConstantInt *AssumedExecModeC = ConstantInt::get(
-        ExecModeC->getType(),
+        ExecModeC->getIntegerType(),
         ExecModeC->getSExtValue() | OMP_TGT_EXEC_MODE_GENERIC_SPMD);
     if (ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_SPMD)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
@@ -3792,7 +3795,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     ConstantInt *MayUseNestedParallelismC =
         KernelInfo::getMayUseNestedParallelismFromKernelEnvironment(KernelEnvC);
     ConstantInt *AssumedMayUseNestedParallelismC = ConstantInt::get(
-        MayUseNestedParallelismC->getType(), NestedParallelism);
+        MayUseNestedParallelismC->getIntegerType(), NestedParallelism);
     setMayUseNestedParallelismOfKernelEnvironment(
         AssumedMayUseNestedParallelismC);
 
@@ -3801,7 +3804,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           KernelInfo::getUseGenericStateMachineFromKernelEnvironment(
               KernelEnvC);
       ConstantInt *AssumedUseGenericStateMachineC =
-          ConstantInt::get(UseGenericStateMachineC->getType(), false);
+          ConstantInt::get(UseGenericStateMachineC->getIntegerType(), false);
       setUseGenericStateMachineOfKernelEnvironment(
           AssumedUseGenericStateMachineC);
     }
@@ -4280,8 +4283,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // kernel is executed in.
     assert(ExecModeVal == OMP_TGT_EXEC_MODE_GENERIC &&
            "Initially non-SPMD kernel has SPMD exec mode!");
-    setExecModeOfKernelEnvironment(ConstantInt::get(
-        ExecModeC->getType(), ExecModeVal | OMP_TGT_EXEC_MODE_GENERIC_SPMD));
+    setExecModeOfKernelEnvironment(
+        ConstantInt::get(ExecModeC->getIntegerType(),
+                         ExecModeVal | OMP_TGT_EXEC_MODE_GENERIC_SPMD));
 
     ++NumOpenMPTargetRegionKernelsSPMD;
 
@@ -4332,7 +4336,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // If not SPMD mode, indicate we use a custom state machine now.
     setUseGenericStateMachineOfKernelEnvironment(
-        ConstantInt::get(UseStateMachineC->getType(), false));
+        ConstantInt::get(UseStateMachineC->getIntegerType(), false));
 
     // If we don't actually need a state machine we are done here. This can
     // happen if there simply are no parallel regions. In the resulting kernel
@@ -4658,7 +4662,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
             KernelInfo::getMayUseNestedParallelismFromKernelEnvironment(
                 AA.KernelEnvC);
         ConstantInt *NewMayUseNestedParallelismC = ConstantInt::get(
-            MayUseNestedParallelismC->getType(), AA.NestedParallelism);
+            MayUseNestedParallelismC->getIntegerType(), AA.NestedParallelism);
         AA.setMayUseNestedParallelismOfKernelEnvironment(
             NewMayUseNestedParallelismC);
       }

@@ -796,8 +796,8 @@ test_sad() {
 
 // CHECK-LABEL: define available_externally i64 @_mm_sad_pu8
 // CHECK: call void @llvm.memset.p0.i64(ptr align 8 %{{[0-9a-zA-Z_.]+}}, i8 0, i64 8, i1 false)
-// CHECK: insertelement <2 x i64> <i64 0, i64 undef>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: insertelement <2 x i64> <i64 0, i64 undef>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
+// CHECK: insertelement <2 x i64> <i64 0, i64 poison>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
+// CHECK: insertelement <2 x i64> <i64 0, i64 poison>, i64 %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: call <16 x i8> @vec_min(unsigned char vector[16], unsigned char vector[16])
 // CHECK: call <16 x i8> @vec_max(unsigned char vector[16], unsigned char vector[16])
 // CHECK: call <16 x i8> @vec_sub(unsigned char vector[16], unsigned char vector[16])
@@ -823,7 +823,7 @@ test_set() {
 // CHECK-LABEL: @test_set
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_set_ps
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> poison, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3
@@ -833,21 +833,21 @@ test_set() {
 // CHECK: call <4 x float> @_mm_set1_ps
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_set_ss
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> poison, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float 0.000000e+00, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float 0.000000e+00, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float 0.000000e+00, i32 3
 // CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_set1_ps
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> poison, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3
 // CHECK: store <4 x float> %[[VEC4]], ptr %{{[0-9a-zA-Z_.]+}}, align 16
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_setr_ps
-// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> undef, float %{{[0-9a-zA-Z_.]+}}, i32 0
+// CHECK: %[[VEC:[0-9a-zA-Z_.]+]] = insertelement <4 x float> poison, float %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: %[[VEC2:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC]], float %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK: %[[VEC3:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC2]], float %{{[0-9a-zA-Z_.]+}}, i32 2
 // CHECK: %[[VEC4:[0-9a-zA-Z_.]+]] = insertelement <4 x float> %[[VEC3]], float %{{[0-9a-zA-Z_.]+}}, i32 3

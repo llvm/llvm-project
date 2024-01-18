@@ -61,7 +61,9 @@ using namespace mlir::arm_sme;
 
 namespace {
 
-static constexpr char kTilesInUseAttr[] = "arm_sme.tiles_in_use";
+static constexpr StringLiteral kTilesInUseAttr("arm_sme.tiles_in_use");
+static constexpr StringLiteral
+    kNextInMemoryTileIdAttr("arm_sme.next_in_memory_tile_id");
 
 enum class TileMask : unsigned {
   // clang-format off
@@ -200,7 +202,6 @@ static void findDependantOps(Value rootValue,
         });
   }
 }
-
 struct AssignTileIDsPattern
     : public OpInterfaceRewritePattern<ArmSMETileOpInterface> {
   using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
@@ -209,26 +210,37 @@ struct AssignTileIDsPattern
     if (tileOp.getTileId())
       return failure();
 
+    auto func = tileOp->getParentOfType<FunctionOpInterface>();
+    auto getDiscardableIntAttr = [&](StringRef name, unsigned defaultVal = 0) {
+      if (auto attr = llvm::dyn_cast_or_null<IntegerAttr>(
+              func->getDiscardableAttr(name)))
+        return unsigned(attr.getInt());
+      return defaultVal;
+    };
+    auto setDiscardableIntAttr = [&](StringRef name, auto value) {
+      rewriter.modifyOpInPlace(tileOp, [&] {
+        func->setDiscardableAttr(name,
+                                 rewriter.getI32IntegerAttr((unsigned)value));
+      });
+    };
+
     std::optional<ArmSMETileType> tileType = tileOp.getAllocatedTileType();
     if (!tileType)
       return rewriter.notifyMatchFailure(tileOp, "op does not allocate a tile");
 
-    auto func = tileOp->getParentOfType<FunctionOpInterface>();
-    TileMask tilesInUse = TileMask::kNone;
-    if (auto tilesInUseAttr = llvm::dyn_cast_or_null<IntegerAttr>(
-            func->getDiscardableAttr(kTilesInUseAttr)))
-      tilesInUse = static_cast<TileMask>(tilesInUseAttr.getInt());
-
+    TileMask tilesInUse =
+        static_cast<TileMask>(getDiscardableIntAttr(kTilesInUseAttr));
     auto tileId = allocateTileId(*tileType, tilesInUse);
-    if (failed(tileId))
-      return tileOp.emitError("ran out of SME virtual tiles!");
-
-    func->setDiscardableAttr(kTilesInUseAttr,
-                             rewriter.getI32IntegerAttr((unsigned)tilesInUse));
-
-    // Find all the ops that (transitively) depend on this tile.
-    SetVector<Operation *> dependantOps;
-    findDependantOps(tileOp->getResult(0), dependantOps);
+    bool tileIsInMemory = failed(tileId);
+    if (tileIsInMemory) {
+      // If we could not find a real tile ID, use an in-memory tile ID (ID >=
+      // 16). A later pass will insert the necessary spills and reloads.
+      tileId =
+          getDiscardableIntAttr(kNextInMemoryTileIdAttr, kInMemoryTileIdBase);
+      tileOp->emitWarning(
+          "failed to allocate SME virtual tile to operation, all tile "
+          "operations will go through memory, expect degraded performance");
+    }
 
     // Set all operations dependent on `tileOp` to use the same tile ID.
     // This is a naive tile allocation scheme, but works for common cases. For
@@ -244,15 +256,29 @@ struct AssignTileIDsPattern
     // This case would require allocating a new tile for the result of the
     // scf.if, and moving the contents of %tileA or %tileB to result tile (based
     // on the %some_cond).
+    // Find all the ops that (transitively) depend on this tile.
+    SetVector<Operation *> dependantOps;
+    findDependantOps(tileOp->getResult(0), dependantOps);
     auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
-    tileOp.setTileId(tileIDAttr);
     for (auto *op : dependantOps) {
-      if (auto tileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
-        auto currentTileId = tileOp.getTileId();
+      if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
+        auto currentTileId = dependantTileOp.getTileId();
         if (currentTileId && unsigned(currentTileId.getInt()) != tileId)
-          return tileOp.emitOpError(
+          return dependantTileOp.emitOpError(
               "already assigned different SME virtual tile!");
-        tileOp.setTileId(tileIDAttr);
+      }
+    }
+
+    // Rewrite IR.
+    if (!tileIsInMemory)
+      setDiscardableIntAttr(kTilesInUseAttr, tilesInUse);
+    else
+      setDiscardableIntAttr(kNextInMemoryTileIdAttr, *tileId + 1);
+    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIDAttr); });
+    for (auto *op : dependantOps) {
+      if (auto dependantTileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
+        rewriter.modifyOpInPlace(
+            dependantTileOp, [&] { dependantTileOp.setTileId(tileIDAttr); });
       }
     }
 

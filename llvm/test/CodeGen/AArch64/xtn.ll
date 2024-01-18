@@ -224,23 +224,13 @@ entry:
 }
 
 define <3 x i8> @xtn_v3i16_v3i8(<3 x i16> %a) {
-; CHECK-SD-LABEL: xtn_v3i16_v3i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    umov w0, v0.h[0]
-; CHECK-SD-NEXT:    umov w1, v0.h[1]
-; CHECK-SD-NEXT:    umov w2, v0.h[2]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: xtn_v3i16_v3i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    fmov w1, s1
-; CHECK-GI-NEXT:    fmov w2, s2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: xtn_v3i16_v3i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    umov w1, v0.h[1]
+; CHECK-NEXT:    umov w2, v0.h[2]
+; CHECK-NEXT:    ret
 entry:
   %arg1 = trunc <3 x i16> %a to <3 x i8>
   ret <3 x i8> %arg1

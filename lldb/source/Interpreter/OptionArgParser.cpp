@@ -61,7 +61,7 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
 
   for (const auto &enum_value : enum_values) {
     llvm::StringRef this_enum(enum_value.string_value);
-    if (this_enum.startswith(s))
+    if (this_enum.starts_with(s))
       return enum_value.value;
   }
 

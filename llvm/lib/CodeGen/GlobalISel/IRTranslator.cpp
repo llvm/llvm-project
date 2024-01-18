@@ -751,14 +751,89 @@ bool IRTranslator::translateSwitch(const User &U, MachineIRBuilder &MIB) {
   auto DefaultProb = getEdgeProbability(SwitchMBB, DefaultMBB);
   WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
 
-  // FIXME: At the moment we don't do any splitting optimizations here like
-  // SelectionDAG does, so this worklist only has one entry.
   while (!WorkList.empty()) {
     SwitchWorkListItem W = WorkList.pop_back_val();
+
+    unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
+    // For optimized builds, lower large range as a balanced binary tree.
+    if (NumClusters > 3 &&
+        MF->getTarget().getOptLevel() != CodeGenOptLevel::None &&
+        !DefaultMBB->getParent()->getFunction().hasMinSize()) {
+      splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB, MIB);
+      continue;
+    }
+
     if (!lowerSwitchWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB, MIB))
       return false;
   }
   return true;
+}
+
+void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
+                                 const SwitchCG::SwitchWorkListItem &W,
+                                 Value *Cond, MachineBasicBlock *SwitchMBB,
+                                 MachineIRBuilder &MIB) {
+  using namespace SwitchCG;
+  assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
+         "Clusters not sorted?");
+  assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
+
+  auto [LastLeft, FirstRight, LeftProb, RightProb] =
+      SL->computeSplitWorkItemInfo(W);
+
+  // Use the first element on the right as pivot since we will make less-than
+  // comparisons against it.
+  CaseClusterIt PivotCluster = FirstRight;
+  assert(PivotCluster > W.FirstCluster);
+  assert(PivotCluster <= W.LastCluster);
+
+  CaseClusterIt FirstLeft = W.FirstCluster;
+  CaseClusterIt LastRight = W.LastCluster;
+
+  const ConstantInt *Pivot = PivotCluster->Low;
+
+  // New blocks will be inserted immediately after the current one.
+  MachineFunction::iterator BBI(W.MBB);
+  ++BBI;
+
+  // We will branch to the LHS if Value < Pivot. If LHS is a single cluster,
+  // we can branch to its destination directly if it's squeezed exactly in
+  // between the known lower bound and Pivot - 1.
+  MachineBasicBlock *LeftMBB;
+  if (FirstLeft == LastLeft && FirstLeft->Kind == CC_Range &&
+      FirstLeft->Low == W.GE &&
+      (FirstLeft->High->getValue() + 1LL) == Pivot->getValue()) {
+    LeftMBB = FirstLeft->MBB;
+  } else {
+    LeftMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
+    FuncInfo.MF->insert(BBI, LeftMBB);
+    WorkList.push_back(
+        {LeftMBB, FirstLeft, LastLeft, W.GE, Pivot, W.DefaultProb / 2});
+  }
+
+  // Similarly, we will branch to the RHS if Value >= Pivot. If RHS is a
+  // single cluster, RHS.Low == Pivot, and we can branch to its destination
+  // directly if RHS.High equals the current upper bound.
+  MachineBasicBlock *RightMBB;
+  if (FirstRight == LastRight && FirstRight->Kind == CC_Range && W.LT &&
+      (FirstRight->High->getValue() + 1ULL) == W.LT->getValue()) {
+    RightMBB = FirstRight->MBB;
+  } else {
+    RightMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
+    FuncInfo.MF->insert(BBI, RightMBB);
+    WorkList.push_back(
+        {RightMBB, FirstRight, LastRight, Pivot, W.LT, W.DefaultProb / 2});
+  }
+
+  // Create the CaseBlock record that will be used to lower the branch.
+  CaseBlock CB(ICmpInst::Predicate::ICMP_SLT, false, Cond, Pivot, nullptr,
+               LeftMBB, RightMBB, W.MBB, MIB.getDebugLoc(), LeftProb,
+               RightProb);
+
+  if (W.MBB == SwitchMBB)
+    emitSwitchCase(CB, SwitchMBB, MIB);
+  else
+    SL->SwitchCases.push_back(CB);
 }
 
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
@@ -1545,13 +1620,15 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
       continue;
     } else {
-      uint64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
+      uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
 
       // If this is a scalar constant or a splat vector of constants,
       // handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
-        Offset += ElementSize * CI->getSExtValue();
-        continue;
+        if (std::optional<int64_t> Val = CI->getValue().trySExtValue()) {
+          Offset += ElementSize * *Val;
+          continue;
+        }
       }
 
       if (Offset != 0) {
@@ -1842,6 +1919,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_LROUND;
     case Intrinsic::llround:
       return TargetOpcode::G_LLROUND;
+    case Intrinsic::get_fpenv:
+      return TargetOpcode::G_GET_FPENV;
     case Intrinsic::get_fpmode:
       return TargetOpcode::G_GET_FPMODE;
   }
@@ -2423,6 +2502,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                     {getOrCreateVReg(*FpValue)})
         .addImm(TestMaskValue->getZExtValue());
 
+    return true;
+  }
+  case Intrinsic::set_fpenv: {
+    Value *FPEnv = CI.getOperand(0);
+    MIRBuilder.buildInstr(TargetOpcode::G_SET_FPENV, {},
+                          {getOrCreateVReg(*FPEnv)});
+    return true;
+  }
+  case Intrinsic::reset_fpenv: {
+    MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPENV, {}, {});
     return true;
   }
   case Intrinsic::set_fpmode: {
@@ -3134,6 +3223,8 @@ void IRTranslator::finishPendingPhis() {
 #endif // ifndef NDEBUG
   for (auto &Phi : PendingPHIs) {
     const PHINode *PI = Phi.first;
+    if (PI->getType()->isEmptyTy())
+      continue;
     ArrayRef<MachineInstr *> ComponentPHIs = Phi.second;
     MachineBasicBlock *PhiMBB = ComponentPHIs[0]->getParent();
     EntryBuilder->setDebugLoc(PI->getDebugLoc());

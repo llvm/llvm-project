@@ -201,8 +201,9 @@ Expected<StubT> getRequiredValue(
 template <typename JsonT, typename StubT = JsonT>
 Expected<StubT> getRequiredValue(
     TBDKey Key, const Object *Obj,
-    std::function<std::optional<JsonT>(const Object *, StringRef)> GetValue,
-    StubT DefaultValue, std::function<std::optional<StubT>(JsonT)> Validate) {
+    std::function<std::optional<JsonT>(const Object *, StringRef)> const
+        GetValue,
+    StubT DefaultValue, function_ref<std::optional<StubT>(JsonT)> Validate) {
   std::optional<JsonT> Val = GetValue(Obj, Keys[Key]);
   if (!Val)
     return DefaultValue;
@@ -215,7 +216,7 @@ Expected<StubT> getRequiredValue(
 }
 
 Error collectFromArray(TBDKey Key, const Object *Obj,
-                       std::function<void(StringRef)> Append,
+                       function_ref<void(StringRef)> Append,
                        bool IsRequired = false) {
   const auto *Values = Obj->getArray(Keys[Key]);
   if (!Values) {

@@ -5,6 +5,7 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:
 
 declare ptr @getptr()
 declare void @use(ptr)
+declare void @use.i1(i1)
 
 define i1 @eq_base(ptr %x, i64 %y) {
 ; CHECK-LABEL: @eq_base(
@@ -441,6 +442,29 @@ define i1 @test60_extra_use_const_operands_no_inbounds(ptr %foo, i64 %i, i64 %j)
   call void @use(ptr %gep1)
   %cmp = icmp eq ptr %gep1, %gep2
   ret i1 %cmp
+}
+
+define void @test60_extra_use_fold(ptr %foo, i64 %start.idx, i64 %end.offset) {
+; CHECK-LABEL: @test60_extra_use_fold(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[FOO:%.*]], i64 [[START_IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[FOO]], i64 [[END_OFFSET:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP2]])
+; CHECK-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds i32, ptr %foo, i64 %start.idx
+  %gep2 = getelementptr inbounds i8, ptr %foo, i64 %end.offset
+  call void @use(ptr %gep1)
+  call void @use(ptr %gep2)
+  %cmp1 = icmp eq ptr %gep1, %gep2
+  call void @use.i1(i1 %cmp1)
+  %cmp2 = icmp ult ptr %gep1, %gep2
+  call void @use.i1(i1 %cmp2)
+  ret void
 }
 
 define i1 @test_scalable_same(ptr %x) {

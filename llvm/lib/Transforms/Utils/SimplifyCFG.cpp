@@ -6293,7 +6293,7 @@ Value *SwitchLookupTable::BuildLookup(Value *Index, IRBuilder<> &Builder) {
   }
   case BitMapKind: {
     // Type of the bitmap (e.g. i59).
-    IntegerType *MapTy = BitMap->getType();
+    IntegerType *MapTy = BitMap->getIntegerType();
 
     // Cast Index to the same type as the bitmap.
     // Note: The Index is <= the number of elements in the table, so
@@ -6668,7 +6668,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Value *TableIndex;
   ConstantInt *TableIndexOffset;
   if (UseSwitchConditionAsTableIndex) {
-    TableIndexOffset = ConstantInt::get(MaxCaseVal->getType(), 0);
+    TableIndexOffset = ConstantInt::get(MaxCaseVal->getIntegerType(), 0);
     TableIndex = SI->getCondition();
   } else {
     TableIndexOffset = MinCaseVal;
@@ -6752,7 +6752,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // Get the TableIndex'th bit of the bitmask.
     // If this bit is 0 (meaning hole) jump to the default destination,
     // else continue with table lookup.
-    IntegerType *MapTy = TableMask->getType();
+    IntegerType *MapTy = TableMask->getIntegerType();
     Value *MaskIndex =
         Builder.CreateZExtOrTrunc(TableIndex, MapTy, "switch.maskindex");
     Value *Shifted = Builder.CreateLShr(TableMask, MaskIndex, "switch.shifted");
@@ -6898,18 +6898,17 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
-  auto *ShiftC = ConstantInt::get(Ty, Shift);
-  auto *Sub = Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
-  auto *LShr = Builder.CreateLShr(Sub, ShiftC);
-  auto *Shl = Builder.CreateShl(Sub, Ty->getBitWidth() - Shift);
-  auto *Rot = Builder.CreateOr(LShr, Shl);
+  Value *Sub =
+      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+  Value *Rot = Builder.CreateIntrinsic(
+      Ty, Intrinsic::fshl,
+      {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
   SI->replaceUsesOfWith(SI->getCondition(), Rot);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
     auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
-    Case.setValue(
-        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
+    Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(Shift))));
   }
   return true;
 }
@@ -6975,7 +6974,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   // Replace each case with its trailing zeros number.
   for (auto &Case : SI->cases()) {
     auto *OrigValue = Case.getCaseValue();
-    Case.setValue(ConstantInt::get(OrigValue->getType(),
+    Case.setValue(ConstantInt::get(OrigValue->getIntegerType(),
                                    OrigValue->getValue().countr_zero()));
   }
 

@@ -182,6 +182,11 @@ def Transform_AnyHandleOrParamType
              TransformValueHandleTypeInterface.predicate]>,
          "any transform handle or parameter">;
 
+def Transform_AnyHandleType
+  : Type<Or<[TransformHandleTypeInterface.predicate,
+             TransformValueHandleTypeInterface.predicate]>,
+         "any transform handle">;
+
 def FunctionalStyleTransformOpTrait
     : NativeOpTrait<"FunctionalStyleTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";

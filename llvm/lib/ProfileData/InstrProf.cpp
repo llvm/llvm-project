@@ -14,7 +14,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +26,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -113,11 +111,11 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::malformed:
     OS << "malformed instrumentation profile data";
     break;
-  case instrprof_error::missing_debug_info_for_correlation:
-    OS << "debug info for correlation is required";
+  case instrprof_error::missing_correlation_info:
+    OS << "debug info/binary for correlation is required";
     break;
-  case instrprof_error::unexpected_debug_info_for_correlation:
-    OS << "debug info for correlation is not necessary";
+  case instrprof_error::unexpected_correlation_info:
+    OS << "debug info/binary for correlation is not necessary";
     break;
   case instrprof_error::unable_to_correlate_profile:
     OS << "unable to correlate profile";
@@ -246,11 +244,27 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
-std::string getPGOFuncName(StringRef RawFuncName,
-                           GlobalValue::LinkageTypes Linkage,
+std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
-  return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
+  // Value names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (Name[0] == '\1')
+    Name = Name.substr(1);
+
+  std::string NewName = std::string(Name);
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (FileName.empty())
+      NewName = NewName.insert(0, "<unknown>:");
+    else
+      NewName = NewName.insert(0, FileName.str() + ":");
+  }
+  return NewName;
 }
 
 // Strip NumPrefix level of directory name from PathNameStr. If the number of
@@ -281,31 +295,20 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
   return FileName;
 }
 
-// The PGO name has the format [<filepath>;]<linkage-name> where <filepath>; is
-// provided if linkage is local and <linkage-name> is the mangled function
-// name. The filepath is used to discriminate possibly identical function names.
-// ; is used because it is unlikely to be found in either <filepath> or
-// <linkage-name>.
+// The PGO name has the format [<filepath>;]<mangled-name> where <filepath>; is
+// provided if linkage is local and is used to discriminate possibly identical
+// mangled names. ";" is used because it is unlikely to be found in either
+// <filepath> or <mangled-name>.
 //
 // Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. <filepath> is used to discriminate between
-// possibly identical function names when linkage is local and <function-name>
-// simply comes from F.getName(). This caused trouble for Objective-C functions
-// which commonly have :'s in their names. Also, since <function-name> is not
-// mangled, they cannot be passed to Mach-O linkers via -order_file. We still
-// need to compute this name to lookup functions from profiles built by older
-// compilers.
+// [<filepath>:]<mangled-name>. This caused trouble for Objective-C functions
+// which commonly have :'s in their names. We still need to compute this name to
+// lookup functions from profiles built by older compilers.
 static std::string
 getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
-  SmallString<64> Name;
-  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
-    Name.append(FileName.empty() ? "<unknown>" : FileName);
-    Name.append(";");
-  }
-  Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
-  return Name.str().str();
+  return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
 static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
@@ -352,6 +355,9 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
+// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// for front-end (Clang, etc) instrumentation.
+// The implementation is kept for profile matching from older profiles.
 // This is similar to `getIRPGOFuncName` except that this function calls
 // 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
@@ -384,7 +390,8 @@ getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
-  // Drop the file name including ':'. See also getPGOFuncName.
+  // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
+  // well.
   if (PGOFuncName.starts_with(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;
@@ -914,7 +921,7 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
       if (Timestamp < Trace.FunctionNameRefs.size())
         FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
 
-  int N = std::ceil(std::log2(LargestTraceSize));
+  const int N = Log2_64(LargestTraceSize) + 1;
 
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
@@ -922,8 +929,8 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
     auto &Trace = Traces[TraceIdx].FunctionNameRefs;
     for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
-        auto &FunctionId = Trace[Timestamp];
+      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
+        auto FunctionId = Trace[Timestamp];
         UtilityNodeT GroupId = TraceIdx * N + I;
         FuncGroups[FunctionId].push_back(GroupId);
       }
@@ -931,7 +938,7 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
   }
 
   std::vector<BPFunctionNode> Nodes;
-  for (auto &Id : FunctionIds) {
+  for (auto Id : FunctionIds) {
     auto &UNs = FuncGroups[Id];
     llvm::sort(UNs);
     UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());

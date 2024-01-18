@@ -256,22 +256,26 @@ void MsanTSDDtor(void *tsd) {
   atomic_signal_fence(memory_order_seq_cst);
   MsanThread::TSDDtor(tsd);
 }
-#endif
+#  endif
+
+static void BeforeFork() {
+  // Usually we lock ThreadRegistry, but msan does not have one.
+  LockAllocator();
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
+  UnlockAllocator();
+  // Usually we unlock ThreadRegistry, but msan does not have one.
+}
 
 void InstallAtForkHandler() {
-  auto before = []() {
-    // Usually we lock ThreadRegistry, but msan does not have one.
-    LockAllocator();
-    StackDepotLockAll();
-    ChainedOriginDepotLockAll();
-  };
-  auto after = []() {
-    ChainedOriginDepotUnlockAll();
-    StackDepotUnlockAll();
-    UnlockAllocator();
-    // Usually we unlock ThreadRegistry, but msan does not have one.
-  };
-  pthread_atfork(before, after, after);
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 } // namespace __msan

@@ -1656,7 +1656,8 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
 }
 
 static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
-                                                FileManager &FileMgr) {
+                                                FileManager &FileMgr,
+                                                DiagnosticsEngine &Diags) {
   StringRef Filename = llvm::sys::path::filename(File.getName());
   SmallString<128>  PrivateFilename(File.getDir().getName());
   if (Filename == "module.map")
@@ -1665,7 +1666,14 @@ static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
     llvm::sys::path::append(PrivateFilename, "module.private.modulemap");
   else
     return std::nullopt;
-  return FileMgr.getOptionalFileRef(PrivateFilename);
+  auto PMMFile = FileMgr.getOptionalFileRef(PrivateFilename);
+  if (PMMFile) {
+    if (Filename == "module.map")
+      Diags.Report(diag::warn_deprecated_module_dot_map)
+          << PrivateFilename << 1
+          << File.getDir().getName().ends_with(".framework");
+  }
+  return PMMFile;
 }
 
 bool HeaderSearch::loadModuleMapFile(FileEntryRef File, bool IsSystem,
@@ -1731,7 +1739,8 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   }
 
   // Try to load a corresponding private module map.
-  if (OptionalFileEntryRef PMMFile = getPrivateModuleMap(File, FileMgr)) {
+  if (OptionalFileEntryRef PMMFile =
+          getPrivateModuleMap(File, FileMgr, Diags)) {
     if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
@@ -1755,11 +1764,14 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
   if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
     return *F;
 
-  // Continue to allow module.map
+  // Continue to allow module.map, but warn it's deprecated.
   ModuleMapFileName = Dir.getName();
   llvm::sys::path::append(ModuleMapFileName, "module.map");
-  if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
+  if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName)) {
+    Diags.Report(diag::warn_deprecated_module_dot_map)
+        << ModuleMapFileName << 0 << IsFramework;
     return *F;
+  }
 
   // For frameworks, allow to have a private module map with a preferred
   // spelling when a public module map is absent.
