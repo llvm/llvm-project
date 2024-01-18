@@ -219,20 +219,19 @@ static void ReExecIfNeeded() {
   // Go maps shadow memory lazily and works fine with limited address space.
   // Unlimited stack is not a problem as well, because the executable
   // is not compiled with -pie.
-  {
-    bool reexec = false;
-    // TSan doesn't play well with unlimited stack size (as stack
-    // overlaps with shadow memory). If we detect unlimited stack size,
-    // we re-exec the program with limited stack size as a best effort.
-    if (StackSizeIsUnlimited()) {
-      const uptr kMaxStackSize = 32 * 1024 * 1024;
-      VReport(1,
-              "Program is run with unlimited stack size, which wouldn't "
-              "work with ThreadSanitizer.\n"
-              "Re-execing with stack size limited to %zd bytes.\n",
-              kMaxStackSize);
-      SetStackSizeLimitInBytes(kMaxStackSize);
-      reexec = true;
+  bool reexec = false;
+  // TSan doesn't play well with unlimited stack size (as stack
+  // overlaps with shadow memory). If we detect unlimited stack size,
+  // we re-exec the program with limited stack size as a best effort.
+  if (StackSizeIsUnlimited()) {
+    const uptr kMaxStackSize = 32 * 1024 * 1024;
+    VReport(1,
+            "Program is run with unlimited stack size, which wouldn't "
+            "work with ThreadSanitizer.\n"
+            "Re-execing with stack size limited to %zd bytes.\n",
+            kMaxStackSize);
+    SetStackSizeLimitInBytes(kMaxStackSize);
+    reexec = true;
     }
 
     if (!AddressSpaceIsUnlimited()) {
@@ -292,7 +291,6 @@ static void ReExecIfNeeded() {
 
     if (reexec)
       ReExec();
-  }
 }
 #  endif
 
