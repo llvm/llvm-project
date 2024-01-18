@@ -147,16 +147,17 @@ GetFileForModule(const ModuleSpec &module_spec,
                  std::function<std::string(llvm::object::BuildID)> UrlBuilder) {
   const UUID &module_uuid = module_spec.GetUUID();
   // Don't bother if we don't have a valid UUID, Debuginfod isn't available,
-  // or if the 'symbols.enable-external-lookup' setting is false
+  // or if the 'symbols.enable-external-lookup' setting is false.
   if (!module_uuid.IsValid() || !llvm::canUseDebuginfod() ||
       !ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
     return {};
 
-  // Grab the settings values we need
+  // Grab LLDB's Debuginfod overrides from the
+  // plugin.symbol-locator.debuginfod.* settings.
   PluginProperties &plugin_props = GetGlobalPluginProperties();
   llvm::Expected<llvm::StringRef> CacheDirectoryPathOrErr =
       plugin_props.GetCachePath();
-  // A cache location is *required*
+  // A cache location is *required*.
   if (!CacheDirectoryPathOrErr)
     return {};
   llvm::StringRef CacheDirectoryPath = *CacheDirectoryPathOrErr;
@@ -164,7 +165,7 @@ GetFileForModule(const ModuleSpec &module_spec,
       llvm::getDefaultDebuginfodUrls();
   std::chrono::milliseconds Timeout = plugin_props.GetTimeout();
 
-  // We're ready to ask the Debuginfod library to find our file
+  // We're ready to ask the Debuginfod library to find our file.
   llvm::object::BuildID build_id(module_uuid.GetBytes());
   std::string UrlPath = UrlBuilder(build_id);
   std::string CacheKey = llvm::getDebuginfodCacheKey(UrlPath);
@@ -173,7 +174,7 @@ GetFileForModule(const ModuleSpec &module_spec,
   if (result)
     return FileSpec(*result);
   // An error here should be logged as a failure in the Debuginfod library,
-  // just consume it here
+  // just consume it here.
   consumeError(result.takeError());
   return {};
 }

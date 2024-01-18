@@ -72,7 +72,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   std::shared_lock<llvm::sys::RWMutex> ReadGuard(UrlsMutex);
   if (!DebuginfodUrls) {
     // Only read from the environment variable if the user hasn't already
-    // set the value
+    // set the value.
     ReadGuard.unlock();
     std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
     DebuginfodUrls = SmallVector<StringRef>();
@@ -86,7 +86,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   return DebuginfodUrls.value();
 }
 
-// Set the default debuginfod URL list, override the environment variable
+// Set the default debuginfod URL list, override the environment variable.
 void setDefaultDebuginfodUrls(const SmallVector<StringRef> &URLs) {
   std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
   DebuginfodUrls = URLs;
