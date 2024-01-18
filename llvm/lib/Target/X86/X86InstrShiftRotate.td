@@ -916,59 +916,59 @@ let Predicates = [HasBMI2] in {
     // truncated to that register size can be replaced by RORX to
     // preserve flags with the same execution cost.
 
-    def : Pat<(i8 (trunc (srl GR16:$src, (i8 immle16minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit), imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (sra GR16:$src, (i8 immle16minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit), imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (srl GR32:$src, (i8 immle32minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (sra GR32:$src, (i8 immle32minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (srl GR64:$src, (i8 immle64minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (sra GR64:$src, (i8 immle64minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (srl GR16:$src, (i8 immle16minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit), imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (sra GR16:$src, (i8 immle16minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR16:$src, sub_16bit), imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (srl GR32:$src, (i8 immle32minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (sra GR32:$src, (i8 immle32minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (srl GR64:$src, (i8 immle64minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (sra GR64:$src, (i8 immle64minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_8bit)>;
 
 
-    def : Pat<(i16 (trunc (srl GR32:$src, (i8 immle32minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (sra GR32:$src, (i8 immle32minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (srl GR64:$src, (i8 immle64minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (sra GR64:$src, (i8 immle64minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (srl GR32:$src, (i8 immle32minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (sra GR32:$src, (i8 immle32minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32ri GR32:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (srl GR64:$src, (i8 immle64minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (sra GR64:$src, (i8 immle64minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_16bit)>;
 
-    def : Pat<(i32 (trunc (srl GR64:$src, (i8 immle64minus32:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_32bit)>;
-    def : Pat<(i32 (trunc (sra GR64:$src, (i8 immle64minus32:$shamt)))),
-              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_32bit)>;
+//    def : Pat<(i32 (trunc (srl GR64:$src, (i8 immle64minus32:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_32bit)>;
+//    def : Pat<(i32 (trunc (sra GR64:$src, (i8 immle64minus32:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64ri GR64:$src, imm:$shamt), sub_32bit)>;
 
 
     // Can't expand the load
-    def : Pat<(i8 (trunc (srl (loadi32 addr:$src), (i8 immle32minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (sra (loadi32 addr:$src), (i8 immle32minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (srl (loadi64 addr:$src), (i8 immle64minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_8bit)>;
-    def : Pat<(i8 (trunc (sra (loadi64 addr:$src), (i8 immle64minus8:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (srl (loadi32 addr:$src), (i8 immle32minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (sra (loadi32 addr:$src), (i8 immle32minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (srl (loadi64 addr:$src), (i8 immle64minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_8bit)>;
+//    def : Pat<(i8 (trunc (sra (loadi64 addr:$src), (i8 immle64minus8:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_8bit)>;
 
 
-    def : Pat<(i16 (trunc (srl (loadi32 addr:$src), (i8 immle32minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (sra (loadi32 addr:$src), (i8 immle32minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (srl (loadi64 addr:$src), (i8 immle64minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_16bit)>;
-    def : Pat<(i16 (trunc (sra (loadi64 addr:$src), (i8 immle64minus16:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (srl (loadi32 addr:$src), (i8 immle32minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (sra (loadi32 addr:$src), (i8 immle32minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX32mi addr:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (srl (loadi64 addr:$src), (i8 immle64minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_16bit)>;
+//    def : Pat<(i16 (trunc (sra (loadi64 addr:$src), (i8 immle64minus16:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_16bit)>;
 
-    def : Pat<(i32 (trunc (srl (loadi64 addr:$src), (i8 immle64minus32:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_32bit)>;
-    def : Pat<(i32 (trunc (sra (loadi64 addr:$src), (i8 immle64minus32:$shamt)))),
-              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_32bit)>;
+//    def : Pat<(i32 (trunc (srl (loadi64 addr:$src), (i8 immle64minus32:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_32bit)>;
+//    def : Pat<(i32 (trunc (sra (loadi64 addr:$src), (i8 immle64minus32:$shamt)))),
+//              (EXTRACT_SUBREG (RORX64mi addr:$src, imm:$shamt), sub_32bit)>;
   }
 
   def : Pat<(rotr (loadi32 addr:$src), (i8 imm:$shamt)),
