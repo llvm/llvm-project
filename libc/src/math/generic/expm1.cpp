@@ -438,6 +438,8 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, hi_part.lo);
 
+  // TODO: The following line leaks encoding abstraction. Use FPBits methods
+  // instead.
   uint64_t err = x_is_neg ? (static_cast<uint64_t>(-hi) << 52) : 0;
 
   double err_d = cpp::bit_cast<double>(ERR_D + err);
