@@ -457,10 +457,7 @@ public:
                                      MachineFunctionAnalysisManager &,
                                      raw_pwrite_stream &, raw_pwrite_stream *,
                                      CodeGenFileType, CGPassBuilderOption,
-                                     PassInstrumentationCallbacks *) {
-    return make_error<StringError>("buildCodeGenPipeline is not overridden",
-                                   inconvertibleErrorCode());
-  }
+                                     PassInstrumentationCallbacks *) = 0;
 
   virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
     llvm_unreachable(
