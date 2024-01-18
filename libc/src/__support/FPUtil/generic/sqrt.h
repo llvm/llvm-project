@@ -77,7 +77,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
     FPBits<T> bits(x);
 
     if (bits.is_inf_or_nan()) {
-      if (bits.get_sign() && (bits.get_mantissa() == 0)) {
+      if (bits.is_neg() && (bits.get_mantissa() == 0)) {
         // sqrt(-Inf) = NaN
         return FPBits<T>::build_quiet_nan(ONE >> 1);
       } else {
@@ -89,7 +89,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       // sqrt(+0) = +0
       // sqrt(-0) = -0
       return x;
-    } else if (bits.get_sign()) {
+    } else if (bits.is_neg()) {
       // sqrt( negative numbers ) = NaN
       return FPBits<T>::build_quiet_nan(ONE >> 1);
     } else {
