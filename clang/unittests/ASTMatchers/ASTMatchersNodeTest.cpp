@@ -471,6 +471,19 @@ TEST_P(ASTMatchersTest, CXXOperatorCallExpr) {
   EXPECT_TRUE(notMatches("int t = 5 << 2;", OpCall));
 }
 
+TEST_P(ASTMatchersTest, FoldExpr) {
+  if (!GetParam().isCXX() || !GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr()));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); }",
+                      cxxFoldExpr()));
+}
+
 TEST_P(ASTMatchersTest, ThisPointerType) {
   if (!GetParam().isCXX()) {
     return;

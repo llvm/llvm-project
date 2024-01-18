@@ -7,7 +7,8 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/A.cppm -emit-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.cppm -emit-module-interface -o %t/B.pcm \
 // RUN:     -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.pcm -S -emit-llvm -o - | FileCheck %t/B.cppm
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/B.pcm -S -emit-llvm -o - \
+// RUN:     -fprebuilt-module-path=%t | FileCheck %t/B.cppm
 
 //--- foo.h
 

@@ -59,7 +59,7 @@ Process::FindInEnvPath(StringRef EnvName, StringRef FileName,
     SmallString<128> FilePath(Dir);
     path::append(FilePath, FileName);
     if (fs::exists(Twine(FilePath))) {
-      FoundPath = std::string(FilePath.str());
+      FoundPath = std::string(FilePath);
       break;
     }
   }
