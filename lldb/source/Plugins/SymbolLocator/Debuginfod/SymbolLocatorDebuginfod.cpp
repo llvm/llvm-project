@@ -9,6 +9,7 @@
 #include "SymbolLocatorDebuginfod.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
@@ -54,6 +55,34 @@ public:
     return urls;
   }
 
+  llvm::Expected<llvm::StringRef> GetCachePath() {
+    OptionValueString *s =
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(
+            ePropertySymbolCachePath);
+    // If we don't have a valid cache location, use the default one.
+    if (!s || !s->GetCurrentValueAsRef().size()) {
+      llvm::Expected<std::string> maybeCachePath =
+          llvm::getDefaultDebuginfodCacheDirectory();
+      if (!maybeCachePath) {
+        return maybeCachePath;
+      }
+      m_cache_path = *maybeCachePath;
+      return llvm::StringRef(m_cache_path);
+    }
+    return s->GetCurrentValueAsRef();
+  }
+
+  std::chrono::milliseconds GetTimeout() const {
+    std::optional<uint64_t> seconds =
+        m_collection_sp->GetPropertyAtIndexAs<uint64_t>(ePropertyTimeout);
+    if (seconds && *seconds != 0) {
+      return std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::seconds(*seconds));
+    } else {
+      return llvm::getDefaultDebuginfodTimeout();
+    }
+  }
+
 private:
   void ServerURLsChangedCallback() {
     m_server_urls = GetDebugInfoDURLs();
@@ -65,6 +94,7 @@ private:
   }
   // Storage for the StringRef's used within the Debuginfod library.
   Args m_server_urls;
+  std::string m_cache_path;
 };
 
 } // namespace
@@ -112,31 +142,49 @@ SymbolLocator *SymbolLocatorDebuginfod::CreateInstance() {
   return new SymbolLocatorDebuginfod();
 }
 
-static std::optional<FileSpec> GetFileForModule(
-    const ModuleSpec &module_spec,
-    std::function<llvm::Expected<std::string>(llvm::object::BuildIDRef)>
-        PullFromServer) {
-  if (!ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
-    return {};
++ static std::optional<FileSpec> +
+    GetFileForModule(
+        const ModuleSpec &module_spec,
+        std::function<std::string(llvm::object::BuildID)> UrlBuilder) {
   const UUID &module_uuid = module_spec.GetUUID();
-  if (module_uuid.IsValid() && llvm::canUseDebuginfod()) {
-    llvm::object::BuildID build_id(module_uuid.GetBytes());
-    llvm::Expected<std::string> result = PullFromServer(build_id);
-    if (result)
-      return FileSpec(*result);
-    // An error here should be logged as a failure in the Debuginfod library,
-    // so just consume it here
-    consumeError(result.takeError());
-  }
+  // Don't bother if we don't have a valid UUID, Debuginfod isn't available,
+  // or if the 'symbols.enable-external-lookup' setting is false
+  if (!module_uuid.IsValid() || !llvm::canUseDebuginfod() ||
+      !ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
+    return {};
+
+  // Grab the settings values we need
+  PluginProperties &plugin_props = GetGlobalPluginProperties();
+  llvm::Expected<llvm::StringRef> CacheDirectoryPathOrErr =
+      plugin_props.GetCachePath();
+  // A cache location is *required*
+  if (!CacheDirectoryPathOrErr)
+    return {};
+  llvm::StringRef CacheDirectoryPath = *CacheDirectoryPathOrErr;
+  llvm::SmallVector<llvm::StringRef> DebuginfodUrls =
+      llvm::getDefaultDebuginfodUrls();
+  std::chrono::milliseconds Timeout = plugin_props.GetTimeout();
+
+  // We're ready to ask the Debuginfod library to find our file
+  llvm::object::BuildID build_id(module_uuid.GetBytes());
+  std::string UrlPath = UrlBuilder(build_id);
+  std::string CacheKey = llvm::getDebuginfodCacheKey(UrlPath);
+  llvm::Expected<std::string> result = llvm::getCachedOrDownloadArtifact(
+      CacheKey, UrlPath, CacheDirectoryPath, DebuginfodUrls, Timeout);
+  if (result)
+    return FileSpec(*result);
+  // An error here should be logged as a failure in the Debuginfod library,
+  // just consume it here
+  consumeError(result.takeError());
   return {};
 }
 
 std::optional<ModuleSpec> SymbolLocatorDebuginfod::LocateExecutableObjectFile(
     const ModuleSpec &module_spec) {
-  return GetFileForModule(module_spec, llvm::getCachedOrDownloadExecutable);
+  return GetFileForModule(module_spec, llvm::getDebuginfodExecutableUrlPath);
 }
 
 std::optional<FileSpec> SymbolLocatorDebuginfod::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
-  return GetFileForModule(module_spec, llvm::getCachedOrDownloadDebuginfo);
+  return GetFileForModule(module_spec, llvm::getDebuginfodDebuginfoUrlPath);
 }

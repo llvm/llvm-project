@@ -54,7 +54,7 @@ std::optional<SmallVector<StringRef>> DebuginfodUrls;
 llvm::sys::RWMutex UrlsMutex;
 } // namespace
 
-static std::string uniqueKey(llvm::StringRef S) {
+std::string getDebuginfodCacheKey(llvm::StringRef S) {
   return utostr(xxh3_64bits(S));
 }
 
@@ -120,29 +120,44 @@ std::chrono::milliseconds getDefaultDebuginfodTimeout() {
 /// cache and return the cached file path. They first search the local cache,
 /// followed by the debuginfod servers.
 
-Expected<std::string> getCachedOrDownloadSource(BuildIDRef ID,
-                                                StringRef SourceFilePath) {
+std::string getDebuginfodSourceUrlPath(BuildIDRef ID,
+                                       StringRef SourceFilePath) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "source",
                     sys::path::convert_to_slash(SourceFilePath));
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
 }
 
-Expected<std::string> getCachedOrDownloadExecutable(BuildIDRef ID) {
+Expected<std::string> getCachedOrDownloadSource(BuildIDRef ID,
+                                                StringRef SourceFilePath) {
+  std::string UrlPath = getDebuginfodSourceUrlPath(ID, SourceFilePath);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
+}
+
+std::string getDebuginfodExecutableUrlPath(BuildIDRef ID) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "executable");
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
 }
 
-Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
+Expected<std::string> getCachedOrDownloadExecutable(BuildIDRef ID) {
+  std::string UrlPath = getDebuginfodExecutableUrlPath(ID);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
+}
+
+std::string getDebuginfodDebuginfoUrlPath(BuildIDRef ID) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "debuginfo");
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
 }
 
+Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
+  std::string UrlPath = getDebuginfodDebuginfoUrlPath(ID);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
+}
 // General fetching function.
 Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
                                                   StringRef UrlPath) {
