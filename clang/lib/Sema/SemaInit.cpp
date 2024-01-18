@@ -10718,14 +10718,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     bool HasAnyDeductionGuide = false;
 
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
-      auto *Pattern = Template;
-      while (Pattern->getInstantiatedFromMemberTemplate()) {
-        if (Pattern->isMemberSpecialization())
-          break;
-        Pattern = Pattern->getInstantiatedFromMemberTemplate();
-      }
-
-      auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
+      auto *RD = cast<CXXRecordDecl>(Template->getTemplatedDecl());
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getRecordType(RD);
