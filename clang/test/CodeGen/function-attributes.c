@@ -57,7 +57,7 @@ int f12(int arg) {
   return arg ? 0 : f10_t();
 }
 
-// CHECK: define{{.*}} int @f13() [[NUW_OS_RN:#[0-9]+]]
+// CHECK: define{{.*}} i32 @f13() [[NUW_OS_RN:#[0-9]+]]
 int f13(void) __attribute__((const));
 int f13(void){ return 0; }
 
