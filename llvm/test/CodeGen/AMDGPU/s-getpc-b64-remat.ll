@@ -56,7 +56,11 @@ define void @test_remat_s_getpc_b64() {
 ;
 ; GFX12-LABEL: test_remat_s_getpc_b64:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
@@ -79,7 +83,7 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i64 @llvm.amdgcn.s.getpc()

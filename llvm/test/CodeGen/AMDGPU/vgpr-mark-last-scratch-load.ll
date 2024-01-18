@@ -4,48 +4,48 @@
 define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 ; CHECK-LABEL: max_6_vgprs:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; CHECK-NEXT:    global_load_b32 v5, v[0:1], off th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v5, v[0:1], off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:8 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:12 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:160 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:160 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:16 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    global_store_b32 v[0:1], v5, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v5, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:8 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
@@ -72,8 +72,8 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgpu-num-vgpr"="11" {
 ; CHECK-LABEL: max_11_vgprs_branch:
 ; CHECK:       ; %bb.0: ; %.entry
-; CHECK-NEXT:    global_load_b32 v3, v[0:1], off th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v3, v[0:1], off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -81,71 +81,71 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
-; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:336 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:336 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:12 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:448 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:448 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:16 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:576 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:576 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:720 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:720 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_cmpx_eq_u32_e32 0, v2
 ; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %.false
-; CHECK-NEXT:    global_load_b32 v10, v[0:1], off th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v10, v[0:1], off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:20 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:24 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:28 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:160 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:160 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:32 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:240 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:240 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:36 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    global_store_b32 v[0:1], v10, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v10, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:20 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:24 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:28 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:32 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:36 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
@@ -155,65 +155,65 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_4
 ; CHECK-NEXT:  ; %bb.3: ; %.true
-; CHECK-NEXT:    global_load_b32 v10, v[0:1], off th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v10, v[0:1], off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:20 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:48 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:24 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:96 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:28 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:160 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:160 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v2, off offset:32 ; 4-byte Folded Spill
-; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:240 th:TH_LOAD_RT_NT
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    global_load_b32 v0, v[0:1], off offset:240 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, off offset:36 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    global_store_b32 v[0:1], v10, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v10, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:20 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:24 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:28 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:32 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:36 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:  .LBB1_4: ; %.exit
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:4 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:8 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
