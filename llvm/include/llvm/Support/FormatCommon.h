@@ -66,8 +66,8 @@ struct FmtAlign {
   }
 
 private:
-  void fill(llvm::raw_ostream &S, uint32_t Count) {
-    for (uint32_t I = 0; I < Count; ++I)
+  void fill(llvm::raw_ostream &S, size_t Count) {
+    for (size_t I = 0; I < Count; ++I)
       S << Fill;
   }
 };

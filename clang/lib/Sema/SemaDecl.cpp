@@ -3819,8 +3819,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // It is not permitted to redeclare an SME function with different SME
   // attributes.
-  if (IsInvalidSMECallConversion(Old->getType(), New->getType(),
-                                 AArch64SMECallConversionKind::MatchExactly)) {
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType())) {
     Diag(New->getLocation(), diag::err_sme_attr_mismatch)
         << New->getType() << Old->getType();
     Diag(OldLocation, diag::note_previous_declaration);
@@ -4391,8 +4390,8 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   mergeDeclAttributes(New, Old);
 
   // Merge "pure" flag.
-  if (Old->isPure())
-    New->setPure();
+  if (Old->isPureVirtual())
+    New->setIsPureVirtual();
 
   // Merge "used" flag.
   if (Old->getMostRecentDecl()->isUsed(false))
@@ -5804,7 +5803,7 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
   // Mock up a declarator.
   Declarator Dc(DS, ParsedAttributesView::none(), DeclaratorContext::Member);
   StorageClass SC = StorageClassSpecToVarDeclStorageClass(DS);
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc);
   assert(TInfo && "couldn't build declarator info for anonymous struct/union");
 
   // Create a declaration for this anonymous struct/union.
@@ -5901,7 +5900,7 @@ Decl *Sema::BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
 
   // Mock up a declarator.
   Declarator Dc(DS, ParsedAttributesView::none(), DeclaratorContext::TypeName);
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(Dc);
   assert(TInfo && "couldn't build declarator info for anonymous struct");
 
   auto *ParentDecl = cast<RecordDecl>(CurContext);
@@ -6378,12 +6377,6 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   } else if (DiagnoseUnexpandedParameterPack(NameInfo, UPPC_DeclarationType))
     return nullptr;
 
-  // The scope passed in may not be a decl scope.  Zip up the scope tree until
-  // we find one that is.
-  while ((S->getFlags() & Scope::DeclScope) == 0 ||
-         (S->getFlags() & Scope::TemplateParamScope) != 0)
-    S = S->getParent();
-
   DeclContext *DC = CurContext;
   if (D.getCXXScopeSpec().isInvalid())
     D.setInvalidType();
@@ -6439,7 +6432,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     }
   }
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType R = TInfo->getType();
 
   if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
@@ -6535,6 +6528,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // of a function declaration (C++ only).
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
+
+  // The scope passed in may not be a decl scope.  Zip up the scope tree until
+  // we find one that is.
+  while ((S->getFlags() & Scope::DeclScope) == 0 ||
+         (S->getFlags() & Scope::TemplateParamScope) != 0)
+    S = S->getParent();
 
   NamedDecl *New;
 
@@ -7069,8 +7068,7 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   if (WeakRefAttr *Attr = ND.getAttr<WeakRefAttr>()) {
     if (ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weakref_not_static);
-      ND.dropAttr<WeakRefAttr>();
-      ND.dropAttr<AliasAttr>();
+      ND.dropAttrs<WeakRefAttr, AliasAttr>();
     }
   }
 
@@ -9880,7 +9878,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (const CXXRecordDecl *Parent =
           dyn_cast<CXXRecordDecl>(NewFD->getDeclContext())) {
       if (Parent->isInterface() && cast<CXXMethodDecl>(NewFD)->isUserProvided())
-        NewFD->setPure(true);
+        NewFD->setIsPureVirtual(true);
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
@@ -10847,8 +10845,18 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
-        FriendConstraintsDependOnEnclosingTemplate(NewFD))
+        FriendConstraintsDependOnEnclosingTemplate(NewFD)) {
       NewFD->setFriendConstraintRefersToEnclosingTemplate(true);
+
+      // C++ [temp.friend]p9:
+      //    A friend function template with a constraint that depends on a
+      //    template parameter from an enclosing template shall be a definition.
+      if (!D.isFunctionDefinition()) {
+        Diag(NewFD->getBeginLoc(),
+             diag::err_friend_decl_with_enclosing_temp_constraint_must_be_def);
+        NewFD->setInvalidDecl();
+      }
+    }
 
     if (FunctionTemplate) {
       if (NewFD->isInvalidDecl())
@@ -12066,11 +12074,12 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         checkThisInStaticMemberFunctionType(Method);
     }
 
-    // C++20: dcl.decl.general p4:
-    // The optional requires-clause ([temp.pre]) in an init-declarator or
-    // member-declarator shall be present only if the declarator declares a
-    // templated function ([dcl.fct]).
     if (Expr *TRC = NewFD->getTrailingRequiresClause()) {
+      // C++20: dcl.decl.general p4:
+      // The optional requires-clause ([temp.pre]) in an init-declarator or
+      // member-declarator shall be present only if the declarator declares a
+      // templated function ([dcl.fct]).
+      //
       // [temp.pre]/8:
       // An entity is templated if it is
       // - a template,
@@ -12088,15 +12097,29 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // templated. A templated variable is a variable template or a variable
       // that is templated.
 
-      if (!NewFD->getDescribedFunctionTemplate() && // -a template
-          // defined... in a templated entity
+      bool IsTemplate = NewFD->getDescribedFunctionTemplate();
+      bool IsFriend = NewFD->getFriendObjectKind();
+      if (!IsTemplate && // -a template
+                         // defined... in a templated entity
           !(DeclIsDefn && NewFD->isTemplated()) &&
           // a member of a templated entity
           !(isa<CXXMethodDecl>(NewFD) && NewFD->isTemplated()) &&
           // Don't complain about instantiations, they've already had these
           // rules + others enforced.
-          !NewFD->isTemplateInstantiation()) {
+          !NewFD->isTemplateInstantiation() &&
+          // If the function violates [temp.friend]p9 because it is missing
+          // a definition, and adding a definition would make it templated,
+          // then let that error take precedence.
+          !(!DeclIsDefn && IsFriend && NewFD->isTemplated())) {
         Diag(TRC->getBeginLoc(), diag::err_constrained_non_templated_function);
+      } else if (!DeclIsDefn && !IsTemplate && IsFriend &&
+                 !NewFD->isTemplateInstantiation()) {
+        // C++ [temp.friend]p9:
+        //   A non-template friend declaration with a requires-clause shall be a
+        //   definition.
+        Diag(NewFD->getBeginLoc(),
+             diag::err_non_temp_friend_decl_with_requires_clause_must_be_def);
+        NewFD->setInvalidDecl();
       }
     }
 
@@ -12180,13 +12203,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   // Check if the function definition uses any AArch64 SME features without
   // having the '+sme' feature enabled.
   if (DeclIsDefn) {
+    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
-    bool UsesZA = NewFD->hasAttr<ArmNewZAAttr>();
+    bool UsesZA = Attr && Attr->isNewZA();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      UsesZA |= EPI.AArch64SMEAttributes & FunctionType::SME_PStateZASharedMask;
+      UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
+                FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {
@@ -13576,6 +13601,15 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
           CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), Args);
       if (RecoveryExpr.get())
         VDecl->setInit(RecoveryExpr.get());
+      // In general, for error recovery purposes, the initalizer doesn't play
+      // part in the valid bit of the declaration. There are a few exceptions:
+      //  1) if the var decl has a deduced auto type, and the type cannot be
+      //     deduced by an invalid initializer;
+      //  2) if the var decl is decompsition decl with a non-deduced type, and
+      //     the initialization fails (e.g. `int [a] = {1, 2};`);
+      // Case 1) was already handled elsewhere.
+      if (isa<DecompositionDecl>(VDecl)) // Case 2)
+        VDecl->setInvalidDecl();
       return;
     }
 
@@ -15046,7 +15080,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
 
   CheckFunctionOrTemplateParamDeclarator(S, D);
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType parmDeclType = TInfo->getType();
 
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
@@ -15168,6 +15202,37 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
       Diag(Parameter->getLocation(), diag::warn_parameter_size)
           << Parameter << Size;
   }
+}
+
+QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
+                                                      SourceLocation NameLoc,
+                                                      TypeSourceInfo *TSInfo) {
+  // In ARC, infer a lifetime qualifier for appropriate parameter types.
+  if (!getLangOpts().ObjCAutoRefCount ||
+      T.getObjCLifetime() != Qualifiers::OCL_None || !T->isObjCLifetimeType())
+    return T;
+
+  Qualifiers::ObjCLifetime Lifetime;
+
+  // Special cases for arrays:
+  //   - if it's const, use __unsafe_unretained
+  //   - otherwise, it's an error
+  if (T->isArrayType()) {
+    if (!T.isConstQualified()) {
+      if (DelayedDiagnostics.shouldDelayDiagnostics())
+        DelayedDiagnostics.add(sema::DelayedDiagnostic::makeForbiddenType(
+            NameLoc, diag::err_arc_array_param_no_ownership, T, false));
+      else
+        Diag(NameLoc, diag::err_arc_array_param_no_ownership)
+            << TSInfo->getTypeLoc().getSourceRange();
+    }
+    Lifetime = Qualifiers::OCL_ExplicitNone;
+  } else {
+    Lifetime = T->getObjCARCImplicitLifetime();
+  }
+  T = Context.getLifetimeQualifiedType(T, Lifetime);
+
+  return T;
 }
 
 ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
@@ -15847,13 +15912,26 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
+  return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
+         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+}
+
+bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
+  return methodHasName(FD, "get_return_object");
+}
+
+bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
+  return FD->isStatic() &&
+         methodHasName(FD, "get_return_object_on_allocation_failure");
+}
+
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
-  // Allow `get_return_object()`.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName().equals("get_return_object") && FD->param_empty())
+  // Allow some_promise_type::get_return_object().
+  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
@@ -15934,7 +16012,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
-      if (getLangOpts().MicrosoftExt && FD->isPure() && !FD->isOutOfLine())
+      if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
+          !FD->isOutOfLine())
         Diag(FD->getLocation(), diag::ext_pure_function_definition);
 
       if (!FD->isInvalidDecl()) {
@@ -18310,7 +18389,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
   SourceLocation Loc = DeclStart;
   if (II) Loc = D.getIdentifierLoc();
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
   if (getLangOpts().CPlusPlus) {
     CheckExtraCXXDefaultArguments(D);
@@ -18674,7 +18753,7 @@ Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
   // FIXME: Unnamed fields can be handled in various different ways, for
   // example, unnamed unions inject all members into the struct namespace!
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType T = TInfo->getType();
 
   if (BitWidth) {
@@ -20219,7 +20298,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
     // Adjust the APSInt value.
     InitVal = InitVal.extOrTrunc(NewWidth);
     InitVal.setIsSigned(NewSign);
-    ECD->setInitVal(InitVal);
+    ECD->setInitVal(Context, InitVal);
 
     // Adjust the Expr initializer and type.
     if (ECD->getInitExpr() &&

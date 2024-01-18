@@ -263,6 +263,9 @@ private:
       {{{"fputs"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, false), 1}},
+      {{{"fprintf"}},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFprintf, _1, _2, _3, _4), 0}},
       {{{"ungetc"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
@@ -338,6 +341,9 @@ private:
 
   void evalFputx(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C, bool IsSingleChar) const;
+
+  void evalFprintf(const FnDescription *Desc, const CallEvent &Call,
+                   CheckerContext &C) const;
 
   void evalUngetc(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
@@ -923,6 +929,49 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
   StreamState NewSS = StreamState::getOpened(Desc, ErrorFError, true);
   StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
+  C.addTransition(StateFailed);
+}
+
+void StreamChecker::evalFprintf(const FnDescription *Desc,
+                                const CallEvent &Call,
+                                CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  if (Call.getNumArgs() < 2)
+    return;
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+  SValBuilder &SVB = C.getSValBuilder();
+  auto &ACtx = C.getASTContext();
+  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ACtx.IntTy),
+                            SVB.getConditionType())
+                  .getAs<DefinedOrUnknownSVal>();
+  if (!Cond)
+    return;
+  ProgramStateRef StateNotFailed, StateFailed;
+  std::tie(StateNotFailed, StateFailed) = State->assume(*Cond);
+
+  StateNotFailed =
+      StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+  C.addTransition(StateNotFailed);
+
+  // Add transition for the failed state. The resulting value of the file
+  // position indicator for the stream is indeterminate.
+  StateFailed = StateFailed->set<StreamMap>(
+      StreamSym, StreamState::getOpened(Desc, ErrorFError, true));
   C.addTransition(StateFailed);
 }
 

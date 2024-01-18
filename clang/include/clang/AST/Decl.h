@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_DECL_H
 #define LLVM_CLANG_AST_DECL_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -2293,8 +2294,8 @@ public:
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return FunctionDeclBits.IsPure; }
-  void setPure(bool P = true);
+  bool isPureVirtual() const { return FunctionDeclBits.IsPureVirtual; }
+  void setIsPureVirtual(bool P = true);
 
   /// Whether this templated function will be late parsed.
   bool isLateTemplateParsed() const {
@@ -3251,15 +3252,16 @@ public:
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
-class EnumConstantDecl : public ValueDecl, public Mergeable<EnumConstantDecl> {
+class EnumConstantDecl : public ValueDecl,
+                         public Mergeable<EnumConstantDecl>,
+                         public APIntStorage {
   Stmt *Init; // an integer constant expression
-  llvm::APSInt Val; // The value.
+  bool IsUnsigned;
 
 protected:
-  EnumConstantDecl(DeclContext *DC, SourceLocation L,
+  EnumConstantDecl(const ASTContext &C, DeclContext *DC, SourceLocation L,
                    IdentifierInfo *Id, QualType T, Expr *E,
-                   const llvm::APSInt &V)
-    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt*)E), Val(V) {}
+                   const llvm::APSInt &V);
 
 public:
   friend class StmtIteratorBase;
@@ -3272,10 +3274,15 @@ public:
 
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
-  const llvm::APSInt &getInitVal() const { return Val; }
+  llvm::APSInt getInitVal() const {
+    return llvm::APSInt(getValue(), IsUnsigned);
+  }
 
   void setInitExpr(Expr *E) { Init = (Stmt*) E; }
-  void setInitVal(const llvm::APSInt &V) { Val = V; }
+  void setInitVal(const ASTContext &C, const llvm::APSInt &V) {
+    setValue(C, V);
+    IsUnsigned = V.isUnsigned();
+  }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 

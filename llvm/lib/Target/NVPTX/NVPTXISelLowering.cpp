@@ -1257,6 +1257,18 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::TexUnifiedCubeArrayU32Float";
   case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
     return "NVPTXISD::TexUnifiedCubeArrayU32FloatLevel";
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+    return "NVPTXISD::TexUnifiedCubeFloatFloatGrad";
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeS32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeU32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayS32FloatGrad";
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
+    return "NVPTXISD::TexUnifiedCubeArrayU32FloatGrad";
   case NVPTXISD::Tld4UnifiedR2DFloatFloat:
     return "NVPTXISD::Tld4UnifiedR2DFloatFloat";
   case NVPTXISD::Tld4UnifiedG2DFloatFloat:
@@ -1654,8 +1666,7 @@ std::string NVPTXTargetLowering::getPrototype(
   return Prototype;
 }
 
-Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
-                                                const CallBase *CB, Type *Ty,
+Align NVPTXTargetLowering::getArgumentAlignment(const CallBase *CB, Type *Ty,
                                                 unsigned Idx,
                                                 const DataLayout &DL) const {
   if (!CB) {
@@ -1782,7 +1793,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (IsVAArg)
         VAOffset = alignTo(VAOffset, ArgAlign);
     } else {
-      ArgAlign = getArgumentAlignment(Callee, CB, Ty, ParamCount + 1, DL);
+      ArgAlign = getArgumentAlignment(CB, Ty, ParamCount + 1, DL);
     }
 
     unsigned TypeSize =
@@ -1964,7 +1975,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           DeclareRetOps);
       InGlue = Chain.getValue(1);
     } else {
-      retAlignment = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
+      retAlignment = getArgumentAlignment(CB, RetTy, 0, DL);
       assert(retAlignment && "retAlignment is guaranteed to be set");
       SDVTList DeclareRetVTs = DAG.getVTList(MVT::Other, MVT::Glue);
       SDValue DeclareRetOps[] = {
@@ -2095,7 +2106,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, RetTy, VTs, &Offsets, 0);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    Align RetAlign = getArgumentAlignment(Callee, CB, RetTy, 0, DL);
+    Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
     auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, RetAlign);
 
     SmallVector<EVT, 6> LoadVTs;
@@ -2387,8 +2398,10 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
   SDValue V2 = Op.getOperand(1);
   uint32_t Selector = 0;
-  for (auto I : llvm::enumerate(SVN->getMask()))
-    Selector |= (I.value() << (I.index() * 4));
+  for (auto I : llvm::enumerate(SVN->getMask())) {
+    if (I.value() != -1) // -1 is a placeholder for undef.
+      Selector |= (I.value() << (I.index() * 4));
+  }
 
   SDLoc DL(Op);
   return DAG.getNode(NVPTXISD::PRMT, DL, MVT::v4i8, V1, V2,
@@ -3652,6 +3665,19 @@ static unsigned getOpcForTextureInstr(unsigned Intrinsic) {
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4u32_f32:
     return NVPTXISD::TexUnifiedCubeArrayU32FloatLevel;
 
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4f32_f32:
+    return NVPTXISD::TexUnifiedCubeFloatFloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4s32_f32:
+    return NVPTXISD::TexUnifiedCubeS32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4u32_f32:
+    return NVPTXISD::TexUnifiedCubeU32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4f32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4s32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayS32FloatGrad;
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4u32_f32:
+    return NVPTXISD::TexUnifiedCubeArrayU32FloatGrad;
+
   case Intrinsic::nvvm_tld4_unified_r_2d_v4f32_f32:
     return NVPTXISD::Tld4UnifiedR2DFloatFloat;
   case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
@@ -4536,6 +4562,8 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tex_unified_cube_level_v4f32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_v4f32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4f32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4f32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_r_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_g_2d_v4f32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4f32_f32:
@@ -4652,6 +4680,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tex_unified_cube_level_v4u32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_v4u32_f32:
   case Intrinsic::nvvm_tex_unified_cube_array_level_v4u32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4s32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_grad_v4u32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4s32_f32:
+  case Intrinsic::nvvm_tex_unified_cube_array_grad_v4u32_f32:
   case Intrinsic::nvvm_tld4_unified_r_2d_v4s32_f32:
   case Intrinsic::nvvm_tld4_unified_g_2d_v4s32_f32:
   case Intrinsic::nvvm_tld4_unified_b_2d_v4s32_f32:
@@ -5262,9 +5294,7 @@ static SDValue PerformANDCombine(SDNode *N,
       return SDValue();
     }
 
-    unsigned ExtType =
-      cast<ConstantSDNode>(Val->getOperand(Val->getNumOperands()-1))->
-        getZExtValue();
+    unsigned ExtType = Val->getConstantOperandVal(Val->getNumOperands() - 1);
     if (ExtType == ISD::SEXTLOAD) {
       // If for some reason the load is a sextload, the and is needed to zero
       // out the high 8 bits

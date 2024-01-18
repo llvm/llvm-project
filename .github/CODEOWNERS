@@ -68,14 +68,14 @@
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
 
 # Vector Dialect in MLIR.
-/mlir/**/*AMX* @dcaballe
+/mlir/**/*AMX* @aartbik @dcaballe
 /mlir/**/*Neon* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @nicolasvasilache @matthias-springer
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
-/mlir/**/*X86Vector* @dcaballe @nicolasvasilache
+/mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
 /mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -98,3 +98,6 @@
 /mlir/**/SPIRVTo*/ @antiagainst @kuhar
 /mlir/**/*ToSPIRV/ @antiagainst @kuhar
 /mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
+
+# MLIR Sparsifier.
+/mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer

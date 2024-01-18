@@ -3896,7 +3896,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setLexicalDeclContext(LexicalDC);
   ToFunction->setVirtualAsWritten(D->isVirtualAsWritten());
   ToFunction->setTrivial(D->isTrivial());
-  ToFunction->setPure(D->isPure());
+  ToFunction->setIsPureVirtual(D->isPureVirtual());
   ToFunction->setDefaulted(D->isDefaulted());
   ToFunction->setExplicitlyDefaulted(D->isExplicitlyDefaulted());
   ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
@@ -6280,17 +6280,21 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
                                               D->getTemplatedDecl()))
         continue;
       if (IsStructuralMatch(D, FoundTemplate)) {
-        // The Decl in the "From" context has a definition, but in the
-        // "To" context we already have a definition.
+        // FIXME Check for ODR error if the two definitions have
+        // different initializers?
         VarTemplateDecl *FoundDef = getTemplateDefinition(FoundTemplate);
-        if (D->isThisDeclarationADefinition() && FoundDef)
-          // FIXME Check for ODR error if the two definitions have
-          // different initializers?
-          return Importer.MapImported(D, FoundDef);
-        if (FoundTemplate->getDeclContext()->isRecord() &&
-            D->getDeclContext()->isRecord())
-          return Importer.MapImported(D, FoundTemplate);
-
+        if (D->getDeclContext()->isRecord()) {
+          assert(FoundTemplate->getDeclContext()->isRecord() &&
+                 "Member variable template imported as non-member, "
+                 "inconsistent imported AST?");
+          if (FoundDef)
+            return Importer.MapImported(D, FoundDef);
+          if (!D->isThisDeclarationADefinition())
+            return Importer.MapImported(D, FoundTemplate);
+        } else {
+          if (FoundDef && D->isThisDeclarationADefinition())
+            return Importer.MapImported(D, FoundDef);
+        }
         FoundByLookup = FoundTemplate;
         break;
       }

@@ -2755,7 +2755,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
                                    IsExplicitSpecialization,
                                    Method->isThisDeclarationADefinition());
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     SemaRef.CheckPureMethod(Method, SourceRange());
 
   // Propagate access.  For a non-friend declaration, the access is
@@ -3056,16 +3056,21 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
         D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), DI);
 
   if (AutoTypeLoc AutoLoc = DI->getTypeLoc().getContainedAutoTypeLoc())
-    if (AutoLoc.isConstrained())
+    if (AutoLoc.isConstrained()) {
+      SourceLocation EllipsisLoc;
+      if (IsExpandedParameterPack)
+        EllipsisLoc =
+            DI->getTypeLoc().getAs<PackExpansionTypeLoc>().getEllipsisLoc();
+      else if (auto *Constraint = dyn_cast_if_present<CXXFoldExpr>(
+                   D->getPlaceholderTypeConstraint()))
+        EllipsisLoc = Constraint->getEllipsisLoc();
       // Note: We attach the uninstantiated constriant here, so that it can be
-      // instantiated relative to the top level, like all our other constraints.
-      if (SemaRef.AttachTypeConstraint(
-              AutoLoc, Param, D,
-              IsExpandedParameterPack
-                ? DI->getTypeLoc().getAs<PackExpansionTypeLoc>()
-                    .getEllipsisLoc()
-                : SourceLocation()))
+      // instantiated relative to the top level, like all our other
+      // constraints.
+      if (SemaRef.AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/Param,
+                                       /*OrigConstrainedParm=*/D, EllipsisLoc))
         Invalid = true;
+    }
 
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());

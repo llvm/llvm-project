@@ -4236,19 +4236,34 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
     // handle PhysicalStorageBuffer64 memory model
     if (T.isDXIL() || T.isSPIRVLogical()) {
-      enum { ShaderModel, ShaderStage };
+      enum { ShaderModel, VulkanEnv, ShaderStage };
+      enum { OS, Environment };
+
+      int ExpectedOS = T.isSPIRVLogical() ? VulkanEnv : ShaderModel;
+
       if (T.getOSName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderModel << T.str();
-      } else if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
-        Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-            << ShaderModel << T.getOSName() << T.str();
+            << ExpectedOS << OS << T.str();
       } else if (T.getEnvironmentName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderStage << T.str();
+            << ShaderStage << Environment << T.str();
       } else if (!T.isShaderStageEnvironment()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
             << ShaderStage << T.getEnvironmentName() << T.str();
+      }
+
+      if (T.isDXIL()) {
+        if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << ShaderModel << T.getOSName() << T.str();
+        }
+      } else if (T.isSPIRVLogical()) {
+        if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << VulkanEnv << T.getOSName() << T.str();
+        }
+      } else {
+        llvm_unreachable("expected DXIL or SPIR-V target");
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
