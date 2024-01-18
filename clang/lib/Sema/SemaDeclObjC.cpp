@@ -1628,7 +1628,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     }
 
     // Convert this to a type.
-    return ActOnTypeName(S, D);
+    return ActOnTypeName(D);
   };
 
   // Local function that updates the declaration specifiers with
@@ -5265,7 +5265,7 @@ Decl *Sema::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType ExceptionType = TInfo->getType();
 
   VarDecl *New = BuildObjCExceptionDecl(TInfo, ExceptionType,

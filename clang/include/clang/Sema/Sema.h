@@ -2158,7 +2158,7 @@ public:
                          SourceLocation Loc);
   QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
 
-  TypeSourceInfo *GetTypeForDeclarator(Declarator &D, Scope *S);
+  TypeSourceInfo *GetTypeForDeclarator(Declarator &D);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
 
   /// Package the given type and TSI into a ParsedType.
@@ -2199,7 +2199,7 @@ public:
       SourceLocation TargetLoc, const FunctionProtoType *Source,
       bool SkipSourceFirstParameter, SourceLocation SourceLoc);
 
-  TypeResult ActOnTypeName(Scope *S, Declarator &D);
+  TypeResult ActOnTypeName(Declarator &D);
 
   /// The parser has parsed the context-sensitive type 'instancetype'
   /// in an Objective-C message declaration. Return the appropriate type.
