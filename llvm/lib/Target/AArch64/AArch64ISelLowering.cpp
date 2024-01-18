@@ -7675,8 +7675,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If caller shares ZT0 but the callee is not shared ZA, we need to stop
   // PSTATE.ZA before the call if there is no lazy-save active.
-  bool ToggleZA = !RequiresLazySave && CallerAttrs.sharesZT0() &&
-                  CalleeAttrs.hasPrivateZAInterface();
+  bool ToggleZA = CallerAttrs.requiresZAToggle(CalleeAttrs);
+
+  assert((!ToggleZA || !RequiresLazySave) &&
+       "Lazy-save should have PSTATE.SM=1 on entry to the function");
+
   if (ToggleZA)
     Chain = DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other, Chain,

@@ -122,6 +122,10 @@ public:
   bool requiresPreservingZT0(const SMEAttrs &Callee) const {
     return hasZT0State() && !Callee.sharesZT0();
   }
+  bool requiresZAToggle(const SMEAttrs &Callee) const {
+    return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface();
+
+  }
 };
 
 } // namespace llvm

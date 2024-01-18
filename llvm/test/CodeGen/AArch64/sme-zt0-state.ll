@@ -6,6 +6,7 @@ declare void @no_state_callee();
 
 ; Callees with ZT0 state
 declare void @zt0_shared_callee() "aarch64_in_zt0";
+declare void @zt0_new_callee() "aarch64_new_zt0";
 
 ; Callees with ZA state
 
@@ -138,5 +139,27 @@ define void @za_zt0_shared_caller_za_zt0_shared_callee() "aarch64_pstate_za_shar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @za_zt0_shared_callee();
+  ret void;
+}
+
+; New-ZA Callee
+
+; Expect spill & fill of ZT0 around call
+; Expect smstop/smstart za around call
+define void @zt0_in_caller_zt0_new_callee() "aarch64_in_zt0" nounwind {
+; CHECK-LABEL: zt0_in_caller_zt0_new_callee:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    str zt0, [x19]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    bl zt0_new_callee
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+  call void @zt0_new_callee();
   ret void;
 }
