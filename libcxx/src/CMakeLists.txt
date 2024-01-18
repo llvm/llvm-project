@@ -400,12 +400,13 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
       set(header_install_target install-cxx-headers)
     endif()
     if(LIBCXX_INSTALL_MODULE_INTERFACE_UNIT_SOURCES)
-      set(header_install_target install-cxx-modules)
+      set(module_install_target install-cxx-modules)
     endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -413,6 +414,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

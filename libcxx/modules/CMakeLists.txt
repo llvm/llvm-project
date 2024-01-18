@@ -183,6 +183,7 @@ add_custom_target(generate-cxx-modules
     ${_all_modules}
 )
 
+# Configure the modules manifest.
 # Use the relative path between the installation and the module in the json
 # file. This allows moving the entire installation to a different location.
 file(RELATIVE_PATH LIBCXX_MODULE_RELATIVE_PATH
@@ -232,6 +233,6 @@ if (LIBCXX_INSTALL_MODULE_INTERFACE_UNIT_SOURCES)
                               -DCMAKE_INSTALL_COMPONENT=cxx-modules
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     # Stripping is a no-op for modules
-    add_custom_target(install-cxx-modules-stripped DEPENDS install-cxx-headers)
+    add_custom_target(install-cxx-modules-stripped DEPENDS install-cxx-modules)
   endif()
 endif()
