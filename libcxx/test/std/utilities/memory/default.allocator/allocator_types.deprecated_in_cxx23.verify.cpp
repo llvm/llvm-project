@@ -20,13 +20,14 @@
 
 #include <memory>
 
-template <typename T>
-void check() {
-  typedef std::allocator<T>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
-}
-
 void test() {
-  check<char>();
-  check<char const>();
-  check<void>();
+  {
+    typedef std::allocator<char>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
+  }
+  {
+    typedef std::allocator<const char>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
+  }
+  {
+    typedef std::allocator<void>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
+  }
 }
