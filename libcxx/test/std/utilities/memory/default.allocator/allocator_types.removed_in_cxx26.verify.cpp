@@ -10,7 +10,7 @@
 
 // <memory>
 
-// Check that the following nested types are removed in C++20:
+// Check that the following nested types are removed in C++26:
 
 // template <class T>
 // class allocator

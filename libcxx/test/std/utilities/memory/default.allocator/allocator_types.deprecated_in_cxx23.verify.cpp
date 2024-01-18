@@ -22,7 +22,7 @@
 
 template <typename T>
 void check() {
-  typedef std::allocator<char>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
+  typedef std::allocator<T>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
 }
 
 void test() {
