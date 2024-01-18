@@ -113,6 +113,7 @@ class module_test_generator:
     clang_tidy_plugin: str
     compiler: str
     compiler_flags: str
+    module: str
 
     def write_lit_configuration(self):
         print(
@@ -120,12 +121,12 @@ class module_test_generator:
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: clang-modules-build
 
-// XFAIL: *
-
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// MODULE_DEPENDENCIES: {self.module}
 
 // RUN: echo -n > {self.tmp_prefix}.all_partitions
 """

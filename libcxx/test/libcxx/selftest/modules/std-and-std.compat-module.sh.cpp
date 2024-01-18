@@ -12,13 +12,11 @@
 
 // XFAIL: has-no-cxx-module-support
 
-// A minimal test to validate import works.
+// Make sure that the compile flags contain the expected elements.
+// The tests only look for the expected components and not the exact flags.
+// Otherwise changing the location of the module would break this test.
 
-// MODULE_DEPENDENCIES: std
+// MODULE_DEPENDENCIES: std std.compat
 
-import std;
-
-int main(int, char**) {
-  std::println("Hello modular world");
-  return 0;
-}
+// RUN: echo "%{compile_flags}" | grep -- "-fmodule-file=std=.*/std.pcm .*/std.pcm"
+// RUN: echo "%{compile_flags}" | grep -- "-fmodule-file=std.compat=.*/std.compat.pcm .*/std.compat.pcm"

@@ -317,6 +317,18 @@ DEFAULT_FEATURES = [
             AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
         ],
     ),
+    # Whether module support for the platform is available.
+    Feature(
+        name="has-no-cxx-module-support",
+        # The libc of these platforms have functions with internal linkage.
+        # This is not allowed per C11 7.1.2 Standard headers/6
+        #  Any declaration of a library function shall have external linkage.
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "__PICOLIBC__" in compilerMacros(cfg)
+        or platform.system().lower().startswith("aix")
+        # Avoid building on platforms that don't support modules properly.
+        or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
+    ),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
