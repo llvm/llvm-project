@@ -319,6 +319,11 @@ namespace dr1872 { // dr1872: 9
 
 namespace dr1878 { // dr1878: 18
 #if __cplusplus >= 201402L
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
 struct S {
   template <typename T>
   operator auto() const { return short(); }
@@ -327,8 +332,19 @@ struct S {
   operator const auto() const { return int(); }
   // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
   template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
   operator decltype(auto)() const { return unsigned(); }
   // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
 };
 #endif
 }
