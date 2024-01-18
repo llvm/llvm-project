@@ -34,6 +34,12 @@ using namespace clang;
 #define CLANG_INTERPRETER_NO_SUPPORT_EXEC
 #endif
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+#else
+extern "C" void __lsan_ignore_object(const void *p) {}
+#endif
+
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
 REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
@@ -311,6 +317,8 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto fn =
       cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
   EXPECT_EQ(42, fn(NewA.getPtr()));
+  // FIXME: release the memory.
+  __lsan_ignore_object(NewA.getPtr());
 }
 
 #ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
