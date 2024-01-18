@@ -25,7 +25,7 @@ body:             |
     ; GCN-NEXT: $vgpr48_vgpr49_vgpr50 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51 :: (load (s96) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr52, implicit $vgpr53, implicit $vgpr54, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr52, implicit $vgpr53, implicit $vgpr54, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
 ...
 
@@ -52,7 +52,7 @@ body:             |
     ; GCN-NEXT: $vgpr48_vgpr49 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr52, implicit $vgpr53, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr52, implicit $vgpr53, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
 ...
 
@@ -81,7 +81,7 @@ body:             |
     ; GCN-NEXT: $vgpr48 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51 :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr52, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $vgpr48_vgpr49_vgpr50_vgpr51 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr52, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
 ...
 
@@ -110,7 +110,7 @@ body:             |
     ; GCN-NEXT: $vgpr52 = COPY $vgpr3, implicit $vgpr52_vgpr53_vgpr54_vgpr55
     ; GCN-NEXT: S_ENDPGM 0
     SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $vgpr52_vgpr53_vgpr54_vgpr55 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $vgpr52_vgpr53_vgpr54_vgpr55 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...
 
@@ -135,7 +135,7 @@ body:             |
     ; GCN-NEXT: $agpr26_agpr27_agpr28 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr26_agpr27_agpr28_agpr29 :: (load (s96) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25
 ...
 
@@ -162,7 +162,7 @@ body:             |
     ; GCN-NEXT: $agpr26_agpr27 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr26_agpr27_agpr28_agpr29 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25
 ...
 
@@ -191,7 +191,7 @@ body:             |
     ; GCN-NEXT: $agpr26 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr26_agpr27_agpr28_agpr29 :: (load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr26_agpr27_agpr28_agpr29 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24
 ...
 
@@ -220,6 +220,6 @@ body:             |
     ; GCN-NEXT: $agpr0 = COPY $agpr7, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN-NEXT: S_ENDPGM 0
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...

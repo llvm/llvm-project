@@ -25,7 +25,7 @@ body:             |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 8, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: undef %9.sub1:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
     ; CHECK-NEXT: S_NOP 0, implicit %9.sub1
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_NOP 0, implicit [[SI_SPILL_V64_RESTORE]].sub0
     ; CHECK-NEXT: undef %7.sub1:vreg_64 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
     ; CHECK-NEXT: S_NOP 0, implicit %7.sub1
@@ -65,11 +65,11 @@ body:             |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR undef $sgpr0_sgpr1, undef %5:vgpr_32, 8, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: SI_SPILL_V64_SAVE [[GLOBAL_LOAD_DWORDX2_SADDR2]], %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_NOP 0, implicit-def [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.1, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
     ; CHECK-NEXT: undef %13.sub0:vreg_64 = COPY [[SI_SPILL_V64_RESTORE]].sub0
     ; CHECK-NEXT: S_NOP 0, implicit-def %13.sub1
     ; CHECK-NEXT: undef %15.sub0:vreg_64 = COPY %13.sub0
-    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V64_RESTORE1:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: undef %7.sub1:vreg_64 = COPY [[SI_SPILL_V64_RESTORE1]].sub1
     ; CHECK-NEXT: S_NOP 0, implicit-def %7.sub0
     ; CHECK-NEXT: undef %9.sub1:vreg_64 = COPY %7.sub1
