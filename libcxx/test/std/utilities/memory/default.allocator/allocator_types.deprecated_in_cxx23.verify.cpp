@@ -30,15 +30,3 @@ void test() {
   check<char const>();
   check<void>();
 }
-
-// void f() {
-//   {
-//     typedef std::allocator<char>::is_always_equal IAE; // _expected-warning {{'is_always_equal' is deprecated}}
-//   }
-//   {
-//     typedef std::allocator<char const>::is_always_equal IAE; // _expected-warning {{'is_always_equal' is deprecated}}
-//   }
-//   {
-//     typedef std::allocator<void>::is_always_equal IAE; // _expected-warning {{'is_always_equal' is deprecated}}
-//   }
-// }
