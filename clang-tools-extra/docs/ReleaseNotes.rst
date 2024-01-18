@@ -140,7 +140,7 @@ New checks
   <clang-tidy/checks/bugprone/chained-comparison>` check.
 
   Check detects chained comparison operators that can lead to unintended
-  behavior or logical errors in C++ code.
+  behavior or logical errors.
 
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.

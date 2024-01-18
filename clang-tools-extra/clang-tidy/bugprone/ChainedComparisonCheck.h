@@ -14,7 +14,7 @@
 namespace clang::tidy::bugprone {
 
 /// Check detects chained comparison operators that can lead to unintended
-/// behavior or logical errors in C++ code.
+/// behavior or logical errors.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/chained-comparison.html
@@ -24,9 +24,6 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
-  }
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }

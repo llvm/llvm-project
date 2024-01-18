@@ -4,7 +4,7 @@ bugprone-chained-comparison
 ===========================
 
 Check detects chained comparison operators that can lead to unintended
-behavior or logical errors in C++ code.
+behavior or logical errors.
 
 Chained comparisons are expressions that use multiple comparison operators
 to compare three or more values. For example, the expression ``a < b < c``
