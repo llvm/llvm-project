@@ -280,34 +280,12 @@ def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   ];
 }
 
-def TypeConversionOpInterface : OpInterface<"TypeConversionOpInterface"> {
-  let description = [{
-    This interface should be implemented by ops that populate type casting
-    of a `transform.cast_and_inline` op. It provides a method to populate a
-    type converter with source/target materialization patterns.
-  }];
-
-  let cppNamespace = "::mlir::transform";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/[{
-        Populate the given type converter with source/target materialization
-        functions.
-      }],
-      /*returnType=*/"void",
-      /*name=*/"populateTypeMaterializations",
-      /*arguments=*/(ins "::mlir::TypeConverter &":$converter)
-    >
-  ];
-}
-
 def TypeConverterBuilderOpInterface
     : OpInterface<"TypeConverterBuilderOpInterface"> {
   let description = [{
     This interface should be implemented by ops that specify a type converter
-    for a dialect conversion. Such ops can be used with
-    "apply_conversion_patterns".
+    for a dialect conversion, or to populate a type converter with
+    conversions. Such ops can be used with "apply_conversion_patterns".
   }];
 
   let cppNamespace = "::mlir::transform";
@@ -319,7 +297,11 @@ def TypeConverterBuilderOpInterface
       }],
       /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
       /*name=*/"getTypeConverter",
-      /*arguments=*/(ins)
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return std::make_unique<::mlir::TypeConverter>();
+      }]
     >,
     StaticInterfaceMethod<
       /*desc=*/[{
@@ -331,6 +313,17 @@ def TypeConverterBuilderOpInterface
       /*arguments=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return "TypeConverter"; }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate the given type converter with source/target materialization
+        functions.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populateTypeMaterializations",
+      /*arguments=*/(ins "::mlir::TypeConverter &":$converter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return; }]
     >,
   ];
 }

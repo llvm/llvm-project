@@ -131,11 +131,11 @@ void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// TypeConversionCastOp
+// TypeConversionCastTensorShapeOp
 //===----------------------------------------------------------------------===//
 
-void transform::TypeConversionCastOp::populateTypeMaterializations(
-    TypeConverter &converter) {
+void transform::TypeConversionCastShapeDynamicDimsOp::
+    populateTypeMaterializations(TypeConverter &converter) {
   bool ignoreDynamicInfo = getIgnoreDynamicInfo();
   converter.addSourceMaterialization([ignoreDynamicInfo](
                                          OpBuilder &builder, Type resultType,

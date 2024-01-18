@@ -47,21 +47,19 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
                                 transform::TransformState &state) {
   SmallVector<Value> inputs;
   if (getInputs())
-    for (Value input : state.getPayloadValues(getInputs()))
-      inputs.push_back(input);
-  SmallVector<Value> outputs;
-  if (getOutputs())
-    for (Value output : state.getPayloadValues(getOutputs()))
-      outputs.push_back(output);
+    llvm::append_range(inputs, state.getPayloadValues(getInputs()));
 
-  // Verify that the set of output values to be replaced is unique.
-  llvm::SmallDenseSet<Value> outputSet;
-  for (Value output : outputs) {
-    outputSet.insert(output);
-  }
-  if (outputSet.size() != outputs.size()) {
-    return emitSilenceableFailure(getLoc())
-           << "cast and call output values must be unique";
+  SetVector<Value> outputs;
+  if (getOutputs()) {
+    for (auto output : state.getPayloadValues(getOutputs()))
+      outputs.insert(output);
+
+    // Verify that the set of output values to be replaced is unique.
+    if (outputs.size() !=
+        llvm::range_size(state.getPayloadValues(getOutputs()))) {
+      return emitSilenceableFailure(getLoc())
+             << "cast and call output values must be unique";
+    }
   }
 
   // Get the insertion point for the call.
@@ -106,7 +104,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
     }
   }
 
-  // Get the function to inline. This can either be specified by symbol or as a
+  // Get the function to call. This can either be specified by symbol or as a
   // transform handle.
   func::FuncOp targetFunction = nullptr;
   if (getFunctionName()) {
@@ -129,7 +127,6 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
     llvm_unreachable("Invalid CastAndCall op without a function to call");
     return emitDefiniteFailure();
   }
-  assert(targetFunction && "no target function found");
 
   // Verify that the function argument and result lengths match the inputs and
   // outputs given to this op.
@@ -147,37 +144,34 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Gather all specified converters.
-  MLIRContext *ctx = insertionPoint->getContext();
   mlir::TypeConverter converter;
   if (!getRegion().empty()) {
     for (Operation &op : getRegion().front()) {
-      cast<transform::TypeConversionOpInterface>(&op)
+      cast<transform::TypeConverterBuilderOpInterface>(&op)
           .populateTypeMaterializations(converter);
     }
   }
 
-  OpBuilder builder(ctx);
   if (insertAfter)
-    builder.setInsertionPointAfter(insertionPoint);
+    rewriter.setInsertionPointAfter(insertionPoint);
   else
-    builder.setInsertionPoint(insertionPoint);
+    rewriter.setInsertionPoint(insertionPoint);
 
   for (auto [input, type] :
        llvm::zip_equal(inputs, targetFunction.getArgumentTypes())) {
     if (input.getType() != type) {
       Value newInput = converter.materializeSourceConversion(
-          builder, input.getLoc(), type, input);
+          rewriter, input.getLoc(), type, input);
       if (!newInput) {
-        return emitSilenceableFailure(input.getLoc())
-               << "Failed to materialize conversion of " << input << " to type "
-               << type;
+        return emitDefiniteFailure() << "Failed to materialize conversion of "
+                                     << input << " to type " << type;
       }
       input = newInput;
     }
   }
 
-  auto callOp = builder.create<func::CallOp>(insertionPoint->getLoc(),
-                                             targetFunction, inputs);
+  auto callOp = rewriter.create<func::CallOp>(insertionPoint->getLoc(),
+                                              targetFunction, inputs);
 
   // Cast the call results back to the expected types. If any conversions fail
   // this is a definite failure as the call has been constructed at this point.
@@ -186,14 +180,14 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
     Value convertedOutput = newOutput;
     if (output.getType() != newOutput.getType()) {
       convertedOutput = converter.materializeTargetConversion(
-          builder, output.getLoc(), output.getType(), newOutput);
+          rewriter, output.getLoc(), output.getType(), newOutput);
       if (!convertedOutput) {
-        return emitSilenceableFailure(output.getLoc())
+        return emitDefiniteFailure()
                << "Failed to materialize conversion of " << newOutput
                << " to type " << output.getType();
       }
     }
-    output.replaceAllUsesExcept(convertedOutput, callOp);
+    rewriter.replaceAllUsesExcept(output, convertedOutput, callOp);
   }
   results.set(cast<OpResult>(getResult()), {callOp});
   return DiagnosedSilenceableFailure::success();
@@ -202,10 +196,10 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
 LogicalResult transform::CastAndCallOp::verify() {
   if (!getRegion().empty()) {
     for (Operation &op : getRegion().front()) {
-      if (!isa<transform::TypeConversionOpInterface>(&op)) {
+      if (!isa<transform::TypeConverterBuilderOpInterface>(&op)) {
         InFlightDiagnostic diag = emitOpError()
                                   << "expected children ops to implement "
-                                     "TypeConversionOpInterface";
+                                     "TypeConverterBuilderOpInterface";
         diag.attachNote(op.getLoc()) << "op without interface";
         return diag;
       }

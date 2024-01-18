@@ -169,12 +169,17 @@ def MakeLoopIndependentOp
   }];
 }
 
-def TypeConversionCastOp : Op<Transform_Dialect,
-    "type_conversion.tensor.cast",
-    [DeclareOpInterfaceMethods<TypeConversionOpInterface>]> {
+def TypeConversionCastShapeDynamicDimsOp : Op<Transform_Dialect,
+    "type_conversion.tensor.cast_shape_dynamic_dims",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["populateTypeMaterializations"]>]> {
   let description = [{
-    Indicates that tensor ops (such as tensor.generate) should be replaced with
-    constants (arith.constant) when possible.
+    Populates a type converter with conversion materialization functions that
+    cast a tensor value between two cast-compatible tensors. See `tensor.cast`
+    for more information on cast compatibility between tensors.
+
+    If `ignore_dynamic_info` is not set, this will set an additional constraint
+    that source materializations do not cast dynamic dimensions to static ones.
   }];
   let arguments = (ins UnitAttr:$ignore_dynamic_info);
 

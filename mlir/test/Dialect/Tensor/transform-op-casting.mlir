@@ -12,10 +12,10 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %concat = transform.structured.match ops{["tensor.concat"]} in %f#0 : (!transform.any_op) -> !transform.any_op
-    %ins = transform.get_operand %concat : (!transform.any_op) -> !transform.any_value
-    %out = transform.get_result %concat : (!transform.any_op) -> !transform.any_value
+    %ins = transform.get_operand %concat[all] : (!transform.any_op) -> !transform.any_value
+    %out = transform.get_result %concat[all] : (!transform.any_op) -> !transform.any_value
     transform.func.cast_and_call %f#1(%ins) -> %out before %concat {
-      transform.type_conversion.tensor.cast
+      transform.type_conversion.tensor.cast_shape_dynamic_dims
     } : (!transform.any_op, !transform.any_value,
          !transform.any_value, !transform.any_op) -> !transform.any_op
     transform.apply_dce to %f#0 : !transform.any_op
@@ -46,10 +46,10 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %concat = transform.structured.match ops{["tensor.collapse_shape"]} in %f#0 : (!transform.any_op) -> !transform.any_op
-    %ins = transform.get_operand %concat : (!transform.any_op) -> !transform.any_value
-    %out = transform.get_result %concat : (!transform.any_op) -> !transform.any_value
+    %ins = transform.get_operand %concat[all] : (!transform.any_op) -> !transform.any_value
+    %out = transform.get_result %concat[all] : (!transform.any_op) -> !transform.any_value
     transform.func.cast_and_call %f#1(%ins) -> %out before %concat {
-      transform.type_conversion.tensor.cast ignore_dynamic_info
+      transform.type_conversion.tensor.cast_shape_dynamic_dims ignore_dynamic_info
     } : (!transform.any_op, !transform.any_value,
          !transform.any_value, !transform.any_op) -> !transform.any_op
     transform.apply_dce to %f#0 : !transform.any_op
