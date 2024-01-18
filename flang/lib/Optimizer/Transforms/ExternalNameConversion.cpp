@@ -76,7 +76,7 @@ public:
   matchAndRewrite(mlir::func::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::LogicalResult ret = success();
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     llvm::StringRef oldName = op.getSymName();
     auto result = fir::NameUniquer::deconstruct(oldName);
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
@@ -95,7 +95,7 @@ public:
     }
 
     updateEarlyOutliningParentName(op, appendUnderscore);
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return ret;
   }
 
@@ -114,7 +114,7 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     auto result = fir::NameUniquer::deconstruct(
         op.getSymref().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
@@ -122,7 +122,7 @@ public:
       op.setSymrefAttr(mlir::SymbolRefAttr::get(op.getContext(), newName));
       SymbolTable::setSymbolName(op, newName);
     }
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     return success();
   }
 

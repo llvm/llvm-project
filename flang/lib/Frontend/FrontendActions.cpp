@@ -769,7 +769,6 @@ getRISCVVScaleRange(CompilerInstance &ci) {
 // too much of clang, so for now, replicate the functionality.
 static std::optional<std::pair<unsigned, unsigned>>
 getVScaleRange(CompilerInstance &ci) {
-  const auto &langOpts = ci.getInvocation().getLangOpts();
   const llvm::Triple triple(ci.getInvocation().getTargetOpts().triple);
 
   if (triple.isAArch64())
@@ -777,10 +776,8 @@ getVScaleRange(CompilerInstance &ci) {
   if (triple.isRISCV())
     return getRISCVVScaleRange(ci);
 
-  if (langOpts.VScaleMin || langOpts.VScaleMax)
-    return std::pair<unsigned, unsigned>(
-        langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
-
+  // All other architectures that don't support scalable vectors (i.e. don't
+  // need vscale)
   return std::nullopt;
 }
 

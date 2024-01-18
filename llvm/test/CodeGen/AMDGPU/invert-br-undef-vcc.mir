@@ -1,4 +1,4 @@
-# RUN: llc -run-pass block-placement -march=amdgcn -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -run-pass block-placement -mtriple=amdgcn -verify-machineinstrs -o - %s | FileCheck %s
 --- |
 
   define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) #0 {
