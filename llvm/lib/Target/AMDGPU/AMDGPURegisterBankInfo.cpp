@@ -450,8 +450,6 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
   const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
                        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
   const unsigned MemSize = 8 * MMO->getSize();
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const GCNSubtarget &Subtarget = MF->getSubtarget<GCNSubtarget>();
 
   // Require 4-byte alignment.
   return (MMO->getAlign() >= Align(4) ||
@@ -4919,9 +4917,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
-    case Intrinsic::amdgcn_flat_atomic_cond_sub_u32:
-    case Intrinsic::amdgcn_global_atomic_cond_sub_u32:
-    case Intrinsic::amdgcn_ds_cond_sub_u32:
+    case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:

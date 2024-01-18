@@ -2768,7 +2768,8 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: { // __real x
-    assert(!T);
+    if (T)
+      return this->delegate(SubExpr);
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(0, E))
@@ -2783,7 +2784,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return true;
   }
   case UO_Imag: { // __imag x
-    assert(!T);
+    if (T) {
+      if (!this->discard(SubExpr))
+        return false;
+      return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+    }
     if (!this->visit(SubExpr))
       return false;
     if (!this->emitConstUint8(1, E))

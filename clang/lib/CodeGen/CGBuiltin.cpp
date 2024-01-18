@@ -1019,7 +1019,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   FAMSize = Builder.CreateIntCast(FAMSize, ResType, IsSigned);
   Value *Res = FAMSize;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+  if (isa<DeclRefExpr>(Base)) {
     // The whole struct is specificed in the __bdos.
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
 
@@ -13287,7 +13287,7 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     const auto *DR = cast<DeclRefExpr>(CE->getSubExpr());
     const auto *Enumerator = cast<EnumConstantDecl>(DR->getDecl());
 
-    auto &InitVal = Enumerator->getInitVal();
+    auto InitVal = Enumerator->getInitVal();
     std::string InitValStr;
     if (InitVal.isNegative() || InitVal > uint64_t(INT64_MAX))
       InitValStr = std::to_string(InitVal.getSExtValue());

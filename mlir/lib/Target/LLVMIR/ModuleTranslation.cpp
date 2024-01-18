@@ -1104,6 +1104,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (func.getArmPreservesZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_preserved");
 
+  if (auto targetCpu = func.getTargetCpu())
+    llvmFunc->addFnAttr("target-cpu", *targetCpu);
+
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 

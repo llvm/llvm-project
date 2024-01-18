@@ -910,8 +910,9 @@ private:
       PathBBs.pop_front();
 
     auto DetIt = llvm::find(PathBBs, Determinator);
-    auto Prev = std::prev(DetIt);
-    BasicBlock *PrevBB = *Prev;
+    // When there is only one BB in PathBBs, the determinator takes itself as a
+    // direct predecessor.
+    BasicBlock *PrevBB = PathBBs.size() == 1 ? *DetIt : *std::prev(DetIt);
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
       BasicBlock *BB = *BBIt;
       BlocksToClean.insert(BB);
