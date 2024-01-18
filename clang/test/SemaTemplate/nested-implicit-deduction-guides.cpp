@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
+// expected-no-diagnostics
 
 template<class T> struct S {
     template<class U> struct N {
@@ -57,21 +58,3 @@ template<class X> struct requires_clause {
 requires_clause<int>::B req(1, 2);
 using RC = decltype(req);
 using RC = requires_clause<int>::B<int>;
-
-template<typename X> struct nested_init_list {
-    template<C<X> Y>
-    struct B { // #INIT_LIST_INNER
-        X x;
-        Y y;
-    };
-};
-
-nested_init_list<int>::B nil {1, 2};
-using NIL = decltype(nil);
-using NIL = nested_init_list<int>::B<int>;
-
-// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'B'}}
-nested_init_list<int>::B nil_invalid {1, ""};
-// expected-note@#INIT_LIST_INNER {{candidate template ignored: substitution failure [with Y = const char *]: constraints not satisfied for class template 'B' [with Y = const char *]}}
-// expected-note@#INIT_LIST_INNER {{candidate function template not viable: requires 1 argument, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER {{candidate function template not viable: requires 0 arguments, but 2 were provided}}

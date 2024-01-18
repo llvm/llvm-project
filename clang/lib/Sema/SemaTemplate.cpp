@@ -2418,9 +2418,6 @@ struct ConvertConstructorToDeductionGuideTransform {
     QualType Result = SemaRef.BuildFunctionType(DeducedType, ParamTypes, Loc,
                                                 DeductionGuideName, EPI);
     TypeSourceInfo *TSI = SemaRef.Context.getTrivialTypeSourceInfo(Result, Loc);
-    if (NestedPattern)
-      TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
-                              DeductionGuideName);
 
     FunctionProtoTypeLoc FPTL =
         TSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
@@ -2428,13 +2425,9 @@ struct ConvertConstructorToDeductionGuideTransform {
     // Build the parameters, needed during deduction / substitution.
     SmallVector<ParmVarDecl*, 4> Params;
     for (auto T : ParamTypes) {
-      auto *TSI = SemaRef.Context.getTrivialTypeSourceInfo(T, Loc);
-      if (NestedPattern)
-        TSI = SemaRef.SubstType(TSI, OuterInstantiationArgs, Loc,
-                                DeclarationName());
-      ParmVarDecl *NewParam =
-          ParmVarDecl::Create(SemaRef.Context, DC, Loc, Loc, nullptr,
-                              TSI->getType(), TSI, SC_None, nullptr);
+      ParmVarDecl *NewParam = ParmVarDecl::Create(
+          SemaRef.Context, DC, Loc, Loc, nullptr, T,
+          SemaRef.Context.getTrivialTypeSourceInfo(T, Loc), SC_None, nullptr);
       NewParam->setScopeInfo(0, Params.size());
       FPTL.setParam(Params.size(), NewParam);
       Params.push_back(NewParam);
@@ -2677,14 +2670,8 @@ FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
   if (BuildingDeductionGuides.isInvalid())
     return nullptr;
 
-  ClassTemplateDecl *Pattern =
-      Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
-  ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
-
-  auto *DG = cast<FunctionTemplateDecl>(
+  return cast<FunctionTemplateDecl>(
       Transform.buildSimpleDeductionGuide(ParamTypes));
-  SavedContext.pop();
-  return DG;
 }
 
 void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
