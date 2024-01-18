@@ -4,11 +4,11 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load(":binary_alias.bzl", "binary_alias")
-load(":config.bzl", "llvm_config_defines")
-load(":enum_targets_gen.bzl", "enum_targets_gen")
-load(":targets.bzl", "llvm_targets")
 load(":tblgen.bzl", "gentbl")
+load(":config.bzl", "llvm_config_defines")
+load(":targets.bzl", "llvm_targets")
+load(":enum_targets_gen.bzl", "enum_targets_gen")
+load(":binary_alias.bzl", "binary_alias")
 
 package(
     default_visibility = ["//visibility:public"],
