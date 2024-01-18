@@ -53,6 +53,11 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
     return "apple-m1";
   }
 
+  if (Triple.isXROS()) {
+    // The xrOS simulator runs on M1 as well, it should have been covered above.
+    assert(!Triple.isSimulatorEnvironment() && "xrossim should be mac-like");
+    return "apple-a12";
+  }
   // arm64e requires v8.3a and only runs on apple-a12 and later CPUs.
   if (Triple.isArm64e())
     return "apple-a12";

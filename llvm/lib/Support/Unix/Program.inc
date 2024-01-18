@@ -91,7 +91,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
     SmallString<128> FilePath(Path);
     sys::path::append(FilePath, Name);
     if (sys::fs::can_execute(FilePath.c_str()))
-      return std::string(FilePath.str()); // Found the executable!
+      return std::string(FilePath); // Found the executable!
   }
   return errc::no_such_file_or_directory;
 }
