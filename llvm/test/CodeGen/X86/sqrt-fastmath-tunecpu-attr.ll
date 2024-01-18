@@ -7,7 +7,7 @@ define float @f32_tune_nhm(float %f) #0 {
 ; CHECK-NEXT:    rsqrtss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    mulss %xmm2, %xmm3
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
 ; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
@@ -44,7 +44,7 @@ define float @f32_tune_x86_64(float %f) #3 {
 ; CHECK-NEXT:    rsqrtss %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm3 = [-5.0E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    mulss %xmm2, %xmm3
 ; CHECK-NEXT:    mulss %xmm1, %xmm2
 ; CHECK-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
