@@ -1376,7 +1376,7 @@ let Predicates = [HasBMI2, NoTBM, HasEGPR] in {
 }
 
 multiclass bmi_pdep_pext<string mnemonic, X86TypeInfo t, SDPatternOperator OpNode,
-                         PatFrag ld_frag, string suffix = ""> {
+                         string suffix = ""> {
   def rr#suffix : ITy<0xF5, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.RegClass:$src2),
                       mnemonic, binop_ndd_args,
@@ -1385,22 +1385,22 @@ multiclass bmi_pdep_pext<string mnemonic, X86TypeInfo t, SDPatternOperator OpNod
   def rm#suffix : ITy<0xF5, MRMSrcMem, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.MemOperand:$src2),
                       mnemonic, binop_ndd_args,
-                      [(set t.RegClass:$dst, (OpNode t.RegClass:$src1, (ld_frag addr:$src2)))]>,
+                      [(set t.RegClass:$dst, (OpNode t.RegClass:$src1, (t.LoadNode addr:$src2)))]>,
                   VVVV, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
-  defm PDEP32 : bmi_pdep_pext<"pdep", Xi32, X86pdep, loadi32>, T8, XD, VEX;
-  defm PDEP64 : bmi_pdep_pext<"pdep", Xi64, X86pdep, loadi64>, T8, XD, REX_W, VEX;
-  defm PEXT32 : bmi_pdep_pext<"pext", Xi32, X86pext, loadi32>, T8, XS, VEX;
-  defm PEXT64 : bmi_pdep_pext<"pext", Xi64, X86pext, loadi64>, T8, XS, REX_W, VEX;
+  defm PDEP32 : bmi_pdep_pext<"pdep", Xi32, X86pdep>, T8, XD, VEX;
+  defm PDEP64 : bmi_pdep_pext<"pdep", Xi64, X86pdep>, T8, XD, REX_W, VEX;
+  defm PEXT32 : bmi_pdep_pext<"pext", Xi32, X86pext>, T8, XS, VEX;
+  defm PEXT64 : bmi_pdep_pext<"pext", Xi64, X86pext>, T8, XS, REX_W, VEX;
 }
 
 let Predicates = [HasBMI2, HasEGPR] in {
-  defm PDEP32 : bmi_pdep_pext<"pdep", Xi32, X86pdep, loadi32, "_EVEX">, T8, XD, EVEX;
-  defm PDEP64 : bmi_pdep_pext<"pdep", Xi64, X86pdep, loadi64, "_EVEX">, T8, XD, REX_W, EVEX;
-  defm PEXT32 : bmi_pdep_pext<"pext", Xi32, X86pext, loadi32, "_EVEX">, T8, XS, EVEX;
-  defm PEXT64 : bmi_pdep_pext<"pext", Xi64, X86pext, loadi64, "_EVEX">, T8, XS, REX_W, EVEX;
+  defm PDEP32 : bmi_pdep_pext<"pdep", Xi32, X86pdep, "_EVEX">, T8, XD, EVEX;
+  defm PDEP64 : bmi_pdep_pext<"pdep", Xi64, X86pdep, "_EVEX">, T8, XD, REX_W, EVEX;
+  defm PEXT32 : bmi_pdep_pext<"pext", Xi32, X86pext, "_EVEX">, T8, XS, EVEX;
+  defm PEXT64 : bmi_pdep_pext<"pext", Xi64, X86pext, "_EVEX">, T8, XS, REX_W, EVEX;
 }
 
 //===----------------------------------------------------------------------===//
