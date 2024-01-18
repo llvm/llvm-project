@@ -26538,19 +26538,26 @@ Arguments:
 The ``llvm.objectsize`` intrinsic takes five arguments:
 
 - The first argument is a pointer to or into the ``object``.
+
 - The second argument controls which size ``llvm.objectsize`` returns:
-  - If it's ``false``, ``llvm.objectsize`` returns the size of the closest
-    surrounding subobject.
-  - If it's ``true``, ``llvm.objectsize`` returns the size of the whole object.
+
+    - If it's ``false``, ``llvm.objectsize`` returns the size of the closest
+      surrounding subobject.
+    - If it's ``true``, ``llvm.objectsize`` returns the size of the whole object.
+
 - The third argument controls which value to return when the size is unknown:
-  - If it's ``false``, ``llvm.objectsize`` returns ``-1``.
-  - If it's ``true``, ``llvm.objectsize`` returns ``0``.
+
+    - If it's ``false``, ``llvm.objectsize`` returns ``-1``.
+    - If it's ``true``, ``llvm.objectsize`` returns ``0``.
+
 - The fourth argument controls how ``llvm.objectsize`` acts when ``null`` in
   address space 0 is used as its pointer argument:
-  - If it's ``false``, ``llvm.objectsize`` reports 0 bytes available when given
-    ``null``.
-  - If it's ``true``, or the ``null`` pointer is in a non-zero address space,
-    the size is assumed to be unknown.
+
+    - If it's ``false``, ``llvm.objectsize`` reports 0 bytes available when given
+      ``null``.
+    - If it's ``true``, or the ``null`` pointer is in a non-zero address space,
+      the size is assumed to be unknown.
+
 - The fifth argument to ``llvm.objectsize`` determines if the value should be
   evaluated at runtime.
 
