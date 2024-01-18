@@ -6,7 +6,8 @@
 ! UNSUPPORTED: x86_64-pc-linux-gnu
 ! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
-! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! RUN: %libomptarget-compile-fortran-generic
+! RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
 program main
    use omp_lib
    integer :: x(100)
@@ -28,4 +29,5 @@ program main
 
 end program main
 
-! CHECK: number of errors: 0
+! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECKi: number of errors: 0
