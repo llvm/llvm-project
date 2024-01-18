@@ -205,6 +205,9 @@ enum class OpenACCClauseKind {
   /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
   /// loop', and 'serial loop' constructs.
   Private,
+  /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'exit data', and 'declare'.
+  CopyOut,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -287,6 +290,9 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::Private:
     return Out << "private";
+
+  case OpenACCClauseKind::CopyOut:
+    return Out << "copyout";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
