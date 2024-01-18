@@ -229,16 +229,16 @@ string HipBinNvidia::getHipLibPath() const {
 
 // gets nvcc compiler Path
 void HipBinNvidia::constructCompilerPath() {
-  string complierPath;
+  string compilerPath;
   const EnvVariables& envVariables = getEnvVariables();
   if (envVariables.cudaPathEnv_.empty()) {
     fs::path cudaPathfs;
     cudaPathfs = "/usr/local/cuda";
-    complierPath = cudaPathfs.string();
+    compilerPath = cudaPathfs.string();
   } else {
-    complierPath = envVariables.cudaPathEnv_;
+    compilerPath = envVariables.cudaPathEnv_;
   }
-  cudaPath_ = complierPath;
+  cudaPath_ = compilerPath;
 }
 
 
@@ -259,13 +259,13 @@ void HipBinNvidia::printCompilerInfo() const {
 
 // returns nvcc version
 string HipBinNvidia::getCompilerVersion() {
-  string complierVersion, cmd;
+  string compilerVersion, cmd;
   fs::path nvcc;
   nvcc = getCompilerPath();
   nvcc /= "bin/nvcc";
   cmd = nvcc.string() + " --version";
   system(cmd.c_str());
-  return complierVersion;
+  return compilerVersion;
 }
 
 // returns nvidia platform

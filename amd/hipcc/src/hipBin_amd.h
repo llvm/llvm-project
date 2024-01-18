@@ -76,6 +76,7 @@ class HipBinAmd : public HipBinBase {
   // non virtual functions
   const string& getHsaPath() const;
   const string& getRocclrHomePath() const;
+  const bool isWindows() const;
 };
 
 HipBinAmd::HipBinAmd() {
@@ -196,26 +197,25 @@ void HipBinAmd::initializeHipCXXFlags() {
 
 // populates clang path.
 void HipBinAmd::constructCompilerPath() {
-  string complierPath;
+  string compilerPath;
   const EnvVariables& envVariables = getEnvVariables();
   if (envVariables.hipClangPathEnv_.empty()) {
     fs::path hipClangPath;
-    const OsType& osInfo = getOSInfo();
-    if (osInfo == windows) {
-      complierPath = getHipPath();
-      hipClangPath = complierPath;
+    if (isWindows()) {
+      compilerPath = getHipPath();
+      hipClangPath = compilerPath;
+      hipClangPath /= "bin";
     } else {
-      complierPath = getRoccmPath();
-      hipClangPath = complierPath;
+      compilerPath = getRoccmPath();
+      hipClangPath = compilerPath;
+      hipClangPath /= "llvm/bin";
     }
 
-    hipClangPath /= "llvm/bin";
-
-    complierPath = hipClangPath.string();
+    compilerPath = hipClangPath.string();
   } else {
-    complierPath = envVariables.hipClangPathEnv_;
+    compilerPath = envVariables.hipClangPathEnv_;
   }
-  hipClangPath_ = complierPath;
+  hipClangPath_ = compilerPath;
 }
 
 // returns clang path.
@@ -224,10 +224,9 @@ const string& HipBinAmd::getCompilerPath() const {
 }
 
 void HipBinAmd::printCompilerInfo() const {
-  const OsType& os = getOSInfo();
   const string& hipClangPath = getCompilerPath();
   const string& hipPath = getHipPath();
-  if (os == windows) {
+  if (isWindows()) {
     string cmd = hipClangPath + "/clang++ --print-resource-dir";
     system(cmd.c_str());  // hipclang version
     cout << "llc-version :" << endl;
@@ -256,7 +255,7 @@ void HipBinAmd::printCompilerInfo() const {
 }
 
 string HipBinAmd::getCompilerVersion() {
-  string out, complierVersion;
+  string out, compilerVersion;
   const string& hipClangPath = getCompilerPath();
   fs::path cmdAmd = hipClangPath;
   cmdAmd /= "clang++";
@@ -267,13 +266,13 @@ string HipBinAmd::getCompilerVersion() {
       if (m.size() > 1) {
         // get the index =1 match, 0=whole match we ignore
         std::ssub_match sub_match = m[1];
-        complierVersion = sub_match.str();
+        compilerVersion = sub_match.str();
       }
     }
   } else {
     std::cerr << "Hip Clang Compiler not found" << endl;
   }
-  return complierVersion;
+  return compilerVersion;
 }
 
 
@@ -293,8 +292,7 @@ string HipBinAmd::getCppConfig() {
   const string& hipPath = getHipPath();
   hipPathInclude = hipPath;
   hipPathInclude /= "include";
-  const OsType& osInfo = getOSInfo();
-  if (osInfo == windows) {
+  if (isWindows()) {
     cppConfig += " -I" + hipPathInclude.string();
     cppConfigFs = cppConfig;
     cppConfigFs /= "/";
@@ -380,12 +378,19 @@ string HipBinAmd::getHipCC() const {
   string hipCC;
   const string& hipClangPath = getCompilerPath();
   fs::path compiler = hipClangPath;
-  compiler /= "clang++";
+  if (isWindows())
+    compiler /= "clang.exe";
+  else
+    compiler /= "clang++";
+
   if (!fs::exists(compiler)) {
     fs::path compiler = hipClangPath;
     compiler /= "clang";
   }
   hipCC = compiler.string();
+
+  if (isWindows()) // wrap hipcc (clang) command in escaped double quotes.
+    hipCC = "\"" + hipCC + "\" ";
   return hipCC;
 }
 
@@ -444,6 +449,10 @@ void HipBinAmd::printFull() {
   cout << endl;
 }
 
+const bool HipBinAmd::isWindows() const {
+    const OsType& osInfo = getOSInfo();
+    return (osInfo == windows);
+}
 
 void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   if (argv.size() < 2) {
@@ -689,6 +698,9 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     } else if (hasCXX || hasHIP) {
       needCXXFLAGS = 1;
     }
+    if (isWindows())
+      arg = "\"" + arg + "\"";
+
     inputs.push_back(arg);
     // print "I: <$arg>\n";
     }
@@ -698,7 +710,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     // Do the quoting here because sometimes the $arg is changed in the loop
     // Important to have all of '-Xlinker' in the set of unquoted characters.
     // Windows needs different quoting, ignore for now
-    if (os != windows && escapeArg) {
+    if (!isWindows() && escapeArg) {
       regex reg("[^-a-zA-Z0-9_=+,.\\/]");
       arg = regex_replace(arg, reg, "\\$&");
     }
@@ -908,12 +920,15 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     cout << HIPLDFLAGS;
   }
   if (runCmd) {
+    if (isWindows())
+      CMD = "\"" + CMD + "\"";
+
     SystemCmdOut sysOut;
     sysOut = hipBinUtilPtr_->exec(CMD.c_str(), true);
     string cmdOut = sysOut.out;
     int CMD_EXIT_CODE = sysOut.exitCode;
     if (CMD_EXIT_CODE !=0) {
-      std::cerr <<  "failed to execute:"  << CMD << std::endl;
+       std::cerr <<  "failed to execute:"  << CMD << std::endl;
     }
     exit(CMD_EXIT_CODE);
   }  // end of runCmd section

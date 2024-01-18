@@ -459,14 +459,14 @@ void HipBinBase::printUsage() const {
 
 // compiler canRun or not
 bool HipBinBase::canRunCompiler(string exeName, string& cmdOut) {
-  string complierName = exeName;
+  string compilerName = exeName;
   string temp_dir = hipBinUtilPtr_->getTempDir();
   fs::path templateFs = temp_dir;
   templateFs /= "canRunXXXXXX";
   string tmpFileName = hipBinUtilPtr_->mktempFile(templateFs.string());
-  complierName += " --version > " + tmpFileName + " 2>&1";
+  compilerName += " --version > " + tmpFileName + " 2>&1";
   bool executable = false;
-  if (system(const_cast<char*>(complierName.c_str()))) {
+  if (system(const_cast<char*>(compilerName.c_str()))) {
     executable = false;
   } else {
     string myline;
