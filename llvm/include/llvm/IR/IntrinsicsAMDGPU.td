@@ -2729,6 +2729,25 @@ def int_amdgcn_udot8 :
      ImmArg<ArgIndex<0>>,  ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
   >;
 
+// f32 %r = llvm.amdgcn.dot4.f32.type_a.type_b (v4type_a (as i32) %a, v4type_b (as i32) %b, f32 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+class AMDGPU8bitFloatDot4Intrinsic :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [llvm_float_ty], // %r
+    [
+      llvm_i32_ty,   // %a
+      llvm_i32_ty,   // %b
+      llvm_float_ty, // %c
+    ],
+    [IntrNoMem, IntrSpeculatable]
+  >;
+
+def int_amdgcn_dot4_f32_fp8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_fp8_fp8 : AMDGPU8bitFloatDot4Intrinsic;
+def int_amdgcn_dot4_f32_bf8_bf8 : AMDGPU8bitFloatDot4Intrinsic;
+
 //===----------------------------------------------------------------------===//
 // gfx908 intrinsics
 // ===----------------------------------------------------------------------===//
