@@ -345,12 +345,12 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
 
 /// Built-in transfer function for `CFGStmt`.
 static void
-builtinTransferStatement(const CFGBlock &CurBlock, const CFGStmt &Elt,
+builtinTransferStatement(unsigned CurBlockID, const CFGStmt &Elt,
                          TypeErasedDataflowAnalysisState &InputState,
                          AnalysisContext &AC) {
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
-  transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates, CurBlock, InputState), *S,
+  transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates, CurBlockID, InputState), *S,
            InputState.Env);
 }
 
@@ -418,12 +418,12 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   }
 }
 
-static void builtinTransfer(const CFGBlock &CurBlock, const CFGElement &Elt,
+static void builtinTransfer(unsigned CurBlockID, const CFGElement &Elt,
                             TypeErasedDataflowAnalysisState &State,
                             AnalysisContext &AC) {
   switch (Elt.getKind()) {
   case CFGElement::Statement:
-    builtinTransferStatement(CurBlock, Elt.castAs<CFGStmt>(), State, AC);
+    builtinTransferStatement(CurBlockID, Elt.castAs<CFGStmt>(), State, AC);
     break;
   case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
@@ -467,7 +467,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     AC.Log.enterElement(Element);
     // Built-in analysis
     if (AC.Analysis.builtinOptions()) {
-      builtinTransfer(Block, Element, State, AC);
+      builtinTransfer(Block.getBlockID(), Element, State, AC);
     }
 
     // User-provided analysis
@@ -493,8 +493,9 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
       // takes a `CFGElement` as input, but some expressions only show up as a
       // terminator condition, but not as a `CFGElement`. The condition of an if
       // statement is one such example.
-      transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates, Block, State),
-               *TerminatorCond, State.Env);
+      transfer(
+          StmtToEnvMap(AC.CFCtx, AC.BlockStates, Block.getBlockID(), State),
+          *TerminatorCond, State.Env);
 
     // If the transfer function didn't produce a value, create an atom so that
     // we have *some* value for the condition expression. This ensures that
