@@ -284,32 +284,32 @@ defm SHRX64: ShiftX<"shrx", Xi64>, XD;
 defm SHLX32: ShiftX<"shlx", Xi32>, PD;
 defm SHLX64: ShiftX<"shlx", Xi64>, PD;
 
-multiclass RORX_Pats {
+multiclass RORX_Pats<string suffix> {
   // Prefer RORX which is non-destructive and doesn't update EFLAGS.
   let AddedComplexity = 10 in {
     def : Pat<(rotr GR32:$src, (i8 imm:$shamt)),
-              (RORX32ri GR32:$src, imm:$shamt)>;
+              (!cast<Instruction>(RORX32ri#suffix) GR32:$src, imm:$shamt)>;
     def : Pat<(rotr GR64:$src, (i8 imm:$shamt)),
-              (RORX64ri GR64:$src, imm:$shamt)>;
+              (!cast<Instruction>(RORX64ri#suffix) GR64:$src, imm:$shamt)>;
 
     def : Pat<(rotl GR32:$src, (i8 imm:$shamt)),
-              (RORX32ri GR32:$src, (ROT32L2R_imm8 imm:$shamt))>;
+              (!cast<Instruction>(RORX32ri#suffix) GR32:$src, (ROT32L2R_imm8 imm:$shamt))>;
     def : Pat<(rotl GR64:$src, (i8 imm:$shamt)),
-              (RORX64ri GR64:$src, (ROT64L2R_imm8 imm:$shamt))>;
+              (!cast<Instruction>(RORX64ri#suffix) GR64:$src, (ROT64L2R_imm8 imm:$shamt))>;
   }
 
   def : Pat<(rotr (loadi32 addr:$src), (i8 imm:$shamt)),
-            (RORX32mi addr:$src, imm:$shamt)>;
+            (!cast<Instruction>(RORX32mi#suffix) addr:$src, imm:$shamt)>;
   def : Pat<(rotr (loadi64 addr:$src), (i8 imm:$shamt)),
-            (RORX64mi addr:$src, imm:$shamt)>;
+            (!cast<Instruction>(RORX64mi#suffix) addr:$src, imm:$shamt)>;
 
   def : Pat<(rotl (loadi32 addr:$src), (i8 imm:$shamt)),
-            (RORX32mi addr:$src, (ROT32L2R_imm8 imm:$shamt))>;
+            (!cast<Instruction>(RORX32mi#suffix) addr:$src, (ROT32L2R_imm8 imm:$shamt))>;
   def : Pat<(rotl (loadi64 addr:$src), (i8 imm:$shamt)),
-            (RORX64mi addr:$src, (ROT64L2R_imm8 imm:$shamt))>;
+            (!cast<Instruction>(RORX64mi#suffix) addr:$src, (ROT64L2R_imm8 imm:$shamt))>;
 }
 
-multiclass ShiftX_Pats<SDNode op> {
+multiclass ShiftX_Pats<SDNode op, string suffix = ""> {
   // Prefer SARX/SHRX/SHLX over SAR/SHR/SHL with variable shift BUT not
   // immediate shift, i.e. the following code is considered better
   //
@@ -325,16 +325,16 @@ multiclass ShiftX_Pats<SDNode op> {
   //
   let AddedComplexity = 1 in {
    def : Pat<(op GR32:$src1, GR8:$src2),
-              (!cast<Instruction>(NAME#"32rr") GR32:$src1,
+              (!cast<Instruction>(NAME#"32rr"#suffix) GR32:$src1,
                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
    def : Pat<(op GR64:$src1, GR8:$src2),
-              (!cast<Instruction>(NAME#"64rr") GR64:$src1,
+              (!cast<Instruction>(NAME#"64rr"#suffix) GR64:$src1,
                (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
    def : Pat<(op GR32:$src1, (shiftMask32 GR8:$src2)),
-              (!cast<Instruction>(NAME#"32rr") GR32:$src1,
+              (!cast<Instruction>(NAME#"32rr"#suffix) GR32:$src1,
                (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
    def : Pat<(op GR64:$src1, (shiftMask64 GR8:$src2)),
-              (!cast<Instruction>(NAME#"64rr") GR64:$src1,
+              (!cast<Instruction>(NAME#"64rr"#suffix) GR64:$src1,
                (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
   // We prefer to use
@@ -348,22 +348,29 @@ multiclass ShiftX_Pats<SDNode op> {
   //
   // This priority is enforced by IsProfitableToFoldLoad.
   def : Pat<(op (loadi32 addr:$src1), GR8:$src2),
-             (!cast<Instruction>(NAME#"32rm") addr:$src1,
+             (!cast<Instruction>(NAME#"32rm"#suffix) addr:$src1,
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
-             (!cast<Instruction>(NAME#"64rm") addr:$src1,
+             (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
-             (!cast<Instruction>(NAME#"32rm") addr:$src1,
+             (!cast<Instruction>(NAME#"32rm"#suffix) addr:$src1,
               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   def : Pat<(op (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
-             (!cast<Instruction>(NAME#"64rm") addr:$src1,
+             (!cast<Instruction>(NAME#"64rm"#suffix) addr:$src1,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
 
-let Predicates = [HasBMI2] in {
-  defm : RORX_Pats;
+let Predicates = [HasBMI2, NoEGPR] in {
+  defm : RORX_Pats<"">;
   defm SARX : ShiftX_Pats<sra>;
   defm SHRX : ShiftX_Pats<srl>;
   defm SHLX : ShiftX_Pats<shl>;
+}
+
+let Predicates = [HasBMI2, HasEGPR] in {
+  defm : RORX_Pats<"_EVEX">;
+  defm SARX : ShiftX_Pats<sra, "_EVEX">;
+  defm SHRX : ShiftX_Pats<srl, "_EVEX">;
+  defm SHLX : ShiftX_Pats<shl, "_EVEX">;
 }
