@@ -178,9 +178,8 @@ set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBCXX_INSTALL_HEADERS "Install the libc++ headers." ON)
 option(LIBCXX_INSTALL_LIBRARY "Install the libc++ library." ON)
-cmake_dependent_option(LIBCXX_INSTALL_MODULE_INTERFACE_UNIT_SOURCES
-  "Install the libc++ C++20 module interface unit source files (experimental)." OFF
-  "LIBCXX_ENABLE_STD_MODULES" OFF
+option(LIBCXX_INSTALL_MODULES
+  "Install the libc++ C++20 module source files (experimental)." OFF
 )
 cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
   "Install the static libc++ library." ON
@@ -429,8 +428,8 @@ set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE STRING
     "Path where target-agnostic libc++ headers should be installed.")
 set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libc++ runtime libraries should be installed.")
-set(LIBCXX_INSTALL_MODULE_INTERFACE_UNIT_SOURCE_DIR "share/libc++/v1" CACHE STRING
-    "Path where target-agnostic libc++ module interface unit source should be installed.")
+set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
+    "Path where target-agnostic libc++ module source files should be installed.")
 
 set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
