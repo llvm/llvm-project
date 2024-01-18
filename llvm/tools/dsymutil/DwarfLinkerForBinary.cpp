@@ -593,7 +593,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
 }
 
 bool DwarfLinkerForBinary::link(const DebugMap &Map) {
-  if (Options.DWARFLinkerType == DsymutilDWARFLinkerType::LLVM)
+  if (Options.DWARFLinkerType == DsymutilDWARFLinkerType::Parallel)
     return linkImpl<parallel::DWARFLinker>(Map, Options.FileType);
 
   return linkImpl<classic::DWARFLinker>(Map, Options.FileType);

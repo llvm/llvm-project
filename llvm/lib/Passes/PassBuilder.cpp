@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -92,6 +93,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -315,7 +317,8 @@ namespace {
 /// We currently only use this for --print-before/after.
 bool shouldPopulateClassToPassNames() {
   return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty();
+         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
+         TargetPassConfig::hasLimitedCodeGenPipeline();
 }
 
 // A pass for testing -print-on-crash.
@@ -392,6 +395,12 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "PassRegistry.def"
+
+#define MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                \
+  PIC->addClassToPassName(PASS_NAME::name(), NAME);
+#define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
+  PIC->addClassToPassName(PASS_NAME::name(), NAME);
+#include "llvm/CodeGen/MachinePassRegistry.def"
   }
 }
 
@@ -425,6 +434,17 @@ void PassBuilder::registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
 
   for (auto &C : FunctionAnalysisRegistrationCallbacks)
     C(FAM);
+}
+
+void PassBuilder::registerMachineFunctionAnalyses(
+    MachineFunctionAnalysisManager &MFAM) {
+
+#define MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                \
+  MFAM.registerPass([&] { return PASS_NAME(); });
+#include "llvm/CodeGen/MachinePassRegistry.def"
+
+  for (auto &C : MachineFunctionAnalysisRegistrationCallbacks)
+    C(MFAM);
 }
 
 void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
@@ -1063,6 +1083,32 @@ Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
   return parseSinglePassOption(Params, "demote-catchswitch-only",
                                "WinEHPreparePass");
+}
+
+Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
+  GlobalMergeOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "group-by-use")
+      Result.GroupByUse = Enable;
+    else if (ParamName == "ignore-single-use")
+      Result.IgnoreSingleUse = Enable;
+    else if (ParamName == "merge-const")
+      Result.MergeConst = Enable;
+    else if (ParamName == "merge-external")
+      Result.MergeExternal = Enable;
+    else if (ParamName.consume_front("max-offset=")) {
+      if (ParamName.getAsInteger(0, Result.MaxOffset))
+        return make_error<StringError>(
+            formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 } // namespace
@@ -1781,6 +1827,33 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
                                  inconvertibleErrorCode());
 }
 
+Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
+                                    const PipelineElement &E) {
+  StringRef Name = E.Name;
+  if (!E.InnerPipeline.empty())
+    return make_error<StringError>("invalid pipeline",
+                                   inconvertibleErrorCode());
+
+#define MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                      \
+  if (Name == NAME) {                                                          \
+    MFPM.addPass(PASS_NAME());                                                 \
+    return Error::success();                                                   \
+  }
+#define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
+  if (Name == NAME) {                                                          \
+    MFPM.addPass(PASS_NAME());                                                 \
+    return Error::success();                                                   \
+  }
+#include "llvm/CodeGen/MachinePassRegistry.def"
+
+  for (auto &C : MachinePipelineParsingCallbacks)
+    if (C(Name, MFPM))
+      return Error::success();
+  return make_error<StringError>(
+      formatv("unknown machine pass '{0}'", Name).str(),
+      inconvertibleErrorCode());
+}
+
 bool PassBuilder::parseAAPassName(AAManager &AA, StringRef Name) {
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
   if (Name == NAME) {                                                          \
@@ -1800,6 +1873,15 @@ bool PassBuilder::parseAAPassName(AAManager &AA, StringRef Name) {
     if (C(Name, AA))
       return true;
   return false;
+}
+
+Error PassBuilder::parseMachinePassPipeline(
+    MachineFunctionPassManager &MFPM, ArrayRef<PipelineElement> Pipeline) {
+  for (const auto &Element : Pipeline) {
+    if (auto Err = parseMachinePass(MFPM, Element))
+      return Err;
+  }
+  return Error::success();
 }
 
 Error PassBuilder::parseLoopPassPipeline(LoopPassManager &LPM,
@@ -1961,6 +2043,20 @@ Error PassBuilder::parsePassPipeline(LoopPassManager &CGPM,
   return Error::success();
 }
 
+Error PassBuilder::parsePassPipeline(MachineFunctionPassManager &MFPM,
+                                     StringRef PipelineText) {
+  auto Pipeline = parsePipelineText(PipelineText);
+  if (!Pipeline || Pipeline->empty())
+    return make_error<StringError>(
+        formatv("invalid machine pass pipeline '{0}'", PipelineText).str(),
+        inconvertibleErrorCode());
+
+  if (auto Err = parseMachinePassPipeline(MFPM, *Pipeline))
+    return Err;
+
+  return Error::success();
+}
+
 Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   // If the pipeline just consists of the word 'default' just replace the AA
   // manager with our default one.
@@ -2055,6 +2151,21 @@ void PassBuilder::printPassNames(raw_ostream &OS) {
   OS << "Loop analyses:\n";
 #define LOOP_ANALYSIS(NAME, CREATE_PASS) printPassName(NAME, OS);
 #include "PassRegistry.def"
+
+  OS << "Machine module passes (WIP):\n";
+#define MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                      \
+  printPassName(NAME, OS);
+#include "llvm/CodeGen/MachinePassRegistry.def"
+
+  OS << "Machine function passes (WIP):\n";
+#define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
+  printPassName(NAME, OS);
+#include "llvm/CodeGen/MachinePassRegistry.def"
+
+  OS << "Machine function analyses (WIP):\n";
+#define MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                \
+  printPassName(NAME, OS);
+#include "llvm/CodeGen/MachinePassRegistry.def"
 }
 
 void PassBuilder::registerParseTopLevelPipelineCallback(

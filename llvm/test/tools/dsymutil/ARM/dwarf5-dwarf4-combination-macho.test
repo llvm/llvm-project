@@ -34,7 +34,7 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --no-odr --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --no-odr --linker parallel -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 RUN:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
@@ -43,7 +43,7 @@ RUN:   -a --verbose | FileCheck %s
 ### Uncomment following when llvm-dwarfdump will dump address ranges
 ### correctly for severall compile units case.
 COM: rm -rf %t.dir && mkdir -p %t.dir
-COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 COM:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 COM:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 COM: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \

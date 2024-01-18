@@ -22,6 +22,7 @@ include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -961,7 +962,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
   let assemblyFormat = "attr-dict";
 }
 
-def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
+def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
@@ -974,6 +975,8 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
     gpu.yield %f0, %f1 : f32, f32
     ```
   }];
+
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
 // These mirror the reduction combining kinds from the vector dialect.
@@ -1191,7 +1194,9 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
       SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets)> {
+    ]>, Arguments<(ins
+          OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
+          OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1212,13 +1217,20 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     how to transform modules into binary strings and are used by the
     `gpu-module-to-binary` pass to transform modules into GPU binaries.
 
+    Modules can contain an optional `OffloadingTranslationAttr` attribute. This
+    attribute will be used during the `gpu-module-to-binary` pass to specify the
+    `OffloadingTranslationAttr` used when creating the `gpu.binary` operation.
+
     ```
     gpu.module @symbol_name {
       gpu.func {}
         ...
       gpu.module_end
     }
-    gpu.module @symbol_name2 [#nvvm.target, #rocdl.target<chip = "gfx90a">] {
+    // Module with offloading handler and target attributes.
+    gpu.module @symbol_name2 <#gpu.select_object<1>> [
+        #nvvm.target,
+        #rocdl.target<chip = "gfx90a">] {
       gpu.func {}
         ...
       gpu.module_end
@@ -1226,8 +1238,12 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     ```
   }];
   let builders = [
-    OpBuilder<(ins "StringRef":$name, CArg<"ArrayAttr", "{}">:$targets)>,
-    OpBuilder<(ins "StringRef":$name, "ArrayRef<Attribute>":$targets)>
+    OpBuilder<(ins "StringRef":$name,
+                   CArg<"ArrayAttr", "{}">:$targets,
+                   CArg<"Attribute", "{}">:$handler)>,
+    OpBuilder<(ins "StringRef":$name,
+                   "ArrayRef<Attribute>":$targets,
+                   CArg<"Attribute", "{}">:$handler)>
   ];
   let regions = (region SizedRegion<1>:$bodyRegion);
   let hasCustomAssemblyFormat = 1;

@@ -66,6 +66,11 @@ if (current_toolchain == default_toolchain) {
     values = []
   }
 
+  copy("write_assertion_handler") {
+    sources = [ "//libcxx/vendor/llvm/default_assertion_handler.in" ]
+    outputs = [ "$libcxx_generated_include_dir/__assertion_handler" ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -1079,6 +1084,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":write_config_site",
       ":write_modulemap",
+      ":write_assertion_handler",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

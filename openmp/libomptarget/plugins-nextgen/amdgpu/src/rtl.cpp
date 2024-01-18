@@ -38,6 +38,7 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -1999,21 +2000,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // TODO: We should try to avoid materialization but there seems to be no
     // good linker interface w/o file i/o.
+    SmallString<128> LinkerInputFilePath;
+    std::error_code EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit",
+                                                      "o", LinkerInputFilePath);
+    if (EC)
+      return Plugin::error("Failed to create temporary file for linker");
+
+    // Write the file's contents to the output file.
+    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+        FileOutputBuffer::create(LinkerInputFilePath, MB->getBuffer().size());
+    if (!OutputOrErr)
+      return OutputOrErr.takeError();
+    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+    llvm::copy(MB->getBuffer(), Output->getBufferStart());
+    if (Error E = Output->commit())
+      return std::move(E);
+
     SmallString<128> LinkerOutputFilePath;
-    std::error_code EC = sys::fs::createTemporaryFile(
-        "amdgpu-pre-link-jit", ".out", LinkerOutputFilePath);
+    EC = sys::fs::createTemporaryFile("amdgpu-pre-link-jit", "so",
+                                      LinkerOutputFilePath);
     if (EC)
-      return createStringError(EC,
-                               "Failed to create temporary file for linker");
-
-    SmallString<128> LinkerInputFilePath = LinkerOutputFilePath;
-    LinkerInputFilePath.pop_back_n(2);
-
-    auto FD = raw_fd_ostream(LinkerInputFilePath.data(), EC);
-    if (EC)
-      return createStringError(EC, "Failed to open temporary file for linker");
-    FD.write(MB->getBufferStart(), MB->getBufferSize());
-    FD.close();
+      return Plugin::error("Failed to create temporary file for linker");
 
     const auto &ErrorOrPath = sys::findProgramByName("lld");
     if (!ErrorOrPath)
@@ -2025,7 +2032,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
          "Using `%s` to link JITed amdgcn ouput.", LLDPath.c_str());
 
     std::string MCPU = "-plugin-opt=mcpu=" + getComputeUnitKind();
-
     StringRef Args[] = {LLDPath,
                         "-flavor",
                         "gnu",
@@ -2039,12 +2045,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     std::string Error;
     int RC = sys::ExecuteAndWait(LLDPath, Args, std::nullopt, {}, 0, 0, &Error);
     if (RC)
-      return createStringError(inconvertibleErrorCode(),
-                               "Linking optimized bitcode failed: %s",
-                               Error.c_str());
+      return Plugin::error("Linking optimized bitcode failed: %s",
+                           Error.c_str());
 
-    return std::move(
-        MemoryBuffer::getFileOrSTDIN(LinkerOutputFilePath.data()).get());
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(LinkerOutputFilePath);
+    if (!BufferOrErr)
+      return Plugin::error("Failed to open temporary file for lld");
+
+    // Clean up the temporary files afterwards.
+    if (sys::fs::remove(LinkerOutputFilePath))
+      return Plugin::error("Failed to remove temporary output file for lld");
+    if (sys::fs::remove(LinkerInputFilePath))
+      return Plugin::error("Failed to remove temporary input file for lld");
+
+    return std::move(*BufferOrErr);
   }
 
   /// See GenericDeviceTy::getComputeUnitKind().
