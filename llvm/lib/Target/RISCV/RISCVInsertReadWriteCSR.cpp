@@ -105,6 +105,7 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
     // Make MI implicit use FRM.
     MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*IsDef*/ false,
                                             /*IsImp*/ true));
+    Changed = true;
 
     // Skip if MI uses same rounding mode as FRM.
     if (InstrRM == CurrentRM)
@@ -122,7 +123,6 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
           .addImm(InstrRM);
     }
     CurrentRM = InstrRM;
-    Changed = true;
   }
 
   // Restore FRM if needed.
