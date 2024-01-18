@@ -306,7 +306,6 @@ struct WasmLimits {
   uint64_t Maximum;
 };
 
-
 struct WasmTableType {
   ValType ElemType;
   WasmLimits Limits;

@@ -91,7 +91,8 @@ template <> struct DenseMapInfo<wasm::WasmTableType, void> {
   }
   static wasm::WasmTableType getTombstoneKey() {
     return wasm::WasmTableType{
-        wasm::ValType(1), DenseMapInfo<wasm::WasmLimits, void>::getTombstoneKey()};
+        wasm::ValType(1),
+        DenseMapInfo<wasm::WasmLimits, void>::getTombstoneKey()};
   }
   static unsigned getHashValue(const wasm::WasmTableType &TableType) {
     return hash_combine(

@@ -3190,11 +3190,15 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 }
 
 static bool hasSMEZAState(const FunctionDecl *FD) {
-  if (FD->hasAttr<ArmNewZAAttr>())
-    return true;
-  if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask)
+  if (auto *Attr = FD->getAttr<ArmNewAttr>())
+    if (Attr->isNewZA())
       return true;
+  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
+    FunctionType::ArmStateValue State =
+        FunctionType::getArmZAState(T->getAArch64SMEAttributes());
+    if (State != FunctionType::ARM_None)
+      return true;
+  }
   return false;
 }
 
@@ -7522,14 +7526,19 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
     // If the callee uses AArch64 SME ZA state but the caller doesn't define
     // any, then this is an error.
-    if (ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateZASharedMask) {
+    FunctionType::ArmStateValue ArmZAState =
+        FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
+    if (ArmZAState != FunctionType::ARM_None) {
       bool CallerHasZAState = false;
       if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
-        if (CallerFD->hasAttr<ArmNewZAAttr>())
+        auto *Attr = CallerFD->getAttr<ArmNewAttr>();
+        if (Attr && Attr->isNewZA())
           CallerHasZAState = true;
-        else if (const auto *FPT = CallerFD->getType()->getAs<FunctionProtoType>())
-          CallerHasZAState = FPT->getExtProtoInfo().AArch64SMEAttributes &
-                             FunctionType::SME_PStateZASharedMask;
+        else if (const auto *FPT =
+                     CallerFD->getType()->getAs<FunctionProtoType>())
+          CallerHasZAState = FunctionType::getArmZAState(
+                                 FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+                             FunctionType::ARM_None;
       }
 
       if (!CallerHasZAState)
