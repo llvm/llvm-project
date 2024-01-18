@@ -122,8 +122,12 @@ public:
   bool requiresPreservingZT0(const SMEAttrs &Callee) const {
     return hasZT0State() && !Callee.sharesZT0();
   }
-  bool requiresZAToggle(const SMEAttrs &Callee) const {
+  bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
     return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface();
+  }
+  bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
+    return (requiresLazySave(Callee) && !Callee.preservesZA()) ||
+           requiresDisablingZABeforeCall(Callee);
   }
 };
 

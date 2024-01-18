@@ -7659,11 +7659,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue ZTFrameIdx;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool PreserveZT0 = CallerAttrs.requiresPreservingZT0(CalleeAttrs);
+  bool ShouldPreserveZT0 = CallerAttrs.requiresPreservingZT0(CalleeAttrs);
 
   // If the caller has ZT0 state which will not be preserved by the callee,
   // spill ZT0 before the call.
-  if (PreserveZT0) {
+  if (ShouldPreserveZT0) {
     unsigned ZTObj = MFI.CreateSpillStackObject(64, Align(16));
     ZTFrameIdx = DAG.getFrameIndex(
         ZTObj,
@@ -7675,12 +7675,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // If caller shares ZT0 but the callee is not shared ZA, we need to stop
   // PSTATE.ZA before the call if there is no lazy-save active.
-  bool ToggleZA = CallerAttrs.requiresZAToggle(CalleeAttrs);
-
-  assert((!ToggleZA || !RequiresLazySave) &&
+  bool DisableZA = CallerAttrs.requiresDisablingZABeforeCall(CalleeAttrs);
+  assert((!DisableZA || !RequiresLazySave) &&
          "Lazy-save should have PSTATE.SM=1 on entry to the function");
 
-  if (ToggleZA)
+  if (DisableZA)
     Chain = DAG.getNode(
         AArch64ISD::SMSTOP, DL, MVT::Other, Chain,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
@@ -8096,14 +8095,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                  PStateSM, false);
   }
 
-  if (RequiresLazySave || ToggleZA)
+  if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
     // Unconditionally resume ZA.
     Result = DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other, Result,
         DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
         DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
 
-  if (PreserveZT0)
+  if (ShouldPreserveZT0)
     Result =
         DAG.getNode(AArch64ISD::RESTORE_ZT, DL, DAG.getVTList(MVT::Other),
                     {Result, DAG.getConstant(0, DL, MVT::i32), ZTFrameIdx});
@@ -8137,7 +8136,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getConstant(0, DL, MVT::i64));
   }
 
-  if (RequiresSMChange || RequiresLazySave || PreserveZT0) {
+  if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0) {
     for (unsigned I = 0; I < InVals.size(); ++I) {
       // The smstart/smstop is chained as part of the call, but when the
       // resulting chain is discarded (which happens when the call is not part
