@@ -55,13 +55,13 @@
 
 ; LARGE: .data {{.*}} WA {{.*}}
 ; LARGE: .data.x {{.*}} WA {{.*}}
-; LARGE: .data0 {{.*}} WAl {{.*}}
+; LARGE: .data0 {{.*}} WA {{.*}}
 ; LARGE: .ldata {{.*}} WAl {{.*}}
 ; LARGE: .ldata.x {{.*}} WAl {{.*}}
-; LARGE: .ldata0 {{.*}} WAl {{.*}}
+; LARGE: .ldata0 {{.*}} WA {{.*}}
 ; LARGE: force_small {{.*}} WA {{.*}}
 ; LARGE: force_large {{.*}} WAl {{.*}}
-; LARGE: foo {{.*}} WAl {{.*}}
+; LARGE: foo {{.*}} WA {{.*}}
 ; LARGE: .bss {{.*}} WA {{.*}}
 ; LARGE: .lbss {{.*}} WAl {{.*}}
 ; LARGE: .rodata {{.*}} A {{.*}}
@@ -72,14 +72,14 @@
 
 ; LARGE-DS: .data {{.*}} WA {{.*}}
 ; LARGE-DS: .data.x {{.*}} WA {{.*}}
-; LARGE-DS: .data0 {{.*}} WAl {{.*}}
+; LARGE-DS: .data0 {{.*}} WA {{.*}}
 ; LARGE-DS: .ldata {{.*}} WAl {{.*}}
 ; LARGE-DS: .ldata.x {{.*}} WAl {{.*}}
-; LARGE-DS: .ldata0 {{.*}} WAl {{.*}}
+; LARGE-DS: .ldata0 {{.*}} WA {{.*}}
 ; LARGE-DS: .ldata.data {{.*}} WAl {{.*}}
 ; LARGE-DS: force_small {{.*}} WA {{.*}}
 ; LARGE-DS: force_large {{.*}} WAl {{.*}}
-; LARGE-DS: foo {{.*}} WAl {{.*}}
+; LARGE-DS: foo {{.*}} WA {{.*}}
 ; LARGE-DS: .bss {{.*}} WA {{.*}}
 ; LARGE-DS: .lbss.bss {{.*}} WAl {{.*}}
 ; LARGE-DS: .rodata {{.*}} A {{.*}}
