@@ -2,6 +2,7 @@
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
+! CHECK: acc.routine @acc_routine_17 func(@_QPacc_routine19) bind("_QPacc_routine17" [#acc.device_type<host>], "_QPacc_routine17" [#acc.device_type<default>], "_QPacc_routine16" [#acc.device_type<multicore>])
 ! CHECK: acc.routine @acc_routine_16 func(@_QPacc_routine18) bind("_QPacc_routine17" [#acc.device_type<host>], "_QPacc_routine16" [#acc.device_type<multicore>])
 ! CHECK: acc.routine @acc_routine_15 func(@_QPacc_routine17) worker ([#acc.device_type<host>]) vector ([#acc.device_type<multicore>])
 ! CHECK: acc.routine @acc_routine_14 func(@_QPacc_routine16) gang([#acc.device_type<nvidia>]) seq ([#acc.device_type<host>])
@@ -119,4 +120,8 @@ end subroutine
 
 subroutine acc_routine18()
   !$acc routine device_type(host) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
+end subroutine
+
+subroutine acc_routine19()
+  !$acc routine device_type(host,default) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
 end subroutine
