@@ -25,7 +25,7 @@ void PrintTo(const BPFunctionNode &Node, std::ostream *OS) {
 
 TEST(BPFunctionNodeTest, Basic) {
   auto UNIdsAre = [](auto... Ids) {
-    return UnorderedElementsAre(Field("id", &BPFunctionNode::UtilityNodeT::id,
+    return UnorderedElementsAre(Field("Id", &BPFunctionNode::UtilityNodeT::Id,
                                       std::forward<uint32_t>(Ids))...);
   };
   auto NodeIs = [](BPFunctionNode::IDT Id,

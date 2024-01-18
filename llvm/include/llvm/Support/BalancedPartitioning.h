@@ -61,9 +61,9 @@ public:
   using IDT = uint64_t;
   /// The type of UtilityNode
   struct UtilityNodeT {
-    UtilityNodeT(uint32_t id, uint32_t weight = 1) : id(id), weight(weight) {}
-    uint32_t id;
-    uint32_t weight;
+    UtilityNodeT(uint32_t Id, uint32_t Weight = 1) : Id(Id), Weight(Weight) {}
+    uint32_t Id;
+    uint32_t Weight;
   };
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
