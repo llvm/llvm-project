@@ -552,7 +552,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
         newYieldValuesFn(rewriter, getLoc(), newIterArgs);
     assert(newInitOperands.size() == newYieldedValues.size() &&
            "expected as many new yield values as new iter operands");
-    rewriter.updateRootInPlace(yieldOp, [&]() {
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
       yieldOp.getResultsMutable().append(newYieldedValues);
     });
   }
@@ -1444,7 +1444,7 @@ struct DimOfForallOp : public OpRewritePattern<tensor::DimOp> {
     Value sharedOut =
         forallOp.getTiedOpOperand(llvm::cast<OpResult>(dimOp.getSource()))
             ->get();
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(sharedOut); });
     return success();
   }
@@ -1464,7 +1464,7 @@ public:
         failed(foldDynamicIndexList(mixedStep)))
       return failure();
 
-    rewriter.updateRootInPlace(op, [&]() {
+    rewriter.modifyOpInPlace(op, [&]() {
       SmallVector<Value> dynamicLowerBound, dynamicUpperBound, dynamicStep;
       SmallVector<int64_t> staticLowerBound, staticUpperBound, staticStep;
       dispatchIndexOpFoldResults(mixedLowerBound, dynamicLowerBound,
@@ -1556,7 +1556,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     for (const auto &namedAttr : op->getAttrs()) {
       if (llvm::is_contained(elidedAttrs, namedAttr.getName()))
         continue;
-      rewriter.updateRootInPlace(newOp, [&]() {
+      rewriter.modifyOpInPlace(newOp, [&]() {
         newOp->setAttr(namedAttr.getName(), namedAttr.getValue());
       });
     }
@@ -2023,8 +2023,8 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
                     [&](OpResult result) {
                       return yieldOp.getOperand(result.getResultNumber());
                     });
-    rewriter.updateRootInPlace(yieldOp,
-                               [&]() { yieldOp->setOperands(usedOperands); });
+    rewriter.modifyOpInPlace(yieldOp,
+                             [&]() { yieldOp->setOperands(usedOperands); });
   }
 
   LogicalResult matchAndRewrite(IfOp op,
@@ -2189,8 +2189,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
           constantTrue = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
 
-        rewriter.updateRootInPlace(use.getOwner(),
-                                   [&]() { use.set(constantTrue); });
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantTrue); });
       } else if (op.getElseRegion().isAncestor(
                      use.getOwner()->getParentRegion())) {
         changed = true;
@@ -2199,8 +2199,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
           constantFalse = rewriter.create<arith::ConstantOp>(
               op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
 
-        rewriter.updateRootInPlace(use.getOwner(),
-                                   [&]() { use.set(constantFalse); });
+        rewriter.modifyOpInPlace(use.getOwner(),
+                                 [&]() { use.set(constantFalse); });
       }
     }
 
@@ -2383,14 +2383,14 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
            llvm::make_early_inc_range(std::get<0>(it).getUses())) {
         if (nextThen && nextThen->getParent()->isAncestor(
                             use.getOwner()->getParentRegion())) {
-          rewriter.startRootUpdate(use.getOwner());
+          rewriter.startOpModification(use.getOwner());
           use.set(std::get<1>(it));
-          rewriter.finalizeRootUpdate(use.getOwner());
+          rewriter.finalizeOpModification(use.getOwner());
         } else if (nextElse && nextElse->getParent()->isAncestor(
                                    use.getOwner()->getParentRegion())) {
-          rewriter.startRootUpdate(use.getOwner());
+          rewriter.startOpModification(use.getOwner());
           use.set(std::get<2>(it));
-          rewriter.finalizeRootUpdate(use.getOwner());
+          rewriter.finalizeOpModification(use.getOwner());
         }
       }
 
