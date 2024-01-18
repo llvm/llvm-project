@@ -11330,7 +11330,7 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
           << getReturnTypeLoc(Conversion).getSourceRange()
           << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
-          << /* in declaration of conversion function template */ 24;
+          << /* in declaration of conversion function template= */ 24;
     }
 
     return ConversionTemplate;
