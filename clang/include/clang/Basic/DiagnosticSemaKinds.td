@@ -2769,7 +2769,7 @@ def ext_constexpr_dtor_subobject : ExtWarn<
   "destructor cannot be declared %sub{select_constexpr_spec_kind}0 before C++23 because "
   "%select{data member %2|base class %3}1 does not have a "
   "constexpr destructor">, InGroup<CXX23>, DefaultError;
-def warn_cxx23_compat_constexpr_dtor_subobject : ExtWarn<
+def warn_cxx23_compat_constexpr_dtor_subobject : Warning<
   "%sub{select_constexpr_spec_kind}0 destructor is incompatible with C++ standards before C++23 because "
   "%select{data member %2|base class %3}1 does not have a "
   "constexpr destructor">, InGroup<CXXPre23Compat>, DefaultIgnore;
