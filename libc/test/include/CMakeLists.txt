@@ -7,7 +7,9 @@ add_libc_test(
   SRCS
     sys/queue_test.cpp
   DEPENDS
-    libc.include.sys_queue
+    libc.include.sys.sys_queue_macros
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
+  COMPILE_OPTIONS
+    -Wno-gnu-statement-expression-from-macro-expansion
 )
