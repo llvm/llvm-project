@@ -2809,6 +2809,10 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC,
           match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
         return X;
 
+      // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
+      if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
+        return L;
+
       // Similar to above, but the shift amount may be extended after masking,
       // so return the extended value as the parameter for the intrinsic.
       if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
@@ -3396,6 +3400,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return replaceInstUsesWith(I, Concat);
 
   if (Instruction *R = foldBinOpShiftWithShift(I))
+    return R;
+
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
     return R;
 
   Value *X, *Y;

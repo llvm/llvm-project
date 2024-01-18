@@ -2,15 +2,15 @@
 ; Check for consistency of interpretation of fast math flags on fdiv
 ; between implementations.
 
-; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -march=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,CODEGEN-IEEE-SDAG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -march=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,CODEGEN-IEEE-GISEL %s
-; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -march=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,IR-IEEE,IR-IEEE-SDAG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -march=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,IR-IEEE,IR-IEEE-GISEL %s
+; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,CODEGEN-IEEE-SDAG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,CODEGEN-IEEE-GISEL %s
+; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,IR-IEEE,IR-IEEE-SDAG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=ieee < %s | FileCheck -check-prefixes=CHECK,IEEE,IR-IEEE,IR-IEEE-GISEL %s
 
-; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -march=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,CODEGEN-DAZ,CODEGEN-DAZ-SDAG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -march=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,CODEGEN-DAZ,CODEGEN-DAZ-GISEL %s
-; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -march=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,IR-DAZ,IR-DAZ-SDAG %s
-; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -march=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,IR-DAZ,IR-DAZ-GISEL %s
+; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,CODEGEN-DAZ,CODEGEN-DAZ-SDAG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=0 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,CODEGEN-DAZ,CODEGEN-DAZ-GISEL %s
+; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,IR-DAZ,IR-DAZ-SDAG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion=1 -mtriple=amdgcn -mcpu=hawaii -denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=CHECK,DAZ,IR-DAZ,IR-DAZ-GISEL %s
 
 define float @v_fdiv_f32(float %x, float %y) {
 ; CODEGEN-IEEE-SDAG-LABEL: v_fdiv_f32:

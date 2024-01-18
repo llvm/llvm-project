@@ -88,6 +88,7 @@ on support follow.
      ``C``            Supported
      ``D``            Supported
      ``F``            Supported
+     ``E``            Supported (`See note <#riscv-rve-note>`__)
      ``H``            Assembly Support
      ``M``            Supported
      ``Smaia``        Supported
@@ -179,6 +180,11 @@ Assembly Support
 Supported
   Fully supported by the compiler.  This includes everything in Assembly Support, along with - if relevant - C language intrinsics for the instructions and pattern matching by the compiler to recognize idiomatic patterns which can be lowered to the associated instructions.
 
+.. _riscv-rve-note:
+
+``E``
+  Support of RV32E/RV64E and ilp32e/lp64e ABIs are experimental. To be compatible with the implementation of ilp32e in GCC, we don't use aligned registers to pass variadic arguments. Furthermore, we set the stack alignment to 4 bytes for types with length of 2*XLEN.
+
 .. _riscv-scalar-crypto-note1:
 
 ``Zbkb``, ``Zbkx``
@@ -210,7 +216,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
-  LLVM implements assembler support for the `0.8.0 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/20230629>`_.
+  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`_.
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
