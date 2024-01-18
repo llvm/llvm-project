@@ -121,7 +121,7 @@ void test_argument_forwarding() {
     std::move(cv).visit<ReturnType>(obj);
     assert(Fn::check_call<const int&&>(val));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
+#  if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   { // single argument - lvalue reference
     using V = std::variant<int&>;
     int x   = 42;
@@ -152,7 +152,7 @@ void test_argument_forwarding() {
     std::move(cv).visit<ReturnType>(obj);
     assert(Fn::check_call<int&&>(val));
   }
-#endif
+#  endif
 }
 
 template <typename ReturnType>
@@ -226,7 +226,7 @@ void test_constexpr_int() {
 
 template <typename ReturnType>
 void test_exceptions() {
-#ifndef TEST_HAS_NO_EXCEPTIONS
+#  ifndef TEST_HAS_NO_EXCEPTIONS
   ReturnArity obj{};
 
   auto test = [&](auto&& v) {
@@ -246,7 +246,7 @@ void test_exceptions() {
 
     assert(test(v));
   }
-#endif
+#  endif
 }
 
 // See https://bugs.llvm.org/show_bug.cgi?id=31916
