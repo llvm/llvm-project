@@ -281,6 +281,8 @@ def err_function_needs_feature : Error<
   "be inlined into function %0 that is compiled without support for '%2'">;
 def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatched %2 attributes">;
+def err_function_always_inline_new_za : Error<
+  "always_inline function %0 has new za state">;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "

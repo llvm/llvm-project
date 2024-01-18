@@ -831,6 +831,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     llvm::SMEAttrs FAttrs;
     if (F->hasAttr<ArmLocallyStreamingAttr>())
       FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
+    if (auto *NewAttr = F->getAttr<ArmNewAttr>()) {
+      if (NewAttr->isNewZA())
+        FAttrs.set(llvm::SMEAttrs::Mask::ZA_New);
+    }
     if (const auto *T = F->getType()->getAs<FunctionProtoType>()) {
       if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
         FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
@@ -848,6 +852,9 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     CGM.getDiags().Report(CallLoc,
                           diag::err_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
+  if (CalleeAttrs.hasNewZABody())
+    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+        << Callee->getDeclName();
 }
 
 std::unique_ptr<TargetCodeGenInfo>
