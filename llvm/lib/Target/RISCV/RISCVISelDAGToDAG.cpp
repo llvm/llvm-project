@@ -3545,6 +3545,9 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
 
   if (IsMasked) {
     assert(HasTiedDest && "Expected tied dest");
+    // The vmerge instruction must be TU.
+    if (isImplicitDef(Merge))
+      return false;
     // The vmerge instruction must have an all 1s mask since we're going to keep
     // the mask from the True instruction.
     // FIXME: Support mask agnostic True instruction which would have an
