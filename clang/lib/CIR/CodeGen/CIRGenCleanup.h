@@ -37,7 +37,7 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
-  mlir::Block *CachedLandingPad;
+  mlir::Operation *CachedLandingPad;
   mlir::Block *CachedEHDispatchBlock;
 
   EHScopeStack::stable_iterator EnclosingEHScope;
@@ -108,9 +108,9 @@ public:
 
   Kind getKind() const { return static_cast<Kind>(CommonBits.Kind); }
 
-  mlir::Block *getCachedLandingPad() const { return CachedLandingPad; }
+  mlir::Operation *getCachedLandingPad() const { return CachedLandingPad; }
 
-  void setCachedLandingPad(mlir::Block *block) { CachedLandingPad = block; }
+  void setCachedLandingPad(mlir::Operation *op) { CachedLandingPad = op; }
 
   mlir::Block *getCachedEHDispatchBlock() const {
     return CachedEHDispatchBlock;
@@ -121,8 +121,11 @@ public:
   }
 
   bool hasEHBranches() const {
+    // Traditional LLVM codegen also checks for `!block->use_empty()`, but
+    // in CIRGen the block content is not important, just used as a way to
+    // signal `hasEHBranches`.
     if (mlir::Block *block = getCachedEHDispatchBlock())
-      return !block->use_empty();
+      return true;
     return false;
   }
 

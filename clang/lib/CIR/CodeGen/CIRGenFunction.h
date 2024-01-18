@@ -301,6 +301,30 @@ public:
   using SymTableScopeTy =
       llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
 
+  /// Try/Catch: calls within try statements need to refer to local
+  /// allocas for the exception info
+  struct CIRExceptionInfo {
+    mlir::Value exceptionAddr{};
+    mlir::cir::CatchOp catchOp{};
+  };
+  CIRExceptionInfo currExceptionInfo{};
+  class ExceptionInfoRAIIObject {
+    CIRGenFunction &P;
+    CIRExceptionInfo OldVal{};
+
+  public:
+    ExceptionInfoRAIIObject(CIRGenFunction &p, CIRExceptionInfo info) : P(p) {
+      if (P.currExceptionInfo.exceptionAddr)
+        OldVal = P.currExceptionInfo;
+      P.currExceptionInfo = info;
+    }
+
+    /// Can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.currExceptionInfo = OldVal; }
+    ~ExceptionInfoRAIIObject() { restore(); }
+  };
+
   enum class EvaluationOrder {
     ///! No langauge constraints on evaluation order.
     Default,
@@ -1480,14 +1504,15 @@ public:
   };
 
   /// Emits landing pad information for the current EH stack.
-  mlir::Block *buildLandingPad();
+  mlir::Operation *buildLandingPad();
+  mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
 
-  // TODO(cir): perhaps return a mlir::Block* here, for now
-  // only check if a landing pad is required.
-  mlir::Block *getInvokeDestImpl();
+  mlir::Operation *getInvokeDestImpl();
   bool getInvokeDest() {
     if (!EHStack.requiresLandingPad())
       return false;
+    // cir.try_call does not require a block destination, but keep the
+    // overall traditional LLVM codegen names, and just ignore the result.
     return (bool)getInvokeDestImpl();
   }
 
