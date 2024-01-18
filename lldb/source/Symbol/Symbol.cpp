@@ -226,8 +226,9 @@ bool Symbol::IsTrampoline() const { return m_type == eSymbolTypeTrampoline; }
 
 bool Symbol::IsIndirect() const { return m_type == eSymbolTypeResolver; }
 
-void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                            Target *target, llvm::StringRef pattern) const {
+void Symbol::GetDescription(
+    Stream *s, lldb::DescriptionLevel level, Target *target,
+    std::optional<Stream::HighlightSettings> pattern_info) const {
   s->Printf("id = {0x%8.8x}", m_uid);
 
   if (m_addr_range.GetBaseAddress().GetSection()) {
@@ -262,14 +263,12 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
   if (ConstString demangled = m_mangled.GetDemangledName()) {
     s->PutCString(", name=\"");
-    s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern,
-                                  ansi_prefix, ansi_suffix);
+    s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern_info);
     s->PutCString("\"");
   }
   if (ConstString mangled_name = m_mangled.GetMangledName()) {
     s->PutCString(", mangled=\"");
-    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), pattern,
-                                  ansi_prefix, ansi_suffix);
+    s->PutCStringColorHighlighted(mangled_name.GetStringRef(), pattern_info);
     s->PutCString("\"");
   }
 }

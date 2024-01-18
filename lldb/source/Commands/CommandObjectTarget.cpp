@@ -53,6 +53,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
@@ -1531,9 +1532,10 @@ static void DumpOsoFilesTable(Stream &strm,
   });
 }
 
-static void DumpAddress(ExecutionContextScope *exe_scope,
-                        const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm, llvm::StringRef pattern = "") {
+static void DumpAddress(
+    ExecutionContextScope *exe_scope, const Address &so_addr, bool verbose,
+    bool all_ranges, Stream &strm,
+    std::optional<Stream::HighlightSettings> pattern_info = std::nullopt) {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1544,13 +1546,14 @@ static void DumpAddress(ExecutionContextScope *exe_scope,
   const uint32_t save_indent = strm.GetIndentLevel();
   strm.SetIndentLevel(save_indent + 13);
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleResolvedDescription,
-               Address::DumpStyleInvalid, UINT32_MAX, false, pattern);
+               Address::DumpStyleInvalid, UINT32_MAX, false, pattern_info);
   strm.SetIndentLevel(save_indent);
   // Print out detailed address information when verbose is enabled
   if (verbose) {
     strm.EOL();
     so_addr.Dump(&strm, exe_scope, Address::DumpStyleDetailedSymbolContext,
-                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges, pattern);
+                 Address::DumpStyleInvalid, UINT32_MAX, all_ranges,
+                 pattern_info);
   }
   strm.IndentLess();
 }
@@ -1618,22 +1621,25 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     for (uint32_t i = 0; i < num_matches; ++i) {
       Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
+        Stream::HighlightSettings pattern_info(
+            name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
+            interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
         if (symbol->ValueIsAddress()) {
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
               symbol->GetAddressRef(), verbose, all_ranges, strm,
-              use_color && name_is_regex ? name : nullptr);
+              use_color && name_is_regex
+                  ? std::optional<Stream::HighlightSettings>{pattern_info}
+                  : std::nullopt);
           strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
-          llvm::StringRef ansi_prefix =
-              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
-          llvm::StringRef ansi_suffix =
-              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
           strm.PutCStringColorHighlighted(
               symbol->GetDisplayName().GetStringRef(),
-              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
+              use_color && name_is_regex
+                  ? std::optional<Stream::HighlightSettings>{pattern_info}
+                  : std::nullopt);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
@@ -1650,10 +1656,10 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
   return num_matches;
 }
 
-static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
-                                  Stream &strm,
-                                  const SymbolContextList &sc_list,
-                                  bool verbose, bool all_ranges) {
+static void DumpSymbolContextList(
+    ExecutionContextScope *exe_scope, Stream &strm,
+    const SymbolContextList &sc_list, bool verbose, bool all_ranges,
+    std::optional<Stream::HighlightSettings> pattern_info = std::nullopt) {
   strm.IndentMore();
   bool first_module = true;
   for (const SymbolContext &sc : sc_list) {
@@ -1664,7 +1670,8 @@ static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
 
     sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
 
-    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm);
+    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm,
+                pattern_info);
     first_module = false;
   }
   strm.IndentLess();

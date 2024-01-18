@@ -17,6 +17,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -157,7 +158,8 @@ public:
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
                        bool show_function_arguments, bool show_function_name,
-                       llvm::StringRef pattern = "") const;
+                       std::optional<Stream::HighlightSettings> pattern_info =
+                           std::nullopt) const;
 
   /// Get the address range contained within a symbol context.
   ///
@@ -224,7 +226,8 @@ public:
   const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      llvm::StringRef pattern = "") const;
+                      std::optional<Stream::HighlightSettings> pattern_info =
+                          std::nullopt) const;
 
   uint32_t GetResolvedMask() const;
 

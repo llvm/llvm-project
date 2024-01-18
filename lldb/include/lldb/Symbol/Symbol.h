@@ -13,6 +13,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
@@ -175,7 +176,8 @@ public:
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      llvm::StringRef pattern = "") const;
+                      std::optional<Stream::HighlightSettings> pattern_info =
+                          std::nullopt) const;
 
   bool IsSynthetic() const { return m_is_synthetic; }
 
