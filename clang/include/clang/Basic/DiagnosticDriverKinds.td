@@ -656,6 +656,13 @@ def err_drv_trivial_auto_var_init_stop_after_missing_dependency : Error<
 def err_drv_trivial_auto_var_init_stop_after_invalid_value : Error<
   "'-ftrivial-auto-var-init-stop-after=*' only accepts positive integers">;
 
+def err_drv_trivial_auto_var_init_max_size_missing_dependency : Error<
+  "'-ftrivial-auto-var-init-max-size=*' is used without "
+  "'-ftrivial-auto-var-init=zero' or '-ftrivial-auto-var-init=pattern'">;
+
+def err_drv_trivial_auto_var_init_max_size_invalid_value : Error<
+  "'-ftrivial-auto-var-init-max-size=*' only accepts positive integers (in bytes)">;
+
 def warn_drv_msp430_hwmult_unsupported : Warning<
   "the given MCU does not support hardware multiply, but '-mhwmult' is set to "
   "%0">, InGroup<InvalidCommandLineArgument>;

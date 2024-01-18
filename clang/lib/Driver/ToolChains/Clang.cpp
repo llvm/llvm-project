@@ -3535,6 +3535,20 @@ static void RenderTrivialAutoVarInitOptions(const Driver &D,
     CmdArgs.push_back(
         Args.MakeArgString("-ftrivial-auto-var-init-stop-after=" + Val));
   }
+
+  if (Arg *A = Args.getLastArg(options::OPT_ftrivial_auto_var_init_max_size)) {
+    if (!Args.hasArg(options::OPT_ftrivial_auto_var_init) ||
+        StringRef(
+            Args.getLastArg(options::OPT_ftrivial_auto_var_init)->getValue()) ==
+            "uninitialized")
+      D.Diag(diag::err_drv_trivial_auto_var_init_max_size_missing_dependency);
+    A->claim();
+    StringRef Val = A->getValue();
+    if (std::stoi(Val.str()) <= 0)
+      D.Diag(diag::err_drv_trivial_auto_var_init_max_size_invalid_value);
+    CmdArgs.push_back(
+        Args.MakeArgString("-ftrivial-auto-var-init-max-size=" + Val));
+  }
 }
 
 static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
