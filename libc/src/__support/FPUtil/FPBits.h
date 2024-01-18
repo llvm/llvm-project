@@ -559,8 +559,7 @@ public:
   }
   LIBC_INLINE
   constexpr bool is_subnormal() const {
-    return exp_sig_bits() >
-           encode(BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
+    return exp_bits() == encode(BiasedExponent::BITS_ALL_ZEROES());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     const auto exp = exp_bits();

@@ -39,7 +39,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
 
   // Convert pseudo subnormal number to normal number.
   if (from_bits.get_implicit_bit() == 1 &&
-      from_bits.get_biased_exponent() == 0) {
+      from_bits.is_subnormal()) {
     from_bits.set_biased_exponent(1);
   }
 
