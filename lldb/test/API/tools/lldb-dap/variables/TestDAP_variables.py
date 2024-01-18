@@ -580,7 +580,6 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
         ]["variables"]
-or synthetics configurable (#65687))
         self.verify_variables(verify_children, children)
 
 
