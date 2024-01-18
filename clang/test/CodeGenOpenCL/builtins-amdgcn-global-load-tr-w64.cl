@@ -13,7 +13,7 @@ typedef short  v4s   __attribute__((ext_vector_type(4)));
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_global_load_tr_i32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.load.tr.i32.p1(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1200-NEXT:    ret i32 [[TMP0]]
 //
 int test_amdgcn_global_load_tr_i32(global int* inptr)
@@ -27,7 +27,7 @@ int test_amdgcn_global_load_tr_i32(global int* inptr)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_global_load_tr_v4i16(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i16> @llvm.amdgcn.load.tr.v4i16.p1(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i16> @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1200-NEXT:    ret <4 x i16> [[TMP0]]
 //
 v4s test_amdgcn_global_load_tr_v4i16(global v4s* inptr)
@@ -37,7 +37,7 @@ v4s test_amdgcn_global_load_tr_v4i16(global v4s* inptr)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_global_load_tr_v4f16(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.load.tr.v4f16.p1(ptr addrspace(1) [[INPTR:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1) [[INPTR:%.*]])
 // CHECK-GFX1200-NEXT:    ret <4 x half> [[TMP0]]
 //
 v4h test_amdgcn_global_load_tr_v4f16(global v4h* inptr)

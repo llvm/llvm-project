@@ -18211,9 +18211,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
           llvm::Type::getInt16Ty(getLLVMContext()), 8);
       break;
     }
+
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_load_tr, {ArgTy, Addr->getType()});
+        CGM.getIntrinsic(Intrinsic::amdgcn_global_load_tr, {ArgTy});
     return Builder.CreateCall(F, {Addr});
   }
   case AMDGPU::BI__builtin_amdgcn_read_exec:
