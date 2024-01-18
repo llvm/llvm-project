@@ -1,51 +1,66 @@
-# RUN: echo test
+## Test the functionality of make_corpus_lib
 
 import json
 import os
-
-from absl.testing import absltest
+import sys
 
 from mlgo.corpus import make_corpus_lib
 
+## Test that when we load the bitcode from a directory using the
+## load_bitcode_from_directory function, we get the expected results.
 
-class MakeCorpusTest(absltest.TestCase):
-    def test_load_bitcode_from_directory(self):
-        outer = self.create_tempdir()
-        tempdir = outer.mkdir(dir_path="nested")
-        tempdir.create_file("test1.bc")
-        tempdir.create_file("test2.bc")
-        relative_paths = make_corpus_lib.load_bitcode_from_directory(outer)
-        relative_paths = sorted(relative_paths)
-        self.assertEqual(relative_paths[0], "nested/test1")
-        self.assertEqual(relative_paths[1], "nested/test2")
+# RUN: rm -rf %t.dir && mkdir %t.dir
+# RUN: mkdir %t.dir/nested
+# RUN: touch %t.dir/nested/test1.bc
+# RUN: touch %t.dir/nested/test2.bc
+# RUN: %python %s test_load_bitcode_from_directory %t.dir | FileCheck %s --check-prefix CHECK-LOAD
 
-    def test_copy_bitcode(self):
-        build_dir = self.create_tempdir()
-        nested_dir = build_dir.mkdir(dir_path="nested")
-        nested_dir.create_file("test1.bc")
-        nested_dir.create_file("test2.bc")
-        relative_paths = ["nested/test1", "nested/test2"]
-        corpus_dir = self.create_tempdir()
-        make_corpus_lib.copy_bitcode(relative_paths, build_dir, corpus_dir)
-        output_files = sorted(os.listdir(os.path.join(corpus_dir, "./nested")))
-        self.assertEqual(output_files[0], "test1.bc")
-        self.assertEqual(output_files[1], "test2.bc")
+# CHECK-LOAD: nested/test1
+# CHECK-LOAD: nested/test2
 
-    def test_write_corpus_manifest(self):
-        relative_output_paths = ["test/test1", "test/test2"]
-        output_dir = self.create_tempdir()
-        default_args = ["-O3", "-c"]
-        make_corpus_lib.write_corpus_manifest(
-            relative_output_paths, output_dir, default_args
-        )
-        with open(
-            os.path.join(output_dir, "corpus_description.json"), encoding="utf-8"
-        ) as corpus_description_file:
-            corpus_description = json.load(corpus_description_file)
-        self.assertEqual(corpus_description["global_command_override"], default_args)
-        self.assertEqual(corpus_description["has_thinlto"], False)
-        self.assertEqual(corpus_description["modules"], relative_output_paths)
+def test_load_bitcode_from_directory(work_dir):
+    relative_paths = make_corpus_lib.load_bitcode_from_directory(work_dir)
+    relative_paths = sorted(relative_paths)
+    for relative_path in relative_paths:
+        print(relative_path)
+
+## Test that when we copy the bitcode given a list of relative paths, the
+## appropriate files are copied over.
+
+# RUN: rm -rf %t.dir1 && mkdir %t.dir1
+# RUN: %python %s test_copy_bitcode %t.dir %t.dir1
+# RUN: ls %t.dir1/nested | FileCheck %s --check-prefix CHECK-COPY
+
+# CHECK-COPY: test1.bc
+# CHECK-COPY: test2.bc
+
+def test_copy_bitcode(directory, output_dir):
+    relative_paths = ["nested/test1", "nested/test2"]
+    make_corpus_lib.copy_bitcode(relative_paths, directory, output_dir)
+
+## Test that we get the expected corpus manifest when writing a corpus
+## manifest to the specificed directory.
+
+# RUN: %python %s test_write_corpus_manifest %t.dir1 | FileCheck %s --check-prefix CHECK-MANIFEST
+
+# CHECK-MANIFEST: ['-O3', '-c']
+# CHECK-MANIFEST: False
+# CHECK-MANIFEST: ['test/test1', 'test/test2']
+
+def test_write_corpus_manifest(output_dir):
+    relative_output_paths = ["test/test1", "test/test2"]
+    default_args = ["-O3", "-c"]
+    make_corpus_lib.write_corpus_manifest(
+        relative_output_paths, output_dir, default_args
+    )
+    with open(
+        os.path.join(output_dir, "corpus_description.json"), encoding="utf-8"
+    ) as corpus_description_file:
+        corpus_description = json.load(corpus_description_file)
+    print(corpus_description["global_command_override"])
+    print(corpus_description["has_thinlto"])
+    print(corpus_description["modules"])
 
 
 if __name__ == "__main__":
-    absltest.main()
+    globals()[sys.argv[1]](*sys.argv[2:])
