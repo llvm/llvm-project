@@ -748,9 +748,9 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
       // return -Inf and raise FE_DIVBYZERO.
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<double>(FPBits_t::neg_inf());
+      return static_cast<double>(FPBits_t::inf(fputil::Sign::NEG));
     }
-    if (xbits.get_sign() && !xbits.is_nan()) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits_t::build_quiet_nan(0);
