@@ -29,14 +29,10 @@ public:
             CleanupMemory](FunctionFiller &Filler) {
       auto Entry = Filler.getEntry();
       if (!Instructions.empty()) {
-        // Add the whole snippet at least once.
-        Entry.addInstructions(Instructions);
-        unsigned FullInstructionCount = MinInstructions;
-        if (FullInstructionCount % Instructions.size() != 0)
-          FullInstructionCount +=
-              Instructions.size() - (MinInstructions % Instructions.size());
-        for (unsigned I = Instructions.size(); I < FullInstructionCount; ++I) {
-          Entry.addInstruction(Instructions[I % Instructions.size()]);
+        const unsigned NumRepetitions =
+            divideCeil(MinInstructions, Instructions.size());
+        for (unsigned I = 0; I < NumRepetitions; ++I) {
+          Entry.addInstructions(Instructions);
         }
       }
       Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
