@@ -47,6 +47,20 @@ namespace lld::wasm {
 Configuration *config;
 Ctx ctx;
 
+void Ctx::reset() {
+  objectFiles.clear();
+  stubFiles.clear();
+  sharedFiles.clear();
+  bitcodeFiles.clear();
+  syntheticFunctions.clear();
+  syntheticGlobals.clear();
+  syntheticTables.clear();
+  whyExtractRecords.clear();
+  isPic = false;
+  legacyFunctionTable = false;
+  emitBssSegments = false;
+}
+
 namespace {
 
 // Create enum with OPT_xxx values for each option in Options.td
@@ -90,6 +104,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   auto *ctx = new CommonLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
   ctx->e.logName = args::getFilenameWithoutExe(args[0]);
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
                                  "-error-limit=0 to see all errors)";
