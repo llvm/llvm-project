@@ -1298,13 +1298,13 @@ multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
   let SchedRW = [sched], Form = MRMSrcReg4VOp3 in
     def rr#Suffix : BinOpRR<o, m, binop_ndd_args, t, (outs t.RegClass:$dst),
                             [(set t.RegClass:$dst, EFLAGS,
-                             (node t.RegClass:$src1, t.RegClass:$src2))]>, T8, NoCD8;
+                             (node t.RegClass:$src1, t.RegClass:$src2))]>, T8;
   let SchedRW = [sched.Folded,
                  ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                  sched.ReadAfterFold], Form =  MRMSrcMem4VOp3 in
     def rm#Suffix : BinOpMR<o, m, binop_ndd_args, t, (outs t.RegClass:$dst),
                             [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode addr:$src1),
-                             t.RegClass:$src2))]>, T8, NoCD8;
+                             t.RegClass:$src2))]>, T8;
 }
 
 let Predicates = [HasBMI, NoEGPR], Defs = [EFLAGS] in {
