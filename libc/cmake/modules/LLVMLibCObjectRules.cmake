@@ -41,8 +41,6 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fno-unwind-tables")
     list(APPEND compile_options "-fno-asynchronous-unwind-tables")
     list(APPEND compile_options "-fno-rtti")
-    # clang-8+, gcc-12+
-    check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
     if (LIBC_CC_SUPPORTS_PATTERN_INIT)
       list(APPEND compile_options "-ftrivial-auto-var-init=pattern")
     endif()
