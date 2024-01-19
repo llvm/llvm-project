@@ -4817,8 +4817,8 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     symbol = &MakeSymbol(name, EntityDetails{});
   }
   if (CheckDuplicatedAttr(name.source, *symbol, attr)) {
+    HandleSaveName(name.source, Attrs{attr});
     SetExplicitAttr(*symbol, attr);
-    symbol->attrs() = HandleSaveName(name.source, symbol->attrs());
   }
   return *symbol;
 }
