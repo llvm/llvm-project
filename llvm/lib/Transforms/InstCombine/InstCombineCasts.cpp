@@ -103,6 +103,13 @@ Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
       }
     }
     break;
+  case Instruction::ShuffleVector: {
+    Value *Op0 = EvaluateInDifferentType(I->getOperand(0), Ty, isSigned);
+    Value *Op1 = EvaluateInDifferentType(I->getOperand(1), Ty, isSigned);
+    Res = new ShuffleVectorInst(Op0, Op1,
+                                cast<ShuffleVectorInst>(I)->getShuffleMask());
+    break;
+  }
   default:
     // TODO: Can handle more cases here.
     llvm_unreachable("Unreachable!");
@@ -363,6 +370,9 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
           I->getOpcode() == Instruction::FPToSI);
     return Ty->getScalarSizeInBits() >= MinBitWidth;
   }
+  case Instruction::ShuffleVector:
+    return canEvaluateTruncated(I->getOperand(0), Ty, IC, CxtI) &&
+           canEvaluateTruncated(I->getOperand(1), Ty, IC, CxtI);
   default:
     // TODO: Can handle more cases here.
     break;

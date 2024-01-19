@@ -8,17 +8,17 @@ define double @foo(double %0) #0 {
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
 ; CHECK-NEXT:    callq fesetround@PLT
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd (%rsp), %xmm1 # 8-byte Folded Reload
 ; CHECK-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
 ; CHECK-NEXT:    callq fesetround@PLT
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd (%rsp), %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1024, %edi # imm = 0x400
 ; CHECK-NEXT:    callq fesetround@PLT
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    divsd (%rsp), %xmm2 # 8-byte Folded Reload
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero

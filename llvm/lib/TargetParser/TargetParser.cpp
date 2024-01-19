@@ -275,7 +275,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1201:
     case GK_GFX1200:
       Features["ci-insts"] = true;
-      Features["dot5-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
       Features["dot9-insts"] = true;
