@@ -17,6 +17,13 @@ def HasStdExtZicsr : Predicate<"Subtarget->hasStdExtZicsr()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZicsr),
                                 "'Zicsr' (CSRs)">;
 
+def FeatureStdExtI
+    : SubtargetFeature<"i", "HasStdExtI", "true",
+                       "'I' (Base Integer Instruction Set)">;
+def HasStdExtI : Predicate<"Subtarget->hasStdExtI()">,
+                           AssemblerPredicate<(all_of FeatureStdExtI),
+                           "'I' (Base Integer Instruction Set)">;
+
 def FeatureStdExtM
     : SubtargetFeature<"m", "HasStdExtM", "true",
                        "'M' (Integer Multiplication and Division)">;
@@ -85,6 +92,22 @@ def FeatureStdExtZifencei
 def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                                    AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                    "'Zifencei' (fence.i)">;
+
+def FeatureStdExtZiccamoa
+    : SubtargetFeature<"ziccamoa", "HasStdExtZiccamoa", "true",
+                       "'Ziccamoa' (Main Memory Supports All Atomics in A)">;
+
+def FeatureStdExtZiccif
+    : SubtargetFeature<"ziccif", "HasStdExtZiccif", "true",
+                       "'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement)">;
+
+def FeatureStdExtZicclsm
+    : SubtargetFeature<"zicclsm", "HasStdExtZicclsm", "true",
+                       "'Zicclsm' (Main Memory Supports Misaligned Loads/Stores)">;
+
+def FeatureStdExtZiccrse
+    : SubtargetFeature<"ziccrse", "HasStdExtZiccrse", "true",
+                       "'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences)">;
 
 def FeatureStdExtZicntr
     : SubtargetFeature<"zicntr", "HasStdExtZicntr", "true",
@@ -510,6 +533,10 @@ def HasStdExtZfhOrZvfh
                                    "'Zfh' (Half-Precision Floating-Point) or "
                                    "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
+def FeatureStdExtZic64b
+    : SubtargetFeature<"zic64b", "HasStdExtZic64b", "true",
+                       "'Zic64b' (Cache Block Size Is 64 Bytes)">;
+
 def FeatureStdExtZicbom
     : SubtargetFeature<"zicbom", "HasStdExtZicbom", "true",
                        "'Zicbom' (Cache-Block Management Instructions)">;
@@ -554,6 +581,12 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                               "'Ztso' (Memory Model - Total Store Order)">;
 def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
 
+def FeatureStdExtZa64rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
+                                           "'Za64rs' (Reservation Set Size of at Most 64 Bytes)">;
+
+def FeatureStdExtZa128rs : SubtargetFeature<"za128rs", "HasStdExtZa128rs", "true",
+                                            "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
+
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
 def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
@@ -569,11 +602,11 @@ def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
 
 def FeatureStdExtZvbb
     : SubtargetFeature<"zvbb", "HasStdExtZvbb", "true",
-                       "'Zvbb' (Vector basic bit-manipulation instructions.)",
+                       "'Zvbb' (Vector basic bit-manipulation instructions)",
                        [FeatureStdExtZvkb]>;
 def HasStdExtZvbb : Predicate<"Subtarget->hasStdExtZvbb()">,
                               AssemblerPredicate<(all_of FeatureStdExtZvbb),
-                              "'Zvbb' (Vector basic bit-manipulation instructions.)">;
+                              "'Zvbb' (Vector basic bit-manipulation instructions)">;
 
 def FeatureStdExtZvbc
     : SubtargetFeature<"zvbc", "HasStdExtZvbc", "true",
@@ -637,40 +670,36 @@ def FeatureStdExtZvkt
 
 def FeatureStdExtZvkn
     : SubtargetFeature<"zvkn", "HasStdExtZvkn", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvkned, Zvknhb, Zvkb and Zvkt.",
+                       "'Zvkn' (shorthand for 'Zvkned', 'Zvknhb', 'Zvkb', and "
+                       "'Zvkt')",
                        [FeatureStdExtZvkned, FeatureStdExtZvknhb,
                         FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvknc
     : SubtargetFeature<"zvknc", "HasStdExtZvknc", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvkn and Zvbc.",
+                       "'Zvknc' (shorthand for 'Zvknc' and 'Zvbc')",
                        [FeatureStdExtZvkn, FeatureStdExtZvbc]>;
 
 def FeatureStdExtZvkng
     : SubtargetFeature<"zvkng", "HasStdExtZvkng", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvkn and Zvkg.",
+                       "'zvkng' (shorthand for 'Zvkn' and 'Zvkg')",
                        [FeatureStdExtZvkn, FeatureStdExtZvkg]>;
 
 def FeatureStdExtZvks
     : SubtargetFeature<"zvks", "HasStdExtZvks", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvksed, Zvksh, Zvkb and Zvkt.",
+                       "'Zvks' (shorthand for 'Zvksed', 'Zvksh', 'Zvkb', and "
+                       "'Zvkt')",
                        [FeatureStdExtZvksed, FeatureStdExtZvksh,
                         FeatureStdExtZvkb, FeatureStdExtZvkt]>;
 
 def FeatureStdExtZvksc
     : SubtargetFeature<"zvksc", "HasStdExtZvksc", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvks and Zvbc.",
+                       "'Zvksc' (shorthand for 'Zvks' and 'Zvbc')",
                        [FeatureStdExtZvks, FeatureStdExtZvbc]>;
 
 def FeatureStdExtZvksg
     : SubtargetFeature<"zvksg", "HasStdExtZvksg", "true",
-                       "This extension is shorthand for the following set of "
-                       "other extensions: Zvks and Zvkg.",
+                       "'Zvksg' (shorthand for 'Zvks' and 'Zvkg')",
                        [FeatureStdExtZvks, FeatureStdExtZvkg]>;
 
 def FeatureStdExtZicfilp
@@ -711,16 +740,13 @@ def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
-                       "'Smaia' (Smaia encompasses all added CSRs and all "
-                       "modifications to interrupt response behavior that the "
-                       "AIA specifies for a hart, over all privilege levels.)",
-                       []>;
+                       "'Smaia' (Advanced Interrupt Architecture Machine "
+                       "Level)", []>;
 
 def FeatureStdExtSsaia
     : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
-                       "'Ssaia' (Ssaia is essentially the same as Smaia except "
-                       "excluding the machine-level CSRs and behavior not "
-                       "directly visible to supervisor level.)", []>;
+                       "'Ssaia' (Advanced Interrupt Architecture Supervisor "
+                       "Level)", []>;
 
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,

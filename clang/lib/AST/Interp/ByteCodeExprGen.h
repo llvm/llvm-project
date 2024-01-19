@@ -294,6 +294,8 @@ private:
     return this->classify(ElemType);
   }
 
+  bool emitComplexReal(const Expr *SubExpr);
+
   bool emitRecordDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);

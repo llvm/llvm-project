@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -117,6 +118,17 @@ private:
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
                          uint64_t FuncAddress);
+
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
 
   std::map<uint64_t, MapTy> Maps;
 

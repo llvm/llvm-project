@@ -11,8 +11,8 @@
 // Regression test to error in deque::__annotate_from_to in deque,
 // with origin in deque::__add_back_capacity.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
+// `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
+// UNSUPPORTED: c++03, !has-unix-headers, no-localization
 
 #include <deque>
 #include <cstdio>

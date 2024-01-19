@@ -734,8 +734,6 @@ namespace VirtualDtors {
   }
 
   static_assert(foo());
-
-
 };
 
 namespace QualifiedCalls {
@@ -1134,4 +1132,91 @@ namespace AccessOnNullptr {
                                // expected-note {{in call to 'a2()'}} \
                                // ref-error {{not an integral constant expression}} \
                                // ref-note {{in call to 'a2()'}}
+}
+
+namespace IndirectFieldInit {
+#if __cplusplus >= 202002L
+  /// Primitive.
+  struct Nested1 {
+    struct {
+      int first;
+    };
+    int x;
+    constexpr Nested1(int x) : first(12), x() { x = 4; }
+    constexpr Nested1() : Nested1(42) {}
+  };
+  constexpr Nested1 N1{};
+  static_assert(N1.first == 12, "");
+
+  /// Composite.
+  struct Nested2 {
+    struct First { int x = 42; };
+    struct {
+      First first;
+    };
+    int x;
+    constexpr Nested2(int x) : first(12), x() { x = 4; }
+    constexpr Nested2() : Nested2(42) {}
+  };
+  constexpr Nested2 N2{};
+  static_assert(N2.first.x == 12, "");
+
+  /// Bitfield.
+  struct Nested3 {
+    struct {
+      unsigned first : 2;
+    };
+    int x;
+    constexpr Nested3(int x) : first(3), x() { x = 4; }
+    constexpr Nested3() : Nested3(42) {}
+  };
+
+  constexpr Nested3 N3{};
+  static_assert(N3.first == 3, "");
+
+  /// Test that we get the offset right if the
+  /// record has a base.
+  struct Nested4Base {
+    int a;
+    int b;
+    char c;
+  };
+  struct Nested4 : Nested4Base{
+    struct {
+      int first;
+    };
+    int x;
+    constexpr Nested4(int x) : first(123), x() { a = 1; b = 2; c = 3; x = 4; }
+    constexpr Nested4() : Nested4(42) {}
+  };
+  constexpr Nested4 N4{};
+  static_assert(N4.first == 123, "");
+
+  struct S {
+    struct {
+      int x, y;
+    };
+
+    constexpr S(int x_, int y_) : x(x_), y(y_) {}
+  };
+
+  constexpr S s(1, 2);
+  static_assert(s.x == 1 && s.y == 2);
+
+  struct S2 {
+    int a;
+    struct {
+      int b;
+      struct {
+        int x, y;
+      };
+    };
+
+    constexpr S2(int x_, int y_) : a(3), b(4), x(x_), y(y_) {}
+  };
+
+  constexpr S2 s2(1, 2);
+  static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
+
+#endif
 }

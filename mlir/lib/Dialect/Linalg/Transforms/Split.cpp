@@ -113,7 +113,7 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   // Need to pretend that the original op now takes as operands firstResults,
   // otherwise tiling interface implementation will take the wrong value to
   // produce data tiles.
-  rewriter.updateRootInPlace(op, [&]() {
+  rewriter.modifyOpInPlace(op, [&]() {
     unsigned numTotalOperands = op->getNumOperands();
     unsigned numOutputOperands = firstResults.size();
     op->setOperands(numTotalOperands - numOutputOperands, numOutputOperands,

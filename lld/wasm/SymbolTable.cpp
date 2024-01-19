@@ -34,14 +34,14 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
 
   // .so file
   if (auto *f = dyn_cast<SharedFile>(file)) {
-    sharedFiles.push_back(f);
+    ctx.sharedFiles.push_back(f);
     return;
   }
 
   // stub file
   if (auto *f = dyn_cast<StubFile>(file)) {
     f->parse();
-    stubFiles.push_back(f);
+    ctx.stubFiles.push_back(f);
     return;
   }
 
@@ -52,7 +52,7 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
   if (auto *f = dyn_cast<BitcodeFile>(file)) {
     // This order, first adding to `bitcodeFiles` and then parsing is necessary.
     // See https://github.com/llvm/llvm-project/pull/73095
-    bitcodeFiles.push_back(f);
+    ctx.bitcodeFiles.push_back(f);
     f->parse(symName);
     return;
   }
@@ -60,7 +60,7 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
   // Regular object file
   auto *f = cast<ObjFile>(file);
   f->parse(false);
-  objectFiles.push_back(f);
+  ctx.objectFiles.push_back(f);
 }
 
 // This function is where all the optimizations of link-time
@@ -74,18 +74,18 @@ void SymbolTable::compileBitcodeFiles() {
   // Prevent further LTO objects being included
   BitcodeFile::doneLTO = true;
 
-  if (bitcodeFiles.empty())
+  if (ctx.bitcodeFiles.empty())
     return;
 
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler);
-  for (BitcodeFile *f : bitcodeFiles)
+  for (BitcodeFile *f : ctx.bitcodeFiles)
     lto->add(*f);
 
   for (StringRef filename : lto->compile()) {
     auto *obj = make<ObjFile>(MemoryBufferRef(filename, "lto.tmp"), "");
     obj->parse(true);
-    objectFiles.push_back(obj);
+    ctx.objectFiles.push_back(obj);
   }
 }
 
@@ -218,7 +218,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
                                                    InputFunction *function) {
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << name << "\n");
   assert(!find(name));
-  syntheticFunctions.emplace_back(function);
+  ctx.syntheticFunctions.emplace_back(function);
   return replaceSymbol<DefinedFunction>(insertName(name).first, name,
                                         flags, nullptr, function);
 }
@@ -255,7 +255,7 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
   LLVM_DEBUG(dbgs() << "addSyntheticGlobal: " << name << " -> " << global
                     << "\n");
   assert(!find(name));
-  syntheticGlobals.emplace_back(global);
+  ctx.syntheticGlobals.emplace_back(global);
   return replaceSymbol<DefinedGlobal>(insertName(name).first, name, flags,
                                       nullptr, global);
 }
@@ -267,7 +267,7 @@ DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
-  syntheticGlobals.emplace_back(global);
+  ctx.syntheticGlobals.emplace_back(global);
   return replaceSymbol<DefinedGlobal>(s, name, WASM_SYMBOL_VISIBILITY_HIDDEN,
                                       nullptr, global);
 }
@@ -280,7 +280,7 @@ DefinedTable *SymbolTable::addSyntheticTable(StringRef name, uint32_t flags,
   assert(!s || s->isUndefined());
   if (!s)
     s = insertName(name).first;
-  syntheticTables.emplace_back(table);
+  ctx.syntheticTables.emplace_back(table);
   return replaceSymbol<DefinedTable>(s, name, flags, nullptr, table);
 }
 
@@ -533,10 +533,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
       lazy->setWeak();
       lazy->signature = sig;
     } else {
-      lazy->fetch();
+      lazy->extract();
       if (!config->whyExtract.empty())
-        config->whyExtractRecords.emplace_back(toString(file), s->getFile(),
-                                               *s);
+        ctx.whyExtractRecords.emplace_back(toString(file), s->getFile(), *s);
     }
   } else {
     auto existingFunction = dyn_cast<FunctionSymbol>(s);
@@ -586,7 +585,7 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
     if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK)
       lazy->setWeak();
     else
-      lazy->fetch();
+      lazy->extract();
   } else if (s->isDefined()) {
     checkDataType(s, file);
   } else if (s->isWeak()) {
@@ -613,7 +612,7 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
     replaceSymbol<UndefinedGlobal>(s, name, importName, importModule, flags,
                                    file, type);
   else if (auto *lazy = dyn_cast<LazySymbol>(s))
-    lazy->fetch();
+    lazy->extract();
   else if (s->isDefined())
     checkGlobalType(s, file, type);
   else if (s->isWeak())
@@ -639,7 +638,7 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
     replaceSymbol<UndefinedTable>(s, name, importName, importModule, flags,
                                   file, type);
   else if (auto *lazy = dyn_cast<LazySymbol>(s))
-    lazy->fetch();
+    lazy->extract();
   else if (s->isDefined())
     checkTableType(s, file, type);
   else if (s->isWeak())
@@ -665,7 +664,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
     replaceSymbol<UndefinedTag>(s, name, importName, importModule, flags, file,
                                 sig);
   else if (auto *lazy = dyn_cast<LazySymbol>(s))
-    lazy->fetch();
+    lazy->extract();
   else if (s->isDefined())
     checkTagType(s, file, sig);
   else if (s->isWeak())
@@ -676,7 +675,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
   WasmLimits limits{0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();
-  type->ElemType = uint8_t(ValType::FUNCREF);
+  type->ElemType = ValType::FUNCREF;
   type->Limits = limits;
   StringRef module(defaultModule);
   uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
@@ -690,7 +689,7 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
 TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
   const uint32_t invalidIndex = -1;
   WasmLimits limits{0, 0, 0}; // Set by the writer.
-  WasmTableType type{uint8_t(ValType::FUNCREF), limits};
+  WasmTableType type{ValType::FUNCREF, limits};
   WasmTable desc{invalidIndex, type, name};
   InputTable *table = make<InputTable>(desc, nullptr);
   uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
@@ -774,7 +773,7 @@ void SymbolTable::addLazy(ArchiveFile *file, const Archive::Symbol *sym) {
   const InputFile *oldFile = s->getFile();
   file->addMember(sym);
   if (!config->whyExtract.empty())
-    config->whyExtractRecords.emplace_back(toString(oldFile), s->getFile(), *s);
+    ctx.whyExtractRecords.emplace_back(toString(oldFile), s->getFile(), *s);
 }
 
 bool SymbolTable::addComdat(StringRef name) {
@@ -856,7 +855,7 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
                                                    StringRef debugName) {
   auto *func = make<SyntheticFunction>(sig, sym->getName(), debugName);
   func->setBody(unreachableFn);
-  syntheticFunctions.emplace_back(func);
+  ctx.syntheticFunctions.emplace_back(func);
   // Mark new symbols as local. For relocatable output we don't want them
   // to be exported outside the object file.
   replaceSymbol<DefinedFunction>(sym, debugName, WASM_SYMBOL_BINDING_LOCAL,

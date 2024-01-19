@@ -2,10 +2,19 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -DTEST_SME2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -DTEST_SME2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -DTEST_SME2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 #include <arm_sve.h>
+
+#ifndef TEST_SME2
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -24,7 +33,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3)
+svint32_t test_svdot_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot,_s32_s16,)(op1, op2, op3);
 }
@@ -39,7 +48,7 @@ svint32_t test_svdot_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svdot_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3)
+svuint32_t test_svdot_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot,_u32_u16,)(op1, op2, op3);
 }
@@ -54,7 +63,7 @@ svuint32_t test_svdot_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fdot.x2.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_svdot_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+svfloat32_t test_svdot_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot,_f32_f16,)(op1, op2, op3);
 }
@@ -71,7 +80,7 @@ svfloat32_t test_svdot_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.lane.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_lane_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3)
+svint32_t test_svdot_lane_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot_lane,_s32_s16,)(op1, op2, op3, 3);
 }
@@ -86,7 +95,7 @@ svint32_t test_svdot_lane_s32_x2(svint32_t op1, svint16_t op2, svint16_t op3)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.lane.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svdot_lane_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3)
+svuint32_t test_svdot_lane_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot_lane,_u32_u16,)(op1, op2, op3, 3);
 }
@@ -101,7 +110,7 @@ svuint32_t test_svdot_lane_u32_x2(svuint32_t op1, svuint16_t op2, svuint16_t op3
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fdot.lane.x2.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[OP3:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_svdot_lane_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
+svfloat32_t test_svdot_lane_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3) ATTR
 {
   return SVE_ACLE_FUNC(svdot_lane,_f32_f16,)(op1, op2, op3, 3);
 }

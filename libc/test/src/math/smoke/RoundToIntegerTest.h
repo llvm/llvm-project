@@ -28,11 +28,12 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
-  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
-  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
-  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
+  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero(Sign::POS));
+  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero(Sign::NEG));
+  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf(Sign::POS));
+  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf(Sign::NEG));
   const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);

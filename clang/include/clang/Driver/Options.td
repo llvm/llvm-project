@@ -3664,6 +3664,10 @@ def ftrivial_auto_var_init_stop_after : Joined<["-"], "ftrivial-auto-var-init-st
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   HelpText<"Stop initializing trivial automatic stack variables after the specified number of instances">,
   MarshallingInfoInt<LangOpts<"TrivialAutoVarInitStopAfter">>;
+def ftrivial_auto_var_init_max_size : Joined<["-"], "ftrivial-auto-var-init-max-size=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  HelpText<"Stop initializing trivial automatic stack variables if var size exceeds the specified number of instances (in bytes)">,
+  MarshallingInfoInt<LangOpts<"TrivialAutoVarInitMaxSize">>;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
@@ -4392,8 +4396,8 @@ def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "65535">;
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "0">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
@@ -5172,7 +5176,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
-  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86">;
+  HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
 def multiply__defined : Separate<["-"], "multiply_defined">;
@@ -5307,7 +5311,8 @@ def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>,
+  BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
@@ -6296,6 +6301,11 @@ def fsycl : Flag<["-"], "fsycl">,
 def fno_sycl : Flag<["-"], "fno-sycl">,
   Visibility<[ClangOption, CLOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
+
+// OS-specific options
+let Flags = [TargetSpecific] in {
+defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
+} // let Flags = [TargetSpecific]
 
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
