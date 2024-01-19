@@ -4568,6 +4568,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":TransformDialect",
+        ":TransformUtils",
     ],
 )
 
