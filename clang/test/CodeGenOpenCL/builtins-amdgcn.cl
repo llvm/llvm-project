@@ -436,6 +436,19 @@ void test_sched_group_barrier()
   __builtin_amdgcn_sched_group_barrier(15, 10000, -1);
 }
 
+// CHECK-LABEL: @test_sched_group_barrier_inst
+// CHECK: call void @llvm.amdgcn.sched.group.barrier.inst(metadata !16, i32 1, i32 2)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier.inst(metadata !17, i32 3, i32 1)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier.inst(metadata !16, i32 1000, i32 -1)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier.inst(metadata !18, i32 1, i32 1)
+void test_sched_group_barrier_inst()
+{
+  __builtin_amdgcn_sched_group_barrier_inst("ds_r",1,2);
+  __builtin_amdgcn_sched_group_barrier_inst("v_cvt",3,1);
+  __builtin_amdgcn_sched_group_barrier_inst("ds_r",1000,-1);
+  __builtin_amdgcn_sched_group_barrier_inst("1",1,1);
+}
+
 // CHECK-LABEL: @test_iglp_opt
 // CHECK: call void @llvm.amdgcn.iglp.opt(i32 0)
 // CHECK: call void @llvm.amdgcn.iglp.opt(i32 1)

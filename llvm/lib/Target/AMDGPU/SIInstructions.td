@@ -402,6 +402,24 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let isMeta = 1;
 }
 
+def AMDGPUSGBI : SDNode<"AMDGPUISD::SCHED_GROUP_BARRIER_INST", SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>, [SDNPHasChain]>;
+
+def SCHED_GROUP_BARRIER_INST : SPseudoInstSI<
+  (outs),
+  (ins i32imm:$idx, i32imm:$size, i32imm:$syncid),
+  [(AMDGPUSGBI (i32 timm:$idx), (i32 timm:$size), (i32 timm:$syncid))]> {
+  let SchedRW = [];
+  let SchedRW = [];
+  let hasNoSchedulingInfo = 1;
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let isConvergent = 1;
+  let FixedSize = 1;
+  let Size = 0;
+  let isMeta = 1;
+}
+
 def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
   [(int_amdgcn_iglp_opt (i32 timm:$mask))]> {
   let SchedRW = [];

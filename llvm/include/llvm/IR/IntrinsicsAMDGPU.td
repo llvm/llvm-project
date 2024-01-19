@@ -302,6 +302,17 @@ def int_amdgcn_sched_group_barrier : ClangBuiltin<"__builtin_amdgcn_sched_group_
   [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
    IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+
+// Similar to int_amdgcn_sched_group_barrier, except that scheduling group inclusion is specified using
+// a string, which is passed to the intrinsic via metadata. This string will be matched against the
+// name of the instruction to determine inclusion into scheduling groups. The other parameters are
+// the same as above.
+def int_amdgcn_sched_group_barrier_inst :
+  Intrinsic<[], [llvm_metadata_ty, llvm_i32_ty, llvm_i32_ty],
+  [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
+   IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+
 // Scheduler optimization hint.
 //     MASK = 0: Small gemm opt
 def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,

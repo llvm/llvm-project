@@ -21,6 +21,27 @@ namespace llvm {
 
 class AMDGPUSubtarget;
 
+class AMDGPUMetadataInfo {
+private:
+  unsigned Index = 0;
+  DenseMap<Metadata *, unsigned> MetadataToIndex;
+  DenseMap<unsigned, Metadata *> IndexToMetadata;
+
+public:
+  AMDGPUMetadataInfo() = default;
+  unsigned addOrGetMetadataIndex(Metadata *MD) {
+    if (MetadataToIndex.contains(MD))
+      return MetadataToIndex[MD];
+
+    MetadataToIndex[MD] = Index;
+    IndexToMetadata[Index] = MD;
+    return Index++;
+  }
+  Metadata *getMetadataFromIndex(unsigned Index) {
+    return IndexToMetadata[Index];
+  }
+};
+
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
@@ -67,6 +88,8 @@ protected:
   // Kernel may need limited waves per EU for better performance.
   bool WaveLimiter = false;
 
+  AMDGPUMetadataInfo MDInfo;
+
 public:
   AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
 
@@ -112,6 +135,8 @@ public:
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV) {
     return allocateLDSGlobal(DL, GV, DynLDSAlign);
   }
+
+  AMDGPUMetadataInfo *getMDInfo() { return &MDInfo; }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);

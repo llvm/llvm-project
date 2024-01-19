@@ -18149,6 +18149,22 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
     return Builder.CreateCall(F, {Arg});
   }
+  case AMDGPU::BI__builtin_amdgcn_sched_group_barrier_inst: {
+    StringRef InstrStr;
+    llvm::getConstantStringInfo(EmitScalarExpr(E->getArg(0)), InstrStr);
+
+    llvm::MDBuilder MDHelper(getLLVMContext());
+
+    MDNode *InfoTuple =
+        MDTuple::get(getLLVMContext(), {MDHelper.createString(InstrStr)});
+    auto MDV = MetadataAsValue::get(getLLVMContext(), InfoTuple);
+
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier_inst, {});
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(F, {MDV, Src1, Src2});
+  }
   default:
     return nullptr;
   }

@@ -9615,6 +9615,24 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+
+  case Intrinsic::amdgcn_sched_group_barrier_inst: {
+    if (auto MSOP = dyn_cast<MDNodeSDNode>(Op.getOperand(2))) {
+      const MDNode *Metadata = MSOP->getMD();
+      auto MFI = MF.getInfo<SIMachineFunctionInfo>();
+      auto MDI = MFI->getMDInfo();
+      auto MDIndex = MDI->addOrGetMetadataIndex(Metadata->getOperand(0));
+      SmallVector<SDValue, 5> Ops = {
+          Op.getOperand(0), DAG.getTargetConstant(MDIndex, DL, MVT::i32),
+          Op.getOperand(3), Op.getOperand(4)};
+      return DAG.getNode(AMDGPUISD::SCHED_GROUP_BARRIER_INST, DL,
+                         Op.getValueType(), Ops);
+    }
+
+    // Fail to legalize
+    return Op;
+  }
+
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
