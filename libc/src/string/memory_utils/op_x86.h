@@ -116,6 +116,14 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
   return cmp_neq_uint64_t(a, b);
 }
 
+// SIMD types are defined with attributes. e.g., '__m128i' is defined as
+// long long  __attribute__((__vector_size__(16), __aligned__(16)))
+// When we use these SIMD types in template specialization GCC complains:
+// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+// Therefore, we disable this warning in this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
 #if defined(__SSE4_1__)
@@ -263,13 +271,13 @@ LIBC_INLINE uint64_t big_endian_cmp_mask(__m512i max, __m512i value) {
   // 16-byte lane.
   // zmm = | 16 bytes  | 16 bytes  | 16 bytes  | 16 bytes  |
   // zmm = | <8> | <8> | <8> | <8> | <8> | <8> | <8> | <8> |
-  const __m512i indices = _mm512_set_epi8(56, 57, 58, 59, 60, 61, 62, 63, //
-                                          48, 49, 50, 51, 52, 53, 54, 55, //
-                                          40, 41, 42, 43, 44, 45, 46, 47, //
-                                          32, 33, 34, 35, 36, 37, 38, 39, //
-                                          24, 25, 26, 27, 28, 29, 30, 31, //
-                                          16, 17, 18, 19, 20, 21, 22, 23, //
-                                          8, 9, 10, 11, 12, 13, 14, 15,   //
+  const __m512i indices = _mm512_set_epi8(8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
                                           0, 1, 2, 3, 4, 5, 6, 7);
   // Then we compute the mask for equal bytes. In this mask the bits of each
   // byte are already reversed but the byte themselves should be reversed, this
@@ -303,6 +311,8 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
   return cmp_neq_uint64_t(ge, le);
 }
 #endif // __AVX512BW__
+
+#pragma GCC diagnostic pop
 
 } // namespace LIBC_NAMESPACE::generic
 

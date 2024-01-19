@@ -164,6 +164,8 @@ void A<double, U>::C<V>::f4() {
 }
 } // namespace dr1804
 
+// dr1807 is in dr1807.cpp
+
 namespace dr1812 { // dr1812: no
                    // NB: dup 1710
 #if __cplusplus >= 201103L
@@ -209,7 +211,7 @@ namespace dr1815 { // dr1815: no
   // FIXME: needs codegen test
   struct A { int &&r = 0; }; // #dr1815-A 
   A a = {};
-  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}} FIXME
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
   //   since-cxx14-note@#dr1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #dr1815-B
@@ -328,6 +330,34 @@ namespace dr1881 { // dr1881: 7
   static_assert(__is_standard_layout(C), "");
   static_assert(!__is_standard_layout(D), "");
 }
+
+namespace dr1890 { // dr1890: no drafting
+// FIXME: current consensus for CWG2335 is that the examples are well-formed.
+namespace ex1 {
+#if __cplusplus >= 201402L
+struct A {
+  struct B {
+    auto foo() { return 0; } // #dr1890-foo
+  };
+  decltype(B().foo()) x;
+  // since-cxx14-error@-1 {{function 'foo' with deduced return type cannot be used before it is defined}}
+  //   since-cxx14-note@#dr1890-foo {{'foo' declared here}}
+};
+#endif
+} // namespace ex1
+
+namespace ex2 {
+#if __cplusplus >= 201103L
+struct Bar {
+  struct Baz {
+    int a = 0;
+  };
+  static_assert(__is_constructible(Baz), "");
+  // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(dr1890::ex2::Bar::Baz)'}}
+};
+#endif
+} // namespace ex2
+} // namespace dr1890
 
 void dr1891() { // dr1891: 4
 #if __cplusplus >= 201103L

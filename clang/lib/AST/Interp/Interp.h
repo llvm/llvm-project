@@ -77,6 +77,9 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
+/// Checks if the Descriptor is of a constexpr or const global variable.
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
+
 /// Checks if a pointer points to a mutable field.
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -107,9 +110,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
-
-/// Checks that all fields are initialized after a constructor call.
-bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 
 /// Checks if reinterpret casts are legal in the current context.
 bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
@@ -1004,8 +1004,19 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Block *B = S.P.getGlobal(I);
+
+  if (!CheckConstant(S, OpPC, B->getDescriptor()))
+    return false;
   if (B->isExtern())
     return false;
+  S.Stk.push<T>(B->deref<T>());
+  return true;
+}
+
+/// Same as GetGlobal, but without the checks.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
+  auto *B = S.P.getGlobal(I);
   S.Stk.push<T>(B->deref<T>());
   return true;
 }
@@ -1047,8 +1058,12 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
 
-  *Cached = P.toRValue(S.getCtx());
-  return true;
+  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+    *Cached = *APV;
+    return true;
+  }
+
+  return false;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1064,15 +1079,18 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+// FIXME: The Field pointer here is too much IMO and we could instead just
+// pass an Offset + BitWidth pair.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
+bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
+                      uint32_t FieldOffset) {
   assert(F->isBitField());
   if (S.checkingPotentialConstantExpression())
     return false;
   const Pointer &This = S.Current->getThis();
   if (!CheckThis(S, OpPC, This))
     return false;
-  const Pointer &Field = This.atField(F->Offset);
+  const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
   Field.initialize();
@@ -1844,11 +1862,6 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
     return false;
 
   return NarrowPtr(S, OpPC);
-}
-
-inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
-  const Pointer &Obj = S.Stk.peek<Pointer>();
-  return CheckCtorCall(S, OpPC, Obj);
 }
 
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {

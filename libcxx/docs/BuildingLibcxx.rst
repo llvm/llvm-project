@@ -337,7 +337,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXXABI_USE_LLVM_UNWINDER:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.
@@ -409,6 +409,15 @@ libc++ Feature Options
   Use the specified GCC toolchain and standard library when building the native
   stdlib benchmark tests.
 
+.. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
+
+  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
+
+  Specify the path to a header that contains a custom implementation of the
+  assertion handler that gets invoked when a hardening assertion fails. If
+  provided, this header will be included by the library, replacing the
+  default assertion handler.
+
 
 libc++ ABI Feature Options
 --------------------------
@@ -471,6 +480,43 @@ LLVM-specific options
   Arguments given to lit.  ``make check`` and ``make clang-test`` are affected.
   By default, ``'-sv --no-progress-bar'`` on Visual C++ and Xcode, ``'-sv'`` on
   others.
+
+
+.. _assertion-handler:
+
+Overriding the default assertion handler
+==========================================
+
+When the library wants to terminate due to an unforeseen condition (such as
+a hardening assertion failure), the program is aborted through a special verbose
+termination function. The library provides a default function that prints an
+error message and calls ``std::abort()``. Note that this function is provided by
+the static or shared library, so it is only available when deploying to
+a platform where the compiled library is sufficiently recent. On older
+platforms, the program will terminate in an unspecified unsuccessful manner, but
+the quality of diagnostics won't be great.
+
+However, vendors can also override that mechanism at CMake configuration time.
+When a hardening assertion fails, the library invokes the
+``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide a header that contains
+a custom definition of this macro and specify the path to the header via the
+``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, this header will
+be included by the library and replace the default implementation. The header
+must not include any standard library headers (directly or transitively) because
+doing so will almost always create a circular dependency. The
+``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single parameter that
+contains an error message explaining the hardening failure and some details
+about the source location that triggered it.
+
+When a hardening assertion fails, it means that the program is about to invoke
+library undefined behavior. For this reason, the custom assertion handler is
+generally expected to terminate the program. If a custom assertion handler
+decides to avoid doing so (e.g. it chooses to log and continue instead), it does
+so at its own risk -- this approach should only be used in non-production builds
+and with an understanding of potential consequences. Furthermore, the custom
+assertion handler should not throw any exceptions as it may be invoked from
+standard library functions that are marked ``noexcept`` (so throwing will result
+in ``std::terminate`` being called).
 
 
 Using Alternate ABI libraries

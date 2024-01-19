@@ -1209,7 +1209,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Expand = true;
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
-        Expand = Name == "i" || Name == "ll" || Name == "ui" || Name == "ull";
+        Expand = Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+                 Name == "ui" || Name == "ull";
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
@@ -2351,18 +2352,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(Name.starts_with("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);
 
-    bool IsX86 = Name.starts_with("x86.");
-    if (IsX86)
-      Name = Name.substr(4);
-    bool IsNVVM = Name.starts_with("nvvm.");
-    if (IsNVVM)
-      Name = Name.substr(5);
-    bool IsARM = Name.starts_with("arm.");
-    if (IsARM)
-      Name = Name.substr(4);
-    bool IsAMDGCN = Name.starts_with("amdgcn.");
-    if (IsAMDGCN)
-      Name = Name.substr(7);
+    bool IsX86 = Name.consume_front("x86.");
+    bool IsNVVM = Name.consume_front("nvvm.");
+    bool IsARM = Name.consume_front("arm.");
+    bool IsAMDGCN = Name.consume_front("amdgcn.");
 
     if (IsX86 && Name.starts_with("sse4a.movnt.")) {
       SmallVector<Metadata *, 1> Elts;
@@ -2788,7 +2781,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
 
       bool IsPS2PD = SrcTy->getElementType()->isFloatTy();
-      bool IsUnsigned = (StringRef::npos != Name.find("cvtu"));
+      bool IsUnsigned = Name.contains("cvtu");
       if (IsPS2PD)
         Rep = Builder.CreateFPExt(Rep, DstTy, "cvtps2pd");
       else if (CI->arg_size() == 4 &&
@@ -2968,7 +2961,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *SV =
           Builder.CreateShuffleVector(CI->getArgOperand(0), ShuffleMask);
 
-      bool DoSext = (StringRef::npos != Name.find("pmovsx"));
+      bool DoSext = Name.contains("pmovsx");
       Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
                    : Builder.CreateZExt(SV, DstTy);
       // If there are 3 arguments, it's a masked intrinsic so we need a select.
@@ -4140,19 +4133,21 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *Val = CI->getArgOperand(1);
       Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
                                     AtomicOrdering::SequentiallyConsistent);
-    } else if (IsNVVM && (Name == "max.i" || Name == "max.ll" ||
-                          Name == "max.ui" || Name == "max.ull")) {
+    } else if (IsNVVM && Name.consume_front("max.") &&
+               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+                Name == "ui" || Name == "ull")) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.ends_with(".ui") || Name.ends_with(".ull")
+      Value *Cmp = Name.starts_with("u")
                        ? Builder.CreateICmpUGE(Arg0, Arg1, "max.cond")
                        : Builder.CreateICmpSGE(Arg0, Arg1, "max.cond");
       Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "max");
-    } else if (IsNVVM && (Name == "min.i" || Name == "min.ll" ||
-                          Name == "min.ui" || Name == "min.ull")) {
+    } else if (IsNVVM && Name.consume_front("min.") &&
+               (Name == "s" || Name == "i" || Name == "ll" || Name == "us" ||
+                Name == "ui" || Name == "ull")) {
       Value *Arg0 = CI->getArgOperand(0);
       Value *Arg1 = CI->getArgOperand(1);
-      Value *Cmp = Name.ends_with(".ui") || Name.ends_with(".ull")
+      Value *Cmp = Name.starts_with("u")
                        ? Builder.CreateICmpULE(Arg0, Arg1, "min.cond")
                        : Builder.CreateICmpSLE(Arg0, Arg1, "min.cond");
       Rep = Builder.CreateSelect(Cmp, Arg0, Arg1, "min");

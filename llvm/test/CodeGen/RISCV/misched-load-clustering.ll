@@ -23,10 +23,10 @@ define i32 @load_clustering_1(ptr nocapture %p) {
 ; LDCLUSTER: ********** MI Scheduling **********
 ; LDCLUSTER-LABEL: load_clustering_1:%bb.0
 ; LDCLUSTER: *** Final schedule for %bb.0 ***
-; LDCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
-; LDCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; LDCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
 ; LDCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
+; LDCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
+; LDCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
+; LDCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
 entry:
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 3
   %val0 = load i32, i32* %arrayidx0
