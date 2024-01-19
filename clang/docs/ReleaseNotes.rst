@@ -979,6 +979,9 @@ Bug Fixes to C++ Support
 - Clang now allows parenthesized initialization of arrays in `operator new[]`.
   Fixes: (`#68198 <https://github.com/llvm/llvm-project/issues/68198>`_)
 
+- Fixes CTAD for aggregates on nested template classes. Fixes:
+  (`#77599 <https://github.com/llvm/llvm-project/issues/77599>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
