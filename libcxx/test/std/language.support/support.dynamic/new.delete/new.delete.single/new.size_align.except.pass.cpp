@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
+// UNSUPPORTED: sanitizer-new-delete
+
 #include <new>
 #include <cassert>
 #include <limits>
