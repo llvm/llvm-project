@@ -679,12 +679,16 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
 }
 
 const uint8_t GOTEntryInit[] = {
-    0x00, 0x00, 0x00, 0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
 };
 
 /// Create a new node in the link-graph for the given pointer value.
 template <size_t Size>
-static Block &allocPointer(LinkGraph &G, Section &S, const uint8_t (&Content)[Size]) {
+static Block &allocPointer(LinkGraph &G, Section &S,
+                           const uint8_t (&Content)[Size]) {
   static_assert(Size == 4, "Pointers are 32-bit");
   constexpr uint64_t Alignment = 4;
   ArrayRef<char> Init(reinterpret_cast<const char *>(Content), Size);
@@ -710,9 +714,11 @@ bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   default:
     return false;
   }
-  LLVM_DEBUG(dbgs() << "  Transforming " << G.getEdgeKindName(E.getKind()) << " edge at "
-            << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
-            << formatv("{0:x}", E.getOffset()) << ") into " << G.getEdgeKindName(KindToSet) << "\n");
+  LLVM_DEBUG(dbgs() << "  Transforming " << G.getEdgeKindName(E.getKind())
+                    << " edge at " << B->getFixupAddress(E) << " ("
+                    << B->getAddress() << " + "
+                    << formatv("{0:x}", E.getOffset()) << ") into "
+                    << G.getEdgeKindName(KindToSet) << "\n");
   E.setKind(KindToSet);
   E.setTarget(getEntryForTarget(G, E.getTarget()));
   return true;
