@@ -705,7 +705,6 @@ class VOP1_DPP16_Gen<bits<8> op, VOP1_DPP_Pseudo ps, GFXGen Gen, VOPProfile p = 
   let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
 }
 
-
 class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
     VOP_DPP8<ps.OpName, p> {
   let hasSideEffects = ps.hasSideEffects;
