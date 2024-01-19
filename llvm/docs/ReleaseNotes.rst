@@ -70,7 +70,7 @@ Changes to the LLVM IR
 
 * Added `llvm.exp10` intrinsic.
 
-* Added a code model attribute for the global variable.
+* Added a code model attribute for the `global variable <LangRef.html#global-variables>`_.
 
 Changes to LLVM infrastructure
 ------------------------------
