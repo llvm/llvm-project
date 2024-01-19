@@ -69,15 +69,6 @@ s_wait_alu depctr_va_sdst(3)
 s_wait_alu depctr_va_vdst(14) depctr_va_sdst(6) depctr_vm_vsrc(6)
 // GFX12: encoding: [0x9b,0xed,0x88,0xbf]
 
-s_inst_prefetch 0x1234
-// GFX12: s_set_inst_prefetch_distance 0x1234 ; encoding: [0x34,0x12,0x84,0xbf]
-
-s_set_inst_prefetch_distance 0x1234
-// GFX12: s_set_inst_prefetch_distance 0x1234 ; encoding: [0x34,0x12,0x84,0xbf]
-
-s_set_inst_prefetch_distance 0xc1d1
-// GFX12: s_set_inst_prefetch_distance 0xc1d1 ; encoding: [0xd1,0xc1,0x84,0xbf]
-
 s_singleuse_vdst 0x0000
 // GFX12: encoding: [0x00,0x00,0x93,0xbf]
 
