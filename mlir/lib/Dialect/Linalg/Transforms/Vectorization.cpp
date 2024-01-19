@@ -1458,15 +1458,19 @@ static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                        ArrayRef<int64_t> inputVectorSizes,
                        SmallVectorImpl<Value> &newResults) {
-  auto padValue = packOp.getPaddingValue();
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(packOp);
+
   Location loc = packOp.getLoc();
+  auto padValue = packOp.getPaddingValue();
+  if (!padValue) {
+    padValue = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
+  }
   int64_t inputRank = inputVectorSizes.size();
   int64_t outputRank = packOp.getDestRank();
   auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
   auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
-
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(packOp);
 
   ReifiedRankedShapedTypeDims reifiedReturnShapes;
   LogicalResult status =
@@ -1502,14 +1506,6 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
       /*source=*/emptyOp,
       /*indices=*/SmallVector<Value>(outputRank, zero),
       /*inBounds=*/SmallVector<bool>(outputRank, true));
-  // bool needMaskForWrite = llvm::any_of(
-  //     llvm::zip_equal(inputVectorSizes, packOp.getResultType().getShape()),
-  //     [](auto it) { return std::get<0>(it) != std::get<1>(it); });
-  // if (needMaskForWrite) {
-  //   Value maskForWrite = rewriter.create<vector::CreateMaskOp>(
-  //       loc, maskType, reifiedReturnShapes[0]);
-  //   write = mlir::vector::maskOperation(rewriter, write, maskForWrite);
-  // }
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1710,7 +1706,7 @@ static LogicalResult
 vectorizePackOpPrecondition(tensor::PackOp packOp,
                            ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = packOp.getPaddingValue();
-  if (!padValue) {
+  if (padValue && getConstantIntValue(padValue) != std::nullopt) {
     LDBG("pad value is not constant: " << packOp << "\n");
     return failure();
   }
