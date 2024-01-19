@@ -33,18 +33,21 @@ constexpr bool test_signed() {
   assert(std::add_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{-2});
   assert(std::add_sat(IntegerT{-1}, IntegerT{ 0}) == IntegerT{-1});
   assert(std::add_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::add_sat(IntegerT{-1},       maxVal) == IntegerT{-1} + maxVal);
   assert(std::add_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{-1});
   assert(std::add_sat(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
   assert(std::add_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 1});
+  assert(std::add_sat(IntegerT{ 0},       minVal) == minVal);
+  assert(std::add_sat(IntegerT{ 0},       maxVal) == maxVal);
   assert(std::add_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{ 0});
   assert(std::add_sat(IntegerT{ 1}, IntegerT{ 0}) == IntegerT{ 1});
   assert(std::add_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 2});
+  assert(std::add_sat(IntegerT{ 1},       minVal) == IntegerT{ 1} + minVal);
 
   // No saturation (Large values)
 
   assert(std::add_sat(IntegerT{-27}, IntegerT{28})== IntegerT{ 1});
   assert(std::add_sat(IntegerT{ 27}, IntegerT{28})== IntegerT{55});
-
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};

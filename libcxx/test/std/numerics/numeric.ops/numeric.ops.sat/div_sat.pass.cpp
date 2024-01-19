@@ -23,145 +23,57 @@ constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minMax, minMax);
+  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
   static_assert(noexcept(std::div_sat(minVal, maxVal)));
 
-  // No saturation
+  // No saturation (-1, 0, 1)
+
+  assert(std::div_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
+  assert(std::div_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
+  assert(std::div_sat(IntegerT{-1},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{-1},       maxVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
+  assert(std::div_sat(IntegerT{ 1},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 1},       maxVal) == IntegerT{ 0});
+
+  // No saturation (Large values)
+
+  assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
+  assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, IntegerT{-1});
-    assert(quot == IntegerT{1});
+    constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{-28};
+    constexpr IntegerT biggerVal = minVal / IntegerT{2} + IntegerT{-27};
+    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{1});
+    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{0});
+  }
+  {
+    constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{-27};
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{-1});
+    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{-1});
   }
 
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, IntegerT{1});
-    assert(quot == IntegerT{-1});
+    constexpr IntegerT lesserVal = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{0});
+    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
   }
 
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, minVal);
-    assert(quot == IntegerT{0});
-  }
+  // No saturation (min, max)
 
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{-1}, maxVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, IntegerT{-1});
-    assert(quot == IntegerT{-1} * maxVal);
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{-1});
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{1});
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, minVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, IntegerT{-1});
-    assert(quot == IntegerT{-1});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, minVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, maxVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, IntegerT{1});
-    assert(quot == minVal);
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, IntegerT{1});
-    assert(quot == maxVal);
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{27}, IntegerT{28});
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{28}, IntegerT{27});
-    assert(quot == IntegerT{1});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{-1});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
-    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-27};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{-1});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
-    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-28};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{0});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-28};
-    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-27};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{1});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, minVal);
-    assert(quot == (maxVal / minVal));
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
-    assert(quot == (minVal / maxVal));
-  }
+  assert(std::div_sat(minVal, IntegerT{ 1}) == minVal);
+  assert(std::div_sat(minVal,       maxVal) == (minVal / maxVal));
+  assert(std::div_sat(maxVal,       minVal) == (maxVal / minVal));
+  assert(std::div_sat(maxVal, IntegerT{-1}) ==-maxVal);
+  assert(std::div_sat(maxVal, IntegerT{ 1}) == maxVal);
 
   // Saturation - max only
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, IntegerT{-1});
-    assert(quot == maxVal);
-  }
+
+  assert(std::div_sat(minVal, IntegerT{-1}) == maxVal);
 
   return true;
 }
@@ -171,68 +83,37 @@ constexpr bool test_unsigned() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
+  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
   static_assert(noexcept(std::div_sat(minVal, maxVal)));
 
-  // No saturation
+  // clang-format off
+
+  // No saturation (0, 1)
+
+  assert(std::div_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
+  assert(std::div_sat(IntegerT{0},      maxVal) == IntegerT{0});
+  assert(std::div_sat(IntegerT{1}, IntegerT{1}) == IntegerT{1});
+  assert(std::div_sat(IntegerT{1},      maxVal) == IntegerT{0});
+
+  // No saturation (large values)
+
+  assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
+  assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
   {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, IntegerT{1});
-    assert(quot == IntegerT{0});
+    constexpr IntegerT lesserVal = maxVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    assert(std::div_sat(lesserVal, biggerVal) == IntegerT{0});
+    assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
   }
 
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{0}, maxVal);
-    assert(quot == IntegerT{0});
-  }
+  // No saturation (min, max)
 
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, IntegerT{1});
-    assert(quot == IntegerT{1});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{1}, maxVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{27}, IntegerT{28});
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(IntegerT{28}, IntegerT{27});
-    assert(quot == IntegerT{1});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{0});
-  }
-
-  {
-    // Large values
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{27};
-
-    std::same_as<IntegerT> decltype(auto) sum = std::div_sat(x, y);
-    assert(sum == IntegerT{1});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
-    assert(quot == IntegerT{0});
-  }
-
-  {
-    std::same_as<IntegerT> decltype(auto) quot = std::div_sat(maxVal, maxVal);
-    assert(quot == IntegerT{1});
-  }
+  assert(std::div_sat(minVal, maxVal) == IntegerT{0});
+  assert(std::div_sat(maxVal, maxVal) == IntegerT{1});
 
   // Unsigned integer division never overflows
+
+  // clang-format on
 
   return true;
 }
@@ -260,7 +141,18 @@ constexpr bool test() {
   return true;
 }
 
+#include <print>
+
 int main(int, char**) {
+  // using IntegerT               = int;
+  // constexpr auto minVal        = std::numeric_limits<IntegerT>::min();
+  // constexpr auto maxVal        = std::numeric_limits<IntegerT>::max();
+  // constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{-27};
+  // constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+  // std::println(stderr, "---------------- = {} |", lesserVal / biggerVal);
+  // std::println(stderr, "---------------- = {} |", biggerVal / lesserVal);
+  // std::println(stderr, "---------------- = {} |", minVal / -1);
+  // assert(false);
   test();
   static_assert(test());
 
