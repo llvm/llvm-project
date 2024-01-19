@@ -49,13 +49,12 @@ static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
                                 cl::desc("Disable autoupgrade of debug info"));
 
-namespace {
-
-void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
+static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
 // Upgrade the declarations of the SSE4.1 ptest intrinsics whose arguments have
 // changed their type from v4f32 to v2i64.
-bool upgradePTESTIntrinsic(Function *F, Intrinsic::ID IID, Function *&NewFn) {
+static bool upgradePTESTIntrinsic(Function *F, Intrinsic::ID IID,
+                                  Function *&NewFn) {
   // Check whether this is an old version of the function, which received
   // v4f32 arguments.
   Type *Arg0Type = F->getFunctionType()->getParamType(0);
@@ -70,8 +69,8 @@ bool upgradePTESTIntrinsic(Function *F, Intrinsic::ID IID, Function *&NewFn) {
 
 // Upgrade the declarations of intrinsic functions whose 8-bit immediate mask
 // arguments have changed their type from i32 to i8.
-bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
-                                      Function *&NewFn) {
+static bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
+                                             Function *&NewFn) {
   // Check that the last argument is an i32.
   Type *LastArgType = F->getFunctionType()->getParamType(
      F->getFunctionType()->getNumParams() - 1);
@@ -86,8 +85,8 @@ bool upgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
 
 // Upgrade the declaration of fp compare intrinsics that change return type
 // from scalar to vXi1 mask.
-bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
-                               Function *&NewFn) {
+static bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
+                                      Function *&NewFn) {
   // Check if the return type is a vector.
   if (F->getReturnType()->isVectorTy())
     return false;
@@ -97,7 +96,8 @@ bool upgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID, Function *&NewFn) {
+static bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
+                                    Function *&NewFn) {
   if (F->getReturnType()->getScalarType()->isBFloatTy())
     return false;
 
@@ -106,8 +106,8 @@ bool upgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID, Function *&NewFn) {
   return true;
 }
 
-bool upgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
-                               Function *&NewFn) {
+static bool upgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
+                                      Function *&NewFn) {
   if (F->getFunctionType()->getParamType(1)->getScalarType()->isBFloatTy())
     return false;
 
@@ -116,7 +116,7 @@ bool upgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
+static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // All of the intrinsics matches below should be marked with which llvm
   // version started autoupgrading them. At some point in the future we would
   // like to use this information to remove upgrade code for some older
@@ -483,8 +483,8 @@ bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
           Name.starts_with("vcvtph2ps.")); // Added in 11.0
 }
 
-bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
-                                 Function *&NewFn) {
+static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
+                                        Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
   if (!Name.consume_front("x86."))
     return false;
@@ -623,8 +623,9 @@ bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
 
 // Upgrade ARM (IsArm) or Aarch64 (!IsArm) intrinsic fns. Return true iff so.
 // IsArm: 'arm.*', !IsArm: 'aarch64.*'.
-bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
-                                          StringRef Name, Function *&NewFn) {
+static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
+                                                 StringRef Name,
+                                                 Function *&NewFn) {
   if (Name.starts_with("rbit")) {
     // '(arm|aarch64).rbit'.
     NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::bitreverse,
@@ -898,7 +899,7 @@ bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
+static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("abs."))
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_abs_bf16)
@@ -978,7 +979,7 @@ Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
+static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
   StringRef Name = F->getName();
@@ -1395,8 +1396,6 @@ bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   return false;
 }
 
-} // namespace
-
 bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
   NewFn = nullptr;
   bool Upgraded = upgradeIntrinsicFunction1(F, NewFn);
@@ -1441,12 +1440,10 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
                             NewInit, GV->getName());
 }
 
-namespace {
-
 // Handles upgrading SSE2/AVX2/AVX512BW PSLLDQ intrinsics by converting them
 // to byte shuffles.
-Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
-                                  unsigned Shift) {
+static Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
+                                         unsigned Shift) {
   auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
@@ -1479,8 +1476,8 @@ Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
 
 // Handles upgrading SSE2/AVX2/AVX512BW PSRLDQ intrinsics by converting them
 // to byte shuffles.
-Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
-                                  unsigned Shift) {
+static Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
+                                         unsigned Shift) {
   auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
@@ -1511,7 +1508,8 @@ Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   return Builder.CreateBitCast(Res, ResultTy, "cast");
 }
 
-Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask, unsigned NumElts) {
+static Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask,
+                            unsigned NumElts) {
   assert(isPowerOf2_32(NumElts) && "Expected power-of-2 mask elements");
   llvm::VectorType *MaskTy = FixedVectorType::get(
       Builder.getInt1Ty(), cast<IntegerType>(Mask->getType())->getBitWidth());
@@ -1530,8 +1528,8 @@ Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask, unsigned NumElts) {
   return Mask;
 }
 
-Value *emitX86Select(IRBuilder<> &Builder, Value *Mask, Value *Op0,
-                     Value *Op1) {
+static Value *emitX86Select(IRBuilder<> &Builder, Value *Mask, Value *Op0,
+                            Value *Op1) {
   // If the mask is all ones just emit the first operation.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
@@ -1542,8 +1540,8 @@ Value *emitX86Select(IRBuilder<> &Builder, Value *Mask, Value *Op0,
   return Builder.CreateSelect(Mask, Op0, Op1);
 }
 
-Value *emitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask, Value *Op0,
-                           Value *Op1) {
+static Value *emitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask, Value *Op0,
+                                  Value *Op1) {
   // If the mask is all ones just emit the first operation.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
@@ -1559,9 +1557,10 @@ Value *emitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask, Value *Op0,
 // Handle autoupgrade for masked PALIGNR and VALIGND/Q intrinsics.
 // PALIGNR handles large immediates by shifting while VALIGN masks the immediate
 // so we need to handle both cases. VALIGN also doesn't have 128-bit lanes.
-Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0, Value *Op1,
-                                 Value *Shift, Value *Passthru, Value *Mask,
-                                 bool IsVALIGN) {
+static Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
+                                        Value *Op1, Value *Shift,
+                                        Value *Passthru, Value *Mask,
+                                        bool IsVALIGN) {
   unsigned ShiftVal = cast<llvm::ConstantInt>(Shift)->getZExtValue();
 
   unsigned NumElts = cast<FixedVectorType>(Op0->getType())->getNumElements();
@@ -1603,8 +1602,8 @@ Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0, Value *Op1,
   return emitX86Select(Builder, Mask, Align, Passthru);
 }
 
-Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
-                                   bool ZeroMask, bool IndexForm) {
+static Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
+                                          bool ZeroMask, bool IndexForm) {
   Type *Ty = CI.getType();
   unsigned VecWidth = Ty->getPrimitiveSizeInBits();
   unsigned EltWidth = Ty->getScalarSizeInBits();
@@ -1664,8 +1663,8 @@ Value *upgradeX86VPERMT2Intrinsics(IRBuilder<> &Builder, CallBase &CI,
   return emitX86Select(Builder, CI.getArgOperand(3), V, PassThru);
 }
 
-Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
-                                  Intrinsic::ID IID) {
+static Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
+                                         Intrinsic::ID IID) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getOperand(0);
   Value *Op1 = CI.getOperand(1);
@@ -1680,8 +1679,8 @@ Value *upgradeX86BinaryIntrinsics(IRBuilder<> &Builder, CallBase &CI,
   return Res;
 }
 
-Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
-                        bool IsRotateRight) {
+static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
+                               bool IsRotateRight) {
   Type *Ty = CI.getType();
   Value *Src = CI.getArgOperand(0);
   Value *Amt = CI.getArgOperand(1);
@@ -1707,8 +1706,8 @@ Value *upgradeX86Rotate(IRBuilder<> &Builder, CallBase &CI,
   return Res;
 }
 
-Value *upgradeX86vpcom(IRBuilder<> &Builder, CallBase &CI, unsigned Imm,
-                       bool IsSigned) {
+static Value *upgradeX86vpcom(IRBuilder<> &Builder, CallBase &CI, unsigned Imm,
+                              bool IsSigned) {
   Type *Ty = CI.getType();
   Value *LHS = CI.getArgOperand(0);
   Value *RHS = CI.getArgOperand(1);
@@ -1746,8 +1745,8 @@ Value *upgradeX86vpcom(IRBuilder<> &Builder, CallBase &CI, unsigned Imm,
   return Ext;
 }
 
-Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
-                             bool IsShiftRight, bool ZeroMask) {
+static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
+                                    bool IsShiftRight, bool ZeroMask) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
   Value *Op1 = CI.getArgOperand(1);
@@ -1780,8 +1779,8 @@ Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
   return Res;
 }
 
-Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
-                          Value *Mask, bool Aligned) {
+static Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
+                                 Value *Mask, bool Aligned) {
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr,
                               llvm::PointerType::getUnqual(Data->getType()));
@@ -1801,8 +1800,8 @@ Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
   return Builder.CreateMaskedStore(Data, Ptr, Alignment, Mask);
 }
 
-Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr, Value *Passthru,
-                         Value *Mask, bool Aligned) {
+static Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr,
+                                Value *Passthru, Value *Mask, bool Aligned) {
   Type *ValTy = Passthru->getType();
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
@@ -1824,7 +1823,7 @@ Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr, Value *Passthru,
   return Builder.CreateMaskedLoad(ValTy, Ptr, Alignment, Mask, Passthru);
 }
 
-Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
+static Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
   Type *Ty = CI.getType();
   Value *Op0 = CI.getArgOperand(0);
   Function *F = Intrinsic::getDeclaration(CI.getModule(), Intrinsic::abs, Ty);
@@ -1834,7 +1833,7 @@ Value *upgradeAbs(IRBuilder<> &Builder, CallBase &CI) {
   return Res;
 }
 
-Value *upgradePMULDQ(IRBuilder<> &Builder, CallBase &CI, bool IsSigned) {
+static Value *upgradePMULDQ(IRBuilder<> &Builder, CallBase &CI, bool IsSigned) {
   Type *Ty = CI.getType();
 
   // Arguments have a vXi32 type so cast to vXi64.
@@ -1864,7 +1863,8 @@ Value *upgradePMULDQ(IRBuilder<> &Builder, CallBase &CI, bool IsSigned) {
 }
 
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
-Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec, Value *Mask) {
+static Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
+                                     Value *Mask) {
   unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   if (Mask) {
     const auto *C = dyn_cast<Constant>(Mask);
@@ -1885,8 +1885,8 @@ Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec, Value *Mask) {
   return Builder.CreateBitCast(Vec, Builder.getIntNTy(std::max(NumElts, 8U)));
 }
 
-Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI, unsigned CC,
-                            bool Signed) {
+static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
+                                   unsigned CC, bool Signed) {
   Value *Op0 = CI.getArgOperand(0);
   unsigned NumElts = cast<FixedVectorType>(Op0->getType())->getNumElements();
 
@@ -1917,15 +1917,15 @@ Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI, unsigned CC,
 }
 
 // Replace a masked intrinsic with an older unmasked intrinsic.
-Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
-                             Intrinsic::ID IID) {
+static Value *upgradeX86MaskedShift(IRBuilder<> &Builder, CallBase &CI,
+                                    Intrinsic::ID IID) {
   Function *Intrin = Intrinsic::getDeclaration(CI.getModule(), IID);
   Value *Rep = Builder.CreateCall(Intrin,
                                  { CI.getArgOperand(0), CI.getArgOperand(1) });
   return emitX86Select(Builder, CI.getArgOperand(3), Rep, CI.getArgOperand(2));
 }
 
-Value *upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
+static Value *upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
   Value* A = CI.getArgOperand(0);
   Value* B = CI.getArgOperand(1);
   Value* Src = CI.getArgOperand(2);
@@ -1939,7 +1939,7 @@ Value *upgradeMaskedMove(IRBuilder<> &Builder, CallBase &CI) {
   return Builder.CreateInsertElement(A, Select, (uint64_t)0);
 }
 
-Value *upgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
+static Value *upgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
   Value* Op = CI.getArgOperand(0);
   Type* ReturnOp = CI.getType();
   unsigned NumElts = cast<FixedVectorType>(CI.getType())->getNumElements();
@@ -1948,8 +1948,8 @@ Value *upgradeMaskToInt(IRBuilder<> &Builder, CallBase &CI) {
 }
 
 // Replace intrinsic with unmasked version and a select.
-bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
-                               CallBase &CI, Value *&Rep) {
+static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
+                                      CallBase &CI, Value *&Rep) {
   Name = Name.substr(12); // Remove avx512.mask.
 
   unsigned VecWidth = CI.getType()->getPrimitiveSizeInBits();
@@ -2186,8 +2186,6 @@ bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
   return true;
 }
 
-} // namespace
-
 /// Upgrade comment in call to inline asm that represents an objc retain release
 /// marker.
 void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
@@ -2199,10 +2197,8 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
-namespace {
-
-Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
-                               IRBuilder<> &Builder) {
+static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
+                                      IRBuilder<> &Builder) {
   if (Name == "mve.vctp64.old") {
     // Replace the old v4i1 vctp64 with a v2i1 vctp and predicate-casts to the
     // correct type.
@@ -2295,8 +2291,8 @@ Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
-Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
-                                  IRBuilder<> &Builder) {
+static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
+                                         Function *F, IRBuilder<> &Builder) {
   const bool IsInc = Name.starts_with("atomic.inc.");
   if (IsInc || Name.starts_with("atomic.dec.")) {
     if (CI->getNumOperands() != 6) // Malformed bitcode.
@@ -2330,8 +2326,6 @@ Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
   llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
 }
-
-} // namespace
 
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
@@ -4828,11 +4822,9 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
-namespace {
-
 /// This checks for objc retain release marker which should be upgraded. It
 /// returns true if module is modified.
-bool upgradeRetainReleaseMarker(Module &M) {
+static bool upgradeRetainReleaseMarker(Module &M) {
   bool Changed = false;
   const char *MarkerKey = "clang.arc.retainAutoreleasedReturnValueMarker";
   NamedMDNode *ModRetainReleaseMarker = M.getNamedMetadata(MarkerKey);
@@ -4855,8 +4847,6 @@ bool upgradeRetainReleaseMarker(Module &M) {
   }
   return Changed;
 }
-
-} // namespace
 
 void llvm::UpgradeARCRuntime(Module &M) {
   // This lambda converts normal function calls to ARC runtime functions to
@@ -5184,9 +5174,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
 }
 
-namespace {
-
-bool isOldLoopArgument(Metadata *MD) {
+static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
     return false;
@@ -5198,7 +5186,7 @@ bool isOldLoopArgument(Metadata *MD) {
   return S->getString().starts_with("llvm.vectorizer.");
 }
 
-MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
+static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
   StringRef OldPrefix = "llvm.vectorizer.";
   assert(OldTag.starts_with(OldPrefix) && "Expected old prefix");
 
@@ -5210,7 +5198,7 @@ MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
              .str());
 }
 
-Metadata *upgradeLoopArgument(Metadata *MD) {
+static Metadata *upgradeLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
     return MD;
@@ -5231,8 +5219,6 @@ Metadata *upgradeLoopArgument(Metadata *MD) {
 
   return MDTuple::get(T->getContext(), Ops);
 }
-
-} // namespace
 
 MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   auto *T = dyn_cast<MDTuple>(&N);
