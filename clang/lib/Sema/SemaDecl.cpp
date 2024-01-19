@@ -11809,9 +11809,10 @@ static void CheckConstPureAttributesUsage(Sema &S, FunctionDecl *NewFD) {
   if (!IsPure && !IsConst)
     return;
 
-  // If the function is marked both pure and const, we retain the const attribute
-  // because it makes stronger guarantees than the pure attribute, and we drop
-  // the pure attribute explicitly to prevent later confusion about semantics.
+  // If the function is marked both pure and const, we retain the const
+  // attribute because it makes stronger guarantees than the pure attribute, and
+  // we drop the pure attribute explicitly to prevent later confusion about
+  // semantics.
   if (IsPure && IsConst) {
     S.Diag(NewFD->getLocation(), diag::warn_const_attr_with_pure_attr);
     NewFD->dropAttrs<PureAttr>();
