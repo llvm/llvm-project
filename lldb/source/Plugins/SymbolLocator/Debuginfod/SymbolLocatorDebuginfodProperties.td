@@ -9,5 +9,5 @@ let Definition = "symbollocatordebuginfod" in {
     Desc<"The path where symbol files should be cached. This defaults to LLDB's system cache location.">;
   def Timeout : Property<"timeout", "UInt64">,
     DefaultUnsignedValue<0>,
-    Desc<"Timeout (in seconds) for requests made to a DEBUGINFOD server. A value of zero defaults to DEBUGINFOD_TIMEOUT environment variable (or 90 seconds).">;
+    Desc<"Timeout (in seconds) for requests made to a DEBUGINFOD server. A value of zero means we use the debuginfod default timeout: DEBUGINFOD_TIMEOUT if the environment variable is set and 90 seconds otherwise.">;
 }
