@@ -329,7 +329,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       MergedProfile.insert_or_assign(Key, Count);
     }
 
-  if (BoltedCollection)
+  if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   for (const auto &[Key, Value] : MergedProfile)
     output() << Key << " " << Value << "\n";

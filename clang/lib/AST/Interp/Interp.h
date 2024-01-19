@@ -111,9 +111,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
-/// Checks that all fields are initialized after a constructor call.
-bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
-
 /// Checks if reinterpret casts are legal in the current context.
 bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr);
@@ -1061,8 +1058,12 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
 
-  *Cached = P.toRValue(S.getCtx());
-  return true;
+  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+    *Cached = *APV;
+    return true;
+  }
+
+  return false;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1078,15 +1079,18 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+// FIXME: The Field pointer here is too much IMO and we could instead just
+// pass an Offset + BitWidth pair.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
+bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
+                      uint32_t FieldOffset) {
   assert(F->isBitField());
   if (S.checkingPotentialConstantExpression())
     return false;
   const Pointer &This = S.Current->getThis();
   if (!CheckThis(S, OpPC, This))
     return false;
-  const Pointer &Field = This.atField(F->Offset);
+  const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
   Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue(S.getCtx()));
   Field.initialize();
@@ -1858,11 +1862,6 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
     return false;
 
   return NarrowPtr(S, OpPC);
-}
-
-inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
-  const Pointer &Obj = S.Stk.peek<Pointer>();
-  return CheckCtorCall(S, OpPC, Obj);
 }
 
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
