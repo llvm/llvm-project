@@ -228,8 +228,7 @@ New checks
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
   Replaces certain conditional statements with equivalent ``std::min`` or
-  ``std::max`` expressions, improving readability and promoting the use of
-  standard library functions.
+  ``std::max`` expressions.
 
 - New :doc:`readability-avoid-nested-conditional-operator
   <clang-tidy/checks/readability/avoid-nested-conditional-operator>` check.

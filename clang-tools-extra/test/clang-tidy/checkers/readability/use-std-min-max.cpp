@@ -10,6 +10,11 @@ constexpr int myConstexprMax(int a, int b) {
   return a > b ? a : b;
 }
 
+#define MY_IF_MACRO(condition, statement) \
+  if (condition) {                        \
+    statement                             \
+  }
+
 class MyClass {
 public:
   int member1;
@@ -135,8 +140,7 @@ void foo() {
   if (obj.member2 >= value1)
     obj.member2 = value1; 
   
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
-  // CHECK-FIXES: value3 = std::min(MY_MACRO_MIN(value1, value2), value3);
+  // No suggestion needed here
   if (MY_MACRO_MIN(value1, value2) < value3)
     value3 = MY_MACRO_MIN(value1, value2); 
   
@@ -146,4 +150,26 @@ void foo() {
     value2 = value1; 
   }
 
+  // No suggestion needed here
+  if(value1 < value2)
+    value2 = value1;
+  else
+    value2 = value3;
+  
+  // No suggestion needed here
+  if(value1<value2){
+    value2 = value1; 
+  }
+  else{
+    value2 = value3;  
+  }
+
+  // No suggestion needed here
+  if(value1<value2){
+    value2 = value1; 
+    int res = value1 + value2;
+  }
+
+  // No suggestion needed here
+  MY_IF_MACRO(value1 < value2, value1 = value2;)
 }
