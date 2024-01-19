@@ -11801,8 +11801,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                          OldDecl, Previous);
 }
 
-static void CheckConstPureAttributesUsage(Sema &S,
-                                          FunctionDecl *NewFD) {
+static void CheckConstPureAttributesUsage(Sema &S, FunctionDecl *NewFD) {
   bool IsPure = NewFD->hasAttr<PureAttr>();
   bool IsConst = NewFD->hasAttr<ConstAttr>();
 
