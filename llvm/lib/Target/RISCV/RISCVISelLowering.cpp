@@ -2592,11 +2592,12 @@ static SDValue getAllOnesMask(MVT VecVT, SDValue VL, const SDLoc &DL,
 
 static SDValue getVLOp(uint64_t NumElts, MVT ContainerVT, const SDLoc &DL,
                        SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
-  // If we know the exact VLEN, our VL is exactly equal to VLMAX, and
-  // we can't encode the AVL as an immediate, use the VLMAX encoding.
+  // If we know the exact VLEN, and our VL is exactly equal to VLMAX,
+  // canonicalize the representation.  InsertVSETVLI will pick the immediate
+  // encoding later if profitable.
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
-  if (MinVLMAX == MaxVLMAX && NumElts == MinVLMAX && NumElts > 31)
+  if (MinVLMAX == MaxVLMAX && NumElts == MinVLMAX)
     return DAG.getRegister(RISCV::X0, Subtarget.getXLenVT());
 
   return DAG.getConstant(NumElts, DL, Subtarget.getXLenVT());
