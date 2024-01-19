@@ -302,7 +302,7 @@ void CoverageChecker::collectUmbrellaHeaderHeader(StringRef HeaderName) {
     sys::fs::current_path(PathBuf);
   // HeaderName will have an absolute path, so if it's the module map
   // directory, we remove it, also skipping trailing separator.
-  if (HeaderName.startswith(PathBuf))
+  if (HeaderName.starts_with(PathBuf))
     HeaderName = HeaderName.substr(PathBuf.size() + 1);
   // Save header name.
   ModuleMapHeadersSet.insert(ModularizeUtilities::getCanonicalPath(HeaderName));
@@ -356,8 +356,8 @@ bool CoverageChecker::collectFileSystemHeaders(StringRef IncludePath) {
     sys::path::append(Directory, IncludePath);
   if (Directory.size() == 0)
     Directory = ".";
-  if (IncludePath.startswith("/") || IncludePath.startswith("\\") ||
-    ((IncludePath.size() >= 2) && (IncludePath[1] == ':'))) {
+  if (IncludePath.starts_with("/") || IncludePath.starts_with("\\") ||
+      ((IncludePath.size() >= 2) && (IncludePath[1] == ':'))) {
     llvm::errs() << "error: Include path \"" << IncludePath
       << "\" is not relative to the module map file.\n";
     return false;

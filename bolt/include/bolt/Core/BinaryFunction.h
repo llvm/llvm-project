@@ -75,6 +75,14 @@ enum IndirectCallPromotionType : char {
   ICP_ALL          /// Perform ICP on calls and jump tables.
 };
 
+/// Hash functions supported for BF/BB hashing.
+enum class HashFunction : char {
+  StdHash, /// std::hash, implementation is platform-dependent. Provided for
+           /// backwards compatibility.
+  XXH3,    /// llvm::xxh3_64bits, the default.
+  Default = XXH3,
+};
+
 /// Information on a single indirect call to a particular callee.
 struct IndirectCallProfile {
   MCSymbol *Symbol;
@@ -1236,6 +1244,8 @@ public:
       return SmallString<32>(CodeSectionName);
     if (Fragment == FragmentNum::cold())
       return SmallString<32>(ColdCodeSectionName);
+    if (BC.HasWarmSection && Fragment == FragmentNum::warm())
+      return SmallString<32>(BC.getWarmCodeSectionName());
     return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
   }
 
@@ -2232,18 +2242,21 @@ public:
   ///
   /// If \p UseDFS is set, process basic blocks in DFS order. Otherwise, use
   /// the existing layout order.
+  /// \p HashFunction specifies which function is used for BF hashing.
   ///
   /// By default, instruction operands are ignored while calculating the hash.
   /// The caller can change this via passing \p OperandHashFunc function.
   /// The return result of this function will be mixed with internal hash.
   size_t computeHash(
-      bool UseDFS = false,
+      bool UseDFS = false, HashFunction HashFunction = HashFunction::Default,
       OperandHashFuncTy OperandHashFunc = [](const MCOperand &) {
         return std::string();
       }) const;
 
   /// Compute hash values for each block of the function.
-  void computeBlockHashes() const;
+  /// \p HashFunction specifies which function is used for BB hashing.
+  void
+  computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
   void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
 

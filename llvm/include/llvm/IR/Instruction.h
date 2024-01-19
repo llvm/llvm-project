@@ -78,6 +78,11 @@ public:
   /// Return a range over the DPValues attached to this instruction.
   iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange() const;
 
+  /// Return an iterator to the position of the "Next" DPValue after this
+  /// instruction, or std::nullopt. This is the position to pass to
+  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
+  std::optional<simple_ilist<DPValue>::iterator> getDbgReinsertionPosition();
+
   /// Returns true if any DPValues are attached to this instruction.
   bool hasDbgValues() const;
 
@@ -224,7 +229,7 @@ public:
   /// of cases, e.g. phi nodes or terminators that return values. This function
   /// may return null if the insertion after the definition is not possible,
   /// e.g. due to a catchswitch terminator.
-  Instruction *getInsertionPointAfterDef();
+  std::optional<InstListType::iterator> getInsertionPointAfterDef();
 
   //===--------------------------------------------------------------------===//
   // Subclass classification.
@@ -378,6 +383,9 @@ public:
   /// empty, all meta data will be copied.
   void copyMetadata(const Instruction &SrcInst,
                     ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Erase all metadata that matches the predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 
   /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
   /// has three operands (including name string), swap the order of the

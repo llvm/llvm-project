@@ -93,7 +93,12 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
                         cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(false));
+                        cl::init(true));
+
+static cl::opt<bool> EnableMISchedLoadClustering(
+    "riscv-misched-load-clustering", cl::Hidden,
+    cl::desc("Enable load clustering in the machine scheduler"),
+    cl::init(false));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -123,10 +128,20 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
+static StringRef computeDataLayout(const Triple &TT,
+                                   const TargetOptions &Options) {
+  StringRef ABIName = Options.MCOptions.getABIName();
+  if (TT.isArch64Bit()) {
+    if (ABIName == "lp64e")
+      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
+
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
   assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+
+  if (ABIName == "ilp32e")
+    return "e-m:e-p:32:32-i64:64-n32-S32";
+
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
@@ -141,7 +156,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : LLVMTargetMachine(T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
@@ -208,13 +223,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
 
   SmallString<512> Key;
-  Key += "RVVMin";
-  Key += std::to_string(RVVBitsMin);
-  Key += "RVVMax";
-  Key += std::to_string(RVVBitsMax);
-  Key += CPU;
-  Key += TuneCPU;
-  Key += FS;
+  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
+                           << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -345,12 +355,17 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (ST.hasMacroFusion()) {
-      ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-      DAG->addMutation(createRISCVMacroFusionDAGMutation());
-      return DAG;
+    ScheduleDAGMILive *DAG = nullptr;
+    if (EnableMISchedLoadClustering) {
+      DAG = createGenericSchedLive(C);
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
-    return nullptr;
+    if (ST.hasMacroFusion()) {
+      DAG = DAG ? DAG : createGenericSchedLive(C);
+      DAG->addMutation(createRISCVMacroFusionDAGMutation());
+    }
+    return DAG;
   }
 
   ScheduleDAGInstrs *
@@ -540,7 +555,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
+  if (TM->getTargetTriple().isRISCV64()) {
     addPass(createRISCVOptWInstrsPass());
   }
 }

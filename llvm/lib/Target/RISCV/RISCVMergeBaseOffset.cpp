@@ -19,7 +19,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-merge-base-offset"

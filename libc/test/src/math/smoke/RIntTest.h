@@ -28,12 +28,13 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
+  const T inf = T(FPBits::inf(Sign::POS));
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
+  const T zero = T(FPBits::zero(Sign::POS));
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
   const T nan = T(FPBits::build_quiet_nan(1));
 
 public:

@@ -221,6 +221,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool IsN64 = ABIName == "64";
   bool IsPIC = false;
   bool NonPIC = false;
+  bool HasNaN2008Opt = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
                                     options::OPT_fpic, options::OPT_fno_pic,
@@ -285,9 +286,10 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (Val == "2008") {
-      if (mips::getIEEE754Standard(CPUName) & mips::Std2008)
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
         Features.push_back("+nan2008");
-      else {
+        HasNaN2008Opt = true;
+      } else {
         Features.push_back("-nan2008");
         D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
       }
@@ -323,6 +325,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
     }
+  } else if (HasNaN2008Opt) {
+    Features.push_back("+abs2008");
   }
 
   AddTargetFeature(Args, Features, options::OPT_msingle_float,

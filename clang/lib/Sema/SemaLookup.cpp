@@ -5712,6 +5712,11 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
 
+  // See https://github.com/llvm/llvm-project/issues/73893. It is generally
+  // confusing than helpful to show the namespace is not visible.
+  if (isa<NamespaceDecl>(Decl))
+    return;
+
   auto NotePrevious = [&] {
     // FIXME: Suppress the note backtrace even under
     // -fdiagnostics-show-note-include-stack. We don't care how this

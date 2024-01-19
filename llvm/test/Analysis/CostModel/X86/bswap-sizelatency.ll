@@ -7,6 +7,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX512DQ
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX512BW
+;
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mcpu=slm | FileCheck %s --check-prefixes=SLM
 
 ;
 ; bswap(X)
@@ -68,6 +70,13 @@ define void @cost_bswap_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %a256)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a512)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SLM-LABEL: 'cost_bswap_i64'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I64 = call i64 @llvm.bswap.i64(i64 %a64)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %a128)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %a256)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a512)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I64    = call i64 @llvm.bswap.i64(i64 %a64)
   %V2I64  = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %a128)
@@ -133,6 +142,13 @@ define void @cost_bswap_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i3
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a512)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+; SLM-LABEL: 'cost_bswap_i32'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.bswap.i32(i32 %a32)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I32 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a128)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I32 = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %a256)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I32 = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a512)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
   %I32   = call i32 @llvm.bswap.i32(i32 %a32)
   %V2I32 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> %a128)
   %V4I32 = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %a256)
@@ -196,6 +212,13 @@ define void @cost_bswap_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> %a256)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a512)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SLM-LABEL: 'cost_bswap_i16'
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I16 = call i16 @llvm.bswap.i16(i16 %a16)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %a128)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I16 = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> %a256)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I16 = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a512)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I16    = call i16 @llvm.bswap.i16(i16 %a16)
   %V8I16  = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %a128)

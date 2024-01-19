@@ -24,15 +24,13 @@ public:
 
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
-    EXPECT_EQ(FP_ILOGB0, func(T(LIBC_NAMESPACE::fputil::FPBits<T>::zero())));
-    EXPECT_EQ(FP_ILOGB0,
-              func(T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero())));
-
-    EXPECT_EQ(FP_ILOGBNAN,
-              func(T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1))));
-
-    EXPECT_EQ(INT_MAX, func(T(LIBC_NAMESPACE::fputil::FPBits<T>::inf())));
-    EXPECT_EQ(INT_MAX, func(T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf())));
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
+    using Sign = LIBC_NAMESPACE::fputil::Sign;
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::POS))));
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::NEG))));
+    EXPECT_EQ(FP_ILOGBNAN, func(T(FPBits::build_quiet_nan(1))));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::POS))));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::NEG))));
   }
 
   template <typename T>
@@ -77,12 +75,11 @@ public:
   template <typename T>
   void test_subnormal_range(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (StorageType v = FPBits::MIN_SUBNORMAL; v <= FPBits::MAX_SUBNORMAL;
          v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
@@ -97,11 +94,12 @@ public:
   template <typename T>
   void test_normal_range(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    using UIntType = typename FPBits::UIntType;
-    constexpr UIntType COUNT = 10'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL; v += STEP) {
+    using StorageType = typename FPBits::StorageType;
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    for (StorageType v = FPBits::MIN_NORMAL; v <= FPBits::MAX_NORMAL;
+         v += STEP) {
       T x = T(FPBits(v));
       if (isnan(x) || isinf(x) || x == 0.0)
         continue;

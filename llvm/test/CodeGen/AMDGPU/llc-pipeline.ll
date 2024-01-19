@@ -4,7 +4,7 @@
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
-; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -debug-pass=Structure < %s 2>&1 \
+; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -amdgpu-loop-prefetch -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
 ; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
@@ -334,6 +334,7 @@
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Register Coalescer
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
+; GCN-O1-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-NEXT:        SI Whole Quad Mode
 ; GCN-O1-NEXT:        SI optimize exec mask operations pre-RA
@@ -358,6 +359,7 @@
 ; GCN-O1-NEXT:        SI Lower WWM Copies
 ; GCN-O1-NEXT:        GCN NSA Reassign
 ; GCN-O1-NEXT:        Virtual Register Rewriter
+; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
@@ -460,6 +462,12 @@
 ; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
+; GCN-O1-OPTS-NEXT:      Canonicalize natural loops
+; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
+; GCN-O1-OPTS-NEXT:      Loop Data Prefetch
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
@@ -622,6 +630,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
+; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-OPTS-NEXT:        SI Whole Quad Mode
@@ -647,6 +656,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Lower WWM Copies
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
+; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
@@ -922,6 +932,7 @@
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Register Coalescer
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
+; GCN-O2-NEXT:        Rewrite Partial Register Uses
 ; GCN-O2-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
 ; GCN-O2-NEXT:        SI Whole Quad Mode
@@ -948,6 +959,7 @@
 ; GCN-O2-NEXT:        SI Lower WWM Copies
 ; GCN-O2-NEXT:        GCN NSA Reassign
 ; GCN-O2-NEXT:        Virtual Register Rewriter
+; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
@@ -1235,6 +1247,7 @@
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Register Coalescer
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
+; GCN-O3-NEXT:        Rewrite Partial Register Uses
 ; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
 ; GCN-O3-NEXT:        SI Whole Quad Mode
@@ -1261,6 +1274,7 @@
 ; GCN-O3-NEXT:        SI Lower WWM Copies
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        Virtual Register Rewriter
+; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion

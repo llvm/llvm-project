@@ -134,3 +134,7 @@ def get_op_result_or_op_results(
 # see the typing.Type doc string.
 _U = _TypeVar("_U", bound=_cext.ir.Value)
 SubClassValueT = _Type[_U]
+
+ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
+ResultValueT = _Union[ResultValueTypeTuple]
+VariadicResultValueT = _Union[ResultValueT, _Sequence[ResultValueT]]

@@ -503,27 +503,27 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 84, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[IND_END4:%.*]] = mul i8 84, [[INDUCTION_IV]]
-; CHECK-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT9]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT12:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT11]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT12]]
-; CHECK-NEXT:    [[INDUCTION13:%.*]] = add <4 x i8> [[DOTSPLAT10]], [[TMP8]]
+; CHECK-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT8]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT10]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT11]]
+; CHECK-NEXT:    [[INDUCTION12:%.*]] = add <4 x i8> [[DOTSPLAT9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT15:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT14]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT13:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT14:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT13]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND16:%.*]] = phi <4 x i8> [ [[INDUCTION13]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT17:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX18:%.*]] = add i64 1, [[INDEX8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX18]], 0
+; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND15:%.*]] = phi <4 x i8> [ [[INDUCTION12]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX17:%.*]] = add i64 1, [[INDEX7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX17]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    store <4 x i8> [[VEC_IND16]], ptr [[TMP12]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX8]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT17]] = add <4 x i8> [[VEC_IND16]], [[DOTSPLAT15]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT19]], 84
+; CHECK-NEXT:    store <4 x i8> [[VEC_IND15]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX7]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT16]] = add <4 x i8> [[VEC_IND15]], [[DOTSPLAT14]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT18]], 84
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -593,27 +593,27 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 84, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END4:%.*]] = mul i8 84, [[INDUCTION_IV]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT9]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <2 x i8> poison, i8 [[INDUCTION_IV]], i64 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT12:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT11]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = mul <2 x i8> <i8 0, i8 1>, [[DOTSPLAT12]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION13:%.*]] = add <2 x i8> [[DOTSPLAT10]], [[TMP8]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT8:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT8]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <2 x i8> poison, i8 [[INDUCTION_IV]], i64 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT10]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = mul <2 x i8> <i8 0, i8 1>, [[DOTSPLAT11]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION12:%.*]] = add <2 x i8> [[DOTSPLAT9]], [[TMP8]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <2 x i8> poison, i8 [[TMP9]], i64 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT15:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT14]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT13:%.*]] = insertelement <2 x i8> poison, i8 [[TMP9]], i64 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT14:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT13]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.vector.body:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND16:%.*]] = phi <2 x i8> [ [[INDUCTION13]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT17:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[OFFSET_IDX18:%.*]] = add i64 1, [[INDEX8]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX18]], 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND15:%.*]] = phi <2 x i8> [ [[INDUCTION12]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[OFFSET_IDX17:%.*]] = add i64 1, [[INDEX7]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX17]], 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP10]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> [[VEC_IND16]], ptr [[TMP12]], align 1
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX8]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT17]] = add <2 x i8> [[VEC_IND16]], [[DOTSPLAT15]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT19]], 84
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> [[VEC_IND15]], ptr [[TMP12]], align 1
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX7]], 2
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_IND_NEXT16]] = add <2 x i8> [[VEC_IND15]], [[DOTSPLAT14]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT18]], 84
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.middle.block:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -662,7 +662,7 @@ outer.latch:
   br label %outer.header
 }
 
-; Check handling of widended/truncated inductions.
+; Check handling of widened/truncated inductions.
 define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  iter.check:

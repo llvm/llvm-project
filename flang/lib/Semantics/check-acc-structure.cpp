@@ -69,7 +69,12 @@ static constexpr inline AccClauseSet updateOnlyAllowedAfterDeviceTypeClauses{
 
 static constexpr inline AccClauseSet routineOnlyAllowedAfterDeviceTypeClauses{
     llvm::acc::Clause::ACCC_bind, llvm::acc::Clause::ACCC_gang,
-    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_worker};
+    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_worker,
+    llvm::acc::Clause::ACCC_seq};
+
+static constexpr inline AccClauseSet routineMutuallyExclusiveClauses{
+    llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_worker,
+    llvm::acc::Clause::ACCC_vector, llvm::acc::Clause::ACCC_seq};
 
 bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
   if (GetContext().directive == llvm::acc::ACCD_enter_data ||
@@ -225,7 +230,8 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   case llvm::acc::Directive::ACCD_serial_loop:
     // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
-        computeConstructOnlyAllowedAfterDeviceTypeClauses);
+        computeConstructOnlyAllowedAfterDeviceTypeClauses |
+            loopOnlyAllowedAfterDeviceTypeClauses);
     if (doCons) {
       const parser::Block &block{std::get<parser::Block>(doCons->t)};
       CheckNoBranching(block, GetContext().directive, beginBlockDir.source);
@@ -387,12 +393,8 @@ CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
 CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
 CHECK_SIMPLE_CLAUSE(Read, ACCC_read)
-CHECK_SIMPLE_CLAUSE(Seq, ACCC_seq)
-CHECK_SIMPLE_CLAUSE(Tile, ACCC_tile)
 CHECK_SIMPLE_CLAUSE(UseDevice, ACCC_use_device)
-CHECK_SIMPLE_CLAUSE(Vector, ACCC_vector)
 CHECK_SIMPLE_CLAUSE(Wait, ACCC_wait)
-CHECK_SIMPLE_CLAUSE(Worker, ACCC_worker)
 CHECK_SIMPLE_CLAUSE(Write, ACCC_write)
 CHECK_SIMPLE_CLAUSE(Unknown, ACCC_unknown)
 
@@ -534,25 +536,88 @@ void AccStructureChecker::Enter(const parser::AccClause::DeviceType &d) {
                 .str()),
         ContextDirectiveAsFortran());
   }
+  ResetCrtGroup();
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Seq &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_seq;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_vector;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_worker;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Tile &g) {
+  CheckAllowed(llvm::acc::Clause::ACCC_tile);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_tile, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
-  CheckAllowed(llvm::acc::Clause::ACCC_gang);
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_gang;
+  if (GetContext().directive == llvm::acc::Directive::ACCD_routine) {
+    CheckMutuallyExclusivePerGroup(crtClause,
+        llvm::acc::Clause::ACCC_device_type, routineMutuallyExclusiveClauses);
+  }
+  CheckAllowed(crtClause);
+  if (GetContext().directive != llvm::acc::Directive::ACCD_routine) {
+    CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
+  }
 
   if (g.v) {
     bool hasNum = false;
     bool hasDim = false;
+    bool hasStatic = false;
     const Fortran::parser::AccGangArgList &x = *g.v;
     for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-      if (std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u))
+      if (std::get_if<Fortran::parser::AccGangArg::Num>(&gangArg.u)) {
         hasNum = true;
-      else if (std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u))
+      } else if (std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
         hasDim = true;
+      } else if (std::get_if<Fortran::parser::AccGangArg::Static>(&gangArg.u)) {
+        hasStatic = true;
+      }
     }
 
-    if (hasDim && hasNum)
+    if (GetContext().directive == llvm::acc::Directive::ACCD_routine &&
+        (hasStatic || hasNum)) {
+      context_.Say(GetContext().clauseSource,
+          "Only the dim argument is allowed on the %s clause on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_gang)
+                  .str()),
+          ContextDirectiveAsFortran());
+    }
+
+    if (hasDim && hasNum) {
       context_.Say(GetContext().clauseSource,
           "The num argument is not allowed when dim is specified"_err_en_US);
+    }
   }
 }
 
@@ -561,6 +626,8 @@ void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_num_gangs, llvm::acc::Clause::ACCC_device_type);
 
   if (n.v.size() > 3)
     context_.Say(GetContext().clauseSource,
@@ -572,6 +639,8 @@ void AccStructureChecker::Enter(const parser::AccClause::NumWorkers &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_num_workers, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
@@ -579,6 +648,8 @@ void AccStructureChecker::Enter(const parser::AccClause::VectorLength &n) {
       /*warnInsteadOfError=*/GetContext().directive ==
               llvm::acc::Directive::ACCD_serial ||
           GetContext().directive == llvm::acc::Directive::ACCD_serial_loop);
+  CheckAllowedOncePerGroup(llvm::acc::Clause::ACCC_vector_length,
+      llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
@@ -659,6 +730,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
 
 void AccStructureChecker::Enter(const parser::AccClause::Collapse &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_collapse);
+  CheckAllowedOncePerGroup(
+      llvm::acc::Clause::ACCC_collapse, llvm::acc::Clause::ACCC_device_type);
   const parser::AccCollapseArg &accCollapseArg = x.v;
   const auto &collapseValue{
       std::get<parser::ScalarIntConstantExpr>(accCollapseArg.t)};

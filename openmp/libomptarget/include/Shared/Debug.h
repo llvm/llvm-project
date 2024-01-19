@@ -115,15 +115,16 @@ inline uint32_t getDebugLevel() {
 /// Print fatal error message with an error string and error identifier
 #define FATAL_MESSAGE0(_num, _str)                                             \
   do {                                                                         \
-    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: %s\n", _num, _str); \
+    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: %s\n", (int)_num,   \
+            _str);                                                             \
     abort();                                                                   \
   } while (0)
 
 /// Print fatal error message with a printf string and error identifier
 #define FATAL_MESSAGE(_num, _str, ...)                                         \
   do {                                                                         \
-    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: " _str "\n", _num,  \
-            __VA_ARGS__);                                                      \
+    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: " _str "\n",        \
+            (int)_num, __VA_ARGS__);                                           \
     abort();                                                                   \
   } while (0)
 

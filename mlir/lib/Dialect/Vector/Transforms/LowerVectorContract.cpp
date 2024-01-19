@@ -139,7 +139,7 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF ||
+    if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
         kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
@@ -167,7 +167,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   if (!acc)
     return std::optional<Value>(mul);
 
-  return makeArithReduction(rewriter, loc, kind, mul, acc, mask);
+  return makeArithReduction(rewriter, loc, kind, mul, acc,
+                            /*fastmath=*/nullptr, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -425,16 +426,8 @@ struct UnrolledOuterProductGenerator
   }
 
   FailureOr<Value> outerProd(Value lhs, Value rhs, Value res,
-                             VectorType lhsType, int reductionDim,
+                             VectorType lhsType, int reductionSize,
                              std::optional<Value> maybeMask = std::nullopt) {
-    // Unrolling a scalable dimension would be incorrect - bail out.
-    if (lhsType.getScalableDims()[reductionDim])
-      return failure();
-
-    int reductionSize = lhsType.getDimSize(reductionDim);
-    assert(reductionSize > 0 &&
-           "Reduction dim must be a known static size to allow unrolling");
-
     // Incremental support for masking.
     if (mask && !maybeMask.has_value())
       return failure();
@@ -457,6 +450,20 @@ struct UnrolledOuterProductGenerator
     return res;
   }
 
+  /// Helper function for `matmat`, `matvec`, `tmatvec`. Returns the size of
+  /// dimension `reductionDim`. If the dimension is a scalable dimension,
+  /// returns "nullopt".
+  std::optional<int64_t> getReductionSize(VectorType vecType,
+                                          int64_t reductionDim) {
+    // Cannot unroll scalable dimension.
+    if (vecType.getScalableDims()[reductionDim])
+      return std::nullopt;
+    int64_t reductionSize = vecType.getDimSize(reductionDim);
+    assert(reductionSize > 0 &&
+           "Reduction dim must be a known static size to allow unrolling");
+    return reductionSize;
+  }
+
   /// Two outer parallel, one inner reduction (matmat flavor).
   FailureOr<Value> matmat() {
     if (!iters({Par(), Par(), Red()}))
@@ -464,42 +471,72 @@ struct UnrolledOuterProductGenerator
     // Set up the parallel/reduction structure in the right form.
     AffineExpr m, n, k;
     bindDims(rewriter.getContext(), m, n, k);
-    Value transposedMask = t(mask, {2, 0, 1});
+
     // Classical row-major matmul:  Just permute the lhs.
-    if (layout({{m, k}, {k, n}, {m, n}}))
-      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1,
-                       transposedMask);
+    if (layout({{m, k}, {k, n}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        // Note: `t` creates new IR. It must be nested within this `if` check
+        // so that no IR is created when then pattern returns "failure".
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {m, n}})) {
-      Value tlhs = t(lhs);
-      return outerProd(tlhs, t(rhs), res, lhsType, /*reductionDim=*/1,
-                       transposedMask);
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tLhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
     }
     // No need to permute anything.
-    if (layout({{k, m}, {k, n}, {m, n}}))
-      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k, m}, {k, n}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Just permute the rhs.
-    if (layout({{k, m}, {n, k}, {m, n}}))
-      return outerProd(lhs, t(rhs), res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k, m}, {n, k}, {m, n}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(lhs, tRhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Transposed output: swap RHS and LHS.
     // Classical row-major matmul: permute the lhs.
-    if (layout({{m, k}, {k, n}, {n, m}}))
-      return outerProd(rhs, t(lhs), res, lhsType, /*reductionDim=*/1,
-                       transposedMask);
+    if (layout({{m, k}, {k, n}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // TODO: may be better to fail and use some vector<k> -> scalar reduction.
     if (layout({{m, k}, {n, k}, {n, m}})) {
-      Value trhs = t(rhs);
-      return outerProd(trhs, t(lhs), res, lhsType, /*reductionDim=*/1,
-                       transposedMask);
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tRhs = t(rhs);
+        Value tLhs = t(lhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, tLhs, res, lhsType, *reductionSize, tMask);
+      }
     }
-    if (layout({{k, m}, {k, n}, {n, m}}))
-      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
-    if (layout({{k, m}, {n, k}, {n, m}}))
-      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k, m}, {k, n}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
+    if (layout({{k, m}, {n, k}, {n, m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask, {2, 0, 1});
+        return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     return failure();
   }
 
@@ -513,24 +550,37 @@ struct UnrolledOuterProductGenerator
       return failure();
     AffineExpr m, k;
     bindDims(rewriter.getContext(), m, k);
-    Value transposedMask = t(mask);
 
     // Case mat-vec: transpose.
-    if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1,
-                       transposedMask);
+    if (layout({{m, k}, {k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 1)) {
+        Value tLhs = t(lhs);
+        Value tMask = t(mask);
+        return outerProd(tLhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case mat-trans-vec: ready to go.
-    if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k, m}, {k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask);
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case vec-mat: swap and transpose.
-    if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k}, {m, k}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tRhs = t(rhs);
+        Value tMask = t(mask);
+        return outerProd(tRhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     // Case vec-mat-trans: swap and ready to go.
-    if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0,
-                       transposedMask);
+    if (layout({{k}, {k, m}, {m}})) {
+      if (auto reductionSize = getReductionSize(lhsType, 0)) {
+        Value tMask = t(mask);
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, tMask);
+      }
+    }
     return failure();
   }
 
@@ -546,16 +596,20 @@ struct UnrolledOuterProductGenerator
 
     // Case mat-vec: transpose.
     if (layout({{m, k}, {k}, {m}}))
-      return outerProd(t(lhs), rhs, res, lhsType, /*reductionDim=*/1, mask);
+      if (auto reductionSize = getReductionSize(lhsType, 1))
+        return outerProd(t(lhs), rhs, res, lhsType, *reductionSize, mask);
     // Case mat-trans-vec: ready to go.
     if (layout({{k, m}, {k}, {m}}))
-      return outerProd(lhs, rhs, res, lhsType, /*reductionDim=*/0, mask);
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(lhs, rhs, res, lhsType, *reductionSize, mask);
     // Case vec-mat: swap and transpose.
     if (layout({{k}, {m, k}, {m}}))
-      return outerProd(t(rhs), lhs, res, lhsType, /*reductionDim=*/0, mask);
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(t(rhs), lhs, res, lhsType, *reductionSize, mask);
     // Case vec-mat-trans: swap and ready to go.
     if (layout({{k}, {k, m}, {m}}))
-      return outerProd(rhs, lhs, res, lhsType, /*reductionDim=*/0, mask);
+      if (auto reductionSize = getReductionSize(lhsType, 0))
+        return outerProd(rhs, lhs, res, lhsType, *reductionSize, mask);
     return failure();
   }
 

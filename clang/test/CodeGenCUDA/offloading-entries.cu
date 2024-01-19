@@ -17,31 +17,47 @@
 //.
 // CUDA: @.omp_offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00"
 // CUDA: @.omp_offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { ptr @_Z18__device_stub__foov, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries", align 1
-// CUDA: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [8 x i8] c"_Z3barv\00"
-// CUDA: @.omp_offloading.entry._Z3barv = weak constant %struct.__tgt_offload_entry { ptr @_Z18__device_stub__barv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries", align 1
-// CUDA: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [2 x i8] c"x\00"
-// CUDA: @.omp_offloading.entry.x = weak constant %struct.__tgt_offload_entry { ptr @x, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "cuda_offloading_entries", align 1
+// CUDA: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00"
+// CUDA: @.omp_offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { ptr @_Z21__device_stub__kernelv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries", align 1
+// CUDA: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00"
+// CUDA: @.omp_offloading.entry.var = weak constant %struct.__tgt_offload_entry { ptr @var, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "cuda_offloading_entries", align 1
+// CUDA: @.omp_offloading.entry_name.3 = internal unnamed_addr constant [5 x i8] c"surf\00"
+// CUDA: @.omp_offloading.entry.surf = weak constant %struct.__tgt_offload_entry { ptr @surf, ptr @.omp_offloading.entry_name.3, i64 4, i32 2, i32 1 }, section "cuda_offloading_entries", align 1
+// CUDA: @.omp_offloading.entry_name.4 = internal unnamed_addr constant [4 x i8] c"tex\00"
+// CUDA: @.omp_offloading.entry.tex = weak constant %struct.__tgt_offload_entry { ptr @tex, ptr @.omp_offloading.entry_name.4, i64 4, i32 3, i32 1 }, section "cuda_offloading_entries", align 1
 //.
 // HIP: @.omp_offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00"
 // HIP: @.omp_offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { ptr @_Z3foov, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "hip_offloading_entries", align 1
-// HIP: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [8 x i8] c"_Z3barv\00"
-// HIP: @.omp_offloading.entry._Z3barv = weak constant %struct.__tgt_offload_entry { ptr @_Z3barv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "hip_offloading_entries", align 1
-// HIP: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [2 x i8] c"x\00"
-// HIP: @.omp_offloading.entry.x = weak constant %struct.__tgt_offload_entry { ptr @x, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "hip_offloading_entries", align 1
+// HIP: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00"
+// HIP: @.omp_offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { ptr @_Z6kernelv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "hip_offloading_entries", align 1
+// HIP: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00"
+// HIP: @.omp_offloading.entry.var = weak constant %struct.__tgt_offload_entry { ptr @var, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "hip_offloading_entries", align 1
+// HIP: @.omp_offloading.entry_name.3 = internal unnamed_addr constant [5 x i8] c"surf\00"
+// HIP: @.omp_offloading.entry.surf = weak constant %struct.__tgt_offload_entry { ptr @surf, ptr @.omp_offloading.entry_name.3, i64 4, i32 2, i32 1 }, section "hip_offloading_entries", align 1
+// HIP: @.omp_offloading.entry_name.4 = internal unnamed_addr constant [4 x i8] c"tex\00"
+// HIP: @.omp_offloading.entry.tex = weak constant %struct.__tgt_offload_entry { ptr @tex, ptr @.omp_offloading.entry_name.4, i64 4, i32 3, i32 1 }, section "hip_offloading_entries", align 1
 //.
 // CUDA-COFF: @.omp_offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00"
 // CUDA-COFF: @.omp_offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { ptr @_Z18__device_stub__foov, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries$OE", align 1
-// CUDA-COFF: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [8 x i8] c"_Z3barv\00"
-// CUDA-COFF: @.omp_offloading.entry._Z3barv = weak constant %struct.__tgt_offload_entry { ptr @_Z18__device_stub__barv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries$OE", align 1
-// CUDA-COFF: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [2 x i8] c"x\00"
-// CUDA-COFF: @.omp_offloading.entry.x = weak constant %struct.__tgt_offload_entry { ptr @x, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "cuda_offloading_entries$OE", align 1
+// CUDA-COFF: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00"
+// CUDA-COFF: @.omp_offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { ptr @_Z21__device_stub__kernelv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "cuda_offloading_entries$OE", align 1
+// CUDA-COFF: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00"
+// CUDA-COFF: @.omp_offloading.entry.var = weak constant %struct.__tgt_offload_entry { ptr @var, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "cuda_offloading_entries$OE", align 1
+// CUDA-COFF: @.omp_offloading.entry_name.3 = internal unnamed_addr constant [5 x i8] c"surf\00"
+// CUDA-COFF: @.omp_offloading.entry.surf = weak constant %struct.__tgt_offload_entry { ptr @surf, ptr @.omp_offloading.entry_name.3, i64 4, i32 2, i32 1 }, section "cuda_offloading_entries$OE", align 1
+// CUDA-COFF: @.omp_offloading.entry_name.4 = internal unnamed_addr constant [4 x i8] c"tex\00"
+// CUDA-COFF: @.omp_offloading.entry.tex = weak constant %struct.__tgt_offload_entry { ptr @tex, ptr @.omp_offloading.entry_name.4, i64 4, i32 3, i32 1 }, section "cuda_offloading_entries$OE", align 1
 //.
 // HIP-COFF: @.omp_offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00"
 // HIP-COFF: @.omp_offloading.entry._Z3foov = weak constant %struct.__tgt_offload_entry { ptr @_Z3foov, ptr @.omp_offloading.entry_name, i64 0, i32 0, i32 0 }, section "hip_offloading_entries$OE", align 1
-// HIP-COFF: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [8 x i8] c"_Z3barv\00"
-// HIP-COFF: @.omp_offloading.entry._Z3barv = weak constant %struct.__tgt_offload_entry { ptr @_Z3barv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "hip_offloading_entries$OE", align 1
-// HIP-COFF: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [2 x i8] c"x\00"
-// HIP-COFF: @.omp_offloading.entry.x = weak constant %struct.__tgt_offload_entry { ptr @x, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "hip_offloading_entries$OE", align 1
+// HIP-COFF: @.omp_offloading.entry_name.1 = internal unnamed_addr constant [11 x i8] c"_Z6kernelv\00"
+// HIP-COFF: @.omp_offloading.entry._Z6kernelv = weak constant %struct.__tgt_offload_entry { ptr @_Z6kernelv, ptr @.omp_offloading.entry_name.1, i64 0, i32 0, i32 0 }, section "hip_offloading_entries$OE", align 1
+// HIP-COFF: @.omp_offloading.entry_name.2 = internal unnamed_addr constant [4 x i8] c"var\00"
+// HIP-COFF: @.omp_offloading.entry.var = weak constant %struct.__tgt_offload_entry { ptr @var, ptr @.omp_offloading.entry_name.2, i64 4, i32 0, i32 0 }, section "hip_offloading_entries$OE", align 1
+// HIP-COFF: @.omp_offloading.entry_name.3 = internal unnamed_addr constant [5 x i8] c"surf\00"
+// HIP-COFF: @.omp_offloading.entry.surf = weak constant %struct.__tgt_offload_entry { ptr @surf, ptr @.omp_offloading.entry_name.3, i64 4, i32 2, i32 1 }, section "hip_offloading_entries$OE", align 1
+// HIP-COFF: @.omp_offloading.entry_name.4 = internal unnamed_addr constant [4 x i8] c"tex\00"
+// HIP-COFF: @.omp_offloading.entry.tex = weak constant %struct.__tgt_offload_entry { ptr @tex, ptr @.omp_offloading.entry_name.4, i64 4, i32 3, i32 1 }, section "hip_offloading_entries$OE", align 1
 //.
 // CUDA-LABEL: @_Z18__device_stub__foov(
 // CUDA-NEXT:  entry:
@@ -72,34 +88,52 @@
 // HIP-COFF-NEXT:    ret void
 //
 __global__ void foo() {}
+__device__ int var = 1;
+const __device__ int constant = 1;
+extern __device__ int external;
 
-// CUDA-LABEL: @_Z18__device_stub__barv(
+// CUDA-LABEL: @_Z21__device_stub__kernelv(
 // CUDA-NEXT:  entry:
-// CUDA-NEXT:    [[TMP0:%.*]] = call i32 @cudaLaunch(ptr @_Z18__device_stub__barv)
+// CUDA-NEXT:    [[TMP0:%.*]] = call i32 @cudaLaunch(ptr @_Z21__device_stub__kernelv)
 // CUDA-NEXT:    br label [[SETUP_END:%.*]]
 // CUDA:       setup.end:
 // CUDA-NEXT:    ret void
 //
-// HIP-LABEL: @_Z18__device_stub__barv(
+// HIP-LABEL: @_Z21__device_stub__kernelv(
 // HIP-NEXT:  entry:
-// HIP-NEXT:    [[TMP0:%.*]] = call i32 @hipLaunchByPtr(ptr @_Z3barv)
+// HIP-NEXT:    [[TMP0:%.*]] = call i32 @hipLaunchByPtr(ptr @_Z6kernelv)
 // HIP-NEXT:    br label [[SETUP_END:%.*]]
 // HIP:       setup.end:
 // HIP-NEXT:    ret void
 //
-// CUDA-COFF-LABEL: @_Z18__device_stub__barv(
+// CUDA-COFF-LABEL: @_Z21__device_stub__kernelv(
 // CUDA-COFF-NEXT:  entry:
-// CUDA-COFF-NEXT:    [[TMP0:%.*]] = call i32 @cudaLaunch(ptr @_Z18__device_stub__barv)
+// CUDA-COFF-NEXT:    [[TMP0:%.*]] = call i32 @cudaLaunch(ptr @_Z21__device_stub__kernelv)
 // CUDA-COFF-NEXT:    br label [[SETUP_END:%.*]]
 // CUDA-COFF:       setup.end:
 // CUDA-COFF-NEXT:    ret void
 //
-// HIP-COFF-LABEL: @_Z18__device_stub__barv(
+// HIP-COFF-LABEL: @_Z21__device_stub__kernelv(
 // HIP-COFF-NEXT:  entry:
-// HIP-COFF-NEXT:    [[TMP0:%.*]] = call i32 @hipLaunchByPtr(ptr @_Z3barv)
+// HIP-COFF-NEXT:    [[TMP0:%.*]] = call i32 @hipLaunchByPtr(ptr @_Z6kernelv)
 // HIP-COFF-NEXT:    br label [[SETUP_END:%.*]]
 // HIP-COFF:       setup.end:
 // HIP-COFF-NEXT:    ret void
 //
-__global__ void bar() {}
-__device__ int x = 1;
+__global__ void kernel() { external = 1; }
+
+struct surfaceReference { int desc; };
+
+template <typename T, int dim = 1>
+struct __attribute__((device_builtin_surface_type)) surface : public surfaceReference {};
+
+surface<void> surf;
+
+struct textureReference {
+  int desc;
+};
+
+template <typename T, int dim = 1, int mode = 0>
+struct __attribute__((device_builtin_texture_type)) texture : public textureReference {};
+
+texture<void> tex;

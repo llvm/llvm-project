@@ -459,9 +459,24 @@ public:
       // Record all stack id indices actually used in the summary entries being
       // written, so that we can compact them in the case of distributed ThinLTO
       // indexes.
-      for (auto &CI : FS->callsites())
+      for (auto &CI : FS->callsites()) {
+        // If the stack id list is empty, this callsite info was synthesized for
+        // a missing tail call frame. Ensure that the callee's GUID gets a value
+        // id. Normally we only generate these for defined summaries, which in
+        // the case of distributed ThinLTO is only the functions already defined
+        // in the module or that we want to import. We don't bother to include
+        // all the callee symbols as they aren't normally needed in the backend.
+        // However, for the synthesized callsite infos we do need the callee
+        // GUID in the backend so that we can correlate the identified callee
+        // with this callsite info (which for non-tail calls is done by the
+        // ordering of the callsite infos and verified via stack ids).
+        if (CI.StackIdIndices.empty()) {
+          GUIDToValueIdMap[CI.Callee.getGUID()] = ++GlobalValueId;
+          continue;
+        }
         for (auto Idx : CI.StackIdIndices)
           StackIdIndices.push_back(Idx);
+      }
       for (auto &AI : FS->allocs())
         for (auto &MIB : AI.MIBs)
           for (auto Idx : MIB.StackIdIndices)
@@ -827,6 +842,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_WRITABLE;
   case Attribute::CoroDestroyOnlyWhenComplete:
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
+  case Attribute::DeadOnUnwind:
+    return bitc::ATTR_KIND_DEAD_ON_UNWIND;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1157,6 +1174,24 @@ static uint64_t getEncodedGVarFlags(GlobalVarSummary::GVarFlags Flags) {
   return RawFlags;
 }
 
+static uint64_t getEncodedHotnessCallEdgeInfo(const CalleeInfo &CI) {
+  uint64_t RawFlags = 0;
+
+  RawFlags |= CI.Hotness;            // 3 bits
+  RawFlags |= (CI.HasTailCall << 3); // 1 bit
+
+  return RawFlags;
+}
+
+static uint64_t getEncodedRelBFCallEdgeInfo(const CalleeInfo &CI) {
+  uint64_t RawFlags = 0;
+
+  RawFlags |= CI.RelBlockFreq; // CalleeInfo::RelBlockFreqBits bits
+  RawFlags |= (CI.HasTailCall << CalleeInfo::RelBlockFreqBits); // 1 bit
+
+  return RawFlags;
+}
+
 static unsigned getEncodedVisibility(const GlobalValue &GV) {
   switch (GV.getVisibility()) {
   case GlobalValue::DefaultVisibility:   return 0;
@@ -1403,7 +1438,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat, attributes, DSO_Local, GlobalSanitizer]
+    //             comdat, attributes, DSO_Local, GlobalSanitizer, code_model]
     Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1420,7 +1455,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
         GV.hasComdat() || GV.hasAttributes() || GV.isDSOLocal() ||
-        GV.hasPartition() || GV.hasSanitizerMetadata()) {
+        GV.hasPartition() || GV.hasSanitizerMetadata() || GV.getCodeModel()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
@@ -1438,6 +1473,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
       Vals.push_back((GV.hasSanitizerMetadata() ? serializeSanitizerMetadata(
                                                       GV.getSanitizerMetadata())
                                                 : 0));
+      Vals.push_back(GV.getCodeModelRaw());
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }
@@ -4008,8 +4044,9 @@ static void writeFunctionHeapProfileRecords(
 // Helper to emit a single function summary record.
 void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
-    unsigned ValueID, unsigned FSCallsAbbrev, unsigned FSCallsProfileAbbrev,
-    unsigned CallsiteAbbrev, unsigned AllocAbbrev, const Function &F) {
+    unsigned ValueID, unsigned FSCallsRelBFAbbrev,
+    unsigned FSCallsProfileAbbrev, unsigned CallsiteAbbrev,
+    unsigned AllocAbbrev, const Function &F) {
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
@@ -4036,21 +4073,21 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   for (auto &RI : FS->refs())
     NameVals.push_back(VE.getValueID(RI.getValue()));
 
-  bool HasProfileData =
-      F.hasProfileData() || ForceSummaryEdgesCold != FunctionSummary::FSHT_None;
+  const bool UseRelBFRecord =
+      WriteRelBFToSummary && !F.hasProfileData() &&
+      ForceSummaryEdgesCold == FunctionSummary::FSHT_None;
   for (auto &ECI : FS->calls()) {
     NameVals.push_back(getValueId(ECI.first));
-    if (HasProfileData)
-      NameVals.push_back(static_cast<uint8_t>(ECI.second.Hotness));
-    else if (WriteRelBFToSummary)
-      NameVals.push_back(ECI.second.RelBlockFreq);
+    if (UseRelBFRecord)
+      NameVals.push_back(getEncodedRelBFCallEdgeInfo(ECI.second));
+    else
+      NameVals.push_back(getEncodedHotnessCallEdgeInfo(ECI.second));
   }
 
-  unsigned FSAbbrev = (HasProfileData ? FSCallsProfileAbbrev : FSCallsAbbrev);
+  unsigned FSAbbrev =
+      (UseRelBFRecord ? FSCallsRelBFAbbrev : FSCallsProfileAbbrev);
   unsigned Code =
-      (HasProfileData ? bitc::FS_PERMODULE_PROFILE
-                      : (WriteRelBFToSummary ? bitc::FS_PERMODULE_RELBF
-                                             : bitc::FS_PERMODULE));
+      (UseRelBFRecord ? bitc::FS_PERMODULE_RELBF : bitc::FS_PERMODULE_PROFILE);
 
   // Emit the finished record.
   Stream.EmitRecord(Code, NameVals, FSAbbrev);
@@ -4159,17 +4196,14 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid, hotness)
+  // numrefs x valueid, n x (valueid, hotness+tailcall flags)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSCallsProfileAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
-  // Abbrev for FS_PERMODULE or FS_PERMODULE_RELBF.
+  // Abbrev for FS_PERMODULE_RELBF.
   Abbv = std::make_shared<BitCodeAbbrev>();
-  if (WriteRelBFToSummary)
-    Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_RELBF));
-  else
-    Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE));
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_RELBF));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
@@ -4177,10 +4211,10 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid [, rel_block_freq])
+  // numrefs x valueid, n x (valueid, rel_block_freq+tailcall])
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-  unsigned FSCallsAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+  unsigned FSCallsRelBFAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   // Abbrev for FS_PERMODULE_GLOBALVAR_INIT_REFS.
   Abbv = std::make_shared<BitCodeAbbrev>();
@@ -4252,9 +4286,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
       continue;
     }
     auto *Summary = VI.getSummaryList()[0].get();
-    writePerModuleFunctionSummaryRecord(NameVals, Summary, VE.getValueID(&F),
-                                        FSCallsAbbrev, FSCallsProfileAbbrev,
-                                        CallsiteAbbrev, AllocAbbrev, F);
+    writePerModuleFunctionSummaryRecord(
+        NameVals, Summary, VE.getValueID(&F), FSCallsRelBFAbbrev,
+        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, F);
   }
 
   // Capture references from GlobalVariable initializers, which are outside
@@ -4325,25 +4359,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, StackIds, StackIdAbbvId);
   }
 
-  // Abbrev for FS_COMBINED.
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
-  Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // entrycount
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid)
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-  unsigned FSCallsAbbrev = Stream.EmitAbbrev(std::move(Abbv));
-
   // Abbrev for FS_COMBINED_PROFILE.
-  Abbv = std::make_shared<BitCodeAbbrev>();
+  auto Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_PROFILE));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // modid
@@ -4354,7 +4371,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // rorefcnt
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // worefcnt
-  // numrefs x valueid, n x (valueid, hotness)
+  // numrefs x valueid, n x (valueid, hotness+tailcall flags)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned FSCallsProfileAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -4534,14 +4551,6 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals[7] = RORefCnt;
     NameVals[8] = WORefCnt;
 
-    bool HasProfileData = false;
-    for (auto &EI : FS->calls()) {
-      HasProfileData |=
-          EI.second.getHotness() != CalleeInfo::HotnessType::Unknown;
-      if (HasProfileData)
-        break;
-    }
-
     for (auto &EI : FS->calls()) {
       // If this GUID doesn't have a value id, it doesn't have a function
       // summary and we don't need to record any calls to it.
@@ -4549,16 +4558,12 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       if (!CallValueId)
         continue;
       NameVals.push_back(*CallValueId);
-      if (HasProfileData)
-        NameVals.push_back(static_cast<uint8_t>(EI.second.Hotness));
+      NameVals.push_back(getEncodedHotnessCallEdgeInfo(EI.second));
     }
 
-    unsigned FSAbbrev = (HasProfileData ? FSCallsProfileAbbrev : FSCallsAbbrev);
-    unsigned Code =
-        (HasProfileData ? bitc::FS_COMBINED_PROFILE : bitc::FS_COMBINED);
-
     // Emit the finished record.
-    Stream.EmitRecord(Code, NameVals, FSAbbrev);
+    Stream.EmitRecord(bitc::FS_COMBINED_PROFILE, NameVals,
+                      FSCallsProfileAbbrev);
     NameVals.clear();
     MaybeEmitOriginalName(*S);
   });

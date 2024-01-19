@@ -792,7 +792,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
 
   // Check the type of include. If ending with `.pdll`, this is another pdl file
   // to be parsed along with the current module.
-  if (filename.endswith(".pdll")) {
+  if (filename.ends_with(".pdll")) {
     if (failed(lexer.pushInclude(filename, fileLoc)))
       return emitError(fileLoc,
                        "unable to open include file `" + filename + "`");
@@ -807,7 +807,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
   }
 
   // Otherwise, this must be a `.td` include.
-  if (filename.endswith(".td"))
+  if (filename.ends_with(".td"))
     return parseTdInclude(filename, fileLoc, decls);
 
   return emitError(fileLoc,

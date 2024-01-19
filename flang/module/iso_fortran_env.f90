@@ -9,12 +9,13 @@
 ! See Fortran 2018, clause 16.10.2
 ! TODO: These are placeholder values so that some tests can be run.
 
-include '../include/flang/Runtime/magic-numbers.h' ! for IOSTAT= error/end code values
+include '../include/flang/Runtime/magic-numbers.h'
 
 module iso_fortran_env
 
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     event_type => __builtin_event_type, &
+    notify_type => __builtin_notify_type, &
     lock_type => __builtin_lock_type, &
     team_type => __builtin_team_type, &
     atomic_int_kind => __builtin_atomic_int_kind, &
@@ -23,6 +24,7 @@ module iso_fortran_env
     compiler_version => __builtin_compiler_version
 
   implicit none
+  private count
 
   ! TODO: Use PACK([x],test) in place of the array constructor idiom
   ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.
@@ -129,8 +131,9 @@ module iso_fortran_env
 
   integer, parameter :: current_team = -1, initial_team = -2, parent_team = -3
 
-  integer, parameter :: input_unit = 5, output_unit = 6
-  integer, parameter :: error_unit = 0
+  integer, parameter :: output_unit = FORTRAN_DEFAULT_OUTPUT_UNIT
+  integer, parameter :: input_unit = FORTRAN_DEFAULT_INPUT_UNIT
+  integer, parameter :: error_unit = FORTRAN_ERROR_UNIT
   integer, parameter :: iostat_end = FORTRAN_RUNTIME_IOSTAT_END
   integer, parameter :: iostat_eor = FORTRAN_RUNTIME_IOSTAT_EOR
   integer, parameter :: iostat_inquire_internal_unit = &
@@ -142,9 +145,11 @@ module iso_fortran_env
 
   integer, parameter :: stat_failed_image = FORTRAN_RUNTIME_STAT_FAILED_IMAGE
   integer, parameter :: stat_locked = FORTRAN_RUNTIME_STAT_LOCKED
-  integer, parameter :: stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE
+  integer, parameter :: &
+    stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE
   integer, parameter :: stat_stopped_image = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE
   integer, parameter :: stat_unlocked = FORTRAN_RUNTIME_STAT_UNLOCKED
-  integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
+  integer, parameter :: &
+    stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
 end module iso_fortran_env

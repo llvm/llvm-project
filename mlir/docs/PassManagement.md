@@ -17,22 +17,26 @@ this is a great place to start.
 
 In MLIR, the main unit of abstraction and transformation is an
 [operation](LangRef.md/#operations). As such, the pass manager is designed to
-work on instances of operations at different levels of nesting. The structure of
-the [pass manager](#pass-manager), and the concept of nesting, is detailed
-further below. All passes in MLIR derive from `OperationPass` and adhere to the
-following restrictions; any noncompliance will lead to problematic behavior in
-multithreaded and other advanced scenarios:
+work on instances of operations at different levels of nesting. In the following
+paragraphs, we refer to the operation that a pass operates on as the "current
+operation".
 
-*   Must not modify any state referenced or relied upon outside the current
-    operation being operated on. This includes adding or removing operations
-    from the parent block, changing the attributes(depending on the contract
-    of the current operation)/operands/results/successors of the current operation.
-*   Must not modify the state of another operation not nested within the current
-    operation being operated on.
-    *   Other threads may be operating on these operations simultaneously.
-*   Must not inspect the state of sibling operations.
+The structure of the [pass manager](#pass-manager), and the concept of nesting,
+is detailed further below. All passes in MLIR derive from `OperationPass` and
+adhere to the following restrictions; any noncompliance will lead to problematic
+behavior in multithreaded and other advanced scenarios:
+
+*   Must not inspect the state of operations that are siblings of the current
+    operation. Must neither access operations nested under those siblings.
     *   Other threads may be modifying these operations in parallel.
     *   Inspecting the state of ancestor/parent operations is permitted.
+*   Must not modify the state of operations other than the operations that are
+    nested under the current operation. This includes adding, modifying or
+    removing other operations from an ancestor/parent block.
+    *   Other threads may be operating on these operations simultaneously.
+    *   As an exception, the attributes of the current operation may be modified
+        freely. This is the only way that the current operation may be modified.
+        (I.e., modifying operands, etc. is not allowed.)
 *   Must not maintain mutable pass state across invocations of `runOnOperation`.
     A pass may be run on many different operations with no guarantee of
     execution order.

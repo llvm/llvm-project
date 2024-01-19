@@ -39,10 +39,16 @@ static_assert(!std::is_invocable_v<decltype(std::views::split), SomeView, NotAVi
 static_assert(!std::is_invocable_v<decltype(std::views::split), NotAView, SomeView>);
 static_assert( std::is_invocable_v<decltype(std::views::split), SomeView, SomeView>);
 
-static_assert( CanBePiped<SomeView&,    decltype(std::views::split)>);
-static_assert( CanBePiped<char(&)[10],  decltype(std::views::split)>);
-static_assert(!CanBePiped<char(&&)[10], decltype(std::views::split)>);
-static_assert(!CanBePiped<NotAView,     decltype(std::views::split)>);
+// Regression test for #75002, views::split shouldn't be a range adaptor closure
+static_assert(!CanBePiped<SomeView&, decltype(std::views::split)>);
+static_assert(!CanBePiped<char (&)[10], decltype(std::views::split)>);
+static_assert(!CanBePiped<char (&&)[10], decltype(std::views::split)>);
+static_assert(!CanBePiped<NotAView, decltype(std::views::split)>);
+
+static_assert(CanBePiped<SomeView&, decltype(std::views::split('x'))>);
+static_assert(CanBePiped<char (&)[10], decltype(std::views::split('x'))>);
+static_assert(!CanBePiped<char (&&)[10], decltype(std::views::split('x'))>);
+static_assert(!CanBePiped<NotAView, decltype(std::views::split('x'))>);
 
 static_assert(std::same_as<decltype(std::views::split), decltype(std::ranges::views::split)>);
 

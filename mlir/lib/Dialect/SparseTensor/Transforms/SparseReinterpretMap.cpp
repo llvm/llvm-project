@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "IterationGraphSorter.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/IterationGraphSorter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -38,16 +38,22 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
   LogicalResult matchAndRewrite(SourceOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
+
     // Demaps non-trivial inputs.
+    bool changed = false;
     SmallVector<Value> deMappedIns(op->getOperands());
-    for (Value &in : deMappedIns)
-      if (auto stt = tryGetSparseTensorType(in); stt && !stt->isIdentity())
+    for (Value &in : deMappedIns) {
+      if (auto stt = tryGetSparseTensorType(in); stt && !stt->isIdentity()) {
         in = rewriter.create<ReinterpretMapOp>(loc, stt->getDemappedType(), in);
+        changed = true;
+      }
+    }
 
     // CRTP call.
     OpAdaptor adaptor(deMappedIns, op);
-    return static_cast<const SubClass *>(this)->rewriteOp(op, adaptor,
-                                                          rewriter);
+    LogicalResult status =
+        static_cast<const SubClass *>(this)->rewriteOp(op, adaptor, rewriter);
+    return changed ? success() : status;
   }
 };
 
@@ -367,7 +373,7 @@ public:
                           PatternRewriter &rewriter) const {
     // Only rewrite single output operations with pure (sparse) tensor
     // semantics.
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         !hasAnySparseOperandOrResult(linalgOp) ||
         !hasAnyNonIdentityOperandsOrResults(linalgOp))
       return failure();
@@ -383,14 +389,14 @@ public:
     auto stt = tryGetSparseTensorType(res);
     auto [idxMap, itTp] = *transMap;
 
-    rewriter.startRootUpdate(linalgOp);
+    rewriter.startOpModification(linalgOp);
     linalgOp.setIndexingMapsAttr(idxMap);
     linalgOp.setIteratorTypesAttr(itTp);
     // Use demapped arguments.
     linalgOp.getInputsMutable().assign(adaptor.getInputs());
     linalgOp.getDpsInitsMutable().assign(adaptor.getOutputs());
     res.setType(adaptor.getOutputs()[0].getType());
-    rewriter.finalizeRootUpdate(linalgOp);
+    rewriter.finalizeOpModification(linalgOp);
 
     rewriter.setInsertionPointAfter(linalgOp);
     if (stt && stt->hasEncoding()) {
@@ -405,7 +411,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
                                 PatternRewriter &rewriter) const override {
-    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasTensorSemantics() ||
+    if (linalgOp.getNumDpsInits() != 1 || !linalgOp.hasPureTensorSemantics() ||
         hasAnyNonIdentityOperandsOrResults(linalgOp) || // need demap first
         !hasAnySparseOperandOrResult(linalgOp)) {
       return failure();
@@ -452,11 +458,13 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     }
 
     // Marks the GenericOp to avoid recursive matching.
-    linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
+    rewriter.modifyOpInPlace(linalgOp, [&]() {
+      linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
+    });
 
     // Already sorted.
     if (order.isIdentity())
-      return failure();
+      return success();
 
     assert(order.isPermutation());
     // `order` is orignial loop -> sorted loop map
@@ -474,10 +482,10 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     for (AffineMap &idxMap : idxMaps)
       idxMap = idxMap.compose(order); // sorted loop -> lvl map
 
-    rewriter.startRootUpdate(linalgOp);
+    rewriter.startOpModification(linalgOp);
     linalgOp.setIndexingMapsAttr(rewriter.getAffineMapArrayAttr(idxMaps));
     linalgOp.setIteratorTypesAttr(rewriter.getArrayAttr(curItTypes));
-    rewriter.finalizeRootUpdate(linalgOp);
+    rewriter.finalizeOpModification(linalgOp);
 
     return success();
   }
@@ -562,7 +570,7 @@ private:
       rewriter.setInsertionPoint(linalgOp);
       RankedTensorType dstTp = stt.withDimToLvl(dimToLvl).getRankedTensorType();
       Value dst = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);
-      rewriter.updateRootInPlace(linalgOp, [&]() {
+      rewriter.modifyOpInPlace(linalgOp, [&]() {
         linalgOp->setOperand(t->getOperandNumber(), dst);
       });
       return success();
@@ -615,10 +623,10 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
     }
 
     assert(dynSz.empty()); // should have consumed all.
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     op->setOperands(dynLvlSzs);
     op.getResult().setType(stt.getDemappedType());
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
     rewriter.setInsertionPointAfter(op);
 
     Value t = genRemap(rewriter, stt.getEncoding(), op.getResult());
@@ -668,7 +676,7 @@ struct ForeachOpDemapper
     auto srcStt = getSparseTensorType(op.getTensor());
     SmallVector<Type> prevRetTps(op.getResultTypes());
 
-    rewriter.startRootUpdate(op);
+    rewriter.startOpModification(op);
     op.getTensorMutable().assign(adaptor.getTensor());
     op.getInitArgsMutable().assign(adaptor.getInitArgs());
     // Update results' types.
@@ -723,7 +731,7 @@ struct ForeachOpDemapper
         rewriter.eraseOp(yield);
       }
     }
-    rewriter.finalizeRootUpdate(op);
+    rewriter.finalizeOpModification(op);
 
     rewriter.setInsertionPointAfter(op);
     SmallVector<Value> outs =

@@ -1951,8 +1951,7 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,4,0,4,0,4,8,12]
 ; AVX512F-NEXT:    vpermt2d %ymm5, %ymm1, %ymm6
 ; AVX512F-NEXT:    vpmovdb %zmm2, %xmm5
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0,1,2,3],ymm6[4,5,6,7]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm5, %zmm0, %zmm8
+; AVX512F-NEXT:    vpblendd {{.*#+}} ymm8 = ymm5[0,1,2,3],ymm6[4,5,6,7]
 ; AVX512F-NEXT:    vmovdqa 96(%rdi), %ymm5
 ; AVX512F-NEXT:    vpshufb %ymm7, %ymm5, %ymm9
 ; AVX512F-NEXT:    vmovdqa 64(%rdi), %ymm6
@@ -1960,7 +1959,7 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-NEXT:    vpermt2d %ymm9, %ymm1, %ymm7
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm9
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm7 = ymm9[0,1,2,3],ymm7[4,5,6,7]
-; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm7 = zmm7[0,1,2,3],zmm8[4,5,6,7]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm7 = zmm7[0,1,2,3],zmm8[0,1,2,3]
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm8 = [1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13]
 ; AVX512F-NEXT:    vpshufb %ymm8, %ymm3, %ymm9
 ; AVX512F-NEXT:    vpshufb %ymm8, %ymm4, %ymm10
@@ -1968,14 +1967,13 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-NEXT:    vpsrld $8, %zmm2, %zmm9
 ; AVX512F-NEXT:    vpmovdb %zmm9, %xmm9
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm10[4,5,6,7]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm9, %zmm0, %zmm9
 ; AVX512F-NEXT:    vpshufb %ymm8, %ymm5, %ymm10
 ; AVX512F-NEXT:    vpshufb %ymm8, %ymm6, %ymm8
 ; AVX512F-NEXT:    vpermt2d %ymm10, %ymm1, %ymm8
 ; AVX512F-NEXT:    vpsrld $8, %zmm0, %zmm10
 ; AVX512F-NEXT:    vpmovdb %zmm10, %xmm10
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm8 = ymm10[0,1,2,3],ymm8[4,5,6,7]
-; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm8 = zmm8[0,1,2,3],zmm9[4,5,6,7]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm8 = zmm8[0,1,2,3],zmm9[0,1,2,3]
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm9 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
 ; AVX512F-NEXT:    vpshufb %ymm9, %ymm3, %ymm10
 ; AVX512F-NEXT:    vpshufb %ymm9, %ymm4, %ymm11
@@ -1983,14 +1981,13 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-NEXT:    vpsrld $16, %zmm2, %zmm10
 ; AVX512F-NEXT:    vpmovdb %zmm10, %xmm10
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm10 = ymm10[0,1,2,3],ymm11[4,5,6,7]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm10, %zmm0, %zmm10
 ; AVX512F-NEXT:    vpshufb %ymm9, %ymm5, %ymm11
 ; AVX512F-NEXT:    vpshufb %ymm9, %ymm6, %ymm9
 ; AVX512F-NEXT:    vpermt2d %ymm11, %ymm1, %ymm9
 ; AVX512F-NEXT:    vpsrld $16, %zmm0, %zmm11
 ; AVX512F-NEXT:    vpmovdb %zmm11, %xmm11
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm9 = ymm11[0,1,2,3],ymm9[4,5,6,7]
-; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm9 = zmm9[0,1,2,3],zmm10[4,5,6,7]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm9 = zmm9[0,1,2,3],zmm10[0,1,2,3]
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm10 = [3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15]
 ; AVX512F-NEXT:    vpshufb %ymm10, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpshufb %ymm10, %ymm4, %ymm4
@@ -1998,14 +1995,13 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-NEXT:    vpsrld $24, %zmm2, %zmm2
 ; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm4[4,5,6,7]
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm2
 ; AVX512F-NEXT:    vpshufb %ymm10, %ymm5, %ymm3
 ; AVX512F-NEXT:    vpshufb %ymm10, %ymm6, %ymm4
 ; AVX512F-NEXT:    vpermt2d %ymm3, %ymm1, %ymm4
 ; AVX512F-NEXT:    vpsrld $24, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm4[4,5,6,7]
-; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm2[4,5,6,7]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm2[0,1,2,3]
 ; AVX512F-NEXT:    vmovdqa64 %zmm7, (%rsi)
 ; AVX512F-NEXT:    vmovdqa64 %zmm8, (%rdx)
 ; AVX512F-NEXT:    vmovdqa64 %zmm9, (%rcx)

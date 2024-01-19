@@ -415,6 +415,9 @@ HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_UDEC_WRAP)
 // Generic atomic fence
 HANDLE_TARGET_OPCODE(G_FENCE)
 
+/// Generic prefetch
+HANDLE_TARGET_OPCODE(G_PREFETCH)
+
 /// Generic conditional branch instruction.
 HANDLE_TARGET_OPCODE(G_BRCOND)
 
@@ -454,7 +457,7 @@ HANDLE_TARGET_OPCODE(G_FCONSTANT)
 /// Generic va_start instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VASTART)
 
-/// Generic va_start instruction. Stores to its one pointer operand.
+/// Generic va_arg instruction. Stores to its one pointer operand.
 HANDLE_TARGET_OPCODE(G_VAARG)
 
 // Generic sign extend
@@ -684,6 +687,9 @@ HANDLE_TARGET_OPCODE(G_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_FMAXIMUM)
 
 /// Access to FP environment.
+HANDLE_TARGET_OPCODE(G_GET_FPENV)
+HANDLE_TARGET_OPCODE(G_SET_FPENV)
+HANDLE_TARGET_OPCODE(G_RESET_FPENV)
 HANDLE_TARGET_OPCODE(G_GET_FPMODE)
 HANDLE_TARGET_OPCODE(G_SET_FPMODE)
 HANDLE_TARGET_OPCODE(G_RESET_FPMODE)

@@ -62,20 +62,34 @@ public:
     if (const auto &cycleName{cycleStmt.v}) {
       CheckConstructNameBranching("CYCLE", cycleName.value());
     } else {
-      switch ((llvm::omp::Directive)currentDirective_) {
-      // exclude directives which do not need a check for unlabelled CYCLES
-      case llvm::omp::Directive::OMPD_do:
-      case llvm::omp::Directive::OMPD_simd:
-      case llvm::omp::Directive::OMPD_parallel_do:
-      case llvm::omp::Directive::OMPD_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for:
-      case llvm::omp::Directive::OMPD_distribute_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
-        return;
-      default:
-        break;
+      if constexpr (std::is_same_v<D, llvm::omp::Directive>) {
+        switch ((llvm::omp::Directive)currentDirective_) {
+        // exclude directives which do not need a check for unlabelled CYCLES
+        case llvm::omp::Directive::OMPD_do:
+        case llvm::omp::Directive::OMPD_simd:
+        case llvm::omp::Directive::OMPD_parallel_do:
+        case llvm::omp::Directive::OMPD_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for:
+        case llvm::omp::Directive::OMPD_distribute_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+          return;
+        default:
+          break;
+        }
+      } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+        switch ((llvm::acc::Directive)currentDirective_) {
+        // exclude loop directives which do not need a check for unlabelled
+        // CYCLES
+        case llvm::acc::Directive::ACCD_loop:
+        case llvm::acc::Directive::ACCD_kernels_loop:
+        case llvm::acc::Directive::ACCD_parallel_loop:
+        case llvm::acc::Directive::ACCD_serial_loop:
+          return;
+        default:
+          break;
+        }
       }
       CheckConstructNameBranching("CYCLE");
     }
@@ -183,6 +197,7 @@ protected:
     const PC *clause{nullptr};
     ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
+    std::list<C> crtGroup;
     Symbol *loopIV{nullptr};
   };
 
@@ -246,6 +261,12 @@ protected:
   void AddClauseToCrtContext(C type) {
     GetContext().actualClauses.push_back(type);
   }
+
+  void AddClauseToCrtGroupInContext(C type) {
+    GetContext().crtGroup.push_back(type);
+  }
+
+  void ResetCrtGroup() { GetContext().crtGroup.clear(); }
 
   // Check if the given clause is present in the current context
   const PC *FindClause(C type) { return FindClause(GetContext(), type); }
@@ -334,6 +355,13 @@ protected:
   void CheckRequireAtLeastOneOf(bool warnInsteadOfError = false);
 
   void CheckAllowed(C clause, bool warnInsteadOfError = false);
+
+  // Check that the clause appears only once. The counter is reset when the
+  // separator clause appears.
+  void CheckAllowedOncePerGroup(C clause, C separator);
+
+  void CheckMutuallyExclusivePerGroup(
+      C clause, C separator, common::EnumSet<C, ClauseEnumSize> set);
 
   void CheckAtLeastOneClause();
 
@@ -508,6 +536,7 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckAllowed(
   }
   SetContextClauseInfo(clause);
   AddClauseToCrtContext(clause);
+  AddClauseToCrtGroupInContext(clause);
 }
 
 // Enforce restriction where clauses in the given set are not allowed if the
@@ -526,6 +555,58 @@ void DirectiveStructureChecker<D, C, PC,
           "Clause %s is not allowed if clause %s appears on the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(getClauseName(cl).str()),
           parser::ToUpperCaseLetters(getClauseName(clause).str()),
+          ContextDirectiveAsFortran());
+    }
+  }
+}
+
+template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+void DirectiveStructureChecker<D, C, PC,
+    ClauseEnumSize>::CheckAllowedOncePerGroup(C clause, C separator) {
+  bool clauseIsPresent = false;
+  for (auto cl : GetContext().actualClauses) {
+    if (cl == clause) {
+      if (clauseIsPresent) {
+        context_.Say(GetContext().clauseSource,
+            "At most one %s clause can appear on the %s directive or in group separated by the %s clause"_err_en_US,
+            parser::ToUpperCaseLetters(getClauseName(clause).str()),
+            parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
+            parser::ToUpperCaseLetters(getClauseName(separator).str()));
+      } else {
+        clauseIsPresent = true;
+      }
+    }
+    if (cl == separator)
+      clauseIsPresent = false;
+  }
+}
+
+template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+void DirectiveStructureChecker<D, C, PC,
+    ClauseEnumSize>::CheckMutuallyExclusivePerGroup(C clause, C separator,
+    common::EnumSet<C, ClauseEnumSize> set) {
+
+  // Checking of there is any offending clauses before the first separator.
+  for (auto cl : GetContext().actualClauses) {
+    if (cl == separator) {
+      break;
+    }
+    if (set.test(cl)) {
+      context_.Say(GetContext().directiveSource,
+          "Clause %s is not allowed if clause %s appears on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()),
+          parser::ToUpperCaseLetters(getClauseName(cl).str()),
+          ContextDirectiveAsFortran());
+    }
+  }
+
+  // Checking for mutually exclusive clauses in the current group.
+  for (auto cl : GetContext().crtGroup) {
+    if (set.test(cl)) {
+      context_.Say(GetContext().directiveSource,
+          "Clause %s is not allowed if clause %s appears on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(getClauseName(clause).str()),
+          parser::ToUpperCaseLetters(getClauseName(cl).str()),
           ContextDirectiveAsFortran());
     }
   }

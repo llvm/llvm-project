@@ -191,7 +191,7 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
 
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
   // This marks values of type (2) liveness as "live".
-  lattice->markLive();
+  (void)lattice->markLive();
 }
 
 //===----------------------------------------------------------------------===//

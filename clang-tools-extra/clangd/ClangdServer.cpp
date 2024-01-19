@@ -437,7 +437,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
-    if (!IP->Contents.endswith("\n"))
+    if (!IP->Contents.ends_with("\n"))
       ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
 
@@ -488,7 +488,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
-    if (!IP->Contents.endswith("\n"))
+    if (!IP->Contents.ends_with("\n"))
       ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
     CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput,
@@ -661,7 +661,7 @@ void ClangdServer::codeAction(const CodeActionInputs &Params,
             return true;
           return llvm::any_of(Only, [&](llvm::StringRef Base) {
             return Kind.consume_front(Base) &&
-                   (Kind.empty() || Kind.startswith("."));
+                   (Kind.empty() || Kind.starts_with("."));
           });
         };
 

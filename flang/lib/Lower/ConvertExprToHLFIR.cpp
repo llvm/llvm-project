@@ -166,6 +166,13 @@ public:
     return builder.genShape(loc, lbounds, extents);
   }
 
+  fir::FortranVariableOpInterface
+  gen(const Fortran::evaluate::DataRef &dataRef) {
+    return std::visit(
+        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
+        dataRef.u);
+  }
+
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
   /// function) before the top level "gen" generates an hlfir.declare for the
@@ -309,13 +316,6 @@ private:
     PartInfo partInfo;
     mlir::Type resultType = visit(component, partInfo);
     return genDesignate(resultType, partInfo, component);
-  }
-
-  fir::FortranVariableOpInterface
-  gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit(
-        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
-        dataRef.u);
   }
 
   fir::FortranVariableOpInterface
@@ -1738,6 +1738,8 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
+        if (Fortran::semantics::IsProcedure(sym))
+          TODO(loc, "procedure pointer component in structure constructor");
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);
@@ -1923,6 +1925,15 @@ fir::ExtendedValue Fortran::lower::convertExprToValue(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  return convertToValue(loc, converter, loweredExpr, stmtCtx);
+}
+
+fir::ExtendedValue Fortran::lower::convertDataRefToValue(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FortranVariableOpInterface loweredExpr =
+      HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx).gen(dataRef);
   return convertToValue(loc, converter, loweredExpr, stmtCtx);
 }
 

@@ -10,6 +10,7 @@
 /// debugging the test tools. This file must be included into the tool.
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -310,6 +311,20 @@ inline void createDefaultFIRCodeGenPassPipeline(
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
+
+  // Add function attributes
+  fir::FunctionAttrTypes functionAttrs;
+
+  if (config.FramePointerKind != llvm::FramePointerKind::None) {
+    if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
+    else
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::All;
+
+    pm.addPass(fir::createFunctionAttrPass(functionAttrs));
+  }
 
   fir::addFIRToLLVMPass(pm, config);
 }

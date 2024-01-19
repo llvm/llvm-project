@@ -361,7 +361,7 @@ define i32 @fshl_concat_i8_i24(i8 %x, i24 %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SLX:%.*]] = shl nuw i32 [[ZEXT_X]], 24
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i24 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[YX:%.*]] = call i32 @llvm.fshl.i32(i32 [[XY]], i32 [[XY]], i32 8)
 ; CHECK-NEXT:    ret i32 [[YX]]
@@ -381,7 +381,7 @@ define i32 @fshl_concat_i8_i8(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SLX:%.*]] = shl nuw nsw i32 [[ZEXT_X]], 13
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[YX:%.*]] = call i32 @llvm.fshl.i32(i32 [[XY]], i32 [[XY]], i32 19)
 ; CHECK-NEXT:    ret i32 [[YX]]
@@ -401,7 +401,7 @@ define i32 @fshl_concat_i8_i8_overlap(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SLX:%.*]] = shl i32 [[ZEXT_X]], 25
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[SLY:%.*]] = shl nuw nsw i32 [[ZEXT_Y]], 7
 ; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
@@ -426,7 +426,7 @@ define i32 @fshl_concat_i8_i8_drop(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[SLY:%.*]] = shl i32 [[ZEXT_Y]], 25
-; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    [[YX:%.*]] = or disjoint i32 [[SLY]], [[ZEXT_X]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   ; Test sly drop.
@@ -445,10 +445,10 @@ define i32 @fshl_concat_i8_i8_different_slot(i8 %x, i8 %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SLX:%.*]] = shl nuw nsw i32 [[ZEXT_X]], 9
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[XY:%.*]] = or i32 [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i32 [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store i32 [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[SLY:%.*]] = shl nuw nsw i32 [[ZEXT_Y]], 22
-; CHECK-NEXT:    [[YX:%.*]] = or i32 [[SLY]], [[ZEXT_X]]
+; CHECK-NEXT:    [[YX:%.*]] = or disjoint i32 [[SLY]], [[ZEXT_X]]
 ; CHECK-NEXT:    ret i32 [[YX]]
 ;
   %zext.x = zext i8 %x to i32
@@ -483,7 +483,7 @@ define <2 x i32> @fshl_concat_vector(<2 x i8> %x, <2 x i24> %y, ptr %addr) {
 ; CHECK-NEXT:    [[ZEXT_X:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[SLX:%.*]] = shl nuw <2 x i32> [[ZEXT_X]], <i32 24, i32 24>
 ; CHECK-NEXT:    [[ZEXT_Y:%.*]] = zext <2 x i24> [[Y:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[XY:%.*]] = or <2 x i32> [[SLX]], [[ZEXT_Y]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint <2 x i32> [[SLX]], [[ZEXT_Y]]
 ; CHECK-NEXT:    store <2 x i32> [[XY]], ptr [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[YX:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[XY]], <2 x i32> [[XY]], <2 x i32> <i32 8, i32 8>)
 ; CHECK-NEXT:    ret <2 x i32> [[YX]]
@@ -558,4 +558,80 @@ define i8 @unmasked_shlop_masked_shift_amount(i16 %x, i16 %y, i16 %shamt) {
   %t7 = or i16 %t5, %t6
   %t8 = trunc i16 %t7 to i8
   ret i8 %t8
+}
+
+define i32 @test_rotl_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_commuted(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_commuted(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shr, %shl
+  ret i32 %or
+}
+
+define i32 @test_rotr_and_neg(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotr_and_neg(
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 [[X]], i32 [[SHAMT:%.*]])
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shr = lshr i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shl = shl i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+; Negative tests
+
+; Only work for rotation patterns
+define i32 @test_fshl_and_neg(i32 %x, i32 %y, i32 %shamt) {
+; CHECK-LABEL: @test_fshl_and_neg(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 31
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[Y:%.*]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 31
+  %shr = lshr i32 %y, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
+}
+
+define i32 @test_rotl_and_neg_wrong_mask(i32 %x, i32 %shamt) {
+; CHECK-LABEL: @test_rotl_and_neg_wrong_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[SHAMT]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEG]], 15
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[AND]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %shl = shl i32 %x, %shamt
+  %neg = sub i32 0, %shamt
+  %and = and i32 %neg, 15
+  %shr = lshr i32 %x, %and
+  %or = or i32 %shl, %shr
+  ret i32 %or
 }

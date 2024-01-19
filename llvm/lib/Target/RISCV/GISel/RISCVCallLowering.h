@@ -42,6 +42,11 @@ public:
 private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
+
+  void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
+                           CallLowering::IncomingValueHandler &Handler,
+                           IncomingValueAssigner &Assigner,
+                           CCState &CCInfo) const;
 };
 
 } // end namespace llvm

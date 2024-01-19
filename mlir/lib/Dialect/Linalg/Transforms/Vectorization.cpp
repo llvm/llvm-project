@@ -44,8 +44,9 @@ using namespace mlir::linalg;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Try to vectorize `convOp` as a convolution.
-static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
-                                                   LinalgOp convOp);
+static FailureOr<Operation *>
+vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
+                     bool flatten1DDepthwiseConv = false);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
@@ -279,7 +280,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                          operandDimPos)))
       return failure();
 
-    Value dynamicDim = linalgOp.hasTensorSemantics()
+    Value dynamicDim = linalgOp.hasPureTensorSemantics()
                            ? (Value)rewriter.create<tensor::DimOp>(
                                  linalgOp.getLoc(), operand, operandDimPos)
                            : (Value)rewriter.create<memref::DimOp>(
@@ -893,10 +894,16 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   return result;
 }
 
-/// Check whether \p extractOp would be a gather or a contiguous load Op after
-/// vectorising \p linalgOp. Note that it is always safe to use gather load
-/// operations for contiguous loads (albeit slow), but not vice-versa. When in
-/// doubt, bail out and assume that \p extractOp is a gather load.
+/// Infer the memory access pattern for the input ExtractOp
+///
+/// Based on the operation shapes and indices (usually based on the iteration
+/// space of the parent `linalgOp` operation), decides whether the input
+/// ExtractOp is a contiguous load (including a broadcast of a scalar) or a
+/// gather load.
+///
+/// Note that it is always safe to use gather load operations for contiguous
+/// loads (albeit slow), but not vice-versa. When in doubt, bail out and assume
+/// that `extractOp` is a gather load.
 static VectorMemoryAccessKind
 getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
                                     LinalgOp &linalgOp) {
@@ -915,8 +922,8 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::Gather;
 
   // 1. Assume that it's a gather load when reading _into_:
-  //    * an n-D vector, like`tensor<1x2x4xi32` or`tensor<2x1x4xi32>`, or
-  //    * a 1-D vector with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
+  //    * an n-D "vector", like `tensor<1x2x4xi32` or `tensor<2x1x4xi32>`, or
+  //    * a 1-D "vector" with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
   // TODO: Relax these conditions.
   // FIXME: This condition assumes non-dynamic sizes.
   if ((llvm::count_if(targetShape,
@@ -1664,7 +1671,8 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       ArrayRef<bool> inputScalableVecDims,
-                                      bool vectorizeNDExtract) {
+                                      bool vectorizeNDExtract,
+                                      bool flatten1DDepthwiseConv) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -1696,8 +1704,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
             // TODO: isaConvolutionOpInterface that can also infer from generic
             // features. Will require stride/dilation attributes inference.
             if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-              FailureOr<Operation *> convOr =
-                  vectorizeConvolution(rewriter, linalgOp);
+              FailureOr<Operation *> convOr = vectorizeConvolution(
+                  rewriter, linalgOp, flatten1DDepthwiseConv);
               if (succeeded(convOr)) {
                 llvm::append_range(results, (*convOr)->getResults());
                 return success();
@@ -1944,7 +1952,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
 
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
@@ -2424,11 +2432,11 @@ bool isCastOfBlockArgument(Operation *op) {
 bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
-  case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
-  case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
@@ -2822,7 +2830,7 @@ struct Conv1DGenerator
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> depthwiseConv() {
+  FailureOr<Operation *> depthwiseConv(bool flatten) {
     if (!valid)
       return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
 
@@ -2869,6 +2877,9 @@ struct Conv1DGenerator
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
+    auto inOutSliceSizes = SmallVector<int64_t>{nSize, wSizeStep, cSize};
+    auto inOutStrides = SmallVector<int64_t>{1, 1, 1};
+
     // Extract lhs slice of size {n, wSizeStep, c}
     //   @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
@@ -2876,8 +2887,7 @@ struct Conv1DGenerator
         lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
-            /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
-            /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
+            inOutSliceSizes, inOutStrides));
       }
     }
     // Extract rhs slice of size {c} @ [kw].
@@ -2889,21 +2899,38 @@ struct Conv1DGenerator
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res,
-          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-          /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
-          /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
+          inOutStrides));
     }
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
       return kw * (wSize / wSizeStep) + w;
     };
 
+    auto inOutFlattenSliceSizes =
+        SmallVector<int64_t>{nSize, wSizeStep * cSize};
+    auto lhsCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
+    auto resCastType = VectorType::get(inOutFlattenSliceSizes, resEltType);
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc,
-                                                  lhsVals[linearIndex(kw, w)],
-                                                  rhsVals[kw], resVals[w]);
+        Value lhsVal = lhsVals[linearIndex(kw, w)];
+        Value resVal = resVals[w];
+        if (flatten) {
+          // Flatten the input and output vectors (collapse the channel
+          // dimension)
+          lhsVal = rewriter.create<vector::ShapeCastOp>(
+              loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
+          resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
+                                                        resVals[w]);
+        }
+        resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
+                                                  rhsVals[kw], resVal, flatten);
+        if (flatten) {
+          // Un-flatten the output vector (restore the channel dimension)
+          resVals[w] = rewriter.create<vector::ShapeCastOp>(
+              loc, VectorType::get(inOutSliceSizes, resEltType), resVals[w]);
+        }
       }
     }
 
@@ -2936,17 +2963,39 @@ struct Conv1DGenerator
         .getOperation();
   }
 
-  /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to MulAcc
+  /// Lower:
+  ///   *  lhs{n, w, c} * rhs{c} -> res{n, w, c} (flatten = false)
+  ///   *  lhs{n, w * c} * rhs{c} -> res{n, w * c} (flatten = true)
+  /// to MulAcc.
   Value depthwiseConv1dSliceAsMulAcc(RewriterBase &rewriter, Location loc,
-                                     Value lhs, Value rhs, Value res) {
+                                     Value lhs, Value rhs, Value res,
+                                     bool flatten) {
     auto rhsTy = cast<ShapedType>(rhs.getType());
     auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
     lhs = promote(rewriter, loc, lhs, resTy);
 
+    if (flatten) {
+      // There are two options for handling the filter:
+      //  * shape_cast(broadcast(filter))
+      //  * broadcast(shuffle(filter))
+      // Opt for the option without shape_cast to simplify the codegen.
+      auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
+      auto resSize = res.getType().cast<VectorType>().getShape()[1];
+
+      SmallVector<int64_t, 16> indicies;
+      for (int i = 0; i < resSize / rhsSize; ++i) {
+        for (int j = 0; j < rhsSize; ++j)
+          indicies.push_back(j);
+      }
+
+      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
+    }
+    // Broadcast the filter to match the output vector
     rhs = rewriter.create<vector::BroadcastOp>(
         loc, resTy.clone(rhsTy.getElementType()), rhs);
+
     rhs = promote(rewriter, loc, rhs, resTy);
 
     if (!lhs || !rhs)
@@ -3049,7 +3098,7 @@ struct Conv1DGenerator
 
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
-  FailureOr<Operation *> generateDilatedConv() {
+  FailureOr<Operation *> generateDilatedConv(bool flatten = false) {
     AffineExpr n, w, c, kw;
     bindDims(ctx, n, w, c, kw);
     if (!iters({Par(), Par(), Par(), Red()}))
@@ -3060,7 +3109,7 @@ struct Conv1DGenerator
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return depthwiseConv();
+      return depthwiseConv(flatten);
 
     return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
   }
@@ -3125,8 +3174,9 @@ private:
 
 /// Helper function to vectorize a LinalgOp with convolution semantics.
 // TODO: extend the generic vectorization to support windows and drop this.
-static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
-                                                   LinalgOp op) {
+static FailureOr<Operation *>
+vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
+                     bool flatten1DDepthwiseConv) {
   // The ConvolutionOpInterface gives us guarantees of existence for
   // strides/dilations. However, we do not need to rely on those, we can simply
   // use them if present, otherwise use the default and let the generic conv.
@@ -3151,7 +3201,7 @@ static FailureOr<Operation *> vectorizeConvolution(RewriterBase &rewriter,
   res = e.generateNcwPooling();
   if (succeeded(res))
     return res;
-  return e.generateDilatedConv();
+  return e.generateDilatedConv(flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {

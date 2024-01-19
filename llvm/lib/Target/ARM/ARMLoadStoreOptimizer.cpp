@@ -2604,16 +2604,14 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
 
     // Re-schedule loads.
-    for (unsigned i = 0, e = LdBases.size(); i != e; ++i) {
-      unsigned Base = LdBases[i];
+    for (unsigned Base : LdBases) {
       SmallVectorImpl<MachineInstr *> &Lds = Base2LdsMap[Base];
       if (Lds.size() > 1)
         RetVal |= RescheduleOps(MBB, Lds, Base, true, MI2LocMap, RegisterMap);
     }
 
     // Re-schedule stores.
-    for (unsigned i = 0, e = StBases.size(); i != e; ++i) {
-      unsigned Base = StBases[i];
+    for (unsigned Base : StBases) {
       SmallVectorImpl<MachineInstr *> &Sts = Base2StsMap[Base];
       if (Sts.size() > 1)
         RetVal |= RescheduleOps(MBB, Sts, Base, false, MI2LocMap, RegisterMap);

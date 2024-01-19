@@ -29,7 +29,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ThreadPool.h"
 #include <fstream>
-#include <set>
 
 using namespace llvm;
 

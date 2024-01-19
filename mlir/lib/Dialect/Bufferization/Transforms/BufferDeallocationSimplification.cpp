@@ -42,7 +42,7 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
       deallocOp.getConditions() == conditions)
     return failure();
 
-  rewriter.updateRootInPlace(deallocOp, [&]() {
+  rewriter.modifyOpInPlace(deallocOp, [&]() {
     deallocOp.getMemrefsMutable().assign(memrefs);
     deallocOp.getConditionsMutable().assign(conditions);
   });
@@ -77,18 +77,12 @@ static bool distinctAllocAndBlockArgument(Value v1, Value v2) {
   return areDistinct(v1Base, v2Base) || areDistinct(v2Base, v1Base);
 }
 
-/// Checks if `memref` may or must alias a MemRef in `otherList`. It is often a
-/// requirement of optimization patterns that there cannot be any aliasing
-/// memref in order to perform the desired simplification. The `allowSelfAlias`
-/// argument indicates whether `memref` may be present in `otherList` which
-/// makes this helper function applicable to situations where we already know
-/// that `memref` is in the list but also when we don't want it in the list.
+/// Checks if `memref` may potentially alias a MemRef in `otherList`. It is
+/// often a requirement of optimization patterns that there cannot be any
+/// aliasing memref in order to perform the desired simplification.
 static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
-                                     ValueRange otherList, Value memref,
-                                     bool allowSelfAlias) {
+                                     ValueRange otherList, Value memref) {
   for (auto other : otherList) {
-    if (allowSelfAlias && other == memref)
-      continue;
     if (distinctAllocAndBlockArgument(other, memref))
       continue;
     if (!analysis.alias(other, memref).isNo())
@@ -240,23 +234,17 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newRetainedMemrefs, replacements;
-    Value falseValue;
-    auto getOrCreateFalse = [&]() -> Value {
-      if (!falseValue)
-        falseValue = rewriter.create<arith::ConstantOp>(
-            deallocOp.getLoc(), rewriter.getBoolAttr(false));
-      return falseValue;
-    };
 
     for (auto retainedMemref : deallocOp.getRetained()) {
       if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
-                                   retainedMemref, false)) {
+                                   retainedMemref)) {
         newRetainedMemrefs.push_back(retainedMemref);
         replacements.push_back({});
         continue;
       }
 
-      replacements.push_back(getOrCreateFalse());
+      replacements.push_back(rewriter.create<arith::ConstantOp>(
+          deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
@@ -314,44 +302,53 @@ struct SplitDeallocWhenNotAliasingAnyOther
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
+    Location loc = deallocOp.getLoc();
     if (deallocOp.getMemrefs().size() <= 1)
       return failure();
 
-    SmallVector<Value> newMemrefs, newConditions, replacements;
-    DenseSet<Operation *> exceptedUsers;
-    replacements = deallocOp.getUpdatedConditions();
-    for (auto [memref, cond] :
-         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
-      if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
-                                   memref, true)) {
-        newMemrefs.push_back(memref);
-        newConditions.push_back(cond);
+    SmallVector<Value> remainingMemrefs, remainingConditions;
+    SmallVector<SmallVector<Value>> updatedConditions;
+    for (int64_t i = 0, e = deallocOp.getMemrefs().size(); i < e; ++i) {
+      Value memref = deallocOp.getMemrefs()[i];
+      Value cond = deallocOp.getConditions()[i];
+      SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
+      otherMemrefs.erase(otherMemrefs.begin() + i);
+      // Check if `memref` can split off into a separate bufferization.dealloc.
+      if (potentiallyAliasesMemref(aliasAnalysis, otherMemrefs, memref)) {
+        // `memref` alias with other memrefs, do not split off.
+        remainingMemrefs.push_back(memref);
+        remainingConditions.push_back(cond);
         continue;
       }
 
-      auto newDeallocOp = rewriter.create<DeallocOp>(
-          deallocOp.getLoc(), memref, cond, deallocOp.getRetained());
-      replacements = SmallVector<Value>(llvm::map_range(
-          llvm::zip(replacements, newDeallocOp.getUpdatedConditions()),
-          [&](auto replAndNew) -> Value {
-            auto orOp = rewriter.create<arith::OrIOp>(deallocOp.getLoc(),
-                                                      std::get<0>(replAndNew),
-                                                      std::get<1>(replAndNew));
-            exceptedUsers.insert(orOp);
-            return orOp.getResult();
-          }));
+      // Create new bufferization.dealloc op for `memref`.
+      auto newDeallocOp = rewriter.create<DeallocOp>(loc, memref, cond,
+                                                     deallocOp.getRetained());
+      updatedConditions.push_back(
+          llvm::to_vector(ValueRange(newDeallocOp.getUpdatedConditions())));
     }
 
-    if (newMemrefs.size() == deallocOp.getMemrefs().size())
+    // Fail if no memref was split off.
+    if (remainingMemrefs.size() == deallocOp.getMemrefs().size())
       return failure();
 
-    rewriter.replaceUsesWithIf(deallocOp.getUpdatedConditions(), replacements,
-                               [&](OpOperand &operand) {
-                                 return !exceptedUsers.contains(
-                                     operand.getOwner());
-                               });
-    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
-                                  rewriter);
+    // Create bufferization.dealloc op for all remaining memrefs.
+    auto newDeallocOp = rewriter.create<DeallocOp>(
+        loc, remainingMemrefs, remainingConditions, deallocOp.getRetained());
+
+    // Bit-or all conditions.
+    SmallVector<Value> replacements =
+        llvm::to_vector(ValueRange(newDeallocOp.getUpdatedConditions()));
+    for (auto additionalConditions : updatedConditions) {
+      assert(replacements.size() == additionalConditions.size() &&
+             "expected same number of updated conditions");
+      for (int64_t i = 0, e = replacements.size(); i < e; ++i) {
+        replacements[i] = rewriter.create<arith::OrIOp>(
+            loc, replacements[i], additionalConditions[i]);
+      }
+    }
+    rewriter.replaceOp(deallocOp, replacements);
+    return success();
   }
 
 private:

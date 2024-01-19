@@ -58,7 +58,7 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
     }
 
     // Check that suffix is as expected and doesn't have any dash post.
-    bool expectedSuffix = buffer.startswith(splitMarker.take_back(checkLen)) &&
+    bool expectedSuffix = buffer.starts_with(splitMarker.take_back(checkLen)) &&
                           buffer.size() > checkLen && buffer[checkLen] != '0';
     if (expectedSuffix) {
       sourceBuffers.push_back(prev);

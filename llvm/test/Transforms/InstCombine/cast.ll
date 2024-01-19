@@ -467,7 +467,7 @@ define i16 @test40(i16 %a) {
 ; ALL-LABEL: @test40(
 ; ALL-NEXT:    [[T21:%.*]] = lshr i16 [[A:%.*]], 9
 ; ALL-NEXT:    [[T5:%.*]] = shl i16 [[A]], 8
-; ALL-NEXT:    [[T32:%.*]] = or i16 [[T21]], [[T5]]
+; ALL-NEXT:    [[T32:%.*]] = or disjoint i16 [[T21]], [[T5]]
 ; ALL-NEXT:    ret i16 [[T32]]
 ;
   %t = zext i16 %a to i32
@@ -482,7 +482,7 @@ define <2 x i16> @test40vec(<2 x i16> %a) {
 ; ALL-LABEL: @test40vec(
 ; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 9>
 ; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 8>
-; ALL-NEXT:    [[T32:%.*]] = or <2 x i16> [[T21]], [[T5]]
+; ALL-NEXT:    [[T32:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
 ; ALL-NEXT:    ret <2 x i16> [[T32]]
 ;
   %t = zext <2 x i16> %a to <2 x i32>
@@ -497,7 +497,7 @@ define <2 x i16> @test40vec_nonuniform(<2 x i16> %a) {
 ; ALL-LABEL: @test40vec_nonuniform(
 ; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 10>
 ; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 9>
-; ALL-NEXT:    [[T32:%.*]] = or <2 x i16> [[T21]], [[T5]]
+; ALL-NEXT:    [[T32:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
 ; ALL-NEXT:    ret <2 x i16> [[T32]]
 ;
   %t = zext <2 x i16> %a to <2 x i32>
@@ -646,7 +646,7 @@ define i64 @test48(i8 %A1, i8 %a2) {
 ; ALL-LABEL: @test48(
 ; ALL-NEXT:    [[Z2:%.*]] = zext i8 [[A1:%.*]] to i32
 ; ALL-NEXT:    [[C:%.*]] = shl nuw nsw i32 [[Z2]], 8
-; ALL-NEXT:    [[D:%.*]] = or i32 [[C]], [[Z2]]
+; ALL-NEXT:    [[D:%.*]] = or disjoint i32 [[C]], [[Z2]]
 ; ALL-NEXT:    [[E:%.*]] = zext nneg i32 [[D]] to i64
 ; ALL-NEXT:    ret i64 [[E]]
 ;
@@ -690,7 +690,7 @@ define i64 @test51(i64 %A, i1 %cond) {
 ; ALL-NEXT:    [[C:%.*]] = and i64 [[A:%.*]], 4294967294
 ; ALL-NEXT:    [[NOT_COND:%.*]] = xor i1 [[COND:%.*]], true
 ; ALL-NEXT:    [[MASKSEL:%.*]] = zext i1 [[NOT_COND]] to i64
-; ALL-NEXT:    [[E:%.*]] = or i64 [[C]], [[MASKSEL]]
+; ALL-NEXT:    [[E:%.*]] = or disjoint i64 [[C]], [[MASKSEL]]
 ; ALL-NEXT:    [[SEXT:%.*]] = shl nuw i64 [[E]], 32
 ; ALL-NEXT:    [[F:%.*]] = ashr exact i64 [[SEXT]], 32
 ; ALL-NEXT:    ret i64 [[F]]
@@ -707,7 +707,7 @@ define i32 @test52(i64 %A) {
 ; ALL-LABEL: @test52(
 ; ALL-NEXT:    [[B:%.*]] = trunc i64 [[A:%.*]] to i32
 ; ALL-NEXT:    [[C:%.*]] = and i32 [[B]], 7224
-; ALL-NEXT:    [[D:%.*]] = or i32 [[C]], 32962
+; ALL-NEXT:    [[D:%.*]] = or disjoint i32 [[C]], 32962
 ; ALL-NEXT:    ret i32 [[D]]
 ;
   %B = trunc i64 %A to i16
@@ -720,7 +720,7 @@ define i32 @test52(i64 %A) {
 define i64 @test53(i32 %A) {
 ; ALL-LABEL: @test53(
 ; ALL-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 7224
-; ALL-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 32962
+; ALL-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 32962
 ; ALL-NEXT:    [[D:%.*]] = zext nneg i32 [[TMP2]] to i64
 ; ALL-NEXT:    ret i64 [[D]]
 ;
@@ -735,7 +735,7 @@ define i32 @test54(i64 %A) {
 ; ALL-LABEL: @test54(
 ; ALL-NEXT:    [[B:%.*]] = trunc i64 [[A:%.*]] to i32
 ; ALL-NEXT:    [[C:%.*]] = and i32 [[B]], 7224
-; ALL-NEXT:    [[D:%.*]] = or i32 [[C]], -32574
+; ALL-NEXT:    [[D:%.*]] = or disjoint i32 [[C]], -32574
 ; ALL-NEXT:    ret i32 [[D]]
 ;
   %B = trunc i64 %A to i16
@@ -749,7 +749,7 @@ define i64 @test55(i32 %A) {
 ; ALL-LABEL: @test55(
 ; ALL-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 7224
 ; ALL-NEXT:    [[C:%.*]] = zext nneg i32 [[TMP1]] to i64
-; ALL-NEXT:    [[D:%.*]] = or i64 [[C]], -32574
+; ALL-NEXT:    [[D:%.*]] = or disjoint i64 [[C]], -32574
 ; ALL-NEXT:    ret i64 [[D]]
 ;
   %B = trunc i32 %A to i16
@@ -814,7 +814,7 @@ define i64 @test58(i64 %A) {
 ; ALL-LABEL: @test58(
 ; ALL-NEXT:    [[C:%.*]] = lshr i64 [[A:%.*]], 8
 ; ALL-NEXT:    [[D:%.*]] = and i64 [[C]], 16777087
-; ALL-NEXT:    [[E:%.*]] = or i64 [[D]], 128
+; ALL-NEXT:    [[E:%.*]] = or disjoint i64 [[D]], 128
 ; ALL-NEXT:    ret i64 [[E]]
 ;
   %B = trunc i64 %A to i32
@@ -832,7 +832,7 @@ define i64 @test59(i8 %A, i8 %B) {
 ; ALL-NEXT:    [[E:%.*]] = and i64 [[D]], 48
 ; ALL-NEXT:    [[TMP1:%.*]] = lshr i8 [[B:%.*]], 4
 ; ALL-NEXT:    [[G:%.*]] = zext nneg i8 [[TMP1]] to i64
-; ALL-NEXT:    [[H:%.*]] = or i64 [[E]], [[G]]
+; ALL-NEXT:    [[H:%.*]] = or disjoint i64 [[E]], [[G]]
 ; ALL-NEXT:    ret i64 [[H]]
 ;
   %C = zext i8 %A to i32
@@ -2139,7 +2139,7 @@ define i32 @test95(i32 %x) {
 ; ALL-LABEL: @test95(
 ; ALL-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 6
 ; ALL-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
-; ALL-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], 40
+; ALL-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[TMP2]], 40
 ; ALL-NEXT:    ret i32 [[TMP3]]
 ;
   %1 = trunc i32 %x to i8

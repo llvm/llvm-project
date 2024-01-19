@@ -171,6 +171,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIFunc
   MLIRFuncDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPISPIRV
+  SPIRV.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRSPIRVDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPITensor
   Tensor.cpp
 

@@ -24,17 +24,14 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-  1) In the comments of the issue, request for it to be assigned to you.
-  2) Fix the issue locally.
-  3) [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally.
-    3.1) Remember that the subdirectories under `test/` create fine-grained testing targets, so you can
-         e.g. use `make check-clang-ast` to only run Clang's AST tests.
-  4) Create a Git commit.
-  5) Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-  6) Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub.
-    6.1) Detailed instructions can be found [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
+1. In the comments of the issue, request for it to be assigned to you.
+2. Fix the issue locally.
+3. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
+4. Create a Git commit.
+5. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+6. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
 
-If you have any further questions about this issue, don't hesitate to ask via a comment on this Github issue.
+If you have any further questions about this issue, don't hesitate to ask via a comment in the thread below.
 """
 
 
@@ -208,6 +205,39 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             if self.team_name == team.name.lower():
                 return team
         return None
+
+
+class PRGreeter:
+    def __init__(self, token: str, repo: str, pr_number: int):
+        repo = github.Github(token).get_repo(repo)
+        self.pr = repo.get_issue(pr_number).as_pull_request()
+
+    def run(self) -> bool:
+        # We assume that this is only called for a PR that has just been opened
+        # by a user new to LLVM and/or GitHub itself.
+
+        # This text is using Markdown formatting.
+        comment = f"""\
+Thank you for submitting a Pull Request (PR) to the LLVM Project!
+
+This PR will be automatically labeled and the relevant teams will be
+notified.
+
+If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+
+If this is not working for you, it is probably because you do not have write
+permissions for the repository. In which case you can instead tag reviewers by
+name in a comment by using `@` followed by their GitHub username.
+
+If you have received no comments on your PR for a week, you can request a review
+by "ping"ing the PR by adding a comment “Ping”. The common courtesy "ping" rate
+is once a week. Please remember that you are asking for valuable time from other developers.
+
+If you have further questions, they may be answered by the [LLVM GitHub User Guide](https://llvm.org/docs/GitHub.html).
+
+You can also ask questions in a comment on this PR, on the [LLVM Discord](https://discord.com/invite/xS7Z362) or on the [forums](https://discourse.llvm.org/)."""
+        self.pr.as_issue().create_comment(comment)
+        return True
 
 
 def setup_llvmbot_git(git_dir="."):
@@ -414,7 +444,7 @@ class ReleaseWorkflow:
 
     def issue_notify_pull_request(self, pull: github.PullRequest.PullRequest) -> None:
         self.issue.create_comment(
-            "/pull-request {}#{}".format(self.branch_repo_name, pull.number)
+            "/pull-request {}#{}".format(self.repo_name, pull.number)
         )
 
     def make_ignore_comment(self, comment: str) -> str:
@@ -466,29 +496,39 @@ class ReleaseWorkflow:
         if self.CHERRY_PICK_FAILED_LABEL in [l.name for l in self.issue.labels]:
             self.issue.remove_from_labels(self.CHERRY_PICK_FAILED_LABEL)
 
+    def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
+        commit = self.repo.get_commit(cherry_pick_sha)
+        message = commit.commit.message
+        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        if not m:
+            return None
+        return self.repo.get_commit(m.group(1))
+
     def pr_request_review(self, pr: github.PullRequest.PullRequest):
         """
         This function will try to find the best reviewers for `commits` and
-        then add a comment requesting review of the backport and assign the
-        pull request to the selected reviewers.
+        then add a comment requesting review of the backport and add them as
+        reviewers.
 
-        The reviewers selected are those users who approved the patch in
-        Phabricator.
+        The reviewers selected are those users who approved the pull request
+        for the main branch.
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, commit)
-            for a in approvers:
-                login = phab_login_to_github_login(self.phab_token, self.repo, a)
-                if not login:
-                    continue
-                reviewers.append(login)
+            main_commit = self.get_main_commit(commit.sha)
+            if not main_commit:
+                continue
+            for pull in main_commit.get_pulls():
+                for review in pull.get_reviews():
+                    if review.state != "APPROVED":
+                        continue
+                reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])
             )
             pr.create_issue_comment(message)
-            pr.add_to_assignees(*reviewers)
+            pr.create_review_request(reviewers)
 
     def create_branch(self, commits: List[str]) -> bool:
         """
@@ -529,7 +569,7 @@ class ReleaseWorkflow:
 
     def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
         """
-        reate a pull request in `self.branch_repo_name`.  The base branch of the
+        Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
@@ -537,7 +577,7 @@ class ReleaseWorkflow:
         https://docs.github.com/en/get-started/quickstart/github-glossary#base-branch
         https://docs.github.com/en/get-started/quickstart/github-glossary#compare-branch
         """
-        repo = github.Github(self.token).get_repo(self.branch_repo_name)
+        repo = github.Github(self.token).get_repo(self.repo_name)
         issue_ref = "{}#{}".format(self.repo_name, self.issue_number)
         pull = None
         release_branch_for_issue = self.release_branch_for_issue
@@ -582,9 +622,10 @@ class ReleaseWorkflow:
                 maintainer_can_modify=False,
             )
 
+            pull.as_issue().edit(milestone=self.issue.milestone)
+
             try:
-                if self.phab_token:
-                    self.pr_request_review(pull)
+                self.pr_request_review(pull)
             except Exception as e:
                 print("error: Failed while searching for reviewers", e)
 
@@ -654,6 +695,9 @@ pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
 pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
 pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_greeter_parser = subparsers.add_parser("pr-greeter")
+pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -677,7 +721,7 @@ release_workflow_parser.add_argument(
 release_workflow_parser.add_argument(
     "--branch-repo",
     type=str,
-    default="llvm/llvm-project-release-prs",
+    default="llvmbot/llvm-project",
     help="The name of the repo where new branches will be pushed (e.g. llvm/llvm-project)",
 )
 release_workflow_parser.add_argument(
@@ -704,6 +748,9 @@ elif args.command == "pr-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     pr_subscriber.run()
+elif args.command == "pr-greeter":
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,

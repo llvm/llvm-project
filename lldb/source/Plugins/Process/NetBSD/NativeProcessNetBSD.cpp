@@ -379,6 +379,29 @@ void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
   SetState(StateType::eStateStopped, true);
 }
 
+Status NativeProcessNetBSD::StopProcess(lldb::pid_t pid) {
+#ifdef PT_STOP
+  return PtraceWrapper(PT_STOP, pid);
+#else
+  Log *log = GetLog(POSIXLog::Ptrace);
+  Status error;
+  int ret;
+
+  errno = 0;
+  ret = kill(pid, SIGSTOP);
+
+  if (ret == -1)
+    error.SetErrorToErrno();
+
+  LLDB_LOG(log, "kill({0}, SIGSTOP)", pid);
+
+  if (error.Fail())
+    LLDB_LOG(log, "kill() failed: {0}", error);
+
+  return error;
+#endif
+}
+
 Status NativeProcessNetBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                                           int data, int *result) {
   Log *log = GetLog(POSIXLog::Ptrace);
@@ -531,7 +554,7 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
   return ret;
 }
 
-Status NativeProcessNetBSD::Halt() { return PtraceWrapper(PT_STOP, GetID()); }
+Status NativeProcessNetBSD::Halt() { return StopProcess(GetID()); }
 
 Status NativeProcessNetBSD::Detach() {
   Status error;
@@ -555,9 +578,7 @@ Status NativeProcessNetBSD::Signal(int signo) {
   return error;
 }
 
-Status NativeProcessNetBSD::Interrupt() {
-  return PtraceWrapper(PT_STOP, GetID());
-}
+Status NativeProcessNetBSD::Interrupt() { return StopProcess(GetID()); }
 
 Status NativeProcessNetBSD::Kill() {
   Log *log = GetLog(POSIXLog::Process);

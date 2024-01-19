@@ -290,7 +290,7 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
   const StringRef FileName = MachOObj->getFileName();
   for (const SymbolRef &Symbol : MachOObj->symbols()) {
     StringRef SymName = unwrapOrError(Symbol.getName(), FileName);
-    if (!SymName.startswith("ltmp"))
+    if (!SymName.starts_with("ltmp"))
       Symbols.push_back(Symbol);
   }
 
@@ -1482,7 +1482,7 @@ static void CreateSymbolAddressMap(MachOObjectFile *O,
         ST == SymbolRef::ST_Other) {
       uint64_t Address = cantFail(Symbol.getValue());
       StringRef SymName = unwrapOrError(Symbol.getName(), FileName);
-      if (!SymName.startswith(".objc"))
+      if (!SymName.starts_with(".objc"))
         (*AddrMap)[Address] = SymName;
     }
   }

@@ -94,11 +94,10 @@ void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                  unsigned Depth, const SimplifyQuery &Q);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
-KnownBits analyzeKnownBitsFromAndXorOr(
-    const Operator *I, const KnownBits &KnownLHS, const KnownBits &KnownRHS,
-    unsigned Depth, const DataLayout &DL, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true);
+KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
+                                       const KnownBits &KnownLHS,
+                                       const KnownBits &KnownRHS,
+                                       unsigned Depth, const SimplifyQuery &SQ);
 
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
@@ -138,27 +137,18 @@ bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
 bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
 
 /// Returns true if the give value is known to be non-negative.
-bool isKnownNonNegative(const Value *V, const DataLayout &DL,
-                        unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                        const Instruction *CxtI = nullptr,
-                        const DominatorTree *DT = nullptr,
-                        bool UseInstrInfo = true);
+bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
+                        unsigned Depth = 0);
 
 /// Returns true if the given value is known be positive (i.e. non-negative
 /// and non-zero).
-bool isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CxtI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     bool UseInstrInfo = true);
+bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
+                     unsigned Depth = 0);
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-bool isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CxtI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     bool UseInstrInfo = true);
+bool isKnownNegative(const Value *V, const SimplifyQuery &DL,
+                     unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
@@ -177,11 +167,8 @@ bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
 /// where V is a vector, the mask, known zero, and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
-bool MaskedValueIsZero(const Value *V, const APInt &Mask, const DataLayout &DL,
-                       unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                       const Instruction *CxtI = nullptr,
-                       const DominatorTree *DT = nullptr,
-                       bool UseInstrInfo = true);
+bool MaskedValueIsZero(const Value *V, const APInt &Mask,
+                       const SimplifyQuery &DL, unsigned Depth = 0);
 
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -823,9 +810,14 @@ bool isAssumeLikeIntrinsic(const Instruction *I);
 
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
-/// context instruction, CxtI.
+/// context instruction, CxtI. By default, ephemeral values of the assumption
+/// are treated as an invalid context, to prevent the assumption from being used
+/// to optimize away its argument. If the caller can ensure that this won't
+/// happen, it can call with AllowEphemerals set to true to get more valid
+/// assumptions.
 bool isValidAssumeForContext(const Instruction *I, const Instruction *CxtI,
-                             const DominatorTree *DT = nullptr);
+                             const DominatorTree *DT = nullptr,
+                             bool AllowEphemerals = false);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
@@ -875,6 +867,11 @@ ConstantRange computeConstantRange(const Value *V, bool ForSigned,
                                    const Instruction *CtxI = nullptr,
                                    const DominatorTree *DT = nullptr,
                                    unsigned Depth = 0);
+
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+ConstantRange
+computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
+                                       bool ForSigned, const SimplifyQuery &SQ);
 
 /// Return true if this function can prove that the instruction I will
 /// always transfer execution to one of its successors (including the next
@@ -994,10 +991,18 @@ bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                       const Instruction *CtxI = nullptr,
                                       const DominatorTree *DT = nullptr,
                                       unsigned Depth = 0);
+
+/// Returns true if V cannot be poison, but may be undef.
 bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
+
+/// Returns true if V cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
+                              const Instruction *CtxI = nullptr,
+                              const DominatorTree *DT = nullptr,
+                              unsigned Depth = 0);
 
 /// Return true if undefined behavior would provable be executed on the path to
 /// OnPathTo if Root produced a posion result.  Note that this doesn't say

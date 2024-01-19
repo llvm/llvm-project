@@ -2042,8 +2042,7 @@ SDValue MipsTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   SDValue CCNode  = CondRes.getOperand(2);
-  Mips::CondCode CC =
-    (Mips::CondCode)cast<ConstantSDNode>(CCNode)->getZExtValue();
+  Mips::CondCode CC = (Mips::CondCode)CCNode->getAsZExtVal();
   unsigned Opc = invertFPCondCodeUser(CC) ? Mips::BRANCH_F : Mips::BRANCH_T;
   SDValue BrCode = DAG.getConstant(Opc, DL, MVT::i32);
   SDValue FCC0 = DAG.getRegister(Mips::FCC0, MVT::i32);
@@ -2508,7 +2507,7 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
 SDValue MipsTargetLowering::
 lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();
@@ -2529,7 +2528,7 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // check the depth
-  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+  if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(
         "return address can be determined only for current frame");
     return SDValue();
@@ -4064,7 +4063,7 @@ parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
     RC = TRI->getRegClass(Prefix == "hi" ?
                           Mips::HI32RegClassID : Mips::LO32RegClassID);
     return std::make_pair(*(RC->begin()), RC);
-  } else if (Prefix.startswith("$msa")) {
+  } else if (Prefix.starts_with("$msa")) {
     // Parse $msa(ir|csr|access|save|modify|request|map|unmap)
 
     // No numeric characters follow the name.

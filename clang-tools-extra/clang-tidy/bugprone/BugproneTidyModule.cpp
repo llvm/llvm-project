@@ -83,6 +83,7 @@
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
+#include "UnusedLocalNonTrivialVariableCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
 #include "UseAfterMoveCheck.h"
@@ -235,6 +236,8 @@ public:
         "bugprone-unique-ptr-array-mismatch");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
+    CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(
+        "bugprone-unused-local-non-trivial-variable");
     CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "bugprone-unused-return-value");

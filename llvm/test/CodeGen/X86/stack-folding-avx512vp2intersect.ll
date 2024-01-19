@@ -11,7 +11,7 @@ define void @stack_fold_vp2intersectd(ptr %a, <16 x i32> %b, ptr nocapture %m0, 
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm0
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-NEXT:    vp2intersectd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %k0, (%rsi)
 ; CHECK-NEXT:    kmovw %k1, (%rdx)
@@ -35,7 +35,7 @@ define void @stack_fold_vp2intersectq(ptr %a, <8 x i64> %b, ptr nocapture %m0, p
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %zmm0
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %k1, %eax
 ; CHECK-NEXT:    kmovw %k0, %ecx
@@ -61,7 +61,7 @@ define void @stack_fold_vp2intersectd_256(ptr %a, <8 x i32> %b, ptr nocapture %m
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %ymm0
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
 ; CHECK-NEXT:    vp2intersectd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 # 32-byte Folded Reload
 ; CHECK-NEXT:    kmovw %k1, %eax
 ; CHECK-NEXT:    kmovw %k0, %ecx
@@ -87,7 +87,7 @@ define void @stack_fold_vp2intersectq_256(ptr %a, <4 x i64> %b, ptr nocapture %m
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %ymm0
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 # 32-byte Folded Reload
 ; CHECK-NEXT:    kshiftlw $12, %k0, %k2
 ; CHECK-NEXT:    kshiftrw $12, %k2, %k2
@@ -117,7 +117,7 @@ define void @stack_fold_vp2intersectd_128(ptr %a, <4 x i32> %b, ptr nocapture %m
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
 ; CHECK-NEXT:    vp2intersectd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 # 16-byte Folded Reload
 ; CHECK-NEXT:    kshiftlw $12, %k0, %k2
 ; CHECK-NEXT:    kshiftrw $12, %k2, %k2
@@ -146,7 +146,7 @@ define void @stack_fold_vp2intersectq_128(ptr %a, <2 x i64> %b, ptr nocapture %m
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
 ; CHECK-NEXT:    vp2intersectq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 # 16-byte Folded Reload
 ; CHECK-NEXT:    kshiftlw $14, %k0, %k2
 ; CHECK-NEXT:    kshiftrw $14, %k2, %k2

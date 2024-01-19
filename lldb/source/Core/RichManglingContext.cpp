@@ -72,7 +72,7 @@ bool RichManglingContext::IsCtorOrDtor() const {
     // We can only check for destructors here.
     auto base_name =
         get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetBasename();
-    return base_name.startswith("~");
+    return base_name.starts_with("~");
   }
   case None:
     return false;

@@ -657,8 +657,8 @@ define <2 x i1> @test21vec(<2 x i32> %x) {
 define i32 @test22(i32 %V) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 10, label [[LAB1:%.*]]
-; CHECK-NEXT:    i32 20, label [[LAB2:%.*]]
+; CHECK-NEXT:      i32 10, label [[LAB1:%.*]]
+; CHECK-NEXT:      i32 20, label [[LAB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       Default:
 ; CHECK-NEXT:    ret i32 123
@@ -764,7 +764,7 @@ define i32 @test29(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP_2:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP_7:%.*]] = and i32 [[X]], 63
 ; CHECK-NEXT:    [[TMP_9:%.*]] = and i32 [[TMP_2]], -64
-; CHECK-NEXT:    [[TMP_10:%.*]] = or i32 [[TMP_7]], [[TMP_9]]
+; CHECK-NEXT:    [[TMP_10:%.*]] = or disjoint i32 [[TMP_7]], [[TMP_9]]
 ; CHECK-NEXT:    ret i32 [[TMP_10]]
 ;
   %tmp.2 = sub i32 %x, %y
@@ -1499,7 +1499,7 @@ define i8 @add_like_or_n1(i8 %x) {
 define i8 @add_like_or_t2_extrause(i8 %x) {
 ; CHECK-LABEL: @add_like_or_t2_extrause(
 ; CHECK-NEXT:    [[I0:%.*]] = shl i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[I1:%.*]] = or i8 [[I0]], 15
+; CHECK-NEXT:    [[I1:%.*]] = or disjoint i8 [[I0]], 15
 ; CHECK-NEXT:    call void @use(i8 [[I1]])
 ; CHECK-NEXT:    [[R:%.*]] = add i8 [[I0]], 57
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1511,7 +1511,17 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   ret i8 %r
 }
 
-define i8 @add_and_xor(i8 %x, i8 %y) {
+define i8 @add_like_or_disjoint(i8 %x) {
+; CHECK-LABEL: @add_like_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 57
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i1 = or disjoint i8 %x, 15
+  %r = add i8 %i1, 42
+  ret i8 %r
+}
+
+define i8 @add_and_xor(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @add_and_xor(
 ; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
@@ -1548,7 +1558,7 @@ define i8 @add_and_xor_wrong_op(i8 %x, i8 %y, i8 %z) {
   ret i8 %add
 }
 
-define i8 @add_and_xor_commuted1(i8 %x, i8 %_y) {
+define i8 @add_and_xor_commuted1(i8 noundef %x, i8 %_y) {
 ; CHECK-LABEL: @add_and_xor_commuted1(
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[Y]], [[X:%.*]]
@@ -1561,7 +1571,7 @@ define i8 @add_and_xor_commuted1(i8 %x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_and_xor_commuted2(i8 %_x, i8 %y) {
+define i8 @add_and_xor_commuted2(i8 noundef %_x, i8 %y) {
 ; CHECK-LABEL: @add_and_xor_commuted2(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[X]], [[Y:%.*]]
@@ -1574,7 +1584,7 @@ define i8 @add_and_xor_commuted2(i8 %_x, i8 %y) {
   ret i8 %add
 }
 
-define i8 @add_and_xor_commuted3(i8 %_x, i8 %_y) {
+define i8 @add_and_xor_commuted3(i8 noundef %_x, i8 %_y) {
 ; CHECK-LABEL: @add_and_xor_commuted3(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
@@ -1589,7 +1599,7 @@ define i8 @add_and_xor_commuted3(i8 %_x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_and_xor_extra_use(i8 %x, i8 %y) {
+define i8 @add_and_xor_extra_use(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @add_and_xor_extra_use(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
@@ -1606,7 +1616,7 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_const(i8 %x) {
+define i8 @add_xor_and_const(i8 noundef %x) {
 ; CHECK-LABEL: @add_xor_and_const(
 ; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[X:%.*]], 42
 ; CHECK-NEXT:    ret i8 [[ADD]]
@@ -1630,7 +1640,7 @@ define i8 @add_xor_and_const_wrong_const(i8 %x) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var(i8 %x, i8 %y) {
+define i8 @add_xor_and_var(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @add_xor_and_var(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
@@ -1674,7 +1684,7 @@ define i8 @add_xor_and_var_wrong_op2(i8 %x, i8 %y, i8 %z) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted1(i8 %x, i8 %y) {
+define i8 @add_xor_and_var_commuted1(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted1(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
@@ -1688,7 +1698,7 @@ define i8 @add_xor_and_var_commuted1(i8 %x, i8 %y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted2(i8 %_x, i8 %_y) {
+define i8 @add_xor_and_var_commuted2(i8 noundef %_x, i8 noundef %_y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted2(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
@@ -1706,7 +1716,7 @@ define i8 @add_xor_and_var_commuted2(i8 %_x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted3(i8 %x, i8 %_y) {
+define i8 @add_xor_and_var_commuted3(i8 noundef %x, i8 noundef %_y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted3(
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[X:%.*]]
@@ -1722,7 +1732,7 @@ define i8 @add_xor_and_var_commuted3(i8 %x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted4(i8 %_x, i8 %y) {
+define i8 @add_xor_and_var_commuted4(i8 noundef %_x, i8 noundef %y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted4(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
@@ -1738,7 +1748,7 @@ define i8 @add_xor_and_var_commuted4(i8 %_x, i8 %y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted5(i8 %_x, i8 %_y) {
+define i8 @add_xor_and_var_commuted5(i8 noundef %_x, i8 noundef %_y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted5(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
@@ -1756,7 +1766,7 @@ define i8 @add_xor_and_var_commuted5(i8 %_x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted6(i8 %_x, i8 %_y) {
+define i8 @add_xor_and_var_commuted6(i8 noundef %_x, i8 noundef %_y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted6(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
@@ -1774,7 +1784,7 @@ define i8 @add_xor_and_var_commuted6(i8 %_x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_commuted7(i8 %_x, i8 %_y) {
+define i8 @add_xor_and_var_commuted7(i8 noundef %_x, i8 noundef %_y) {
 ; CHECK-LABEL: @add_xor_and_var_commuted7(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i8 42, [[_X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = udiv i8 42, [[_Y:%.*]]
@@ -1792,7 +1802,7 @@ define i8 @add_xor_and_var_commuted7(i8 %_x, i8 %_y) {
   ret i8 %add
 }
 
-define i8 @add_xor_and_var_extra_use(i8 %x, i8 %y) {
+define i8 @add_xor_and_var_extra_use(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @add_xor_and_var_extra_use(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
@@ -2361,7 +2371,7 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i64 [[Y:%.*]] to i128
 ; CHECK-NEXT:    [[ZZ:%.*]] = zext i64 [[Z:%.*]] to i128
 ; CHECK-NEXT:    [[SHY:%.*]] = shl nuw i128 [[ZY]], 64
-; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i128 [[SHY]], [[ZX]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
@@ -2573,7 +2583,7 @@ define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
   ret <vscale x 1 x i32> %add
 }
 
-define i5 @zext_zext_not(i3 %x) {
+define i5 @zext_zext_not(i3 noundef %x) {
 ; CHECK-LABEL: @zext_zext_not(
 ; CHECK-NEXT:    ret i5 7
 ;
@@ -2584,7 +2594,7 @@ define i5 @zext_zext_not(i3 %x) {
   ret i5 %r
 }
 
-define <2 x i5> @zext_zext_not_commute(<2 x i3> %x) {
+define <2 x i5> @zext_zext_not_commute(<2 x i3> noundef %x) {
 ; CHECK-LABEL: @zext_zext_not_commute(
 ; CHECK-NEXT:    ret <2 x i5> <i5 7, i5 7>
 ;
@@ -2595,7 +2605,7 @@ define <2 x i5> @zext_zext_not_commute(<2 x i3> %x) {
   ret <2 x i5> %r
 }
 
-define i9 @sext_sext_not(i3 %x) {
+define i9 @sext_sext_not(i3 noundef %x) {
 ; CHECK-LABEL: @sext_sext_not(
 ; CHECK-NEXT:    ret i9 -1
 ;
@@ -2606,7 +2616,7 @@ define i9 @sext_sext_not(i3 %x) {
   ret i9 %r
 }
 
-define i8 @sext_sext_not_commute(i3 %x) {
+define i8 @sext_sext_not_commute(i3 noundef %x) {
 ; CHECK-LABEL: @sext_sext_not_commute(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i3 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SX]])
@@ -2621,7 +2631,7 @@ define i8 @sext_sext_not_commute(i3 %x) {
   ret i8 %r
 }
 
-define i5 @zext_sext_not(i4 %x) {
+define i5 @zext_sext_not(i4 noundef %x) {
 ; CHECK-LABEL: @zext_sext_not(
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i5
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
@@ -2636,7 +2646,7 @@ define i5 @zext_sext_not(i4 %x) {
   ret i5 %r
 }
 
-define i8 @zext_sext_not_commute(i4 %x) {
+define i8 @zext_sext_not_commute(i4 noundef %x) {
 ; CHECK-LABEL: @zext_sext_not_commute(
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[ZX]])
@@ -2655,7 +2665,7 @@ define i8 @zext_sext_not_commute(i4 %x) {
   ret i8 %r
 }
 
-define i9 @sext_zext_not(i4 %x) {
+define i9 @sext_zext_not(i4 noundef %x) {
 ; CHECK-LABEL: @sext_zext_not(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
@@ -2670,7 +2680,7 @@ define i9 @sext_zext_not(i4 %x) {
   ret i9 %r
 }
 
-define i9 @sext_zext_not_commute(i4 %x) {
+define i9 @sext_zext_not_commute(i4 noundef %x) {
 ; CHECK-LABEL: @sext_zext_not_commute(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
@@ -2698,6 +2708,70 @@ define i32 @floor_sdiv(i32 %x) {
   %s = sext i1 %i to i32
   %r = add i32 %d, %s
   ret i32 %r
+}
+
+define i8 @floor_sdiv_by_2(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2(
+; CHECK-NEXT:    [[RV:%.*]] = ashr i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, -127
+  %icmp = icmp eq i8 %and, -127
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_mask(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_mask(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 127
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 127
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, 127
+  %icmp = icmp eq i8 %and, 127
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_constant(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_constant(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -125
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], -125
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 4
+  %and = and i8 %x, -125
+  %icmp = icmp eq i8 %and, -125
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_cast(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_cast(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -127
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], -127
+; CHECK-NEXT:    [[SEXT:%.*]] = zext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, -127
+  %icmp = icmp eq i8 %and, -127
+  %sext = zext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
 }
 
 ; vectors work too and commute is handled by complexity-based canonicalization
