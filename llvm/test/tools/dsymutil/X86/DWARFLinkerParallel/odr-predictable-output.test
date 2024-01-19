@@ -1,11 +1,11 @@
-# RUN: dsymutil --linker=llvm -f -o %t1.o -oso-prepend-path=%p/ -y %s
+# RUN: dsymutil --linker=parallel -f -o %t1.o -oso-prepend-path=%p/ -y %s
 # RUN: llvm-dwarfdump --verify %t1.o | FileCheck -check-prefixes=VERIFY %s
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/ -y %s --num-threads 1 | llvm-dwarfdump -a - -o %t1
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/ -y %s --num-threads 3 | llvm-dwarfdump -a - -o %t2
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 1 | llvm-dwarfdump -a - -o %t1
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 3 | llvm-dwarfdump -a - -o %t2
 # RUN: diff %t1 %t2
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/ -y %s --num-threads 4 | llvm-dwarfdump -a - -o %t3
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 4 | llvm-dwarfdump -a - -o %t3
 # RUN: diff %t1 %t3
-# RUN: dsymutil --linker=llvm -f -o - -oso-prepend-path=%p/ -y %s | llvm-dwarfdump -a - -o %t4
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s | llvm-dwarfdump -a - -o %t4
 # RUN: diff %t1 %t4
 
 # This test checks that generated output does not differ between runs.

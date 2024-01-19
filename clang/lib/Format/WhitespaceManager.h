@@ -282,6 +282,7 @@ private:
     for (auto PrevIter = Start; PrevIter != End; ++PrevIter) {
       // If we broke the line the initial spaces are already
       // accounted for.
+      assert(PrevIter->Index < Changes.size());
       if (Changes[PrevIter->Index].NewlinesBefore > 0)
         NetWidth = 0;
       NetWidth +=

@@ -1,15 +1,170 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
+
+namespace dr1800 { // dr1800: 2.9
+struct A { union { int n; }; };
+static_assert(__is_same(__decltype(&A::n), int A::*), "");
+} // namespace dr1800
+
+namespace dr1801 { // dr1801: 2.8
+static union {
+  int i;
+};
+
+template <int &> struct S {}; // #dr1801-S
+S<i> V; // #dr1801-S-i
+// cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
+//   cxx98-14-note@#dr1801-S {{template parameter is declared here}}
+// since-cxx17-error@#dr1801-S-i {{non-type template argument refers to subobject '.i'}}
+}
+
+namespace dr1802 { // dr1802: 3.1
+#if __cplusplus >= 201103L
+// Using a Wikipedia example of surrogate pair:
+// https://en.wikipedia.org/wiki/UTF-16#Examples
+constexpr char16_t a[3] = u"\U00010437";
+static_assert(a[0] == 0xD801, "");
+static_assert(a[1] == 0xDC37, "");
+static_assert(a[2] == 0x0, "");
+#endif
+} // namespace dr1802
+
+namespace dr1803 { // dr1803: 2.9
+#if __cplusplus >= 201103L
+struct A {
+  enum E : int;
+  enum E : int {};
+  enum class EC;
+  enum class EC {};
+  enum struct ES;
+  enum struct ES {};
+};
+#endif
+} // namespace dr1803
+
+namespace dr1804 { // dr1804: 2.7
+template <typename, typename>
+struct A {
+  void f1();
+  
+  template <typename V>
+  void f2(V);
+
+  class B {
+    void f3();
+  };
+
+  template <typename>
+  class C {
+    void f4();
+  };
+};
+
+template <typename U>
+struct A<int, U> {
+  void f1();
+  
+  template <typename V>
+  void f2(V);
+
+  class B {
+    void f3();
+  };
+
+  template <typename>
+  class C {
+    void f4();
+  };
+};
+
+class D {
+  int i;
+
+  template <typename, typename>
+  friend struct A;
+};
+
+template <typename U>
+struct A<double, U> {
+  void f1();
+  
+  template <typename V>
+  void f2(V);
+
+  class B {
+    void f3();
+  };
+
+  template <typename>
+  class C {
+    void f4();
+  };
+};
+
+template <typename U>
+void A<int, U>::f1() {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+void A<double, U>::f1() {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+template <typename V>
+void A<int, U>::f2(V) {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+template <typename V>
+void A<double, U>::f2(V) {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+void A<int, U>::B::f3() {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+void A<double, U>::B::f3() {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+template <typename V>
+void A<int, U>::C<V>::f4() {
+  D d;
+  d.i = 0;
+}
+
+template <typename U>
+template <typename V>
+void A<double, U>::C<V>::f4() {
+  D d;
+  d.i = 0;
+}
+} // namespace dr1804
+
+// dr1807 is in dr1807.cpp
 
 namespace dr1812 { // dr1812: no
                    // NB: dup 1710
@@ -56,7 +211,7 @@ namespace dr1815 { // dr1815: no
   // FIXME: needs codegen test
   struct A { int &&r = 0; }; // #dr1815-A 
   A a = {};
-  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}} FIXME
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
   //   since-cxx14-note@#dr1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #dr1815-B
@@ -175,6 +330,34 @@ namespace dr1881 { // dr1881: 7
   static_assert(__is_standard_layout(C), "");
   static_assert(!__is_standard_layout(D), "");
 }
+
+namespace dr1890 { // dr1890: no drafting
+// FIXME: current consensus for CWG2335 is that the examples are well-formed.
+namespace ex1 {
+#if __cplusplus >= 201402L
+struct A {
+  struct B {
+    auto foo() { return 0; } // #dr1890-foo
+  };
+  decltype(B().foo()) x;
+  // since-cxx14-error@-1 {{function 'foo' with deduced return type cannot be used before it is defined}}
+  //   since-cxx14-note@#dr1890-foo {{'foo' declared here}}
+};
+#endif
+} // namespace ex1
+
+namespace ex2 {
+#if __cplusplus >= 201103L
+struct Bar {
+  struct Baz {
+    int a = 0;
+  };
+  static_assert(__is_constructible(Baz), "");
+  // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(dr1890::ex2::Bar::Baz)'}}
+};
+#endif
+} // namespace ex2
+} // namespace dr1890
 
 void dr1891() { // dr1891: 4
 #if __cplusplus >= 201103L

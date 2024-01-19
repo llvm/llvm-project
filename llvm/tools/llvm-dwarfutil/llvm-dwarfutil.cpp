@@ -118,10 +118,10 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
 
   if (opt::Arg *LinkerKind = Args.getLastArg(OPT_linker)) {
     StringRef S = LinkerKind->getValue();
-    if (S == "apple")
-      Options.UseLLVMDWARFLinker = false;
-    else if (S == "llvm")
-      Options.UseLLVMDWARFLinker = true;
+    if (S == "classic")
+      Options.UseDWARFLinkerParallel = false;
+    else if (S == "parallel")
+      Options.UseDWARFLinkerParallel = true;
     else
       return createStringError(
           std::errc::invalid_argument,

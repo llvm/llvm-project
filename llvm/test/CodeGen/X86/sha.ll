@@ -18,7 +18,7 @@ define <4 x i32> @test_sha1rnds4rr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable 
 ;
 ; EGPR-LABEL: test_sha1rnds4rr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd4,0xc1,0x03]
+; EGPR-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x3a,0xcc,0xc1,0x03]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha1rnds4(<4 x i32> %a, <4 x i32> %b, i8 3)
@@ -38,7 +38,7 @@ define <4 x i32> @test_sha1rnds4rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1rnds4rm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd4,0x07,0x03]
+; EGPR-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x3a,0xcc,0x07,0x03]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -61,7 +61,7 @@ define <4 x i32> @test_sha1nexterr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable 
 ;
 ; EGPR-LABEL: test_sha1nexterr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1nexte %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd8,0xc1]
+; EGPR-NEXT:    sha1nexte %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xc8,0xc1]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha1nexte(<4 x i32> %a, <4 x i32> %b)
@@ -81,7 +81,7 @@ define <4 x i32> @test_sha1nexterm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1nexterm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1nexte (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd8,0x07]
+; EGPR-NEXT:    sha1nexte (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xc8,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -104,7 +104,7 @@ define <4 x i32> @test_sha1msg1rr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1msg1rr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1msg1 %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd9,0xc1]
+; EGPR-NEXT:    sha1msg1 %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xc9,0xc1]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha1msg1(<4 x i32> %a, <4 x i32> %b)
@@ -124,7 +124,7 @@ define <4 x i32> @test_sha1msg1rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1msg1rm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1msg1 (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd9,0x07]
+; EGPR-NEXT:    sha1msg1 (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xc9,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -147,7 +147,7 @@ define <4 x i32> @test_sha1msg2rr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1msg2rr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1msg2 %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xda,0xc1]
+; EGPR-NEXT:    sha1msg2 %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xca,0xc1]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha1msg2(<4 x i32> %a, <4 x i32> %b)
@@ -167,7 +167,7 @@ define <4 x i32> @test_sha1msg2rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha1msg2rm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1msg2 (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xda,0x07]
+; EGPR-NEXT:    sha1msg2 (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xca,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -198,7 +198,7 @@ define <4 x i32> @test_sha256rnds2rr(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) n
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movaps %xmm0, %xmm3 # encoding: [0x0f,0x28,0xd8]
 ; EGPR-NEXT:    movaps %xmm2, %xmm0 # encoding: [0x0f,0x28,0xc2]
-; EGPR-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # encoding: [0x62,0xf4,0x7c,0x08,0xdb,0xd9]
+; EGPR-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcb,0xd9]
 ; EGPR-NEXT:    movaps %xmm3, %xmm0 # encoding: [0x0f,0x28,0xc3]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -227,7 +227,7 @@ define <4 x i32> @test_sha256rnds2rm(<4 x i32> %a, ptr %b, <4 x i32> %c) nounwin
 ; EGPR:       # %bb.0: # %entry
 ; EGPR-NEXT:    movaps %xmm0, %xmm2 # encoding: [0x0f,0x28,0xd0]
 ; EGPR-NEXT:    movaps %xmm1, %xmm0 # encoding: [0x0f,0x28,0xc1]
-; EGPR-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm2 # encoding: [0x62,0xf4,0x7c,0x08,0xdb,0x17]
+; EGPR-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm2 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcb,0x17]
 ; EGPR-NEXT:    movaps %xmm2, %xmm0 # encoding: [0x0f,0x28,0xc2]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -251,7 +251,7 @@ define <4 x i32> @test_sha256msg1rr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable
 ;
 ; EGPR-LABEL: test_sha256msg1rr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha256msg1 %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xdc,0xc1]
+; EGPR-NEXT:    sha256msg1 %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcc,0xc1]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha256msg1(<4 x i32> %a, <4 x i32> %b)
@@ -271,7 +271,7 @@ define <4 x i32> @test_sha256msg1rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha256msg1rm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha256msg1 (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xdc,0x07]
+; EGPR-NEXT:    sha256msg1 (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcc,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -294,7 +294,7 @@ define <4 x i32> @test_sha256msg2rr(<4 x i32> %a, <4 x i32> %b) nounwind uwtable
 ;
 ; EGPR-LABEL: test_sha256msg2rr:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha256msg2 %xmm1, %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xdd,0xc1]
+; EGPR-NEXT:    sha256msg2 %xmm1, %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcd,0xc1]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <4 x i32> @llvm.x86.sha256msg2(<4 x i32> %a, <4 x i32> %b)
@@ -314,7 +314,7 @@ define <4 x i32> @test_sha256msg2rm(<4 x i32> %a, ptr %b) nounwind uwtable {
 ;
 ; EGPR-LABEL: test_sha256msg2rm:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha256msg2 (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xdd,0x07]
+; EGPR-NEXT:    sha256msg2 (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xcd,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = load <4 x i32>, ptr %b
@@ -338,7 +338,7 @@ define <8 x i32> @test_sha1rnds4_zero_extend(<4 x i32> %a, ptr %b) nounwind uwta
 ;
 ; EGPR-LABEL: test_sha1rnds4_zero_extend:
 ; EGPR:       # %bb.0: # %entry
-; EGPR-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # encoding: [0x62,0xf4,0x7c,0x08,0xd4,0x07,0x03]
+; EGPR-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # EVEX TO LEGACY Compression encoding: [0x0f,0x3a,0xcc,0x07,0x03]
 ; EGPR-NEXT:    xorps %xmm1, %xmm1 # encoding: [0x0f,0x57,0xc9]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
