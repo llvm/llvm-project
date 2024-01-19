@@ -289,6 +289,7 @@ private:
 
     if (WIFSIGNALED(status_value)) {
       exit_code_ = WTERMSIG(status_value);
+      // `__builtin_trap` generqtes `SIGILL` on x86 and `SIGTRAP` on ARM.
       if (exit_code_ == SIGILL || exit_code_ == SIGTRAP) {
         return DeathCause::Trap;
       }
