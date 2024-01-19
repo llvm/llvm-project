@@ -8,6 +8,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Analysis/CallGraph.h"
 #include "llvm/Support/CommandLine.h"
+#include "clang/AST/ParentMapContext.h"
 
 using namespace clang;
 using namespace clang::tooling;
@@ -51,66 +52,169 @@ static cl::extrahelp MoreHelp("\nMore help text...\n");
 //                          Opts.ASTDumpFormat);
 // }
 
+void requireTrue(bool condition, std::string message) {
+  if (!condition) {
+    llvm::errs() << "requireTrue failed: " << message << "\n";
+    exit(1);
+  }
+}
 
-class FindNamedClassVisitor
-  : public RecursiveASTVisitor<FindNamedClassVisitor> {
+class HasContextVisitor {
+protected:
+  ASTContext *Context;
+
+  std::string getLocation(const SourceLocation &loc) {
+    PresumedLoc PLoc = Context->getSourceManager().getPresumedLoc(loc);
+    if (PLoc.isInvalid())
+      return "<invalid>";
+
+    std::string filename = PLoc.getFilename();
+    std::string line = std::to_string(PLoc.getLine());
+    std::string column = std::to_string(PLoc.getColumn());
+    return filename + ":" + line + ":" + column;
+  }
+
+  void printStmtLocation(const Stmt &s) {
+    llvm::errs() << "    beg: " << getLocation(s.getBeginLoc()) << "\n";
+    llvm::errs() << "    end: " << getLocation(s.getEndLoc()) << "\n";
+  }
+
 public:
-  explicit FindNamedClassVisitor(ASTContext *Context)
-    : Context(Context) {}
+  explicit HasContextVisitor(ASTContext *Context) : Context(Context) {}
+};
 
-  bool VisitFunctionDecl(FunctionDecl *D) {
-      FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
-      if (FullLocation.isValid())
-        llvm::outs() << "Found declaration " << D->getQualifiedNameAsString() << " at "
-                     << FullLocation.getSpellingLineNumber() << ":"
-                     << FullLocation.getSpellingColumnNumber() << "\n";
-      D->dump();
-      if (D->hasBody()) {
-        TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();
+/**
+ * Visit all DeclRefExprs and print their parents.
+ */
+class VarVisitor : public RecursiveASTVisitor<VarVisitor>, public HasContextVisitor {
+public:
+  explicit VarVisitor(ASTContext *Context) : HasContextVisitor(Context) {
+  }
 
-        if (D->getQualifiedNameAsString().find("globalF") != std::string::npos) {
-          CallGraph CG;
-          CG.addToCallGraph(TUD);
-          CG.viewGraph();
-        }
+  void visitParents(const Stmt &base) {
+    const Stmt *s = &base;
+    llvm::errs() << "    parents:\n";
+    while (true) {
+      const auto &parents = Context->getParents(*s);
+      requireTrue(parents.size() == 1, "parent size is not 1");
 
-        auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), CFG::BuildOptions());
-        cfg->dump(D->getASTContext().getLangOpts(), true);
+      const Stmt *parent = parents.begin()->get<Stmt>();
+      requireTrue(parent != nullptr, "parent is null");
+
+      llvm::errs() << "      " << parent->getStmtClassName() << "\n";
+      if (isa<CompoundStmt>(parent)) {
+        break;
       }
 
-    return true;
+      s = parent;
+    }
   }
 
-  bool VisitCXXRecordDecl(CXXRecordDecl *D) {
+  bool VisitStmt(Stmt *s) {
+    // DeclRefExpr
+    if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(s)) {
+      llvm::errs() << "  DeclRefExpr: " << dre->getDecl()->getQualifiedNameAsString() << "\n";
+      printStmtLocation(*s);
+      visitParents(*s);
+    }
+    return true;
+  }
+};
+
+/**
+ * Visit all FunctionDecls and print their CFGs.
+ */
+class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>, public HasContextVisitor {
+public:
+  explicit FunctionDeclVisitor(ASTContext *Context)
+    : HasContextVisitor(Context) {}
+
+  bool VisitFunctionDecl(FunctionDecl *D) {
     FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
-    if (FullLocation.isValid())
-      llvm::outs() << "Class decl " << D->getQualifiedNameAsString() << " at "
-                    << FullLocation.getSpellingLineNumber() << ":"
-                    << FullLocation.getSpellingColumnNumber() << "\n";
+    requireTrue(FullLocation.hasManager(), "no source manager!");
+    if (FullLocation.isInvalid())
+      return true;
+
+    llvm::errs() << "------ FunctionDecl: " << D->getQualifiedNameAsString() << " at "
+                  << FullLocation.getSpellingLineNumber() << ":"
+                  << FullLocation.getSpellingColumnNumber() << "\n";
+
+    if (!D->hasBody())
+      return true;
+
+    // show call graph
+    // TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();
+    // CallGraph CG;
+    // CG.addToCallGraph(TUD);
+    // CG.viewGraph();
+
+    llvm::errs() << "--------- CFG dump: " << D->getQualifiedNameAsString() << "\n";
+    // build CFG
+    auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), CFG::BuildOptions());
+    cfg->dump(D->getASTContext().getLangOpts(), true);
+    // cfg->viewCFG(D->getASTContext().getLangOpts());
+
+    // traverse each block
+    llvm::errs() << "--------- Block traversal: " << D->getQualifiedNameAsString() << "\n";
+    for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
+      const CFGBlock &B = **BI;
+      // print block ID
+      llvm::errs() << "Block " << B.getBlockID();
+      if (&B == &cfg->getEntry()) {
+        llvm::errs() << " (Entry)";
+      } else if (&B == &cfg->getExit()) {
+        llvm::errs() << " (Exit)";
+      }
+      llvm::errs() << ":\n";
+
+      // traverse & print block contents
+      for (auto EI = B.begin(); EI != B.end(); ++EI) {
+        const CFGElement &E = *EI;
+        llvm::errs() << "  ";
+        E.dump();
+        if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
+          // CS->getStmt()->dump();
+          printStmtLocation(*CS->getStmt());
+        }
+      }
+
+      // print block terminator
+      if (B.getTerminator().isValid()) {
+        const CFGTerminator &T = B.getTerminator();
+        if (T.getStmt()) {
+          const Stmt &S = *T.getStmt();
+          llvm::errs() << "  T: <" << S.getStmtClassName() << ">\n";
+          printStmtLocation(S);
+        }
+      }
+    }
+
     return true;
   }
-
-private:
-  ASTContext *Context;
 };
 
 class FindNamedClassConsumer : public clang::ASTConsumer {
 public:
-  explicit FindNamedClassConsumer(ASTContext *Context)
-    : Visitor(Context) {}
+  explicit FindNamedClassConsumer(ASTContext *Context) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+    auto *TUD = Context.getTranslationUnitDecl();
+    llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
+    TUD->dump();
+
+    // call different visitors
+    llvm::errs() << "\n--- FunctionDeclVisitor ---\n";
+    FunctionDeclVisitor(&Context).TraverseDecl(TUD);
+
+    llvm::errs() << "\n--- VarVisitor ---\n";
+    VarVisitor(&Context).TraverseDecl(TUD);
   }
-private:
-  FindNamedClassVisitor Visitor;
 };
 
 class FindNamedClassAction : public clang::ASTFrontendAction {
 public:
   virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
     clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
-    llvm::outs() << "CreateASTConsumer\n";
     return std::make_unique<FindNamedClassConsumer>(&Compiler.getASTContext());
   }
 };
@@ -136,7 +240,7 @@ int main(int argc, const char **argv) {
 
   llvm::errs() << "All files:\n";
   for (auto &file : allFiles) {
-    llvm::outs() << "  " << file << "\n";
+    llvm::errs() << "  " << file << "\n";
   }
 
   ClangTool Tool(*cb, allFiles);
