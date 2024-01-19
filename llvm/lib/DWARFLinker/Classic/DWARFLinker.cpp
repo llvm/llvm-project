@@ -2240,14 +2240,20 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
     } break;
     case AccelTableKind::DebugNames: {
       for (const auto &Namespace : Unit.getNamespaces())
-        DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
-                           Namespace.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Namespace.Name, Namespace.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
+            Namespace.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubname : Unit.getPubnames())
-        DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
-                           Pubname.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubname.Name, Pubname.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
+            Pubname.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubtype : Unit.getPubtypes())
-        DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
-                           Pubtype.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubtype.Name, Pubtype.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
+            Pubtype.Die->getTag(), Unit.getUniqueID());
     } break;
     }
   }
