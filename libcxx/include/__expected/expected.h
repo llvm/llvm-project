@@ -1371,17 +1371,19 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr ~expected() = default;
 
 private:
-  // precondition: has_value()
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr void __reinit_expected(unexpect_t, _Args&&... __args) {
+    _LIBCPP_ASSERT_INTERNAL(this->__has_val(), "__reinit_expected(unexpect_t, ...) needs value to be set");
+
     this->__destroy();
     auto __trans = std::__make_exception_guard([&] { this->__construct(in_place); });
     this->__construct(unexpect, std::forward<_Args>(__args)...);
     __trans.__complete();
   }
 
-  // precondition: !has_value()
   _LIBCPP_HIDE_FROM_ABI constexpr void __reinit_expected(in_place_t) {
+    _LIBCPP_ASSERT_INTERNAL(!this->__has_val(), "__reinit_expected(in_place_t, ...) needs value to be unset");
+
     this->__destroy();
     this->__construct(in_place);
   }
