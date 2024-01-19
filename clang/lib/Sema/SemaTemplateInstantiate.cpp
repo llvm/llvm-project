@@ -1203,6 +1203,9 @@ namespace {
     // Whether to evaluate the C++20 constraints or simply substitute into them.
     bool EvaluateConstraints = true;
 
+    // Whether we are in the middle of transforming a lambda expression.
+    bool TransformingLambda = false;
+
   public:
     typedef TreeTransform<TemplateInstantiator> inherited;
 
@@ -1454,7 +1457,7 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
-
+      TransformingLambda = true;
       ExprResult Result = inherited::TransformLambdaExpr(E);
       if (Result.isInvalid())
         return Result;
@@ -2178,10 +2181,16 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                  CXXRecordDecl *ThisContext,
                                  Qualifiers ThisTypeQuals,
                                  Fn TransformExceptionSpec) {
-  // We need a local instantiation scope for this function prototype.
-  LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-  return inherited::TransformFunctionProtoType(
-      TLB, TL, ThisContext, ThisTypeQuals, TransformExceptionSpec);
+  if (TransformingLambda) {
+    TransformingLambda = false;
+    return inherited::TransformFunctionProtoType(
+        TLB, TL, ThisContext, ThisTypeQuals, TransformExceptionSpec);
+  } else {
+    // We need a local instantiation scope for this function prototype.
+    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
+    return inherited::TransformFunctionProtoType(
+        TLB, TL, ThisContext, ThisTypeQuals, TransformExceptionSpec);
+  }
 }
 
 ParmVarDecl *TemplateInstantiator::TransformFunctionTypeParam(
