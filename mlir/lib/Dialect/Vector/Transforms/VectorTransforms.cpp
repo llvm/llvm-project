@@ -1177,7 +1177,7 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
     int dim = vectorType.getRank() - i - 1;
     if (srcStrides[dim + rankDiff] != 1 ||
         srcType.getDimSize(dim + rankDiff) != 1 ||
-        vectorType.getDimSize(dim) == 1)
+        vectorType.getDimSize(dim) != 1)
       break;
     result++;
   }
