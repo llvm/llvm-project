@@ -175,8 +175,7 @@ GetFileForModule(const ModuleSpec &module_spec,
   Log *log = GetLog(LLDBLog::Symbols);
   auto err_message = llvm::toString(result.takeError());
   LLDB_LOGV(log,
-            "[Debuginfod] Failed to download symbol artifact {0} "
-            "with error {1}",
+            "Debuginfod failed to download symbol artifact {0} with error {1}",
             url_path, err_message);
   return {};
 }
