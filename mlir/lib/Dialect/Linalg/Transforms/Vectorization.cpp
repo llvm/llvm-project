@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -1454,7 +1455,73 @@ static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp) {
   return applyPermutation(destShape, invertPermutationVector(perm));
 }
 
-///
+/// Create a masked TransferReadOp from `source` with shape `readShape`.
+static vector::MaskOp createMaskedTransferRead(OpBuilder &builder, Location loc,
+                                               Value source,
+                                               ArrayRef<int64_t> readShape,
+                                               Value padValue) {
+  auto maskType = VectorType::get(readShape, builder.getI1Type());
+  auto vectorType = VectorType::get(readShape, padValue.getType());
+  SmallVector<OpFoldResult> mixedSourceDims =
+      tensor::getMixedSizes(builder, loc, source);
+  Value mask =
+      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  int64_t readRank = readShape.size();
+  auto transferReadOp = builder.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/source,
+      /*indices=*/SmallVector<Value>(readRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(readRank, true));
+  return cast<vector::MaskOp>(
+      mlir::vector::maskOperation(builder, transferReadOp, mask));
+}
+
+/// Given an input, the mixed destSizes, and the vector sizes for vectorization,
+/// create an empty destination tensor and create a TransferWriteOp from the
+/// input to the empty tensor. If the destination shape is not the same as the
+/// inputVectorSizes for the first rank(inputVectorSizes) dims, then create a
+/// mask for the write.
+static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                           Value input,
+                                           SmallVector<OpFoldResult> destSizes,
+                                           ArrayRef<int64_t> inputVectorSizes) {
+  auto inputType = cast<VectorType>(input.getType());
+  Value dest = builder.create<tensor::EmptyOp>(loc, destSizes,
+                                               inputType.getElementType());
+  int64_t rank = cast<ShapedType>(dest.getType()).getRank();
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Operation *write = builder.create<vector::TransferWriteOp>(
+      loc,
+      /*vector=*/input,
+      /*source=*/dest,
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  auto destShape = cast<ShapedType>(dest.getType()).getShape();
+  bool needMaskForWrite =
+      llvm::any_of(llvm::zip(inputVectorSizes, destShape),
+                   [](auto it) { return std::get<0>(it) != std::get<1>(it); });
+  if (needMaskForWrite) {
+    SmallVector<int64_t> writeMaskShape;
+    writeMaskShape.append(inputVectorSizes.begin(), inputVectorSizes.end());
+    writeMaskShape.append(destShape.begin() + inputVectorSizes.size(),
+                          destShape.end());
+    auto writeMaskType = VectorType::get(writeMaskShape, builder.getI1Type());
+    Value maskForWrite =
+        builder.create<vector::CreateMaskOp>(loc, writeMaskType, destSizes);
+    write = mlir::vector::maskOperation(builder, write, maskForWrite);
+  }
+  return write;
+}
+
+/// Vectorize tensor::PackOp with (1) static innerTiles and (2) constant
+/// padding value into
+/// transfer_write_in_bounds(
+///     transpose(
+///         shape_cast(
+///             transfer_read_masked(pack_source, pad_value))))
 static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
@@ -1468,48 +1535,41 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
     padValue = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
   }
-  int64_t inputRank = inputVectorSizes.size();
-  int64_t outputRank = packOp.getDestRank();
-  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
-
   ReifiedRankedShapedTypeDims reifiedReturnShapes;
   LogicalResult status =
       cast<ReifyRankedShapedTypeOpInterface>(packOp.getOperation())
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
-                                                  padValue.getType());
-  SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(rewriter, loc, packOp.getSource());
-  Value mask =
-      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/packOp.getSource(),
-      /*indices=*/SmallVector<Value>(inputRank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(inputRank, true));
-  auto maskedOp = cast<vector::MaskOp>(
-      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
-  // ShapeCast
-  auto tiledPackShape = getTiledPackShape(packOp);
-  auto tiledPackType =
-      VectorType::get(tiledPackShape, packOp.getDestType().getElementType());
+
+  // Create masked TransferReadOp
+  SmallVector<int64_t> inputShape(inputVectorSizes);
+  auto innerTiles = packOp.getStaticInnerTiles();
+  auto innerDimsPos = packOp.getInnerDimsPos();
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+  if (!outerDimsPerm.empty())
+    applyPermutationToVector(inputShape,
+                             invertPermutationVector(outerDimsPerm));
+  for (auto [idx, size] : enumerate(innerTiles))
+    inputShape[innerDimsPos[idx]] *= size;
+  auto maskedOp = createMaskedTransferRead(rewriter, loc, packOp.getSource(),
+                                           inputShape, padValue);
+
+  // Create ShapeCastOp
+  auto tiledPackType = VectorType::get(getTiledPackShape(packOp),
+                                       packOp.getDestType().getElementType());
   auto shapeCastOp = rewriter.create<vector::ShapeCastOp>(
       loc, tiledPackType, maskedOp->getResult(0));
+
+  // Create TransposeOp
   auto tiledShapeToPackedShapePerm = getTiledShapeToPackedShapePerm(packOp);
   auto transposeOp = rewriter.create<vector::TransposeOp>(
-      loc, shapeCastOp->getResult(0), tiledShapeToPackedShapePerm);
-  Operation *write = rewriter.create<vector::TransferWriteOp>(
-      loc,
-      /*vector=*/transposeOp->getResult(0),
-      /*source=*/emptyOp,
-      /*indices=*/SmallVector<Value>(outputRank, zero),
-      /*inBounds=*/SmallVector<bool>(outputRank, true));
+      loc, shapeCastOp.getResult(), tiledShapeToPackedShapePerm);
+
+  // Create TransferWriteOp
+  Operation *write =
+      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(),
+                               reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1523,9 +1583,6 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
                        SmallVectorImpl<Value> &newResults) {
   auto padValue = padOp.getConstantPaddingValue();
   Location loc = padOp.getLoc();
-  int64_t rank = inputVectorSizes.size();
-  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
 
   // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
   OpBuilder::InsertionGuard g(rewriter);
@@ -1537,36 +1594,11 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
-                                                  padValue.getType());
-  SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(rewriter, loc, padOp.getSource());
-  Value mask =
-      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/padOp.getSource(),
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  auto maskedOp = cast<vector::MaskOp>(
-      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
-  Operation *write = rewriter.create<vector::TransferWriteOp>(
-      loc,
-      /*vector=*/maskedOp->getResult(0),
-      /*source=*/emptyOp,
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  bool needMaskForWrite = llvm::any_of(
-      llvm::zip_equal(inputVectorSizes, padOp.getResultType().getShape()),
-      [](auto it) { return std::get<0>(it) != std::get<1>(it); });
-  if (needMaskForWrite) {
-    Value maskForWrite = rewriter.create<vector::CreateMaskOp>(
-        loc, maskType, reifiedReturnShapes[0]);
-    write = mlir::vector::maskOperation(rewriter, write, maskForWrite);
-  }
+  auto maskedOp = createMaskedTransferRead(rewriter, loc, padOp.getSource(),
+                                           inputVectorSizes, padValue);
+  Operation *write =
+      createWriteOrMaskedWrite(rewriter, loc, maskedOp->getResult(0),
+                               reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1710,18 +1742,19 @@ static LogicalResult
 vectorizePackOpPrecondition(tensor::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = packOp.getPaddingValue();
-  if (padValue && getConstantIntValue(padValue) != std::nullopt) {
+  if (padValue && !getConstantIntValue(padValue).has_value()) {
     LDBG("pad value is not constant: " << packOp << "\n");
     return failure();
   }
 
-  ArrayRef<int64_t> resultTensorShape = packOp.getSourceType().getShape();
-  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+  ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
+  if (failed(isValidMaskedInputVector(
+          resultTensorShape.take_front(packOp.getSourceRank()),
+          inputVectorSizes)))
     return failure();
 
   if (llvm::any_of(packOp.getInnerTiles(), [](OpFoldResult v) {
-        std::optional<int64_t> res = getConstantIntValue(v);
-        return !res.has_value();
+        return !getConstantIntValue(v).has_value();
       })) {
     LDBG("inner_tiles must be constant: " << packOp << "\n");
     return failure();
