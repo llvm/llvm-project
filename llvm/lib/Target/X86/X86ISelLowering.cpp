@@ -36375,9 +36375,15 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
 #define GET_EGPR_IF_ENABLED(OPC) (Subtarget.hasEGPR() ? OPC##_EVEX : OPC)
-    case X86::PTILELOADD:   Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);   break;
-    case X86::PTILELOADDT1: Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1); break;
-    case X86::PTILESTORED:  Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);  break;
+    case X86::PTILELOADD:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTILESTORED:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
+      break;
 #undef GET_EGPR_IF_ENABLED
     }
 
