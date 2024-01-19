@@ -175,6 +175,8 @@ std::string ToString(DeathCause cause) {
   case DeathCause::Unknown:
     return "<invalid cause (unknown)>";
   }
+
+  assert(false && "Unreachable");
 }
 
 TEST_NORETURN void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
@@ -204,6 +206,8 @@ std::string ToString(Outcome outcome) {
   case Outcome::InvalidCause:
     return "invalid death cause";
   }
+
+  assert(false && "Unreachable");
 }
 
 class DeathTestResult {
