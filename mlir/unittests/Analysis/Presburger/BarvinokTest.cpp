@@ -202,61 +202,28 @@ TEST(BarvinokTest, computeNumTerms) {
 
   Fraction m = 0, n = 0, p = 0, mn = 0, np = 0, pm = 0, mnp = 0;
 
-  for (unsigned i = 0, e = numPoints.getAffine().size(); i < e; i++) {
-    if (numPoints.getAffine()[i].size() == 1u) {
-      if (numPoints.getAffine()[i][0][0] == 1)
-        m += numPoints.getCoefficients()[i];
-      if (numPoints.getAffine()[i][0][1] == 1)
-        n += numPoints.getCoefficients()[i];
-      if (numPoints.getAffine()[i][0][2] == 1)
-        p += numPoints.getCoefficients()[i];
-    } else if (numPoints.getAffine()[i].size() == 2u) {
-      if ((numPoints.getAffine()[i][0][0] == 1 &&
-           numPoints.getAffine()[i][1][1] == 1) ||
-          (numPoints.getAffine()[i][0][1] == 1 &&
-           numPoints.getAffine()[i][1][0] == 1))
-        mn += numPoints.getCoefficients()[i];
-      if ((numPoints.getAffine()[i][0][1] == 1 &&
-           numPoints.getAffine()[i][1][2] == 1) ||
-          (numPoints.getAffine()[i][0][2] == 1 &&
-           numPoints.getAffine()[i][1][1] == 1))
-        np += numPoints.getCoefficients()[i];
-      if ((numPoints.getAffine()[i][0][2] == 1 &&
-           numPoints.getAffine()[i][1][0] == 1) ||
-          (numPoints.getAffine()[i][0][0] == 1 &&
-           numPoints.getAffine()[i][1][2] == 1))
-        pm += numPoints.getCoefficients()[i];
-    } else if (numPoints.getAffine()[i].size() == 3u) {
-      if ((numPoints.getAffine()[i][0][0] == 1 &&
-           numPoints.getAffine()[i][1][1] == 1 &&
-           numPoints.getAffine()[i][2][2] == 1) ||
-          (numPoints.getAffine()[i][0][0] == 1 &&
-           numPoints.getAffine()[i][1][2] == 1 &&
-           numPoints.getAffine()[i][2][1] == 1) ||
-          (numPoints.getAffine()[i][0][1] == 1 &&
-           numPoints.getAffine()[i][1][0] == 1 &&
-           numPoints.getAffine()[i][2][2] == 1) ||
-          (numPoints.getAffine()[i][0][1] == 1 &&
-           numPoints.getAffine()[i][1][2] == 1 &&
-           numPoints.getAffine()[i][2][0] == 1) ||
-          (numPoints.getAffine()[i][0][2] == 1 &&
-           numPoints.getAffine()[i][1][1] == 1 &&
-           numPoints.getAffine()[i][2][0] == 1) ||
-          (numPoints.getAffine()[i][0][2] == 1 &&
-           numPoints.getAffine()[i][1][0] == 1 &&
-           numPoints.getAffine()[i][2][1] == 1))
-        mnp += numPoints.getCoefficients()[i];
+  // We store the coefficients of M, N and P in this array.
+  Fraction count[2][2][2];
+  unsigned mIndex, nIndex, pIndex;
+  for (unsigned i = 0, e = numPoints.getCoefficients().size(); i < e; i++) {
+    mIndex = nIndex = pIndex = 0;
+    for (const SmallVector<Fraction> &aff : numPoints.getAffine()[i]) {
+      if (aff[0] == 1)
+        mIndex = 1;
+      if (aff[1] == 1)
+        nIndex = 1;
+      if (aff[2] == 1)
+        pIndex = 1;
+      EXPECT_EQ(aff[3], 0);
     }
+    count[mIndex][nIndex][pIndex] += numPoints.getCoefficients()[i];
   }
 
   // We expect the answer to be
   // (⌊M⌋ + 1)(⌊N⌋ + 1)(⌊P⌋ + 1) =
   // ⌊M⌋⌊N⌋⌊P⌋ + ⌊M⌋⌊N⌋ + ⌊N⌋⌊P⌋ + ⌊M⌋⌊P⌋ + ⌊M⌋ + ⌊N⌋ + ⌊P⌋ + 1.
-  EXPECT_EQ(mn, 1);
-  EXPECT_EQ(np, 1);
-  EXPECT_EQ(pm, 1);
-  EXPECT_EQ(m, 1);
-  EXPECT_EQ(n, 1);
-  EXPECT_EQ(p, 1);
-  EXPECT_EQ(numPoints.getConstantTerm(), 1);
+  for (unsigned i = 0; i < 2; i++)
+    for (unsigned j = 0; j < 2; j++)
+      for (unsigned k = 0; k < 2; k++)
+        EXPECT_EQ(count[i][j][k], 1);
 }
