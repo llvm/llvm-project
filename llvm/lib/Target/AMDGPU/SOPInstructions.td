@@ -1726,6 +1726,11 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
   let Uses = [MODE];
 }
 }
+
+def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
+  let SubtargetPredicate = isGFX12_10Plus;
+}
 } // End hasSideEffects
 
 let SubtargetPredicate = HasVGPRIndexMode in {
@@ -2712,7 +2717,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
@@ -2751,6 +2756,7 @@ defm S_BARRIER                    : SOPP_Real_32_gfx11_gfx12<0x03d>;
 //===----------------------------------------------------------------------===//
 
 defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
+defm S_MONITOR_SLEEP              : SOPP_Real_32_gfx12<0x004>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

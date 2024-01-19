@@ -3221,6 +3221,11 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
+def int_amdgcn_s_monitor_sleep :
+  ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                            IntrHasSideEffects]>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
