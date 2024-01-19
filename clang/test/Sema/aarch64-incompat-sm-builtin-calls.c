@@ -105,5 +105,6 @@ svint8_t missing_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streami
 
 __arm_new("za")
 svint8_t new_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streaming {
-    return svread_hor_za8_s8_m(zd, pg, 0, slice_base);  // no warning
+    // expected-no-warning
+    return svread_hor_za8_s8_m(zd, pg, 0, slice_base);
 }
