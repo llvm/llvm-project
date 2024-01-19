@@ -1267,10 +1267,11 @@ struct NVGPUWarpgroupMmaOpLowering
     }
 
     /// Generates WGMMATypesAttr from MLIR Type
-    NVVM::WGMMATypesAttr generateWgmmaType(Type type) const {
-      auto getWgmmaType = [](Type elemType) {
+    NVVM::WGMMATypesAttr generateWgmmaType(Type type,
+                                           bool useF32 = false) const {
+      auto getWgmmaType = [=](Type elemType) {
         if (elemType.isF32() || elemType.isTF32())
-          return NVVM::WGMMATypes::tf32;
+          return useF32 ? NVVM::WGMMATypes::f32 : NVVM::WGMMATypes::tf32;
         if (elemType.isF16())
           return NVVM::WGMMATypes::f16;
         if (elemType.isBF16())
@@ -1285,6 +1286,8 @@ struct NVGPUWarpgroupMmaOpLowering
           return NVVM::WGMMATypes::s8;
         if (elemType.isUnsignedInteger(8))
           return NVVM::WGMMATypes::u8;
+        if (elemType.isInteger(32))
+          return NVVM::WGMMATypes::s32;
         llvm_unreachable("unsupported type");
       };
       return NVVM::WGMMATypesAttr::get(op->getContext(), getWgmmaType(type));
@@ -1397,6 +1400,9 @@ struct NVGPUWarpgroupMmaOpLowering
       Type elemB = op.getDescriptorB().getType().getTensor().getElementType();
       NVVM::WGMMATypesAttr itypeB = generateWgmmaType(elemB);
 
+      Type elemD = op.getMatrixC().getType().getFragmented().getElementType();
+      NVVM::WGMMATypesAttr itypeD = generateWgmmaType(elemD, true);
+
       NVVM::MMAShapeAttr shape = generateWgmmaShape();
       NVVM::WGMMAScaleOutAttr scaleOut = generateScaleOut();
       NVVM::WGMMAScaleInAttr scaleIn = generateScaleIn();
@@ -1408,7 +1414,8 @@ struct NVGPUWarpgroupMmaOpLowering
 
       return b.create<NVVM::WgmmaMmaAsyncOp>(
           matrixC.getType(), matrixC, descriptorA, descriptorB, shape, itypeA,
-          itypeB, scaleOut, scaleIn, scaleIn, layoutA, layoutB, overflow);
+          itypeB, itypeD, scaleOut, scaleIn, scaleIn, layoutA, layoutB,
+          overflow);
     }
 
     /// Generates multiple wgmma instructions to complete the given GEMM shape
