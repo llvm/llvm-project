@@ -36,12 +36,23 @@
 // RUN:     -fvisibility=hidden \
 // RUN:     -fapply-global-visibility-to-externs \
 // RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -fvisibility-dllexport=protected \
+// RUN:     -fvisibility-dllexport=keep \
 // RUN:     -fvisibility-nodllstorageclass=keep \
-// RUN:     -fvisibility-externs-dllimport=default \
+// RUN:     -fvisibility-externs-dllimport=keep \
 // RUN:     -fvisibility-externs-nodllstorageclass=keep \
-// RUN:     -x c++  %s -S -emit-llvm -o - | tee %t.log | \
+// RUN:     -x c++  %s -S -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=ALL_KEEP
+
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
+// RUN:     -fvisibility=hidden \
+// RUN:     -fapply-global-visibility-to-externs \
+// RUN:     -fvisibility-dllexport=protected \
+// RUN:     -fvisibility-nodllstorageclass=protected \
+// RUN:     -fvisibility-externs-dllimport=protected \
+// RUN:     -fvisibility-externs-nodllstorageclass=protected \
+// RUN:     -x c++  %s -S -emit-llvm -o - | \
+// RUN:   FileCheck %s --check-prefixes=ALL_KEEP
+
 // Local
 static void l() {}
 void use_locals(){l();}
@@ -60,7 +71,7 @@ void __declspec(dllexport) exported_f() {}
 // ALL_DEFAULT-DAG: define void @_Z1fv()
 // ALL_DEFAULT-DAG: define void @_Z10exported_fv()
 // ALL_KEEP-DAG: define hidden void @_Z1fv()
-// ALL_KEEP-DAG: define protected void @_Z10exported_fv()
+// ALL_KEEP-DAG: define hidden void @_Z10exported_fv()
 
 // Variable
 int d = 123;
@@ -72,7 +83,7 @@ __declspec(dllexport) int exported_d = 123;
 // ALL_DEFAULT-DAG: @d = global
 // ALL_DEFAULT-DAG: @exported_d = global
 // ALL_KEEP-DAG: @d = hidden global
-// ALL_KEEP-DAG: @exported_d = protected global
+// ALL_KEEP-DAG: @exported_d = hidden global
 
 // Alias
 extern "C" void aliased() {}
@@ -85,7 +96,7 @@ void __declspec(dllexport) a_exported() __attribute__((alias("aliased")));
 // ALL_DEFAULT-DAG: @_Z1av = alias
 // ALL_DEFAULT-DAG: @_Z10a_exportedv = alias
 // ALL_KEEP-DAG: @_Z1av = hidden alias
-// ALL_KEEP-DAG: @_Z10a_exportedv = protected alias
+// ALL_KEEP-DAG: @_Z10a_exportedv = dso_local alias
 
 // Declaration
 extern void e();
