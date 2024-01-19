@@ -25,6 +25,10 @@ void usages() {
   __attribute__((opencl_local)) int *LOC;
   // CHECK-DAG: [[NoAS:%[a-zA-Z0-9]+]] = alloca ptr addrspace(4)
   // CHECK-DAG: [[NoAS]].ascast = addrspacecast ptr [[NoAS]] to ptr addrspace(4)
+  LOC = nullptr;
+  // CHECK-DAG: store ptr addrspace(3) null, ptr addrspace(4) [[LOC]].ascast, align 8
+  GLOB = nullptr;
+  // CHECK-DAG: store ptr addrspace(1) null, ptr addrspace(4) [[GLOB]].ascast, align 8
   int *NoAS;
   // CHECK-DAG: [[PRIV:%[a-zA-Z0-9]+]] = alloca ptr
   // CHECK-DAG: [[PRIV]].ascast = addrspacecast ptr [[PRIV]] to ptr addrspace(4)
