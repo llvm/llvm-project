@@ -21341,26 +21341,29 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
       ISD::BITCAST, DL, WideVT.getSizeInBits() == 64 ? MVT::v8i8 : MVT::v16i8,
       WideTrunc);
 
+  unsigned IdxScale = WideVT.getScalarSizeInBits() / 8;
+  Align Align = ST->getOriginalAlign();
   SDValue Chain = ST->getChain();
   SDValue E2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
-                           DAG.getConstant(8, DL, MVT::i64));
-
-  SDValue Ptr2 =
-      DAG.getMemBasePlusOffset(ST->getBasePtr(), TypeSize::getFixed(2), DL);
-  Chain = DAG.getStore(Chain, DL, E2, Ptr2, ST->getPointerInfo(),
-                       ST->getOriginalAlign());
+                           DAG.getConstant(2 * IdxScale, DL, MVT::i64));
+  TypeSize Offset2 = TypeSize::getFixed(2);
+  SDValue Ptr2 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset2, DL);
+  Chain = DAG.getStore(Chain, DL, E2, Ptr2,
+                       ST->getPointerInfo().getWithOffset(Offset2),
+                       commonAlignment(Align, Offset2));
 
   SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
-                           DAG.getConstant(4, DL, MVT::i64));
+                           DAG.getConstant(1 * IdxScale, DL, MVT::i64));
+  TypeSize Offset1 = TypeSize::getFixed(1);
+  SDValue Ptr1 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset1, DL);
+  Chain = DAG.getStore(Chain, DL, E1, Ptr1,
+                       ST->getPointerInfo().getWithOffset(Offset2),
+                       commonAlignment(Align, Offset1));
 
-  SDValue Ptr1 =
-      DAG.getMemBasePlusOffset(ST->getBasePtr(), TypeSize::getFixed(1), DL);
-  Chain = DAG.getStore(Chain, DL, E1, Ptr1, ST->getPointerInfo(),
-                       ST->getOriginalAlign());
   SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
                            DAG.getConstant(0, DL, MVT::i64));
   Chain = DAG.getStore(Chain, DL, E0, ST->getBasePtr(), ST->getPointerInfo(),
-                       ST->getOriginalAlign());
+                       Align);
 
   return Chain;
 }

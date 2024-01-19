@@ -154,11 +154,14 @@ define <3 x i32> @load_v3i32(ptr %src) {
 define void @store_trunc_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-LABEL: store_trunc_from_64bits:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add x8, x0, #4
-; CHECK-NEXT:    ld1r.4h { v0 }, [x8]
 ; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    add x9, x0, #4
+; CHECK-NEXT:    ld1r.4h { v0 }, [x9]
+; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    strb w8, [x1]
 ; CHECK-NEXT:    add x8, x1, #1
+; CHECK-NEXT:    st1.b { v1 }[2], [x8]
+; CHECK-NEXT:    add x8, x1, #2
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    ret
 ;
