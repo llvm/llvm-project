@@ -119,7 +119,7 @@ def expectedFailureIf(condition, bugnumber=None):
             raise Exception("Decorator can only be used to decorate a test method")
 
         if condition:
-            return expectedFailure(func)
+            return unittest2.expectedFailure(func)
         return func
 
     if callable(bugnumber):
