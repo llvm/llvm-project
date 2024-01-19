@@ -223,7 +223,7 @@ struct CastAwayTransferReadLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
-    // Not supported masked op yet.
+    // TODO(#78787): Not supported masked op yet.
     if (cast<MaskableOpInterface>(read.getOperation()).isMasked())
       return failure();
     // TODO: support 0-d corner case.
@@ -277,7 +277,7 @@ struct CastAwayTransferWriteLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
-    // Not supported masked op yet.
+    // TODO(#78787): Not supported masked op yet.
     if (cast<MaskableOpInterface>(write.getOperation()).isMasked())
       return failure();
     // TODO: support 0-d corner case.
@@ -331,7 +331,7 @@ struct CastAwayTransferWriteLeadingOneDim
 LogicalResult
 mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                                RewriterBase &rewriter) {
-  // Not supported masked op yet.
+  // TODO(#78787): Not supported masked op yet.
   if (cast<MaskableOpInterface>(contractOp.getOperation()).isMasked())
     return failure();
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
