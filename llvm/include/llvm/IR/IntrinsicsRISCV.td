@@ -122,7 +122,6 @@ let TargetPrefix = "riscv" in {
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
-
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
