@@ -600,10 +600,11 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
       // Some vectorized function variants may also take a scalar argument,
       // e.g. linear parameters for pointers.
       Value *Arg;
-      if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
-          (UseIntrinsic &&
-           isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index())))
+      if (UseIntrinsic &&
+          isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
         Arg = State.get(I.value(), VPIteration(0, 0));
+      else if (VFTy && !VFTy->getParamType(I.index())->isVectorTy())
+        Arg = State.get(I.value(), VPIteration(Part, 0));
       else
         Arg = State.get(I.value(), Part);
       if (UseIntrinsic &&
