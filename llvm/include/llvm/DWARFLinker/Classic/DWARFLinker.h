@@ -42,7 +42,8 @@ public:
   virtual ~DwarfEmitter() = default;
 
   /// Emit section named SecName with data SecData.
-  virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
+  virtual void emitSectionContents(StringRef SecData,
+                                   DebugSectionKind SecKind) = 0;
 
   /// Emit the abbreviation table \p Abbrevs to the .debug_abbrev section.
   virtual void
@@ -188,17 +189,6 @@ public:
 
   /// Dump the file to the disk.
   virtual void finish() = 0;
-
-  /// Emit the swift_ast section stored in \p Buffer.
-  virtual void emitSwiftAST(StringRef Buffer) = 0;
-
-  /// Emit the swift reflection section stored in \p Buffer.
-  virtual void emitSwiftReflectionSection(
-      llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t Size) = 0;
-
-  /// Returns underlying AsmPrinter.
-  virtual AsmPrinter &getAsmPrinter() const = 0;
 };
 
 class DwarfStreamer;
@@ -232,10 +222,10 @@ public:
                                          StringsTranslator);
   }
 
-  Error createEmitter(const Triple &TheTriple, OutputFileType FileType,
-                      raw_pwrite_stream &OutFile);
-
-  DwarfEmitter *getEmitter();
+  /// Set output DWARF emitter.
+  void setOutputDWARFEmitter(DwarfEmitter *Emitter) {
+    TheDwarfEmitter = Emitter;
+  }
 
   /// Add object file to be linked. Pre-load compile unit die. Call
   /// \p OnCUDieLoaded for each compile unit die. If specified \p File
@@ -762,7 +752,7 @@ private:
   BumpPtrAllocator DIEAlloc;
   /// @}
 
-  std::unique_ptr<DwarfStreamer> TheDwarfEmitter;
+  DwarfEmitter *TheDwarfEmitter = nullptr;
   std::vector<LinkContext> ObjectContexts;
 
   /// The CIEs that have been emitted in the output section. The actual CIE
