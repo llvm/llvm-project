@@ -6,27 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that `_LIBCPP_ASSERT` and `_LIBCPP_ASSUME` are each a single expression.
-// This is useful so we can use them  in places that require an expression, such as
-// in a constructor initializer list.
+// Make sure that `_LIBCPP_ASSERT` and `_LIBCPP_ASSUME` are each a single expression, and that it still holds when an
+// assertion is wrapped in  the `_LIBCPP_REDUNDANT_ASSERTION` macro. This is useful so we can use them in places that
+// require an expression, such as in a constructor initializer list.
 
 #include <__assert>
 #include <cassert>
 
-void f() {
+void test_assert() {
   int i = (_LIBCPP_ASSERT(true, "message"), 3);
   assert(i == 3);
   return _LIBCPP_ASSERT(true, "message");
 }
 
-void g() {
+void test_assume() {
   int i = (_LIBCPP_ASSUME(true), 3);
   assert(i == 3);
   return _LIBCPP_ASSUME(true);
 }
 
+void test_redundant() {
+  int i = (_LIBCPP_REDUNDANT_ASSERTION(_LIBCPP_ASSERT(true, "message")), 3);
+  assert(i == 3);
+  return _LIBCPP_REDUNDANT_ASSERTION(_LIBCPP_ASSERT(true, "message"));
+}
+
 int main(int, char**) {
-  f();
-  g();
+  test_assert();
+  test_assume();
+  test_redundant();
+
   return 0;
 }
