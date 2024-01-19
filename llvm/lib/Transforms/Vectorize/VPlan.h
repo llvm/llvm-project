@@ -863,7 +863,8 @@ public:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenMemoryInstructionSC:
-      // TODO: Widened stores don't define a value, but widened loads do. Split the recipes to be able to make widened loads VPSingleDefRecipes.
+      // TODO: Widened stores don't define a value, but widened loads do. Split
+      // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
     }
     llvm_unreachable("Unhandled VPDefID");
