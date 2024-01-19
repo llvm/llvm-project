@@ -55,6 +55,7 @@ intermediate LLVM representation.
    ORCv2
    OpaquePointers
    JITLink
+   Mdl/index
    NewPassManager
    NVPTXUsage
    Phabricator
