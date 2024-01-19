@@ -8756,6 +8756,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {
           {MONoClobber, "amdgpu-noclobber"},
+          {MOLastUse, "amdgpu-last-use"},
       };
 
   return ArrayRef(TargetFlags);
