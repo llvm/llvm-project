@@ -2725,8 +2725,8 @@ RenderComplexRangeOption(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Fortran:
     ComplexRangeStr += "fortran";
     break;
-  case LangOptions::ComplexRangeKind::CX_None:
-    ComplexRangeStr = "";
+  default:
+    assert("Unexpected range option");
   }
   return ComplexRangeStr;
 }
