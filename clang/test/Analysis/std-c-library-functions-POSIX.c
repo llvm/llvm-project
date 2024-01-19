@@ -29,8 +29,6 @@
 // CHECK: Loaded summary for: char *fgets(char *restrict s, int n, FILE *restrict stream)
 // CHECK: Loaded summary for: int fputs(const char *restrict s, FILE *restrict stream)
 // CHECK: Loaded summary for: int fseek(FILE *stream, long offset, int whence)
-// CHECK: Loaded summary for: int fseeko(FILE *stream, off_t offset, int whence)
-// CHECK: Loaded summary for: off_t ftello(FILE *stream)
 // CHECK: Loaded summary for: int fgetpos(FILE *restrict stream, fpos_t *restrict pos)
 // CHECK: Loaded summary for: int fsetpos(FILE *stream, const fpos_t *pos)
 // CHECK: Loaded summary for: int fflush(FILE *stream)
