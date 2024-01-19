@@ -86,7 +86,6 @@ int main(int, char**) {
     // Success -- `std::terminate`.
     TEST_DEATH_TEST(Outcome::Success, DeathCause::StdTerminate, std::terminate());
 
-    (void)fail_assert;
     // Success -- trapping.
     TEST_DEATH_TEST(Outcome::Success, DeathCause::Trap, __builtin_trap());
 

@@ -490,19 +490,20 @@ Overriding the default assertion handler
 When the library wants to terminate due to a hardening assertion failure, the
 program is aborted by invoking a trap instruction (or in debug mode, by
 a special verbose termination function that prints an error message and calls
-``std::abort()``). However, vendors can also override that mechanism at CMake
-configuration time.
+``std::abort()``). This is done to minimize the code size impact of enabling
+hardening in the library. However, vendors can also override that mechanism at
+CMake configuration time.
 
-When a hardening assertion fails, the library invokes the
-``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide a header that contains
-a custom definition of this macro and specify the path to the header via the
-``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided, this header will
-be included by the library and replace the default implementation. The header
-must not include any standard library headers (directly or transitively) because
-doing so will almost always create a circular dependency. The
-``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single parameter that
-contains an error message explaining the hardening failure and some details
-about the source location that triggered it.
+Under the hood, a hardening assertion will invoke the
+``_LIBCPP_ASSERTION_HANDLER`` macro upon failure. A vendor may provide a header
+that contains a custom definition of this macro and specify the path to the
+header via the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided,
+this header will be included by the library and replace the default
+implementation. The header must not include any standard library headers
+(directly or transitively) because doing so will almost always create a circular
+dependency. The ``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single
+parameter that contains an error message explaining the hardening failure and
+some details about the source location that triggered it.
 
 When a hardening assertion fails, it means that the program is about to invoke
 library undefined behavior. For this reason, the custom assertion handler is

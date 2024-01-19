@@ -145,7 +145,7 @@ Deprecations and Removals
 Upcoming Deprecations and Removals
 ----------------------------------
 
-- ``__libcpp_verbose_abort`` and the ability to override this function will be removed in an upcoming release.
+- The ability to override ``__libcpp_verbose_abort`` will be removed in an upcoming release.
 
 LLVM 19
 ~~~~~~~
