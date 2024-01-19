@@ -3442,19 +3442,17 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       MI.eraseFromParent();
       return;
     }
-    if (!Subtarget.hasVectorPrefetch()) {
-      Register PtrReg = MI.getOperand(0).getReg();
-      unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
-      if (PtrBank == AMDGPU::VGPRRegBankID) {
-        MI.eraseFromParent();
-        return;
-      }
-      unsigned AS = MRI.getType(PtrReg).getAddressSpace();
-      if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
-          AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
-        MI.eraseFromParent();
-        return;
-      }
+    Register PtrReg = MI.getOperand(0).getReg();
+    unsigned PtrBank = getRegBankID(PtrReg, MRI, AMDGPU::SGPRRegBankID);
+    if (PtrBank == AMDGPU::VGPRRegBankID) {
+      MI.eraseFromParent();
+      return;
+    }
+    unsigned AS = MRI.getType(PtrReg).getAddressSpace();
+    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+        AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+      MI.eraseFromParent();
+      return;
     }
     applyDefaultMapping(OpdMapper);
     return;
