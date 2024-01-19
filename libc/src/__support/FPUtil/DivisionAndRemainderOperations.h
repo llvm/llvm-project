@@ -78,7 +78,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     }
   }
 
-  NormalFloat<T> remainder(exp + normaly.exponent, mx, 0);
+  NormalFloat<T> remainder(Sign::POS, exp + normaly.exponent, mx);
 
   // Since NormalFloat to native type conversion is a truncation operation
   // currently, the remainder value in the native type is correct as is.
