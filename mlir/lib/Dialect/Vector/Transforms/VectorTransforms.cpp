@@ -1172,16 +1172,14 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   size_t result = 0;
   int rankDiff = srcType.getRank() - vectorType.getRank();
   for (int64_t i = 0, e = vectorType.getRank(); i < e; ++i) {
-    // Check that the inner dim size is 1 for both memref type and  vector
-    // slice. It can be folded only if they are 1 and the stride is 1.
+    // Check that the inner dim size is 1 for both memref type and vector slice.
+    // It can be folded only if they are 1 and the stride is 1.
     int dim = vectorType.getRank() - i - 1;
-    if (srcStrides[dim + rankDiff] == 1 &&
-        srcType.getDimSize(dim + rankDiff) == 1 &&
-        vectorType.getDimSize(dim) == 1) {
-      result++;
-    } else {
+    if (srcStrides[dim + rankDiff] != 1 ||
+        srcType.getDimSize(dim + rankDiff) != 1 ||
+        vectorType.getDimSize(dim) == 1)
       break;
-    }
+    result++;
   }
   return result;
 }
@@ -1344,17 +1342,17 @@ class DropInnerMostUnitDimsTransferWrite
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
                         targetType.getElementType());
 
-    auto loc = writeOp.getLoc();
     MemRefType resultMemrefType =
         getMemRefTypeWithDroppingInnerDims(rewriter, srcType, dimsToDrop);
     SmallVector<int64_t> offsets(srcType.getRank(), 0);
     SmallVector<int64_t> strides(srcType.getRank(), 1);
-
     ArrayAttr inBoundsAttr =
         writeOp.getInBounds()
             ? rewriter.getArrayAttr(
                   writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
             : ArrayAttr();
+
+    Location loc = writeOp.getLoc();
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
         loc, resultMemrefType, writeOp.getSource(), offsets, srcType.getShape(),
         strides);
