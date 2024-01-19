@@ -1148,8 +1148,8 @@ ValueRange NonEmptySubSectIterator::forward(OpBuilder &b, Location l) {
     //    offset = minCrd - size + 1;
     // }
     b.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    ValueRange loopArgs{C_IDX(-1), // nextMinCrd
-                        C_FALSE};  // isNotEnd
+    SmallVector<Value, 2> loopArgs{C_IDX(-1), // nextMinCrd
+                                   C_FALSE};  // isNotEnd
     auto loopNest = scf::buildLoopNest(
         b, l, c0, tupleCnt, c1, loopArgs,
         [this](OpBuilder &b, Location l, ValueRange ivs,
