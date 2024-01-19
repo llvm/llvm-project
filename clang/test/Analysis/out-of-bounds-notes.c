@@ -1,9 +1,7 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
-// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,alpha.security.taint,debug.ExprInspection -verify %s
+// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,alpha.security.taint -verify %s
 
 int array[10];
-
-void clang_analyzer_value(unsigned arg);
 
 int irrelevantAssumptions(int arg) {
   int a = array[arg];
