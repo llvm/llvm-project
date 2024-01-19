@@ -50,6 +50,9 @@ namespace mlir {
 // TODO: part_tensor need to have it's own namespace.
 namespace part_tensor {
 
+using llvm::ArrayRef;
+using std::unique_ptr;
+
 /**
  * Point in num-dims-dimensional-cartesian space.
  */
@@ -91,10 +94,6 @@ public:
 /// in a general manner.
 template <typename P = uint64_t, typename I = uint64_t, typename V = float>
 class PartTensorStorage : public PartTensorStorageBase {
-  template <typename T>
-  using ArrayRef = llvm::ArrayRef<T>;
-  template <typename T>
-  using unique_ptr = std::unique_ptr<T>;
 
 public:
   /// The called is resposible to keep spCOO alive for the lifetime of this
