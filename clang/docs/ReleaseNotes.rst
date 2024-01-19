@@ -162,6 +162,12 @@ C23 Feature Support
   ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
   macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
   (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
+- Enumerations should allow values greater than ``INT_MAX`` and smaller than
+  ``INT_MIN``, in order to provide a value-preserved set of integer constants. `N3029 Improved Normal Enumerations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm>`_
+
+- Enumerations should have the ability to specify the underlying type to aid
+  in portability and usability across platforms, across ABIs, and across
+  languages (for serialization and similar purposes). `N3030 Enhancements to Enumerations <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_
 
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
@@ -320,6 +326,8 @@ Bug Fixes in This Version
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
+- Fixes a miscompilation when an enum has a specified value such that the automatic
+  increment overflows a ``signed long``. Fixes #GH24667.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
