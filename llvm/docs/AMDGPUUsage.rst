@@ -5042,11 +5042,10 @@ The fields used by CP for code objects before V3 also match those specified in
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     3:0     4 bits  SHARED_VGPR_COUNT               GFX10-GFX11
-                                                       Number of shared VGPR blocks when executing in subvector mode. For
-                                                       wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
-                                                       of 8), such that (compute_pgm_rsrc1.vgprs +1)*4 + shared_vgpr_count*8 does
-                                                       not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
+     3:0     4 bits  SHARED_VGPR_COUNT               Number of shared VGPR blocks when executing in subvector mode. For
+                                                     wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
+                                                     of 8), such that (compute_pgm_rsrc1.vgprs +1)*4 + shared_vgpr_count*8 does
+                                                     not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
      9:4     6 bits  INST_PREF_SIZE                  GFX10
                                                        Reserved, must be 0.
                                                      GFX11
