@@ -130,6 +130,30 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
 }
 
+static void dropIntrinsicWithUnknownMetadataArgument(IntrinsicInst *II) {
+  // White-list intrinsics that are safe to drop.
+  if (!isa<DbgInfoIntrinsic>(II) &&
+      II->getIntrinsicID() != Intrinsic::experimental_noalias_scope_decl)
+    return;
+
+  SmallVector<MetadataAsValue *> MVs;
+  for (Value *V : II->args())
+    if (auto *MV = dyn_cast<MetadataAsValue>(V))
+      if (auto *MD = dyn_cast<MDNode>(MV->getMetadata()))
+        if (MD->isTemporary())
+          MVs.push_back(MV);
+
+  if (!MVs.empty()) {
+    assert(II->use_empty() && "Cannot have uses");
+    II->eraseFromParent();
+
+    // Also remove no longer used MetadataAsValue wrappers.
+    for (MetadataAsValue *MV : MVs)
+      if (MV->use_empty())
+        delete MV;
+  }
+}
+
 void LLParser::dropUnknownMetadataReferences() {
   auto Pred = [](unsigned MDKind, MDNode *Node) { return Node->isTemporary(); };
   for (Function &F : *M) {
@@ -138,32 +162,8 @@ void LLParser::dropUnknownMetadataReferences() {
       for (Instruction &I : make_early_inc_range(BB)) {
         I.eraseMetadataIf(Pred);
 
-        if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-          // If this is a white-listed intrinsic with an unknown metadata
-          // operand, drop it.
-          if (isa<DbgInfoIntrinsic>(II) ||
-              II->getIntrinsicID() ==
-                  Intrinsic::experimental_noalias_scope_decl) {
-            SmallVector<MetadataAsValue *> MVs;
-            for (Value *V : II->args()) {
-              if (auto *MV = dyn_cast<MetadataAsValue>(V))
-                if (auto *MD = dyn_cast<MDNode>(MV->getMetadata()))
-                  if (MD->isTemporary())
-                    MVs.push_back(MV);
-            }
-
-            if (!MVs.empty()) {
-              assert(II->use_empty() && "Cannot have uses");
-              II->eraseFromParent();
-
-              // Also remove no longer used MetadataAsValue wrappers.
-              for (MetadataAsValue *MV : MVs) {
-                if (MV->use_empty())
-                  delete MV;
-              }
-            }
-          }
-        }
+        if (auto *II = dyn_cast<IntrinsicInst>(&I))
+          dropIntrinsicWithUnknownMetadataArgument(II);
       }
     }
   }
