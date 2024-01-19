@@ -2226,6 +2226,8 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("identifier");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
   // Identifier beginning with a number.
+  Tokens = Annotate("0x");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
   Tokens = Annotate("2dVector");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
   Tokens = Annotate("01234Vector");

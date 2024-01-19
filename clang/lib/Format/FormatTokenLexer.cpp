@@ -813,37 +813,35 @@ void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
   if (Tok->isNot(tok::numeric_constant))
     return;
   StringRef Text = Tok->TokenText;
-  // Identifiers cannot begin with + or -.
+  // The following check is based on llvm::TGLexer::LexToken.
+  // That lexes the token as a number if any of the following holds:
+  // 1. It starts with '+', '-'.
+  // 2. All the characters are digits.
+  // 3. The first non-digit character is 'b', and the next is '0' or '1'.
+  // 4. The first non-digit character is 'x', and the next is a hex digit.
+  // Note that in the case 3 and 4, if the next character does not exists in
+  // this token, the token is an identifier.
   if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
     return;
-  // The following check is based on llvm::TGLexer::LexToken.
-  if (isdigit(Text[0])) {
-    size_t I = 0;
-    char NextChar = (char)0;
-    // Identifiers in TalbleGen may begin with digits. Skip to first non-digit.
-    do {
-      NextChar = Text[I++];
-    } while (I < Text.size() && isdigit(NextChar));
-    // All the characters are digits.
-    if (I >= Text.size())
+  const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
+  // All the characters are digits
+  if (NonDigitPos == StringRef::npos)
+    return;
+  char FirstNonDigit = Text[NonDigitPos];
+  if (NonDigitPos < Text.size() - 1) {
+    char TheNext = Text[NonDigitPos + 1];
+    // Regarded as a binary number.
+    if (FirstNonDigit == 'b' && (TheNext == '0' || TheNext == '1'))
       return;
-    // Base character. But it does not check the first 0 and that the base is
-    // the second character.
-    if (NextChar == 'x' || NextChar == 'b') {
-      char NextNextChar = Text[I];
-      // This is regarded as binary number.
-      if (isxdigit(NextNextChar)) {
-        if (NextChar == 'b' && (NextNextChar == '0' || NextNextChar == '1'))
-          return;
-        // Regarded as hex number or decimal number.
-        if (NextChar == 'x' || isdigit(NextNextChar))
-          return;
-      }
-    }
+    // Regarded as hex number.
+    if (FirstNonDigit == 'x' && isxdigit(TheNext))
+      return;
   }
-  // Otherwise, this is actually a identifier.
-  Tok->Tok.setKind(tok::identifier);
-  Tok->Tok.setIdentifierInfo(nullptr);
+  if (isalpha(FirstNonDigit) || FirstNonDigit == '_') {
+    // This is actually an identifier in TableGen.
+    Tok->Tok.setKind(tok::identifier);
+    Tok->Tok.setIdentifierInfo(nullptr);
+  }
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
