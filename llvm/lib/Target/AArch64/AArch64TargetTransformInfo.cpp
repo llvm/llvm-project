@@ -236,8 +236,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
-      CallerAttrs.requiresSMChange(CalleeAttrs,
-                                   /*BodyOverridesInterface=*/true)) {
+      (CallerAttrs.requiresSMChange(CalleeAttrs) &&
+       (!CallerAttrs.hasStreamingInterfaceOrBody() ||
+        !CalleeAttrs.hasStreamingBody()))) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
