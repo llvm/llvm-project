@@ -108,7 +108,7 @@ extern void __declspec(dllimport) imported_e();
 // ALL_DEFAULT-DAG: declare void @_Z1ev()
 // ALL_DEFAULT-DAG: declare void @_Z10imported_ev()
 // ALL_KEEP-DAG: declare hidden void @_Z1ev()
-// ALL_KEEP-DAG: void @_Z10imported_ev()
+// ALL_KEEP-DAG: declare void @_Z10imported_ev()
 
 // Weak Declaration
 __attribute__((weak))
