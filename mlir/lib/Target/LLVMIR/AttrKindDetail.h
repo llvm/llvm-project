@@ -59,11 +59,12 @@ getAttrKindToNameMapping() {
   return kindNamePairs;
 }
 
+/// Returns a dense map from LLVM attribute name to their kind in LLVM IR
+/// dialect.
 static llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind>
 getAttrNameToKindMapping() {
   static auto attrNameToKindMapping = []() {
-    static llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind>
-        nameKindMap;
+    llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind> nameKindMap;
     for (auto kindNamePair : getAttrKindToNameMapping()) {
       nameKindMap.insert({kindNamePair.second, kindNamePair.first});
     }

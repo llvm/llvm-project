@@ -1086,20 +1086,22 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
     return success();
 
   bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
-  auto attrName = argAttr.getName();
+  StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
-    if (!isKernel)
+    if (!isKernel) {
       return op->emitError()
              << "'" << attrName
-             << "' attribute must be present only on kernel arguments.";
-    if (!llvm::isa<UnitAttr>(argAttr.getValue()))
-      return op->emitError()
-             << "'" << attrName << "' must be a unit attribute.";
-    if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName()))
+             << "' attribute must be present only on kernel arguments";
+    }
+    if (!isa<UnitAttr>(argAttr.getValue())) {
+      return op->emitError() << "'" << attrName << "' must be a unit attribute";
+    }
+    if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName())) {
       return op->emitError()
              << "'" << attrName
              << "' attribute requires the argument to also have attribute '"
-             << LLVM::LLVMDialect::getByValAttrName() << "'.";
+             << LLVM::LLVMDialect::getByValAttrName() << "'";
+    }
   }
 
   return success();

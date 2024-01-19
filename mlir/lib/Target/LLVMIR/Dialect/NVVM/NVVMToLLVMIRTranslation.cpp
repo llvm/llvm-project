@@ -209,15 +209,14 @@ public:
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc =
         moduleTranslation.lookupFunction(funcOp.getName());
-    auto nvvmAnnotations =
+    llvm::NamedMDNode *nvvmAnnotations =
         moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations");
 
     if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
       llvm::MDNode *gridConstantMetaData = nullptr;
 
       // Check if a 'grid_constant' metadata node exists for the given function
-      for (int i = nvvmAnnotations->getNumOperands() - 1; i >= 0; --i) {
-        auto opnd = nvvmAnnotations->getOperand(i);
+      for (llvm::MDNode *opnd : llvm::reverse(nvvmAnnotations->operands())) {
         if (opnd->getNumOperands() == 3 &&
             opnd->getOperand(0) == llvm::ValueAsMetadata::get(llvmFunc) &&
             opnd->getOperand(1) ==
@@ -248,7 +247,7 @@ public:
         // Append argIdx + 1 to the 'grid_constant' argument list
         if (auto argList =
                 dyn_cast<llvm::MDTuple>(gridConstantMetaData->getOperand(2))) {
-          auto clonedArgList = argList->clone();
+          llvm::TempMDTuple clonedArgList = argList->clone();
           clonedArgList->push_back((llvm::ValueAsMetadata::getConstant(
               llvm::ConstantInt::get(i32, argIdx + 1))));
           gridConstantMetaData->replaceOperandWith(

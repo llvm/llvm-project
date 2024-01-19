@@ -114,7 +114,7 @@ public:
       return iface->convertParameterAttr(function, argIdx, attribute,
                                          moduleTranslation);
     }
-    return success();
+    return failure();
   }
 };
 

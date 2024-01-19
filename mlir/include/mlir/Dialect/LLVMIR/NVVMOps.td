@@ -68,10 +68,10 @@ def NVVM_Dialect : Dialect {
     /// the region at 'regionIndex' on the given operation. Returns failure if
     /// the verification failed, success otherwise. This hook may optionally be
     /// invoked from any operation containing a region.
-    LogicalResult verifyRegionArgAttribute(Operation *,
+    LogicalResult verifyRegionArgAttribute(Operation *op,
                                            unsigned regionIndex,
                                            unsigned argIndex,
-                                           NamedAttribute) override;
+                                           NamedAttribute argAttr) override;
   }];
 
   let useDefaultAttributePrinterParser = 1;
