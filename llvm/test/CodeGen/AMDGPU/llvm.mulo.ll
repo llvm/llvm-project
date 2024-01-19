@@ -101,7 +101,11 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ;
 ; GFX12-LABEL: umulo_i64_v_v:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v2, 0
@@ -278,7 +282,11 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ;
 ; GFX12-LABEL: smulo_i64_v_v:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v2, 0
@@ -448,7 +456,7 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-NEXT:    s_mov_b32 s5, 0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mul_hi_u32 s7, s0, s3
 ; GFX12-NEXT:    s_mul_i32 s6, s0, s3
 ; GFX12-NEXT:    s_mul_hi_u32 s4, s0, s2
@@ -661,7 +669,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX12-NEXT:    s_mov_b32 s5, 0
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mul_hi_u32 s7, s0, s3
 ; GFX12-NEXT:    s_mul_i32 s6, s0, s3
 ; GFX12-NEXT:    s_mul_hi_u32 s4, s0, s2
@@ -759,7 +767,11 @@ define { i64, i1 } @smulo_i64_v_4(i64 %i) {
 ;
 ; GFX12-LABEL: smulo_i64_v_4:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[0:1]
 ; GFX12-NEXT:    v_alignbit_b32 v3, v1, v0, 30
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -828,7 +840,11 @@ define { i64, i1 } @umulo_i64_v_4(i64 %i) {
 ;
 ; GFX12-LABEL: umulo_i64_v_4:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_and_b32 v7, 0x3fffffff, v1
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[0:1]
 ; GFX12-NEXT:    v_alignbit_b32 v3, v1, v0, 30

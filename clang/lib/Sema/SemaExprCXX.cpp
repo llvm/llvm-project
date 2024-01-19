@@ -1947,11 +1947,11 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
 }
 
 static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
-                                       Expr *Init) {
+                                       Expr *Init, bool IsCPlusPlus20) {
   if (!Init)
     return true;
   if (ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init))
-    return PLE->getNumExprs() == 0;
+    return IsCPlusPlus20 || PLE->getNumExprs() == 0;
   if (isa<ImplicitValueInitExpr>(Init))
     return true;
   else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
@@ -2406,7 +2406,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Array 'new' can't have any initializers except empty parentheses.
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
-  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer)) {
+  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer,
+                                               getLangOpts().CPlusPlus20)) {
     SourceRange InitRange(Exprs.front()->getBeginLoc(),
                           Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;

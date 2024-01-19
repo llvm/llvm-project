@@ -42,8 +42,9 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
 
   uint32_t x_abs = xbits.uintval();
   double xd = static_cast<double>(xbits.get_val());

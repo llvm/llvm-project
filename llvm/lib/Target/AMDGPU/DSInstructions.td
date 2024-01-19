@@ -492,10 +492,10 @@ let SubtargetPredicate = isGFX90APlus in {
 } // End SubtargetPredicate = isGFX90APlus
 
 let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
-  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_f16">;
-  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_f16", VGPR_32, "ds_pk_add_f16">;
-  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc_gfx9<"ds_pk_add_bf16">;
-  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc_gfx9<"ds_pk_add_rtn_bf16", VGPR_32, "ds_pk_add_bf16">;
+  defm DS_PK_ADD_F16      : DS_1A1D_NORET_mc<"ds_pk_add_f16">;
+  defm DS_PK_ADD_RTN_F16  : DS_1A1D_RET_mc<"ds_pk_add_rtn_f16", VGPR_32, "ds_pk_add_f16">;
+  defm DS_PK_ADD_BF16     : DS_1A1D_NORET_mc<"ds_pk_add_bf16">;
+  defm DS_PK_ADD_RTN_BF16 : DS_1A1D_RET_mc<"ds_pk_add_rtn_bf16", VGPR_32, "ds_pk_add_bf16">;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 defm DS_CMPSTORE_B32     : DS_1A2D_NORET_mc<"ds_cmpstore_b32">;
@@ -1254,6 +1254,10 @@ defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
 defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
 defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
 defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12<0x0a9>;
+defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
+defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
+defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
+defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

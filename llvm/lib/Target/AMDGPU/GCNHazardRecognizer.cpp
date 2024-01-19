@@ -1242,7 +1242,8 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
       case AMDGPU::S_WAITCNT: {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
-        return (Decoded.LgkmCnt == 0);
+        // DsCnt corresponds to LGKMCnt here.
+        return (Decoded.DsCnt == 0);
       }
       default:
         // SOPP instructions cannot mitigate the hazard.

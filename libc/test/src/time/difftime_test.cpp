@@ -32,7 +32,7 @@ TEST(LlvmLibcDifftime, SmokeTest) {
       static_cast<long double>(result));
 
   EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
+  EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
   EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
   EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
 }
