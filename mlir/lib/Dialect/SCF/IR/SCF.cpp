@@ -584,64 +584,6 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   return cast<LoopLikeOpInterface>(newLoop.getOperation());
 }
 
-FailureOr<LoopLikeOpInterface>
-ForOp::yieldTiledValuesAndReplace(RewriterBase &rewriter,
-                                  ValueRange newInitOperands,
-                                  YieldTiledValuesFn yieldTiledValuesFn) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(getOperation());
-
-  auto inits = llvm::to_vector(getInitArgs());
-  inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<ForOp>(
-      getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
-      [](OpBuilder &, Location, Value, ValueRange) {});
-
-  // Move the loop body to the new op.
-  rewriter.mergeBlocks(getBody(), newLoop.getBody(),
-                       newLoop.getBody()->getArguments().take_front(
-                           getBody()->getNumArguments()));
-
-  auto yieldOp = cast<scf::YieldOp>(newLoop.getBody()->getTerminator());
-  rewriter.setInsertionPoint(yieldOp);
-
-  SmallVector<Value> tiledValues;
-  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-  ValueRange newRegionIterArgs =
-      newLoop.getRegionIterArgs().take_back(newInitOperands.size());
-  if (failed(yieldTiledValuesFn(rewriter, getLoc(), newLoop.getInductionVar(),
-                                newRegionIterArgs, tiledValues, resultOffsets,
-                                resultSizes))) {
-    return rewriter.notifyMatchFailure(getOperation(),
-                                       "failed to get tiled values");
-  }
-
-  if (tiledValues.size() != resultOffsets.size() ||
-      tiledValues.size() != resultSizes.size()) {
-    return rewriter.notifyMatchFailure(
-        getOperation(),
-        "expected number of tiled values returned, the number of offset "
-        "vectors and number of size vectors to be the same");
-  }
-
-  SmallVector<Value> newYieldValues = llvm::to_vector(yieldOp.getOperands());
-  for (auto [tiledValue, regionIterArg, resultOffset, resultSize] :
-       llvm::zip_equal(tiledValues, newRegionIterArgs, resultOffsets,
-                       resultSizes)) {
-    SmallVector<OpFoldResult> resultStride(resultOffset.size(),
-                                           rewriter.getIndexAttr(1));
-    Value insert = rewriter.create<tensor::InsertSliceOp>(
-        yieldOp->getLoc(), tiledValue, regionIterArg, resultOffset, resultSize,
-        resultStride);
-    newYieldValues.push_back(insert);
-  }
-
-  rewriter.replaceOpWithNewOp<scf::YieldOp>(yieldOp, newYieldValues);
-  rewriter.replaceOp(getOperation(),
-                     newLoop->getResults().take_front(getNumResults()));
-  return cast<LoopLikeOpInterface>(newLoop.getOperation());
-}
-
 ForOp mlir::scf::getForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
   if (!ivArg)
@@ -686,54 +628,6 @@ Block::BlockArgListType ForallOp::getRegionIterArgs() {
 
 MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
   return getOutputsMutable();
-}
-
-FailureOr<LoopLikeOpInterface>
-ForallOp::yieldTiledValuesAndReplace(RewriterBase &rewriter,
-                                     ValueRange newInitOperands,
-                                     YieldTiledValuesFn yieldTiledValuesFn) {
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(getOperation());
-  auto inits = llvm::to_vector(getOutputs());
-  inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<scf::ForallOp>(
-      getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
-      inits, getMapping(), [](OpBuilder &, Location, ValueRange) {});
-
-  // Move the region of the current block to the newly created op.
-  Block *newLoopBody = newLoop.getBody();
-  rewriter.mergeBlocks(
-      getBody(), newLoopBody,
-      newLoopBody->getArguments().take_front(getBody()->getNumArguments()));
-
-  auto terminator = cast<scf::InParallelOp>(newLoopBody->getTerminator());
-  rewriter.setInsertionPoint(terminator);
-  SmallVector<Value> tiledValues;
-  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
-  ValueRange regionIterArgs =
-      newLoop.getRegionIterArgs().take_back(newInitOperands.size());
-  if (failed(yieldTiledValuesFn(rewriter, getLoc(), newLoop.getInductionVars(),
-                                regionIterArgs, tiledValues, resultOffsets,
-                                resultSizes))) {
-    return rewriter.notifyMatchFailure(getOperation(),
-                                       "failed to get yielded tiled values");
-  }
-
-  // Update the terminator.
-  rewriter.setInsertionPointToEnd(terminator.getBody());
-
-  for (auto [tiledValue, iterArg, resultOffset, resultSize] : llvm::zip_equal(
-           tiledValues, regionIterArgs, resultOffsets, resultSizes)) {
-    SmallVector<OpFoldResult> resultStride(resultOffset.size(),
-                                           rewriter.getIndexAttr(1));
-    rewriter.create<tensor::ParallelInsertSliceOp>(
-        terminator.getLoc(), tiledValue, iterArg, resultOffset, resultSize,
-        resultStride);
-  }
-
-  rewriter.replaceOp(getOperation(),
-                     newLoop->getResults().take_front(getNumResults()));
-  return cast<LoopLikeOpInterface>(newLoop.getOperation());
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.

@@ -23,6 +23,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -287,6 +288,171 @@ static LogicalResult generateLoopNest(RewriterBase &rewriter, Location loc,
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
 }
 
+/// A function that allows returning additional yielded values during
+/// `yieldTiledValuesAndReplace`.
+/// - `ivs` induction variable for the loop.
+/// - `newBbArgs` basic block arguments corresponding to newly added iter_args.
+/// - `tiledValues` the tiled values to return. Must be of same size as
+///   `newbbArgs`, each element of this array is inserted into the corresponding
+///   element in `newbbArgs`.
+/// - `resultOffsets` is of the same size as `tiledValues` and represents
+///   the offsets to use when inserting corresponding element from `tiledValues`
+///   into the element from `newBbArgs`.
+/// - `resultSizes` is of the same size as `tiledValues` and represents
+///   the size of the corresponding element from `tiledValues` inserted into
+///   the element from `newBbArgs`.
+using YieldTiledValuesFn = llvm::function_ref<LogicalResult(
+    RewriterBase &rewriter, Location loc, ValueRange ivs, ValueRange newBbArgs,
+    SmallVector<Value> &tiledValues,
+    SmallVector<SmallVector<OpFoldResult>> &resultOffsets,
+    SmallVector<SmallVector<OpFoldResult>> &resultSizes)>;
+
+/// Append the specified additional `newInitOperands` operands to the
+/// loops existing `init` operands (or similar), and replace `loopOp` with
+/// the new loop that has the additional init operands. The loop body of
+/// this loop is moved over to the new loop. `yieldTiledValuesFn`
+/// is called to get the new tiled values returned, and the offset
+/// and sizes at which the tiled value is inserted into the
+/// new region iter_args that correspond to the newly added init operands.
+template <typename LoopType>
+FailureOr<LoopLikeOpInterface>
+yieldTiledValuesAndReplaceLoop(LoopType loopOp, RewriterBase &rewriter,
+                               ValueRange newInitOperands,
+                               YieldTiledValuesFn yieldTiledValuesFn) {
+  return rewriter.notifyMatchFailure(loopOp, "unhandled loop type");
+}
+
+/// Implementation of `yieldTiledValuesAndReplaceLoop` for `scf.for`.
+template <>
+FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
+    scf::ForOp loopOp, RewriterBase &rewriter, ValueRange newInitOperands,
+    YieldTiledValuesFn yieldTiledValuesFn) {
+  OpBuilder::InsertionGuard g(rewriter);
+  Location loc = loopOp.getLoc();
+  rewriter.setInsertionPoint(loopOp);
+
+  auto inits = llvm::to_vector(loopOp.getInitArgs());
+  inits.append(newInitOperands.begin(), newInitOperands.end());
+  auto newLoop = rewriter.create<scf::ForOp>(
+      loc, loopOp.getLowerBound(), loopOp.getUpperBound(), loopOp.getStep(),
+      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+
+  // Move the loop body to the new op.
+  Block *loopBody = loopOp.getBody();
+  Block *newLoopBody = newLoop.getBody();
+  rewriter.mergeBlocks(
+      loopBody, newLoopBody,
+      newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
+
+  auto yieldOp = cast<scf::YieldOp>(newLoopBody->getTerminator());
+  rewriter.setInsertionPoint(yieldOp);
+
+  SmallVector<Value> tiledValues;
+  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
+  ValueRange newRegionIterArgs =
+      newLoop.getRegionIterArgs().take_back(newInitOperands.size());
+  if (failed(yieldTiledValuesFn(rewriter, loc, newLoop.getInductionVar(),
+                                newRegionIterArgs, tiledValues, resultOffsets,
+                                resultSizes))) {
+    return rewriter.notifyMatchFailure(loopOp, "failed to get tiled values");
+  }
+
+  if (tiledValues.size() != resultOffsets.size() ||
+      tiledValues.size() != resultSizes.size()) {
+    return rewriter.notifyMatchFailure(
+        loopOp,
+        "expected number of tiled values returned, the number of offset "
+        "vectors and number of size vectors to be the same");
+  }
+
+  SmallVector<Value> newYieldValues = llvm::to_vector(yieldOp.getOperands());
+  for (auto [tiledValue, regionIterArg, resultOffset, resultSize] :
+       llvm::zip_equal(tiledValues, newRegionIterArgs, resultOffsets,
+                       resultSizes)) {
+    SmallVector<OpFoldResult> resultStride(resultOffset.size(),
+                                           rewriter.getIndexAttr(1));
+    Value insert = rewriter.create<tensor::InsertSliceOp>(
+        yieldOp->getLoc(), tiledValue, regionIterArg, resultOffset, resultSize,
+        resultStride);
+    newYieldValues.push_back(insert);
+  }
+
+  rewriter.replaceOpWithNewOp<scf::YieldOp>(yieldOp, newYieldValues);
+  rewriter.replaceOp(loopOp,
+                     newLoop->getResults().take_front(loopOp.getNumResults()));
+  return cast<LoopLikeOpInterface>(newLoop.getOperation());
+}
+
+/// Implementation of `yieldTiledValuesAndReplaceLoop` for `scf.forall`
+template <>
+FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
+    scf::ForallOp loopOp, RewriterBase &rewriter, ValueRange newInitOperands,
+    YieldTiledValuesFn yieldTiledValuesFn) {
+  OpBuilder::InsertionGuard g(rewriter);
+  Location loc = loopOp.getLoc();
+  rewriter.setInsertionPoint(loopOp);
+  auto inits = llvm::to_vector(loopOp.getOutputs());
+  inits.append(newInitOperands.begin(), newInitOperands.end());
+  auto newLoop = rewriter.create<scf::ForallOp>(
+      loc, loopOp.getMixedLowerBound(), loopOp.getMixedUpperBound(),
+      loopOp.getMixedStep(), inits, loopOp.getMapping(),
+      [](OpBuilder &, Location, ValueRange) {});
+
+  // Move the region of the current block to the newly created op.
+  Block *loopBody = loopOp.getBody();
+  Block *newLoopBody = newLoop.getBody();
+  rewriter.mergeBlocks(
+      loopBody, newLoopBody,
+      newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
+
+  auto terminator = cast<scf::InParallelOp>(newLoopBody->getTerminator());
+  rewriter.setInsertionPoint(terminator);
+  SmallVector<Value> tiledValues;
+  SmallVector<SmallVector<OpFoldResult>> resultOffsets, resultSizes;
+  ValueRange regionIterArgs =
+      newLoop.getRegionIterArgs().take_back(newInitOperands.size());
+  if (failed(yieldTiledValuesFn(rewriter, loc, newLoop.getInductionVars(),
+                                regionIterArgs, tiledValues, resultOffsets,
+                                resultSizes))) {
+    return rewriter.notifyMatchFailure(loopOp,
+                                       "failed to get yielded tiled values");
+  }
+
+  // Update the terminator.
+  rewriter.setInsertionPointToEnd(terminator.getBody());
+
+  for (auto [tiledValue, iterArg, resultOffset, resultSize] : llvm::zip_equal(
+           tiledValues, regionIterArgs, resultOffsets, resultSizes)) {
+    SmallVector<OpFoldResult> resultStride(resultOffset.size(),
+                                           rewriter.getIndexAttr(1));
+    rewriter.create<tensor::ParallelInsertSliceOp>(
+        terminator.getLoc(), tiledValue, iterArg, resultOffset, resultSize,
+        resultStride);
+  }
+
+  rewriter.replaceOp(loopOp,
+                     newLoop->getResults().take_front(loopOp.getNumResults()));
+  return cast<LoopLikeOpInterface>(newLoop.getOperation());
+}
+
+/// Implementation of `yieldTiledValuesAndReplaceLoop` for
+/// `LoopLikeOpInterface`, that just dispatches to the implementation for each
+/// supported loop type.
+FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop(
+    LoopLikeOpInterface loopLikeOp, RewriterBase &rewriter,
+    ValueRange newInitOperands, YieldTiledValuesFn yieldTiledValuesFn) {
+  return TypeSwitch<LoopLikeOpInterface, FailureOr<LoopLikeOpInterface>>(
+             loopLikeOp)
+      .Case<scf::ForOp, scf::ForallOp>(
+          [&](auto loopOp) -> FailureOr<LoopLikeOpInterface> {
+            return yieldTiledValuesAndReplaceLoop(
+                loopOp, rewriter, newInitOperands, yieldTiledValuesFn);
+          })
+      .Default([&](auto loopOp) -> FailureOr<LoopLikeOpInterface> {
+        return rewriter.notifyMatchFailure(loopOp, "unhandled loop type");
+      });
+}
+
 /// Method to add new init values to a loop nest. Updates `loops` in-place with
 /// new loops that use the `newInitValues`.
 /// The outer-loops are updated to yield the new result values of the inner
@@ -334,8 +500,8 @@ static LogicalResult addInitOperandsToLoopNest(
   // Update the loop body of the innermost loop to get new yield values.
   LoopLikeOpInterface innerMostLoop = loops.back();
   FailureOr<LoopLikeOpInterface> newInnerMostLoop =
-      innerMostLoop.yieldTiledValuesAndReplace(rewriter, newInitValues,
-                                               getNewTiledYieldsFn);
+      yieldTiledValuesAndReplaceLoop(innerMostLoop, rewriter, newInitValues,
+                                     getNewTiledYieldsFn);
 
   if (failed(newInnerMostLoop))
     return innerMostLoop.emitOpError("failed to return additional yields");
