@@ -843,8 +843,24 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
   MachineInstr *Call =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
   Call->addOperand(CallTarget);
+
+  // 1 because we already added the branch target above.
+  unsigned RegMaskStartIdx = 1;
+  // The branch is BL <target>, so we cannot attach the arguments of the called
+  // function to it. Those must be added as implicitly used by the branch.
+  while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
+    auto MOP = MI.getOperand(RegMaskStartIdx);
+    assert(MOP.isReg() && "can only add register operands");
+    Call->addOperand(MachineOperand::CreateReg(
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
+    RegMaskStartIdx++;
+  }
+  for (const MachineOperand &MO :
+       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
+    Call->addOperand(MO);
+
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
-  Call->copyImplicitOps(*MBB.getParent(), MI);
 
   MachineInstr *BTI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
