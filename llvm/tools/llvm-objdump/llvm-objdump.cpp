@@ -1269,9 +1269,9 @@ struct BBAddrMapLabel {
   std::string PGOAnalysis;
 };
 
-static void constructPGOLabelString(std::string &PGOString,
-                                    const PGOAnalysisMap &PGOMap,
-                                    size_t BBEntryIndex) {
+static std::string constructPGOLabelString(const PGOAnalysisMap &PGOMap,
+                                           size_t BBEntryIndex) {
+  std::string PGOString;
   raw_string_ostream PGOSS(PGOString);
 
   PGOSS << " (";
@@ -1283,6 +1283,8 @@ static void constructPGOLabelString(std::string &PGOString,
   }
 
   if (PGOMap.FeatEnable.BBFreq || PGOMap.FeatEnable.BrProb) {
+    assert(BBEntryIndex < PGOMap.BBEntries.size() &&
+           "Expected PGOAnalysisMap and BBAddrMap to have the same entires");
     const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
         PGOMap.BBEntries[BBEntryIndex];
 
@@ -1303,6 +1305,8 @@ static void constructPGOLabelString(std::string &PGOString,
     }
   }
   PGOSS << ")";
+
+  return PGOString;
 }
 
 static void collectBBAddrMapLabels(
@@ -1331,7 +1335,7 @@ static void collectBBAddrMapLabels(
     std::string PGOString;
 
     if (PGOIter != AddrToPGOAnalysisMap.end())
-      constructPGOLabelString(PGOString, PGOIter->second, I);
+      PGOString = constructPGOLabelString(PGOIter->second, I);
 
     Labels[BBAddress].push_back({LabelString, PGOString});
   }
@@ -1702,7 +1706,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         reportWarning(toString(BBAddrMapsOrErr.takeError()), Obj.getFileName());
         return;
       }
-      for (auto &&[FunctionBBAddrMap, FunctionPGOAnalysis] :
+      for (const auto &[FunctionBBAddrMap, FunctionPGOAnalysis] :
            zip_equal(*BBAddrMapsOrErr, PGOAnalyses)) {
         uint64_t Addr = FunctionBBAddrMap.Addr;
         AddrToBBAddrMap.emplace(Addr, std::move(FunctionBBAddrMap));
