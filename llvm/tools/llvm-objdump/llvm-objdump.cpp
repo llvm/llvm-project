@@ -1707,7 +1707,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         return;
       }
       for (const auto &[FunctionBBAddrMap, FunctionPGOAnalysis] :
-           zip_equal(*BBAddrMapsOrErr, PGOAnalyses)) {
+           zip_equal(*std::move(BBAddrMapsOrErr), std::move(PGOAnalyses))) {
         uint64_t Addr = FunctionBBAddrMap.Addr;
         AddrToBBAddrMap.emplace(Addr, std::move(FunctionBBAddrMap));
         if (FunctionPGOAnalysis.FeatEnable.anyEnabled())
