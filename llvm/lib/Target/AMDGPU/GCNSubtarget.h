@@ -155,6 +155,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -779,6 +780,8 @@ public:
   bool hasFP8Insts() const {
     return HasFP8Insts;
   }
+
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
