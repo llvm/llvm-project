@@ -1159,7 +1159,7 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegal(SDValue Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(*Subtarget))
+  if (Subtarget->hasSignedScratchOffsets())
     return true;
 
   auto LHS = Addr.getOperand(0);
@@ -1186,7 +1186,7 @@ bool AMDGPUDAGToDAGISel::isFlatScratchBaseLegalSV(SDValue Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(*Subtarget))
+  if (Subtarget->hasSignedScratchOffsets())
     return true;
 
   auto LHS = Addr.getOperand(0);

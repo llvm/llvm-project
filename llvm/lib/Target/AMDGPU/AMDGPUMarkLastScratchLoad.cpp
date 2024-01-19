@@ -9,10 +9,13 @@
 // Mark scratch load/spill instructions which are guaranteed to be the last time
 // this scratch slot is used so it can be evicted from caches.
 //
+// TODO: Handle general stack accesses not just spilling.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
@@ -25,6 +28,7 @@ namespace {
 class AMDGPUMarkLastScratchLoad : public MachineFunctionPass {
 private:
   LiveStacks *LS = nullptr;
+  LiveIntervals *LIS = nullptr;
   SlotIndexes *SI = nullptr;
   const SIInstrInfo *SII = nullptr;
 
@@ -39,6 +43,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexes>();
+    AU.addRequired<LiveIntervals>();
     AU.addRequired<LiveStacks>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -52,11 +57,6 @@ public:
 } // end anonymous namespace
 
 bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG({
-    dbgs() << "********** Mark Last Scratch Load **********\n"
-           << "********** Function: " << MF.getName() << '\n';
-  });
-
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -65,8 +65,10 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   LS = &getAnalysis<LiveStacks>();
+  LIS = &getAnalysis<LiveIntervals>();
   SI = &getAnalysis<SlotIndexes>();
   SII = ST.getInstrInfo();
+  SlotIndexes &Slots = *LIS->getSlotIndexes();
 
   const unsigned NumSlots = LS->getNumIntervals();
   if (NumSlots == 0) {
@@ -79,10 +81,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (auto &[SS, LI] : *LS) {
-    LLVM_DEBUG(dbgs() << "Checking interval: " << LI << "\n");
-
     for (const LiveRange::Segment &Segment : LI.segments) {
-      LLVM_DEBUG(dbgs() << "  Checking segment: " << Segment << "\n");
 
       // Ignore segments that run to the end of basic block because in this case
       // slot is still live at the end of it.
@@ -92,19 +91,21 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       const int FrameIndex = Register::stackSlot2Index(LI.reg());
       MachineInstr *LastLoad = nullptr;
 
-      MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
+
+      // If there is no instruction at this slot because it was deleted take the
+      // instruction from the next slot.
       if (!MISegmentEnd) {
-        // FIXME: The start and end can refer to deleted instructions. We should
-        // be able to handle this more gracefully by finding the closest real
-        // instructions.
-        continue;
+        SlotIndex NextSlot = Slots.getNextNonNullIndex(Segment.end);
+        MISegmentEnd = SI->getInstructionFromIndex(NextSlot);
       }
+
+      MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineBasicBlock *BB = MISegmentEnd->getParent();
 
       // Start iteration backwards from segment end until the start of basic
       // block or start of segment if it is in the same basic block.
-      auto End = BB->instr_rend();
+      auto End = BB->rend();
       if (MISegmentStart && MISegmentStart->getParent() == BB)
         End = MISegmentStart->getReverseIterator();
 
@@ -117,13 +118,11 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      if (LastLoad) {
-        MachineOperand *LastUse =
-            SII->getNamedOperand(*LastLoad, AMDGPU::OpName::last_use);
-        assert(LastUse && "This instruction must have a last_use operand");
-        LastUse->setImm(1);
+      if (LastLoad && !LastLoad->memoperands_empty()) {
+        MachineMemOperand *MMO = *LastLoad->memoperands_begin();
+        MMO->setFlags(MOLastUse);
         Changed = true;
-        LLVM_DEBUG(dbgs() << "  Found last load: " << *LastLoad;);
+        LLVM_DEBUG(dbgs() << "  Found last load: " << *LastLoad);
       }
     }
   }

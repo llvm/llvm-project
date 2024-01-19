@@ -97,10 +97,6 @@ C/C++ Language Potentially Breaking Changes
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
   Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
 
-- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
-  require all the dependent modules to specified from the command line.
-  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
-
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - The name mangling rules for function templates has been changed to take into
@@ -140,6 +136,13 @@ C++ Specific Potentially Breaking Changes
 - The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
   when targetting MSVC to match the behavior of MSVC.
   (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
+
+- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
+  require all the dependent modules to specified from the command line.
+  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
+
+- Forbid `import XXX;` in C++ to find module `XXX` comes from explicit clang modules.
+  See (`#64755: <https://github.com/llvm/llvm-project/issues/64755>`_).
 
 ABI Changes in This Version
 ---------------------------
@@ -280,6 +283,8 @@ Non-comprehensive list of changes in this release
 * Since MSVC 19.33 added undocumented attribute ``[[msvc::constexpr]]``, this release adds the attribute as well.
 
 * Added ``#pragma clang fp reciprocal``.
+
+* The version of Unicode used by Clang (primarily to parse identifiers) has been updated to 15.1.
 
 New Compiler Flags
 ------------------
@@ -568,7 +573,43 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
+- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
 
+- Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
+  expressions on matrix types or builtin functions without an argument list) as placement-args
+  to new-expressions.
+
+  Before:
+
+  .. code-block:: text
+
+    error: no matching function for call to 'operator new'
+       13 |     new (__builtin_memset) S {};
+          |     ^   ~~~~~~~~~~~~~~~~~~
+
+    note: candidate function not viable: no known conversion from '<builtin fn type>' to 'int' for 2nd argument
+        5 |     void* operator new(__SIZE_TYPE__, int);
+          |           ^
+
+  After:
+
+  .. code-block:: text
+
+    error: builtin functions must be directly called
+       13 |     new (__builtin_memset) S {};
+          |          ^
+
+- Clang now diagnoses import before module declarations but not in global
+  module fragment.
+  (`#67627: <https://github.com/llvm/llvm-project/issues/67627>`_).
+
+- Clang now diagnoses include headers with angle in module purviews, which is
+  not usually intended.
+  (`#68615: <https://github.com/llvm/llvm-project/issues/68615>`_)
+
+- Clang now won't mention invisible namespace when diagnose invisible declarations
+  inside namespace. The original diagnostic message is confusing.
+  (`#73893: <https://github.com/llvm/llvm-project/issues/73893>`_)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -771,6 +812,15 @@ Bug Fixes in This Version
 - Fix assertion failure when call noreturn-attribute function with musttail
   attribute.
   Fixes (`#76631 <https://github.com/llvm/llvm-project/issues/76631>`_)
+  - The MS ``__noop`` builtin without an argument list is now accepted
+  in the placement-args of new-expressions, matching MSVC's behaviour.
+- Fix an issue that caused MS ``__decspec(property)`` accesses as well as
+  Objective-C++ property accesses to not be converted to a function call
+  to the getter in the placement-args of new-expressions.
+  Fixes (`#65053 <https://github.com/llvm/llvm-project/issues/65053>`_)
+- Fix an issue with missing symbol definitions when the first coroutine
+  statement appears in a discarded ``if constexpr`` branch.
+  Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -938,6 +988,23 @@ Bug Fixes to C++ Support
   parameters. Fixes:
   (`#57410 <https://github.com/llvm/llvm-project/issues/57410>`_) and
   (`#76604 <https://github.com/llvm/llvm-project/issues/57410>`_)
+
+- Fix a bug where clang would produce inconsistent values when
+  ``std::source_location::current()`` was used in a function template.
+  Fixes (`#78128 <https://github.com/llvm/llvm-project/issues/78128>`_)
+
+- Clang now allows parenthesized initialization of arrays in `operator new[]`.
+  Fixes: (`#68198 <https://github.com/llvm/llvm-project/issues/68198>`_)
+
+- Fix crash when importing the same module with an dynamic initializer twice
+  in different visibility.
+  Fixes (`#67893 <https://github.com/llvm/llvm-project/issues/67893>`_)
+
+- Fix a false-positive ODR violation for different definitions for `std::align_val_t`.
+  Fixes (`#76638 <https://github.com/llvm/llvm-project/issues/76638>`_)
+
+- Remove recorded `#pragma once` state for headers included in named modules.
+  Fixes (`#77995 <https://github.com/llvm/llvm-project/issues/77995>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1306,6 +1373,14 @@ Improvements
 
 - Checkers can query constraint bounds to improve diagnostic messages.
   (`#74141 <https://github.com/llvm/llvm-project/pull/74141>`_)
+
+- Improved the generated initializers for modules. Now the calls to initialize
+  functions from imported module units can be omitted if the initialize
+  function is known to be empty.
+  (`#56794 <https://github.com/llvm/llvm-project/issues/56794>`_)
+
+- Clang now allow to export declarations within linkage-specification.
+  (`#71347 <https://github.com/llvm/llvm-project/issues/71347>`_)
 
 Moved checkers
 ^^^^^^^^^^^^^^

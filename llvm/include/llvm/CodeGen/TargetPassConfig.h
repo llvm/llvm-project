@@ -423,9 +423,6 @@ protected:
   /// to physical registers.
   virtual void addPostRewrite() { }
 
-  /// Add passes to be run immediately before Stack Slot Coloring pass.
-  virtual void addPreStackSlotColoring() {}
-
   /// This method may be implemented by targets that want to run passes after
   /// register allocation pass pipeline but before prolog-epilog insertion.
   virtual void addPostRegAlloc() { }
