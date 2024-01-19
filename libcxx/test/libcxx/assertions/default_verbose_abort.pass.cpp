@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Test that the default verbose termination function aborts the program.
+// XFAIL: availability-verbose_abort-missing
 
 #include <__verbose_abort>
 #include <csignal>
