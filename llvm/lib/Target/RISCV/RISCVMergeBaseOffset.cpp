@@ -181,7 +181,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
   Register Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
-  if (!MRI->hasOneUse(Reg))
+  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
     return false;
   // This can point to an ADDI(W) or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
@@ -248,14 +248,14 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
           TailShXAdd.getOpcode() == RISCV::SH3ADD) &&
          "Expected SHXADD instruction!");
 
-  // The first source is the shifted operand.
-  Register Rs1 = TailShXAdd.getOperand(1).getReg();
-
   if (GAReg != TailShXAdd.getOperand(2).getReg())
     return false;
 
+  // The first source is the shifted operand.
+  Register Rs1 = TailShXAdd.getOperand(1).getReg();
+
   // Can't fold if the register has more than one use.
-  if (!MRI->hasOneUse(Rs1))
+  if (!Rs1.isVirtual() || !MRI->hasOneUse(Rs1))
     return false;
   // This can point to an ADDI X0, C.
   MachineInstr &OffsetTail = *MRI->getVRegDef(Rs1);
