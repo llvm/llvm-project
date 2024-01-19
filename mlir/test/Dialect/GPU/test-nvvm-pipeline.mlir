@@ -20,7 +20,7 @@ func.func @test_math(%arg0 : f32) {
     gpu.launch 
         blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1) 
         threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) { 
-        // CHECK-PTX: ex2.approx.ftz.f32 
+        // CHECK-PTX: __nv_expf 
         %s1 = math.exp %arg0 : f32
         gpu.printf "%f" %s1 : f32
         gpu.terminator
