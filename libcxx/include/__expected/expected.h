@@ -323,6 +323,8 @@ class __expected_base {
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
       requires(!__put_flag_in_tail && (is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>))
     {
+      // Note: Since the destructor of the union is trivial, this does nothing
+      // except to end the lifetime of the union.
       std::destroy_at(&__union_.__v);
     }
 
