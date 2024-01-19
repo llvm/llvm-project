@@ -116,7 +116,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   LongLongWidth = HostTarget->getLongLongWidth();
   LongLongAlign = HostTarget->getLongLongAlign();
   MinGlobalAlign = HostTarget->getMinGlobalAlign(/* TypeSize = */ 0,
-                                                 /* VD = */ nullptr);
+                                                 /* HasNonWeakDef = */ true);
   NewAlign = HostTarget->getNewAlign();
   DefaultAlignForAttributeAligned =
       HostTarget->getDefaultAlignForAttributeAligned();

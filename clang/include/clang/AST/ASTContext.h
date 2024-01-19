@@ -2405,12 +2405,18 @@ public:
   unsigned getTargetDefaultAlignForAttributeAligned() const;
 
   /// Return the alignment in bits that should be given to a
-  /// global variable with type \p T.
+  /// global variable with type \p T. If \p VD is non-null it will be
+  /// considered specifically for the query.
   unsigned getAlignOfGlobalVar(QualType T, const VarDecl *VD) const;
 
   /// Return the alignment in characters that should be given to a
-  /// global variable with type \p T.
+  /// global variable with type \p T. If \p VD is non-null it will be
+  /// considered specifically for the query.
   CharUnits getAlignOfGlobalVarInChars(QualType T, const VarDecl *VD) const;
+
+  /// Return the minimum alignement as specified by the target. If \p VD is
+  /// non-null it may be used to identify external or weak variables.
+  unsigned getMinGlobalAlignOfVar(uint64_t Size, const VarDecl *VD) const;
 
   /// Return a conservative estimate of the alignment of the specified
   /// decl \p D.

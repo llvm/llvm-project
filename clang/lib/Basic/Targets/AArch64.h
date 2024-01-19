@@ -237,7 +237,7 @@ public:
   getCallingConvKind(bool ClangABICompat4) const override;
 
   unsigned getMinGlobalAlign(uint64_t TypeSize,
-                             const VarDecl *VD) const override;
+                             bool HasNonWeakDef) const override;
 };
 
 // ARM64 MinGW target

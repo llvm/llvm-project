@@ -140,10 +140,10 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 unsigned SystemZTargetInfo::getMinGlobalAlign(uint64_t Size,
-                                              const VarDecl *VD) const {
+                                              bool HasNonWeakDef) const {
   // Don't enforce the minimum alignment on an external or weak symbol if
   // -munaligned-symbols is passed.
-  if (UnalignedSymbols && VD && (!VD->hasDefinition() || VD->isWeak()))
+  if (UnalignedSymbols && !HasNonWeakDef)
     return 0;
 
   return MinGlobalAlign;

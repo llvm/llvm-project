@@ -1688,8 +1688,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
       if (VD->hasGlobalStorage() && !ForAlignof) {
         uint64_t TypeSize =
             !BaseT->isIncompleteType() ? getTypeSize(T.getTypePtr()) : 0;
-        Align =
-            std::max(Align, getTargetInfo().getMinGlobalAlign(TypeSize, VD));
+        Align = std::max(Align, getMinGlobalAlignOfVar(TypeSize, VD));
       }
 
     // Fields can be subject to extra alignment constraints, like if
@@ -2514,7 +2513,7 @@ unsigned ASTContext::getTargetDefaultAlignForAttributeAligned() const {
 unsigned ASTContext::getAlignOfGlobalVar(QualType T, const VarDecl *VD) const {
   uint64_t TypeSize = getTypeSize(T.getTypePtr());
   return std::max(getPreferredTypeAlign(T),
-                  getTargetInfo().getMinGlobalAlign(TypeSize, VD));
+                  getMinGlobalAlignOfVar(TypeSize, VD));
 }
 
 /// getAlignOfGlobalVarInChars - Return the alignment in characters that
@@ -2522,6 +2521,14 @@ unsigned ASTContext::getAlignOfGlobalVar(QualType T, const VarDecl *VD) const {
 CharUnits ASTContext::getAlignOfGlobalVarInChars(QualType T,
                                                  const VarDecl *VD) const {
   return toCharUnitsFromBits(getAlignOfGlobalVar(T, VD));
+}
+
+unsigned ASTContext::getMinGlobalAlignOfVar(uint64_t Size,
+                                            const VarDecl *VD) const {
+  // Make the default handling as that of a non-weak definition in the
+  // current translation unit.
+  bool HasNonWeakDef = !VD || (VD->hasDefinition() && !VD->isWeak());
+  return getTargetInfo().getMinGlobalAlign(Size, HasNonWeakDef);
 }
 
 CharUnits ASTContext::getOffsetOfBaseWithVBPtr(const CXXRecordDecl *RD) const {

@@ -66,7 +66,7 @@ public:
     HasStrictFP = true;
   }
 
-  unsigned getMinGlobalAlign(uint64_t Size, const VarDecl *VD) const override;
+  unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
