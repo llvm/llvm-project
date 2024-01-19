@@ -32,6 +32,7 @@
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -158,13 +159,11 @@ void LLParser::dropUnknownMetadataReferences() {
   auto Pred = [](unsigned MDKind, MDNode *Node) { return Node->isTemporary(); };
   for (Function &F : *M) {
     F.eraseMetadataIf(Pred);
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : make_early_inc_range(BB)) {
-        I.eraseMetadataIf(Pred);
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      I.eraseMetadataIf(Pred);
 
-        if (auto *II = dyn_cast<IntrinsicInst>(&I))
-          dropIntrinsicWithUnknownMetadataArgument(II);
-      }
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        dropIntrinsicWithUnknownMetadataArgument(II);
     }
   }
 
