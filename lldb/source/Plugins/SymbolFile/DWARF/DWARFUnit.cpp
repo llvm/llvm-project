@@ -668,12 +668,12 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   if (!die.Extract(GetData(), this, &die_offset))
     return llvm::StringRef();
 
-  // Does die contain an AT_Name?
+  // Does die contain a DW_AT_Name?
   if (const char *name =
           die.GetAttributeValueAsString(this, DW_AT_name, nullptr))
     return name;
 
-  // Does its specification or abstract_origin contain an AT_Name?
+  // Does its DW_AT_specification or DW_AT_abstract_origin contain an AT_Name?
   for (auto attr : {DW_AT_specification, DW_AT_abstract_origin}) {
     DWARFFormValue form_value;
     if (!die.GetAttributeValue(this, attr, form_value))
