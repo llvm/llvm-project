@@ -45,7 +45,7 @@ using CompUnitIDToIdx = DenseMap<unsigned, unsigned>;
 /// This class emits DWARF data to the output stream. It emits already
 /// generated section data and specific data, which could not be generated
 /// by CompileUnit.
-class DwarfEmitterImpl : public ExtraDwarfEmitter {
+class DwarfEmitterImpl {
 public:
   DwarfEmitterImpl(DWARFLinker::OutputFileType OutFileType,
                    raw_pwrite_stream &OutFile)
@@ -58,21 +58,7 @@ public:
   const Triple &getTargetTriple() { return MC->getTargetTriple(); }
 
   /// Dump the file to the disk.
-  void finish() override { MS->finish(); }
-
-  /// Returns AsmPrinter.
-  AsmPrinter &getAsmPrinter() const override { return *Asm; }
-
-  /// Emit the swift_ast section stored in \p Buffer.
-  void emitSwiftAST(StringRef Buffer) override;
-
-  /// Emit the swift reflection section stored in \p Buffer.
-  void emitSwiftReflectionSection(
-      llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t) override;
-
-  /// Emit specified section data.
-  void emitSectionContents(StringRef SecData, StringRef SecName) override;
+  void finish() { MS->finish(); }
 
   /// Emit abbreviations.
   void emitAbbrevs(const SmallVector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
@@ -115,8 +101,6 @@ private:
                        const StringEntryToDwarfStringPoolEntryMap &Strings,
                        uint64_t &NextOffset, MCSection *OutSection);
 
-  MCSection *switchSection(StringRef SecName);
-
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
   std::unique_ptr<MCRegisterInfo> MRI;
@@ -135,7 +119,8 @@ private:
 
   /// The output file we stream the linked Dwarf to.
   raw_pwrite_stream &OutFile;
-  DWARFLinker::OutputFileType OutFileType = DWARFLinker::OutputFileType::Object;
+  DWARFLinkerBase::OutputFileType OutFileType =
+      DWARFLinkerBase::OutputFileType::Object;
 
   uint64_t DebugInfoSectionSize = 0;
 };

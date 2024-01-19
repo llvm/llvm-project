@@ -2644,19 +2644,22 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
 
 void DWARFLinker::copyInvariantDebugSection(DWARFContext &Dwarf) {
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getLocSection().Data,
-                                       "debug_loc");
+                                       DebugSectionKind::DebugLoc);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getRangesSection().Data, "debug_ranges");
+      Dwarf.getDWARFObj().getRangesSection().Data,
+      DebugSectionKind::DebugRange);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getFrameSection().Data, "debug_frame");
+      Dwarf.getDWARFObj().getFrameSection().Data, DebugSectionKind::DebugFrame);
   TheDwarfEmitter->emitSectionContents(Dwarf.getDWARFObj().getArangesSection(),
-                                       "debug_aranges");
+                                       DebugSectionKind::DebugARanges);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getAddrSection().Data, "debug_addr");
+      Dwarf.getDWARFObj().getAddrSection().Data, DebugSectionKind::DebugAddr);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getRnglistsSection().Data, "debug_rnglists");
+      Dwarf.getDWARFObj().getRnglistsSection().Data,
+      DebugSectionKind::DebugRngLists);
   TheDwarfEmitter->emitSectionContents(
-      Dwarf.getDWARFObj().getLoclistsSection().Data, "debug_loclists");
+      Dwarf.getDWARFObj().getLoclistsSection().Data,
+      DebugSectionKind::DebugLocLists);
 }
 
 void DWARFLinker::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
@@ -2848,7 +2851,7 @@ Error DWARFLinker::link() {
       SizeByObject[OptContext.File.FileName].Input =
           getDebugInfoSize(*OptContext.File.Dwarf);
       SizeByObject[OptContext.File.FileName].Output =
-          DIECloner(*this, TheDwarfEmitter.get(), OptContext.File, DIEAlloc,
+          DIECloner(*this, TheDwarfEmitter, OptContext.File, DIEAlloc,
                     OptContext.CompileUnits, Options.Update, DebugStrPool,
                     DebugLineStrPool, StringOffsetPool)
               .cloneAllCompileUnits(*OptContext.File.Dwarf, OptContext.File,
@@ -3011,7 +3014,7 @@ Error DWARFLinker::cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
   UnitListTy CompileUnits;
   CompileUnits.emplace_back(std::move(Unit.Unit));
   assert(TheDwarfEmitter);
-  DIECloner(*this, TheDwarfEmitter.get(), Unit.File, DIEAlloc, CompileUnits,
+  DIECloner(*this, TheDwarfEmitter, Unit.File, DIEAlloc, CompileUnits,
             Options.Update, DebugStrPool, DebugLineStrPool, StringOffsetPool)
       .cloneAllCompileUnits(*Unit.File.Dwarf, Unit.File,
                             Unit.File.Dwarf->isLittleEndian());
@@ -3029,17 +3032,5 @@ void DWARFLinker::verifyInput(const DWARFFile &File) {
       Options.InputVerificationHandler(File, OS.str());
   }
 }
-
-Error DWARFLinker::createEmitter(const Triple &TheTriple,
-                                 OutputFileType FileType,
-                                 raw_pwrite_stream &OutFile) {
-
-  TheDwarfEmitter = std::make_unique<DwarfStreamer>(
-      FileType, OutFile, StringsTranslator, WarningHandler);
-
-  return TheDwarfEmitter->init(TheTriple, "__DWARF");
-}
-
-DwarfEmitter *DWARFLinker::getEmitter() { return TheDwarfEmitter.get(); }
 
 } // namespace llvm
