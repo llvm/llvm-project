@@ -842,9 +842,11 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
   unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
   MachineInstr *Call =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  Call->addOperand(CallTarget);
+
+  for (const MachineOperand &MO : MI.operands())
+    Call->addOperand(MO);
+
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
-  Call->copyImplicitOps(*MBB.getParent(), MI);
 
   MachineInstr *BTI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
