@@ -1448,7 +1448,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   StringRef TripleVersionName = Triple.getEnvironmentVersionString();
   StringRef TripleObjectFormat =
       Triple.getObjectFormatTypeName(Triple.getObjectFormat());
-
   if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
       TripleVersionName != TripleObjectFormat) {
     Diags.Report(diag::err_drv_triple_version_invalid)
