@@ -285,7 +285,13 @@ def TypeConverterBuilderOpInterface
   let description = [{
     This interface should be implemented by ops that specify a type converter
     for a dialect conversion, or to populate a type converter with
-    conversions. Such ops can be used with "apply_conversion_patterns".
+    conversions.
+
+    When such ops are intended to be used with "apply_conversion_patterns" or
+    other operations that expect a type converter, a non-default implementation
+    of `getTypeConverter` should be implemented. For use with "cast_and_call"
+    like ops that construct a type converter iteratively, non-default
+    `populateTypeMaterializations` should be implemented.
   }];
 
   let cppNamespace = "::mlir::transform";
