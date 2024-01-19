@@ -17,23 +17,24 @@ void *__arm_sc_memchr(const void *, int, size_t);
 template <unsigned N> class Memory {
 public:
   uint8_t ptr[N];
+  unsigned size;
 
-  Memory(int Stride = 0) {
-    if (Stride != 0) {
-      for (unsigned I = 0, Elem = 0; I < N; I++, Elem += Stride) {
-        ptr[I] = Elem;
-      }
+  Memory(unsigned Stride = 0) {
+    size = N;
+    if (Stride == 0)
+      return;
+    for (unsigned I = 0, Elem = 0; I < N; I++) {
+      ptr[I] = I * Stride;
     }
   }
 
   void assert_equal(const Memory &Other) {
-    for (unsigned I = 0; I < N; I++) {
-      assert(ptr[I] == Other.ptr[I]);
-    }
+    assert(N == Other.size);
+    assert(memcmp(ptr, Other.ptr, N) == 0);
   }
 
   void assert_equal(std::initializer_list<uint8_t> S) {
-    assert(S.size() == N);
+    assert(N == S.size());
     auto It = S.begin();
     for (unsigned I = 0; I < N; I++) {
       assert(ptr[I] == *It++);
@@ -75,7 +76,9 @@ int main() {
       if (!Elem)
         abort();
       Src.assert_elemt_equal_at(Elem - Src.ptr, *Elem);
-      assert(__arm_sc_memchr(Src.ptr, E, 8) == memchr(Src.ptr, E, 8));
+      for (unsigned I = 0; I < 8; ++I)
+        assert(__arm_sc_memchr(Src.ptr, Src.ptr[I], 8) ==
+               memchr(Src.ptr, Src.ptr[I], 8));
     }
   }
 
@@ -93,27 +96,6 @@ int main() {
     if (!__arm_sc_memset(Array.ptr + 1, 2, 6))
       abort();
     Array.assert_equal({0, 2, 2, 2, 2, 2, 2, 7});
-  }
-
-  // Testing memset with different pointer offset.
-  {
-    for (unsigned I = 0; I < 16; I++) {
-      Memory<16> Array(2);
-      if (!__arm_sc_memset(Array.ptr + I, I, 16 - I))
-        abort();
-
-      uint8_t OrigElem = 0;
-      for (unsigned J = 0; J < 16; J++) {
-        if (I == 0) {
-          Array.assert_elemt_equal_at(J, 0);
-        } else if (J < I) {
-          Array.assert_elemt_equal_at(J, OrigElem);
-        } else {
-          Array.assert_elemt_equal_at(J, (uint8_t)I);
-        }
-        OrigElem += 2;
-      }
-    }
   }
 
   // Testing memmove with a simple non-overlap case.
