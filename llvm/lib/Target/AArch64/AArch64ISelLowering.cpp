@@ -16640,16 +16640,15 @@ static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
 
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::v2i64:
-    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v2i64, Concat);
   case MVT::v4i32:
-    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), VT, Concat);
   case MVT::v8i16: {
     SDValue Uaddlv =
         DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
     return DAG.getNode(AArch64ISD::NVCAST, SDLoc(A), MVT::v8i16, Uaddlv);
   }
   default:
-    return SDValue();
+    llvm_unreachable("Unhandled vector type");
   }
 }
 
