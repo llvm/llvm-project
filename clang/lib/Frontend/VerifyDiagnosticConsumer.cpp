@@ -1099,10 +1099,10 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // source file(s) processed.
     if (Status == HasNoDirectives) {
       std::string directives;
-      for(auto &Prefix : Diags.getDiagnosticOptions().VerifyPrefixes) {
+      for (auto &Prefix : Diags.getDiagnosticOptions().VerifyPrefixes) {
         directives = directives + Prefix + ",";
       }
-      if(directives.empty()) {
+      if (directives.empty()) {
         directives = "expected";
       } else {
         directives.pop_back();
