@@ -25,6 +25,7 @@ template <typename R, typename T>
 constexpr void test_constraint_success() {
   static_assert(CanDo<R, T>);
   static_assert(CanDo<T, T>);
+  static_assert(CanDo<T, R>);
 }
 
 template <typename T>

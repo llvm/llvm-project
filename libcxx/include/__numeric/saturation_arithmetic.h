@@ -32,8 +32,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
     return std::numeric_limits<_Tp>::max();
   } else {
     // Signed addition overflow
-    if (__x > 0)
-      // Overflows if (x > 0 && y > 0)
+    if (__x >= 0)
+      // Overflows if (x >= 0 && y > 0)
       return std::numeric_limits<_Tp>::max();
     else
       // Overflows if  (x < 0 && y < 0)
@@ -51,7 +51,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
     return std::numeric_limits<_Tp>::min();
   } else {
     // Signed subtration overflow
-    if (__x > 0)
+    if (__x >= 0)
       // Overflows if (x > 0 && y < 0)
       return std::numeric_limits<_Tp>::max();
     else

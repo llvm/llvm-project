@@ -26,39 +26,54 @@ constexpr bool test_signed() {
   [[maybe_unused]] std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, maxVal);
   static_assert(noexcept(std::sub_sat(minVal, maxVal)));
 
-  // No saturation
+  // clang-format off
+
+  assert(std::sub_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 0});
+  assert(std::sub_sat(IntegerT{-1}, IntegerT{ 0}) == IntegerT{-1});
+  assert(std::sub_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-2});
+  assert(std::sub_sat(IntegerT{-1},       minVal) == IntegerT{-1} - minVal);
+  assert(std::sub_sat(IntegerT{-1},       maxVal) == IntegerT{-1} - maxVal);
+  assert(std::sub_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 1});
+  assert(std::sub_sat(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
+  assert(std::sub_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{-1});
+  assert(std::sub_sat(IntegerT{ 0},       maxVal) == -maxVal);
+
+  // No saturation (large value)
+  
+  assert(std::sub_sat(IntegerT{ 27}, IntegerT{-28}) ==  55);
+  assert(std::sub_sat(IntegerT{ 27}, IntegerT{ 28}) ==  -1);
+  assert(std::sub_sat(IntegerT{-27}, IntegerT{ 28}) == -55);
+  assert(std::sub_sat(IntegerT{-27}, IntegerT{-28}) ==   1);
+
+  // No saturation (min, max)
+
+  assert(std::sub_sat(minVal, IntegerT{-1}) == minVal - IntegerT{-1});
+  assert(std::sub_sat(minVal, IntegerT{ 0}) == minVal);
+  assert(std::sub_sat(minVal,       minVal) == IntegerT{0});
+  assert(std::sub_sat(maxVal, IntegerT{ 0}) == maxVal);
+  assert(std::sub_sat(maxVal,       maxVal) == IntegerT{0});
+
+  // Saturation
+
+  assert(std::sub_sat(IntegerT{ 0},       minVal) == maxVal);
+
   {
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(IntegerT{3}, IntegerT{4});
-    assert(diff == IntegerT{-1});
+    constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    assert(std::sub_sat(lesserVal, biggerVal) == minVal);
+  }
+  {
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{27};
+    assert(std::sub_sat(biggerVal, lesserVal) == maxVal);
   }
 
-  // Saturation - min - left negative, right positive
-  {
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, IntegerT{4});
-    assert(diff == minVal);
-  }
+  assert(std::sub_sat(minVal, IntegerT{ 1}) == minVal);
+  assert(std::sub_sat(minVal,       maxVal) == minVal);
+  assert(std::sub_sat(maxVal, IntegerT{-1}) == maxVal);
+  assert(std::sub_sat(maxVal,       minVal) == maxVal);
 
-  {
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
-    assert(diff == minVal);
-  }
-
-  // Saturation - max - left postitive, right negative
-  {
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(maxVal, IntegerT{-4});
-    assert(diff == maxVal);
-  }
-
-  {
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{28};
-    constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{27};
-
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
-    assert(diff == maxVal);
-  }
+  // clang-format on
 
   return true;
 }
@@ -68,27 +83,38 @@ constexpr bool test_unsigned() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
+  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, maxVal);
+  static_assert(noexcept(std::sub_sat(minVal, maxVal)));
   static_assert(noexcept(std::sub_sat(minVal, maxVal)));
 
-  // No saturation
+  // clang-format off
+
+  // No saturation (0, 1)
+
+  assert(std::sub_sat(IntegerT{0}, IntegerT{0}) == IntegerT{0});
+  assert(std::sub_sat(IntegerT{1}, IntegerT{0}) == IntegerT{1});
+  assert(std::sub_sat(IntegerT{1}, IntegerT{1}) == IntegerT{0});
+
+  // No saturatn (min, max)
+
+  assert(std::sub_sat(minVal, IntegerT{0}) == minVal);
+  assert(std::sub_sat(minVal,      maxVal) == minVal);
+  assert(std::sub_sat(minVal,      maxVal) == minVal);
+
+  // Saturation
+
+  assert(std::sub_sat(IntegerT{0}, IntegerT{1}) == minVal);
+  assert(std::sub_sat(IntegerT{0},      maxVal) == minVal);
+
   {
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(IntegerT{3}, IntegerT{1});
-    assert(diff == IntegerT{2});
+    constexpr IntegerT lesserVal = minVal / IntegerT{2} + IntegerT{27};
+    constexpr IntegerT biggerVal = maxVal / IntegerT{2} + IntegerT{28};
+    assert(std::sub_sat(lesserVal, biggerVal) == minVal);
   }
 
-  // Saturation - min only
-  {
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, IntegerT{4});
-    assert(diff == minVal);
-  }
+  assert(std::sub_sat(minVal, IntegerT{1}) == minVal);
 
-  {
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
-    constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-
-    std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(x, y);
-    assert(diff == minVal);
-  }
+  // clang-format on
 
   return true;
 }
@@ -117,7 +143,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert();
+  test();
   static_assert(test());
 
   return 0;
