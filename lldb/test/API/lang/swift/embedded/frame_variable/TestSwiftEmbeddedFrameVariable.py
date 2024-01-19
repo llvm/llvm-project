@@ -29,3 +29,5 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
                 "b = 123456",
             ],
         )
+
+        # TODO: test enums when "rdar://119343683 (Embedded Swift trivial case enum fails to link)" is solved

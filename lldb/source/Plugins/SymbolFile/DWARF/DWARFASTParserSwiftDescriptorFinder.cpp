@@ -55,9 +55,12 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
 
 static std::optional<swift::reflection::FieldDescriptorKind>
 getFieldDescriptorKindForDie(DWARFDIE &die) {
-  if (die.Tag() == DW_TAG_structure_type)
+  if (die.Tag() == DW_TAG_structure_type) {
+    if (die.HasChildren() && die.GetFirstChild().Tag() == llvm::dwarf::DW_TAG_variant_part)
+      return swift::reflection::FieldDescriptorKind::Enum;
     return swift::reflection::FieldDescriptorKind::Struct;
-  // TODO: handle more cases, for now we only support structs.
+  }
+  // TODO: handle more cases, for now we only support structs and enums.
   return {};
 }
 
@@ -134,10 +137,20 @@ public:
     if (!die)
       return {};
 
-    // For now we only support structs.
-    if (Kind != swift::reflection::FieldDescriptorKind::Struct)
+    switch (Kind) {
+    case swift::reflection::FieldDescriptorKind::Struct:
+      return getFieldRecordsFromStruct(die, dwarf_parser);
+    case swift::reflection::FieldDescriptorKind::Enum:
+      return getFieldRecordsFromEnum(die, dwarf_parser);
+    default:
+      // TODO: handle more cases.
       return {};
+    }
+  }
 
+  std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
+  getFieldRecordsFromStruct(const DWARFDIE &die,
+                          plugin::dwarf::DWARFASTParser *dwarf_parser) {
     std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>> fields;
     for (DWARFDIE child_die : die.children()) {
       auto tag = child_die.Tag();
@@ -148,6 +161,40 @@ public:
       auto *member_type = dwarf_parser->GetTypeForDIE(child_die);
       auto member_mangled_typename =
           member_type->GetForwardCompilerType().GetMangledTypeName();
+
+      // Only matters for enums, so set to false for structs.
+      bool is_indirect_case = false;
+      // Unused by type info construction.
+      bool is_var = false;
+      fields.emplace_back(std::make_unique<DWARFFieldRecordImpl>(
+          is_indirect_case, is_var, ConstString(member_field_name),
+          member_mangled_typename));
+    }
+    return fields;
+  }
+
+  std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
+  getFieldRecordsFromEnum(const DWARFDIE &die,
+                          plugin::dwarf::DWARFASTParser *dwarf_parser) {
+    std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>> fields;
+    auto variant_part = die.GetFirstChild();
+    for (DWARFDIE child_die : variant_part.children()) {
+      auto tag = child_die.Tag();
+      if (tag != llvm::dwarf::DW_TAG_variant)
+        continue;
+      auto member = child_die.GetFirstChild();
+      tag = member.Tag();
+      if (tag != llvm::dwarf::DW_TAG_member)
+        continue;
+      const auto *member_field_name =
+          member.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
+      auto *member_type = dwarf_parser->GetTypeForDIE(member);
+
+      // Empty enum cases don' have a type.
+      auto member_mangled_typename =
+          member_type
+              ? member_type->GetForwardCompilerType().GetMangledTypeName()
+              : ConstString();
 
       // Only matters for enums, so set to false for structs.
       bool is_indirect_case = false;
