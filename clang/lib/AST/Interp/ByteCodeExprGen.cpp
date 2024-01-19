@@ -294,6 +294,29 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_ToVoid:
     return discard(SubExpr);
 
+  case CK_IntegralRealToComplex:
+  case CK_FloatingRealToComplex: {
+    // We're creating a complex value here, so we need to
+    // allocate storage for it.
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(CE, /*IsExtended=*/true);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
+    // Init the complex value to {SubExpr, 0}.
+    if (!this->visitArrayElemInit(0, SubExpr))
+      return false;
+    // Zero-init the second element.
+    PrimType T = classifyPrim(SubExpr->getType());
+    if (!this->visitZeroInitializer(T, SubExpr->getType(), SubExpr))
+      return false;
+    return this->emitInitElem(T, 1, SubExpr);
+  }
+
   default:
     assert(false && "Cast not implemented");
   }
@@ -846,6 +869,10 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 
   if (T->isAnyComplexType()) {
     unsigned NumInits = E->getNumInits();
+
+    if (NumInits == 1)
+      return this->delegate(E->inits()[0]);
+
     QualType ElemQT = E->getType()->getAs<ComplexType>()->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     if (NumInits == 0) {
