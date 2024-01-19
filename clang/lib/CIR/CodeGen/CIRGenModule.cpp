@@ -1103,8 +1103,37 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     return builder.getString(Str, eltTy, finalSize);
   }
 
-  assert(0 && "not implemented");
-  return {};
+  auto arrayTy =
+      getTypes().ConvertType(E->getType()).dyn_cast<mlir::cir::ArrayType>();
+  assert(arrayTy && "string literals must be emitted as an array type");
+
+  auto arrayEltTy = arrayTy.getEltType().dyn_cast<mlir::cir::IntType>();
+  assert(arrayEltTy &&
+         "string literal elements must be emitted as integral type");
+
+  auto arraySize = arrayTy.getSize();
+  auto literalSize = E->getLength();
+
+  // Collect the code units.
+  SmallVector<uint32_t, 32> elementValues;
+  elementValues.reserve(arraySize);
+  for (unsigned i = 0; i < literalSize; ++i)
+    elementValues.push_back(E->getCodeUnit(i));
+  elementValues.resize(arraySize);
+
+  // If the string is full of null bytes, emit a #cir.zero instead.
+  if (std::all_of(elementValues.begin(), elementValues.end(),
+                  [](uint32_t x) { return x == 0; }))
+    return builder.getZeroAttr(arrayTy);
+
+  // Otherwise emit a constant array holding the characters.
+  SmallVector<mlir::Attribute, 32> elements;
+  elements.reserve(arraySize);
+  for (uint64_t i = 0; i < arraySize; ++i)
+    elements.push_back(mlir::cir::IntAttr::get(arrayEltTy, elementValues[i]));
+
+  auto elementsAttr = mlir::ArrayAttr::get(builder.getContext(), elements);
+  return builder.getConstArray(elementsAttr, arrayTy);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
