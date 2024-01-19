@@ -43,6 +43,6 @@ subroutine sub1()
   !$acc parallel device_type(nvidia, default) num_gangs(1, 1, 1)
   !$acc end parallel
 
-! CHECK: acc.parallel num_gangs({%c1_i32_9 : i32, %c1_i32_10 : i32, %c1_i32_11 : i32} [#acc.device_type<nvidia>], {%c1_i32_9 : i32, %c1_i32_10 : i32, %c1_i32_11 : i32} [#acc.device_type<default>])
+! CHECK: acc.parallel num_gangs({%c1{{.*}} : i32, %c1{{.*}} : i32, %c1{{.*}} : i32} [#acc.device_type<nvidia>], {%c1{{.*}} : i32, %c1{{.*}} : i32, %c1{{.*}} : i32} [#acc.device_type<default>])
 
 end subroutine
