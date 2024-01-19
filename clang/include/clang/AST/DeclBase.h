@@ -1708,7 +1708,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVirtualAsWritten : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsPure : 1;
+    uint64_t IsPureVirtual : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInheritedPrototype : 1;
     LLVM_PREFERRED_TYPE(bool)

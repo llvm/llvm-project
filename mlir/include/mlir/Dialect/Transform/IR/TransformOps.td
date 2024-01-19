@@ -728,24 +728,75 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
                        "functional-type(operands, results)";
 }
 
-def GetResultOp : TransformDialectOp<"get_result",
+def GetOperandOp : TransformDialectOp<"get_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Get handle to the a result of the targeted op";
+     NavigationTransformOpTrait, MatchOpInterface, MemoryEffectsOpInterface]> {
+  let summary = "Get a handle to the operand(s) of the targeted op";
   let description = [{
-    The handle defined by this Transform op corresponds to the OpResult with
-    `result_number` that is defined by the given `target` operation.
+    The handle defined by this Transform op corresponds to the operands of the
+    given `target` operation specified by the given set of positions. There are
+    three possible modes:
 
-    This transform produces a silenceable failure if the targeted operation
-    does not have enough results. It reads the target handle and produces the
-    result handle.
+     - Position list directly, i.e. `%target[0, 1, 2]`. This will return the
+       operands at the specified positions.
+     - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
+       all operands except those at the given positions.
+     - All, i.e. `%target[all]`. This will return all operands of the operation.
+    
+    This transform produces a silenceable failure if any of the operand indices
+    exceeds the number of operands in the target. It reads the target handle and
+    produces the result handle.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                       I64Attr:$result_number);
+                       DenseI64ArrayAttr:$raw_position_list,
+                       UnitAttr:$is_inverted,
+                       UnitAttr:$is_all);
   let results = (outs TransformValueHandleTypeInterface:$result);
-  let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
-                       "functional-type(operands, results)";
+  let assemblyFormat =
+      "$target `[`"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
+      "`]` attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+
+def GetResultOp : TransformDialectOp<"get_result",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get a handle to the result(s) of the targeted op";
+  let description = [{
+    The handle defined by this Transform op correspond to the OpResults of the
+    given `target` operation. Optionally `result_number` can be specified to
+    select a specific result.
+    
+    This transform fails silently if the targeted operation does not have enough
+    results. It reads the target handle and produces the result handle.
+
+    The handle defined by this Transform op corresponds to the results of the
+    given `target` operation specified by the given set of positions. There are
+    three possible modes:
+
+     - Position list directly, i.e. `%target[0, 1, 2]`. This will return the
+       results at the specified positions.
+     - Inverted position list, i.e. `%target[except(0, 1, 2)]`. This will return
+       all results except those at the given positions.
+     - All, i.e. `%target[all]`. This will return all results of the operation.
+    
+    This transform produces a silenceable failure if any of the result indices
+    exceeds the number of results returned by the target. It reads the target
+    handle and produces the result handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       DenseI64ArrayAttr:$raw_position_list,
+                       UnitAttr:$is_inverted,
+                       UnitAttr:$is_all);
+  let results = (outs TransformValueHandleTypeInterface:$result);
+  let assemblyFormat =
+      "$target `[`"
+      "custom<TransformMatchDims>($raw_position_list, $is_inverted, $is_all)"
+      "`]` attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
 }
 
 def GetTypeOp : TransformDialectOp<"get_type",
