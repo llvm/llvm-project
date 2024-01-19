@@ -1236,9 +1236,8 @@ StringRef Triple::getEnvironmentVersionString() const {
     if (getObjectFormat() != Triple::UnknownObjectFormat) {
       StringRef ObjectFormatTypeName =
           getObjectFormatTypeName(getObjectFormat());
-      const std::string &tmp = (Twine("-") + ObjectFormatTypeName).str();
-      StringRef Suffix = tmp;
-      EnvironmentName.consume_back(Suffix);
+      const std::string tmp = (Twine("-") + ObjectFormatTypeName).str();
+      EnvironmentName.consume_back(tmp);
     }
   }
   return EnvironmentName;
