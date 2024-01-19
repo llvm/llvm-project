@@ -48,6 +48,11 @@ using DeclareTargetCapturePair =
 // Common helper functions
 //===----------------------------------------------------------------------===//
 
+static uint32_t getOpenMPVersion(mlir::ModuleOp mod) {
+  mlir::Attribute verAttr = mod->getAttr("omp.version");
+  return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+}
+
 static Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
   Fortran::semantics::Symbol *sym = nullptr;
