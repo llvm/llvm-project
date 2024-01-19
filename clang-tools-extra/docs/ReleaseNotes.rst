@@ -224,12 +224,6 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
-- New :doc:`readability-use-std-min-max
-  <clang-tidy/checks/readability/use-std-min-max>` check.
-
-  Replaces certain conditional statements with equivalent ``std::min`` or
-  ``std::max`` expressions.
-
 - New :doc:`readability-avoid-nested-conditional-operator
   <clang-tidy/checks/readability/avoid-nested-conditional-operator>` check.
 
@@ -246,6 +240,12 @@ New checks
 
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
+
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
+
+  Replaces certain conditional statements with equivalent ``std::min`` or
+  ``std::max`` expressions.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

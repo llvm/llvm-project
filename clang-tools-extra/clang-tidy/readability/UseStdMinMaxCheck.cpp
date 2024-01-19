@@ -60,7 +60,8 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
-  auto &Context = *Result.Context;
+  const auto &Context = *Result.Context;
+  const auto &LO = Context.getLangOpts();
   const SourceManager &Source = Context.getSourceManager();
 
   const auto *BinaryOp = dyn_cast<BinaryOperator>(If->getCond());
@@ -68,42 +69,37 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   if (Compound) {
-    int count = 0;
-    clang::Stmt::const_child_iterator I = Compound->child_begin();
-    clang::Stmt::const_child_iterator E = Compound->child_end();
-    for (; I != E; ++I) {
-      count++;
-    }
-    if (count > 1)
+    if (Compound->size() > 1)
       return;
   }
 
-  SourceLocation IfLocation = If->getIfLoc();
-  SourceLocation ThenLocation = If->getEndLoc();
+  const SourceLocation IfLocation = If->getIfLoc();
+  const SourceLocation ThenLocation = If->getEndLoc();
 
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
 
-  const auto CondLhsStr =
-      Lexer::getSourceText(Source.getExpansionRange(CondLhs->getSourceRange()),
-                           Context.getSourceManager(), Context.getLangOpts());
-
-  const auto AssignLhsStr = Lexer::getSourceText(
-      Source.getExpansionRange(AssignLhs->getSourceRange()),
-      Context.getSourceManager(), Context.getLangOpts());
-
-  const auto CondRhsStr =
-      Lexer::getSourceText(Source.getExpansionRange(CondRhs->getSourceRange()),
-                           Context.getSourceManager(), Context.getLangOpts());
-
-  auto CreateMaxReplacement = [&]() {
-    return AssignLhsStr.str() + " = std::max(" + CondLhsStr.str() + ", " +
-           CondRhsStr.str() + ");";
+  const auto CreateString = [&](int index) -> llvm::StringRef {
+    switch (index) {
+    case 1:
+      return Lexer::getSourceText(
+          Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
+    case 2:
+      return Lexer::getSourceText(
+          Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
+    case 3:
+      return Lexer::getSourceText(
+          Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
+    default:
+      return "Invalid index";
+    }
   };
 
-  auto CreateMinReplacement = [&]() {
-    return AssignLhsStr.str() + " = std::min(" + CondLhsStr.str() + ", " +
-           CondRhsStr.str() + ");";
+  const auto CreateReplacement = [&](bool useMax) {
+    std::string functionName = useMax ? "std::max" : "std::min";
+    return CreateString(/* AssignLhs */ 3).str() + " = " + functionName + "(" +
+           CreateString(/* CondLhs */ 1).str() + ", " +
+           CreateString(/* CondRhs */ 2).str() + ");";
   };
   const auto OperatorStr = BinaryOp->getOpcodeStr();
   if (((BinaryOp->getOpcode() == BO_LT || BinaryOp->getOpcode() == BO_LE) &&
@@ -115,7 +111,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::min` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        std::move(CreateMinReplacement()))
+                                        CreateReplacement(/*useMax = false*/ 0))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
 
@@ -134,7 +130,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::max` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        std::move(CreateMaxReplacement()))
+                                        CreateReplacement(/*useMax = true*/ 1))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   }
