@@ -21,13 +21,8 @@ using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
 
 void BPFunctionNode::dump(raw_ostream &OS) const {
-  OS << "{ID=" << Id << " Utilities={";
-  for (auto &N : UtilityNodes)
-    OS << N.Id << " ,";
-  OS << "}";
-  if (Bucket.has_value())
-    OS << " Bucket=" << Bucket.value();
-  OS << "}";
+  OS << formatv("{{ID={0} Utilities={{{1:$[,]}} Bucket={2}}", Id,
+                make_range(UtilityNodes.begin(), UtilityNodes.end()), Bucket);
 }
 
 template <typename Func>
@@ -171,40 +166,34 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
                                          unsigned RecDepth, unsigned LeftBucket,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
-  // Count the degree of each utility node.
-  DenseMap<uint32_t, unsigned> UtilityNodeIndex;
+  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      ++UtilityNodeIndex[UN.Id];
+      ++UtilityNodeIndex[UN];
   // Remove utility nodes if they have just one edge or are connected to all
-  // functions.
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  // functions
   for (auto &N : Nodes)
     llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
-      return UtilityNodeIndex[UN.Id] == 1 ||
-             UtilityNodeIndex[UN.Id] == NumNodes;
+      return UtilityNodeIndex[UN] == 1 || UtilityNodeIndex[UN] == NumNodes;
     });
 
-  // Renumber utility nodes so they can be used to index into Signatures.
+  // Renumber utility nodes so they can be used to index into Signatures
   UtilityNodeIndex.clear();
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      UN.Id = UtilityNodeIndex.insert({UN.Id, UtilityNodeIndex.size()})
-                  .first->second;
+      UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()}).first->second;
 
-  // Initialize signatures.
+  // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());
   for (auto &N : Nodes) {
     for (auto &UN : N.UtilityNodes) {
-      assert(UN.Id < Signatures.size());
-      if (N.Bucket == LeftBucket)
-        Signatures[UN.Id].LeftCount++;
-      else
-        Signatures[UN.Id].RightCount++;
-      // Identical utility nodes (having the same UN.Id) have the same weight
-      // (unless there are hash collisions mapping utilities to the same Id);
-      // thus, we get a new weight only when the signature is uninitialized.
-      Signatures[UN.Id].Weight = UN.Weight;
+      assert(UN < Signatures.size());
+      if (N.Bucket == LeftBucket) {
+        Signatures[UN].LeftCount++;
+      } else {
+        Signatures[UN].RightCount++;
+      }
     }
   }
 
@@ -232,11 +221,9 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
     Signature.CachedGainLR = 0.f;
     Signature.CachedGainRL = 0.f;
     if (L > 0)
-      Signature.CachedGainLR =
-          (Cost - logCost(L - 1, R + 1)) * Signature.Weight;
+      Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
     if (R > 0)
-      Signature.CachedGainRL =
-          (Cost - logCost(L + 1, R - 1)) * Signature.Weight;
+      Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
     Signature.CachedGainIsValid = true;
   }
 
@@ -295,14 +282,14 @@ bool BalancedPartitioning::moveFunctionNode(BPFunctionNode &N,
   // Update signatures and invalidate gain cache
   if (FromLeftToRight) {
     for (auto &UN : N.UtilityNodes) {
-      auto &Signature = Signatures[UN.Id];
+      auto &Signature = Signatures[UN];
       Signature.LeftCount--;
       Signature.RightCount++;
       Signature.CachedGainIsValid = false;
     }
   } else {
     for (auto &UN : N.UtilityNodes) {
-      auto &Signature = Signatures[UN.Id];
+      auto &Signature = Signatures[UN];
       Signature.LeftCount++;
       Signature.RightCount--;
       Signature.CachedGainIsValid = false;
@@ -331,8 +318,8 @@ float BalancedPartitioning::moveGain(const BPFunctionNode &N,
                                      const SignaturesT &Signatures) {
   float Gain = 0.f;
   for (auto &UN : N.UtilityNodes)
-    Gain += (FromLeftToRight ? Signatures[UN.Id].CachedGainLR
-                             : Signatures[UN.Id].CachedGainRL);
+    Gain += (FromLeftToRight ? Signatures[UN].CachedGainLR
+                             : Signatures[UN].CachedGainRL);
   return Gain;
 }
 
