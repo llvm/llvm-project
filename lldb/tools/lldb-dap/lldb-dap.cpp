@@ -106,6 +106,14 @@ typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
+/// Prints a welcome message on the editor if the preprocessor variable
+/// LLDB_DAP_WELCOME_MESSAGE is defined.
+static void PrintWelcomeMessage() {
+#ifdef LLDB_DAP_WELCOME_MESSAGE
+  g_dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+#endif
+}
+
 lldb::SBValueList *GetTopLevelScope(int64_t variablesReference) {
   switch (variablesReference) {
   case VARREF_LOCALS:
@@ -655,6 +663,8 @@ void request_attach(const llvm::json::Object &request) {
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
+  PrintWelcomeMessage();
+
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
   // the lldb-dap binary to have its working directory set to that relative
@@ -664,7 +674,7 @@ void request_attach(const llvm::json::Object &request) {
 
   // Run any initialize LLDB commands the user specified in the launch.json
   if (llvm::Error err = g_dap.RunInitCommands()) {
-    response["success"] = false;
+    kkkk response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
@@ -1824,10 +1834,12 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
+  PrintWelcomeMessage();
+
   // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which require
-  // the lldb-dap binary to have its working directory set to that relative
-  // root for the .o files in order to be able to load debug info.
+  // in the debug map of the main executable have relative paths which
+  // require the lldb-dap binary to have its working directory set to that
+  // relative root for the .o files in order to be able to load debug info.
   if (!debuggerRoot.empty())
     llvm::sys::fs::set_current_path(debuggerRoot);
 
