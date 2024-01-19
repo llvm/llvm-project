@@ -558,7 +558,7 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
-- The warning `-Wnan-and-infinity-disabled` is now emitted when ``INFINITY``
+- The warning `-Wnan-infinity-disabled` is now emitted when ``INFINITY``
   or ``NAN`` are used in arithmetic operations or function arguments in
   floating-point mode where ``INFINITY`` or ``NAN`` don't have the expected
   values.

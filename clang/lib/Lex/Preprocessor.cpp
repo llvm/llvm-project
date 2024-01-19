@@ -1457,9 +1457,9 @@ void Preprocessor::emitRestrictExpansionWarning(const Token &Identifier) const {
   Diag(Info.Location, diag::note_pp_macro_annotation) << 1;
 }
 
-void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier) const {
-  if (getLangOpts().NoHonorInfs)
-    Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << 0 << 1;
+void Preprocessor::emitRestrictInfNaNWarning(const Token &Identifier,
+                                             unsigned DiagSelection) const {
+  Diag(Identifier, diag::warn_fp_nan_inf_when_disabled) << DiagSelection << 1;
 }
 
 void Preprocessor::emitFinalMacroWarning(const Token &Identifier,

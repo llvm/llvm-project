@@ -1,17 +1,17 @@
 // Use of NAN macro will trigger a warning "infinity defined in macro" because
 // on Windows the NAN macro is defined using INFINITY. See below.
 
-// RUN: %clang_cc1 -x c++ -verify -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs -menable-no-nans  -DFAST=1
+// RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs -menable-no-nans
 
 // RUN: %clang_cc1 -x c++ -verify -triple powerpc64le-unknown-unknown %s \
 // RUN: -DNOFAST=1
 
-// RUN: %clang_cc1 -x c++ -verify -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-infs -DNO_INFS=1
+// RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-infs
 
-// RUN: %clang_cc1 -x c++ -verify -triple powerpc64le-unknown-unknown %s \
-// RUN: -menable-no-nans -DNO_NANS=1
+// RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
+// RUN: -menable-no-nans
 
 int isunorderedf (float x, float y);
 #if NOFAST
@@ -74,202 +74,107 @@ public:
 
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
-#if FAST
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   i = a == INFINITY;
-#if FAST
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY == a;
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   i = a == NAN;
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+4 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = NAN == a;
-#if FAST
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY <= a;
-#if FAST
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = INFINITY < a;
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+4 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = a > NAN;
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = a >= NAN;
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   k = std::isinf(a);
-#if FAST
-// expected-warning@+5 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_NANS
-// expected-warning@+2 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   l = std::isnan(a);
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   o = std::isfinite(a);
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   m = __builtin_isinf(a);
-#if FAST
-// expected-warning@+5 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_NANS
-// expected-warning@+2 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   n = __builtin_isnan(a);
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   p = __builtin_isfinite(a);
 
-  // These should NOT warn, since they are not comparing with NaN or infinity.
+  // These should NOT warn, since they are not using NaN or infinity.
   j = a > 1.1;
   j = b < 1.1;
   j = a >= 1.1;
   j = b <= 1.1;
   j = isunorderedf(a, b);
 
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+// no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point option}}
+// no-inf-no-nan-warning@+3 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = isunorderedf(a, NAN);
-#if FAST
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
   j = isunorderedf(a, INFINITY);
-#if FAST
-// expected-warning@+17 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+14 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+8 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_NANS
-// expected-warning@+2 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+6 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+5 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+4 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+3 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+2 {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   i = std::isunordered(a, NAN);
-#if FAST
-// expected-warning@+11 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if FAST
-// expected-warning@+8 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+5 {{use of infinity via a macro results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_NANS
-// expected-warning@+2 {{use of NaN results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+4 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-no-nan-warning@+3 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+2 {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+// no-nan-warning@+1 {{use of NaN is undefined behavior due to the currently enabled floating-point options}}
   i = std::isunordered(a, INFINITY);
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   double y = i * numeric_limits<double>::infinity();
 
-#if FAST
-// expected-warning@+5 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
-#if NO_INFS
-// expected-warning@+2 {{use of infinity results in undefined behavior due to the currently enabled floating-point options}}
-#endif
+// no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+// no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   j = numeric_limits<float>::infinity();
   return 0;
 
