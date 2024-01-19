@@ -784,9 +784,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
-    unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return (Cost + (LT.first - 1)) * TLI->getLMULCost(LT.second);
+    return LT.first * TLI->getLMULCost(LT.second);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
