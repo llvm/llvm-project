@@ -198,6 +198,7 @@ const char *validationEventToString(exegesis::ValidationEvent VE) {
   case exegesis::ValidationEvent::InstructionRetired:
     return "instructions-retired";
   }
+  llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
 }
 
 Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
