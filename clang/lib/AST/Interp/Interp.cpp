@@ -490,7 +490,7 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
 }
 
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
-  if (!MD->isPure())
+  if (!MD->isPureVirtual())
     return true;
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_pure_virtual_call, 1) << MD;
