@@ -649,11 +649,11 @@ void BreakpointLocation::SendBreakpointLocationChangedEvent(
   if (!m_being_created && !m_owner.IsInternal() &&
       m_owner.GetTarget().EventTypeHasListeners(
           Target::eBroadcastBitBreakpointChanged)) {
-    Breakpoint::BreakpointEventData *data = new Breakpoint::BreakpointEventData(
+    auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
-    data->GetBreakpointLocationCollection().Add(shared_from_this());
+    data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
     m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data);
+                                       data_sp);
   }
 }
 

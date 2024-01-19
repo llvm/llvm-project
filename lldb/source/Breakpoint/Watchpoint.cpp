@@ -462,24 +462,12 @@ const char *Watchpoint::GetConditionText() const {
 
 void Watchpoint::SendWatchpointChangedEvent(
     lldb::WatchpointEventType eventKind) {
-  if (!m_being_created &&
-      GetTarget().EventTypeHasListeners(
-          Target::eBroadcastBitWatchpointChanged)) {
-    WatchpointEventData *data =
-        new Watchpoint::WatchpointEventData(eventKind, shared_from_this());
-    GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data);
+  if (!m_being_created && GetTarget().EventTypeHasListeners(
+                              Target::eBroadcastBitWatchpointChanged)) {
+    auto data_sp =
+        std::make_shared<WatchpointEventData>(eventKind, shared_from_this());
+    GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data_sp);
   }
-}
-
-void Watchpoint::SendWatchpointChangedEvent(WatchpointEventData *data) {
-  if (data == nullptr)
-    return;
-
-  if (!m_being_created &&
-      GetTarget().EventTypeHasListeners(Target::eBroadcastBitWatchpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data);
-  else
-    delete data;
 }
 
 Watchpoint::WatchpointEventData::WatchpointEventData(
