@@ -22,6 +22,10 @@ int x = foo();
 // IGNORE2-NOT: - "foobar.h"
 //     IGNORE2: + "foo.h"
 
+//        RUN: clang-include-cleaner -print=changes %s --only-headers="foo\.h" -- -I%S/Inputs/ | FileCheck --match-full-lines --allow-empty --check-prefix=ONLY %s
+//   ONLY-NOT: - "foobar.h"
+//       ONLY: + "foo.h"
+
 //        RUN: clang-include-cleaner -print %s -- -I%S/Inputs/ | FileCheck --match-full-lines --check-prefix=PRINT %s
 //      PRINT: #include "foo.h"
 //  PRINT-NOT: {{^}}#include "foobar.h"{{$}}
