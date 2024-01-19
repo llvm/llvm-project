@@ -1387,7 +1387,8 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
     }
     SPIRVType *Type = GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
     if (!Type) {
-      std::string DiagMsg = "Unable to recognize SPIRV type name: " + ReturnType;
+      std::string DiagMsg =
+          "Unable to recognize SPIRV type name: " + ReturnType;
       report_fatal_error(DiagMsg.c_str());
     }
     MRI->setRegClass(Call->Arguments[0], &SPIRV::IDRegClass);

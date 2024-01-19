@@ -160,16 +160,15 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   SPIRVType *ResArgType = nullptr;
   if (MDString *MDKernelArgType = getOCLKernelArgType(F, ArgIdx)) {
     StringRef MDTypeStr = MDKernelArgType->getString();
-    if (MDTypeStr.ends_with("*")) {
+    if (MDTypeStr.ends_with("*"))
       ResArgType = GR->getOrCreateSPIRVTypeByName(
           MDTypeStr, MIRBuilder,
           addressSpaceToStorageClass(
               OriginalArgType->getPointerAddressSpace()));
-    } else if (MDTypeStr.ends_with("_t")) {
+    else if (MDTypeStr.ends_with("_t"))
       ResArgType = GR->getOrCreateSPIRVTypeByName(
           "opencl." + MDTypeStr.str(), MIRBuilder,
           SPIRV::StorageClass::Function, ArgAccessQual);
-    }
   }
   return ResArgType ? ResArgType
                     : GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder,
