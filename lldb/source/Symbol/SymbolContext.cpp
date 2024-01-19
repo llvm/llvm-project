@@ -164,12 +164,6 @@ bool SymbolContext::DumpStopContext(
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      llvm::StringRef ansi_prefix;
-      llvm::StringRef ansi_suffix;
-      if (target_sp) {
-        ansi_prefix = target_sp->GetDebugger().GetRegexMatchAnsiPrefix();
-        ansi_suffix = target_sp->GetDebugger().GetRegexMatchAnsiSuffix();
-      }
       s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), settings);
     }
 

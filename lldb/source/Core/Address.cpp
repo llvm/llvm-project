@@ -517,14 +517,6 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               if (symbol) {
                 const char *symbol_name = symbol->GetName().AsCString();
                 if (symbol_name) {
-                  llvm::StringRef ansi_prefix;
-                  llvm::StringRef ansi_suffix;
-                  if (target) {
-                    ansi_prefix =
-                        target->GetDebugger().GetRegexMatchAnsiPrefix();
-                    ansi_suffix =
-                        target->GetDebugger().GetRegexMatchAnsiSuffix();
-                  }
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
