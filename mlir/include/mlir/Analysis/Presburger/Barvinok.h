@@ -99,8 +99,10 @@ QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
                                                  ArrayRef<QuasiPolynomial> num,
                                                  ArrayRef<Fraction> den);
 
-/// Find the number of terms in the generating function corresponding to
-/// a polytope.
+/// Find the number of terms in a generating function, which is
+/// a quasipolynomial in the parameter space of the input function.
+/// The generating function must be such that for all values of the
+/// parameters, the number of terms is finite; else it returns 0.
 QuasiPolynomial computeNumTerms(const GeneratingFunction &gf);
 
 } // namespace detail
