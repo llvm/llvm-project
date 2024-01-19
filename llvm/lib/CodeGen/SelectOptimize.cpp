@@ -128,7 +128,6 @@ public:
   /// act like selects. For example Or(Zext(icmp), X) can be treated like
   /// select(icmp, X|1, X).
   class SelectLike {
-  private:
     SelectLike(Instruction *I) : I(I) {}
 
     Instruction *I;
@@ -305,7 +304,7 @@ private:
                              Instruction *SI, bool ForSinking = false);
 
   // Returns true if the condition of the select is highly predictable.
-  bool isSelectHighlyPredictable(SelectLike SI);
+  bool isSelectHighlyPredictable(const SelectLike SI);
 
   // Loop-level checks to determine if a non-predicated version (with branches)
   // of the given loop is more profitable than its predicated version.
@@ -325,14 +324,14 @@ private:
   std::optional<uint64_t> computeInstCost(const Instruction *I);
 
   // Returns the misprediction cost of a given select when converted to branch.
-  Scaled64 getMispredictionCost(SelectLike SI, const Scaled64 CondCost);
+  Scaled64 getMispredictionCost(const SelectLike SI, const Scaled64 CondCost);
 
   // Returns the cost of a branch when the prediction is correct.
   Scaled64 getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
-                                SelectLike SI);
+                                const SelectLike SI);
 
   // Returns true if the target architecture supports lowering a given select.
-  bool isSelectKindSupported(SelectLike SI);
+  bool isSelectKindSupported(const SelectLike SI);
 };
 
 class SelectOptimize : public FunctionPass {
@@ -897,7 +896,7 @@ static InstructionCost divideNearest(InstructionCost Numerator,
   return (Numerator + (Denominator / 2)) / Denominator;
 }
 
-static bool extractBranchWeights(SelectOptimizeImpl::SelectLike SI,
+static bool extractBranchWeights(const SelectOptimizeImpl::SelectLike SI,
                                  uint64_t &TrueVal, uint64_t &FalseVal) {
   if (isa<SelectInst>(SI.getI()))
     return extractBranchWeights(*SI.getI(), TrueVal, FalseVal);
@@ -1025,7 +1024,7 @@ void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
   }
 }
 
-bool SelectOptimizeImpl::isSelectHighlyPredictable(SelectLike SI) {
+bool SelectOptimizeImpl::isSelectHighlyPredictable(const SelectLike SI) {
   uint64_t TrueWeight, FalseWeight;
   if (extractBranchWeights(SI, TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
@@ -1207,7 +1206,7 @@ SelectOptimizeImpl::computeInstCost(const Instruction *I) {
 }
 
 ScaledNumber<uint64_t>
-SelectOptimizeImpl::getMispredictionCost(SelectLike SI,
+SelectOptimizeImpl::getMispredictionCost(const SelectLike SI,
                                          const Scaled64 CondCost) {
   uint64_t MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
 
@@ -1234,7 +1233,7 @@ SelectOptimizeImpl::getMispredictionCost(SelectLike SI,
 // TrueCost * TrueProbability + FalseCost * FalseProbability.
 ScaledNumber<uint64_t>
 SelectOptimizeImpl::getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
-                                         SelectLike SI) {
+                                         const SelectLike SI) {
   Scaled64 PredPathCost;
   uint64_t TrueWeight, FalseWeight;
   if (extractBranchWeights(SI, TrueWeight, FalseWeight)) {
@@ -1254,7 +1253,7 @@ SelectOptimizeImpl::getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
   return PredPathCost;
 }
 
-bool SelectOptimizeImpl::isSelectKindSupported(SelectLike SI) {
+bool SelectOptimizeImpl::isSelectKindSupported(const SelectLike SI) {
   bool VectorCond = !SI.getCondition()->getType()->isIntegerTy(1);
   if (VectorCond)
     return false;
