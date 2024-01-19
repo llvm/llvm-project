@@ -551,7 +551,6 @@ def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
-
 }
 } // End has_sdst = 0
 

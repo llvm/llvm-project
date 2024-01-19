@@ -8261,7 +8261,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID);
+    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID,
+                                 CI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -8314,7 +8315,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     }
 
     return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()),
-                                 Intrinsic::not_intrinsic, Variant);
+                                 Intrinsic::not_intrinsic, CI->getDebugLoc(),
+                                 Variant);
   }
 
   return nullptr;
@@ -8963,16 +8965,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
            "AnyOf reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
-    SetVector<VPRecipeBase *> Worklist;
+    SetVector<VPSingleDefRecipe *> Worklist;
     Worklist.insert(PhiR);
     for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPRecipeBase *Cur = Worklist[I];
-      for (VPUser *U : Cur->getVPSingleValue()->users()) {
-        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
-        if (!UserRecipe)
+      VPSingleDefRecipe *Cur = Worklist[I];
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = dyn_cast<VPSingleDefRecipe>(U);
+        if (!UserRecipe) {
+          assert(isa<VPLiveOut>(U) &&
+                 "U must either be a VPSingleDef or VPLiveOut");
           continue;
-        assert(UserRecipe->getNumDefinedValues() == 1 &&
-               "recipes must define exactly one result value");
+        }
         Worklist.insert(UserRecipe);
       }
     }
@@ -8982,10 +8985,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // (PreviousLink) to tell which of the two operands of a Link will remain
     // scalar and which will be reduced. For minmax by select(cmp), Link will be
     // the select instructions.
-    VPRecipeBase *PreviousLink = PhiR; // Aka Worklist[0].
-    for (VPRecipeBase *CurrentLink : Worklist.getArrayRef().drop_front()) {
-      VPValue *PreviousLinkV = PreviousLink->getVPSingleValue();
-
+    VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
+    for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
       Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
 
       // Index of the first operand which holds a non-mask vector operand.
@@ -9000,7 +9001,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             "Expected instruction to be a call to the llvm.fmuladd intrinsic");
         assert(((MinVF.isScalar() && isa<VPReplicateRecipe>(CurrentLink)) ||
                 isa<VPWidenCallRecipe>(CurrentLink)) &&
-               CurrentLink->getOperand(2) == PreviousLinkV &&
+               CurrentLink->getOperand(2) == PreviousLink &&
                "expected a call where the previous link is the added operand");
 
         // If the instruction is a call to the llvm.fmuladd intrinsic then we
@@ -9031,15 +9032,15 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         // Note that for non-commutable operands (cmp-selects), the semantics of
         // the cmp-select are captured in the recurrence kind.
         unsigned VecOpId =
-            CurrentLink->getOperand(IndexOfFirstOperand) == PreviousLinkV
+            CurrentLink->getOperand(IndexOfFirstOperand) == PreviousLink
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLinkV &&
+        assert(VecOp != PreviousLink &&
                CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
                                        (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLinkV &&
-               "PreviousLinkV must be the operand other than VecOp");
+                   PreviousLink &&
+               "PreviousLink must be the operand other than VecOp");
       }
 
       BasicBlock *BB = CurrentLinkI->getParent();
@@ -9051,13 +9052,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       }
 
       VPReductionRecipe *RedRecipe = new VPReductionRecipe(
-          RdxDesc, CurrentLinkI, PreviousLinkV, VecOp, CondOp);
+          RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp);
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including
       // CurrentLink), which will be cleaned by a later VPlan transform.
       LinkVPBB->appendRecipe(RedRecipe);
-      CurrentLink->getVPSingleValue()->replaceAllUsesWith(RedRecipe);
+      CurrentLink->replaceAllUsesWith(RedRecipe);
       PreviousLink = RedRecipe;
     }
   }

@@ -27,7 +27,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   undef %6.sub1:vreg_64 = V_MOV_B32_e32 1786773504, implicit $exec
   ; CHECK-NEXT:   S_NOP 0, implicit %6.sub1
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit [[SI_SPILL_V64_RESTORE]].sub1
   ; CHECK-NEXT:   S_NOP 0, implicit undef %9.sub0:vreg_64
   bb.0:

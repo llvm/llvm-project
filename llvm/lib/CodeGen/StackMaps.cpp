@@ -207,7 +207,7 @@ static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
 MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE, LocationVec &Locs,
-                        LiveOutVec &LiveOuts) const {
+                        LiveOutVec &LiveOuts) {
   const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   if (MOI->isImm()) {
     switch (MOI->getImm()) {
@@ -238,7 +238,22 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       ++MOI;
       assert(MOI->isImm() && "Expected constant operand.");
       int64_t Imm = MOI->getImm();
-      Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, Imm);
+      if (isInt<32>(Imm)) {
+        Locs.emplace_back(Location::Constant, sizeof(int64_t), 0, Imm);
+      } else {
+        // ConstPool is intentionally a MapVector of 'uint64_t's (as
+        // opposed to 'int64_t's).  We should never be in a situation
+        // where we have to insert either the tombstone or the empty
+        // keys into a map, and for a DenseMap<uint64_t, T> these are
+        // (uint64_t)0 and (uint64_t)-1.  They can be and are
+        // represented using 32 bit integers.
+        assert((uint64_t)Imm != DenseMapInfo<uint64_t>::getEmptyKey() &&
+               (uint64_t)Imm != DenseMapInfo<uint64_t>::getTombstoneKey() &&
+               "empty and tombstone keys should fit in 32 bits!");
+        auto Result = ConstPool.insert(std::make_pair(Imm, Imm));
+        Locs.emplace_back(Location::ConstantIndex, sizeof(int64_t), 0,
+                          Result.first - ConstPool.begin());
+      }
       break;
     }
     }
@@ -496,27 +511,6 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   else
     while (MOI != MOE)
       MOI = parseOperand(MOI, MOE, Locations, LiveOuts);
-
-  // Move large constants into the constant pool.
-  for (auto &Loc : Locations) {
-    // Constants are encoded as sign-extended integers.
-    // -1 is directly encoded as .long 0xFFFFFFFF with no constant pool.
-    if (Loc.Type == Location::Constant && !isInt<32>(Loc.Offset)) {
-      Loc.Type = Location::ConstantIndex;
-      // ConstPool is intentionally a MapVector of 'uint64_t's (as
-      // opposed to 'int64_t's).  We should never be in a situation
-      // where we have to insert either the tombstone or the empty
-      // keys into a map, and for a DenseMap<uint64_t, T> these are
-      // (uint64_t)0 and (uint64_t)-1.  They can be and are
-      // represented using 32 bit integers.
-      assert((uint64_t)Loc.Offset != DenseMapInfo<uint64_t>::getEmptyKey() &&
-             (uint64_t)Loc.Offset !=
-                 DenseMapInfo<uint64_t>::getTombstoneKey() &&
-             "empty and tombstone keys should fit in 32 bits!");
-      auto Result = ConstPool.insert(std::make_pair(Loc.Offset, Loc.Offset));
-      Loc.Offset = Result.first - ConstPool.begin();
-    }
-  }
 
   // Create an expression to calculate the offset of the callsite from function
   // entry.

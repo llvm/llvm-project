@@ -3458,7 +3458,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
     applyDefaultMapping(OpdMapper);
     return;
-    }
+  }
   default:
     break;
   }

@@ -931,7 +931,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
-      (ins i32imm:$addr, i32imm:$last_use)> {
+      (ins i32imm:$addr)> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -1000,7 +1000,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
       (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset, i32imm:$last_use)> {
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
 
