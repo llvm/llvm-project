@@ -851,6 +851,33 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       Twine(getClangFullCPPVersion()) + "\"");
 
   // Initialize language-specific preprocessor defines.
+  if (LangOpts.getLibcxxHardeningMode()) {
+    const char *LibcxxHardeningStr;
+
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE_NONE", "0");
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE_FAST", "1");
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE_EXTENSIVE", "2");
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE_DEBUG", "3");
+
+    switch (LangOpts.getLibcxxHardeningMode()) {
+    case clang::LangOptions::LIBCPP_HARDENING_MODE_NOT_SPECIFIED:
+      llvm_unreachable("Unexpected libc++ hardening mode value");
+    case clang::LangOptions::LIBCPP_HARDENING_MODE_NONE:
+      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_NONE";
+      break;
+    case clang::LangOptions::LIBCPP_HARDENING_MODE_FAST:
+      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_FAST";
+      break;
+    case clang::LangOptions::LIBCPP_HARDENING_MODE_EXTENSIVE:
+      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_EXTENSIVE";
+      break;
+    case clang::LangOptions::LIBCPP_HARDENING_MODE_DEBUG:
+      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_DEBUG";
+      break;
+    }
+
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE", LibcxxHardeningStr);
+  }
 
   // Standard conforming mode?
   if (!LangOpts.GNUMode && !LangOpts.MSVCCompat)
