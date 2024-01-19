@@ -233,19 +233,20 @@ static void readImportFile(StringRef filename) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
+std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
+    MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> v;
+  std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
+    v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -273,8 +274,8 @@ void LinkerDriver::addFile(StringRef path) {
 
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (MemoryBufferRef &m : getArchiveMembers(mbref)) {
-        auto *object = createObjectFile(m, path);
+      for (const auto &[m, offset] : getArchiveMembers(mbref)) {
+        auto *object = createObjectFile(m, path, offset);
         // Mark object as live; object members are normally not
         // live by default but -whole-archive is designed to treat
         // them as such.
