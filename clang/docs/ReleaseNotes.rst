@@ -74,6 +74,10 @@ C/C++ Language Potentially Breaking Changes
   outlined in "The Equality Operator You Are Looking For" (`P2468 <http://wg21.link/p2468r2>`_).
   Fixes (`#68901: <https://github.com/llvm/llvm-project/issues/68901>`_).
 
+- Remove the hardcoded path to the imported modules for C++20 named modules. Now we
+  require all the dependent modules to specified from the command line.
+  See (`#62707: <https://github.com/llvm/llvm-project/issues/62707>`_).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - The name mangling rules for function templates has been changed to take into
@@ -719,7 +723,9 @@ Bug Fixes in This Version
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
   and `if consteval` branches.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
-
+- Fix an issue where clang cannot find conversion function with template
+  parameter when instantiation of template class.
+  Fixes (`#77583 <https://github.com/llvm/llvm-project/issues/77583>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

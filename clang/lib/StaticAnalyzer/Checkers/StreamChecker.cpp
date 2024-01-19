@@ -268,7 +268,11 @@ private:
         std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
+      {{{"fseeko"}, 3},
+       {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
+       {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+      {{{"ftello"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
       {{{"fflush"}, 1},
        {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
@@ -1113,10 +1117,10 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
-  auto Cond = SVB.evalBinOp(State, BO_GE, RetVal,
-                            SVB.makeZeroVal(C.getASTContext().LongTy),
-                            SVB.getConditionType())
-                  .getAs<DefinedOrUnknownSVal>();
+  auto Cond =
+      SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(Call.getResultType()),
+                    SVB.getConditionType())
+          .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
   StateNotFailed = StateNotFailed->assume(*Cond, true);
@@ -1124,7 +1128,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
+      CE, C.getLocationContext(), SVB.makeIntVal(-1, Call.getResultType()));
 
   // This function does not affect the stream state.
   // Still we add success and failure state with the appropriate return value.

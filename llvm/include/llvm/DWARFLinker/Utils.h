@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_DWARFLINKER_PARALLEL_UTILS_H
-#define LLVM_LIB_DWARFLINKER_PARALLEL_UTILS_H
+#ifndef LLVM_DWARFLINKER_UTILS_H
+#define LLVM_DWARFLINKER_UTILS_H
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 namespace llvm {
 namespace dwarf_linker {
-namespace parallel {
 
 /// This function calls \p Iteration() until it returns false.
 /// If number of iterations exceeds \p MaxCounter then an Error is returned.
@@ -27,16 +30,35 @@ inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
     Expected<bool> IterationResultOrError = Iteration();
     if (!IterationResultOrError)
       return IterationResultOrError.takeError();
-
     if (!IterationResultOrError.get())
       return Error::success();
   }
-
   return createStringError(std::errc::invalid_argument, "Infinite recursion");
 }
 
-} // end of namespace parallel
+/// Make a best effort to guess the
+/// Xcode.app/Contents/Developer/Toolchains/ path from an SDK path.
+inline SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
+  SmallString<128> Result;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  StringRef Base = sys::path::parent_path(SysRoot);
+  if (sys::path::filename(Base) != "SDKs")
+    return Result;
+  Base = sys::path::parent_path(Base);
+  Result = Base;
+  Result += "/Toolchains";
+  return Result;
+}
+
+inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
+  // Debug info can contain paths from any OS, not necessarily
+  // an OS we're currently running on. Moreover different compilation units can
+  // be compiled on different operating systems and linked together later.
+  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
+         sys::path::is_absolute(Path, sys::path::Style::windows);
+}
+
 } // end of namespace dwarf_linker
 } // end of namespace llvm
 
-#endif // LLVM_LIB_DWARFLINKER_PARALLEL_UTILS_H
+#endif // LLVM_DWARFLINKER_UTILS_H

@@ -86,7 +86,7 @@ void test_svmla4_f32(uint32_t slice_base, svfloat32x4_t zn, svfloat32x4_t zm) __
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single2_f32(uint32_t slice_base, svfloat32x2_t zn, svfloat32_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svmla_single_za32,,_f32,,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_f32,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_f32(
@@ -108,7 +108,7 @@ void test_svmla_single2_f32(uint32_t slice_base, svfloat32x2_t zn, svfloat32_t z
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single4_f32(uint32_t slice_base, svfloat32x4_t zn, svfloat32_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svmla_single_za32,,_f32,,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za32,_f32,_vg1x4)(slice_base, zn, zm);
 }
 
 //
@@ -224,7 +224,7 @@ void test_svmla4_f64(uint32_t slice_base, svfloat64x4_t zn, svfloat64x4_t zm) __
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single2_f64(uint32_t slice_base, svfloat64x2_t zn, svfloat64_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svmla_single_za64,,_f64,,_vg1x2)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_f64,_vg1x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_f64(
@@ -246,7 +246,7 @@ void test_svmla_single2_f64(uint32_t slice_base, svfloat64x2_t zn, svfloat64_t z
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmla_single4_f64(uint32_t slice_base, svfloat64x4_t zn, svfloat64_t zm) __arm_streaming __arm_shared_za {
-  SVE_ACLE_FUNC(svmla_single_za64,,_f64,,_vg1x4)(slice_base, zn, zm);
+  SVE_ACLE_FUNC(svmla,_single,_za64,_f64,_vg1x4)(slice_base, zn, zm);
 }
 
 //

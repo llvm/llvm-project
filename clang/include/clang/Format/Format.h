@@ -3055,6 +3055,7 @@ struct FormatStyle {
   bool isProto() const {
     return Language == LK_Proto || Language == LK_TextProto;
   }
+  bool isTableGen() const { return Language == LK_TableGen; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5

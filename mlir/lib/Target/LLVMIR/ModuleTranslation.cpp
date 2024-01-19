@@ -1102,6 +1102,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (func.getArmNewZa())
     llvmFunc->addFnAttr("aarch64_pstate_za_new");
+  else if (func.getArmSharedZa())
+    llvmFunc->addFnAttr("aarch64_pstate_za_shared");
+  if (func.getArmPreservesZa())
+    llvmFunc->addFnAttr("aarch64_pstate_za_preserved");
 
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());

@@ -134,6 +134,18 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC) {
   if (CurFunc->isUnevaluatedBuiltin())
     return;
 
+  // Some builtin functions require us to only look at the call site, since
+  // the classified parameter types do not match.
+  if (CurFunc->isBuiltin()) {
+    const auto *CE =
+        cast<CallExpr>(S.Current->Caller->getExpr(S.Current->getRetPC()));
+    for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
+      const Expr *A = CE->getArg(I);
+      popArg(S, A);
+    }
+    return;
+  }
+
   if (S.Current->Caller && CurFunc->isVariadic()) {
     // CallExpr we're look for is at the return PC of the current function, i.e.
     // in the caller.

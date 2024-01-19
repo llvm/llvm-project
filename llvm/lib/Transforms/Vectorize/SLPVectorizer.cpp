@@ -12017,8 +12017,12 @@ Value *BoUpSLP::vectorizeTree(
               IRBuilder<>::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<Instruction>(Vec))
                 Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
-              Vec = Builder.CreateIntCast(Vec, VU->getType(),
-                                          BWIt->second.second);
+              Vec = Builder.CreateIntCast(
+                  Vec,
+                  FixedVectorType::get(
+                      cast<VectorType>(VU->getType())->getElementType(),
+                      cast<FixedVectorType>(Vec->getType())->getNumElements()),
+                  BWIt->second.second);
               VectorCasts.try_emplace(Scalar, Vec);
             } else {
               Vec = VecIt->second;

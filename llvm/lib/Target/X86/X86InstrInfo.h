@@ -32,7 +32,9 @@ enum AsmComments {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
-  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1
+  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1,
+  // For instr that was compressed from EVEX to EVEX.
+  AC_EVEX_2_EVEX = AC_EVEX_2_VEX << 1
 };
 
 /// Return a pair of condition code for the given predicate and whether
