@@ -23,7 +23,7 @@ int16x8_t incompat_neon_smc(int16x8_t splat) __arm_streaming_compatible {
   return (int16x8_t)__builtin_neon_vqaddq_v((int8x16_t)splat, (int8x16_t)splat, 33);
 }
 
-void incompat_sme_smc(svbool_t pg, void const *ptr) __arm_streaming_compatible __arm_shared_za {
+void incompat_sme_smc(svbool_t pg, void const *ptr) __arm_streaming_compatible __arm_inout("za") {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming compatible function}}
   return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);
 }
@@ -58,7 +58,7 @@ svuint32_t incompat_sve2_smc(svbool_t pg, svuint32_t a, int64_t b) __arm_streami
   return __builtin_sve_svldnt1_gather_u32base_index_u32(pg, a, b);
 }
 
-void incompat_sme_sm(svbool_t pn, svbool_t pm, svfloat32_t zn, svfloat32_t zm) __arm_shared_za {
+void incompat_sme_sm(svbool_t pn, svbool_t pm, svfloat32_t zn, svfloat32_t zm) __arm_inout("za") {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a non-streaming function}}
   svmops_za32_f32_m(0, pn, pm, zn, zm);
 }
@@ -100,5 +100,11 @@ svbool_t streaming_caller_ptrue(void) __arm_streaming {
 
 svint8_t missing_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streaming {
   // expected-warning@+1 {{builtin call is not valid when calling from a function without active ZA state}}
+    return svread_hor_za8_s8_m(zd, pg, 0, slice_base);
+}
+
+__arm_new("za")
+svint8_t new_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streaming {
+    // expected-no-warning
     return svread_hor_za8_s8_m(zd, pg, 0, slice_base);
 }

@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}alignbit_shr_pat:
 ; GCN-DAG: s_load_dword s[[SHR:[0-9]+]]

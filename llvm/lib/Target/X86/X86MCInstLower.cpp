@@ -1399,23 +1399,6 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   return MBBI;
 }
 
-static const Constant *getConstantFromPool(const MachineInstr &MI,
-                                           const MachineOperand &Op) {
-  if (!Op.isCPI() || Op.getOffset() != 0)
-    return nullptr;
-
-  ArrayRef<MachineConstantPoolEntry> Constants =
-      MI.getParent()->getParent()->getConstantPool()->getConstants();
-  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
-
-  // Bail if this is a machine constant pool entry, we won't be able to dig out
-  // anything useful.
-  if (ConstantEntry.isMachineConstantPoolEntry())
-    return nullptr;
-
-  return ConstantEntry.Val.ConstVal;
-}
-
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
                                      unsigned SrcOp2Idx, ArrayRef<int> Mask) {
   std::string Comment;
@@ -1518,7 +1501,7 @@ static void printConstant(const APInt &Val, raw_ostream &CS) {
 
 static void printConstant(const APFloat &Flt, raw_ostream &CS) {
   SmallString<32> Str;
-  // Force scientific notation to distinquish from integers.
+  // Force scientific notation to distinguish from integers.
   Flt.toString(Str, 0, 0);
   CS << Str;
 }
@@ -1674,7 +1657,7 @@ static void addConstantComments(const MachineInstr *MI,
            "Unexpected number of operands!");
 
     const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
@@ -1752,7 +1735,7 @@ static void addConstantComments(const MachineInstr *MI,
            "Unexpected number of operands!");
 
     const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, ElSize, Width, Mask);
@@ -1781,7 +1764,7 @@ static void addConstantComments(const MachineInstr *MI,
     }
 
     const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
@@ -1796,7 +1779,7 @@ static void addConstantComments(const MachineInstr *MI,
            "Unexpected number of operands!");
 
     const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
@@ -1809,7 +1792,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::MMX_MOVQ64rm: {
     assert(MI->getNumOperands() == (1 + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    if (auto *C =
+            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       std::string Comment;
       raw_string_ostream CS(Comment);
       const MachineOperand &DstOp = MI->getOperand(0);
@@ -1819,6 +1803,96 @@ static void addConstantComments(const MachineInstr *MI,
         OutStreamer.AddComment(CS.str());
       }
     }
+    break;
+  }
+
+  case X86::MOVSDrm:
+  case X86::MOVSSrm:
+  case X86::VMOVSDrm:
+  case X86::VMOVSSrm:
+  case X86::VMOVSDZrm:
+  case X86::VMOVSSZrm:
+  case X86::MOVSDrm_alt:
+  case X86::MOVSSrm_alt:
+  case X86::VMOVSDrm_alt:
+  case X86::VMOVSSrm_alt:
+  case X86::VMOVSDZrm_alt:
+  case X86::VMOVSSZrm_alt:
+  case X86::MOVDI2PDIrm:
+  case X86::MOVQI2PQIrm:
+  case X86::VMOVDI2PDIrm:
+  case X86::VMOVQI2PQIrm:
+  case X86::VMOVDI2PDIZrm:
+  case X86::VMOVQI2PQIZrm: {
+    assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
+    int SclWidth = 32;
+    int VecWidth = 128;
+
+    switch (MI->getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode");
+    case X86::MOVSDrm:
+    case X86::VMOVSDrm:
+    case X86::VMOVSDZrm:
+    case X86::MOVSDrm_alt:
+    case X86::VMOVSDrm_alt:
+    case X86::VMOVSDZrm_alt:
+    case X86::MOVQI2PQIrm:
+    case X86::VMOVQI2PQIrm:
+    case X86::VMOVQI2PQIZrm:
+      SclWidth = 64;
+      VecWidth = 128;
+      break;
+    case X86::MOVSSrm:
+    case X86::VMOVSSrm:
+    case X86::VMOVSSZrm:
+    case X86::MOVSSrm_alt:
+    case X86::VMOVSSrm_alt:
+    case X86::VMOVSSZrm_alt:
+    case X86::MOVDI2PDIrm:
+    case X86::VMOVDI2PDIrm:
+    case X86::VMOVDI2PDIZrm:
+      SclWidth = 32;
+      VecWidth = 128;
+      break;
+    }
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    const MachineOperand &DstOp = MI->getOperand(0);
+    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+
+    if (auto *C =
+            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+      if ((unsigned)SclWidth == C->getType()->getScalarSizeInBits()) {
+        if (auto *CI = dyn_cast<ConstantInt>(C)) {
+          CS << "[";
+          printConstant(CI->getValue(), CS);
+          for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+            CS << ",0";
+          }
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+          break; // early-out
+        }
+        if (auto *CF = dyn_cast<ConstantFP>(C)) {
+          CS << "[";
+          printConstant(CF->getValue(), CS);
+          APFloat ZeroFP = APFloat::getZero(CF->getValue().getSemantics());
+          for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+            CS << ",";
+            printConstant(ZeroFP, CS);
+          }
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+          break; // early-out
+        }
+      }
+    }
+
+    // We didn't find a constant load, fallback to a shuffle mask decode.
+    CS << (SclWidth == 32 ? "mem[0],zero,zero,zero" : "mem[0],zero");
+    OutStreamer.AddComment(CS.str());
     break;
   }
 
@@ -1881,7 +1955,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VBROADCASTI64X4rm:
     assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    if (auto *C =
+            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       int NumLanes = 1;
       int BitWidth = 128;
       int CstEltSize = C->getType()->getScalarSizeInBits();
@@ -1984,7 +2059,8 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VPBROADCASTWZrm:
     assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
-    if (auto *C = getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    if (auto *C =
+            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
       int NumElts, EltBits;
       switch (MI->getOpcode()) {
       default: llvm_unreachable("Invalid opcode");
@@ -2055,17 +2131,19 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   }
 
+  // Add comments for values loaded from constant pool.
+  if (OutStreamer->isVerboseAsm())
+    addConstantComments(MI, *OutStreamer);
+
   // Add a comment about EVEX compression
   if (TM.Options.MCOptions.ShowMCEncoding) {
     if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_LEGACY)
       OutStreamer->AddComment("EVEX TO LEGACY Compression ", false);
     else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_VEX)
       OutStreamer->AddComment("EVEX TO VEX Compression ", false);
+    else if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_EVEX)
+      OutStreamer->AddComment("EVEX TO EVEX Compression ", false);
   }
-
-  // Add comments for values loaded from constant pool.
-  if (OutStreamer->isVerboseAsm())
-    addConstantComments(MI, *OutStreamer);
 
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:

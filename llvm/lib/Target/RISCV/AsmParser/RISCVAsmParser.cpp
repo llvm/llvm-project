@@ -199,6 +199,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseGPRAsFPR(OperandVector &Operands);
+  template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
+  ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseReglist(OperandVector &Operands);
@@ -465,6 +467,12 @@ public:
   }
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
+
+  bool isGPRPair() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(
+               Reg.RegNum);
+  }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -1295,11 +1303,15 @@ unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
 
   for (unsigned I = 0; I < MCID.NumOperands; ++I) {
-    if (MCID.operands()[I].RegClass == RISCV::GPRPF64RegClassID) {
+    if (MCID.operands()[I].RegClass == RISCV::GPRPairRegClassID) {
       const auto &Op = Inst.getOperand(I);
       assert(Op.isReg());
 
       MCRegister Reg = Op.getReg();
+      if (RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(Reg))
+        continue;
+
+      // FIXME: We should form a paired register during parsing/matching.
       if (((Reg.id() - RISCV::X0) & 1) != 0)
         return Match_RequiresEvenGPRs;
     }
@@ -2219,6 +2231,48 @@ ParseStatus RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(
       RegNo, S, E, !getSTI().hasFeature(RISCV::FeatureStdExtF)));
+  return ParseStatus::Success;
+}
+
+template <bool IsRV64>
+ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands) {
+  return parseGPRPair(Operands, IsRV64);
+}
+
+ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
+                                         bool IsRV64Inst) {
+  // If this is not an RV64 GPRPair instruction, don't parse as a GPRPair on
+  // RV64 as it will prevent matching the RV64 version of the same instruction
+  // that doesn't use a GPRPair.
+  // If this is an RV64 GPRPair instruction, there is no RV32 version so we can
+  // still parse as a pair.
+  if (!IsRV64Inst && isRV64())
+    return ParseStatus::NoMatch;
+
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  StringRef Name = getLexer().getTok().getIdentifier();
+  MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
+
+  if (!RegNo)
+    return ParseStatus::NoMatch;
+
+  if (!RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(RegNo))
+    return ParseStatus::NoMatch;
+
+  if ((RegNo - RISCV::X0) & 1)
+    return TokError("register must be even");
+
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  getLexer().Lex();
+
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  unsigned Pair = RI->getMatchingSuperReg(
+      RegNo, RISCV::sub_gpr_even,
+      &RISCVMCRegisterClasses[RISCV::GPRPairRegClassID]);
+  Operands.push_back(RISCVOperand::createReg(Pair, S, E));
   return ParseStatus::Success;
 }
 
@@ -3333,27 +3387,6 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   } else if (IsTHeadMemPair64 && Inst.getOperand(4).getImm() != 4) {
     SMLoc Loc = Operands.back()->getStartLoc();
     return Error(Loc, "Operand must be constant 4.");
-  }
-
-  bool IsAMOCAS_D = Opcode == RISCV::AMOCAS_D || Opcode == RISCV::AMOCAS_D_AQ ||
-                    Opcode == RISCV::AMOCAS_D_RL ||
-                    Opcode == RISCV::AMOCAS_D_AQ_RL;
-  bool IsAMOCAS_Q = Opcode == RISCV::AMOCAS_Q || Opcode == RISCV::AMOCAS_Q_AQ ||
-                    Opcode == RISCV::AMOCAS_Q_RL ||
-                    Opcode == RISCV::AMOCAS_Q_AQ_RL;
-  if ((!isRV64() && IsAMOCAS_D) || IsAMOCAS_Q) {
-    unsigned Rd = Inst.getOperand(0).getReg();
-    unsigned Rs2 = Inst.getOperand(2).getReg();
-    assert(Rd >= RISCV::X0 && Rd <= RISCV::X31);
-    if ((Rd - RISCV::X0) % 2 != 0) {
-      SMLoc Loc = Operands[1]->getStartLoc();
-      return Error(Loc, "The destination register must be even.");
-    }
-    assert(Rs2 >= RISCV::X0 && Rs2 <= RISCV::X31);
-    if ((Rs2 - RISCV::X0) % 2 != 0) {
-      SMLoc Loc = Operands[2]->getStartLoc();
-      return Error(Loc, "The source register must be even.");
-    }
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);

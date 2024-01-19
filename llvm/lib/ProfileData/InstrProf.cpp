@@ -921,27 +921,26 @@ std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
       if (Timestamp < Trace.FunctionNameRefs.size())
         FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
 
-  int N = std::ceil(std::log2(LargestTraceSize));
+  const int N = Log2_64(LargestTraceSize) + 1;
 
-  // TODO: We need to use the Trace.Weight field to give more weight to more
+  // TODO: We may use the Trace.Weight field to give more weight to more
   // important utilities
   DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
-  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
+  for (uint32_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
     auto &Trace = Traces[TraceIdx].FunctionNameRefs;
     for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
-        auto &FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
+      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
+        auto FunctionId = Trace[Timestamp];
+        UtilityNodeT GroupId(TraceIdx * N + I);
         FuncGroups[FunctionId].push_back(GroupId);
       }
     }
   }
 
   std::vector<BPFunctionNode> Nodes;
-  for (auto &Id : FunctionIds) {
+  for (auto Id : FunctionIds) {
     auto &UNs = FuncGroups[Id];
-    llvm::sort(UNs);
-    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
+    UtilityNodeT::sortAndDeduplicate(UNs);
     Nodes.emplace_back(Id, UNs);
   }
   return Nodes;

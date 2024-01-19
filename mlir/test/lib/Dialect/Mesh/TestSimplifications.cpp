@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Transforms/Simplifications.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -30,8 +31,11 @@ struct TestMeshSimplificationsPass
 
 void TestMeshSimplificationsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  mesh::populateSimplificationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  SymbolTableCollection symbolTableCollection;
+  mesh::populateSimplificationPatterns(patterns, symbolTableCollection);
+  [[maybe_unused]] LogicalResult status =
+      applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  assert(succeeded(status) && "Rewrite patters application did not converge.");
 }
 
 namespace mlir {

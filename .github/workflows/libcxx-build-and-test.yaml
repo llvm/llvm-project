@@ -161,8 +161,8 @@ jobs:
           'generic-no-unicode',
           'generic-no-wide-characters',
           'generic-no-rtti',
+          'generic-optimized-speed',
           'generic-static',
-          'generic-with_llvm_unwinder',
           # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
           # or don't provide much value since the benchmark run results are too noise on the bots.
           'benchmarks',

@@ -166,6 +166,8 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  setMaxAtomicSizeInBitsSupported(0);
 }
 
 SDValue LanaiTargetLowering::LowerOperation(SDValue Op,

@@ -37,6 +37,7 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <map>
@@ -47,6 +48,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -1125,21 +1127,33 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (g_dap.DetectExpressionContext(frame, text) ==
-      ExpressionContext::Variable) {
-    char command[] = "expression -- ";
-    text = command + text;
-    offset += strlen(command);
+  if (!text.empty() &&
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
+    text = text.substr(g_dap.command_escape_prefix.size());
   }
-  lldb::SBStringList matches;
-  lldb::SBStringList descriptions;
 
-  if (g_dap.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-          text.c_str(), offset, 0, 100, matches, descriptions)) {
+  // While the user is typing then we likely have an incomplete input and cannot
+  // reliably determine the precise intent (command vs variable), try completing
+  // the text as both a command and variable expression, if applicable.
+  const std::string expr_prefix = "expression -- ";
+  std::array<std::tuple<ReplMode, std::string, uint64_t>, 2> exprs = {
+      {std::make_tuple(ReplMode::Command, text, offset),
+       std::make_tuple(ReplMode::Variable, expr_prefix + text,
+                       offset + expr_prefix.size())}};
+  for (const auto &[mode, line, cursor] : exprs) {
+    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+      continue;
+
+    lldb::SBStringList matches;
+    lldb::SBStringList descriptions;
+    if (!g_dap.debugger.GetCommandInterpreter()
+             .HandleCompletionWithDescriptions(line.c_str(), cursor, 0, 100,
+                                               matches, descriptions))
+      continue;
+
     // The first element is the common substring after the cursor position for
     // all the matches. The rest of the elements are the matches so ignore the
     // first result.
-    targets.reserve(matches.GetSize() - 1);
     for (size_t i = 1; i < matches.GetSize(); i++) {
       std::string match = matches.GetStringAtIndex(i);
       std::string description = descriptions.GetStringAtIndex(i);
@@ -1317,7 +1331,7 @@ void request_evaluate(const llvm::json::Object &request) {
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
       VariableDescription desc(value);
-      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
         auto variableReference = g_dap.variables.InsertExpandableVariable(
@@ -3733,7 +3747,8 @@ int SetupStdoutStderrRedirection() {
 
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);

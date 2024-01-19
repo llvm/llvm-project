@@ -112,7 +112,8 @@ private:
   bool isExplicitBindName_{false};
 };
 
-class OpenACCRoutineInfo {
+// Device type specific OpenACC routine information
+class OpenACCRoutineDeviceTypeInfo {
 public:
   bool isSeq() const { return isSeq_; }
   void set_isSeq(bool value = true) { isSeq_ = value; }
@@ -124,12 +125,14 @@ public:
   void set_isGang(bool value = true) { isGang_ = value; }
   unsigned gangDim() const { return gangDim_; }
   void set_gangDim(unsigned value) { gangDim_ = value; }
-  bool isNohost() const { return isNohost_; }
-  void set_isNohost(bool value = true) { isNohost_ = value; }
   const std::string *bindName() const {
     return bindName_ ? &*bindName_ : nullptr;
   }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
+  void set_dType(Fortran::common::OpenACCDeviceType dType) {
+    deviceType_ = dType;
+  }
+  Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
 
 private:
   bool isSeq_{false};
@@ -137,8 +140,28 @@ private:
   bool isWorker_{false};
   bool isGang_{false};
   unsigned gangDim_{0};
-  bool isNohost_{false};
   std::optional<std::string> bindName_;
+  Fortran::common::OpenACCDeviceType deviceType_{
+      Fortran::common::OpenACCDeviceType::None};
+};
+
+// OpenACC routine information. Device independent info are stored on the
+// OpenACCRoutineInfo instance while device dependent info are stored
+// in as objects in the OpenACCRoutineDeviceTypeInfo list.
+class OpenACCRoutineInfo : public OpenACCRoutineDeviceTypeInfo {
+public:
+  bool isNohost() const { return isNohost_; }
+  void set_isNohost(bool value = true) { isNohost_ = value; }
+  std::list<OpenACCRoutineDeviceTypeInfo> &deviceTypeInfos() {
+    return deviceTypeInfos_;
+  }
+  void add_deviceTypeInfo(OpenACCRoutineDeviceTypeInfo &info) {
+    deviceTypeInfos_.push_back(info);
+  }
+
+private:
+  std::list<OpenACCRoutineDeviceTypeInfo> deviceTypeInfos_;
+  bool isNohost_{false};
 };
 
 // A subroutine or function definition, or a subprogram interface defined
@@ -339,11 +362,10 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool CanBeAssumedShape() const {
+  bool IsAssumedShape() const {
     return isDummy() && shape_.CanBeAssumedShape();
   }
   bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
-  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
   std::optional<common::CUDADataAttr> cudaDataAttr() const {
     return cudaDataAttr_;
