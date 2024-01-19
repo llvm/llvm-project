@@ -142,6 +142,70 @@ inline constexpr bool __fits_in_tail_padding = []() {
   return sizeof(__x) == sizeof(_First);
 }();
 
+// This class implements the storage used by `std::expected`. We have a few
+// goals for this storage:
+// 1. Whenever the underlying {_Tp | _Unex} combination has free bytes in its
+//    tail padding, we should reuse it to store the bool discriminator of the
+//    expected, so as to save space.
+// 2. Whenever the `expected<_Tp, _Unex>` as a whole has free bytes in its tail
+//    padding, we should allow an object following the expected to be stored in
+//    its tail padding.
+// 3. However, we never want a user object (say `X`) that would follow an
+//    `expected<_Tp, _Unex>` to be stored in the padding bytes of the
+//    underlying {_Tp | _Unex} union, if any. That is because we use
+//    `construct_at` on that union, which would end up overwriting the `X`
+//    member if it is stored in the tail padding of the union.
+//
+// To achieve this, `__expected_base`'s logic is implemented in an inner
+// `__repr` class. `__expected_base` holds one `__repr` member which is
+// conditionally `[[no_unique_address]]`. The `__repr` class holds the
+// underlying {_Tp | _Unex} union and a boolean "has value" flag.
+//
+// Which one of the `__repr_`/`__union_` members is `[[no_unique_address]]`
+// depends on whether the "has value" boolean fits into the tail padding of
+// the underlying {_Tp | _Unex} union:
+//
+// - In case the "has value" bool fits into the tail padding of the union, the
+//   whole `__repr_` member is _not_ `[[no_unique_address]]` as it needs to be
+//   transparently replaced on `emplace()`/`swap()` etc.
+// - In case the "has value" bool does not fit into the tail padding of the
+//   union, only the union member must be transparently replaced (therefore is
+//   _not_ `[[no_unique_address]]`) and the "has value" flag must be adjusted
+//   manually.
+//
+// This way, the member that is transparently replaced on mutating operations
+// is never `[[no_unique_address]]`, satisfying the requirements from
+// "[basic.life]" in the standard.
+//
+// Stripped away of all superfluous elements, the layout of `__expected_base`
+// then looks like this:
+//
+//     template <class Tp, class Err>
+//     class expected_base {
+//       union union_t {
+//         [[no_unique_address]] Tp val;
+//         [[no_unique_address]] Err unex;
+//       };
+//
+//       struct repr {
+//       private:
+//         // If "has value" fits into the tail, this should be
+//         // `[[no_unique_address]]`, otherwise not.
+//         [[no_unique_address]] conditional_no_unique_address<
+//             fits_in_tail_padding<union_t, bool>,
+//             union_t>::type union_;
+//         [[no_unique_address]] bool has_val_;
+//       };
+//
+//     protected:
+//       // If "has value" fits into the tail, this must _not_ be
+//       // `[[no_unique_address]]` so that we fill out the
+//       // complete `expected` object.
+//       [[no_unique_address]] conditional_no_unique_address<
+//           !fits_in_tail_padding<union_t, bool>,
+//           repr>::type repr_;
+//     };
+//
 template <class _Tp, class _Err>
 class __expected_base {
   // use named union because [[no_unique_address]] cannot be applied to an unnamed union,
