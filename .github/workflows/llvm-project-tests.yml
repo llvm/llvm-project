@@ -14,7 +14,7 @@ on:
         required: false
       os_list:
         required: false
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
       python_version:
         required: false
         type: string
@@ -38,9 +38,7 @@ on:
         type: string
         # Use windows-2019 due to:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        # We're using a specific version of macOS due to:
-        # https://github.com/actions/virtual-environments/issues/5900
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
 
       python_version:
         required: false
