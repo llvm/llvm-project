@@ -12,7 +12,7 @@
 #if 0
 // expected-error {{should be ignored}}
 
-//      CHECK: error: no expected directives found: consider use of '{{.*}}-no-diagnostics'
+//      CHECK: error: no expected directives found: consider use of 'expected-no-diagnostics'
 // CHECK-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-NEXT:   Line 5: header
 // CHECK-NEXT:   Line 10: source

@@ -111,7 +111,7 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 #if 0
 // RUN: not %clang_cc1 -verify %t.invalid 2>&1 | FileCheck -check-prefix=CHECK6 %s
 
-//      CHECK6: error: no expected directives found: consider use of '{{.*}}-no-diagnostics'
+//      CHECK6: error: no expected directives found: consider use of 'expected-no-diagnostics'
 // CHECK6-NEXT: error: 'expected-error' diagnostics seen but not expected:
 // CHECK6-NEXT:   (frontend): error reading '{{.*}}verify.c.tmp.invalid'
 // CHECK6-NEXT: 2 errors generated.
