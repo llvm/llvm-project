@@ -17,7 +17,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -30,7 +30,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ;
@@ -84,7 +84,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB1_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $8, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -113,7 +113,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-O0-NEXT:  LBB1_2: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -189,7 +189,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-APPLE-NEXT:  LBB2_4: ## %handler
 ; CHECK-APPLE-NEXT:    movq %r12, %rdi
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $8, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -217,7 +217,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:    ## in Loop: Header=BB2_1 Depth=1
 ; CHECK-O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    jbe LBB2_1
 ; CHECK-O0-NEXT:  ## %bb.3: ## %bb_end
@@ -228,7 +228,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-O0-NEXT:  LBB2_4: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $32, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -313,7 +313,7 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -333,7 +333,7 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ; CHECK-O0-NEXT:  LBB3_2: ## %normal
@@ -448,7 +448,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    ucomiss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jbe LBB4_1
@@ -638,7 +638,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB6_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    addq $40, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -669,7 +669,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-NEXT:  LBB6_2: ## %handler
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    addq $48, %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    retq
@@ -764,7 +764,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB7_4: ## %handler2
 ; CHECK-APPLE-NEXT:    callq _free
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    leaq -24(%rbp), %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
 ; CHECK-APPLE-NEXT:    popq %r12
@@ -817,7 +817,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0-NEXT:  LBB7_4: ## %handler2
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
 ; CHECK-O0-NEXT:    callq _free
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-O0-NEXT:    popq %r12
 ; CHECK-O0-NEXT:    popq %rbp
@@ -1042,7 +1042,7 @@ define swiftcc float @foo_swiftcc(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
 ; CHECK-APPLE-NEXT:    popq %rax
 ; CHECK-APPLE-NEXT:    retq
@@ -1055,7 +1055,7 @@ define swiftcc float @foo_swiftcc(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-NEXT:    callq _malloc
 ; CHECK-O0-NEXT:    movq %rax, %r12
 ; CHECK-O0-NEXT:    movb $1, 8(%rax)
-; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-O0-NEXT:    popq %rax
 ; CHECK-O0-NEXT:    retq
 ;

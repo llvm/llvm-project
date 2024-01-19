@@ -31,8 +31,8 @@ define <2 x i64> @test3(i64 %x) {
 define <4 x i32> @test4(i32* %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x
    %res = insertelement <4 x i32>undef, i32 %y, i32 0
@@ -60,8 +60,8 @@ define void @test6(double %x, double* %y) {
 define float @test7(i32* %x) {
 ; CHECK-LABEL: test7:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x
    %res = bitcast i32 %y to float
@@ -89,8 +89,8 @@ define i64 @test9(<2 x i64> %x) {
 define <4 x i32> @test10(i32* %x) {
 ; CHECK-LABEL: test10:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x, align 4
    %res = insertelement <4 x i32>zeroinitializer, i32 %y, i32 0
@@ -100,8 +100,8 @@ define <4 x i32> @test10(i32* %x) {
 define <4 x float> @test11(float* %x) {
 ; CHECK-LABEL: test11:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load float, float* %x, align 4
    %res = insertelement <4 x float>zeroinitializer, float %y, i32 0
@@ -111,8 +111,8 @@ define <4 x float> @test11(float* %x) {
 define <2 x double> @test12(double* %x) {
 ; CHECK-LABEL: test12:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovsd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load double, double* %x, align 8
    %res = insertelement <2 x double>zeroinitializer, double %y, i32 0
@@ -140,8 +140,8 @@ define <4 x i32> @test14(i32 %x) {
 define <4 x i32> @test15(i32* %x) {
 ; CHECK-LABEL: test15:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; CHECK-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
    %y = load i32, i32* %x, align 4
    %res = insertelement <4 x i32>zeroinitializer, i32 %y, i32 0

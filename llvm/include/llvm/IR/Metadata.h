@@ -421,6 +421,8 @@ public:
   /// is resolved.
   void resolveAllUses(bool ResolveUsers = true);
 
+  unsigned getNumUses() const { return UseMap.size(); }
+
 private:
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
@@ -1246,6 +1248,11 @@ public:
 
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+
+  unsigned getNumTemporaryUses() const {
+    assert(isTemporary() && "Only for temporaries");
+    return Context.getReplaceableUses()->getNumUses();
+  }
 
   /// RAUW a temporary.
   ///

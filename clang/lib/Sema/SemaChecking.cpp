@@ -3005,6 +3005,15 @@ enum ArmStreamingType {
   ArmStreamingOrSVE2p1
 };
 
+enum ArmSMEState : unsigned {
+  ArmNoState = 0,
+
+  ArmInZA = 0b01,
+  ArmOutZA = 0b10,
+  ArmInOutZA = 0b11,
+  ArmZAMask = 0b11,
+};
+
 bool Sema::ParseSVEImmChecks(
     CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
   // Perform all the immediate checks for this builtin call.
@@ -3189,26 +3198,20 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   }
 }
 
-static bool hasSMEZAState(const FunctionDecl *FD) {
-  if (auto *Attr = FD->getAttr<ArmNewAttr>())
-    if (Attr->isNewZA())
-      return true;
-  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
-    FunctionType::ArmStateValue State =
-        FunctionType::getArmZAState(T->getAArch64SMEAttributes());
-    if (State != FunctionType::ARM_None)
-      return true;
-  }
-  return false;
+static bool hasArmZAState(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
 }
 
-static bool hasSMEZAState(unsigned BuiltinID) {
+static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
-    return false;
-#define GET_SME_BUILTIN_HAS_ZA_STATE
+    return ArmNoState;
+#define GET_SME_BUILTIN_GET_STATE
 #include "clang/Basic/arm_sme_builtins_za_state.inc"
-#undef GET_SME_BUILTIN_HAS_ZA_STATE
+#undef GET_SME_BUILTIN_GET_STATE
   }
 }
 
@@ -3225,7 +3228,7 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (BuiltinType)
       checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
 
-    if (hasSMEZAState(BuiltinID) && !hasSMEZAState(FD))
+    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
            diag::warn_attribute_arm_za_builtin_no_za_state)
           << TheCall->getSourceRange();
