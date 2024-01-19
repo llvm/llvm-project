@@ -279,87 +279,36 @@ TEST(SMEAttributes, Transitions) {
                                    /*BodyOverridesInterface=*/true),
             true);
 
-  SA ZT0_In = SA(SA::encodeZT0State(SA::StateValue::In));
-  SA ZT0_InOut = SA(SA::encodeZT0State(SA::StateValue::InOut));
-  SA ZT0_Out = SA(SA::encodeZT0State(SA::StateValue::Out));
-  SA ZT0_Preserved = SA(SA::encodeZT0State(SA::StateValue::Preserved));
-  SA ZT0_New = SA(SA::encodeZT0State(SA::StateValue::New));
+  SA Private_ZA = SA(SA::Normal);
+  SA ZA_Shared = SA(SA::ZA_Shared);
+  SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
+  SA ZA_ZT0_Shared = SA(SA::ZA_Shared | SA::encodeZT0State(SA::StateValue::In));
 
-  // ZT0 New -> Normal
-  ASSERT_TRUE(ZT0_New.requiresPreservingZT0(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_New.requiresDisablingZABeforeCall(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_New.requiresEnablingZAAfterCall(SA(SA::Normal)));
+  // Shared ZA -> Private ZA Interface
+  ASSERT_FALSE(ZA_Shared.requiresDisablingZABeforeCall(Private_ZA));
+  ASSERT_TRUE(ZA_Shared.requiresEnablingZAAfterCall(Private_ZA));
 
-  // ZT0 New -> ZT0 New
-  ASSERT_TRUE(ZT0_New.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_New.requiresDisablingZABeforeCall(ZT0_New));
-  ASSERT_TRUE(ZT0_New.requiresEnablingZAAfterCall(ZT0_New));
+  // Shared ZT0 -> Private ZA Interface
+  ASSERT_TRUE(ZT0_Shared.requiresDisablingZABeforeCall(Private_ZA));
+  ASSERT_TRUE(ZT0_Shared.requiresPreservingZT0(Private_ZA));
+  ASSERT_TRUE(ZT0_Shared.requiresEnablingZAAfterCall(Private_ZA));
 
-  // ZT0 New -> ZT0 Shared
-  ASSERT_FALSE(ZT0_New.requiresPreservingZT0(ZT0_In));
-  ASSERT_FALSE(ZT0_New.requiresDisablingZABeforeCall(ZT0_In));
-  ASSERT_FALSE(ZT0_New.requiresEnablingZAAfterCall(ZT0_In));
+  // Shared ZA & ZT0 -> Private ZA Interface
+  ASSERT_FALSE(ZA_ZT0_Shared.requiresDisablingZABeforeCall(Private_ZA));
+  ASSERT_TRUE(ZA_ZT0_Shared.requiresPreservingZT0(Private_ZA));
+  ASSERT_TRUE(ZA_ZT0_Shared.requiresEnablingZAAfterCall(Private_ZA));
 
-  ASSERT_FALSE(ZT0_New.requiresPreservingZT0(ZT0_InOut));
-  ASSERT_FALSE(ZT0_New.requiresDisablingZABeforeCall(ZT0_InOut));
-  ASSERT_FALSE(ZT0_New.requiresEnablingZAAfterCall(ZT0_InOut));
+  // Shared ZA -> Shared ZA Interface
+  ASSERT_FALSE(ZA_Shared.requiresDisablingZABeforeCall(ZT0_Shared));
+  ASSERT_FALSE(ZA_Shared.requiresEnablingZAAfterCall(ZT0_Shared));
 
-  ASSERT_FALSE(ZT0_New.requiresPreservingZT0(ZT0_Out));
-  ASSERT_FALSE(ZT0_New.requiresDisablingZABeforeCall(ZT0_Out));
-  ASSERT_FALSE(ZT0_New.requiresEnablingZAAfterCall(ZT0_Out));
+  // Shared ZT0 -> Shared ZA Interface
+  ASSERT_FALSE(ZT0_Shared.requiresDisablingZABeforeCall(ZT0_Shared));
+  ASSERT_FALSE(ZT0_Shared.requiresPreservingZT0(ZT0_Shared));
+  ASSERT_FALSE(ZT0_Shared.requiresEnablingZAAfterCall(ZT0_Shared));
 
-  ASSERT_FALSE(ZT0_New.requiresPreservingZT0(ZT0_Preserved));
-  ASSERT_FALSE(ZT0_New.requiresDisablingZABeforeCall(ZT0_Preserved));
-  ASSERT_FALSE(ZT0_New.requiresEnablingZAAfterCall(ZT0_Preserved));
-
-  // ZT0 Shared -> Normal
-  ASSERT_TRUE(ZT0_In.requiresPreservingZT0(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_In.requiresDisablingZABeforeCall(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_In.requiresEnablingZAAfterCall(SA(SA::Normal)));
-
-  ASSERT_TRUE(ZT0_InOut.requiresPreservingZT0(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_InOut.requiresDisablingZABeforeCall(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_InOut.requiresEnablingZAAfterCall(SA(SA::Normal)));
-
-  ASSERT_TRUE(ZT0_Out.requiresPreservingZT0(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_Out.requiresDisablingZABeforeCall(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_Out.requiresEnablingZAAfterCall(SA(SA::Normal)));
-
-  ASSERT_TRUE(ZT0_Preserved.requiresPreservingZT0(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_Preserved.requiresDisablingZABeforeCall(SA(SA::Normal)));
-  ASSERT_TRUE(ZT0_Preserved.requiresEnablingZAAfterCall(SA(SA::Normal)));
-
-  // ZT0 Shared -> ZT0 Shared
-  ASSERT_FALSE(ZT0_In.requiresPreservingZT0(ZT0_In));
-  ASSERT_FALSE(ZT0_In.requiresDisablingZABeforeCall(ZT0_In));
-  ASSERT_FALSE(ZT0_In.requiresEnablingZAAfterCall(ZT0_In));
-
-  ASSERT_FALSE(ZT0_InOut.requiresPreservingZT0(ZT0_In));
-  ASSERT_FALSE(ZT0_InOut.requiresDisablingZABeforeCall(ZT0_In));
-  ASSERT_FALSE(ZT0_InOut.requiresEnablingZAAfterCall(ZT0_In));
-
-  ASSERT_FALSE(ZT0_Out.requiresPreservingZT0(ZT0_In));
-  ASSERT_FALSE(ZT0_Out.requiresDisablingZABeforeCall(ZT0_In));
-  ASSERT_FALSE(ZT0_Out.requiresEnablingZAAfterCall(ZT0_In));
-
-  ASSERT_FALSE(ZT0_Preserved.requiresPreservingZT0(ZT0_In));
-  ASSERT_FALSE(ZT0_Preserved.requiresDisablingZABeforeCall(ZT0_In));
-  ASSERT_FALSE(ZT0_Preserved.requiresEnablingZAAfterCall(ZT0_In));
-
-  // ZT0 Shared -> ZT0 New
-  ASSERT_TRUE(ZT0_In.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_In.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_In.requiresEnablingZAAfterCall(ZT0_New));
-
-  ASSERT_TRUE(ZT0_InOut.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_InOut.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_InOut.requiresEnablingZAAfterCall(ZT0_New));
-
-  ASSERT_TRUE(ZT0_Out.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_Out.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_Out.requiresEnablingZAAfterCall(ZT0_New));
-
-  ASSERT_TRUE(ZT0_Preserved.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_Preserved.requiresPreservingZT0(ZT0_New));
-  ASSERT_TRUE(ZT0_Preserved.requiresEnablingZAAfterCall(ZT0_New));
+  // Shared ZA & ZT0 -> Shared ZA Interface
+  ASSERT_FALSE(ZA_ZT0_Shared.requiresDisablingZABeforeCall(ZT0_Shared));
+  ASSERT_FALSE(ZA_ZT0_Shared.requiresPreservingZT0(ZT0_Shared));
+  ASSERT_FALSE(ZA_ZT0_Shared.requiresEnablingZAAfterCall(ZT0_Shared));
 }

@@ -126,8 +126,7 @@ public:
     return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface();
   }
   bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
-    return (requiresLazySave(Callee) && !Callee.preservesZA()) ||
-           requiresDisablingZABeforeCall(Callee);
+    return requiresLazySave(Callee) || requiresDisablingZABeforeCall(Callee);
   }
 };
 
