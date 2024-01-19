@@ -1234,7 +1234,8 @@ StringRef Triple::getEnvironmentVersionString() const {
   if (EnvironmentName.contains("-")) {
     // -obj is the suffix
     if (getObjectFormat() != Triple::UnknownObjectFormat) {
-      StringRef ObjectFormatTypeName = getObjectFormatTypeName(getObjectFormat());
+      StringRef ObjectFormatTypeName =
+          getObjectFormatTypeName(getObjectFormat());
       StringRef Suffix = (Twine("-") + ObjectFormatTypeName).str();
       EnvironmentName.consume_back(Suffix);
     }
