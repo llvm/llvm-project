@@ -2281,7 +2281,7 @@ static void createBodyOfOp(
     if (exits.empty())
       return nullptr;
     // If there already is a unique exiting block, do not create another one.
-    // Additionally, some ops (e.g. omp.sections) require onlt 1 block in
+    // Additionally, some ops (e.g. omp.sections) require only 1 block in
     // its region.
     if (exits.size() == 1)
       return exits[0];
