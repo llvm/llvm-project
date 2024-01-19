@@ -22,6 +22,7 @@ libc_test(
 libc_test(
     name = "dyadic_float_test",
     srcs = ["dyadic_float_test.cpp"],
+    copts = ["-frounding-math"],
     deps = [
         "//libc:__support_fputil_dyadic_float",
         "//libc:__support_uint",

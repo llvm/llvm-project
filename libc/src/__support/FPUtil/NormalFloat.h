@@ -46,8 +46,8 @@ template <typename T> struct NormalFloat {
 
   Sign sign = Sign::POS;
 
-  LIBC_INLINE NormalFloat(int32_t e, StorageType m, bool s)
-      : exponent(e), mantissa(m), sign(s ? Sign::NEG : Sign::POS) {
+  LIBC_INLINE NormalFloat(Sign s, int32_t e, StorageType m)
+      : exponent(e), mantissa(m), sign(s) {
     if (mantissa >= ONE)
       return;
 
@@ -153,7 +153,7 @@ private:
     }
 
     // Normalize subnormal numbers.
-    if (bits.get_biased_exponent() == 0) {
+    if (bits.is_subnormal()) {
       unsigned shift = evaluate_normalization_shift(bits.get_mantissa());
       mantissa = StorageType(bits.get_mantissa()) << shift;
       exponent = 1 - FPBits<T>::EXP_BIAS - shift;
@@ -186,7 +186,7 @@ NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
     return;
   }
 
-  if (bits.get_biased_exponent() == 0) {
+  if (bits.is_subnormal()) {
     if (bits.get_implicit_bit() == 0) {
       // Since we ignore zero value, the mantissa in this case is non-zero.
       int normalization_shift =

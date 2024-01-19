@@ -2,6 +2,7 @@
 // RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t 2>&1
 //
 // REQUIRES: stable-runtime
+// UNSUPPORTED: target=s390{{.*}}
 
 // This testcase checks that allocas and VLAs inside loop are correctly unpoisoned.
 
