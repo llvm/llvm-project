@@ -497,28 +497,23 @@ __rdpmc(int __A) {
 /// \param __A
 ///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
 /// \returns The 64-bit value of the time stamp counter.
-/// \see _rdtsc
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdtscp(unsigned int *__A) {
   return __builtin_ia32_rdtscp(__A);
 }
 
-/// Reads the processor's time stamp counter and the \c IA32_TSC_AUX MSR
-///    \c (0xc0000103).
+/// Reads the processor's time stamp counter.
 ///
 /// \headerfile <x86intrin.h>
 ///
 /// \code
-/// unsigned long long _rdtsc(unsigned int *A);
+/// unsigned long long _rdtsc();
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c RDTSCP instruction.
+/// This intrinsic corresponds to the \c RDTSC instruction.
 ///
-/// \param A
-///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
 /// \returns The 64-bit value of the time stamp counter.
-/// \see __rdtscp
-#define _rdtsc(A) __rdtscp(A)
+#define _rdtsc() __rdtsc()
 
 /// Reads the specified performance monitoring counter. Refer to your
 ///    processor's documentation to determine which performance counters are
