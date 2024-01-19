@@ -200,7 +200,8 @@ static_assert(std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0
 static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, false>>);
 
 // The `CheckForInvalidWrites` class recreates situations where other objects
-// may be placed into a `std::expected`'s tail padding. With a template
+// may be placed into a `std::expected`'s tail padding (see
+// https://github.com/llvm/llvm-project/issues/70494). With a template
 // parameter `WithPaddedExpected` two cases can be tested:
 //
 // 1. The `std::expected<T, E>` itself has padding, because `T`/`E` _don't_
