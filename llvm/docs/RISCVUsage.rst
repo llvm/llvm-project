@@ -92,6 +92,7 @@ on support follow.
      ``H``            Assembly Support
      ``M``            Supported
      ``Smaia``        Supported
+     ``Smepmp``       Supported
      ``Ssaia``        Supported
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
