@@ -1,21 +1,16 @@
 // RUN: %clang -E -dM -x c++ %s | FileCheck -check-prefix=UNSPECIFIED %s
-// RUN: %clang -E -dM -x c++ -fstdlib-hardening=none -stdlib=libc++ %s | FileCheck -check-prefix=CHECK -check-prefix=NONE %s
-// RUN: %clang -E -dM -x c++ -fstdlib-hardening=fast -stdlib=libc++ %s | FileCheck -check-prefix=CHECK -check-prefix=FAST %s
-// RUN: %clang -E -dM -x c++ -fstdlib-hardening=extensive -stdlib=libc++ %s | FileCheck -check-prefix=CHECK -check-prefix=EXTENSIVE %s
-// RUN: %clang -E -dM -x c++ -fstdlib-hardening=debug -stdlib=libc++ %s | FileCheck -check-prefix=CHECK -check-prefix=DEBUG %s
+// RUN: %clang -E -dM -x c++ -fstdlib-hardening=none -stdlib=libc++ %s | FileCheck -check-prefix=NONE %s
+// RUN: %clang -E -dM -x c++ -fstdlib-hardening=fast -stdlib=libc++ %s | FileCheck -check-prefix=FAST %s
+// RUN: %clang -E -dM -x c++ -fstdlib-hardening=extensive -stdlib=libc++ %s | FileCheck -check-prefix=EXTENSIVE %s
+// RUN: %clang -E -dM -x c++ -fstdlib-hardening=debug -stdlib=libc++ %s | FileCheck -check-prefix=DEBUG %s
 // RUN: not %clang -x c++ -fstdlib-hardening=debug -stdlib=libstdc++ %s 2>&1 | FileCheck -check-prefix=ERROR %s
 // RUN: not %clang -x c -fstdlib-hardening=debug %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
-// UNSPECIFIED-NOT: _LIBCPP_HARDENING_MODE
+// UNSPECIFIED-NOT: _STDLIB_HARDENING_MODE
 
-// NONE: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_NONE
-// FAST: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_FAST
-// EXTENSIVE: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
-// DEBUG: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEBUG
+// NONE: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_NONE
+// FAST: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_FAST
+// EXTENSIVE: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_EXTENSIVE
+// DEBUG: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_DEBUG
 
-// CHECK: #define _LIBCPP_HARDENING_MODE_DEBUG 3
-// CHECK: #define _LIBCPP_HARDENING_MODE_EXTENSIVE 2
-// CHECK: #define _LIBCPP_HARDENING_MODE_FAST 1
-// CHECK: #define _LIBCPP_HARDENING_MODE_NONE 0
-
-// ERROR: libc++ hardening is available only when libc++ is used
+// ERROR: standard library hardening is available only when libc++ is used

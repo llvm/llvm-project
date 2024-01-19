@@ -7732,11 +7732,11 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 
 def stdlib_hardening_EQ : Joined<["-"], "fstdlib-hardening=">,
   Values<"none,fast,extensive,debug">,
-  NormalizedValues<["LIBCPP_HARDENING_MODE_NONE", "LIBCPP_HARDENING_MODE_FAST", "LIBCPP_HARDENING_MODE_EXTENSIVE", "LIBCPP_HARDENING_MODE_DEBUG"]>,
+  NormalizedValues<["STDLIB_HARDENING_MODE_NONE", "STDLIB_HARDENING_MODE_FAST", "STDLIB_HARDENING_MODE_EXTENSIVE", "STDLIB_HARDENING_MODE_DEBUG"]>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"libc++ hardening mode">,
+  HelpText<"standard library hardening mode">,
   NormalizedValuesScope<"LangOptions">,
-  MarshallingInfoEnum<LangOpts<"LibcxxHardeningMode">, "LIBCPP_HARDENING_MODE_NOT_SPECIFIED">;
+  MarshallingInfoEnum<LangOpts<"StdlibHardeningMode">, "STDLIB_HARDENING_MODE_NOT_SPECIFIED">;
 
 //===----------------------------------------------------------------------===//
 // CUDA Options

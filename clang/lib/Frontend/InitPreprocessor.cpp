@@ -851,32 +851,27 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       Twine(getClangFullCPPVersion()) + "\"");
 
   // Initialize language-specific preprocessor defines.
-  if (LangOpts.getLibcxxHardeningMode()) {
-    const char *LibcxxHardeningStr;
+  if (LangOpts.getStdlibHardeningMode()) {
+    const char *StdlibHardeningStr;
 
-    Builder.defineMacro("_LIBCPP_HARDENING_MODE_NONE", "0");
-    Builder.defineMacro("_LIBCPP_HARDENING_MODE_FAST", "1");
-    Builder.defineMacro("_LIBCPP_HARDENING_MODE_EXTENSIVE", "2");
-    Builder.defineMacro("_LIBCPP_HARDENING_MODE_DEBUG", "3");
-
-    switch (LangOpts.getLibcxxHardeningMode()) {
-    case clang::LangOptions::LIBCPP_HARDENING_MODE_NOT_SPECIFIED:
+    switch (LangOpts.getStdlibHardeningMode()) {
+    case clang::LangOptions::STDLIB_HARDENING_MODE_NOT_SPECIFIED:
       llvm_unreachable("Unexpected libc++ hardening mode value");
-    case clang::LangOptions::LIBCPP_HARDENING_MODE_NONE:
-      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_NONE";
+    case clang::LangOptions::STDLIB_HARDENING_MODE_NONE:
+      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_NONE";
       break;
-    case clang::LangOptions::LIBCPP_HARDENING_MODE_FAST:
-      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_FAST";
+    case clang::LangOptions::STDLIB_HARDENING_MODE_FAST:
+      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_FAST";
       break;
-    case clang::LangOptions::LIBCPP_HARDENING_MODE_EXTENSIVE:
-      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_EXTENSIVE";
+    case clang::LangOptions::STDLIB_HARDENING_MODE_EXTENSIVE:
+      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_EXTENSIVE";
       break;
-    case clang::LangOptions::LIBCPP_HARDENING_MODE_DEBUG:
-      LibcxxHardeningStr = "_LIBCPP_HARDENING_MODE_DEBUG";
+    case clang::LangOptions::STDLIB_HARDENING_MODE_DEBUG:
+      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_DEBUG";
       break;
     }
 
-    Builder.defineMacro("_LIBCPP_HARDENING_MODE", LibcxxHardeningStr);
+    Builder.defineMacro("_STDLIB_HARDENING_MODE", StdlibHardeningStr);
   }
 
   // Standard conforming mode?
