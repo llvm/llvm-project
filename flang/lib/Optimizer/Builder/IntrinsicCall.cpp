@@ -141,6 +141,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"atand", &I::genAtand},
+    {"atand2", &I::genAtand},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2174,16 +2175,39 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
 // ATAND
 mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 1);
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  mlir::Value atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
-  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+  // llvm::outs() << "args.size()=" << args.size() << "\n";
+
+  if (args.size() == 2) {
+    // used for atand(y,x), atand(y,x)
+    // llvm::outs() << "is present.\n";
+    mlir::MLIRContext *context = builder.getContext();
+    // if Y is present, X shall be REAL.
+    assert(fir::isa_real(args[0].getType()) &&
+           "Y shall be of the same type and kind as X.");
+    assert(fir::isa_real(args[1].getType()) &&
+           "if Y is present, X shall be REAL.");
+    llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+    return builder.createRealConstant(loc, mlir::FloatType::getF64(context),
+                                      llvm::APFloat(180.0) / pi);
+  } else if (args.size() == 1) {
+    // used for atand(x)
+    // llvm::outs() << "not resent.\n";
+    mlir::MLIRContext *context = builder.getContext();
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+
+    mlir::Value atan =
+        getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
+    llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+    mlir::Value dfactor = builder.createRealConstant(
+        loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+    mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+    return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+  } else {
+    assert((args.size() >= 1 && args.size() <= 2) &&
+           "args size not correct must between 1 and 2");
+    return;
+  }
 }
 
 // ASSOCIATED
