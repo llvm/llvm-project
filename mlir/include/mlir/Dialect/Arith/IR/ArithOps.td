@@ -782,7 +782,7 @@ def Arith_XOrIOp : Arith_TotalIntBinaryOp<"xori", [Commutative]> {
 // ShLIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ShLIOp : Arith_TotalIntBinaryOp<"shli"> {
+def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
   let summary = "integer left-shift";
   let description = [{
     The `shli` operation shifts the integer value of the first operand to the left 
@@ -796,6 +796,7 @@ def Arith_ShLIOp : Arith_TotalIntBinaryOp<"shli"> {
     ```mlir
     %1 = arith.constant 5 : i8                 // %1 is 0b00000101
     %2 = arith.constant 3 : i8
+    %a = arith.shli %1, %2 overflow<nsw, nuw> : (i8, i8) -> i8  
     %3 = arith.shli %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
     ```
   }];

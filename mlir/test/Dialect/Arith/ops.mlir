@@ -1147,5 +1147,7 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
   // CHECK: %{{.*}} = arith.muli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = arith.shli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+  %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
   return
 }
