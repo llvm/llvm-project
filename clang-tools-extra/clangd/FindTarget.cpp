@@ -444,14 +444,15 @@ public:
           // Don't *traverse* the alias, which would result in traversing the
           // template of the underlying type.
 
+          TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
           // Builtin templates e.g. __make_integer_seq, __type_pack_element
           // are such that they don't have alias *decls*. Even then, we still
           // traverse their desugared *types* so that instantiated decls are
           // collected.
-          if (NamedDecl *D = TST->getTemplateName()
-                                 .getAsTemplateDecl()
-                                 ->getTemplatedDecl())
-            Outer.report(D, Flags | Rel::Alias | Rel::TemplatePattern);
+          if (llvm::isa<BuiltinTemplateDecl>(TD))
+            return;
+          Outer.report(TD->getTemplatedDecl(),
+                       Flags | Rel::Alias | Rel::TemplatePattern);
         }
         // specializations of template template parameters aren't instantiated
         // into decls, so they must refer to the parameter itself.
