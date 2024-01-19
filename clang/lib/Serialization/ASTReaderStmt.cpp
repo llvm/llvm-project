@@ -1901,6 +1901,7 @@ void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
   E->CXXNewExprBits.IsGlobalNew = Record.readInt();
   E->CXXNewExprBits.ShouldPassAlignment = Record.readInt();
   E->CXXNewExprBits.UsualArrayDeleteWantsSize = Record.readInt();
+  E->CXXNewExprBits.HasInitializer = Record.readInt();
   E->CXXNewExprBits.StoredInitializationStyle = Record.readInt();
 
   assert((IsArray == E->isArray()) && "Wrong IsArray!");

@@ -1356,12 +1356,11 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
   switch (NE->getInitializationStyle()) {
   case CXXNewInitializationStyle::None:
-  case CXXNewInitializationStyle::Implicit:
     break;
-  case CXXNewInitializationStyle::Call:
+  case CXXNewInitializationStyle::Parens:
     JOS.attribute("initStyle", "call");
     break;
-  case CXXNewInitializationStyle::List:
+  case CXXNewInitializationStyle::Braces:
     JOS.attribute("initStyle", "list");
     break;
   }
