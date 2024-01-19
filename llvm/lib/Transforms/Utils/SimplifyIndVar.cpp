@@ -1753,7 +1753,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   }
 
   // This narrow use can be widened by a sext if it's non-negative or its narrow
-  // def was widended by a sext. Same for zext.
+  // def was widened by a sext. Same for zext.
   auto canWidenBySExt = [&]() {
     return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
   };

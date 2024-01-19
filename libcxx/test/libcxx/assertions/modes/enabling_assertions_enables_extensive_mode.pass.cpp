@@ -10,8 +10,8 @@
 // This test ensures that enabling assertions with the legacy `_LIBCPP_ENABLE_ASSERTIONS` now enables the extensive
 // hardening mode.
 
-// `check_assertion.h` is only available starting from C++11 and requires Unix headers.
-// UNSUPPORTED: c++03, !has-unix-headers
+// `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
+// UNSUPPORTED: c++03, !has-unix-headers, no-localization
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
 // Note that GCC doesn't support `-Wno-macro-redefined`.

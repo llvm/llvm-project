@@ -107,6 +107,10 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
+- The only supported way to customize the assertion handler that gets invoked when a hardening assertion fails
+  is now by setting the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See
+  the documentation on overriding the default assertion handler for details.
+
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro is not honored anymore in LLVM 18.
   Please see the updated documentation about the hardening modes in libc++ and in particular the
   ``_LIBCPP_VERBOSE_ABORT`` macro for details.
@@ -122,6 +126,12 @@ Deprecations and Removals
   ``reference``, ``rebind``, ``address``, ``max_size``, ``construct``, ``destroy``, and the two-argument
   overload of ``allocate``. However, this led to the library being non-conforming due to incorrect
   constexpr-ness.
+
+- The macros ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` have been deprecated and
+  will be removed in LLVM 19. These macros used to re-enable all features
+  that were removed in the C++17 and C++20 standards. Instead of using these
+  macros, please use the macros to re-enable individual features.
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -148,6 +158,10 @@ LLVM 19
 
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been deprecated in LLVM 18 and will be removed
   entirely in LLVM 19.
+
+- The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have been deprecated
+  in LLVM 18 and will be removed entirely in LLVM 19.
 
 LLVM 20
 ~~~~~~~
