@@ -8,7 +8,6 @@
 
 // This compile-time customization requires cross-file macros, which doesn't work with modules.
 // UNSUPPORTED: clang-modules-build
-// REQUIRES: libcpp-hardening-mode=debug
 
 // Make sure that we can customize the verbose termination function at compile-time by
 // defining _LIBCPP_VERBOSE_ABORT ourselves. Note that this does not have any
@@ -23,6 +22,6 @@ void my_abort(char const*, ...) {
 }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT(false, "message");
+  _LIBCPP_VERBOSE_ABORT("%s", "message");
   return EXIT_FAILURE;
 }

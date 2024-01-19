@@ -11,7 +11,6 @@
 // We flag uses of the verbose termination function in older dylibs at compile-time to avoid runtime
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing
-// REQUIRES: libcpp-hardening-mode=debug
 
 #include <cstdlib>
 
@@ -20,6 +19,6 @@ void std::__libcpp_verbose_abort(char const*, ...) {
 }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT(false, "message");
+  std::__libcpp_verbose_abort("%s", "message");
   return EXIT_FAILURE;
 }
