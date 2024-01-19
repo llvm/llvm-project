@@ -422,6 +422,16 @@ bool isGPUProfTarget(const Module &M) {
   return Triple.isAMDGPU() || Triple.isNVPTX();
 }
 
+void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
+  // If the target is a GPU, make the symbol protected so it can
+  // be read from the host device
+  if (isGPUProfTarget(M))
+    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
+  // Hide the symbol so that we correctly get a copy for each executable.
+  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
+    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
+}
+
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
                                      StringRef PGOFuncName) {
@@ -445,14 +455,7 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
                          getPGOFuncNameVarName(PGOFuncName, Linkage));
 
-  // If the target is a GPU, make the symbol protected so it can
-  // be read from the host device
-  if (isGPUProfTarget(M))
-    FuncNameVar->setVisibility(GlobalValue::ProtectedVisibility);
-  // Hide the symbol so that we correctly get a copy for each executable.
-  else if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
-    FuncNameVar->setVisibility(GlobalValue::HiddenVisibility);
-
+  setPGOFuncVisibility(M, FuncNameVar);
   return FuncNameVar;
 }
 
