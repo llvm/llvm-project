@@ -2781,7 +2781,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       }
 
       bool IsPS2PD = SrcTy->getElementType()->isFloatTy();
-      bool IsUnsigned = (StringRef::npos != Name.find("cvtu"));
+      bool IsUnsigned = Name.contains("cvtu");
       if (IsPS2PD)
         Rep = Builder.CreateFPExt(Rep, DstTy, "cvtps2pd");
       else if (CI->arg_size() == 4 &&
@@ -2961,7 +2961,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Value *SV =
           Builder.CreateShuffleVector(CI->getArgOperand(0), ShuffleMask);
 
-      bool DoSext = (StringRef::npos != Name.find("pmovsx"));
+      bool DoSext = Name.contains("pmovsx");
       Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
                    : Builder.CreateZExt(SV, DstTy);
       // If there are 3 arguments, it's a masked intrinsic so we need a select.
