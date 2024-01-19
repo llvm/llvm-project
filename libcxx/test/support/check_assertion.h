@@ -38,7 +38,7 @@ static constexpr const char* Marker = "###";
 
 // (success, error-message-if-failed)
 using MatchResult = std::pair<bool, std::string>;
-using Matcher = std::function<MatchResult(const std::string& /*text*/)>;
+using Matcher     = std::function<MatchResult(const std::string& /*text*/)>;
 
 MatchResult MatchAssertionMessage(const std::string& text, std::string_view expected_message) {
   // Extract information from the error message. This has to stay synchronized with how we format assertions in the
@@ -55,7 +55,7 @@ MatchResult MatchAssertionMessage(const std::string& text, std::string_view expe
   // Omitting `expression` in `match_result[3]`
   const std::string& assertion_message = match_result[4];
 
-  bool result = assertion_message.find(expected_message) != std::string::npos;
+  bool result = assertion_message == expected_message;
   if (!result) {
     std::stringstream matching_error;
     matching_error                                                       //
@@ -69,13 +69,15 @@ MatchResult MatchAssertionMessage(const std::string& text, std::string_view expe
 }
 
 Matcher MakeAssertionMessageMatcher(std::string_view assertion_message) {
-  return [=] (const std::string& text) {
+  return [=](const std::string& text) { //
     return MatchAssertionMessage(text, assertion_message);
   };
 }
 
 Matcher MakeAnyMatcher() {
-  return [](const std::string&) { return MatchResult(/*success=*/true, /*maybe_error=*/""); };
+  return [](const std::string&) { //
+    return MatchResult(/*success=*/true, /*maybe_error=*/"");
+  };
 }
 
 enum class DeathCause {
@@ -185,8 +187,8 @@ public:
 
     if (expected_cause != cause) {
       std::stringstream failure_description;
-      failure_description                                       //
-          << "Child died, but with a different death cause\n"   //
+      failure_description                                             //
+          << "Child died, but with a different death cause\n"         //
           << "Expected cause:   " << ToString(expected_cause) << "\n" //
           << "Actual cause:     " << ToString(cause) << "\n";
       return DeathTestResult(Outcome::UnexpectedCause, cause, failure_description.str());
