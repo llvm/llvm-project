@@ -1190,7 +1190,6 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
 static MemRefType getMemRefTypeWithDroppingInnerDims(OpBuilder &builder,
                                                      MemRefType srcType,
                                                      size_t dimsToDrop) {
-  MemRefType resultMemrefType;
   MemRefLayoutAttrInterface layout = srcType.getLayout();
   if (isa<AffineMapAttr>(layout) && layout.isIdentity()) {
     return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
