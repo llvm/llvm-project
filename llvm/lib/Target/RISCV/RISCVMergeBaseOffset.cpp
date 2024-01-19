@@ -192,9 +192,11 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &AddiImmOp = OffsetTail.getOperand(2);
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
+    Register AddiReg = OffsetTail.getOperand(1).getReg();
+    if (!AddiReg.isVirtual())
+      return false;
     int64_t OffLo = AddiImmOp.getImm();
-    MachineInstr &OffsetLui =
-        *MRI->getVRegDef(OffsetTail.getOperand(1).getReg());
+    MachineInstr &OffsetLui = *MRI->getVRegDef(AddiReg);
     MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
     if (OffsetLui.getOpcode() != RISCV::LUI ||
         LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
