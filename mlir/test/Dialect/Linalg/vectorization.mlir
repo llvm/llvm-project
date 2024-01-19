@@ -566,6 +566,46 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @test_vectorize_dynamic_result_pack(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?x16x2xf32>) -> tensor<?x?x16x2xf32> {
+  %pack = tensor.pack %arg0 inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %arg1 : tensor<?x?xf32> -> tensor<?x?x16x2xf32>
+  return %pack : tensor<?x?x16x2xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 1] : !transform.any_op
+    transform.yield 
+  }
+}
+//  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+//  CHECK-DAG: %[[d0:.*]] = tensor.dim {{.*}} %[[c0]] : tensor<?x?x16x2xf32>
+//  CHECK-DAG: %[[d1:.*]] = tensor.dim {{.*}} %[[c1]] : tensor<?x?x16x2xf32>
+//  CHECK-DAG: %[[c0_0:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c1_0:.*]] = arith.constant 1 : index
+//  CHECK-DAG: %[[d0_0:.*]] = tensor.dim {{.*}} %[[c0_0]] : tensor<?x?xf32>
+//  CHECK-DAG: %[[d1_0:.*]] = tensor.dim {{.*}} %[[c1_0]] : tensor<?x?xf32>
+//      CHECK: %[[mask:.*]] = vector.create_mask %[[d0_0]], %[[d1_0]] : vector<8x16xi1>
+//  CHECK-DAG: %[[c0_1:.*]] = arith.constant 0 : index
+//      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
+// CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_1]], %[[c0_1]]], %[[cst]]
+// CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<8x16xf32>
+// CHECK-SAME: } : vector<8x16xi1> -> vector<8x16xf32>
+//      CHECK: %[[shape_cast:.*]] = vector.shape_cast %[[masked_read]] : vector<8x16xf32> to vector<4x2x1x16xf32>
+//      CHECK: %[[transpose:.*]] = vector.transpose %[[shape_cast]], [0, 2, 3, 1] : vector<4x2x1x16xf32> to vector<4x1x16x2xf32>
+//  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
+//  CHECK-DAG: %[[c16:.*]] = arith.constant 16 : index
+//  CHECK-DAG: %[[c2:.*]] = arith.constant 2 : index
+//  CHECK-DAG: %[[empty:.*]] = tensor.empty(%[[d0]], %[[d1]]) : tensor<?x?x16x2xf32>
+//      CHECK: %[[mask_0:.*]] = vector.create_mask %[[d0]], %[[d1]], %[[c16]], %[[c2]] : vector<4x1x16x2xi1>
+//      CHECK: %[[masked_write:.*]] = vector.mask %[[mask_0]] {
+// CHECK-SAME:   vector.transfer_write %[[transpose]], %[[empty]][%[[c0_2]], %[[c0_2]], %[[c0_2]], %[[c0_2]]]
+// CHECK-SAME:   {in_bounds = [true, true, true, true]} : vector<4x1x16x2xf32>, tensor<?x?x16x2xf32>
+//      CHECK: return %[[masked_write]] : tensor<?x?x16x2xf32>
+
+// -----
+
 func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
   linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
             outs(%C: memref<?x?xf32>)

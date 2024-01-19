@@ -1442,16 +1442,16 @@ getTiledShapeToPackedShapePerm(tensor::PackOp packOp) {
     return tiledIdx;
   };
   SmallVector<int64_t> perm;
-  for (int i = 0; i < packOp.getDestRank(); i++)
+  for (size_t i = 0; i < packOp.getDestRank(); i++)
     perm.push_back(packedIdxToTiledIdx(i));
   return perm;
 }
 
 /// Given a tensor::PackOp, return the "tiled" `dest` shape as described
 /// above in `getTiledShapeToPackedShapePerm`.
-static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp) {
+static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
+                                              ArrayRef<int64_t> destShape) {
   auto perm = getTiledShapeToPackedShapePerm(packOp);
-  auto destShape = packOp.getDestType().getShape();
   return applyPermutation(destShape, invertPermutationVector(perm));
 }
 
@@ -1556,7 +1556,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                                            inputShape, padValue);
 
   // Create ShapeCastOp
-  auto tiledPackType = VectorType::get(getTiledPackShape(packOp),
+  SmallVector<int64_t> destShape(inputVectorSizes);
+  destShape.append(innerTiles.begin(), innerTiles.end());
+  auto tiledPackType = VectorType::get(getTiledPackShape(packOp, destShape),
                                        packOp.getDestType().getElementType());
   auto shapeCastOp = rewriter.create<vector::ShapeCastOp>(
       loc, tiledPackType, maskedOp->getResult(0));
