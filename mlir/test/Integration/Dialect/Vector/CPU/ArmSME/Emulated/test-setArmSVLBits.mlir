@@ -1,6 +1,5 @@
 // DEFINE: %{entry_point} = main
-// DEFINE: %{compile} = mlir-opt %s -convert-arm-sme-to-llvm \
-// DEFINE:   -cse -canonicalize -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -convert-arm-sme-to-llvm -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:  -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
@@ -24,6 +23,12 @@ func.func @checkSVL() {
   return
 }
 
+func.func @setAndCheckSVL(%bits: i32) {
+  func.call @setArmSVLBits(%bits) : (i32) -> ()
+  func.call @checkSVL() : () -> ()
+  return
+}
+
 func.func @main() {
   //      CHECK: SVL.b
   // CHECK-NEXT: 16
@@ -37,8 +42,7 @@ func.func @main() {
   // CHECK-NEXT: SVL.d
   // CHECK-NEXT: 2
   %c128 = arith.constant 128 : i32
-  func.call @setArmSVLBits(%c128) : (i32) -> ()
-  func.call @checkSVL() : () -> ()
+  func.call @setAndCheckSVL(%c128) : (i32) -> ()
 
   //      CHECK: SVL.b
   // CHECK-NEXT: 32
@@ -52,8 +56,7 @@ func.func @main() {
   // CHECK-NEXT: SVL.d
   // CHECK-NEXT: 4
   %c256 = arith.constant 256 : i32
-  func.call @setArmSVLBits(%c256) : (i32) -> ()
-  func.call @checkSVL() : () -> ()
+  func.call @setAndCheckSVL(%c256) : (i32) -> ()
 
   //      CHECK: SVL.b
   // CHECK-NEXT: 64
@@ -67,8 +70,7 @@ func.func @main() {
   // CHECK-NEXT: SVL.d
   // CHECK-NEXT: 8
   %c512 = arith.constant 512 : i32
-  func.call @setArmSVLBits(%c512) : (i32) -> ()
-  func.call @checkSVL() : () -> ()
+  func.call @setAndCheckSVL(%c512) : (i32) -> ()
 
   return
 }

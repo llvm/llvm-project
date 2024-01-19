@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/MathExtras.h"
 #include <iostream>
 #include <stdint.h>
 #include <string_view>
@@ -22,38 +23,46 @@
 
 extern "C" {
 
-#define PR_VL_LEN_MASK 0xffff
-
+// Defines for prctl() calls. These may not necessarily exist in the host
+// <sys/prctl.h>, but will still be useable under emulation.
+//
+// https://www.kernel.org/doc/html/v5.3/arm64/sve.html#prctl-extensions
 #ifndef PR_SVE_SET_VL
 #define PR_SVE_SET_VL 50
 #endif
-
+// https://docs.kernel.org/arch/arm64/sme.html#prctl-extensions
 #ifndef PR_SME_SET_VL
 #define PR_SME_SET_VL 63
 #endif
+// Note: This mask is the same as both PR_SME_VL_LEN_MASK and
+// PR_SVE_VL_LEN_MASK.
+#define PR_VL_LEN_MASK 0xffff
 
 static void setArmVectorLength(std::string_view helper_name, int option,
-                               int bits) {
+                               uint32_t bits) {
 #if defined(__linux__) && defined(__aarch64__)
-  if (bits < 128 || bits % 128 != 0 || bits > 2048) {
-    std::cerr << "[error] Invalid aarch64 vector length!" << std::endl;
+  if (bits < 128 || bits > 2048 || !llvm::isPowerOf2_32(bits)) {
+    std::cerr << "[error] Attempted to set an invalid vector length (" << bits
+              << "-bit)" << std::endl;
     abort();
   }
   uint32_t vl = bits / 8;
-  if (prctl(option, vl & PR_VL_LEN_MASK) == -1) {
-    std::cerr << "[error] prctl failed!" << std::endl;
+  if (auto ret = prctl(option, vl & PR_VL_LEN_MASK); ret < 0) {
+    std::cerr << "[error] prctl failed (" << ret << ")" << std::endl;
     abort();
   }
 #else
-  std::cerr << "[error] " << helper_name << " is unsupported!" << std::endl;
+  std::cerr << "[error] " << helper_name << " is unsupported" << std::endl;
   abort();
 #endif
 }
 
+/// Sets the SVE vector length (in bits) to `bits`.
 void MLIR_ARMRUNNERUTILS_EXPORTED setArmVLBits(uint32_t bits) {
   setArmVectorLength(__func__, PR_SVE_SET_VL, bits);
 }
 
+/// Sets the SME streaming vector length (in bits) to `bits`.
 void MLIR_ARMRUNNERUTILS_EXPORTED setArmSVLBits(uint32_t bits) {
   setArmVectorLength(__func__, PR_SME_SET_VL, bits);
 }
