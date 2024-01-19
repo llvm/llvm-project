@@ -560,9 +560,12 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME AND COMPILER_RT_HAS_AARCH64_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+if(COMPILER_RT_HAS_AARCH64_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
   list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
   message(STATUS "AArch64 SME ABI routines enabled")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-mllvm -disable-loop-idiom-all")
+  endif()
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()

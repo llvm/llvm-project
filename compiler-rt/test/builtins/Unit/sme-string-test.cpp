@@ -1,11 +1,11 @@
-// REQUIRES: linux, aarch64-target-arch, aarch64-sme-available
+// REQUIRES: aarch64-target-arch, aarch64-sme-available
 // RUN: %clangxx_builtins %s %librt -o %t && %run %t
 
+#include <cassert>
+#include <initializer_list>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define N 16
 
 extern "C" {
 void *__arm_sc_memcpy(void *, const void *, size_t);
@@ -14,95 +14,127 @@ void *__arm_sc_memmove(void *, const void *, size_t);
 void *__arm_sc_memchr(const void *, int, size_t);
 }
 
-class MemoryArea {
-
-  uint8_t dst[N], src[N];
-
-  int sum_and_reset_dst(uint8_t *dest, int n, int j) {
-    int t = 0;
-    for (int i = 0; i < n; i++) {
-      t += dest[i];
-    }
-    for (int i = 0; i < j; i++) {
-      dst[i] = i + 1;
-    }
-    return t;
-  }
-
+template <unsigned N> class Memory {
 public:
-  MemoryArea() {
-    for (int i = 0; i < N; i++) {
-      src[i] = i * 2;
-      dst[i] = i + 1;
-    }
-  }
+  uint8_t ptr[N];
 
-  // Test correctness of memcpy
-  void test_memcpy() {
-    for (int i = 0; i < 8; i++) {
-      int t[2];
-      if (!__arm_sc_memcpy(dst, src, i))
-        abort();
-      t[0] = sum_and_reset_dst(dst, N, i);
-      memcpy(dst, src, i);
-      t[1] = sum_and_reset_dst(dst, N, i);
-      if (t[0] != t[1])
-        abort();
-    }
-  }
-
-  // Test correctness of memset
-  void test_memset() {
-    for (int i = 0; i < 8; i++) {
-      int t[2];
-      if (!__arm_sc_memset(dst, src[i], i))
-        abort();
-      t[0] = sum_and_reset_dst(dst, N, i);
-      __arm_sc_memset(dst, src[i], i);
-      t[1] = sum_and_reset_dst(dst, N, i);
-      if (t[0] != t[1])
-        abort();
-    }
-  }
-
-  // Test correctness of memchr
-  void test_memchr() {
-    for (int i = 0; i < 8; i++) {
-      for (int j = 0; j < 8; j++) {
-        uint8_t *t[2];
-        t[0] = (uint8_t *)__arm_sc_memchr(src, src[j], i);
-        t[1] = (uint8_t *)__arm_sc_memchr(src, src[j], i);
-        if (t[0] != t[1])
-          abort();
+  Memory(int Stride = 0) {
+    if (Stride != 0) {
+      for (unsigned I = 0, Elem = 0; I < N; I++, Elem += Stride) {
+        ptr[I] = Elem;
       }
     }
   }
 
-  // Test correctness for memmove
-  void test_memmove() {
-    for (int i = 0; i < 8; i++) {
-      for (int j = 0; j < 8; j++) {
-        int t[2];
-        if (!__arm_sc_memmove(&dst[8 - j], &dst[j], i))
-          abort();
-        t[0] = sum_and_reset_dst(dst, N, 16);
-        __arm_sc_memmove(&dst[8 - j], &dst[j], i);
-        t[1] = sum_and_reset_dst(dst, N, 16);
-        if (t[0] != t[1])
-          abort();
-      }
+  void assert_equal(const Memory &Other) {
+    for (unsigned I = 0; I < N; I++) {
+      assert(ptr[I] == Other.ptr[I]);
     }
+  }
+
+  void assert_equal(std::initializer_list<uint8_t> S) {
+    assert(S.size() == N);
+    auto It = S.begin();
+    for (unsigned I = 0; I < N; I++) {
+      assert(ptr[I] == *It++);
+    }
+  }
+
+  void assert_elemt_equal_at(unsigned I, uint8_t elem) {
+    assert(ptr[I] == elem);
   }
 };
 
 int main() {
 
-  MemoryArea MA = MemoryArea();
+  // Testing memcpy from Src to Dst.
+  {
+    Memory<8> Src(1);
+    Memory<8> Dst;
+    if (!__arm_sc_memcpy(Dst.ptr, Src.ptr, 8))
+      abort();
+    Dst.assert_equal(Src);
+    Dst.assert_equal({0, 1, 2, 3, 4, 5, 6, 7});
+  }
 
-  MA.test_memcpy();
-  MA.test_memset();
-  MA.test_memchr();
-  MA.test_memmove();
+  // Testing memcpy from Src to Dst with pointer offset.
+  {
+    Memory<8> Src(1);
+    Memory<8> Dst(1);
+    if (!__arm_sc_memcpy(Dst.ptr + 1, Src.ptr, 6))
+      abort();
+    Dst.assert_equal({0, 0, 1, 2, 3, 4, 5, 7});
+  }
+
+  // Testing memchr.
+  {
+    Memory<8> Src(4);
+    for (unsigned I = 0; I < 8; I++) {
+      uint8_t E = Src.ptr[I];
+      uint8_t *Elem = (uint8_t *)memchr(Src.ptr, E, 8);
+      if (!Elem)
+        abort();
+      Src.assert_elemt_equal_at(Elem - Src.ptr, *Elem);
+      assert(__arm_sc_memchr(Src.ptr, E, 8) == memchr(Src.ptr, E, 8));
+    }
+  }
+
+  // Testing memset.
+  {
+    Memory<8> Array;
+    if (!__arm_sc_memset(Array.ptr, 2, 8))
+      abort();
+    Array.assert_equal({2, 2, 2, 2, 2, 2, 2, 2});
+  }
+
+  // Testing memset with pointer offset.
+  {
+    Memory<8> Array(1);
+    if (!__arm_sc_memset(Array.ptr + 1, 2, 6))
+      abort();
+    Array.assert_equal({0, 2, 2, 2, 2, 2, 2, 7});
+  }
+
+  // Testing memset with different pointer offset.
+  {
+    for (unsigned I = 0; I < 16; I++) {
+      Memory<16> Array(2);
+      if (!__arm_sc_memset(Array.ptr + I, I, 16 - I))
+        abort();
+
+      uint8_t OrigElem = 0;
+      for (unsigned J = 0; J < 16; J++) {
+        if (I == 0) {
+          Array.assert_elemt_equal_at(J, 0);
+        } else if (J < I) {
+          Array.assert_elemt_equal_at(J, OrigElem);
+        } else {
+          Array.assert_elemt_equal_at(J, (uint8_t)I);
+        }
+        OrigElem += 2;
+      }
+    }
+  }
+
+  // Testing memmove with a simple non-overlap case.
+  {
+    Memory<8> Src(1);
+    Memory<8> Dst(1);
+    if (!__arm_sc_memmove(Dst.ptr + 1, Src.ptr, 6))
+      abort();
+    Dst.assert_equal({0, 0, 1, 2, 3, 4, 5, 7});
+  }
+
+  // Testing memove with overlap pointers Dst > Src, Dst < Src.
+  {
+    Memory<8> SrcDst(1);
+    if (!__arm_sc_memmove(SrcDst.ptr + 1, SrcDst.ptr, 6))
+      abort();
+    SrcDst.assert_equal({0, 0, 1, 2, 3, 4, 5, 7});
+    if (!__arm_sc_memmove(SrcDst.ptr, SrcDst.ptr + 1, 6))
+      abort();
+    SrcDst.assert_equal({0, 1, 2, 3, 4, 5, 5, 7});
+  }
 
   return 0;
 }

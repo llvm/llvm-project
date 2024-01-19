@@ -35,15 +35,11 @@ asm(\".arch armv8-a+lse\");
 asm(\"cas w0, w1, [x2]\");
 ")
 
-builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_SME
-"
-asm(\".arch armv9-a+sme\");
-asm(\"smstart\");
-")
-
 builtin_check_c_compiler_source(COMPILER_RT_HAS_AARCH64_SME
 "
 void foo(int a)  __arm_streaming_compatible {
+  asm(\".arch armv9-a+sme\");
+  asm(\"smstart\");
 }
 ")
 
