@@ -50,7 +50,7 @@ void test_log(const char* condition, const char* file, int line, const F& functo
 }
 
 template <class Arg>
-[[noreturn]] void test_fail(const char* file, int line, const Arg& arg) {
+TEST_NORETURN void test_fail(const char* file, int line, const Arg& arg) {
   test_log("", file, line, arg);
   std::abort();
 }

@@ -145,14 +145,14 @@ public:
 
     for (size_t idx = 0; idx < num_entries; idx++) {
       llvm::StringRef arg_string = copy_args[idx].ref();
-      if (arg_string.equals("-c") || count_opt.startswith(arg_string)) {
+      if (arg_string.equals("-c") || count_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
         count_idx = idx;
         if (copy_args[idx].ref().getAsInteger(0, count_val))
           return std::nullopt;
-      } else if (arg_string.equals("-s") || start_opt.startswith(arg_string)) {
+      } else if (arg_string.equals("-s") || start_opt.starts_with(arg_string)) {
         idx++;
         if (idx == num_entries)
           return std::nullopt;
@@ -1129,11 +1129,51 @@ protected:
 
 // CommandObjectThreadSelect
 
+#define LLDB_OPTIONS_thread_select
+#include "CommandOptions.inc"
+
 class CommandObjectThreadSelect : public CommandObjectParsed {
 public:
+  class OptionGroupThreadSelect : public OptionGroup {
+  public:
+    OptionGroupThreadSelect() { OptionParsingStarting(nullptr); }
+
+    ~OptionGroupThreadSelect() override = default;
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_thread_id = LLDB_INVALID_THREAD_ID;
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = g_thread_select_options[option_idx].short_option;
+      switch (short_option) {
+      case 't': {
+        if (option_arg.getAsInteger(0, m_thread_id)) {
+          m_thread_id = LLDB_INVALID_THREAD_ID;
+          return Status("Invalid thread ID: '%s'.", option_arg.str().c_str());
+        }
+        break;
+      }
+
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return {};
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_thread_select_options);
+    }
+
+    lldb::tid_t m_thread_id;
+  };
+
   CommandObjectThreadSelect(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "thread select",
-                            "Change the currently selected thread.", nullptr,
+                            "Change the currently selected thread.",
+                            "thread select <thread-index> (or -t <thread-id>)",
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
@@ -1143,6 +1183,7 @@ public:
     // Define the first (and only) variant of this arg.
     thread_idx_arg.arg_type = eArgTypeThreadIndex;
     thread_idx_arg.arg_repetition = eArgRepeatPlain;
+    thread_idx_arg.arg_opt_set_association = LLDB_OPT_SET_1;
 
     // There is only one variant this argument could be; put it into the
     // argument entry.
@@ -1150,6 +1191,9 @@ public:
 
     // Push the data for the first argument into the m_arguments vector.
     m_arguments.push_back(arg);
+
+    m_option_group.Append(&m_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_2);
+    m_option_group.Finalize();
   }
 
   ~CommandObjectThreadSelect() override = default;
@@ -1165,37 +1209,59 @@ public:
         nullptr);
   }
 
+  Options *GetOptions() override { return &m_option_group; }
+
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process");
       return;
-    } else if (command.GetArgumentCount() != 1) {
+    } else if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID &&
+               command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one thread index argument:\nUsage: %s\n",
+          "'%s' takes exactly one thread index argument, or a thread ID "
+          "option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return;
-    }
-
-    uint32_t index_id;
-    if (!llvm::to_integer(command.GetArgumentAtIndex(0), index_id)) {
-      result.AppendErrorWithFormat("Invalid thread index '%s'",
-                                   command.GetArgumentAtIndex(0));
+    } else if (m_options.m_thread_id != LLDB_INVALID_THREAD_ID &&
+               command.GetArgumentCount() != 0) {
+      result.AppendErrorWithFormat("'%s' cannot take both a thread ID option "
+                                   "and a thread index argument:\nUsage: %s\n",
+                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return;
     }
 
-    Thread *new_thread =
-        process->GetThreadList().FindThreadByIndexID(index_id).get();
-    if (new_thread == nullptr) {
-      result.AppendErrorWithFormat("invalid thread #%s.\n",
-                                   command.GetArgumentAtIndex(0));
-      return;
+    Thread *new_thread = nullptr;
+    if (command.GetArgumentCount() == 1) {
+      uint32_t index_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(0), index_id)) {
+        result.AppendErrorWithFormat("Invalid thread index '%s'",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+      new_thread = process->GetThreadList().FindThreadByIndexID(index_id).get();
+      if (new_thread == nullptr) {
+        result.AppendErrorWithFormat("Invalid thread index #%s.\n",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+    } else {
+      new_thread =
+          process->GetThreadList().FindThreadByID(m_options.m_thread_id).get();
+      if (new_thread == nullptr) {
+        result.AppendErrorWithFormat("Invalid thread ID %" PRIu64 ".\n",
+                                     m_options.m_thread_id);
+        return;
+      }
     }
 
     process->GetThreadList().SetSelectedThreadByID(new_thread->GetID(), true);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
+
+  OptionGroupThreadSelect m_options;
+  OptionGroupOptions m_option_group;
 };
 
 // CommandObjectThreadList
@@ -1509,7 +1575,7 @@ protected:
     // I am going to handle this by hand, because I don't want you to have to
     // say:
     // "thread return -- -5".
-    if (command.startswith("-x")) {
+    if (command.starts_with("-x")) {
       if (command.size() != 2U)
         result.AppendWarning("Return values ignored when returning from user "
                              "called expressions");

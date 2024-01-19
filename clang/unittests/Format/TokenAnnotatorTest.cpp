@@ -298,6 +298,17 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TypeName);
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("class Foo {\n"
+                    "  void operator<() {}\n"
+                    "  Foo &f;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1055,6 +1066,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = (!Foo<T>) && Bar;");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[15], tok::ampamp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -1707,6 +1723,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
+
+  auto Style = getLLVMStyle();
+  Style.TypeNames.push_back("time_t");
+  Tokens = annotate("int iso_time(time_t);", Style);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsCtorAndDtorDeclNames) {
@@ -2154,6 +2177,40 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
+  auto Style = getLLVMStyle(FormatStyle::LK_TableGen);
+  ASSERT_TRUE(Style.isTableGen());
+
+  TestLexer Lexer(Allocator, Buffers, Style);
+  AdditionalKeywords Keywords(Lexer.IdentTable);
+  auto Annotate = [&Lexer](llvm::StringRef Code) {
+    return Lexer.annotate(Code);
+  };
+
+  // Additional keywords representation test.
+  auto Tokens = Annotate("def foo : Bar<1>;");
+  ASSERT_TRUE(Keywords.isTableGenKeyword(*Tokens[0]));
+  ASSERT_TRUE(Keywords.isTableGenDefinition(*Tokens[0]));
+  ASSERT_TRUE(Tokens[0]->is(Keywords.kw_def));
+  ASSERT_TRUE(Tokens[1]->is(TT_StartOfName));
+
+  // Code, the multiline string token.
+  Tokens = Annotate("[{ code is multiline string }]");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+  EXPECT_FALSE(Tokens[0]->IsMultiline);
+  // Case with multiple lines.
+  Tokens = Annotate("[{ It can break\n"
+                    "   across lines and the line breaks\n"
+                    "   are retained in \n"
+                    "   the string. }]");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+  EXPECT_EQ(Tokens[0]->ColumnWidth, sizeof("[{ It can break\n") - 1);
+  EXPECT_TRUE(Tokens[0]->IsMultiline);
+  EXPECT_EQ(Tokens[0]->LastLineColumnWidth, sizeof("   the string. }]") - 1);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
   auto Tokens = annotate("Class::Class() : BaseClass(), Member() {}");
 
@@ -2306,6 +2363,11 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_BRACE_KIND(Tokens[1], BK_BracedInit);
   EXPECT_TOKEN(Tokens[6], tok::period, TT_DesignatedInitializerPeriod);
   EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
+
+  Tokens = annotate("Foo foo[] = {[0]{}};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_DesignatedInitializerLSquare);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
@@ -2479,6 +2541,15 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+}
+
+TEST_F(TokenAnnotatorTest, StreamOperator) {
+  auto Tokens = annotate("\"foo\\n\" << aux << \"foo\\n\" << \"foo\";");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_FALSE(Tokens[1]->MustBreakBefore);
+  EXPECT_FALSE(Tokens[3]->MustBreakBefore);
+  // Only break between string literals if the former ends with \n.
+  EXPECT_TRUE(Tokens[5]->MustBreakBefore);
 }
 
 } // namespace

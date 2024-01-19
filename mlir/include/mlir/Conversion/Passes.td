@@ -564,10 +564,6 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
-    Option<"useCoopMatrixNV", "use-coop-matrix-nv",
-           "bool", /*default=*/"false",
-           "Use the NV cooperative matrix extension insted of the KHR extension"
-           " to lower GPU WMMA ops">,
   ];
 }
 
@@ -885,6 +881,12 @@ def SCFToControlFlow : Pass<"convert-scf-to-cf"> {
 def ConvertSCFToOpenMPPass : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let summary = "Convert SCF parallel loop to OpenMP parallel + workshare "
                 "constructs.";
+
+  let options = [
+    Option<"numThreads", "num-threads", "unsigned",
+           /*default=kUseOpenMPDefaultNumThreads*/"0",
+           "Number of threads to use">
+  ];
 
   let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
                            "memref::MemRefDialect"];

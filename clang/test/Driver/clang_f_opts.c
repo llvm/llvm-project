@@ -585,6 +585,19 @@
 // CHECK-TRIVIAL-PATTERN-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 // CHECK-TRIVIAL-ZERO-STOP-AFTER-INVALID-VALUE: only accepts positive integers
 
+// RUN: %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-MAX-SIZE %s
+// RUN: %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-MAX-SIZE %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init-max-size=1024 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-MAX-SIZE-MISSING-DEPENDENCY %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=pattern -ftrivial-auto-var-init-max-size=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN-MAX-SIZE-INVALID-VALUE %s
+// RUN: not %clang -### -S -ftrivial-auto-var-init=zero -ftrivial-auto-var-init-max-size=0 %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-MAX-SIZE-INVALID-VALUE %s
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-NOT: is used without '-ftrivial-auto-var-init'
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-NOT: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-MAX-SIZE-MISSING-DEPENDENCY: used without '-ftrivial-auto-var-init=zero' or
+// CHECK-TRIVIAL-PATTERN-MAX-SIZE-INVALID-VALUE: only accepts positive integers (in bytes)
+// CHECK-TRIVIAL-ZERO-MAX-SIZE-INVALID-VALUE: only accepts positive integers (in bytes)
+
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"
 
@@ -611,3 +624,9 @@
 // CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
 // RUN: not %clang -### -fno-integrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
 // CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target
+
+// RUN: %clang -### --target=aarch64-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// RUN: %clang -### --target=aarch64-windows-msvc -fms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-MS-VOLATILE %s
+// RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
+// CHECK-MS-VOLATILE: -fms-volatile
+// CHECK-NO-MS-VOLATILE-NOT: -fms-volatile

@@ -2045,12 +2045,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int *c;\n"
                "const unsigned int *d;\n"
                "Const unsigned int &e;\n"
                "const unsigned int &f;\n"
+               "int                *f1(int *a, int &b, int &&c);\n"
+               "double             *(*f2)(int *a, double &&b);\n"
                "const unsigned    &&g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int &e;\n"
+               "const unsigned int &f;\n"
+               "int                *f1(int *a, int &b, int &&c);\n"
+               "double *(*f2)(int *a, double &&b);\n"
+               "const unsigned &&g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -2090,12 +2103,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int* c;\n"
                "const unsigned int* d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
+               "int*                f1(int* a, int& b, int&& c);\n"
+               "double*             (*f2)(int* a, double&& b);\n"
                "const unsigned&&    g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int* c;\n"
+               "const unsigned int* d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "int*                f1(int* a, int& b, int&& c);\n"
+               "double* (*f2)(int* a, double&& b);\n"
+               "const unsigned&& g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Right;
@@ -2115,12 +2141,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("for (int a = 0, b++; const Foo *c : {1, 2, 3})", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int *c;\n"
                "const unsigned int *d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
-               "const unsigned      g;\n"
+               "int                *f1(int *a, int& b, int&& c);\n"
+               "double             *(*f2)(int *a, double&& b);\n"
+               "const unsigned&&    g;\n"
                "Const unsigned      h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "int                *f1(int *a, int& b, int&& c);\n"
+               "double *(*f2)(int *a, double&& b);\n"
+               "const unsigned&& g;\n"
+               "Const unsigned   h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -2155,12 +2194,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
       Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int*  c;\n"
                "const unsigned int*  d;\n"
                "Const unsigned int & e;\n"
                "const unsigned int & f;\n"
+               "int*                 f1(int* a, int & b, int && c);\n"
+               "double*              (*f2)(int* a, double && b);\n"
                "const unsigned &&    g;\n"
                "Const unsigned       h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int*  c;\n"
+               "const unsigned int*  d;\n"
+               "Const unsigned int & e;\n"
+               "const unsigned int & f;\n"
+               "int*                 f1(int* a, int & b, int && c);\n"
+               "double* (*f2)(int* a, double && b);\n"
+               "const unsigned && g;\n"
+               "Const unsigned    h;",
                Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
@@ -2180,12 +2232,25 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("for (int a = 0, b++; const Foo * c : {1, 2, 3})", Style);
 
   Style.AlignConsecutiveDeclarations.Enabled = true;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
   verifyFormat("Const unsigned int * c;\n"
                "const unsigned int * d;\n"
                "Const unsigned int  &e;\n"
                "const unsigned int  &f;\n"
+               "int *                f1(int * a, int &b, int &&c);\n"
+               "double *             (*f2)(int * a, double &&b);\n"
                "const unsigned     &&g;\n"
                "Const unsigned       h;",
+               Style);
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = false;
+  verifyFormat("Const unsigned int * c;\n"
+               "const unsigned int * d;\n"
+               "Const unsigned int  &e;\n"
+               "const unsigned int  &f;\n"
+               "int *                f1(int * a, int &b, int &&c);\n"
+               "double * (*f2)(int * a, double &&b);\n"
+               "const unsigned &&g;\n"
+               "Const unsigned   h;",
                Style);
 
   // FIXME: we don't handle this yet, so output may be arbitrary until it's
@@ -4568,6 +4633,13 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                Style);
   verifyFormat("extern \"C\" {\n"
                "int foo12();\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("extern \"C\"\n"
+               "{\n"
+               "int i;\n"
                "}",
                Style);
 
@@ -8490,7 +8562,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
                "    __attribute__((unused));");
 
   Style = getGoogleStyle();
-  Style.AttributeMacros.push_back("GUARDED_BY");
+
   verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    GUARDED_BY(aaaaaaaaaaaa);",
@@ -8505,6 +8577,23 @@ TEST_F(FormatTest, BreaksFunctionDeclarationsWithTrailingTokens) {
       Style);
   verifyFormat(
       "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa GUARDED_BY(aaaaaaaaaaaa) =\n"
+      "    aaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
+
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    ABSL_GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+      "    ABSL_GUARDED_BY(aaaaaaaaaaaa);",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ABSL_GUARDED_BY(aaaaaaaaaaaa) =\n"
+      "    aaaaaaaa::aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+      Style);
+  verifyFormat(
+      "bool aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ABSL_GUARDED_BY(aaaaaaaaaaaa) =\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaa;",
       Style);
 }
@@ -13847,6 +13936,21 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                getLLVMStyleWithColumns(35));
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaa, {},\n"
                "                               aaaaaaaaaaaaaaaaaaaaaaa);");
+
+  // No possible column formats, don't want the optimal paths penalized.
+  verifyFormat(
+      "waarudo::unit desk = {\n"
+      "    .s = \"desk\", .p = p, .b = [] { return w::r{3, 10} * w::m; }};");
+  verifyFormat("SomeType something1([](const Input &i) -> Output { return "
+               "Output{1, 2}; },\n"
+               "                    [](const Input &i) -> Output { return "
+               "Output{1, 2}; });");
+  FormatStyle NoBinPacking = getLLVMStyle();
+  NoBinPacking.BinPackParameters = false;
+  verifyFormat("waarudo::unit desk = {\n"
+               "    .s = \"desk\", .p = p, .b = [] { return w::r{3, 10, 1, 1, "
+               "1, 1} * w::m; }};",
+               NoBinPacking);
 }
 
 TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
@@ -18890,6 +18994,15 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "                 \"bb\"};\n"
                "int   bbbbbbb = 0;",
                Alignment);
+  // http://llvm.org/PR68079
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int (A::*)() &;\n"
+               "using RRFn = int (A::*)() &&;",
+               Alignment);
+  verifyFormat("using Fn   = int (A::*)();\n"
+               "using RFn  = int *(A::*)() &;\n"
+               "using RRFn = double (A::*)() &&;",
+               Alignment);
 
   // PAS_Right
   verifyFormat("void SomeFunction(int parameter = 0) {\n"
@@ -19542,7 +19655,7 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
             FormatStyle::AlignConsecutiveStyle(
                 {/*Enabled=*/false, /*AcrossEmptyLines=*/false,
                  /*AcrossComments=*/false, /*AlignCompound=*/false,
-                 /*PadOperators=*/true}));
+                 /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));
   EXPECT_EQ(Style.AlignConsecutiveDeclarations,
             FormatStyle::AlignConsecutiveStyle({}));
   verifyFormat("void foo() {\n"
@@ -20814,6 +20927,17 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
       "};",
       Style);
 
+  verifyNoCrash("Foo f[] = {\n"
+                "    [0] = { 1, },\n"
+                "    [i] { 1, },\n"
+                "};",
+                Style);
+  verifyNoCrash("Foo foo[] = {\n"
+                "    [0] = {1, 1},\n"
+                "    [1] { 1, 1, },\n"
+                "    [2] { 1, 1, },\n"
+                "};");
+
   verifyFormat("return GradForUnaryCwise(g, {\n"
                "                                {{\"sign\"}, \"Sign\",  "
                "  {\"x\", \"dy\"}},\n"
@@ -21055,6 +21179,17 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "    {56, 5,     \"!!\"                                    }\n"
       "};",
       Style);
+
+  verifyNoCrash("Foo f[] = {\n"
+                "    [0] = { 1, },\n"
+                "    [i] { 1, },\n"
+                "};",
+                Style);
+  verifyNoCrash("Foo foo[] = {\n"
+                "    [0] = {1, 1},\n"
+                "    [1] { 1, 1, },\n"
+                "    [2] { 1, 1, },\n"
+                "};");
 
   verifyFormat("return GradForUnaryCwise(g, {\n"
                "                                {{\"sign\"}, \"Sign\", {\"x\", "
@@ -21425,6 +21560,19 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
                "    2;\n"
                "    iiiiiiiiiiiiiiiii++) {\n"
                "}",
+               Style);
+}
+
+TEST_F(FormatTest, BreakPenaltyScopeResolution) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 20;
+  Style.PenaltyExcessCharacter = 100;
+  verifyFormat("unsigned long\n"
+               "foo::bar();",
+               Style);
+  Style.PenaltyBreakScopeResolution = 10;
+  verifyFormat("unsigned long foo::\n"
+               "    bar();",
                Style);
 }
 
@@ -26267,6 +26415,8 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   constexpr StringRef Code("[[maybe_unused]] const int i;\n"
                            "[[foo([[]])]] [[maybe_unused]]\n"
                            "int j;\n"
+                           "[[maybe_unused]]\n"
+                           "foo<int> k;\n"
                            "[[nodiscard]] inline int f(int &i);\n"
                            "[[foo([[]])]] [[nodiscard]]\n"
                            "int g(int &i);\n"
@@ -26287,6 +26437,7 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   Style.BreakAfterAttributes = FormatStyle::ABS_Never;
   verifyFormat("[[maybe_unused]] const int i;\n"
                "[[foo([[]])]] [[maybe_unused]] int j;\n"
+               "[[maybe_unused]] foo<int> k;\n"
                "[[nodiscard]] inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]] int g(int &i);\n"
                "[[nodiscard]] inline int f(int &i) {\n"
@@ -26304,6 +26455,8 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "const int i;\n"
                "[[foo([[]])]] [[maybe_unused]]\n"
                "int j;\n"
+               "[[maybe_unused]]\n"
+               "foo<int> k;\n"
                "[[nodiscard]]\n"
                "inline int f(int &i);\n"
                "[[foo([[]])]] [[nodiscard]]\n"
@@ -26451,6 +26604,19 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "{\n"
                "}",
                CtorDtorCode, Style);
+
+  verifyFormat("struct Foo {\n"
+               "  [[maybe_unused]]\n"
+               "  void operator+();\n"
+               "};\n"
+               "[[nodiscard]]\n"
+               "Foo &operator-(Foo &);",
+               Style);
+
+  Style.ReferenceAlignment = FormatStyle::ReferenceAlignmentStyle::RAS_Left;
+  verifyFormat("[[nodiscard]]\n"
+               "Foo& operator-(Foo&);",
+               Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {
@@ -26662,6 +26828,8 @@ TEST_F(FormatTest, PPBranchesInBracedInit) {
 
 TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
+  verifyFormat("std::cout << \"foo\\n\"\n"
+               "          << \"bar\";");
 }
 
 TEST_F(FormatTest, BreakAdjacentStringLiterals) {

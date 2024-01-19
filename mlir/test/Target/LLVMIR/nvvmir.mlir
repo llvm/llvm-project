@@ -58,6 +58,10 @@ llvm.func @nvvm_special_regs() -> i32 {
   %27 = nvvm.read.ptx.sreg.cluster.ctarank : i32
   // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank
   %28 = nvvm.read.ptx.sreg.cluster.nctarank : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock
+  %29 = nvvm.read.ptx.sreg.clock : i32
+  // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64
+  %30 = nvvm.read.ptx.sreg.clock64 : i64
   
   llvm.return %1 : i32
 }
@@ -73,6 +77,33 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
 llvm.func @llvm_nvvm_barrier0() {
   // CHECK: call void @llvm.nvvm.barrier0()
   nvvm.barrier0
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive
+llvm.func @llvm_nvvm_cluster_arrive() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive()
+  nvvm.cluster.arrive
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.aligned()
+  nvvm.cluster.arrive {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_arrive_relaxed
+llvm.func @llvm_nvvm_cluster_arrive_relaxed() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed()
+  nvvm.cluster.arrive.relaxed
+  // CHECK: call void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
+  nvvm.cluster.arrive.relaxed {aligned}
+  llvm.return
+}
+
+// CHECK-LABEL: @llvm_nvvm_cluster_wait
+llvm.func @llvm_nvvm_cluster_wait() {
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait()
+  nvvm.cluster.wait
+  // CHECK: call void @llvm.nvvm.barrier.cluster.wait.aligned()
+  nvvm.cluster.wait {aligned}
   llvm.return
 }
 
@@ -365,6 +396,15 @@ llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   llvm.return
 }
 
+// CHECK-LABEL: @llvm_nvvm_setmaxregister
+llvm.func @llvm_nvvm_setmaxregister() {
+  // CHECK-LLVM: call void @llvm.nvvm.setmaxnreg.inc.sync.aligned.u32(i32 256)
+  nvvm.setmaxregister increase 256
+  // CHECK-LLVM: call void @llvm.nvvm.setmaxnreg.dec.sync.aligned.u32(i32 24)
+  nvvm.setmaxregister decrease 24
+  llvm.return
+}
+
 // CHECK-LABEL: @ld_matrix
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // CHECK: call i32 @llvm.nvvm.ldmatrix.sync.aligned.m8n8.x1.b16.p3(ptr addrspace(3) %{{.*}})
@@ -394,7 +434,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
 
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -406,7 +446,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32]} {
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [1,23,32]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
@@ -438,7 +478,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [1,23,32],
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 23, 32>,
                                      nvvm.minctasm = 16, nvvm.maxnreg = 32} {
   llvm.return
 }
@@ -468,13 +508,13 @@ nvvm.maxnreg = "boo"} {
 }
 // -----
 // expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 
 // -----
 // expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = [3,4,5,6]} {
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
   llvm.return
 }
 

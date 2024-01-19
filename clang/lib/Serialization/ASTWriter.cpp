@@ -1411,15 +1411,20 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
       Record.push_back(M.StandardCXXModule);
       AddSourceLocation(M.ImportLoc, Record);
 
-      // If we have calculated signature, there is no need to store
-      // the size or timestamp.
-      Record.push_back(M.Signature ? 0 : M.File->getSize());
-      Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
-
-      llvm::append_range(Record, M.Signature);
+      // We don't want to hard code the information about imported modules
+      // in the C++20 named modules.
+      if (!M.StandardCXXModule) {
+        // If we have calculated signature, there is no need to store
+        // the size or timestamp.
+        Record.push_back(M.Signature ? 0 : M.File.getSize());
+        Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
+        llvm::append_range(Record, M.Signature);
+      }
 
       AddString(M.ModuleName, Record);
-      AddPath(M.FileName, Record);
+
+      if (!M.StandardCXXModule)
+        AddPath(M.FileName, Record);
     }
     Stream.EmitRecord(IMPORTS, Record);
   }
@@ -1892,7 +1897,8 @@ namespace {
 
       unsigned char Flags = (Data.AlreadyIncluded << 6)
                           | (Data.HFI.isImport << 5)
-                          | (Data.HFI.isPragmaOnce << 4)
+                          | (Writer.isWritingStdCXXNamedModules() ? 0 :
+                             Data.HFI.isPragmaOnce << 4)
                           | (Data.HFI.DirInfo << 1)
                           | Data.HFI.IndexHeaderMapHeader;
       LE.write<uint8_t>(Flags);
@@ -2182,8 +2188,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
                "Writing to AST an overridden file is not supported");
 
         // The source location entry is a file. Emit input file ID.
-        assert(InputFileIDs[Content->OrigEntry] != 0 && "Missed file entry");
-        Record.push_back(InputFileIDs[Content->OrigEntry]);
+        assert(InputFileIDs[*Content->OrigEntry] != 0 && "Missed file entry");
+        Record.push_back(InputFileIDs[*Content->OrigEntry]);
 
         Record.push_back(getAdjustedNumCreatedFIDs(FID));
 
@@ -4695,7 +4701,7 @@ void ASTWriter::collectNonAffectingInputFiles() {
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
         AffectingModuleMaps.empty() ||
-        AffectingModuleMaps.find(Cache->OrigEntry) != AffectingModuleMaps.end())
+        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
@@ -6003,12 +6009,17 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-#define FIELD(Name, Width, Merge) DefinitionBits.addBits(Data.Name, Width);
+#define FIELD(Name, Width, Merge)                                              \
+  if (!DefinitionBits.canWriteNextNBits(Width)) {                              \
+    Record->push_back(DefinitionBits);                                         \
+    DefinitionBits.reset(0);                                                   \
+  }                                                                            \
+  DefinitionBits.addBits(Data.Name, Width);
+
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
 #undef FIELD
 
-  while (DefinitionBits.hasUnconsumedValues())
-    Record->push_back(DefinitionBits.getNextValue());
+  Record->push_back(DefinitionBits);
 
   // getODRHash will compute the ODRHash if it has not been previously computed.
   Record->push_back(D->getODRHash());
@@ -6047,7 +6058,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     LambdaBits.addBits(Lambda.CaptureDefault, /*Width=*/2);
     LambdaBits.addBits(Lambda.NumCaptures, /*Width=*/15);
     LambdaBits.addBit(Lambda.HasKnownInternalLinkage);
-    Record->push_back(LambdaBits.getNextValue());
+    Record->push_back(LambdaBits);
 
     Record->push_back(Lambda.NumExplicitCaptures);
     Record->push_back(Lambda.ManglingNumber);
@@ -6058,10 +6069,12 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     for (unsigned I = 0, N = Lambda.NumCaptures; I != N; ++I) {
       const LambdaCapture &Capture = Lambda.Captures.front()[I];
       AddSourceLocation(Capture.getLocation());
+
       BitsPacker CaptureBits;
       CaptureBits.addBit(Capture.isImplicit());
       CaptureBits.addBits(Capture.getCaptureKind(), /*Width=*/3);
       Record->push_back(CaptureBits);
+
       switch (Capture.getCaptureKind()) {
       case LCK_StarThis:
       case LCK_This:

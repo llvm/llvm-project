@@ -67,9 +67,9 @@ void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
     // Use getValues because -Wa can have multiple arguments
     // e.g. -Wa,-mcpu=foo,-mcpu=bar
     for (StringRef Value : A->getValues()) {
-      if (Value.startswith("-mcpu="))
+      if (Value.starts_with("-mcpu="))
         CPU = Value.substr(6);
-      if (Value.startswith("-march="))
+      if (Value.starts_with("-march="))
         Arch = Value.substr(7);
     }
   }
@@ -285,9 +285,9 @@ void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
         // There is no assembler equivalent of -mno-thumb, -marm, or -mno-arm.
         if (Value == "-mthumb")
           IsThumb = true;
-        else if (Value.startswith("-march="))
+        else if (Value.starts_with("-march="))
           WaMArch = Value.substr(7);
-        else if (Value.startswith("-mcpu="))
+        else if (Value.starts_with("-mcpu="))
           WaMCPU = Value.substr(6);
       }
     }
@@ -367,6 +367,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     // Darwin defaults to "softfp" for v6 and v7.
     if (Triple.isWatchABI())
       return FloatABI::Hard;
@@ -528,13 +529,13 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
       // We use getValues here because you can have many options per -Wa
       // We will keep the last one we find for each of these
       for (StringRef Value : A->getValues()) {
-        if (Value.startswith("-mfpu=")) {
+        if (Value.starts_with("-mfpu=")) {
           WaFPU = std::make_pair(A, Value.substr(6));
-        } else if (Value.startswith("-mcpu=")) {
+        } else if (Value.starts_with("-mcpu=")) {
           WaCPU = std::make_pair(A, Value.substr(6));
-        } else if (Value.startswith("-mhwdiv=")) {
+        } else if (Value.starts_with("-mhwdiv=")) {
           WaHDiv = std::make_pair(A, Value.substr(8));
-        } else if (Value.startswith("-march=")) {
+        } else if (Value.starts_with("-march=")) {
           WaArch = std::make_pair(A, Value.substr(7));
         }
       }
@@ -796,7 +797,7 @@ fp16_fml_fallthrough:
   // Propagate frame-chain model selection
   if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
     StringRef FrameChainOption = A->getValue();
-    if (FrameChainOption.startswith("aapcs"))
+    if (FrameChainOption.starts_with("aapcs"))
       Features.push_back("+aapcs-frame-chain");
     if (FrameChainOption == "aapcs+leaf")
       Features.push_back("+aapcs-frame-chain-leaf");
@@ -836,8 +837,8 @@ fp16_fml_fallthrough:
     if (A->getOption().matches(options::OPT_mlong_calls))
       Features.push_back("+long-calls");
   } else if (KernelOrKext && (!Triple.isiOS() || Triple.isOSVersionLT(6)) &&
-             !Triple.isWatchOS()) {
-      Features.push_back("+long-calls");
+             !Triple.isWatchOS() && !Triple.isXROS()) {
+    Features.push_back("+long-calls");
   }
 
   // Generate execute-only output (no data access to code sections).

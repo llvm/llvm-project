@@ -34,7 +34,6 @@ Getting Started with libc++
 .. toctree::
    :maxdepth: 1
 
-   ReleaseNotes/17
    ReleaseNotes/18
    UsingLibcxx
    BuildingLibcxx
@@ -119,7 +118,7 @@ Compiler     Versions        Restrictions               Support policy
 Clang        16, 17, 18-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
 AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
 Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
-GCC          12              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+GCC          13              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================
 
 Libc++ also supports common platforms and architectures:
@@ -202,6 +201,7 @@ Design Documents
 Build Bots and Test Coverage
 ============================
 
+* `Github Actions CI pipeline <https://github.com/llvm/llvm-project/actions/workflows/libcxx-build-and-test.yaml>`_
 * `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
 * `LLVM Buildbot Builders <https://lab.llvm.org/buildbot>`_
 * :ref:`Adding New CI Jobs <AddingNewCIJobs>`

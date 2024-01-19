@@ -63,23 +63,6 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
 }
 
-static const Constant *getConstantFromPool(const MachineInstr &MI,
-                                           const MachineOperand &Op) {
-  if (!Op.isCPI() || Op.getOffset() != 0)
-    return nullptr;
-
-  ArrayRef<MachineConstantPoolEntry> Constants =
-      MI.getParent()->getParent()->getConstantPool()->getConstants();
-  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
-
-  // Bail if this is a machine constant pool entry, we won't be able to dig out
-  // anything useful.
-  if (ConstantEntry.isMachineConstantPoolEntry())
-    return nullptr;
-
-  return ConstantEntry.Val.ConstVal;
-}
-
 // Attempt to extract the full width of bits data from the constant.
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
@@ -190,12 +173,13 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   Type *SclTy = OriginalType->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
+  LLVMContext &Ctx = OriginalType->getContext();
 
   if (NumSclBits == 8) {
     SmallVector<uint8_t> RawBits;
     for (unsigned I = 0; I != SplatBitWidth; I += 8)
       RawBits.push_back(Splat->extractBits(8, I).getZExtValue());
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 16) {
@@ -204,7 +188,7 @@ static Constant *rebuildSplatableConstant(const Constant *C,
       RawBits.push_back(Splat->extractBits(16, I).getZExtValue());
     if (SclTy->is16bitFPTy())
       return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   if (NumSclBits == 32) {
@@ -213,7 +197,7 @@ static Constant *rebuildSplatableConstant(const Constant *C,
       RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
     if (SclTy->isFloatTy())
       return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
   }
 
   // Fallback to i64 / double.
@@ -222,7 +206,7 @@ static Constant *rebuildSplatableConstant(const Constant *C,
     RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
   if (SclTy->isDoubleTy())
     return ConstantDataVector::getFP(SclTy, RawBits);
-  return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+  return ConstantDataVector::get(Ctx, RawBits);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
@@ -243,7 +227,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
            "Unexpected number of operands!");
 
     MachineOperand &CstOp = MI.getOperand(OperandNo + X86::AddrDisp);
-    if (auto *C = getConstantFromPool(MI, CstOp)) {
+    if (auto *C = X86::getConstantFromPool(MI, CstOp)) {
       // Attempt to detect a suitable splat from increasing splat widths.
       std::pair<unsigned, unsigned> Broadcasts[] = {
           {8, OpBcst8},   {16, OpBcst16},   {32, OpBcst32},
@@ -285,7 +269,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
   case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128, X86::VBROADCASTSDYrm,
+    return ConvertToBroadcast(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
                               X86::VBROADCASTSSYrm, 0, 0, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
@@ -318,7 +302,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
     return ConvertToBroadcast(
-        0, HasAVX2 ? X86::VBROADCASTI128 : X86::VBROADCASTF128,
+        0, HasAVX2 ? X86::VBROADCASTI128rm : X86::VBROADCASTF128rm,
         HasAVX2 ? X86::VPBROADCASTQYrm : X86::VBROADCASTSDYrm,
         HasAVX2 ? X86::VPBROADCASTDYrm : X86::VBROADCASTSSYrm,
         HasAVX2 ? X86::VPBROADCASTWYrm : 0, HasAVX2 ? X86::VPBROADCASTBYrm : 0,

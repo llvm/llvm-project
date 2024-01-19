@@ -12,6 +12,8 @@
 
 #include <algorithm>
 
+#include "test_macros.h"
+
 void test() {
   int range[1];
   int* iter = range;
@@ -87,4 +89,19 @@ void test() {
   std::ranges::unique(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::upper_bound(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::upper_bound(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+#if TEST_STD_VER >= 23
+  std::ranges::contains(range, 1);
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains(iter, iter, 1);
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left(range, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left(iter, iter, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left_with_iter(range, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left_with_iter(iter, iter, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
 }

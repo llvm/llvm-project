@@ -5,11 +5,11 @@ Number,Name,Standard,Assignee,Status,First released version
 `P1868 <https://wg21.link/P1868>`_,"width: clarifying units of width and precision in std::format (Implements the unicode support.)","C++20",Mark de Wever,|Complete|,14.0
 `P2216 <https://wg21.link/P2216>`_,"std::format improvements","C++20",Mark de Wever,|Complete|,15.0
 `P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``","C++20",Mark de Wever,|Complete|,15.0
-"`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","C++23",Mark de Wever,|In Progress|
+"`P2093R14 <https://wg21.link/P2093R14>`__","Formatted output","C++23",Mark de Wever,|Complete|,"18.0"
 "`P2286R8 <https://wg21.link/P2286R8>`__","Formatting Ranges","C++23","Mark de Wever","|Complete|",16.0
 "`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","C++23","Mark de Wever","|Complete|",15.0
 "`P2585R0 <https://wg21.link/P2585R0>`__","Improving default container formatting","C++23","Mark de Wever","|Complete|",17.0
-"`P2539R4 <https://wg21.link/P2539R4>`__","Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?","C++23","Mark de Wever","|In Progress|"
+"`P2539R4 <https://wg21.link/P2539R4>`__","Should the output of ``std::print`` to a terminal be synchronized with the underlying stream?","C++23","Mark de Wever","|Complete|","18.0"
 "`P2713R1 <https://wg21.link/P2713R1>`__","Escaping improvements in ``std::format``","C++23","Mark de Wever",""
 "`P2675R1 <https://wg21.link/P2675R1>`__","``format``'s width estimation is too approximate and not forward compatible","C++23","Mark de Wever","|Complete|",17.0
 "`P2572R1 <https://wg21.link/P2572R1>`__","``std::format`` fill character allowances","C++23","Mark de Wever","|Complete|",17.0
@@ -17,7 +17,7 @@ Number,Name,Standard,Assignee,Status,First released version
 "`P2510R3 <https://wg21.link/P2510R3>`__","Formatting pointers","C++26","Mark de Wever","|Complete|",17.0
 "`P2757R3 <https://wg21.link/P2757R3>`__","Type-checking format args","C++26","","",
 "`P2637R3 <https://wg21.link/P2637R3>`__","Member ``visit``","C++26","","",
-"`P2905R2 <https://wg21.link/P2905R2>`__","Runtime format strings","C++26 DR","Mark de Wever","|In Progress|"
+"`P2905R2 <https://wg21.link/P2905R2>`__","Runtime format strings","C++26 DR","Mark de Wever","|Complete|",18.0
 "`P2918R2 <https://wg21.link/P2918R2>`__","Runtime format strings II","C++26","Mark de Wever","|Complete|",18.0
 "`P2909R4 <https://wg21.link/P2909R4>`__","Fix formatting of code units as integers (Dude, where’s my ``char``?)","C++26 DR","Mark de Wever","|Complete|",18.0
 `P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting","C++20",Mark de Wever,|In Progress|,

@@ -1,6 +1,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zifencei -target-feature +m \
-// RUN:  -target-feature +a -target-feature +save-restore \
+// RUN:  -target-feature +a -target-feature +save-restore -target-feature -zbb \
+// RUN:  -target-feature -relax -target-feature -zfa \
 // RUN:  -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: define dso_local void @testDefault
@@ -35,12 +36,13 @@ testAttrFullArchAndAttrCpu() {}
 __attribute__((target("cpu=sifive-u54"))) void testAttrCpuOnly() {}
 
 //.
-// CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zifencei" }
-// CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" "tune-cpu"="generic-rv64" }
-// CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei" }
-// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+experimental-zicond,+f,+m,+save-restore,+v,+zbb,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }
-// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei" }
-// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore" }
-// CHECK: attributes #6 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei" }
-// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore" }
-// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei" }
+// CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zifencei,-relax,-zbb,-zfa" }
+// CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }
+// CHECK: attributes #2 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
+// CHECK: attributes #3 = { {{.*}}"target-features"="+64bit,+a,+d,+experimental-zicond,+f,+m,+save-restore,+v,+zbb,+zicsr,+zifencei,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zfa" }
+// Make sure we append negative features if we override the arch
+// CHECK: attributes #4 = { {{.*}}"target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zbb,+zicsr,+zifencei,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #5 = { {{.*}}"target-features"="+64bit,+m,+save-restore,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #6 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+m,+save-restore,+zbb,+zifencei,-relax,-zfa" }
+// CHECK: attributes #7 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+m,+save-restore,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }
+// CHECK: attributes #8 = { {{.*}}"target-cpu"="sifive-u54" "target-features"="+64bit,+a,+c,+d,+f,+m,+save-restore,+zicsr,+zifencei,{{(-[[:alnum:]-]+)(,-[[:alnum:]-]+)*}}" }

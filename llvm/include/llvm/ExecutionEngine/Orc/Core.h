@@ -1210,14 +1210,13 @@ private:
     SymbolTableEntry() = default;
     SymbolTableEntry(JITSymbolFlags Flags)
         : Flags(Flags), State(static_cast<uint8_t>(SymbolState::NeverSearched)),
-          MaterializerAttached(false), PendingRemoval(false) {}
+          MaterializerAttached(false) {}
 
     ExecutorAddr getAddress() const { return Addr; }
     JITSymbolFlags getFlags() const { return Flags; }
     SymbolState getState() const { return static_cast<SymbolState>(State); }
 
     bool hasMaterializerAttached() const { return MaterializerAttached; }
-    bool isPendingRemoval() const { return PendingRemoval; }
 
     void setAddress(ExecutorAddr Addr) { this->Addr = Addr; }
     void setFlags(JITSymbolFlags Flags) { this->Flags = Flags; }
@@ -1231,18 +1230,13 @@ private:
       this->MaterializerAttached = MaterializerAttached;
     }
 
-    void setPendingRemoval(bool PendingRemoval) {
-      this->PendingRemoval = PendingRemoval;
-    }
-
     ExecutorSymbolDef getSymbol() const { return {Addr, Flags}; }
 
   private:
     ExecutorAddr Addr;
     JITSymbolFlags Flags;
-    uint8_t State : 6;
+    uint8_t State : 7;
     uint8_t MaterializerAttached : 1;
-    uint8_t PendingRemoval : 1;
   };
 
   using SymbolTable = DenseMap<SymbolStringPtr, SymbolTableEntry>;

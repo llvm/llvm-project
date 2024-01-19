@@ -42,6 +42,7 @@ The following options are described below:
 
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`, :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`AggressiveDependentMemberLookup`
+ - :option:`CheckAnonFieldInParent`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`, :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`, :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`, :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
@@ -206,6 +207,32 @@ After if AggressiveDependentMemberLookup is `true`:
         this->bad_named_member = 0;
       }
     };
+
+.. option:: CheckAnonFieldInParent
+
+    When set to `true`, fields in anonymous records (i.e. anonymous
+    unions and structs) will be treated as names in the enclosing scope
+    rather than public members of the anonymous record for the purpose
+    of name checking.
+
+For example:
+
+.. code-block:: c++
+
+    class Foo {
+    private:
+      union {
+        int iv_;
+        float fv_;
+      };
+    };
+
+If :option:`CheckAnonFieldInParent` is `false`, you may get warnings
+that ``iv_`` and ``fv_`` are not coherent to public member names, because
+``iv_`` and ``fv_`` are public members of the anonymous union. When
+:option:`CheckAnonFieldInParent` is `true`, ``iv_`` and ``fv_`` will be
+treated as private data members of ``Foo`` for the purpose of name checking
+and thus no warnings will be emitted.
 
 .. option:: ClassCase
 

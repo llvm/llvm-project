@@ -227,6 +227,13 @@ enum NodeType : unsigned {
   // rightmost sub-element of the corresponding element of operand 1.
   VSUM,
 
+  // Compute carry/borrow indication for add/subtract.
+  VACC, VSCBI,
+  // Add/subtract with carry/borrow.
+  VAC, VSBI,
+  // Compute carry/borrow indication for add/subtract with carry/borrow.
+  VACCC, VSBCBI,
+
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
   // and VICMPHL for "unsigned greater than".
@@ -264,6 +271,10 @@ enum NodeType : unsigned {
 
   // AND the two vector operands together and set CC based on the result.
   VTM,
+
+  // i128 high integer comparisons.
+  SCMP128HI,
+  UCMP128HI,
 
   // String operations that set CC as a side-effect.
   VFAE_CC,
@@ -432,7 +443,17 @@ public:
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override {
+    // 128-bit single-element vector types are passed like other vectors,
+    // not like their element type.
+    if (VT.isVector() && VT.getSizeInBits() == 128 &&
+        VT.getVectorNumElements() == 1)
+      return MVT::v16i8;
+    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+  }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
+  bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
@@ -534,16 +555,12 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override {
-    return SystemZ::R6D;
-  }
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
-    return SystemZ::R7D;
-  }
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode() const override {
@@ -742,19 +759,20 @@ private:
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
+  MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
+                                   bool Unsigned) const;
   MachineBasicBlock *emitPair128(MachineInstr &MI,
                                  MachineBasicBlock *MBB) const;
   MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
                                 bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
-                                          unsigned BinOpcode, unsigned BitSize,
+                                          unsigned BinOpcode,
                                           bool Invert = false) const;
   MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
                                           unsigned CompareOpcode,
-                                          unsigned KeepOldMask,
-                                          unsigned BitSize) const;
+                                          unsigned KeepOldMask) const;
   MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,

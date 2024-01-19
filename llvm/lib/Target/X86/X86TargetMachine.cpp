@@ -75,7 +75,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
   initializeFixupBWInstPassPass(PR);
-  initializeEvexToVexInstPassPass(PR);
+  initializeCompressEVEXPassPass(PR);
   initializeFixupLEAPassPass(PR);
   initializeFPSPass(PR);
   initializeX86FixupSetCCPassPass(PR);
@@ -113,6 +113,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
+
+  if (TT.getArch() == Triple::x86_64)
+    return std::make_unique<X86_64ELFTargetObjectFile>();
   return std::make_unique<X86ELFTargetObjectFile>();
 }
 
@@ -575,7 +578,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
   }
-  addPass(createX86EvexToVexInsts());
+  addPass(createX86CompressEVEXPass());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
   addPass(createX86InsertX87waitPass());

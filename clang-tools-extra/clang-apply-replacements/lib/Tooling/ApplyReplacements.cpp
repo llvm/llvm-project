@@ -38,8 +38,10 @@ static void eatDiagnostics(const SMDiagnostic &, void *) {}
 namespace clang {
 namespace replace {
 
-std::error_code collectReplacementsFromDirectory(
-    const llvm::StringRef Directory, TUReplacements &TUs,
+namespace detail {
+template <typename TranslationUnits>
+static std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TranslationUnits &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
   using namespace llvm::sys::fs;
   using namespace llvm::sys::path;
@@ -68,7 +70,7 @@ std::error_code collectReplacementsFromDirectory(
     }
 
     yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
-    tooling::TranslationUnitReplacements TU;
+    typename TranslationUnits::value_type TU;
     YIn >> TU;
     if (YIn.error()) {
       // File doesn't appear to be a header change description. Ignore it.
@@ -81,49 +83,22 @@ std::error_code collectReplacementsFromDirectory(
 
   return ErrorCode;
 }
+} // namespace detail
 
+template <>
+std::error_code collectReplacementsFromDirectory(
+    const llvm::StringRef Directory, TUReplacements &TUs,
+    TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
+  return detail::collectReplacementsFromDirectory(Directory, TUs, TUFiles,
+                                                  Diagnostics);
+}
+
+template <>
 std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUDiagnostics &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics) {
-  using namespace llvm::sys::fs;
-  using namespace llvm::sys::path;
-
-  std::error_code ErrorCode;
-
-  for (recursive_directory_iterator I(Directory, ErrorCode), E;
-       I != E && !ErrorCode; I.increment(ErrorCode)) {
-    if (filename(I->path())[0] == '.') {
-      // Indicate not to descend into directories beginning with '.'
-      I.no_push();
-      continue;
-    }
-
-    if (extension(I->path()) != ".yaml")
-      continue;
-
-    TUFiles.push_back(I->path());
-
-    ErrorOr<std::unique_ptr<MemoryBuffer>> Out =
-        MemoryBuffer::getFile(I->path());
-    if (std::error_code BufferError = Out.getError()) {
-      errs() << "Error reading " << I->path() << ": " << BufferError.message()
-             << "\n";
-      continue;
-    }
-
-    yaml::Input YIn(Out.get()->getBuffer(), nullptr, &eatDiagnostics);
-    tooling::TranslationUnitDiagnostics TU;
-    YIn >> TU;
-    if (YIn.error()) {
-      // File doesn't appear to be a header change description. Ignore it.
-      continue;
-    }
-
-    // Only keep files that properly parse.
-    TUs.push_back(TU);
-  }
-
-  return ErrorCode;
+  return detail::collectReplacementsFromDirectory(Directory, TUs, TUFiles,
+                                                  Diagnostics);
 }
 
 /// Extract replacements from collected TranslationUnitReplacements and

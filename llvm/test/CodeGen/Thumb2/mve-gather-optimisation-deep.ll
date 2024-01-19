@@ -62,6 +62,65 @@ end:
   ret void;
 }
 
+define arm_aapcs_vfpcc void @push_out_add_sub_block_commutedphi(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
+; CHECK-LABEL: @push_out_add_sub_block_commutedphi(
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 32, i32 32, i32 32, i32 32>
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_END:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[PREINCREMENTSTARTINDEX]], [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY_END]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX]], 48
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOWER_BLOCK:%.*]], label [[END:%.*]]
+; CHECK:       lower.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4i32.v4i32(<4 x i32> [[VEC_IND]], i32 32)
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP2]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    br label [[VECTOR_BODY_END]]
+; CHECK:       vector.body.end:
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC:%.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[END]], label [[VECTOR_BODY]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+
+vector.ph:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body.end ]
+  %vec.ind = phi <4 x i32> [ %vec.ind.next, %vector.body.end ], [ <i32 0, i32 2, i32 4, i32 6>, %vector.ph ]
+  %0 = icmp eq i32 %index, 48
+  br i1 %0, label %lower.block, label %end
+
+lower.block:                             ; preds = %vector.body
+  %1 = add <4 x i32> %vec.ind, <i32 6, i32 6, i32 6, i32 6>
+  %2 = getelementptr inbounds i32, i32* %data, <4 x i32> %1
+  %wide.masked.gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %3 = getelementptr inbounds i32, i32* %dst, i32 %index
+  %4 = bitcast i32* %3 to <4 x i32>*
+  store <4 x i32> %wide.masked.gather, <4 x i32>* %4, align 4
+  %index.next = add i32 %index, 4
+  %vec.ind.next = add <4 x i32> %vec.ind, <i32 8, i32 8, i32 8, i32 8>
+  br label %vector.body.end
+
+vector.body.end:                             ; preds = %lower.block
+  %5 = icmp eq i32 %index.next, %n.vec
+  br i1 %5, label %end, label %vector.body
+
+end:
+  ret void;
+}
+
 define arm_aapcs_vfpcc void @push_out_mul_sub_block(i32* noalias nocapture readonly %data, i32* noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: @push_out_mul_sub_block(
 ; CHECK-NEXT:  vector.ph:

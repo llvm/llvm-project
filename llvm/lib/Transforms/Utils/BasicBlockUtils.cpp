@@ -387,6 +387,18 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
   SmallDenseSet<DebugVariable> VariableSet;
   for (auto &I : reverse(*BB)) {
     for (DPValue &DPV : reverse(I.getDbgValueRange())) {
+      // Skip declare-type records, as the debug intrinsic method only works
+      // on dbg.value intrinsics.
+      if (DPV.getType() == DPValue::LocationType::Declare) {
+        // The debug intrinsic method treats dbg.declares are "non-debug"
+        // instructions (i.e., a break in a consecutive range of debug
+        // intrinsics). Emulate that to create identical outputs. See
+        // "Possible improvements" above.
+        // FIXME: Delete the line below.
+        VariableSet.clear();
+        continue;
+      }
+
       DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
                         DPV.getDebugLoc()->getInlinedAt());
       auto R = VariableSet.insert(Key);
@@ -478,6 +490,8 @@ static bool DPValuesRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       VariableMap;
   for (auto &I : *BB) {
     for (DPValue &DPV : I.getDbgValueRange()) {
+      if (DPV.getType() == DPValue::LocationType::Declare)
+        continue;
       DebugVariable Key(DPV.getVariable(), std::nullopt,
                         DPV.getDebugLoc()->getInlinedAt());
       auto VMI = VariableMap.find(Key);
@@ -522,7 +536,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       SmallVector<Value *, 4> Values(DVI->getValues());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
-        // Use a sentinal value (nullptr) for the DIExpression when we see a
+        // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)

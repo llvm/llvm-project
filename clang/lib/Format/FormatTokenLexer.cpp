@@ -93,6 +93,8 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
+    if (Style.isTableGen())
+      handleTableGenMultilineString();
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -271,6 +273,14 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
+  }
+  // TableGen's Multi line string starts with [{
+  if (Style.isTableGen() && tryMergeTokens({tok::l_square, tok::l_brace},
+                                           TT_TableGenMultiLineString)) {
+    // Set again with finalizing. This must never be annotated as other types.
+    Tokens.back()->setFinalizedType(TT_TableGenMultiLineString);
+    Tokens.back()->Tok.setKind(tok::string_literal);
+    return;
   }
 }
 
@@ -711,12 +721,12 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   bool Verbatim = false;
   bool Interpolated = false;
-  if (TokenText.startswith(R"($@")") || TokenText.startswith(R"(@$")")) {
+  if (TokenText.starts_with(R"($@")") || TokenText.starts_with(R"(@$")")) {
     Verbatim = true;
     Interpolated = true;
-  } else if (TokenText.startswith(R"(@")")) {
+  } else if (TokenText.starts_with(R"(@")")) {
     Verbatim = true;
-  } else if (TokenText.startswith(R"($")")) {
+  } else if (TokenText.starts_with(R"($")")) {
     Interpolated = true;
   }
 
@@ -761,6 +771,37 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   assert(Offset < End);
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
+}
+
+void FormatTokenLexer::handleTableGenMultilineString() {
+  FormatToken *MultiLineString = Tokens.back();
+  if (MultiLineString->isNot(TT_TableGenMultiLineString))
+    return;
+
+  auto OpenOffset = Lex->getCurrentBufferOffset() - 2 /* "[{" */;
+  // "}]" is the end of multi line string.
+  auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
+  if (CloseOffset == StringRef::npos)
+    return;
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  MultiLineString->TokenText = Text;
+  resetLexer(SourceMgr.getFileOffset(
+      Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));
+  auto FirstLineText = Text;
+  auto FirstBreak = Text.find('\n');
+  // Set ColumnWidth and LastLineColumnWidth when it has multiple lines.
+  if (FirstBreak != StringRef::npos) {
+    MultiLineString->IsMultiline = true;
+    FirstLineText = Text.substr(0, FirstBreak + 1);
+    // LastLineColumnWidth holds the width of the last line.
+    auto LastBreak = Text.rfind('\n');
+    MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+        Text.substr(LastBreak + 1), MultiLineString->OriginalColumn,
+        Style.TabWidth, Encoding);
+  }
+  // ColumnWidth holds only the width of the first line.
+  MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+      FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
@@ -1110,7 +1151,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
   if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
-      FormatTok->is(tok::comment) && FormatTok->TokenText.startswith("//")) {
+      FormatTok->is(tok::comment) && FormatTok->TokenText.starts_with("//")) {
     size_t BackslashPos = FormatTok->TokenText.find('\\');
     while (BackslashPos != StringRef::npos) {
       if (BackslashPos + 1 < FormatTok->TokenText.size() &&
@@ -1180,6 +1221,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
     } else if (Style.isJavaScript() &&
                FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
                                   tok::kw_operator)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
     }

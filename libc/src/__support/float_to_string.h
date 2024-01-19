@@ -105,7 +105,7 @@ namespace LIBC_NAMESPACE {
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
 
-using MantissaInt = fputil::FPBits<long double>::UIntType;
+using FPBits = fputil::FPBits<long double>;
 
 // Larger numbers prefer a slightly larger constant than is used for the smaller
 // numbers.
@@ -382,11 +382,10 @@ LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
                                (1000000000 * shifted));
 }
 
-LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
+LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const cpp::UInt<MID_INT_SIZE> &large,
                                        const int32_t shift_amount) {
-  constexpr size_t MANT_INT_SIZE = sizeof(MantissaInt) * 8;
-  cpp::UInt<MID_INT_SIZE + MANT_INT_SIZE> val(large);
+  cpp::UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
   val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint32_times_pow_2(1000000000, 0).value());
@@ -413,23 +412,19 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 class FloatToString {
   fputil::FPBits<T> float_bits;
-  bool is_negative;
   int exponent;
-  MantissaInt mantissa;
+  FPBits::StorageType mantissa;
 
-  static constexpr int MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
-  static constexpr int EXP_BIAS = fputil::FPBits<T>::EXPONENT_BIAS;
+  static constexpr int FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
+  static constexpr int EXP_BIAS = fputil::FPBits<T>::EXP_BIAS;
 
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
-    is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
 
     // Adjust for the width of the mantissa.
-    exponent -= MANT_WIDTH;
-
-    // init_convert();
+    exponent -= FRACTION_LEN;
   }
 
   LIBC_INLINE constexpr bool is_nan() { return float_bits.is_nan(); }
@@ -441,7 +436,7 @@ public:
   // get_block returns an integer that represents the digits in the requested
   // block.
   LIBC_INLINE constexpr BlockInt get_positive_block(int block_index) {
-    if (exponent >= -MANT_WIDTH) {
+    if (exponent >= -FRACTION_LEN) {
       // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
       // find the coarse section of the POW10_SPLIT table that will be used to
       // calculate the 9 digit window, as well as some other related values.
@@ -568,12 +563,13 @@ public:
   }
 
   LIBC_INLINE constexpr size_t get_positive_blocks() {
-    if (exponent >= -MANT_WIDTH) {
+    if (exponent >= -FRACTION_LEN) {
       const uint32_t idx =
           exponent < 0
               ? 0
               : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-      const uint32_t len = internal::length_for_num(idx * IDX_SIZE, MANT_WIDTH);
+      const uint32_t len =
+          internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
       return len;
     } else {
       return 0;
@@ -609,12 +605,12 @@ public:
 
 template <>
 LIBC_INLINE constexpr size_t FloatToString<long double>::get_positive_blocks() {
-  if (exponent >= -MANT_WIDTH) {
+  if (exponent >= -FRACTION_LEN) {
     const uint32_t idx =
         exponent < 0
             ? 0
             : static_cast<uint32_t>(exponent + (IDX_SIZE - 1)) / IDX_SIZE;
-    const uint32_t len = internal::length_for_num(idx * IDX_SIZE, MANT_WIDTH);
+    const uint32_t len = internal::length_for_num(idx * IDX_SIZE, FRACTION_LEN);
     return len;
   } else {
     return 0;
@@ -640,7 +636,7 @@ LIBC_INLINE constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
 template <>
 LIBC_INLINE constexpr BlockInt
 FloatToString<long double>::get_positive_block(int block_index) {
-  if (exponent >= -MANT_WIDTH) {
+  if (exponent >= -FRACTION_LEN) {
 
     // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
     // find the coarse section of the POW10_SPLIT table that will be used to

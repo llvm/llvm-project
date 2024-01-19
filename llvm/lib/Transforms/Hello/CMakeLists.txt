@@ -6,7 +6,7 @@ if( NOT LLVM_REQUIRES_RTTI )
   endif()
 endif()
 
-if(WIN32 OR CYGWIN)
+if(WIN32 OR CYGWIN OR ZOS)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 

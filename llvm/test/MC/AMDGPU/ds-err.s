@@ -2,11 +2,11 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 // offset too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
 ds_add_u32 v2, v4 offset:1000000000
 
 // offset too big
-// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: expected a 16-bit unsigned offset
 ds_add_u32 v2, v4 offset:0x10000
 
 // offset0 twice

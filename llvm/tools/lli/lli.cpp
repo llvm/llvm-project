@@ -622,7 +622,7 @@ int main(int argc, char **argv, char * const *envp) {
   } else {
     // Otherwise, if there is a .bc suffix on the executable strip it off, it
     // might confuse the program.
-    if (StringRef(InputFile).endswith(".bc"))
+    if (StringRef(InputFile).ends_with(".bc"))
       InputFile.erase(InputFile.length() - 3);
   }
 
@@ -965,9 +965,12 @@ int runOrcJIT(const char *ProgName) {
     EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
         std::make_shared<orc::SymbolStringPool>()));
 
-    Builder.setObjectLinkingLayerCreator([&EPC, &P](orc::ExecutionSession &ES,
-                                                    const Triple &TT) {
-      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
+    Builder.getJITTargetMachineBuilder()
+        ->setRelocationModel(Reloc::PIC_)
+        .setCodeModel(CodeModel::Small);
+    Builder.setObjectLinkingLayerCreator([&P](orc::ExecutionSession &ES,
+                                              const Triple &TT) {
+      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES);
       if (P != LLJITPlatform::ExecutorNative)
         L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
             ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));

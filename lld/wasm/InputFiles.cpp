@@ -320,7 +320,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   // it has an unexpected name or type, assume that it's not actually the
   // indirect function table.
   if (tableImport->Field != functionTableName ||
-      tableImport->Table.ElemType != uint8_t(ValType::FUNCREF)) {
+      tableImport->Table.ElemType != ValType::FUNCREF) {
     error(toString(this) + ": table import " + Twine(tableImport->Field) +
           " is missing a symbol table entry.");
     return;
@@ -351,7 +351,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
 
   // We assume that this compilation unit has unrelocatable references to
   // this table.
-  config->legacyFunctionTable = true;
+  ctx.legacyFunctionTable = true;
 }
 
 static bool shouldMerge(const WasmSection &sec) {
@@ -680,16 +680,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &sym, bool isCalledDirectly) {
   llvm_unreachable("unknown symbol kind");
 }
 
-
-StringRef strip(StringRef s) {
-  while (s.starts_with(" ")) {
-    s = s.drop_front();
-  }
-  while (s.ends_with(" ")) {
-    s = s.drop_back();
-  }
-  return s;
-}
+StringRef strip(StringRef s) { return s.trim(' '); }
 
 void StubFile::parse() {
   bool first = true;

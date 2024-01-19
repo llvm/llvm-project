@@ -9,6 +9,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_call_and_memory'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -20,11 +21,13 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN store ir<%arrayidx2>, ir<%call>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -56,6 +59,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_widen_gep_and_select'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -68,13 +72,15 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN store ir<%arrayidx2>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -108,6 +114,7 @@ for.end:                                          ; preds = %for.body, %entry
 define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -120,18 +127,20 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>)
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %red.next.lcssa = ir<%red.next>
+; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_RES]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -154,6 +163,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction_with_invariant_store'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -166,15 +176,17 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
 ; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[IV]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>) (with final reduction value stored in invariant address sank outside of loop)
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[RED_RES:.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -199,6 +211,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
@@ -236,8 +249,9 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%cmp>
 ; CHECK-NEXT:   BLEND ir<%d> = ir<0>/vp<[[NOT]]> vp<[[PRED]]>/ir<%cmp>
 ; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN store ir<%idx>, ir<%d>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR]]>, ir<%d>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -277,6 +291,7 @@ for.end:                                          ; preds = %for.inc
 define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-LABEL: Checking a loop in 'print_interleave_groups'
 ; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<256> = original trip-count
 ; CHECK-EMPTY:
@@ -301,7 +316,7 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT:     store ir<1> to index 1
 ; CHECK-NEXT:     store ir<2> to index 2
 ; CHECK-NEXT:     store ir<%AB.3> to index 3
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -345,6 +360,7 @@ for.end:
 define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'print_fmuladd_strict'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -357,21 +373,24 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:   WIDEN ir<%l.a> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%l.b> = load ir<%arrayidx2>
+; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:   WIDEN ir<%l.b> = load vp<[[VEC_PTR2]]>
 ; CHECK-NEXT:   EMIT vp<[[FMUL:%.+]]> = fmul nnan ninf nsz ir<%l.a>, ir<%l.b>
 ; CHECK-NEXT:   REDUCE ir<[[MULADD:%.+]]> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<[[FMUL]]>)
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%sum.07>, ir<[[MULADD]]>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %muladd.lcssa = ir<%muladd>
+; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_RES]]>
 ; CHECK-NEXT:}
 
 entry:
@@ -396,6 +415,7 @@ for.end:
 define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {
 ; CHECK-LABEL: Checking a loop in 'debug_loc_vpinstruction'
 ; CHECK:    VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<128> = original trip-count
 ; CHECK-EMPTY:
@@ -407,11 +427,12 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%isd> = getelementptr inbounds ir<%asd>, vp<[[STEPS]]>
-; CHECK-NEXT:    WIDEN ir<%lsd> = load ir<%isd>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%isd>
+; CHECK-NEXT:    WIDEN ir<%lsd> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:    WIDEN ir<%psd> = add nuw nsw ir<%lsd>, ir<23>
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
-; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
 ; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
+; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
 ; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]>, ir<%cmp2>, ir<false>, !dbg /tmp/s.c:5:21
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]>, ir<%cmp1>
 ; CHECK-NEXT:  Successor(s): pred.sdiv
@@ -435,8 +456,9 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:    EMIT vp<[[NOT2:%.+]]> = not ir<%cmp2>
 ; CHECK-NEXT:    EMIT vp<[[SEL2:%.+]]> = select vp<[[NOT1]]>, vp<[[NOT2]]>, ir<false>
 ; CHECK-NEXT:    BLEND ir<%ysd.0> = vp<[[PHI]]>/vp<[[OR1]]> ir<%psd>/vp<[[SEL2]]>
-; CHECK-NEXT:    WIDEN store ir<%isd>, ir<%ysd.0>
-; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%isd>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:}
@@ -482,6 +504,7 @@ declare float @llvm.fmuladd.f32(float, float, float)
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: Checking a loop in 'print_expand_scev'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
@@ -504,7 +527,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:     WIDEN ir<%v3> = add nuw ir<%v2>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -537,6 +560,7 @@ loop.exit:
 define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-LABEL: Checking a loop in 'print_exit_value'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
@@ -550,8 +574,9 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
-; CHECK-NEXT:     WIDEN store ir<%gep>, ir<0>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw  vp<[[CAN_IV]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<0>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -583,6 +608,7 @@ exit:
 define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) {
 ; CHECK-LABEL: Checking a loop in 'print_fast_math_flags'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -594,13 +620,15 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.y> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.y>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.y>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd nnan ir<%lv>, ir<1.000000e+00>
 ; CHECK-NEXT:   WIDEN ir<%mul> = fmul reassoc nnan ninf nsz arcp contract afn ir<%add>, ir<2.000000e+00>
 ; CHECK-NEXT:   WIDEN ir<%div> = fdiv reassoc nsz contract ir<%mul>, ir<2.000000e+00>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%div>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR]]>, ir<%div>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -633,6 +661,7 @@ exit:
 define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-LABEL: Checking a loop in 'print_exact_flags'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -644,12 +673,14 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.x>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%div.1> = udiv exact ir<%lv>, ir<20>
 ; CHECK-NEXT:   WIDEN ir<%div.2> = udiv ir<%lv>, ir<60>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nuw nsw ir<%div.1>, ir<%div.2>
-; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.x>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -681,6 +712,7 @@ exit:
 define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'print_call_flags'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -692,7 +724,8 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%ld.addr> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%ld.value> = load ir<%ld.addr>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%ld.addr>
+; CHECK-NEXT:   WIDEN ir<%ld.value> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%ifcond> = fcmp oeq ir<%ld.value>, ir<5.000000e+00>
 ; CHECK-NEXT:  Successor(s): pred.call
 ; CHECK-EMPTY:
@@ -718,8 +751,9 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT:    EMIT vp<[[NOT_COND:%.+]]> = not ir<%ifcond>
 ; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value>/vp<[[NOT_COND]]> ir<%fadd>/ir<%ifcond>
 ; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[STEPS]]>
-; CHECK-NEXT:    WIDEN store ir<%st.addr>, ir<%st.value>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%st.addr>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%st.value>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -761,6 +795,7 @@ end:
 define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-LABEL: Checking a loop in 'print_disjoint_flags'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
@@ -772,12 +807,14 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.x>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>
+; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%or.1> = or disjoint ir<%lv>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%or.2> = or ir<%lv>, ir<3>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nuw nsw ir<%or.1>, ir<%or.2>
-; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>
+; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR]]>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
@@ -809,23 +846,24 @@ exit:
 define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: LV: Checking a loop in 'zext_nneg'
 ; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = vector-trip-count
-; CHECK-NEXT:  Live-in ir<0> = original trip-count
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<%1> = CANONICAL-INDUCTION ir<0>, vp<%8>
-; CHECK-NEXT:    vp<%2>    = DERIVED-IV ir<0> + vp<%1> * ir<1> (truncated to i32)
-; CHECK-NEXT:    vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:    CLONE ir<%zext> = zext nneg vp<%3>
-; CHECK-NEXT:    CLONE ir<%idx2> = getelementptr ir<%p>, ir<%zext>
-; CHECK-NEXT:    WIDEN ir<%1> = load ir<%idx2>
-; CHECK-NEXT:    REPLICATE store ir<%1>, ir<%p1>
-; CHECK-NEXT:    EMIT vp<%8> = VF * UF + nuw vp<%1>
-; CHECK-NEXT:    EMIT branch-on-count vp<%8>, vp<%0>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:    CLONE ir<%idx> = getelementptr ir<%p>, vp<[[STEPS]]>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
+; CHECK-NEXT:    WIDEN ir<%l> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:    WIDEN-CAST ir<%zext> = zext nneg ir<%l>
+; CHECK-NEXT:    REPLICATE store ir<%zext>, ir<%p1>
+; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:    EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -834,13 +872,12 @@ entry:
 
 body:
   %iv = phi i64 [ %next, %body ], [ 0, %entry ]
-  %0 = trunc i64 %iv to i32
-  %zext = zext nneg i32 %0 to i64
-  %idx2 = getelementptr double, ptr %p, i64 %zext
-  %1 = load double, ptr %idx2, align 8
-  store double %1, ptr %p1, align 8
+  %idx = getelementptr i32, ptr %p, i64 %iv
+  %l = load i32, ptr %idx, align 8
+  %zext = zext nneg i32 %l to i64
+  store i64 %zext, ptr %p1, align 8
   %next = add i64 %iv, 1
-  %cmp = icmp eq i64 %next, 0
+  %cmp = icmp eq i64 %next, 1000
   br i1 %cmp, label %exit, label %body
 
 exit:

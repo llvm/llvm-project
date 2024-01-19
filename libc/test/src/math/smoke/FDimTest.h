@@ -17,7 +17,14 @@ class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
+  const T inf = T(FPBits::inf(Sign::POS));
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
+  const T zero = T(FPBits::zero(Sign::POS));
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
@@ -53,9 +60,11 @@ public:
   }
 
   void test_in_range(FuncPtr func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
+    constexpr StorageType STORAGE_MAX =
+        LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w));
       if (isnan(x) || isinf(x))
@@ -70,13 +79,4 @@ public:
       }
     }
   }
-
-private:
-  // constexpr does not work on FPBits yet, so we cannot have these constants as
-  // static.
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
 };

@@ -222,9 +222,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   MI->print(OS, /*IsStandalone*/true, /*SkipOpers*/false, /*SkipDebugLoc*/false,
             /*AddNewLine*/false);
   ASSERT_TRUE(
-      StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
-  ASSERT_TRUE(
-      StringRef(OS.str()).endswith("filename:1:5"));
+      StringRef(OS.str()).starts_with("$noreg = UNKNOWN debug-location "));
+  ASSERT_TRUE(StringRef(OS.str()).ends_with("filename:1:5"));
 }
 
 TEST(MachineInstrSpan, DistanceBegin) {

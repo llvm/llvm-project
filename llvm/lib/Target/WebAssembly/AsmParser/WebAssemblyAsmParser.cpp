@@ -851,7 +851,7 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      wasm::WasmTableType Type = {uint8_t(*ElemType), Limits};
+      wasm::WasmTableType Type = {*ElemType, Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1103,7 +1103,7 @@ public:
     // object writer expects each function to have its own section. This way
     // The user can't forget this "convention".
     auto SymName = Symbol->getName();
-    if (SymName.startswith(".L"))
+    if (SymName.starts_with(".L"))
       return; // Local Symbol.
 
     // TODO: If the user explicitly creates a new function section, we ignore

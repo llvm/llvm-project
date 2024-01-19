@@ -203,6 +203,14 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+  def ShowRegexMatchAnsiPrefix: Property<"show-regex-match-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.red}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the match.">;
+  def ShowRegexMatchAnsiSuffix: Property<"show-regex-match-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the match.">;
   def ShowDontUsePoHint: Property<"show-dont-use-po-hint", "Boolean">,
     Global,
     DefaultTrue,

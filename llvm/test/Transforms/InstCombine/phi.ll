@@ -996,10 +996,9 @@ done:
 define i1 @PR24766(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1040,10 +1039,9 @@ epilog:
 define i1 @PR24766_no_constants(i8 %x1, i8 %x2, i8 %condition, i1 %another_condition) {
 ; CHECK-LABEL: @PR24766_no_constants(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1085,10 +1083,9 @@ epilog:
 define i1 @PR24766_two_constants(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766_two_constants(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]
@@ -1128,11 +1125,10 @@ epilog:
 define i1 @PR24766_two_constants_two_var(i8 %x1, i8 %x2, i8 %condition) {
 ; CHECK-LABEL: @PR24766_two_constants_two_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[CONDITION:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[CONV]], label [[EPILOG:%.*]] [
-; CHECK-NEXT:      i32 0, label [[SW1:%.*]]
-; CHECK-NEXT:      i32 1, label [[SW2:%.*]]
-; CHECK-NEXT:      i32 2, label [[SW3:%.*]]
+; CHECK-NEXT:    switch i8 [[CONDITION:%.*]], label [[EPILOG:%.*]] [
+; CHECK-NEXT:      i8 0, label [[SW1:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW2:%.*]]
+; CHECK-NEXT:      i8 2, label [[SW3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X1:%.*]], [[X2:%.*]]

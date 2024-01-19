@@ -540,6 +540,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_cpp_string_view",
         ":__support_ctype_utils",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
@@ -659,25 +660,15 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_fputil_float_properties",
-    hdrs = ["src/__support/FPUtil/FloatProperties.h"],
-    deps = [
-        ":__support_macros_attributes",
-        ":__support_macros_properties_float",
-        ":__support_uint128",
-    ],
-)
-
-libc_support_library(
     name = "__support_fputil_fp_bits",
     hdrs = ["src/__support/FPUtil/FPBits.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_fputil_float_properties",
         ":__support_macros_attributes",
+        ":__support_macros_properties_float",
+        ":__support_math_extras",
         ":__support_uint128",
     ],
 )
@@ -689,7 +680,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string",
         ":__support_cpp_type_traits",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_integer_to_string",
         ":__support_uint128",
@@ -800,7 +790,6 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
@@ -879,7 +868,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/dyadic_float.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
@@ -1886,6 +1874,30 @@ libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
 
+libc_math_function(
+    name = "nan",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanf",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanl",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
 libc_math_function(name = "nearbyint")
 
 libc_math_function(name = "nearbyintf")
@@ -2265,6 +2277,19 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    features = no_sanitize_features,
+    weak = True,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "mempcpy",
+    srcs = ["src/string/mempcpy.cpp"],
+    hdrs = ["src/string/mempcpy.h"],
+    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -2768,7 +2793,6 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_float_to_string",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_integer_to_string",

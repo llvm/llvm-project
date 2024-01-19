@@ -22,11 +22,9 @@ class InductionDescriptor;
 class Instruction;
 class PHINode;
 class ScalarEvolution;
-class Loop;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
-class VPRecipeBuilder;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding

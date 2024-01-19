@@ -115,7 +115,7 @@ bool LoopBase<BlockT, LoopT>::hasDedicatedExits() const {
   SmallVector<BlockT *, 4> UniqueExitBlocks;
   getUniqueExitBlocks(UniqueExitBlocks);
   for (BlockT *EB : UniqueExitBlocks)
-    for (BlockT *Predecessor : children<Inverse<BlockT *>>(EB))
+    for (BlockT *Predecessor : inverse_children<BlockT *>(EB))
       if (!contains(Predecessor))
         return false;
   // All the requirements are met.
@@ -208,10 +208,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPreheader() const {
     return nullptr;
 
   // Make sure there is only one exit out of the preheader.
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typename BlockTraits::ChildIteratorType SI = BlockTraits::child_begin(Out);
-  ++SI;
-  if (SI != BlockTraits::child_end(Out))
+  if (llvm::size(llvm::children<BlockT *>(Out)) != 1)
     return nullptr; // Multiple exits from the block, must not be a preheader.
 
   // The predecessor has exactly one successor, so it is a preheader.
@@ -231,7 +228,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPredecessor() const {
 
   // Loop over the predecessors of the header node...
   BlockT *Header = getHeader();
-  for (const auto Pred : children<Inverse<BlockT *>>(Header)) {
+  for (const auto Pred : inverse_children<BlockT *>(Header)) {
     if (!contains(Pred)) { // If the block is not in the loop...
       if (Out && Out != Pred)
         return nullptr; // Multiple predecessors outside the loop
@@ -249,7 +246,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopLatch() const {
   assert(!isInvalid() && "Loop not in a valid state!");
   BlockT *Header = getHeader();
   BlockT *Latch = nullptr;
-  for (const auto Pred : children<Inverse<BlockT *>>(Header)) {
+  for (const auto Pred : inverse_children<BlockT *>(Header)) {
     if (contains(Pred)) {
       if (Latch)
         return nullptr;
@@ -331,20 +328,16 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
 
   // Check the individual blocks.
   for (BlockT *BB : depth_first_ext(getHeader(), VisitSet)) {
-    assert(std::any_of(GraphTraits<BlockT *>::child_begin(BB),
-                       GraphTraits<BlockT *>::child_end(BB),
-                       [&](BlockT *B) { return contains(B); }) &&
+    assert(llvm::any_of(children<BlockT *>(BB),
+                        [&](BlockT *B) { return contains(B); }) &&
            "Loop block has no in-loop successors!");
 
-    assert(std::any_of(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
-                       GraphTraits<Inverse<BlockT *>>::child_end(BB),
-                       [&](BlockT *B) { return contains(B); }) &&
+    assert(llvm::any_of(inverse_children<BlockT *>(BB),
+                        [&](BlockT *B) { return contains(B); }) &&
            "Loop block has no in-loop predecessors!");
 
     SmallVector<BlockT *, 2> OutsideLoopPreds;
-    for (BlockT *B :
-         llvm::make_range(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
-                          GraphTraits<Inverse<BlockT *>>::child_end(BB)))
+    for (BlockT *B : inverse_children<BlockT *>(BB))
       if (!contains(B))
         OutsideLoopPreds.push_back(B);
 
@@ -496,7 +489,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
       // within this subloop tree itself. Note that a predecessor may directly
       // reach another subloop that is not yet discovered to be a subloop of
       // this loop, which we must traverse.
-      for (const auto Pred : children<Inverse<BlockT *>>(PredBB)) {
+      for (const auto Pred : inverse_children<BlockT *>(PredBB)) {
         if (LI->getLoopFor(Pred) != Subloop)
           ReverseCFGWorklist.push_back(Pred);
       }
@@ -579,7 +572,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     SmallVector<BlockT *, 4> Backedges;
 
     // Check each predecessor of the potential loop header.
-    for (const auto Backedge : children<Inverse<BlockT *>>(Header)) {
+    for (const auto Backedge : inverse_children<BlockT *>(Header)) {
       // If Header dominates predBB, this is a new loop. Collect the backedges.
       const DomTreeNodeBase<BlockT> *BackedgeNode = DomTree.getNode(Backedge);
       if (BackedgeNode && DomTree.dominates(DomNode, BackedgeNode))

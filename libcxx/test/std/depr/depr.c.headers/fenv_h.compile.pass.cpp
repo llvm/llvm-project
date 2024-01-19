@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Floating point exceptions are required for the FE_... macros to be defined.
-// XFAIL: LIBCXX-PICOLIBC-FIXME
+// Picolibc does not define some of the floating point environment macros for
+// arm platforms without hardware floating point support.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 // <fenv.h>
 

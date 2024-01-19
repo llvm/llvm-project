@@ -1183,6 +1183,36 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   return Error::success();
 }
 
+Error Session::FileInfo::registerGOTEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
+                                  Sym.getAddress().getValue(),
+                                  Sym.getTargetFlags()};
+  return Error::success();
+}
+
+Error Session::FileInfo::registerStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  StubInfos[TS->getName()] = {Sym.getSymbolContent(),
+                              Sym.getAddress().getValue(),
+                              Sym.getTargetFlags()};
+  return Error::success();
+}
+
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
   auto FileInfoItr = FileInfos.find(FileName);
   if (FileInfoItr == FileInfos.end())
@@ -1547,8 +1577,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
-    if (StringRef(InputFile).endswith(".a") ||
-        StringRef(InputFile).endswith(".lib"))
+    if (StringRef(InputFile).ends_with(".a") ||
+        StringRef(InputFile).ends_with(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
@@ -1648,7 +1678,7 @@ static Error addLibraries(Session &S,
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     StringRef InputFile = *InputFileItr;
-    if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
+    if (!InputFile.ends_with(".a") && !InputFile.ends_with(".lib"))
       continue;
     LibraryLoad LL;
     LL.LibName = InputFile.str();

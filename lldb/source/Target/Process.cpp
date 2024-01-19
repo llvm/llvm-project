@@ -445,7 +445,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
-      m_resume_requested(false), m_finalizing(false),
+      m_resume_requested(false), m_finalizing(false), m_destructing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
@@ -518,9 +518,11 @@ ProcessProperties &Process::GetGlobalProperties() {
   return *g_settings_ptr;
 }
 
-void Process::Finalize() {
+void Process::Finalize(bool destructing) {
   if (m_finalizing.exchange(true))
     return;
+  if (destructing)
+    m_destructing.exchange(true);
 
   // Destroy the process. This will call the virtual function DoDestroy under
   // the hood, giving our derived class a chance to do the ncessary tear down.
@@ -1415,7 +1417,13 @@ bool Process::StateChangedIsHijackedForSynchronousResume() {
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
 
 void Process::SetPrivateState(StateType new_state) {
-  if (m_finalizing)
+  // Use m_destructing not m_finalizing here.  If we are finalizing a process
+  // that we haven't started tearing down, we'd like to be able to nicely
+  // detach if asked, but that requires the event system be live.  That will
+  // not be true for an in-the-middle-of-being-destructed Process, since the
+  // event system relies on Process::shared_from_this, which may have already
+  // been destroyed.
+  if (m_destructing)
     return;
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process | LLDBLog::Unwind));
@@ -5686,12 +5694,16 @@ lldb::addr_t Process::GetDataAddressMask() {
 lldb::addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return ~((1ULL << num_bits_setting) - 1);
+  if (m_highmem_code_address_mask)
+    return m_highmem_code_address_mask;
   return GetCodeAddressMask();
 }
 
 lldb::addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return ~((1ULL << num_bits_setting) - 1);
+  if (m_highmem_data_address_mask)
+    return m_highmem_data_address_mask;
   return GetDataAddressMask();
 }
 

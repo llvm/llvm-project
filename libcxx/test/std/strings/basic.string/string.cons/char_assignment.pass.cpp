@@ -15,6 +15,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S s1, typename S::value_type s2) {
@@ -24,6 +25,7 @@ TEST_CONSTEXPR_CXX20 void test(S s1, typename S::value_type s2) {
   assert(s1.size() == 1);
   assert(T::eq(s1[0], s2));
   assert(s1.capacity() >= s1.size());
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
 }
 
 template <class S>
@@ -38,6 +40,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 
   return true;

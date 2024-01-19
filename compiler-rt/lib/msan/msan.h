@@ -255,18 +255,19 @@ char *GetProcSelfMaps();
 void InitializeInterceptors();
 
 void MsanAllocatorInit();
-void MsanDeallocate(StackTrace *stack, void *ptr);
+void MsanDeallocate(BufferedStackTrace *stack, void *ptr);
 
-void *msan_malloc(uptr size, StackTrace *stack);
-void *msan_calloc(uptr nmemb, uptr size, StackTrace *stack);
-void *msan_realloc(void *ptr, uptr size, StackTrace *stack);
-void *msan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack);
-void *msan_valloc(uptr size, StackTrace *stack);
-void *msan_pvalloc(uptr size, StackTrace *stack);
-void *msan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack);
-void *msan_memalign(uptr alignment, uptr size, StackTrace *stack);
+void *msan_malloc(uptr size, BufferedStackTrace *stack);
+void *msan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack);
+void *msan_realloc(void *ptr, uptr size, BufferedStackTrace *stack);
+void *msan_reallocarray(void *ptr, uptr nmemb, uptr size,
+                        BufferedStackTrace *stack);
+void *msan_valloc(uptr size, BufferedStackTrace *stack);
+void *msan_pvalloc(uptr size, BufferedStackTrace *stack);
+void *msan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack);
+void *msan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack);
 int msan_posix_memalign(void **memptr, uptr alignment, uptr size,
-                        StackTrace *stack);
+                        BufferedStackTrace *stack);
 
 void InstallTrapHandler();
 void InstallAtExitHandler();
@@ -321,6 +322,17 @@ const int STACK_TRACE_TAG_VPTR = STACK_TRACE_TAG_FIELDS + 1;
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal); \
   }
 
+#define GET_FATAL_STACK_TRACE \
+  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
+
+// Unwind the stack for fatal error, as the parameter `stack` is
+// empty without origins.
+#define GET_FATAL_STACK_TRACE_IF_EMPTY(STACK)                                 \
+  if (msan_inited && (STACK)->size == 0) {                                    \
+    (STACK)->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
+                    common_flags()->fast_unwind_on_fatal);                    \
+  }
+
 class ScopedThreadLocalStateBackup {
  public:
   ScopedThreadLocalStateBackup() { Backup(); }
@@ -335,6 +347,8 @@ void MsanTSDInit(void (*destructor)(void *tsd));
 void *MsanTSDGet();
 void MsanTSDSet(void *tsd);
 void MsanTSDDtor(void *tsd);
+
+void InstallAtForkHandler();
 
 }  // namespace __msan
 

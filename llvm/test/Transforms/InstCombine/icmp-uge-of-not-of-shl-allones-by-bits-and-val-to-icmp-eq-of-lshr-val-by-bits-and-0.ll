@@ -101,7 +101,7 @@ define i1 @both(i8 %bits0, i8 %bits1) {
 ; CHECK-LABEL: @both(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = shl nsw i8 -1, [[BITS1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T2]], [[T0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[T0]], [[T2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits0

@@ -1290,7 +1290,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                               DeclaratorContext::TypeName);
-    return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+    return Actions.ActOnTypeName(DeclaratorInfo);
   }
 
   // Check whether we have a template-id that names a type.
@@ -1385,7 +1385,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                             DeclaratorContext::TypeName);
-  return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+  return Actions.ActOnTypeName(DeclaratorInfo);
 }
 
 void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
@@ -1890,7 +1890,13 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         if (!SkipUntil(tok::r_paren, StopAtSemi))
           break;
       } else if (Tok.isRegularKeywordAttribute()) {
+        bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
         ConsumeToken();
+        if (TakesArgs) {
+          BalancedDelimiterTracker T(*this, tok::l_paren);
+          if (!T.consumeOpen())
+            T.skipToEnd();
+        }
       } else {
         break;
       }
@@ -2679,6 +2685,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
                                        ParsedAttributes &AccessAttrs,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        ParsingDeclRAIIObject *TemplateDiags) {
+  assert(getLangOpts().CPlusPlus &&
+         "ParseCXXClassMemberDeclaration should only be called in C++ mode");
   if (Tok.is(tok::at)) {
     if (getLangOpts().ObjC && NextToken().isObjCAtKeyword(tok::objc_defs))
       Diag(Tok, diag::err_at_defs_cxx);
@@ -4537,8 +4545,18 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
   if (Tok.isRegularKeywordAttribute()) {
     SourceLocation Loc = Tok.getLocation();
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-    Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Tok.getKind());
+    ParsedAttr::Form Form = ParsedAttr::Form(Tok.getKind());
+    bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
     ConsumeToken();
+    if (TakesArgs) {
+      if (!Tok.is(tok::l_paren))
+        Diag(Tok.getLocation(), diag::err_expected_lparen_after) << AttrName;
+      else
+        ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
+                                 /*ScopeName*/ nullptr,
+                                 /*ScopeLoc*/ Loc, Form);
+    } else
+      Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
     return;
   }
 
@@ -4704,11 +4722,13 @@ SourceLocation Parser::SkipCXX11Attributes() {
       T.consumeOpen();
       T.skipToEnd();
       EndLoc = T.getCloseLocation();
-    } else if (Tok.isRegularKeywordAttribute()) {
+    } else if (Tok.isRegularKeywordAttribute() &&
+               !doesKeywordAttributeTakeArgs(Tok.getKind())) {
       EndLoc = Tok.getLocation();
       ConsumeToken();
     } else {
-      assert(Tok.is(tok::kw_alignas) && "not an attribute specifier");
+      assert((Tok.is(tok::kw_alignas) || Tok.isRegularKeywordAttribute()) &&
+             "not an attribute specifier");
       ConsumeToken();
       BalancedDelimiterTracker T(*this, tok::l_paren);
       if (!T.consumeOpen())

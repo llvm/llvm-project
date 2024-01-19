@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodegenUtils.h"
-#include "LoopEmitter.h"
+#include "Utils/CodegenUtils.h"
+#include "Utils/LoopEmitter.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -214,7 +214,7 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op.hasTensorSemantics() || op.getNumResults() != 1 ||
+    if (!op.hasPureTensorSemantics() || op.getNumResults() != 1 ||
         !isMaterializing(op.getDpsInitOperand(0), /*isZero=*/false) ||
         !isZeroYield(op) || !op.getDpsInitOperand(0)->get().hasOneUse())
       return failure();
@@ -257,7 +257,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Check consumer.
-    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 2 ||
+    if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 2 ||
         op.getNumResults() != 1 ||
         op.getNumParallelLoops() != op.getNumLoops() ||
         !op.getMatchingIndexingMap(op.getDpsInitOperand(0)).isIdentity() ||
@@ -276,7 +276,7 @@ public:
     // Check producer.
     auto prod = dyn_cast_or_null<GenericOp>(
         op.getDpsInputOperand(other)->get().getDefiningOp());
-    if (!prod || !prod.hasTensorSemantics() || prod.getNumResults() != 1 ||
+    if (!prod || !prod.hasPureTensorSemantics() || prod.getNumResults() != 1 ||
         !prod.getResult(0).hasOneUse())
       return failure();
     // Sampling consumer and sum of multiplication chain producer.
@@ -329,7 +329,7 @@ public:
                        .getCopy();
       AllocTensorOp a =
           op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
-      rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(init); });
+      rewriter.modifyOpInPlace(a, [&]() { a.getCopyMutable().assign(init); });
     }
     // Replace consumer with fused operation. Old producer
     // and consumer ops will be removed by DCE.
@@ -366,7 +366,7 @@ public:
     if (tensor::isSameTypeWithoutEncoding(srcType, dstType)) {
       if (Operation *def = op.getSource().getDefiningOp()) {
         if (def->hasOneUse() && isa<tensor::ExtractSliceOp>(def)) {
-          rewriter.updateRootInPlace(def, [&]() {
+          rewriter.modifyOpInPlace(def, [&]() {
             def->getResult(0).setType(op->getResultTypes()[0]);
           });
           rewriter.replaceOp(op, def->getResult(0));
@@ -407,7 +407,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Rejects non sparse kernels.
-    if (!op.hasTensorSemantics() || !hasAnySparseOperand(op))
+    if (!op.hasPureTensorSemantics() || !hasAnySparseOperand(op))
       return failure();
 
     Location loc = op.getLoc();
@@ -540,7 +540,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Reject non-reductions.
-    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 1 ||
+    if (!op.hasPureTensorSemantics() || op.getNumDpsInputs() != 1 ||
         op.getNumReductionLoops() == 0 || op.getNumResults() != 1)
       return failure();
     auto inp = op.getDpsInputOperand(0);
@@ -804,7 +804,7 @@ public:
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
-      rewriter.updateRootInPlace(op, [&]() { op->setOperand(0, convert); });
+      rewriter.modifyOpInPlace(op, [&]() { op->setOperand(0, convert); });
       return success();
     }
     if (encDst) {

@@ -218,12 +218,19 @@ class DeviceImageTy {
   const __tgt_device_image *TgtImage;
   const __tgt_device_image *TgtImageBitcode;
 
+  /// If this image has any global destructors that much be called.
+  /// FIXME: This is only required because we currently have no invariants
+  ///        towards the lifetime of the underlying image. We should either copy
+  ///        the image into memory locally or erase the pointers after init.
+  bool PendingGlobalDtors;
+
   /// Table of offload entries.
   OffloadEntryTableTy OffloadEntryTable;
 
 public:
   DeviceImageTy(int32_t Id, const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr) {
+      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr),
+        PendingGlobalDtors(false) {
     assert(TgtImage && "Invalid target image");
   }
 
@@ -254,6 +261,10 @@ public:
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
   }
+
+  /// Accessors to the boolean value
+  bool setPendingGlobalDtors() { return PendingGlobalDtors = true; }
+  bool hasPendingGlobalDtors() const { return PendingGlobalDtors; }
 
   /// Get a reference to the offload entry table for the image.
   OffloadEntryTableTy &getOffloadEntryTable() { return OffloadEntryTable; }
@@ -290,7 +301,7 @@ struct GenericKernelTy {
   /// Return true if this kernel is a constructor or destructor.
   bool isCtorOrDtor() const {
     // TODO: This is not a great solution and should be revisited.
-    return StringRef(Name).endswith("tor");
+    return StringRef(Name).ends_with("tor");
   }
 
   /// Get the kernel image.
@@ -397,6 +408,9 @@ protected:
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// If the kernel is a bare kernel.
+  bool IsBareKernel = false;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -1062,10 +1076,14 @@ struct GenericPluginTy {
     return isValidDeviceId(SrcDeviceId) && isValidDeviceId(DstDeviceId);
   }
 
+  /// Top level interface to verify if a given ELF image can be executed on a
+  /// given target. Returns true if the \p Image is compatible with the plugin.
+  Expected<bool> checkELFImage(StringRef Image) const;
+
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
-  virtual Expected<bool> isImageCompatible(__tgt_image_info *Info) const = 0;
+  virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
 
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }

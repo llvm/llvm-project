@@ -340,26 +340,22 @@ public:
                                        lldb::SymbolType symbol_type,
                                        SymbolContextList &sc_list) const;
 
-  /// Find types by name.
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
   ///
   /// \param[in] search_first
   ///     If non-null, this module will be searched before any other
   ///     modules.
   ///
-  /// \param[in] name
-  ///     The name of the type we are looking for.
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
   ///
-  /// \param[in] max_matches
-  ///     Allow the number of matches to be limited to \a
-  ///     max_matches. Specify UINT32_MAX to get all possible matches.
-  ///
-  /// \param[out] types
-  ///     A type list gets populated with any matches.
-  ///
-  void FindTypes(Module *search_first, ConstString name,
-                 bool name_is_fully_qualified, size_t max_matches,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeList &types) const;
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  void FindTypes(Module *search_first, const TypeQuery &query,
+                 lldb_private::TypeResults &results) const;
 
   bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 

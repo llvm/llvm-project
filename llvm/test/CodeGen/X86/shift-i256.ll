@@ -78,7 +78,6 @@ define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; CHECK-NEXT:    shrdl %cl, %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; CHECK-NEXT:    shrdl %cl, %edx, (%esp) # 4-byte Folded Spill
 ; CHECK-NEXT:    movl 28(%esp,%ebp), %edx

@@ -426,7 +426,7 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
   memset(&KernelDescriptor, 0x0, sizeof(KernelDescriptor));
 
   assert(isUInt<32>(PI.ScratchSize));
-  assert(isUInt<32>(PI.getComputePGMRSrc1()));
+  assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));
   assert(isUInt<32>(PI.getComputePGMRSrc2()));
 
   KernelDescriptor.group_segment_fixed_size = PI.LDSSize;
@@ -435,7 +435,7 @@ amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
   Align MaxKernArgAlign;
   KernelDescriptor.kernarg_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
 
-  KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1();
+  KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM);
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2();
   KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
@@ -974,15 +974,17 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
   if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
     OutStreamer->emitInt32(R_00B848_COMPUTE_PGM_RSRC1);
 
-    OutStreamer->emitInt32(CurrentProgramInfo.getComputePGMRSrc1());
+    OutStreamer->emitInt32(CurrentProgramInfo.getComputePGMRSrc1(STM));
 
     OutStreamer->emitInt32(R_00B84C_COMPUTE_PGM_RSRC2);
     OutStreamer->emitInt32(CurrentProgramInfo.getComputePGMRSrc2());
 
     OutStreamer->emitInt32(R_00B860_COMPUTE_TMPRING_SIZE);
     OutStreamer->emitInt32(
-        STM.getGeneration() >= AMDGPUSubtarget::GFX11
-            ? S_00B860_WAVESIZE_GFX11Plus(CurrentProgramInfo.ScratchBlocks)
+        STM.getGeneration() >= AMDGPUSubtarget::GFX12
+            ? S_00B860_WAVESIZE_GFX12Plus(CurrentProgramInfo.ScratchBlocks)
+        : STM.getGeneration() == AMDGPUSubtarget::GFX11
+            ? S_00B860_WAVESIZE_GFX11(CurrentProgramInfo.ScratchBlocks)
             : S_00B860_WAVESIZE_PreGFX11(CurrentProgramInfo.ScratchBlocks));
 
     // TODO: Should probably note flat usage somewhere. SC emits a "FlatPtr32 =
@@ -993,8 +995,10 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                               S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks), 4);
     OutStreamer->emitInt32(R_0286E8_SPI_TMPRING_SIZE);
     OutStreamer->emitInt32(
-        STM.getGeneration() >= AMDGPUSubtarget::GFX11
-            ? S_0286E8_WAVESIZE_GFX11Plus(CurrentProgramInfo.ScratchBlocks)
+        STM.getGeneration() >= AMDGPUSubtarget::GFX12
+            ? S_0286E8_WAVESIZE_GFX12Plus(CurrentProgramInfo.ScratchBlocks)
+        : STM.getGeneration() == AMDGPUSubtarget::GFX11
+            ? S_0286E8_WAVESIZE_GFX11(CurrentProgramInfo.ScratchBlocks)
             : S_0286E8_WAVESIZE_PreGFX11(CurrentProgramInfo.ScratchBlocks));
   }
 
@@ -1038,7 +1042,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
 
   MD->setNumUsedSgprs(CC, CurrentProgramInfo.NumSGPRsForWavesPerEU);
   if (MD->getPALMajorVersion() < 3) {
-    MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC));
+    MD->setRsrc1(CC, CurrentProgramInfo.getPGMRSrc1(CC, STM));
     if (AMDGPU::isCompute(CC)) {
       MD->setRsrc2(CC, CurrentProgramInfo.getComputePGMRSrc2());
     } else {
@@ -1116,10 +1120,11 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   StringRef FnName = MF.getFunction().getName();
   MD->setFunctionScratchSize(FnName, MFI.getStackSize());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // Set compute registers
   MD->setRsrc1(CallingConv::AMDGPU_CS,
-               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS));
+               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
   MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
 
   // Set optional info
@@ -1155,7 +1160,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   AMDGPU::initDefaultAMDKernelCodeT(Out, &STM);
 
   Out.compute_pgm_resource_registers =
-      CurrentProgramInfo.getComputePGMRSrc1() |
+      CurrentProgramInfo.getComputePGMRSrc1(STM) |
       (CurrentProgramInfo.getComputePGMRSrc2() << 32);
   Out.code_properties |= AMD_CODE_PROPERTY_IS_PTR64;
 

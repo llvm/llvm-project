@@ -2675,6 +2675,7 @@ def : Pat<(get_fpenv), (VMRS)>;
 def : Pat<(set_fpenv GPRnopc:$Rt), (VMSR GPRnopc:$Rt)>;
 def : Pat<(reset_fpenv), (VMSR (MOVi 0))>, Requires<[IsARM]>;
 def : Pat<(reset_fpenv), (VMSR (tMOVi8 0))>, Requires<[IsThumb]>;
+def : Pat<(get_fpmode), (VMRS)>;
 
 //===----------------------------------------------------------------------===//
 // Assembler aliases.

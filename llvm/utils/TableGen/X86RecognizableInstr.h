@@ -172,7 +172,7 @@ enum { PD = 1, XS = 2, XD = 3, PS = 4 };
 enum { VEX = 1, XOP = 2, EVEX = 3 };
 enum { OpSize16 = 1, OpSize32 = 2 };
 enum { AdSize16 = 1, AdSize32 = 2, AdSize64 = 3 };
-enum { ExplicitREX2 = 1 };
+enum { ExplicitREX2 = 1, ExplicitEVEX = 3 };
 } // namespace X86Local
 
 namespace X86Disassembler {
@@ -212,6 +212,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_KZ;
   /// The hasEVEX_B field from the record
   bool HasEVEX_B;
+  /// The hasEVEX_NF field from the record
+  bool HasEVEX_NF;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record

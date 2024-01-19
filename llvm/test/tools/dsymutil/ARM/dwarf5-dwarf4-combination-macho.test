@@ -34,7 +34,7 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --no-odr --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --no-odr --linker parallel -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 RUN:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
@@ -43,7 +43,7 @@ RUN:   -a --verbose | FileCheck %s
 ### Uncomment following when llvm-dwarfdump will dump address ranges
 ### correctly for severall compile units case.
 COM: rm -rf %t.dir && mkdir -p %t.dir
-COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
 COM:   -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination \
 COM:   -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 COM: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM \
@@ -73,7 +73,7 @@ CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[
 CHECK: DW_AT_linkage_name [DW_FORM_strx]       (indexed (00000005) string = "_Z4foo2i")
 CHECK: DW_AT_name [DW_FORM_strx]       (indexed (00000006) string = "foo2")
 CHECK:     DW_TAG_formal_parameter
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOCLIST_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 CHECK: DW_AT_name [DW_FORM_strx]     (indexed (00000007) string = "a")
@@ -93,7 +93,7 @@ CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addr]     (0x[[#%.16x,LOC_LOWPC
 CHECK: DW_AT_linkage_name [DW_FORM_strp]       ( .debug_str[0x000000e6] = "_Z3bari")
 CHECK: DW_AT_name [DW_FORM_strp]       ( .debug_str[0x000000ee] = "bar")
 CHECK:     DW_TAG_formal_parameter
-CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                  DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START:]], 0x[[#%.16x,LOC_PAIR_END:]]): [[LOC_EXPR:.*]]
 CHECK-NEXT:                     [0x[[#%.16x,LOC_PAIR_START2:]], 0x[[#%.16x,LOC_PAIR_END2:]]): [[LOC_EXPR2:.*]])
 CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x000000f2] = "x")
@@ -105,7 +105,7 @@ CHECK-NEXT:            (0x[[#sub(LOC_PAIR_START2,LOC_LOWPC)]], 0x[[#sub(LOC_PAIR
 
 CHECK: .debug_loclists contents:
 CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOCLIST_OFFSET]]: 
+CHECK-NEXT: 0x[[LOCLIST_OFFSET]]:
 CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
@@ -114,12 +114,12 @@ CHECK-NEXT:            DW_LLE_end_of_list     ()
 CHECK: .debug_line contents:
 CHECK-NEXT: debug_line[0x00000000]
 CHECK-NEXT: Line table prologue:
-CHECK-NEXT:     total_length: 0x00000048
+CHECK-NEXT:     total_length: 0x0000005a
 CHECK-NEXT:           format: DWARF32
 CHECK-NEXT:          version: 5
 CHECK-NEXT:     address_size: 8
 CHECK-NEXT:  seg_select_size: 0
-CHECK-NEXT:  prologue_length: 0x00000025
+CHECK-NEXT:  prologue_length: 0x00000037
 CHECK-NEXT:  min_inst_length: 1
 CHECK-NEXT: max_ops_per_inst: 1
 CHECK-NEXT:  default_is_stmt: 1
@@ -143,7 +143,7 @@ CHECK-NEXT: file_names[  0]:
 CHECK-NEXT:            name:  .debug_line_str[0x00000029] = "a.cpp"
 CHECK-NEXT:       dir_index: 0
 
-CHECK: debug_line[0x0000004c]
+CHECK: debug_line[0x0000005e]
 CHECK-NEXT: Line table prologue:
 CHECK-NEXT:     total_length: 0x0000003b
 CHECK-NEXT:           format: DWARF32

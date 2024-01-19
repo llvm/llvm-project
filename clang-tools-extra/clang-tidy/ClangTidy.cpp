@@ -390,7 +390,7 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
   for (StringRef CheckName : RegisteredCheckers) {
     std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
 
-    if (CheckName.startswith("core") ||
+    if (CheckName.starts_with("core") ||
         Context.isCheckEnabled(ClangTidyCheckName)) {
       List.emplace_back(std::string(CheckName), true);
     }
@@ -541,7 +541,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         CommandLineArguments AdjustedArgs = Args;
         if (Opts.ExtraArgsBefore) {
           auto I = AdjustedArgs.begin();
-          if (I != AdjustedArgs.end() && !StringRef(*I).startswith("-"))
+          if (I != AdjustedArgs.end() && !StringRef(*I).starts_with("-"))
             ++I; // Skip compiler binary name, if it is there.
           AdjustedArgs.insert(I, Opts.ExtraArgsBefore->begin(),
                               Opts.ExtraArgsBefore->end());

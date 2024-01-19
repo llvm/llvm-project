@@ -1203,7 +1203,7 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
     return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
     return ParseDirectiveMachine(DirectiveID.getLoc());
-  if (IDVal.startswith(".gnu_attribute"))
+  if (IDVal.starts_with(".gnu_attribute"))
     return ParseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;

@@ -771,10 +771,9 @@ namespace {
   };
 } // namespace
 
-static const Expr *
-SubstituteConstraintExpression(Sema &S,
-                               const Sema::TemplateCompareNewDeclInfo &DeclInfo,
-                               const Expr *ConstrExpr) {
+static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
+    Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
+    const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
       /*Innermost=*/nullptr,
@@ -797,8 +796,8 @@ SubstituteConstraintExpression(Sema &S,
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
   if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
-  ExprResult SubstConstr =
-      S.SubstConstraintExpr(const_cast<clang::Expr *>(ConstrExpr), MLTAL);
+  ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
+      const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())
     return nullptr;
   return SubstConstr.get();
@@ -814,12 +813,14 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
   if (Old && !New.isInvalid() && !New.ContainsDecl(Old) &&
       Old->getLexicalDeclContext() != New.getLexicalDeclContext()) {
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpression(*this, Old, OldConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(*this, Old,
+                                                              OldConstr))
       OldConstr = SubstConstr;
     else
       return false;
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpression(*this, New, NewConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(*this, New,
+                                                              NewConstr))
       NewConstr = SubstConstr;
     else
       return false;

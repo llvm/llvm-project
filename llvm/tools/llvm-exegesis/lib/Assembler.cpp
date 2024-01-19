@@ -36,6 +36,10 @@
 #include "perfmon/perf_event.h"
 #endif // HAVE_LIBPFM
 
+#ifdef __linux__
+#include <unistd.h>
+#endif
+
 namespace llvm {
 namespace exegesis {
 
@@ -45,14 +49,22 @@ static const Align kFunctionAlignment(4096);
 
 // Fills the given basic block with register setup code, and returns true if
 // all registers could be setup correctly.
-static bool generateSnippetSetupCode(
-    const ExegesisTarget &ET, const MCSubtargetInfo *const MSI,
-    ArrayRef<RegisterValue> RegisterInitialValues, BasicBlockFiller &BBF,
-    const BenchmarkKey &Key, bool GenerateMemoryInstructions) {
+static bool generateSnippetSetupCode(const ExegesisTarget &ET,
+                                     const MCSubtargetInfo *const MSI,
+                                     BasicBlockFiller &BBF,
+                                     const BenchmarkKey &Key,
+                                     bool GenerateMemoryInstructions) {
   bool IsSnippetSetupComplete = true;
   if (GenerateMemoryInstructions) {
     BBF.addInstructions(ET.generateMemoryInitialSetup());
     for (const MemoryMapping &MM : Key.MemoryMappings) {
+#ifdef __linux__
+      // The frontend that generates that parses the memory mapping information
+      // from the user should validate that the requested address is a multiple
+      // of the page size. Assert that this is true here.
+      assert(MM.Address % getpagesize() == 0 &&
+             "Memory mappings need to be aligned to page boundaries.");
+#endif
       BBF.addInstructions(ET.generateMmap(
           MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
           ET.getAuxiliaryMemoryStartAddress() +
@@ -64,7 +76,7 @@ static bool generateSnippetSetupCode(
   Register StackPointerRegister = BBF.MF.getSubtarget()
                                       .getTargetLowering()
                                       ->getStackPointerRegisterToSaveRestore();
-  for (const RegisterValue &RV : RegisterInitialValues) {
+  for (const RegisterValue &RV : Key.RegisterInitialValues) {
     if (GenerateMemoryInstructions) {
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
@@ -82,11 +94,11 @@ static bool generateSnippetSetupCode(
 #ifdef HAVE_LIBPFM
     BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
 #endif // HAVE_LIBPFM
-    for (const RegisterValue &RV : RegisterInitialValues) {
+    for (const RegisterValue &RV : Key.RegisterInitialValues) {
       // Load in the stack register now as we're done using it elsewhere
       // and need to set the value in preparation for executing the
       // snippet.
-      if (RV.Register == StackPointerRegister)
+      if (RV.Register != StackPointerRegister)
         continue;
       const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
       if (SetRegisterCode.empty())
@@ -231,10 +243,8 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
 
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns,
-                       ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStream,
-                       const BenchmarkKey &Key,
+                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
@@ -264,7 +274,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   std::vector<unsigned> RegistersSetUp;
-  for (const auto &InitValue : RegisterInitialValues) {
+  for (const auto &InitValue : Key.RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }
   FunctionFiller Sink(MF, std::move(RegistersSetUp));
@@ -283,8 +293,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), RegisterInitialValues, Entry, Key,
-      GenerateMemoryInstructions);
+      ET, TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.

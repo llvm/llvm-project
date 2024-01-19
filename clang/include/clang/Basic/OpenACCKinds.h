@@ -14,6 +14,9 @@
 #ifndef LLVM_CLANG_BASIC_OPENACCKINDS_H
 #define LLVM_CLANG_BASIC_OPENACCKINDS_H
 
+#include "clang/Basic/Diagnostic.h"
+#include "llvm/Support/ErrorHandling.h"
+
 namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
@@ -53,7 +56,7 @@ enum class OpenACCDirectiveKind {
   Shutdown,
   Set,
   Update,
-  // FIXME: wait construct.
+  Wait,
 
   // Procedure Calls in Compute Regions.
   Routine,
@@ -62,11 +65,297 @@ enum class OpenACCDirectiveKind {
   Invalid,
 };
 
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDirectiveKind K) {
+  switch (K) {
+  case OpenACCDirectiveKind::Parallel:
+    return Out << "parallel";
+
+  case OpenACCDirectiveKind::Serial:
+    return Out << "serial";
+
+  case OpenACCDirectiveKind::Kernels:
+    return Out << "kernels";
+
+  case OpenACCDirectiveKind::Data:
+    return Out << "data";
+
+  case OpenACCDirectiveKind::EnterData:
+    return Out << "enter data";
+
+  case OpenACCDirectiveKind::ExitData:
+    return Out << "exit data";
+
+  case OpenACCDirectiveKind::HostData:
+    return Out << "host_data";
+
+  case OpenACCDirectiveKind::Loop:
+    return Out << "loop";
+
+  case OpenACCDirectiveKind::Cache:
+    return Out << "cache";
+
+  case OpenACCDirectiveKind::ParallelLoop:
+    return Out << "parallel loop";
+
+  case OpenACCDirectiveKind::SerialLoop:
+    return Out << "serial loop";
+
+  case OpenACCDirectiveKind::KernelsLoop:
+    return Out << "kernels loop";
+
+  case OpenACCDirectiveKind::Atomic:
+    return Out << "atomic";
+
+  case OpenACCDirectiveKind::Declare:
+    return Out << "declare";
+
+  case OpenACCDirectiveKind::Init:
+    return Out << "init";
+
+  case OpenACCDirectiveKind::Shutdown:
+    return Out << "shutdown";
+
+  case OpenACCDirectiveKind::Set:
+    return Out << "set";
+
+  case OpenACCDirectiveKind::Update:
+    return Out << "update";
+
+  case OpenACCDirectiveKind::Wait:
+    return Out << "wait";
+
+  case OpenACCDirectiveKind::Routine:
+    return Out << "routine";
+
+  case OpenACCDirectiveKind::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Uncovered directive kind");
+}
+
 enum class OpenACCAtomicKind {
   Read,
   Write,
   Update,
   Capture,
+  Invalid,
+};
+
+/// Represents the kind of an OpenACC clause.
+enum class OpenACCClauseKind {
+  /// 'finalize' clause, allowed on 'exit data' directive.
+  Finalize,
+  /// 'if_present' clause, allowed on 'host_data' and 'update' directives.
+  IfPresent,
+  /// 'seq' clause, allowed on 'loop' and 'routine' directives.
+  Seq,
+  /// 'independent' clause, allowed on 'loop' directives.
+  Independent,
+  /// 'auto' clause, allowed on 'loop' directives.
+  Auto,
+  /// 'worker' clause, allowed on 'loop' and 'routine' directives.
+  Worker,
+  /// 'vector' clause, allowed on 'loop' and 'routine' directives. Takes no
+  /// arguments for 'routine', so the 'loop' version is not yet implemented
+  /// completely.
+  Vector,
+  /// 'nohost' clause, allowed on 'routine' directives.
+  NoHost,
+  /// 'default' clause, allowed on parallel, serial, kernel (and compound)
+  /// constructs.
+  Default,
+  /// 'if' clause, allowed on all the Compute Constructs, Data Constructs,
+  /// Executable Constructs, and Combined Constructs.
+  If,
+  /// 'self' clause, allowed on Compute and Combined Constructs, plus 'update'.
+  Self,
+  /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
+  /// 'declare'.
+  Copy,
+  /// 'use_device' clause, allowed on 'host_data' construct.
+  UseDevice,
+  /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'enter data'.
+  Attach,
+  /// 'delete' clause, allowed on the 'exit data' construct.
+  Delete,
+  /// 'detach' clause, allowed on the 'exit data' construct.
+  Detach,
+  /// 'device' clause, allowed on the 'update' construct.
+  Device,
+  /// 'deviceptr' clause, allowed on Compute and Combined Constructs, plus
+  /// 'data' and 'declare'.
+  DevicePtr,
+  /// 'device_resident' clause, allowed on the 'declare' construct.
+  DeviceResident,
+  /// 'firstprivate' clause, allowed on 'parallel', 'serial', 'parallel loop',
+  /// and 'serial loop' constructs.
+  FirstPrivate,
+  /// 'host' clause, allowed on 'update' construct.
+  Host,
+  /// 'link' clause, allowed on 'declare' construct.
+  Link,
+  /// 'no_create' clause, allowed on allowed on Compute and Combined constructs,
+  /// plus 'data'.
+  NoCreate,
+  /// 'present' clause, allowed on Compute and Combined constructs, plus 'data'
+  /// and 'declare'.
+  Present,
+  /// 'private' clause, allowed on 'parallel', 'serial', 'loop', 'parallel
+  /// loop', and 'serial loop' constructs.
+  Private,
+  /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'exit data', and 'declare'.
+  CopyOut,
+  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'enter data', and 'declare'.
+  CopyIn,
+  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'enter data', and 'declare'.
+  Create,
+  /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
+  /// constructs.
+  Reduction,
+  /// 'collapse' clause, allowed on 'loop' and Combined constructs.
+  Collapse,
+  /// 'bind' clause, allowed on routine constructs.
+  Bind,
+
+  /// Represents an invalid clause, for the purposes of parsing.
+  Invalid,
+};
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCClauseKind K) {
+  switch (K) {
+  case OpenACCClauseKind::Finalize:
+    return Out << "finalize";
+
+  case OpenACCClauseKind::IfPresent:
+    return Out << "if_present";
+
+  case OpenACCClauseKind::Seq:
+    return Out << "seq";
+
+  case OpenACCClauseKind::Independent:
+    return Out << "independent";
+
+  case OpenACCClauseKind::Auto:
+    return Out << "auto";
+
+  case OpenACCClauseKind::Worker:
+    return Out << "worker";
+
+  case OpenACCClauseKind::Vector:
+    return Out << "vector";
+
+  case OpenACCClauseKind::NoHost:
+    return Out << "nohost";
+
+  case OpenACCClauseKind::Default:
+    return Out << "default";
+
+  case OpenACCClauseKind::If:
+    return Out << "if";
+
+  case OpenACCClauseKind::Self:
+    return Out << "self";
+
+  case OpenACCClauseKind::Copy:
+    return Out << "copy";
+
+  case OpenACCClauseKind::UseDevice:
+    return Out << "use_device";
+
+  case OpenACCClauseKind::Attach:
+    return Out << "attach";
+
+  case OpenACCClauseKind::Delete:
+    return Out << "delete";
+
+  case OpenACCClauseKind::Detach:
+    return Out << "detach";
+
+  case OpenACCClauseKind::Device:
+    return Out << "device";
+
+  case OpenACCClauseKind::DevicePtr:
+    return Out << "deviceptr";
+
+  case OpenACCClauseKind::DeviceResident:
+    return Out << "device_resident";
+
+  case OpenACCClauseKind::FirstPrivate:
+    return Out << "firstprivate";
+
+  case OpenACCClauseKind::Host:
+    return Out << "host";
+
+  case OpenACCClauseKind::Link:
+    return Out << "link";
+
+  case OpenACCClauseKind::NoCreate:
+    return Out << "no_create";
+
+  case OpenACCClauseKind::Present:
+    return Out << "present";
+
+  case OpenACCClauseKind::Private:
+    return Out << "private";
+
+  case OpenACCClauseKind::CopyOut:
+    return Out << "copyout";
+
+  case OpenACCClauseKind::CopyIn:
+    return Out << "copyin";
+
+  case OpenACCClauseKind::Create:
+    return Out << "create";
+
+  case OpenACCClauseKind::Reduction:
+    return Out << "reduction";
+
+  case OpenACCClauseKind::Collapse:
+    return Out << "collapse";
+
+  case OpenACCClauseKind::Bind:
+    return Out << "bind";
+
+  case OpenACCClauseKind::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Uncovered clause kind");
+}
+enum class OpenACCDefaultClauseKind {
+  /// 'none' option.
+  None,
+  /// 'present' option.
+  Present,
+  /// Not a valid option.
+  Invalid,
+};
+
+enum class OpenACCReductionOperator {
+  /// '+'.
+  Addition,
+  /// '*'.
+  Multiplication,
+  /// 'max'.
+  Max,
+  /// 'min'.
+  Min,
+  /// '&'.
+  BitwiseAnd,
+  /// '|'.
+  BitwiseOr,
+  /// '^'.
+  BitwiseXOr,
+  /// '&&'.
+  And,
+  /// '||'.
+  Or,
+  /// Invalid Reduction Clause Kind.
   Invalid,
 };
 } // namespace clang
