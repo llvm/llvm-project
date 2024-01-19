@@ -411,6 +411,22 @@ def CP_ASYNC_WAIT_ALL :
   [(int_nvvm_cp_async_wait_all)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
 
+// cp.async.bulk variants of the commit/wait group
+def CP_ASYNC_BULK_COMMIT_GROUP :
+  NVPTXInst<(outs), (ins), "cp.async.bulk.commit_group;",
+  [(int_nvvm_cp_async_bulk_commit_group)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group $n;",
+  [(int_nvvm_cp_async_bulk_wait_group (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP_READ :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group.read $n;",
+  [(int_nvvm_cp_async_bulk_wait_group_read (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
