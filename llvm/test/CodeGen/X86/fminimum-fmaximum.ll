@@ -1328,20 +1328,31 @@ define <4 x float> @test_fmaximum_v4f32_splat(<4 x float> %x, float %y) {
 ; SSE2-LABEL: test_fmaximum_v4f32_splat:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pandn %xmm0, %xmm3
+; SSE2-NEXT:    movaps %xmm1, %xmm4
+; SSE2-NEXT:    andps %xmm2, %xmm4
+; SSE2-NEXT:    orps %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    maxps %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    cmpunordps %xmm0, %xmm2
-; SSE2-NEXT:    movaps %xmm0, %xmm3
-; SSE2-NEXT:    andps %xmm2, %xmm3
-; SSE2-NEXT:    maxps %xmm1, %xmm0
-; SSE2-NEXT:    andnps %xmm0, %xmm2
-; SSE2-NEXT:    orps %xmm3, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    andps %xmm2, %xmm0
+; SSE2-NEXT:    andnps %xmm1, %xmm2
+; SSE2-NEXT:    orps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum_v4f32_splat:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
 ; AVX1-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
@@ -1349,7 +1360,9 @@ define <4 x float> @test_fmaximum_v4f32_splat(<4 x float> %x, float %y) {
 ; AVX512-LABEL: test_fmaximum_v4f32_splat:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vbroadcastss %xmm1, %xmm1
-; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX512-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
 ; AVX512-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
@@ -1357,7 +1370,9 @@ define <4 x float> @test_fmaximum_v4f32_splat(<4 x float> %x, float %y) {
 ; X86-LABEL: test_fmaximum_v4f32_splat:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm0, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vmaxps %xmm2, %xmm0, %xmm1
 ; X86-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    retl

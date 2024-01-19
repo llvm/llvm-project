@@ -212,9 +212,6 @@ public:
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
 
-  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
-                               int64_t &ImmVal) const override;
-
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
