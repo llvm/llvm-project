@@ -1491,8 +1491,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         MIB.buildConstant(LLT::scalar(64), 0)->getOperand(0).getReg();
     Register ExtReg = MIB.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {ExtTy},
                                      {MidReg, ZeroReg})
-                          ->getOperand(0)
-                          .getReg();
+                          .getReg(0);
 
     if (DstTy.getScalarSizeInBits() < 32)
       MIB.buildTrunc(DstReg, ExtReg);
