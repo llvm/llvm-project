@@ -967,7 +967,7 @@ declare void @f(ptr)
 
 @g = external dso_local global [100 x [100 x i8]]
 
-; This Test used to crash due to caling getVRegDef on X0.
+; This test used to crash due to calling getVRegDef on X0.
 define i32 @crash() {
 ; RV32I-LABEL: crash:
 ; RV32I:       # %bb.0: # %entry
