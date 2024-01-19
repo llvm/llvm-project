@@ -836,8 +836,8 @@ public:
   template <class _Table>
   _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(_Table& __source);
 
-  template <class _NodeHandle>
-  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(key_type const& __key);
+  template <class _NodeHandle, class _Key>
+  _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_find_and_extract(const _Key& __key);
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(const_iterator __it);
 #endif
@@ -1579,9 +1579,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_unique(const_iter
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-template <class _NodeHandle>
+template <class _NodeHandle, class _Key>
 _LIBCPP_HIDE_FROM_ABI _NodeHandle
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(key_type const& __key) {
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_find_and_extract(const _Key& __key) {
   iterator __i = find(__key);
   if (__i == end())
     return _NodeHandle();
