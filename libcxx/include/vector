@@ -1459,26 +1459,20 @@ vector<_Tp, _Allocator>::__push_back_slow_path(_Up&& __x) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::push_back(const_reference __x) {
-  pointer __end = this->__end_;
-  if (__end < this->__end_cap()) {
+  if (this->__end_ < this->__end_cap()) {
     __construct_one_at_end(__x);
-    ++__end;
   } else {
-    __end = __push_back_slow_path(__x);
+    __push_back_slow_path(__x);
   }
-  this->__end_ = __end;
 }
 
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI void vector<_Tp, _Allocator>::push_back(value_type&& __x) {
-  pointer __end = this->__end_;
-  if (__end < this->__end_cap()) {
+  if (this->__end_ < this->__end_cap()) {
     __construct_one_at_end(std::move(__x));
-    ++__end;
   } else {
-    __end = __push_back_slow_path(std::move(__x));
+    __push_back_slow_path(std::move(__x));
   }
-  this->__end_ = __end;
 }
 
 template <class _Tp, class _Allocator>
@@ -1503,16 +1497,13 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
     void
 #endif
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
-  pointer __end = this->__end_;
-  if (__end < this->__end_cap()) {
+  if (this->__end_ < this->__end_cap()) {
     __construct_one_at_end(std::forward<_Args>(__args)...);
-    ++__end;
   } else {
-    __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
+    __emplace_back_slow_path(std::forward<_Args>(__args)...);
   }
-  this->__end_ = __end;
 #if _LIBCPP_STD_VER >= 17
-  return *(__end - 1);
+  return *(this->__end_ - 1);
 #endif
 }
 
