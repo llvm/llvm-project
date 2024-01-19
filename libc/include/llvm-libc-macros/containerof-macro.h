@@ -13,7 +13,7 @@
 
 #define __containerof(ptr, type, member)                                       \
   ({                                                                           \
-    const __typeof(((type *)0)->member) *__ptr = ptr;                          \
+    const __typeof(((type *)0)->member) *__ptr = (ptr);                        \
     (type *)(void *)((const char *)__ptr - offsetof(type, member));            \
   })
 

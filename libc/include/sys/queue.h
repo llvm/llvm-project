@@ -12,4 +12,3 @@
 #include <llvm-libc-macros/sys-queue-macros.h>
 
 #endif // LLVM_LIBC_SYS_QUEUE_H
-

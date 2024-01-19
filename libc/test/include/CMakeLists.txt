@@ -11,5 +11,6 @@ add_libc_unittest(
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
   COMPILE_OPTIONS
+    # This is needed because the __containerof macro uses statement expression.
     -Wno-gnu-statement-expression-from-macro-expansion
 )
