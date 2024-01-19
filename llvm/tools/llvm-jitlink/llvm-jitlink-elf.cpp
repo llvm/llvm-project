@@ -95,6 +95,7 @@ static Error registerSymbol(LinkGraph &G, Symbol &Sym, Session::FileInfo &FI,
   case Other:
     return Error::success();
   }
+  llvm_unreachable("Unhandled SectionType enum");
 }
 
 namespace llvm {
