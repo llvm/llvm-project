@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan -triple powerpc64le-unknown-unknown %s \
 // RUN: -menable-no-infs -menable-no-nans
 
-// RUN: %clang_cc1 -x c++ -verify -triple powerpc64le-unknown-unknown %s \
-// RUN: -DNOFAST=1
+// RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown %s
 
 // RUN: %clang_cc1 -x c++ -verify=no-inf -triple powerpc64le-unknown-unknown %s \
 // RUN: -menable-no-infs
@@ -10,10 +9,9 @@
 // RUN: %clang_cc1 -x c++ -verify=no-nan -triple powerpc64le-unknown-unknown %s \
 // RUN: -menable-no-nans
 
+// no-fast-no-diagnostics
+
 int isunorderedf (float x, float y);
-#if NOFAST
-// expected-no-diagnostics
-#endif
 extern "C++" {
 namespace std __attribute__((__visibility__("default"))) {
   bool
