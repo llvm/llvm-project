@@ -126,7 +126,9 @@ public:
   createLinker(MessageHandlerTy ErrorHandler, MessageHandlerTy WarningHandler,
                TranslatorFuncTy StringsTranslator = nullptr);
 
-  /// Set output DWARF handler.
+  /// Set output DWARF handler. Result of linking DWARF is set of sections
+  /// containing final debug info. DWARFLinkerBase::link() pass generated
+  /// sections using specified \p SectionHandler.
   virtual void setOutputDWARFHandler(const Triple &TargetTriple,
                                      SectionHandlerTy SectionHandler) = 0;
 };
