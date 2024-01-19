@@ -309,6 +309,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::TexUnifiedCubeArrayS32FloatLevel:
   case NVPTXISD::TexUnifiedCubeArrayU32Float:
   case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
   case NVPTXISD::Tld4UnifiedR2DFloatFloat:
   case NVPTXISD::Tld4UnifiedG2DFloatFloat:
   case NVPTXISD::Tld4UnifiedB2DFloatFloat:
@@ -2762,6 +2768,24 @@ bool NVPTXDAGToDAGISel::tryTextureIntrinsic(SDNode *N) {
     break;
   case NVPTXISD::Tld4UnifiedA2DU64Float:
     Opc = NVPTX::TLD4_UNIFIED_A_2D_U32_F32_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_U32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_R;
     break;
   }
 
