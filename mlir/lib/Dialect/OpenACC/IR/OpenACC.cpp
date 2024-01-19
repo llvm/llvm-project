@@ -1449,7 +1449,8 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
-  if (operands.begin() == operands.end() && gangOnlyDeviceTypes &&
+  if (operands.begin() == operands.end() &&
+      hasDeviceTypeValues(gangOnlyDeviceTypes) &&
       gangOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[0]);
@@ -1464,7 +1465,7 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
       hasDeviceTypeValues(deviceTypes))
     p << ", ";
 
-  if (deviceTypes) {
+  if (hasDeviceTypeValues(deviceTypes)) {
     unsigned opIdx = 0;
     llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
       p << "{";

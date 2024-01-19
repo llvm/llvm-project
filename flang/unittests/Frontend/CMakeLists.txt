@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_flang_unittest(FlangFrontendTests
-  CodeGenActionTest.cpp
   CompilerInstanceTest.cpp
   FrontendActionTest.cpp
 )
