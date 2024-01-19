@@ -659,6 +659,11 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
 }
 
+void MCObjectStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                                               const MCSubtargetInfo &STI) {
+  insert(new MCNeverAlignFragment(ByteAlignment, STI));
+}
+
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
@@ -797,8 +802,9 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     return std::make_pair(true, std::string("unknown relocation name"));
 
   MCFixupKind Kind = *MaybeKind;
-
-  if (Expr == nullptr)
+  if (Expr)
+    visitUsedExpr(*Expr);
+  else
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
 

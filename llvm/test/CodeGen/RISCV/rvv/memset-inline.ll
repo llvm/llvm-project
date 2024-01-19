@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64
-; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+unaligned-scalar-mem,,+unaligned-vector-mem \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+v,+fast-unaligned-access \
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32-FAST
-; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v,+unaligned-scalar-mem,+unaligned-vector-mem \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v,+fast-unaligned-access \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 

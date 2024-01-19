@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes=debugify,globalopt -f %s | FileCheck %s
+; RUN: opt -S -passes=debugify,globalopt -f %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 @foo = internal global i32 0, align 4
 

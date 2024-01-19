@@ -43,23 +43,24 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
     return x;
   }
 
-  bool result_sign = (xbits.get_sign() == ybits.get_sign() ? false : true);
+  const Sign result_sign =
+      (xbits.sign() == ybits.sign() ? Sign::POS : Sign::NEG);
 
   // Once we know the sign of the result, we can just operate on the absolute
   // values. The correct sign can be applied to the result after the result
   // is evaluated.
-  xbits.set_sign(0);
-  ybits.set_sign(0);
+  xbits.set_sign(Sign::POS);
+  ybits.set_sign(Sign::POS);
 
   NormalFloat<T> normalx(xbits), normaly(ybits);
   int exp = normalx.exponent - normaly.exponent;
-  typename NormalFloat<T>::UIntType mx = normalx.mantissa,
-                                    my = normaly.mantissa;
+  typename NormalFloat<T>::StorageType mx = normalx.mantissa,
+                                       my = normaly.mantissa;
 
   q = 0;
   while (exp >= 0) {
     unsigned shift_count = 0;
-    typename NormalFloat<T>::UIntType n = mx;
+    typename NormalFloat<T>::StorageType n = mx;
     for (shift_count = 0; n < my; n <<= 1, ++shift_count)
       ;
 
@@ -72,7 +73,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
 
     mx = n - my;
     if (mx == 0) {
-      q = result_sign ? -q : q;
+      q = result_sign.is_neg() ? -q : q;
       return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
     }
   }
@@ -107,7 +108,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
       native_remainder = -native_remainder;
   }
 
-  q = result_sign ? -q : q;
+  q = result_sign.is_neg() ? -q : q;
   if (native_remainder == T(0.0))
     return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
   return native_remainder;

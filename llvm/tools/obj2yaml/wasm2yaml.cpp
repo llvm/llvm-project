@@ -44,7 +44,7 @@ static WasmYAML::Table makeTable(uint32_t Index,
                                  const wasm::WasmTableType &Type) {
   WasmYAML::Table T;
   T.Index = Index;
-  T.ElemType = Type.ElemType;
+  T.ElemType = (uint32_t)Type.ElemType;
   T.TableLimits = makeLimits(Type.Limits);
   return T;
 }
@@ -205,7 +205,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     std::unique_ptr<WasmYAML::Section> S;
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM: {
-      if (WasmSec.Name.startswith("reloc.")) {
+      if (WasmSec.Name.starts_with("reloc.")) {
         // Relocations are attached the sections they apply to rather than
         // being represented as a custom section in the YAML output.
         continue;
@@ -334,7 +334,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         WasmYAML::ElemSegment Seg;
         Seg.Flags = Segment.Flags;
         Seg.TableNumber = Segment.TableNumber;
-        Seg.ElemKind = Segment.ElemKind;
+        Seg.ElemKind = (uint32_t)Segment.ElemKind;
         Seg.Offset.Extended = Segment.Offset.Extended;
         if (Seg.Offset.Extended) {
           Seg.Offset.Body = yaml::BinaryRef(Segment.Offset.Body);

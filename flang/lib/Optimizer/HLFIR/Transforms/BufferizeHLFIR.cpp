@@ -256,9 +256,9 @@ struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
     llvm::SmallVector<mlir::Value> newOperands;
     for (mlir::Value operand : adaptor.getOperands())
       newOperands.push_back(getBufferizedExprStorage(operand));
-    rewriter.startRootUpdate(assign);
+    rewriter.startOpModification(assign);
     assign->setOperands(newOperands);
-    rewriter.finalizeRootUpdate(assign);
+    rewriter.finalizeOpModification(assign);
     return mlir::success();
   }
 };
@@ -452,7 +452,7 @@ struct AssociateOpConversion
       //   %0 = hlfir.as_expr %x move %true :
       //       (!fir.box<!fir.heap<!fir.type<_T{y:i32}>>>, i1) ->
       //       !hlfir.expr<!fir.type<_T{y:i32}>>
-      //   %1:3 = hlfir.associate %0 {uniq_name = "adapt.valuebyref"} :
+      //   %1:3 = hlfir.associate %0 {adapt.valuebyref} :
       //       (!hlfir.expr<!fir.type<_T{y:i32}>>) ->
       //       (!fir.ref<!fir.type<_T{y:i32}>>,
       //        !fir.ref<!fir.type<_T{y:i32}>>,
@@ -525,8 +525,15 @@ struct AssociateOpConversion
       return mlir::success();
     }
     if (isTrivialValue) {
-      auto temp = builder.createTemporary(loc, bufferizedExpr.getType(),
-                                          associate.getUniqName());
+      llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
+      if (associate->hasAttr(fir::getAdaptToByRefAttrName())) {
+        attrs.push_back(fir::getAdaptToByRefAttr(builder));
+      }
+      llvm::StringRef name = "";
+      if (associate.getUniqName())
+        name = *associate.getUniqName();
+      auto temp =
+          builder.createTemporary(loc, bufferizedExpr.getType(), name, attrs);
       builder.create<fir::StoreOp>(loc, bufferizedExpr, temp);
       mlir::Value mustFree = builder.createBool(loc, false);
       replaceWith(temp, temp, mustFree);
@@ -827,9 +834,9 @@ struct ElementalOpConversion
     // Explicitly delete the body of the elemental to get rid
     // of any users of hlfir.expr values inside the body as early
     // as possible.
-    rewriter.startRootUpdate(elemental);
+    rewriter.startOpModification(elemental);
     rewriter.eraseBlock(elemental.getBody());
-    rewriter.finalizeRootUpdate(elemental);
+    rewriter.finalizeOpModification(elemental);
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }

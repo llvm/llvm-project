@@ -940,8 +940,13 @@ void DWARFVerifier::verifyDebugLineRows() {
         OS << '\n';
       }
 
-      // Verify file index.
-      if (!LineTable->hasFileAtIndex(Row.File)) {
+      // If the prologue contains no file names and the line table has only one
+      // row, do not verify the file index, this is a line table of an empty
+      // file with an end_sequence, but the DWARF standard sets the file number
+      // to 1 by default, otherwise verify file index.
+      if ((LineTable->Prologue.FileNames.size() ||
+           LineTable->Rows.size() != 1) &&
+          !LineTable->hasFileAtIndex(Row.File)) {
         ++NumDebugLineErrors;
         error() << ".debug_line["
                 << format("0x%08" PRIx64,

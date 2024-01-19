@@ -11,6 +11,9 @@
 // Apple platforms don't provide <uchar.h> yet, so these tests fail.
 // XFAIL: target={{.+}}-apple-{{.+}}
 
+// mbrtoc16 not defined.
+// XFAIL: LIBCXX-PICOLIBC-FIXME
+
 // <cuchar>
 
 #include <cuchar>

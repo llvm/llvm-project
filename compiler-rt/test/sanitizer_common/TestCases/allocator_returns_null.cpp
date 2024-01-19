@@ -34,17 +34,20 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnCRASH
 // RUN: %env_tool_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
+// RUN: %env_tool_opts=allocator_may_return_null=0 not %run %t vector 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-vCRASH
 
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
 #include <assert.h>
 #include <errno.h>
+#include <limits>
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits>
-#include <new>
+#include <vector>
 
 int main(int argc, char **argv) {
   assert(argc == 2);
@@ -59,6 +62,8 @@ int main(int argc, char **argv) {
 #else
       (3UL << 30) + 1;
 #endif
+
+  std::vector<char> v;
 
   void *x = nullptr;
   if (!strcmp(action, "malloc")) {
@@ -82,6 +87,14 @@ int main(int argc, char **argv) {
     x = operator new(kMaxAllowedMallocSizePlusOne);
   } else if (!strcmp(action, "new-nothrow")) {
     x = operator new(kMaxAllowedMallocSizePlusOne, std::nothrow);
+  } else if (!strcmp(action, "vector")) {
+#if __LP64__ || defined(_WIN64)
+    v.resize(kMaxAllowedMallocSizePlusOne);
+    x = v.data();
+#else
+    // Fake it: 32bit fails early in std.
+    x = malloc(kMaxAllowedMallocSizePlusOne);
+#endif
   } else {
     assert(0);
   }
@@ -94,21 +107,31 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-mCRASH: malloc:
-// CHECK-mCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-mCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-mCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-cCRASH: calloc:
-// CHECK-cCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-cCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-cCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-coCRASH: calloc-overflow:
-// CHECK-coCRASH: {{SUMMARY: .*Sanitizer: calloc-overflow}}
+// CHECK-coCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-coCRASH: {{SUMMARY: .*Sanitizer: calloc-overflow.*allocator_returns_null.cpp.*}} in main
 // CHECK-rCRASH: realloc:
-// CHECK-rCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-rCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-rCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-mrCRASH: realloc-after-malloc:
-// CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-mrCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-mrCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-nCRASH: new:
-// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-nCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 // CHECK-nCRASH-OOM: new:
-// CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory}}
+// CHECK-nCRASH-O#{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nCRASH-OOM: {{SUMMARY: .*Sanitizer: out-of-memory.*allocator_returns_null.cpp.*}} in main
 // CHECK-nnCRASH: new-nothrow:
-// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big}}
+// CHECK-nnCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-nnCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
+// CHECK-vCRASH: #{{[0-9]+.*}}allocator_returns_null.cpp
+// CHECK-vCRASH: {{SUMMARY: .*Sanitizer: allocation-size-too-big.*allocator_returns_null.cpp.*}} in main
 
 // CHECK-NULL: {{malloc|calloc|calloc-overflow|realloc|realloc-after-malloc|new-nothrow}}
 // CHECK-NULL: errno: 12, x: 0

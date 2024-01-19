@@ -33,6 +33,7 @@ class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
 public:
   enum FragmentType : uint8_t {
     FT_Align,
+    FT_NeverAlign,
     FT_Data,
     FT_CompactEncodedInst,
     FT_Fill,
@@ -344,6 +345,27 @@ public:
   }
 };
 
+class MCNeverAlignFragment : public MCFragment {
+  /// The alignment the end of the next fragment should avoid.
+  unsigned Alignment;
+
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo &STI;
+
+public:
+  MCNeverAlignFragment(unsigned Alignment, const MCSubtargetInfo &STI,
+                       MCSection *Sec = nullptr)
+      : MCFragment(FT_NeverAlign, false, Sec), Alignment(Alignment), STI(STI) {}
+
+  unsigned getAlignment() const { return Alignment; }
+
+  const MCSubtargetInfo &getSubtargetInfo() const { return STI; }
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_NeverAlign;
+  }
+};
+
 class MCFillFragment : public MCFragment {
   uint8_t ValueSize;
   /// Value to use for filling bytes.
@@ -428,7 +450,7 @@ public:
   }
 };
 
-class MCLEBFragment final : public MCEncodedFragmentWithFixups<10, 1> {
+class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
@@ -437,7 +459,7 @@ class MCLEBFragment final : public MCEncodedFragmentWithFixups<10, 1> {
 
 public:
   MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
-      : MCEncodedFragmentWithFixups<10, 1>(FT_LEB, false, Sec),
+      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false, Sec),
         IsSigned(IsSigned), Value(&Value) {
     getContents().push_back(0);
   }

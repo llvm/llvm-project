@@ -50,6 +50,8 @@ entry:
   ret void
 }
 
+; ASM:        .csect ..text..[PR],5
+; ASM-NEXT:   .rename ..text..[PR],""
 ; ASM:        .csect .foo[PR],5
 ; ASM-NEXT:  	.globl	foo[DS]                         # -- Begin function foo
 ; ASM-NEXT:  	.globl	.foo[PR]
@@ -187,7 +189,7 @@ entry:
 ; DIS32-NEXT:       40: 7c 08 02 a6  	mflr 0
 ; DIS32-NEXT:       44: 94 21 ff c0  	stwu 1, -64(1)
 ; DIS32-NEXT:       48: 90 01 00 48  	stw 0, 72(1)
-; DIS32-NEXT:       4c: 4b ff ff b5  	bl 0x0 <.alias_foo>
+; DIS32-NEXT:       4c: 4b ff ff b5  	bl 0x0 <.foo>
 ; DIS32-NEXT: 			0000004c:  R_RBR	(idx: 7) .foo[PR]
 ; DIS32-NEXT:       50: 60 00 00 00  	nop
 ; DIS32-NEXT:       54: 48 00 00 6d  	bl 0xc0 <.static_overalign_foo>
@@ -196,7 +198,7 @@ entry:
 ; DIS32-NEXT:       5c: 4b ff ff a5  	bl 0x0 <.alias_foo>
 ; DIS32-NEXT: 			0000005c:  R_RBR	(idx: 9) .alias_foo
 ; DIS32-NEXT:       60: 60 00 00 00  	nop
-; DIS32-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.alias_foo>
+; DIS32-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.extern_foo>
 ; DIS32-NEXT: 			00000064:  R_RBR	(idx: 1) .extern_foo[PR]
 ; DIS32-NEXT:       68: 60 00 00 00  	nop
 ; DIS32-NEXT:       6c: 4b ff ff b5  	bl 0x20 <.hidden_foo>
@@ -210,7 +212,7 @@ entry:
 ; DIS64-NEXT:       40: 7c 08 02 a6  	mflr 0
 ; DIS64-NEXT:       44: f8 21 ff 91  	stdu 1, -112(1)
 ; DIS64-NEXT:       48: f8 01 00 80  	std 0, 128(1)
-; DIS64-NEXT:       4c: 4b ff ff b5  	bl 0x0 <.alias_foo>
+; DIS64-NEXT:       4c: 4b ff ff b5  	bl 0x0 <.foo>
 ; DIS64-NEXT: 		000000000000004c:  R_RBR	(idx: 7) .foo[PR]
 ; DIS64-NEXT:       50: 60 00 00 00  	nop
 ; DIS64-NEXT:       54: 48 00 00 6d  	bl 0xc0 <.static_overalign_foo>
@@ -219,7 +221,7 @@ entry:
 ; DIS64-NEXT:       5c: 4b ff ff a5  	bl 0x0 <.alias_foo>
 ; DIS64-NEXT: 		000000000000005c:  R_RBR	(idx: 9) .alias_foo
 ; DIS64-NEXT:       60: 60 00 00 00  	nop
-; DIS64-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.alias_foo>
+; DIS64-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.extern_foo>
 ; DIS64-NEXT: 		0000000000000064:  R_RBR	(idx: 1) .extern_foo[PR]
 ; DIS64-NEXT:       68: 60 00 00 00  	nop
 ; DIS64-NEXT:       6c: 4b ff ff b5  	bl 0x20 <.hidden_foo>

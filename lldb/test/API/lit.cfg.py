@@ -45,7 +45,7 @@ def find_sanitizer_runtime(name):
 
 
 def find_shlibpath_var():
-    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
+    if platform.system() in ["Linux", "FreeBSD", "NetBSD", "OpenBSD", "SunOS"]:
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
@@ -243,6 +243,11 @@ if is_configured("lldb_libs_dir"):
 
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
+
+# Facebook T92898286
+if is_configured("llvm_test_bolt"):
+    dotest_cmd += ["-E", '"--post-link-optimize"']
+# End Facebook T92898286
 
 if (
     "lldb-repro-capture" in config.available_features

@@ -181,7 +181,7 @@ static unsigned getBlockNumber(Block *block) {
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   // Try to extract a name from the source location.
   std::optional<StringRef> text = getTextFromRange(loc);
-  if (text && text->startswith("^")) {
+  if (text && text->starts_with("^")) {
     os << *text;
     return;
   }
@@ -900,7 +900,7 @@ void MLIRDocument::getCodeActionForDiagnostic(
   // Ignore diagnostics that print the current operation. These are always
   // enabled for the language server, but not generally during normal
   // parsing/verification.
-  if (message.startswith("see current operation: "))
+  if (message.starts_with("see current operation: "))
     return;
 
   // Get the start of the line containing the diagnostic.

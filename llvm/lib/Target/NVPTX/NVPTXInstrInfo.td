@@ -164,6 +164,9 @@ def True : Predicate<"true">;
 class hasPTX<int version>: Predicate<"Subtarget->getPTXVersion() >= " # version>;
 class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
+// Explicit records for arch-accelerated SM versions
+def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
+
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
                           "&& Subtarget->getPTXVersion() >= 64)">;
@@ -561,7 +564,7 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
                            [(set Int16Regs:$dst, (OpNode (bf16 Int16Regs:$a)))]>,
                            Requires<[hasSM<80>, hasPTX<70>]>;
    def bf16x2 :    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
-                           !strconcat(OpcStr, ".v2bf16 \t$dst, $a;"),
+                           !strconcat(OpcStr, ".bf16x2 \t$dst, $a;"),
                            [(set Int32Regs:$dst, (OpNode (v2bf16 Int32Regs:$a)))]>,
                            Requires<[hasSM<80>, hasPTX<70>]>;
    def f16_ftz :   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),

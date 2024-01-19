@@ -40,7 +40,9 @@ class Module;
 
 /// Finds dbg.declare intrinsics declaring local variables as living in the
 /// memory that 'V' points to.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
+/// As above, for DPVDeclares.
+TinyPtrVector<DPValue *> findDPVDeclares(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,

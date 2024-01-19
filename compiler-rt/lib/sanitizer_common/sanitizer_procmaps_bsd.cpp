@@ -13,9 +13,6 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD
 #include "sanitizer_common.h"
-#if SANITIZER_FREEBSD
-#include "sanitizer_freebsd.h"
-#endif
 #include "sanitizer_procmaps.h"
 
 // clang-format off
@@ -28,14 +25,6 @@
 #endif
 
 #include <limits.h>
-
-// Fix 'kinfo_vmentry' definition on FreeBSD prior v9.2 in 32-bit mode.
-#if SANITIZER_FREEBSD && (SANITIZER_WORDSIZE == 32)
-#include <osreldate.h>
-#if __FreeBSD_version <= 902001 // v9.2
-#define kinfo_vmentry xkinfo_vmentry
-#endif
-#endif
 
 namespace __sanitizer {
 

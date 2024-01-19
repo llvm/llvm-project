@@ -264,7 +264,7 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
 }
 
 void MCFragment::destroy() {
-  // First check if we are the sentinal.
+  // First check if we are the sentinel.
   if (Kind == FragmentType(~0)) {
     delete this;
     return;
@@ -273,6 +273,9 @@ void MCFragment::destroy() {
   switch (Kind) {
     case FT_Align:
       delete cast<MCAlignFragment>(this);
+      return;
+    case FT_NeverAlign:
+      delete cast<MCNeverAlignFragment>(this);
       return;
     case FT_Data:
       delete cast<MCDataFragment>(this);
@@ -342,6 +345,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   OS << "<";
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
+  case MCFragment::FT_NeverAlign:
+    OS << "MCNeverAlignFragment";
+    break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
   case MCFragment::FT_CompactEncodedInst:
     OS << "MCCompactEncodedInstFragment"; break;
@@ -379,6 +385,12 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     OS << " Alignment:" << AF->getAlignment().value()
        << " Value:" << AF->getValue() << " ValueSize:" << AF->getValueSize()
        << " MaxBytesToEmit:" << AF->getMaxBytesToEmit() << ">";
+    break;
+  }
+  case MCFragment::FT_NeverAlign: {
+    const MCNeverAlignFragment *NAF = cast<MCNeverAlignFragment>(this);
+    OS << "\n       ";
+    OS << " Alignment:" << NAF->getAlignment() << ">";
     break;
   }
   case MCFragment::FT_Data:  {

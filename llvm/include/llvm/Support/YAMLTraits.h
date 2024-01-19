@@ -1058,6 +1058,19 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   }
 }
 
+namespace detail {
+
+template <typename T, typename Context>
+std::string doValidate(IO &io, T &Val, Context &Ctx) {
+  return MappingContextTraits<T, Context>::validate(io, Val, Ctx);
+}
+
+template <typename T> std::string doValidate(IO &io, T &Val, EmptyContext &) {
+  return MappingTraits<T>::validate(io, Val);
+}
+
+} // namespace detail
+
 template <typename T, typename Context>
 std::enable_if_t<validatedMappingTraits<T, Context>::value, void>
 yamlize(IO &io, T &Val, bool, Context &Ctx) {
@@ -1066,7 +1079,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   else
     io.beginMapping();
   if (io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty()) {
       errs() << Err << "\n";
       assert(Err.empty() && "invalid struct trying to be written as yaml");
@@ -1074,7 +1087,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   }
   detail::doMapping(io, Val, Ctx);
   if (!io.outputting()) {
-    std::string Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = detail::doValidate(io, Val, Ctx);
     if (!Err.empty())
       io.setError(Err);
   }

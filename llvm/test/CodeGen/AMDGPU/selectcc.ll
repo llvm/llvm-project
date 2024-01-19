@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI -check-prefix=FUNC %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VI -check-prefix=FUNC %s
+; RUN: llc -verify-machineinstrs -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI -check-prefix=FUNC %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}selectcc_i64:
 ; EG: XOR_INT

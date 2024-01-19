@@ -225,6 +225,8 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
+  BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
 }
 
@@ -531,6 +533,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
 
+  if (Opts.GuardedControlStack)
+    Builder.defineMacro("__ARM_FEATURE_GCS_DEFAULT", "1");
+
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
 
@@ -542,6 +547,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasD128)
     Builder.defineMacro("__ARM_FEATURE_SYSREG128", "1");
+
+  if (HasGCS)
+    Builder.defineMacro("__ARM_FEATURE_GCS", "1");
 
   if (*ArchInfo == llvm::AArch64::ARMV8_1A)
     getTargetDefinesARMV81A(Opts, Builder);
@@ -574,11 +582,12 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
 
-  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
+  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
   // Allow detection of fast FMA support.
   Builder.defineMacro("__FP_FAST_FMA", "1");
@@ -613,9 +622,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (Name == E.Name)
-      return E.FmvPriority;
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->FmvPriority;
   return 0;
 }
 
@@ -625,24 +633,19 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
-    return Name == E.Name && !E.DependentFeatures.empty();
-  });
-  return F != std::end(llvm::AArch64::Extensions);
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return !Ext->DependentFeatures.empty();
+  return false;
 }
 
 StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions,
-                         [&](const auto &E) { return Name == E.Name; });
-  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
-                                                  : StringRef();
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->DependentFeatures;
+  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (FeatureStr == E.Name)
-      return true;
-  return false;
+  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -1061,7 +1064,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         // Pushing the original feature string to give a sema error later on
         // when they get checked.
-        if (Feature.startswith("no"))
+        if (Feature.starts_with("no"))
           Features.push_back("-" + Feature.drop_front(2).str());
         else
           Features.push_back("+" + Feature.str());
@@ -1070,22 +1073,21 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
@@ -1094,7 +1096,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
       else {
@@ -1105,14 +1107,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.CPU = Split.first;
         SplitAndAddFeatures(Split.second, Ret.Features);
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("+")) {
+    } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.startswith("no-")) {
+    } else if (Feature.starts_with("no-")) {
       StringRef FeatureName =
           llvm::AArch64::getArchExtFeature(Feature.split("-").second);
       if (!FeatureName.empty())
@@ -1363,8 +1365,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
     StringRef Constraint, char Modifier, unsigned Size,
     std::string &SuggestedModifier) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:

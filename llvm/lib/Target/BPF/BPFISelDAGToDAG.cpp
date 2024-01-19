@@ -192,22 +192,8 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   switch (Opcode) {
   default:
     break;
-  case ISD::SDIV: {
-    if (!Subtarget->hasSdivSmod()) {
-      DebugLoc Empty;
-      const DebugLoc &DL = Node->getDebugLoc();
-      if (DL != Empty)
-        errs() << "Error at line " << DL.getLine() << ": ";
-      else
-        errs() << "Error: ";
-      errs() << "Unsupport signed division for DAG: ";
-      Node->print(errs(), CurDAG);
-      errs() << "Please convert to unsigned div/mod.\n";
-    }
-    break;
-  }
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
     case Intrinsic::bpf_load_byte:
     case Intrinsic::bpf_load_half:
@@ -483,7 +469,7 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (BaseV.getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return;
 
-  unsigned IntNo = cast<ConstantSDNode>(BaseV->getOperand(1))->getZExtValue();
+  unsigned IntNo = BaseV->getConstantOperandVal(1);
   uint64_t MaskV = MaskN->getZExtValue();
 
   if (!((IntNo == Intrinsic::bpf_load_byte && MaskV == 0xFF) ||

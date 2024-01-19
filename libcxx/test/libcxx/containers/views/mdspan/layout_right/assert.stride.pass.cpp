@@ -33,9 +33,9 @@
 int main(int, char**) {
   // value out of range
   {
-    std::layout_right::template mapping<std::dextents<int, 3>> m{std::dextents<int, 3>{100, 100, 100}};
+    std::layout_right::mapping<std::dextents<int, 3>> m{std::dextents<int, 3>{100, 100, 100}};
 
-    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "invalid rank index");
+    TEST_LIBCPP_ASSERT_FAILURE(m.stride(4), "layout_right::mapping::stride(): invalid rank index");
   }
   return 0;
 }

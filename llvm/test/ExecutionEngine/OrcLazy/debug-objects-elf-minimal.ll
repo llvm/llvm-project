@@ -1,4 +1,4 @@
-; REQUIRES: native && target-x86_64
+; REQUIRES: native && x86_64-linux
 
 ; In-memory debug-object contains some basic DWARF
 ;
@@ -44,7 +44,7 @@
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-objdump --section-headers - | \
 ; RUN:     FileCheck --check-prefix=CHECK_LOAD_ADDR %s
 ;
-; CHECK_LOAD_ADDR-NOT: {{[0-9]*}} .text {{.*}} 0000000000000000 TEXT
+; CHECK_LOAD_ADDR-NOT: {{[0-9]*}} .ltext {{.*}} 0000000000000000 TEXT
 
 target triple = "x86_64-unknown-unknown-elf"
 

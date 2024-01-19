@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Test llvm.dbg.value for the local variables moved onto the unsafe stack.
 ; SafeStack rewrites them relative to the unsafe stack pointer (base address of

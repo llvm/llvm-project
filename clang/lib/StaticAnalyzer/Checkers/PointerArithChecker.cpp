@@ -56,8 +56,8 @@ class PointerArithChecker
                                 bool PointedNeeded = false) const;
   void initAllocIdentifiers(ASTContext &C) const;
 
-  mutable std::unique_ptr<BugType> BT_pointerArith;
-  mutable std::unique_ptr<BugType> BT_polyArray;
+  const BugType BT_pointerArith{this, "Dangerous pointer arithmetic"};
+  const BugType BT_polyArray{this, "Dangerous pointer arithmetic"};
   mutable llvm::SmallSet<IdentifierInfo *, 8> AllocFunctions;
 
 public:
@@ -168,12 +168,10 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
     if (!IsPolymorphic)
       return;
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-      if (!BT_polyArray)
-        BT_polyArray.reset(new BugType(this, "Dangerous pointer arithmetic"));
       constexpr llvm::StringLiteral Msg =
           "Pointer arithmetic on a pointer to base class is dangerous "
           "because derived and base class may have different size.";
-      auto R = std::make_unique<PathSensitiveBugReport>(*BT_polyArray, Msg, N);
+      auto R = std::make_unique<PathSensitiveBugReport>(BT_polyArray, Msg, N);
       R->addRange(E->getSourceRange());
       R->markInteresting(ArrayRegion);
       C.emitReport(std::move(R));
@@ -190,12 +188,10 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
     return;
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    if (!BT_pointerArith)
-      BT_pointerArith.reset(new BugType(this, "Dangerous pointer arithmetic"));
     constexpr llvm::StringLiteral Msg =
         "Pointer arithmetic on non-array variables relies on memory layout, "
         "which is dangerous.";
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT_pointerArith, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT_pointerArith, Msg, N);
     R->addRange(SR);
     R->markInteresting(Region);
     C.emitReport(std::move(R));

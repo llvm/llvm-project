@@ -7,8 +7,8 @@
 // RUN: %clang -c -o %t.main.o %p/Inputs/dlopen-dlclose-x2.S
 // RUN: %clang -c -o %t.inits.o %s
 // RUN: %llvm_jitlink \
-// RUN:   -alias _dlopen=___orc_rt_macho_jit_dlopen \
-// RUN:   -alias _dlclose=___orc_rt_macho_jit_dlclose \
+// RUN:   -alias Platform:_dlopen=___orc_rt_macho_jit_dlopen \
+// RUN:   -alias Platform:_dlclose=___orc_rt_macho_jit_dlclose \
 // RUN:   %t.main.o -jd inits %t.inits.o -lmain | FileCheck %s
 
 // CHECK: entering main

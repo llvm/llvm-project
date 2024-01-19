@@ -102,7 +102,9 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
-      /*Flags=*/"", /*RV=*/0);
+      /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
@@ -189,6 +191,15 @@ DebugTranslation::translateImpl(DILocalVariableAttr attr) {
       /*Annotations=*/nullptr);
 }
 
+llvm::DIGlobalVariable *
+DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
+  return llvm::DIGlobalVariable::getDistinct(
+      llvmCtx, translate(attr.getScope()), getMDStringOrNull(attr.getName()),
+      getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),
+      attr.getLine(), translate(attr.getType()), attr.getIsLocalToUnit(),
+      attr.getIsDefined(), nullptr, nullptr, attr.getAlignInBits(), nullptr);
+}
+
 llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
   return cast<llvm::DIScope>(translate(DINodeAttr(attr)));
 }
@@ -260,10 +271,11 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
-                DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-                DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
-                DISubrangeAttr, DISubroutineTypeAttr>(
+                DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+                DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
+                DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;
@@ -279,6 +291,26 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (!debugEmissionIsEnabled)
     return nullptr;
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
+}
+
+llvm::DIExpression *
+DebugTranslation::translateExpression(LLVM::DIExpressionAttr attr) {
+  SmallVector<uint64_t, 1> ops;
+  if (attr) {
+    // Append operations their operands to the list.
+    for (const DIExpressionElemAttr &op : attr.getOperations()) {
+      ops.push_back(op.getOpcode());
+      append_range(ops, op.getArguments());
+    }
+  }
+  return llvm::DIExpression::get(llvmCtx, ops);
+}
+
+llvm::DIGlobalVariableExpression *
+DebugTranslation::translateGlobalVariableExpression(
+    LLVM::DIGlobalVariableExpressionAttr attr) {
+  return llvm::DIGlobalVariableExpression::get(
+      llvmCtx, translate(attr.getVar()), translateExpression(attr.getExpr()));
 }
 
 /// Translate the given location to an llvm DebugLoc.
@@ -298,7 +330,10 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
-    llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
+    llvmLoc = translateLoc(callLoc.getCallee(), nullptr, callerLoc);
+    // Fallback: Ignore callee if it has no debug scope.
+    if (!llvmLoc)
+      llvmLoc = callerLoc;
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     // A scope of a DILocation cannot be null.

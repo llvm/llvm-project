@@ -1190,10 +1190,7 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
 }
 
 void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
-                                          StringRef Rename) {
-  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
-                   "XCOFF targets");
-}
+                                          StringRef Rename) {}
 
 void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
@@ -1237,6 +1234,8 @@ void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                       unsigned MaxBytesToEmit) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
+void MCStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                                         const MCSubtargetInfo &STI) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
 void MCStreamer::emitBundleAlignMode(Align Alignment) {}
@@ -1316,6 +1315,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::DriverKit:
     // DriverKit always uses the build version load command.
     return VersionTuple();
+  case Triple::XROS:
+    // XROS always uses the build version load command.
+    return VersionTuple();
   default:
     break;
   }
@@ -1342,6 +1344,9 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
                                            : MachO::PLATFORM_WATCHOS;
   case Triple::DriverKit:
     return MachO::PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
   default:
     break;
   }
@@ -1373,6 +1378,9 @@ void MCStreamer::emitVersionForTarget(
     break;
   case Triple::DriverKit:
     Version = Target.getDriverKitVersion();
+    break;
+  case Triple::XROS:
+    Version = Target.getOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");

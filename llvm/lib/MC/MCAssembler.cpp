@@ -193,9 +193,9 @@ const MCSymbol *MCAssembler::getAtom(const MCSymbol &S) const {
   return S.getFragment()->getAtom();
 }
 
-bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
-                                const MCFixup &Fixup, const MCFragment *DF,
-                                MCValue &Target, uint64_t &Value,
+bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
+                                const MCFragment *DF, MCValue &Target,
+                                const MCSubtargetInfo *STI, uint64_t &Value,
                                 bool &WasForced) const {
   ++stats::evaluateFixup;
 
@@ -227,7 +227,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
 
   if (IsTarget)
     return getBackend().evaluateTargetFixup(*this, Layout, Fixup, DF, Target,
-                                            Value, WasForced);
+                                            STI, Value, WasForced);
 
   unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
@@ -282,7 +282,8 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   }
 
   // Let the backend force a relocation if needed.
-  if (IsResolved && getBackend().shouldForceRelocation(*this, Fixup, Target)) {
+  if (IsResolved &&
+      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
     IsResolved = false;
     WasForced = true;
   }
@@ -295,6 +296,43 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     return true;
 
   return IsResolved;
+}
+
+/// Check if the branch crosses the boundary.
+///
+/// \param StartAddr start address of the fused/unfused branch.
+/// \param Size size of the fused/unfused branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
+/// \returns true if the branch cross the boundary.
+static bool mayCrossBoundary(uint64_t StartAddr, uint64_t Size,
+                             Align BoundaryAlignment) {
+  uint64_t EndAddr = StartAddr + Size;
+  return (StartAddr >> Log2(BoundaryAlignment)) !=
+         ((EndAddr - 1) >> Log2(BoundaryAlignment));
+}
+
+/// Check if the branch is against the boundary.
+///
+/// \param StartAddr start address of the fused/unfused branch.
+/// \param Size size of the fused/unfused branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
+/// \returns true if the branch is against the boundary.
+static bool isAgainstBoundary(uint64_t StartAddr, uint64_t Size,
+                              Align BoundaryAlignment) {
+  uint64_t EndAddr = StartAddr + Size;
+  return (EndAddr & (BoundaryAlignment.value() - 1)) == 0;
+}
+
+/// Check if the branch needs padding.
+///
+/// \param StartAddr start address of the fused/unfused branch.
+/// \param Size size of the fused/unfused branch.
+/// \param BoundaryAlignment alignment requirement of the branch.
+/// \returns true if the branch needs padding.
+static bool needPadding(uint64_t StartAddr, uint64_t Size,
+                        Align BoundaryAlignment) {
+  return mayCrossBoundary(StartAddr, Size, BoundaryAlignment) ||
+         isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
 uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
@@ -355,6 +393,41 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     if (Size > AF.getMaxBytesToEmit())
       return 0;
     return Size;
+  }
+
+  case MCFragment::FT_NeverAlign: {
+    // Disclaimer: NeverAlign fragment size depends on the size of its immediate
+    // successor, but NeverAlign need not be a MCRelaxableFragment.
+    // NeverAlign fragment size is recomputed if the successor is relaxed:
+    // - If RelaxableFragment is relaxed, it gets invalidated by marking its
+    // predecessor as LastValidFragment.
+    // - This forces the assembler to call MCAsmLayout::layoutFragment on that
+    // relaxable fragment, which in turn will always ask the predecessor to
+    // compute its size (see "computeFragmentSize(prev)" in layoutFragment).
+    //
+    // In short, the simplest way to ensure that computeFragmentSize() is sane
+    // is to establish the following rule: it should never examine fragments
+    // after the current fragment in the section. If we logically need to
+    // examine any fragment after the current fragment, we need to do that using
+    // relaxation, inside MCAssembler::layoutSectionOnce.
+    const MCNeverAlignFragment &NAF = cast<MCNeverAlignFragment>(F);
+    const MCFragment *NF = F.getNextNode();
+    uint64_t Offset = Layout.getFragmentOffset(&NAF);
+    size_t NextFragSize = 0;
+    if (const auto *NextFrag = dyn_cast<MCRelaxableFragment>(NF)) {
+      NextFragSize = NextFrag->getContents().size();
+    } else if (const auto *NextFrag = dyn_cast<MCDataFragment>(NF)) {
+      NextFragSize = NextFrag->getContents().size();
+    } else {
+      llvm_unreachable("Didn't find the expected fragment after NeverAlign");
+    }
+    // Check if the next fragment ends at the alignment we want to avoid.
+    if (isAgainstBoundary(Offset, NextFragSize, Align(NAF.getAlignment()))) {
+      // Avoid this alignment by introducing minimum nop.
+      assert(getBackend().getMinimumNopSize() != NAF.getAlignment());
+      return getBackend().getMinimumNopSize();
+    }
+    return 0;
   }
 
   case MCFragment::FT_Org: {
@@ -580,6 +653,15 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     break;
   }
 
+  case MCFragment::FT_NeverAlign: {
+    const MCNeverAlignFragment &NAF = cast<MCNeverAlignFragment>(F);
+    if (!Asm.getBackend().writeNopData(OS, FragmentSize,
+                                       &NAF.getSubtargetInfo()))
+      report_fatal_error("unable to write nop sequence of " +
+                         Twine(FragmentSize) + " bytes");
+    break;
+  }
+
   case MCFragment::FT_Data:
     ++stats::EmittedDataFragments;
     OS << cast<MCDataFragment>(F).getContents();
@@ -796,13 +878,13 @@ void MCAssembler::writeSectionData(raw_ostream &OS, const MCSection *Sec,
 
 std::tuple<MCValue, uint64_t, bool>
 MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
-                         const MCFixup &Fixup) {
+                         const MCFixup &Fixup, const MCSubtargetInfo *STI) {
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
   bool WasForced;
-  bool IsResolved = evaluateFixup(Layout, Fixup, &F, Target, FixedValue,
-                                  WasForced);
+  bool IsResolved =
+      evaluateFixup(Layout, Fixup, &F, Target, STI, FixedValue, WasForced);
   if (!IsResolved) {
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
@@ -936,7 +1018,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         bool IsResolved;
         MCValue Target;
         std::tie(Target, FixedValue, IsResolved) =
-            handleFixup(Layout, Frag, Fixup);
+            handleFixup(Layout, Frag, Fixup, STI);
         getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
                                 IsResolved, STI);
       }
@@ -960,7 +1042,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   MCValue Target;
   uint64_t Value;
   bool WasForced;
-  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target, Value, WasForced);
+  bool Resolved = evaluateFixup(Layout, Fixup, DF, Target,
+                                DF->getSubtargetInfo(), Value, WasForced);
   if (Target.getSymA() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
       Fixup.getKind() == FK_Data_1)
@@ -1024,7 +1107,9 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
                  ? LF.getValue().evaluateKnownAbsolute(Value, Layout)
                  : LF.getValue().evaluateAsAbsolute(Value, Layout);
   if (!Abs) {
-    if (!getBackend().relaxLEB128(LF, Layout, Value)) {
+    bool Relaxed, UseZeroPad;
+    std::tie(Relaxed, UseZeroPad) = getBackend().relaxLEB128(LF, Layout, Value);
+    if (!Relaxed) {
       getContext().reportError(LF.getValue().getLoc(),
                                Twine(LF.isSigned() ? ".s" : ".u") +
                                    "leb128 expression is not absolute");
@@ -1032,6 +1117,8 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
     }
     uint8_t Tmp[10]; // maximum size: ceil(64/7)
     PadTo = std::max(PadTo, encodeULEB128(uint64_t(Value), Tmp));
+    if (UseZeroPad)
+      Value = 0;
   }
   Data.clear();
   raw_svector_ostream OSE(Data);
@@ -1044,43 +1131,6 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
   else
     encodeULEB128(Value, OSE, PadTo);
   return OldSize != LF.getContents().size();
-}
-
-/// Check if the branch crosses the boundary.
-///
-/// \param StartAddr start address of the fused/unfused branch.
-/// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment alignment requirement of the branch.
-/// \returns true if the branch cross the boundary.
-static bool mayCrossBoundary(uint64_t StartAddr, uint64_t Size,
-                             Align BoundaryAlignment) {
-  uint64_t EndAddr = StartAddr + Size;
-  return (StartAddr >> Log2(BoundaryAlignment)) !=
-         ((EndAddr - 1) >> Log2(BoundaryAlignment));
-}
-
-/// Check if the branch is against the boundary.
-///
-/// \param StartAddr start address of the fused/unfused branch.
-/// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment alignment requirement of the branch.
-/// \returns true if the branch is against the boundary.
-static bool isAgainstBoundary(uint64_t StartAddr, uint64_t Size,
-                              Align BoundaryAlignment) {
-  uint64_t EndAddr = StartAddr + Size;
-  return (EndAddr & (BoundaryAlignment.value() - 1)) == 0;
-}
-
-/// Check if the branch needs padding.
-///
-/// \param StartAddr start address of the fused/unfused branch.
-/// \param Size size of the fused/unfused branch.
-/// \param BoundaryAlignment alignment requirement of the branch.
-/// \returns true if the branch needs padding.
-static bool needPadding(uint64_t StartAddr, uint64_t Size,
-                        Align BoundaryAlignment) {
-  return mayCrossBoundary(StartAddr, Size, BoundaryAlignment) ||
-         isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
 bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,

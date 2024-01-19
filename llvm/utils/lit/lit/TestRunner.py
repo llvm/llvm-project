@@ -1352,7 +1352,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", baseName))
-    
+
     substitutions.extend(
         [
             ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
@@ -1795,6 +1795,7 @@ class ParserKind(object):
     TAG: A keyword taking no value. Ex 'END.'
     COMMAND: A keyword taking a list of shell commands. Ex 'RUN:'
     LIST: A keyword taking a comma-separated list of values.
+    SPACE_LIST: A keyword taking a space-separated list of values.
     BOOLEAN_EXPR: A keyword taking a comma-separated list of
         boolean expressions. Ex 'XFAIL:'
     INTEGER: A keyword taking a single integer. Ex 'ALLOW_RETRIES:'
@@ -1808,11 +1809,12 @@ class ParserKind(object):
     TAG = 0
     COMMAND = 1
     LIST = 2
-    BOOLEAN_EXPR = 3
-    INTEGER = 4
-    CUSTOM = 5
-    DEFINE = 6
-    REDEFINE = 7
+    SPACE_LIST = 3
+    BOOLEAN_EXPR = 4
+    INTEGER = 5
+    CUSTOM = 6
+    DEFINE = 7
+    REDEFINE = 8
 
     @staticmethod
     def allowedKeywordSuffixes(value):
@@ -1820,6 +1822,7 @@ class ParserKind(object):
             ParserKind.TAG: ["."],
             ParserKind.COMMAND: [":"],
             ParserKind.LIST: [":"],
+            ParserKind.SPACE_LIST: [":"],
             ParserKind.BOOLEAN_EXPR: [":"],
             ParserKind.INTEGER: [":"],
             ParserKind.CUSTOM: [":", "."],
@@ -1833,6 +1836,7 @@ class ParserKind(object):
             ParserKind.TAG: "TAG",
             ParserKind.COMMAND: "COMMAND",
             ParserKind.LIST: "LIST",
+            ParserKind.SPACE_LIST: "SPACE_LIST",
             ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
             ParserKind.INTEGER: "INTEGER",
             ParserKind.CUSTOM: "CUSTOM",
@@ -1881,6 +1885,8 @@ class IntegratedTestKeywordParser(object):
             )
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
+        elif kind == ParserKind.SPACE_LIST:
+            self.parser = self._handleSpaceList
         elif kind == ParserKind.BOOLEAN_EXPR:
             self.parser = self._handleBooleanExpr
         elif kind == ParserKind.INTEGER:
@@ -1953,6 +1959,14 @@ class IntegratedTestKeywordParser(object):
         if output is None:
             output = []
         output.extend([s.strip() for s in line.split(",")])
+        return output
+
+    @staticmethod
+    def _handleSpaceList(line_number, line, output):
+        """A parser for SPACE_LIST type keywords"""
+        if output is None:
+            output = []
+        output.extend([s.strip() for s in line.split(" ") if s.strip() != ""])
         return output
 
     @staticmethod

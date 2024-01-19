@@ -2553,14 +2553,18 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
 // Pow is a builtin call and not a primitive
 
 def fir_CmpcOp : fir_Op<"cmpc",
-    [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape]> {
+    [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "complex floating-point comparison operator";
 
   let description = [{
     A complex comparison to handle complex types found in FIR.
   }];
 
-  let arguments = (ins fir_ComplexType:$lhs, fir_ComplexType:$rhs);
+  let arguments = (ins
+      fir_ComplexType:$lhs,
+      fir_ComplexType:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
 
@@ -3034,6 +3038,45 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
+
+  let summary = "Get the address of a field in a fir.ref<fir.box>";
+
+  let description = [{
+    Given the address of a fir.box, compute the address of a field inside
+    the fir.box.
+    This allows keeping the actual runtime descriptor layout abstract in
+    FIR while providing access to the pointer addresses in the runtime
+    descriptor for OpenMP/OpenACC target mapping.
+
+    To avoid requiring too much information about the fields that the runtime
+    descriptor implementation must have, only the base_addr and derived_type
+    descriptor fields can be addressed.
+
+    ```
+        %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+        %tdesc = fir.box_offset %box derived_type : (!fir.ref<!fir.box<!fir.type<t>>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<t>>>
+
+    ```
+  }];
+
+  let arguments = (ins
+    AnyReferenceLike:$box_ref,
+    fir_BoxFieldAttr:$field
+  );
+
+  let results = (outs RefOrLLVMPtr);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $box_ref $field attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
+  ];
 }
 
 #endif

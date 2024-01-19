@@ -1915,6 +1915,23 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             mapOperands = exitDataOp.getMapOperands();
             return success();
           })
+          .Case([&](omp::UpdateDataOp updateDataOp) {
+            if (updateDataOp.getNowait())
+              return failure();
+
+            if (auto ifExprVar = updateDataOp.getIfExpr())
+              ifCond = moduleTranslation.lookupValue(ifExprVar);
+
+            if (auto devId = updateDataOp.getDevice())
+              if (auto constOp =
+                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+                if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
+                  deviceID = intAttr.getInt();
+
+            RTLFn = llvm::omp::OMPRTL___tgt_target_data_update_mapper;
+            mapOperands = updateDataOp.getMotionOperands();
+            return success();
+          })
           .Default([&](Operation *op) {
             return op->emitError("unsupported OpenMP operation: ")
                    << op->getName();
@@ -2018,6 +2035,12 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                              attribute.getOpenmpDeviceVersion());
+
+  if (attribute.getNoGpuLib())
+    return success();
+
   ompBuilder->createGlobalFlag(
       attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
       "__omp_rtl_debug_kind");
@@ -2039,8 +2062,6 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
           .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
       ,
       "__omp_rtl_assume_no_nested_parallelism");
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
   return success();
 }
 
@@ -2341,13 +2362,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
 
-  // Override parent name if early outlining function
-  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
-          opInst.getParentOfType<LLVM::LLVMFuncOp>().getOperation())) {
-    llvm::StringRef outlineParentName = earlyOutlineOp.getParentName();
-    parentName = outlineParentName.empty() ? parentName : outlineParentName;
-  }
-
   llvm::TargetRegionEntryInfo entryInfo;
 
   if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
@@ -2555,14 +2569,16 @@ public:
   /// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
   /// calls, or operation amendments
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
 } // namespace
 
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
-    Operation *op, NamedAttribute attribute,
+    Operation *op, ArrayRef<llvm::Instruction *> instructions,
+    NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
   return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
              attribute.getName())
@@ -2748,9 +2764,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::ThreadprivateOp) {
         return convertOmpThreadprivate(*op, builder, moduleTranslation);
       })
-      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp>([&](auto op) {
-        return convertOmpTargetData(op, builder, moduleTranslation);
-      })
+      .Case<omp::DataOp, omp::EnterDataOp, omp::ExitDataOp, omp::UpdateDataOp>(
+          [&](auto op) {
+            return convertOmpTargetData(op, builder, moduleTranslation);
+          })
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
       })

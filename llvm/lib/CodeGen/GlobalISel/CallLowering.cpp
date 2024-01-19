@@ -146,7 +146,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
   if (const Function *F = dyn_cast<Function>(CalleeV))
     Info.Callee = MachineOperand::CreateGA(F, 0);
-  else
+  else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
+    // IR IFuncs and Aliases can't be forward declared (only defined), so the
+    // callee must be in the same TU and therefore we can direct-call it without
+    // worrying about it being out of range.
+    Info.Callee = MachineOperand::CreateGA(cast<GlobalValue>(CalleeV), 0);
+  } else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
   Register ReturnHintAlignReg;
@@ -473,9 +478,43 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   } else {
     // Vector was split, and elements promoted to a wider type.
     // FIXME: Should handle floating point promotions.
-    LLT BVType = LLT::fixed_vector(LLTy.getNumElements(), PartLLT);
-    auto BV = B.buildBuildVector(BVType, Regs);
-    B.buildTrunc(OrigRegs[0], BV);
+    unsigned NumElts = LLTy.getNumElements();
+    LLT BVType = LLT::fixed_vector(NumElts, PartLLT);
+
+    Register BuildVec;
+    if (NumElts == Regs.size())
+      BuildVec = B.buildBuildVector(BVType, Regs).getReg(0);
+    else {
+      // Vector elements are packed in the inputs.
+      // e.g. we have a <4 x s16> but 2 x s32 in regs.
+      assert(NumElts > Regs.size());
+      LLT SrcEltTy = MRI.getType(Regs[0]);
+
+      LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
+
+      // Input registers contain packed elements.
+      // Determine how many elements per reg.
+      assert((SrcEltTy.getSizeInBits() % OriginalEltTy.getSizeInBits()) == 0);
+      unsigned EltPerReg =
+          (SrcEltTy.getSizeInBits() / OriginalEltTy.getSizeInBits());
+
+      SmallVector<Register, 0> BVRegs;
+      BVRegs.reserve(Regs.size() * EltPerReg);
+      for (Register R : Regs) {
+        auto Unmerge = B.buildUnmerge(OriginalEltTy, R);
+        for (unsigned K = 0; K < EltPerReg; ++K)
+          BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
+      }
+
+      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces
+      // for a <3 x s16> vector. We should have less than EltPerReg extra items.
+      if (BVRegs.size() > NumElts) {
+        assert((BVRegs.size() - NumElts) < EltPerReg);
+        BVRegs.truncate(NumElts);
+      }
+      BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
+    }
+    B.buildTrunc(OrigRegs[0], BuildVec);
   }
 }
 
@@ -689,7 +728,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)
         return false;
-      j += NumArgRegs;
+      j += (NumArgRegs - 1);
       continue;
     }
 

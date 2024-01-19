@@ -368,15 +368,11 @@ define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    addvl x9, sp, #2
-; CHECK-NEXT:    addvl x10, sp, #1
-; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    rdsvl x3, #1
+; CHECK-NEXT:    addvl x0, sp, #2
+; CHECK-NEXT:    addvl x1, sp, #1
+; CHECK-NEXT:    mov x2, sp
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    mov x0, x9
-; CHECK-NEXT:    mov x1, x10
-; CHECK-NEXT:    mov x2, x11
-; CHECK-NEXT:    mov x3, x8
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.b
@@ -400,8 +396,37 @@ entry:
   ret i8 %vecext
 }
 
+define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2) #0 {
+; CHECK-LABEL: call_to_non_streaming_pass_args:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #112
+; CHECK-NEXT:    stp d15, d14, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
+; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    bl bar
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    ret
+entry:
+  call void @bar(ptr noundef nonnull %ptr, i64 %long1, i64 %long2, i32 %int1, i32 %int2, float %float1, float %float2, double %double1, double %double2)
+  ret void
+}
+
 declare i64 @llvm.aarch64.sme.cntsb()
 
 declare void @foo(ptr noundef, ptr noundef, ptr noundef, i64 noundef)
+declare void @bar(ptr noundef, i64 noundef, i64 noundef, i32 noundef, i32 noundef, float noundef, float noundef, double noundef, double noundef)
 
 attributes #0 = { nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" }

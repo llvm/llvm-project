@@ -871,7 +871,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   prettyPrintAttributes(D, Out, AttrPrintLoc::Right);
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     Out << " = 0";
   else if (D->isDeletedAsWritten())
     Out << " = delete";
@@ -1728,7 +1728,7 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
   std::string TypeStr = PDecl->getASTContext().getUnqualifiedObjCPointerType(T).
       getAsString(Policy);
   Out << ' ' << TypeStr;
-  if (!StringRef(TypeStr).endswith("*"))
+  if (!StringRef(TypeStr).ends_with("*"))
     Out << ' ';
   Out << *PDecl;
   if (Policy.PolishForDeclaration)

@@ -3877,8 +3877,8 @@ enum CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ast_filename, CXXIdx->getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, FileSystemOpts, HSOpts,
-      /*UseDebugInfo=*/false, CXXIdx->getOnlyLocalDecls(),
-      CaptureDiagsKind::All, /*AllowASTWithCompilerErrors=*/true,
+      CXXIdx->getOnlyLocalDecls(), CaptureDiagsKind::All,
+      /*AllowASTWithCompilerErrors=*/true,
       /*UserFilesAreVolatile=*/true);
   *out_TU = MakeCXTranslationUnit(CXXIdx, std::move(AU));
   return *out_TU ? CXError_Success : CXError_Failure;
@@ -9007,7 +9007,7 @@ unsigned clang_CXXMethod_isPureVirtual(CXCursor C) {
   const Decl *D = cxcursor::getCursorDecl(C);
   const CXXMethodDecl *Method =
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && Method->isVirtual() && Method->isPure()) ? 1 : 0;
+  return (Method && Method->isPureVirtual()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isConst(CXCursor C) {

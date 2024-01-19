@@ -478,8 +478,8 @@ struct VectorReductionFloatMinMax final
 
         INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
         INT_OR_FLOAT_CASE(MINIMUMF, SPIRVFMinOp);
-        INT_OR_FLOAT_CASE(MAXF, SPIRVFMaxOp);
-        INT_OR_FLOAT_CASE(MINF, SPIRVFMinOp);
+        INT_OR_FLOAT_CASE(MAXNUMF, SPIRVFMaxOp);
+        INT_OR_FLOAT_CASE(MINNUMF, SPIRVFMinOp);
 
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");

@@ -538,7 +538,7 @@ Error RewriteInstance::discoverStorage() {
 
     if (!opts::HeatmapMode &&
         !(opts::AggregateOnly && BAT->enabledFor(InputFile)) &&
-        (SectionName.startswith(getOrgSecPrefix()) ||
+        (SectionName.starts_with(getOrgSecPrefix()) ||
          SectionName == getBOLTTextSectionName()))
       return createStringError(
           errc::function_not_supported,
@@ -623,7 +623,9 @@ void RewriteInstance::parseBuildID() {
 
   // Reading notes section (see Portable Formats Specification, Version 1.1,
   // pg 2-5, section "Note Section").
-  DataExtractor DE = DataExtractor(Buf, true, 8);
+  DataExtractor DE =
+      DataExtractor(Buf,
+                    /*IsLittleEndian=*/true, InputFile->getBytesInAddress());
   uint64_t Offset = 0;
   if (!DE.isValidOffset(Offset))
     return;
@@ -776,12 +778,12 @@ void RewriteInstance::discoverFileObjects() {
   std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
-    if (NameOrError && NameOrError->startswith("__asan_init")) {
+    if (NameOrError && NameOrError->starts_with("__asan_init")) {
       errs() << "BOLT-ERROR: input file was compiled or linked with sanitizer "
                 "support. Cannot optimize.\n";
       exit(1);
     }
-    if (NameOrError && NameOrError->startswith("__llvm_coverage_mapping")) {
+    if (NameOrError && NameOrError->starts_with("__llvm_coverage_mapping")) {
       errs() << "BOLT-ERROR: input file was compiled or linked with coverage "
                 "support. Cannot optimize.\n";
       exit(1);
@@ -936,9 +938,10 @@ void RewriteInstance::discoverFileObjects() {
     /// It is possible we are seeing a globalized local. LLVM might treat it as
     /// a local if it has a "private global" prefix, e.g. ".L". Thus we have to
     /// change the prefix to enforce global scope of the symbol.
-    std::string Name = SymName.startswith(BC->AsmInfo->getPrivateGlobalPrefix())
-                           ? "PG" + std::string(SymName)
-                           : std::string(SymName);
+    std::string Name =
+        SymName.starts_with(BC->AsmInfo->getPrivateGlobalPrefix())
+            ? "PG" + std::string(SymName)
+            : std::string(SymName);
 
     // Disambiguate all local symbols before adding to symbol table.
     // Since we don't know if we will see a global with the same name,
@@ -2721,8 +2724,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
               BD->nameStartsWith(SymbolName) ||
               BD->nameStartsWith("PG" + SymbolName) ||
               (BD->nameStartsWith("ANONYMOUS") &&
-               (BD->getSectionName().startswith(".plt") ||
-                BD->getSectionName().endswith(".plt")))) &&
+               (BD->getSectionName().starts_with(".plt") ||
+                BD->getSectionName().ends_with(".plt")))) &&
              "BOLT symbol names of all non-section relocations must match up "
              "with symbol names referenced in the relocation");
 
@@ -2738,7 +2741,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // in relocation sections can get through here too, from .plt.
       assert(
           (IsAArch64 || BC->isRISCV() || IsSectionRelocation ||
-           BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
+           BC->getSectionNameForAddress(SymbolAddress)->starts_with(".plt")) &&
           "known symbols should not resolve to anonymous locals");
 
       if (IsSectionRelocation) {
@@ -2755,7 +2758,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           Name = SymbolName;
         } else {
           if (StringRef(SymbolName)
-                  .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
+                  .starts_with(BC->AsmInfo->getPrivateGlobalPrefix()))
             Name = NR.uniquify("PG" + SymbolName);
           else
             Name = NR.uniquify(SymbolName);
@@ -3462,8 +3465,8 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
     // - if opts::HotFunctionsAtEnd is false, we want order
     //   ".text.cold", ".text.cold.1", ... ".text.cold.T-1", ".text.cold.T"
-    if (A->getName().startswith(BC->getColdCodeSectionName()) &&
-        B->getName().startswith(BC->getColdCodeSectionName())) {
+    if (A->getName().starts_with(BC->getColdCodeSectionName()) &&
+        B->getName().starts_with(BC->getColdCodeSectionName())) {
       if (A->getName().size() != B->getName().size())
         return (opts::HotFunctionsAtEnd)
                    ? (A->getName().size() > B->getName().size())
@@ -3478,11 +3481,21 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     if (B->getName() == BC->getHotTextMoverSectionName())
       return false;
 
-    // Depending on the option, put main text at the beginning or at the end.
-    if (opts::HotFunctionsAtEnd)
-      return B->getName() == BC->getMainCodeSectionName();
-    else
-      return A->getName() == BC->getMainCodeSectionName();
+    // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
+    // order.
+    if (opts::HotFunctionsAtEnd) {
+      if (B->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (A->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (B->getName() == BC->getWarmCodeSectionName());
+    } else {
+      if (A->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (B->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (A->getName() == BC->getWarmCodeSectionName());
+    }
   };
 
   // Determine the order of sections.
@@ -3524,6 +3537,9 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
 
     // Allocate sections starting at a given Address.
     auto allocateAt = [&](uint64_t Address) {
+      const char *LastNonColdSectionName = BC->HasWarmSection
+                                               ? BC->getWarmCodeSectionName()
+                                               : BC->getMainCodeSectionName();
       for (BinarySection *Section : CodeSections) {
         Address = alignTo(Address, Section->getAlignment());
         Section->setOutputAddress(Address);
@@ -3532,13 +3548,13 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
         // Hugify: Additional huge page from right side due to
         // weird ASLR mapping addresses (4KB aligned)
         if (opts::Hugify && !BC->HasFixedLoadAddress &&
-            Section->getName() == BC->getMainCodeSectionName())
+            Section->getName() == LastNonColdSectionName)
           Address = alignTo(Address, Section->getAlignment());
       }
 
       // Make sure we allocate enough space for huge pages.
       ErrorOr<BinarySection &> TextSection =
-          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+          BC->getUniqueSectionByName(LastNonColdSectionName);
       if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
@@ -4096,6 +4112,7 @@ void RewriteInstance::encodeBATSection() {
                                   copyByteArray(BoltInfo), BoltInfo.size(),
                                   /*Alignment=*/1,
                                   /*IsReadOnly=*/true, ELF::SHT_NOTE);
+  outs() << "BOLT-INFO: BAT section size (bytes): " << BoltInfo.size() << '\n';
 }
 
 template <typename ELFShdrTy>
@@ -4396,6 +4413,21 @@ void RewriteInstance::updateELFSymbolTable(
     return NewIndex;
   };
 
+  // Get the extra symbol name of a split fragment; used in addExtraSymbols.
+  auto getSplitSymbolName = [&](const FunctionFragment &FF,
+                                const ELFSymTy &FunctionSymbol) {
+    SmallString<256> SymbolName;
+    if (BC->HasWarmSection)
+      SymbolName =
+          formatv("{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+                  FF.getFragmentNum() == FragmentNum::warm() ? "warm" : "cold");
+    else
+      SymbolName = formatv("{0}.cold.{1}",
+                           cantFail(FunctionSymbol.getName(StringSection)),
+                           FF.getFragmentNum().get() - 1);
+    return SymbolName;
+  };
+
   // Add extra symbols for the function.
   //
   // Note that addExtraSymbols() could be called multiple times for the same
@@ -4423,9 +4455,8 @@ void RewriteInstance::updateELFSymbolTable(
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
           ELFSymTy NewColdSym = FunctionSymbol;
-          const SmallString<256> SymbolName = formatv(
-              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-              FF.getFragmentNum().get() - 1);
+          const SmallString<256> SymbolName =
+              getSplitSymbolName(FF, FunctionSymbol);
           NewColdSym.st_name = AddToStrTab(SymbolName);
           NewColdSym.st_shndx =
               Function.getCodeSection(FF.getFragmentNum())->getIndex();
@@ -5624,16 +5655,16 @@ bool RewriteInstance::willOverwriteSection(StringRef SectionName) {
 }
 
 bool RewriteInstance::isDebugSection(StringRef SectionName) {
-  if (SectionName.startswith(".debug_") || SectionName.startswith(".zdebug_") ||
-      SectionName == ".gdb_index" || SectionName == ".stab" ||
-      SectionName == ".stabstr")
+  if (SectionName.starts_with(".debug_") ||
+      SectionName.starts_with(".zdebug_") || SectionName == ".gdb_index" ||
+      SectionName == ".stab" || SectionName == ".stabstr")
     return true;
 
   return false;
 }
 
 bool RewriteInstance::isKSymtabSection(StringRef SectionName) {
-  if (SectionName.startswith("__ksymtab"))
+  if (SectionName.starts_with("__ksymtab"))
     return true;
 
   return false;

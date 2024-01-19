@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/Environment.h"
+
 #include "Allocator.h"
 #include "Debug.h"
-#include "Environment.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
@@ -77,11 +78,11 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment,
+    inititializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
                         KernelLaunchEnvironment);
     synchronize::threadsAligned(atomic::relaxed);
   } else {
-    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment,
+    inititializeRuntime(/*IsSPMD=*/false, KernelEnvironment,
                         KernelLaunchEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.

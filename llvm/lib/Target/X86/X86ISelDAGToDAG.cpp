@@ -487,7 +487,7 @@ namespace {
     // from PatFrags in tablegen.
     bool isUnneededShiftMask(SDNode *N, unsigned Width) const {
       assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
-      const APInt &Val = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+      const APInt &Val = N->getConstantOperandAPInt(1);
 
       if (Val.countr_one() >= Width)
         return true;
@@ -1828,9 +1828,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
   // That signifies access to globals that are known to be "near",
   // such as the GOT itself.
   CodeModel::Model M = TM.getCodeModel();
-  if (Subtarget->is64Bit() &&
-      ((M == CodeModel::Large && !IsRIPRelTLS) ||
-       (M == CodeModel::Medium && !IsRIPRel)))
+  if (Subtarget->is64Bit() && M == CodeModel::Large && !IsRIPRelTLS)
     return true;
 
   // Base and index reg must be 0 in order to use %rip as base.
@@ -1865,6 +1863,13 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
     Offset = BA->getOffset();
   } else
     llvm_unreachable("Unhandled symbol reference node.");
+
+  // Can't use an addressing mode with large globals.
+  if (Subtarget->is64Bit() && !IsRIPRel && AM.GV &&
+      TM.isLargeGlobalValue(AM.GV)) {
+    AM = Backup;
+    return true;
+  }
 
   if (foldOffsetIntoAddress(Offset, AM)) {
     AM = Backup;
@@ -1910,20 +1915,12 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
 
   // Post-processing: Convert foo to foo(%rip), even in non-PIC mode,
   // because it has a smaller encoding.
-  // TODO: Which other code models can use this?
-  switch (TM.getCodeModel()) {
-    default: break;
-    case CodeModel::Small:
-    case CodeModel::Kernel:
-      if (Subtarget->is64Bit() &&
-          AM.Scale == 1 &&
-          AM.BaseType == X86ISelAddressMode::RegBase &&
-          AM.Base_Reg.getNode() == nullptr &&
-          AM.IndexReg.getNode() == nullptr &&
-          AM.SymbolFlags == X86II::MO_NO_FLAG &&
-          AM.hasSymbolicDisplacement())
-        AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
-      break;
+  if (TM.getCodeModel() != CodeModel::Large &&
+      (!AM.GV || !TM.isLargeGlobalValue(AM.GV)) && Subtarget->is64Bit() &&
+      AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
+      AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
+      AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
+    AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 
   return false;
@@ -2358,8 +2355,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
-        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
-        uint64_t Offset = (uint64_t)AddVal->getZExtValue();
+        uint64_t Offset = Src.getConstantOperandVal(1);
         if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
           SDLoc DL(N);
           SDValue Res;
@@ -2855,7 +2851,7 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
                                        SDValue &Index, SDValue &Disp,
                                        SDValue &Segment) {
   X86ISelAddressMode AM;
-  AM.Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
+  AM.Scale = ScaleOp->getAsZExtVal();
 
   // Attempt to match index patterns, as long as we're not relying on implicit
   // sign-extension, which is performed BEFORE scale.
@@ -2927,6 +2923,13 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
+  // Cannot use 32 bit constants to reference objects in kernel code model.
+  // Cannot use 32 bit constants to reference objects in large PIC mode since
+  // GOTOFF is 64 bits.
+  if (TM.getCodeModel() == CodeModel::Kernel ||
+      (TM.getCodeModel() == CodeModel::Large && TM.isPositionIndependent()))
+    return false;
+
   // In static codegen with small code model, we can get the address of a label
   // into a register with 'movl'
   if (N->getOpcode() != X86ISD::Wrapper)
@@ -2940,15 +2943,18 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
     return false;
 
   Imm = N;
-  if (N->getOpcode() != ISD::TargetGlobalAddress)
-    return TM.getCodeModel() == CodeModel::Small;
+  // Small/medium code model can reference non-TargetGlobalAddress objects with
+  // 32 bit constants.
+  if (N->getOpcode() != ISD::TargetGlobalAddress) {
+    return TM.getCodeModel() == CodeModel::Small ||
+           TM.getCodeModel() == CodeModel::Medium;
+  }
 
-  std::optional<ConstantRange> CR =
-      cast<GlobalAddressSDNode>(N)->getGlobal()->getAbsoluteSymbolRange();
-  if (!CR)
-    return TM.getCodeModel() == CodeModel::Small;
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(N)->getGlobal();
+  if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange())
+    return CR->getUnsignedMax().ult(1ull << 32);
 
-  return CR->getUnsignedMax().ult(1ull << 32);
+  return !TM.isLargeGlobalValue(GV);
 }
 
 bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
@@ -4080,14 +4086,17 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   SDValue Control;
   unsigned ROpc, MOpc;
 
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget->hasEGPR() ? OPC##_EVEX : OPC)
   if (!PreferBEXTR) {
     assert(Subtarget->hasBMI2() && "We must have BMI2's BZHI then.");
     // If we can't make use of BEXTR then we can't fuse shift+mask stages.
     // Let's perform the mask first, and apply shift later. Note that we need to
     // widen the mask to account for the fact that we'll apply shift afterwards!
     Control = CurDAG->getTargetConstant(Shift + MaskSize, dl, NVT);
-    ROpc = NVT == MVT::i64 ? X86::BZHI64rr : X86::BZHI32rr;
-    MOpc = NVT == MVT::i64 ? X86::BZHI64rm : X86::BZHI32rm;
+    ROpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BZHI64rr)
+                           : GET_EGPR_IF_ENABLED(X86::BZHI32rr);
+    MOpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BZHI64rm)
+                           : GET_EGPR_IF_ENABLED(X86::BZHI32rm);
     unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
     Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
   } else {
@@ -4102,8 +4111,10 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     } else {
       assert(Subtarget->hasBMI() && "We must have BMI1's BEXTR then.");
       // BMI requires the immediate to placed in a register.
-      ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
-      MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+      ROpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BEXTR64rr)
+                             : GET_EGPR_IF_ENABLED(X86::BEXTR32rr);
+      MOpc = NVT == MVT::i64 ? GET_EGPR_IF_ENABLED(X86::BEXTR64rm)
+                             : GET_EGPR_IF_ENABLED(X86::BEXTR32rm);
       unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
       Control = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, Control), 0);
     }
@@ -5226,7 +5237,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case X86ISD::VPTERNLOG: {
-    uint8_t Imm = cast<ConstantSDNode>(Node->getOperand(3))->getZExtValue();
+    uint8_t Imm = Node->getConstantOperandVal(3);
     if (matchVPTERNLOG(Node, Node, Node, Node, Node->getOperand(0),
                        Node->getOperand(1), Node->getOperand(2), Imm))
       return;
@@ -5476,25 +5487,30 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     switch (NVT.SimpleTy) {
     default: llvm_unreachable("Unsupported VT!");
     case MVT::i32:
-      Opc  = UseMULXHi ? X86::MULX32Hrr :
-             UseMULX ? X86::MULX32rr :
-             IsSigned ? X86::IMUL32r : X86::MUL32r;
-      MOpc = UseMULXHi ? X86::MULX32Hrm :
-             UseMULX ? X86::MULX32rm :
-             IsSigned ? X86::IMUL32m : X86::MUL32m;
+      Opc = UseMULXHi  ? X86::MULX32Hrr
+            : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rr)
+            : IsSigned ? X86::IMUL32r
+                       : X86::MUL32r;
+      MOpc = UseMULXHi  ? X86::MULX32Hrm
+             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX32rm)
+             : IsSigned ? X86::IMUL32m
+                        : X86::MUL32m;
       LoReg = UseMULX ? X86::EDX : X86::EAX;
       HiReg = X86::EDX;
       break;
     case MVT::i64:
-      Opc  = UseMULXHi ? X86::MULX64Hrr :
-             UseMULX ? X86::MULX64rr :
-             IsSigned ? X86::IMUL64r : X86::MUL64r;
-      MOpc = UseMULXHi ? X86::MULX64Hrm :
-             UseMULX ? X86::MULX64rm :
-             IsSigned ? X86::IMUL64m : X86::MUL64m;
+      Opc = UseMULXHi  ? X86::MULX64Hrr
+            : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX64rr)
+            : IsSigned ? X86::IMUL64r
+                       : X86::MUL64r;
+      MOpc = UseMULXHi  ? X86::MULX64Hrm
+             : UseMULX  ? GET_EGPR_IF_ENABLED(X86::MULX64rm)
+             : IsSigned ? X86::IMUL64m
+                        : X86::MUL64m;
       LoReg = UseMULX ? X86::RDX : X86::RAX;
       HiReg = X86::RDX;
       break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;

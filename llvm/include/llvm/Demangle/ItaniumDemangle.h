@@ -888,6 +888,32 @@ public:
   }
 };
 
+/// Represents the explicitly named object parameter.
+/// E.g.,
+/// \code{.cpp}
+///   struct Foo {
+///     void bar(this Foo && self);
+///   };
+/// \endcode
+class ExplicitObjectParameter final : public Node {
+  Node *Base;
+
+public:
+  ExplicitObjectParameter(Node *Base_)
+      : Node(KExplicitObjectParameter), Base(Base_) {
+    DEMANGLE_ASSERT(
+        Base != nullptr,
+        "Creating an ExplicitObjectParameter without a valid Base Node.");
+  }
+
+  template <typename Fn> void match(Fn F) const { F(Base); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB += "this ";
+    Base->print(OB);
+  }
+};
+
 class FunctionEncoding final : public Node {
   const Node *Ret;
   const Node *Name;
@@ -2767,7 +2793,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseClassEnumType();
   Node *parseQualifiedType();
 
-  Node *parseEncoding();
+  Node *parseEncoding(bool ParseParams = true);
   bool parseCallOffset();
   Node *parseSpecialName();
 
@@ -2779,6 +2805,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     Qualifiers CVQualifiers = QualNone;
     FunctionRefQual ReferenceQualifier = FrefQualNone;
     size_t ForwardTemplateRefsBegin;
+    bool HasExplicitObjectParameter = false;
 
     NameState(AbstractManglingParser *Enclosing)
         : ForwardTemplateRefsBegin(Enclosing->ForwardTemplateRefs.size()) {}
@@ -2883,7 +2910,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseDestructorName();
 
   /// Top-level entry point into the parser.
-  Node *parse();
+  Node *parse(bool ParseParams = true);
 };
 
 const char* parse_discriminator(const char* first, const char* last);
@@ -3437,15 +3464,25 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
   if (!consumeIf('N'))
     return nullptr;
 
-  Qualifiers CVTmp = parseCVQualifiers();
-  if (State) State->CVQualifiers = CVTmp;
+  // 'H' specifies that the encoding that follows
+  // has an explicit object parameter.
+  if (!consumeIf('H')) {
+    Qualifiers CVTmp = parseCVQualifiers();
+    if (State)
+      State->CVQualifiers = CVTmp;
 
-  if (consumeIf('O')) {
-    if (State) State->ReferenceQualifier = FrefQualRValue;
-  } else if (consumeIf('R')) {
-    if (State) State->ReferenceQualifier = FrefQualLValue;
-  } else {
-    if (State) State->ReferenceQualifier = FrefQualNone;
+    if (consumeIf('O')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualRValue;
+    } else if (consumeIf('R')) {
+      if (State)
+        State->ReferenceQualifier = FrefQualLValue;
+    } else {
+      if (State)
+        State->ReferenceQualifier = FrefQualNone;
+    }
+  } else if (State) {
+    State->HasExplicitObjectParameter = true;
   }
 
   Node *SoFar = nullptr;
@@ -5367,7 +5404,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
 //            ::= <data name>
 //            ::= <special-name>
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
+Node *AbstractManglingParser<Derived, Alloc>::parseEncoding(bool ParseParams) {
   // The template parameters of an encoding are unrelated to those of the
   // enclosing context.
   SaveTemplateParams SaveTemplateParamsScope(this);
@@ -5392,6 +5429,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
 
   if (IsEndOfEncoding())
     return Name;
+
+  // ParseParams may be false at the top level only, when called from parse().
+  // For example in the mangled name _Z3fooILZ3BarEET_f, ParseParams may be
+  // false when demangling 3fooILZ3BarEET_f but is always true when demangling
+  // 3Bar.
+  if (!ParseParams) {
+    while (consume())
+      ;
+    return Name;
+  }
 
   Node *Attrs = nullptr;
   if (consumeIf("Ua9enable_ifI")) {
@@ -5421,6 +5468,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
       Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
+
+      const bool IsFirstParam = ParamsBegin == Names.size();
+      if (NameInfo.HasExplicitObjectParameter && IsFirstParam)
+        Ty = make<ExplicitObjectParameter>(Ty);
+
+      if (Ty == nullptr)
+        return nullptr;
+
       Names.push_back(Ty);
     } while (!IsEndOfEncoding() && look() != 'Q');
     Params = popTrailingNodeArray(ParamsBegin);
@@ -5849,9 +5904,9 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parse() {
+Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
   if (consumeIf("_Z") || consumeIf("__Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
@@ -5865,7 +5920,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parse() {
   }
 
   if (consumeIf("___Z") || consumeIf("____Z")) {
-    Node *Encoding = getDerived().parseEncoding();
+    Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr || !consumeIf("_block_invoke"))
       return nullptr;
     bool RequireNumber = consumeIf('_');

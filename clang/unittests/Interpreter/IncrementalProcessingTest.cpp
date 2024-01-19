@@ -44,7 +44,7 @@ const char TestProgram2[] = "extern \"C\" int funcForProg2() { return 42; }\n"
 
 const Function *getGlobalInit(llvm::Module *M) {
   for (const auto &Func : *M)
-    if (Func.hasName() && Func.getName().startswith("_GLOBAL__sub_I_"))
+    if (Func.hasName() && Func.getName().starts_with("_GLOBAL__sub_I_"))
       return &Func;
 
   return nullptr;

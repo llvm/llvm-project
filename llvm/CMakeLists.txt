@@ -346,6 +346,8 @@ set(PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
+set(LLDB_BUG_REPORT_URL "${BUG_REPORT_URL}" CACHE STRING
+  "Default URL where lldb bug reports are to be submitted.")
 
 # Configure CPack.
 if(NOT DEFINED CPACK_PACKAGE_INSTALL_DIRECTORY)
@@ -581,7 +583,9 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
+if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+  option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
+endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
@@ -684,6 +688,10 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
+
+# Facebook T92898286
+option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
+# End Facebook T92898286
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
@@ -1127,6 +1135,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
+  add_compile_definitions(_EXT) # Needed for file data.
+  add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.
@@ -1255,6 +1265,7 @@ if( LLVM_INCLUDE_TESTS )
   add_custom_target(test-depends
       DEPENDS ${LLVM_ALL_LIT_DEPENDS} ${LLVM_ALL_ADDITIONAL_TEST_DEPENDS})
   set_target_properties(test-depends PROPERTIES FOLDER "Tests")
+  add_dependencies(check-all test-depends)
 endif()
 
 if (LLVM_INCLUDE_DOCS)
