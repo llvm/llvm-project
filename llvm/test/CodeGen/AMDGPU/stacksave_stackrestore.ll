@@ -878,7 +878,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s6, s0, 5
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; WAVE32-OPT-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; WAVE32-OPT-NEXT:    buffer_store_dword v0, off, s[8:11], 0 offset:4
+; WAVE32-OPT-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; WAVE32-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-OPT-NEXT:    buffer_store_dword v1, off, s[8:11], s32 offset:4
 ; WAVE32-OPT-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -904,7 +904,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s6, s0, 6
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; WAVE64-OPT-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; WAVE64-OPT-NEXT:    buffer_store_dword v0, off, s[8:11], 0 offset:4
+; WAVE64-OPT-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; WAVE64-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-OPT-NEXT:    buffer_store_dword v1, off, s[8:11], s32 offset:4
 ; WAVE64-OPT-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -935,10 +935,10 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    s_lshr_b32 s0, s0, 5
 ; WAVE32-O0-NEXT:    v_writelane_b32 v3, s0, 1
 ; WAVE32-O0-NEXT:    s_or_saveexec_b32 s19, -1
-; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:132 ; 4-byte Folded Spill
+; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:128 ; 4-byte Folded Spill
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s19
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:4
+; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], 0
 ; WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-O0-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; WAVE32-O0-NEXT:    s_mov_b64 s[2:3], s[22:23]
@@ -1020,7 +1020,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v30, s18
 ; WAVE32-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE32-O0-NEXT:    s_or_saveexec_b32 s19, -1
-; WAVE32-O0-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:132 ; 4-byte Folded Reload
+; WAVE32-O0-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:128 ; 4-byte Folded Reload
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s19
 ; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-O0-NEXT:    v_readlane_b32 s1, v0, 1
@@ -1053,10 +1053,10 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    s_lshr_b32 s0, s0, 6
 ; WAVE64-O0-NEXT:    v_writelane_b32 v3, s0, 1
 ; WAVE64-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:132 ; 4-byte Folded Spill
+; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:128 ; 4-byte Folded Spill
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[20:21]
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:4
+; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], 0
 ; WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-O0-NEXT:    s_mov_b64 s[0:1], s[24:25]
 ; WAVE64-O0-NEXT:    s_mov_b64 s[2:3], s[26:27]
@@ -1138,7 +1138,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v30, s18
 ; WAVE64-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; WAVE64-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; WAVE64-O0-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:132 ; 4-byte Folded Reload
+; WAVE64-O0-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:128 ; 4-byte Folded Reload
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[20:21]
 ; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-O0-NEXT:    v_readlane_b32 s1, v0, 1
@@ -1172,7 +1172,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s0, s0, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s0, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v3, 42
-; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:4
+; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v3, off, s[20:23], 0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[2:3], s[22:23]

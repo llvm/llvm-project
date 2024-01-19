@@ -3,8 +3,8 @@
 
 declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture, i8, i32, i32, i1) #1
 
-; ERROR: error: <unknown>:0:0: stack frame size (131061) exceeds limit (131056) in function 'stack_size_limit_wave64'
-; GCN: ; ScratchSize: 131061
+; ERROR: error: <unknown>:0:0: stack frame size (131064) exceeds limit (131056) in function 'stack_size_limit_wave64'
+; GCN: ; ScratchSize: 131064
 define amdgpu_kernel void @stack_size_limit_wave64() #0 {
 entry:
   %alloca = alloca [131057 x i8], align 1, addrspace(5)
@@ -12,8 +12,8 @@ entry:
   ret void
 }
 
-; ERROR: error: <unknown>:0:0: stack frame size (262117) exceeds limit (262112) in function 'stack_size_limit_wave32'
-; GCN: ; ScratchSize: 262117
+; ERROR: error: <unknown>:0:0: stack frame size (262120) exceeds limit (262112) in function 'stack_size_limit_wave32'
+; GCN: ; ScratchSize: 262120
 define amdgpu_kernel void @stack_size_limit_wave32() #1 {
 entry:
   %alloca = alloca [262113 x i8], align 1, addrspace(5)
