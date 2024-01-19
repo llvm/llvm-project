@@ -1864,7 +1864,7 @@ static void addConstantComments(const MachineInstr *MI,
 
     if (auto *C =
             X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
-      if (SclWidth == C->getType()->getScalarSizeInBits()) {
+      if ((unsigned)SclWidth == C->getType()->getScalarSizeInBits()) {
         if (auto *CI = dyn_cast<ConstantInt>(C)) {
           CS << "[";
           printConstant(CI->getValue(), CS);
