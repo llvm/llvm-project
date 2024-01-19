@@ -1814,6 +1814,8 @@ def int_amdgcn_s_setreg :
 // not cross a 4Gb address boundary. Use for any other purpose may not
 // produce the desired results as optimizations may cause code movement,
 // especially as we explicitly use IntrNoMem to allow optimizations.
+// This intrinsic always returns PC sign-extended from 48 bits even if the
+// s_getpc_b64 instruction returns a zero-extended value.
 def int_amdgcn_s_getpc :
   ClangBuiltin<"__builtin_amdgcn_s_getpc">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrSpeculatable,
