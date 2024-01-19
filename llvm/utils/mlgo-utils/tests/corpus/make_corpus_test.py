@@ -1,3 +1,5 @@
+# REQUIRES: python-38, absl
+
 ## Test the functionality of make_corpus_lib
 
 import json

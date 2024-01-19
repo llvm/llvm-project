@@ -1,3 +1,5 @@
+# REQUIRES: python-38, absl
+
 ## Test the functionality of extract_ir_lib
 
 import os.path

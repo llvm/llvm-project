@@ -1,3 +1,5 @@
+# REQUIRES: python-38, absl
+
 ## Test the functionality of combine_training_corpus_lib
 
 import json
