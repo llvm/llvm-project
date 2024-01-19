@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=sroa -o - | FileCheck %s
 
 ;; Check that SROA preserves the InlinedAt status of new dbg.assign intriniscs
 ;; it inserts.
