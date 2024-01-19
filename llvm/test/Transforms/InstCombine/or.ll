@@ -799,6 +799,68 @@ define i32 @test45_commuted3(i32 %x, i32 %y, i32 %z) {
   ret i32 %or1
 }
 
+define i32 @test45a(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45a(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[Y]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %y, %z
+  %and = and i32 %x, %xor
+  %or = or i32 %and, %y
+  ret i32 %or
+}
+
+define i32 @test45a_commuted1(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45a_commuted1(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[YY]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[YY]], [[AND]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %xor = xor i32 %yy, %z
+  %and = and i32 %xor, %x
+  %or = or i32 %yy, %and
+  ret i32 %or
+}
+
+define i32 @test45a_commuted2(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45a_commuted2(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[XX:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[YY]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XX]], [[XOR]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[YY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %xx = mul i32 %x, %x ; thwart complexity-based ordering
+  %xor = xor i32 %yy, %z
+  %and = and i32 %xx, %xor
+  %or = or i32 %and, %yy
+  ret i32 %or
+}
+
+define i32 @test45a_commuted3(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @test45a_commuted3(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[ZZ:%.*]] = mul i32 [[Z:%.*]], [[Z]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ZZ]], [[YY]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[YY]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %zz = mul i32 %z, %z ; thwart complexity-based ordering
+  %xor = xor i32 %zz, %yy
+  %and = and i32 %xor, %x
+  %or = or i32 %and, %yy
+  ret i32 %or
+}
+
 define i1 @test46(i8 signext %c)  {
 ; CHECK-LABEL: @test46(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[C:%.*]], -33
@@ -1242,13 +1304,13 @@ define i1 @orn_and_cmp_4_logical(i32 %a, i32 %b, i32 %c) {
 ; The constant vectors are inverses. Make sure we can turn this into a select without crashing trying to truncate the constant to 16xi1.
 define <16 x i1> @test51(<16 x i1> %arg, <16 x i1> %arg1) {
 ; CHECK-LABEL: @test51(
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i1> [[ARG:%.*]], <16 x i1> [[ARG1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 24, i32 9, i32 10, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    ret <16 x i1> [[TMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = shufflevector <16 x i1> [[ARG:%.*]], <16 x i1> [[ARG1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 5, i32 6, i32 23, i32 24, i32 9, i32 10, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i1> [[RET]]
 ;
   %tmp = and <16 x i1> %arg, <i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
   %tmp2 = and <16 x i1> %arg1, <i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true>
-  %tmp3 = or <16 x i1> %tmp, %tmp2
-  ret <16 x i1> %tmp3
+  %ret = or <16 x i1> %tmp, %tmp2
+  ret <16 x i1> %ret
 }
 
 ; This would infinite loop because it reaches a transform
