@@ -90,21 +90,19 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
+    // Special case for Csu support files.
+    if (name.ends_with(".o"))
+      return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
                                   {".tbd", ".dylib", ".so"}))
         return path;
-      else if (std::optional<StringRef> path = findPathCombination(
-                   "lib" + name, config->librarySearchPaths, {".a"}))
-        return path;
-      return findPathCombination(name, config->librarySearchPaths, {""});
+      return findPathCombination("lib" + name, config->librarySearchPaths,
+                                 {".a"});
     }
-    if (std::optional<StringRef> path =
-            findPathCombination("lib" + name, config->librarySearchPaths,
-                                {".tbd", ".dylib", ".so", ".a"}))
-      return path;
-    return findPathCombination(name, config->librarySearchPaths, {""});
+    return findPathCombination("lib" + name, config->librarySearchPaths,
+                               {".tbd", ".dylib", ".so", ".a"});
   };
 
   std::optional<StringRef> path = doFind();
