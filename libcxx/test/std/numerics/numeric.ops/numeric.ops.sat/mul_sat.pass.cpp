@@ -23,6 +23,7 @@ constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
+  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) prod = std::mul_sat(minVal, maxVal);
   static_assert(noexcept(std::mul_sat(minVal, maxVal)));
 
   // No saturation
