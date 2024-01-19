@@ -90,7 +90,8 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
-    // Special case for Csu support files.
+    // Special case for Csu support files required for Mac OS X 10.7 and older
+    // (crt1.o)
     if (name.ends_with(".o"))
       return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
