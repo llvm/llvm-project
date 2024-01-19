@@ -1231,11 +1231,13 @@ StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentTypeName = getEnvironmentTypeName(getEnvironment());
   EnvironmentName.consume_front(EnvironmentTypeName);
 
-  if (EnvironmentName.starts_with("-")) {
-    // arch-vendor-os-env-obj is correct
-    StringRef ObjectFormatType = getObjectFormatTypeName(getObjectFormat());
-    if (ObjectFormatType == StringRef(EnvironmentName).split('-').second)
-      return "";
+  if (EnvironmentName.contains("-")) {
+    // -obj is the suffix
+    if (getObjectFormat() != Triple::UnknownObjectFormat) {
+      StringRef ObjectFormatTypeName = getObjectFormatTypeName(getObjectFormat());
+      StringRef Suffix = (Twine("-") + ObjectFormatTypeName).str();
+      EnvironmentName.consume_back(Suffix);
+    }
   }
   return EnvironmentName;
 }
