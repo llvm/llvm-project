@@ -144,6 +144,31 @@ define void @test_barrier_cluster_aligned() {
        ret void
 }
 
+; CHECK-LABEL: test_cp_async_bulk_commit_group(
+define void @test_cp_async_bulk_commit_group() {
+; CHECK: cp.async.bulk.commit_group;
+       call void @llvm.nvvm.cp.async.bulk.commit.group()
+       ret void
+}
+
+; CHECK-LABEL: test_cp_async_bulk_wait_group(
+define void @test_cp_async_bulk_wait_group() {
+; CHECK: cp.async.bulk.wait_group 8;
+       call void @llvm.nvvm.cp.async.bulk.wait.group(i32 8)
+; CHECK: cp.async.bulk.wait_group 0;
+       call void @llvm.nvvm.cp.async.bulk.wait.group(i32 0)
+       ret void
+}
+
+; CHECK-LABEL: test_cp_async_bulk_wait_group_read(
+define void @test_cp_async_bulk_wait_group_read() {
+; CHECK: cp.async.bulk.wait_group.read 8;
+       call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 8)
+; CHECK: cp.async.bulk.wait_group.read 0;
+       call void @llvm.nvvm.cp.async.bulk.wait.group.read(i32 0)
+       ret void
+}
+
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p);
 declare ptr @llvm.nvvm.mapa(ptr %p, i32 %r);
 declare ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p, i32 %r);
@@ -167,3 +192,6 @@ declare void @llvm.nvvm.barrier.cluster.arrive.aligned()
 declare void @llvm.nvvm.barrier.cluster.arrive.relaxed.aligned()
 declare void @llvm.nvvm.barrier.cluster.wait.aligned()
 declare void @llvm.nvvm.fence.sc.cluster()
+declare void @llvm.nvvm.cp.async.bulk.commit.group()
+declare void @llvm.nvvm.cp.async.bulk.wait.group(i32)
+declare void @llvm.nvvm.cp.async.bulk.wait.group.read(i32)

@@ -55,21 +55,20 @@ static_assert(ignoredCast() == 0, "");
 static_assert((int)I1 == 1, "");
 static_assert((float)D == 1.0f, "");
 
+static_assert(__real((_Complex unsigned)5) == 5);
+static_assert(__imag((_Complex unsigned)5) == 0);
 
 /// Standalone complex expressions.
 static_assert(__real((_Complex float){1.0, 3.0}) == 1.0, "");
 
 
-#if 0
-/// FIXME: This should work in the new interpreter.
 constexpr _Complex double D2 = {12};
 static_assert(__real(D2) == 12, "");
-static_assert(__imag(D2) == 12, "");
+static_assert(__imag(D2) == 0, "");
 
 constexpr _Complex int I3 = {15};
 static_assert(__real(I3) == 15, "");
-static_assert(__imag(I3) == 15, "");
-#endif
+static_assert(__imag(I3) == 0, "");
 
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};

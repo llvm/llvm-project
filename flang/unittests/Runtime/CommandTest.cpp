@@ -404,6 +404,24 @@ TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
+TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), true, nullptr, nullptr, nullptr));
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+}
+
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
 protected:
