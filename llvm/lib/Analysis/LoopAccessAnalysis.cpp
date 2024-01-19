@@ -2389,11 +2389,7 @@ static bool isMathLibCallMemWriteOnly(const TargetLibraryInfo *TLI,
   if (!Call)
     return false;
 
-  Function *F = Call->getCalledFunction();
-  if (!F->hasFnAttribute(Attribute::AttrKind::Memory))
-    return false;
-
-  auto ME = F->getFnAttribute(Attribute::AttrKind::Memory).getMemoryEffects();
+  auto ME = Call->getMemoryEffects();
   LibFunc Func;
   TLI->getLibFunc(*Call, Func);
   return ME.onlyWritesMemory() && ME.onlyAccessesArgPointees() &&
