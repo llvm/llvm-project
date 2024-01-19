@@ -146,7 +146,7 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
 
 ConfiguredEvent::~ConfiguredEvent() { close(FileDescriptor); }
 #else
-void ConfiguredEvent::initRealEvent(pid_t ProcessID) {}
+void ConfiguredEvent::initRealEvent(pid_t ProcessID, const int GroupFD) {}
 
 Expected<SmallVector<int64_t>>
 ConfiguredEvent::readOrError(StringRef /*unused*/) const {
@@ -232,6 +232,11 @@ CounterGroup::readOrError(StringRef /*unused*/) const {
   }
   return llvm::make_error<llvm::StringError>("Not implemented",
                                              llvm::errc::io_error);
+}
+
+llvm::Expected<llvm::SmallVector<int64_t>>
+CounterGroup::readValidationCountersOrError() const {
+  return SmallVector<int64_t>(0);
 }
 
 int CounterGroup::numValues() const { return 1; }
