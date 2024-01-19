@@ -1,76 +1,76 @@
-# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+# RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
 # ERROR-COUNT-18: error:
 # ERROR-NOT: error:
-# CHECK: {evex}	movbe	ax, dx
+# CHECK: {evex}	movbew	%dx, %ax
 # CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x61,0xd0]
-         {evex}	movbe	ax, dx
+         {evex}	movbew	%dx, %ax
 
-# CHECK: {evex}	movbe	word ptr [rax + 4*rbx + 123], dx
+# CHECK: {evex}	movbew	%dx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x61,0x54,0x98,0x7b]
-         {evex}	movbe	word ptr [rax + 4*rbx + 123], dx
+         {evex}	movbew	%dx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	movbe	edx, ecx
+# CHECK: {evex}	movbel	%ecx, %edx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x61,0xca]
-         {evex}	movbe	edx, ecx
+         {evex}	movbel	%ecx, %edx
 
-# CHECK: {evex}	movbe	dword ptr [rax + 4*rbx + 123], ecx
+# CHECK: {evex}	movbel	%ecx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x61,0x4c,0x98,0x7b]
-         {evex}	movbe	dword ptr [rax + 4*rbx + 123], ecx
+         {evex}	movbel	%ecx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	movbe	r15, r9
+# CHECK: {evex}	movbeq	%r9, %r15
 # CHECK: encoding: [0x62,0x54,0xfc,0x08,0x61,0xcf]
-         {evex}	movbe	r15, r9
+         {evex}	movbeq	%r9, %r15
 
-# CHECK: {evex}	movbe	qword ptr [rax + 4*rbx + 123], r9
+# CHECK: {evex}	movbeq	%r9, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x74,0xfc,0x08,0x61,0x4c,0x98,0x7b]
-         {evex}	movbe	qword ptr [rax + 4*rbx + 123], r9
+         {evex}	movbeq	%r9, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	movbe	dx, word ptr [rax + 4*rbx + 123]
+# CHECK: {evex}	movbew	123(%rax,%rbx,4), %dx
 # CHECK: encoding: [0x62,0xf4,0x7d,0x08,0x60,0x54,0x98,0x7b]
-         {evex}	movbe	dx, word ptr [rax + 4*rbx + 123]
+         {evex}	movbew	123(%rax,%rbx,4), %dx
 
-# CHECK: {evex}	movbe	ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: {evex}	movbel	123(%rax,%rbx,4), %ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0x60,0x4c,0x98,0x7b]
-         {evex}	movbe	ecx, dword ptr [rax + 4*rbx + 123]
+         {evex}	movbel	123(%rax,%rbx,4), %ecx
 
-# CHECK: {evex}	movbe	r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: {evex}	movbeq	123(%rax,%rbx,4), %r9
 # CHECK: encoding: [0x62,0x74,0xfc,0x08,0x60,0x4c,0x98,0x7b]
-         {evex}	movbe	r9, qword ptr [rax + 4*rbx + 123]
+         {evex}	movbeq	123(%rax,%rbx,4), %r9
 
-# CHECK: movbe	r21w, r17w
+# CHECK: movbew	%r17w, %r21w
 # CHECK: encoding: [0x62,0xec,0x7d,0x08,0x61,0xcd]
-         movbe	r21w, r17w
+         movbew	%r17w, %r21w
 
-# CHECK: movbe	word ptr [r28 + 4*r29 + 291], r17w
+# CHECK: movbew	%r17w, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8c,0x79,0x08,0x61,0x8c,0xac,0x23,0x01,0x00,0x00]
-         movbe	word ptr [r28 + 4*r29 + 291], r17w
+         movbew	%r17w, 291(%r28,%r29,4)
 
-# CHECK: movbe	r22d, r18d
+# CHECK: movbel	%r18d, %r22d
 # CHECK: encoding: [0x62,0xec,0x7c,0x08,0x61,0xd6]
-         movbe	r22d, r18d
+         movbel	%r18d, %r22d
 
-# CHECK: movbe	dword ptr [r28 + 4*r29 + 291], r18d
+# CHECK: movbel	%r18d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8c,0x78,0x08,0x61,0x94,0xac,0x23,0x01,0x00,0x00]
-         movbe	dword ptr [r28 + 4*r29 + 291], r18d
+         movbel	%r18d, 291(%r28,%r29,4)
 
-# CHECK: movbe	r23, r19
+# CHECK: movbeq	%r19, %r23
 # CHECK: encoding: [0x62,0xec,0xfc,0x08,0x61,0xdf]
-         movbe	r23, r19
+         movbeq	%r19, %r23
 
-# CHECK: movbe	qword ptr [r28 + 4*r29 + 291], r19
+# CHECK: movbeq	%r19, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8c,0xf8,0x08,0x61,0x9c,0xac,0x23,0x01,0x00,0x00]
-         movbe	qword ptr [r28 + 4*r29 + 291], r19
+         movbeq	%r19, 291(%r28,%r29,4)
 
-# CHECK: movbe	r17w, word ptr [r28 + 4*r29 + 291]
+# CHECK: movbew	291(%r28,%r29,4), %r17w
 # CHECK: encoding: [0x62,0x8c,0x79,0x08,0x60,0x8c,0xac,0x23,0x01,0x00,0x00]
-         movbe	r17w, word ptr [r28 + 4*r29 + 291]
+         movbew	291(%r28,%r29,4), %r17w
 
-# CHECK: movbe	r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: movbel	291(%r28,%r29,4), %r18d
 # CHECK: encoding: [0x62,0x8c,0x78,0x08,0x60,0x94,0xac,0x23,0x01,0x00,0x00]
-         movbe	r18d, dword ptr [r28 + 4*r29 + 291]
+         movbel	291(%r28,%r29,4), %r18d
 
-# CHECK: movbe	r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: movbeq	291(%r28,%r29,4), %r19
 # CHECK: encoding: [0x62,0x8c,0xf8,0x08,0x60,0x9c,0xac,0x23,0x01,0x00,0x00]
-         movbe	r19, qword ptr [r28 + 4*r29 + 291]
+         movbeq	291(%r28,%r29,4), %r19
