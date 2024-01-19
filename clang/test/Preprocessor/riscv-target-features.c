@@ -21,6 +21,7 @@
 // CHECK-NOT: __riscv_muldiv {{.*$}}
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
+// CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
@@ -139,7 +140,6 @@
 
 // Experimental extensions
 
-// CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_zacas {{.*$}}
 // CHECK-NOT: __riscv_zcmop {{.*$}}
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
@@ -1109,10 +1109,10 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-SSAIA-EXT %s
 // CHECK-SSAIA-EXT: __riscv_ssaia  1000000{{$}}
 
-// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 \
 // RUN: -march=rv32ismepmp1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
-// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 \
 // RUN: -march=rv64ismepmp1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
 // CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
