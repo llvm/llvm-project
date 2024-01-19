@@ -121,13 +121,14 @@ private:
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
-  void writeMaps(std::map<uint64_t, MapTy> &Maps, raw_ostream &OS);
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
 
   /// Read the serialized address translation table for a function.
   /// Return a parse error if failed.
   template <bool Cold>
-  void parseMaps(std::vector<uint64_t> &HotFuncs, DataExtractor &DE,
-                 uint64_t &Offset, Error &Err);
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
 
   std::map<uint64_t, MapTy> Maps;
 

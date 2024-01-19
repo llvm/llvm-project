@@ -69,6 +69,13 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
+set(LIBCXX_ASSERTION_HANDLER_FILE
+  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  CACHE STRING
+  "Specify the path to a header that contains a custom implementation of the
+   assertion handler that gets invoked when a hardening assertion fails. If
+   provided, this header will be included by the library, replacing the
+   default assertion handler.")
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -117,6 +124,12 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
 option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
+# TODO MODULES Remove this option and test for the requirements (CMake/Clang) instead.
+option(LIBCXX_ENABLE_STD_MODULES
+   "Whether to enable the building the C++23 `std` module. This feature is
+    experimental and has additional dependencies. Only enable this when
+    interested in testing or developing this module. See
+    https://libcxx.llvm.org/Modules.html for more information." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -766,6 +779,7 @@ config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
+config_define_if_not(LIBCXX_ENABLE_STD_MODULES _LIBCPP_HAS_NO_STD_MODULES)
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
@@ -849,7 +863,9 @@ endfunction()
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
-add_subdirectory(modules)
+if (LIBCXX_ENABLE_STD_MODULES)
+  add_subdirectory(modules)
+endif()
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
 
@@ -857,7 +873,9 @@ if (LIBCXX_ENABLE_CLANG_TIDY)
   list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
 endif()
 
-list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
+if (LIBCXX_ENABLE_STD_MODULES)
+  list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules generate-test-module-std)
+endif()
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

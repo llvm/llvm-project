@@ -425,7 +425,9 @@ const OutputSectionSymbol *SectionSymbol::getOutputSectionSymbol() const {
   return section->outputSec->sectionSym;
 }
 
-void LazySymbol::fetch() { cast<ArchiveFile>(file)->addMember(&archiveSymbol); }
+void LazySymbol::extract() {
+  cast<ArchiveFile>(file)->addMember(&archiveSymbol);
+}
 
 void LazySymbol::setWeak() {
   flags |= (flags & ~WASM_SYMBOL_BINDING_MASK) | WASM_SYMBOL_BINDING_WEAK;

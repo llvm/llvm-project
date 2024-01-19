@@ -21,9 +21,9 @@ declare i64 @llvm.readcyclecounter() #0
 ; GFX12:       s_getreg_b32 [[HI2:s[0-9]+]], hwreg(HW_REG_SHADER_CYCLES_HI)
 ; GFX12:       s_cmp_eq_u32 [[HI1]], [[HI2]]
 ; GFX12:       s_cselect_b32 {{s[0-9]+}}, [[LO1]], 0
-; GCN-DAG:     lgkmcnt
+; GCN-DAG:     kmcnt
 ; MEMTIME:     store_dwordx2
-; SIVI-NOT:    lgkmcnt
+; SIVI-NOT:    kmcnt
 ; MEMTIME:     s_memtime s{{\[[0-9]+:[0-9]+\]}}
 ; MEMTIME:     store_dwordx2
 

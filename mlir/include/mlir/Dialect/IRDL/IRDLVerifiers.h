@@ -99,6 +99,48 @@ private:
   Attribute expectedAttribute;
 };
 
+/// A constraint that checks that an attribute is of a given attribute base
+/// (e.g. IntegerAttr).
+class BaseAttrConstraint : public Constraint {
+public:
+  BaseAttrConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseAttrConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base attribute typeID.
+  TypeID baseTypeID;
+
+  /// The base attribute name, only used for error reporting.
+  StringRef baseName;
+};
+
+/// A constraint that checks that a type is of a given type base (e.g.
+/// IntegerType).
+class BaseTypeConstraint : public Constraint {
+public:
+  BaseTypeConstraint(TypeID baseTypeID, StringRef baseName)
+      : baseTypeID(baseTypeID), baseName(baseName) {}
+
+  virtual ~BaseTypeConstraint() = default;
+
+  LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute attr,
+                       ConstraintVerifier &context) const override;
+
+private:
+  /// The expected base type typeID.
+  TypeID baseTypeID;
+
+  /// The base type name, only used for error reporting.
+  StringRef baseName;
+};
+
 /// A constraint that checks that an attribute is of a
 /// specific dynamic attribute definition, and that all of its parameters
 /// satisfy the given constraints.
