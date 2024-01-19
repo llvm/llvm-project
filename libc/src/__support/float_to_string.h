@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
@@ -108,6 +109,8 @@ namespace LIBC_NAMESPACE {
 
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
+constexpr uint64_t EXP5_9 = 1953125;
+constexpr uint64_t EXP10_9 = 1000000000;
 
 using FPBits = fputil::FPBits<long double>;
 
@@ -118,7 +121,7 @@ constexpr size_t CALC_SHIFT_CONST = 128;
 namespace internal {
 
 // Returns floor(log_10(2^e)); requires 0 <= e <= 42039.
-LIBC_INLINE constexpr uint32_t log10_pow2(const uint64_t e) {
+LIBC_INLINE constexpr uint32_t log10_pow2(uint64_t e) {
   LIBC_ASSERT(e <= 42039 &&
               "Incorrect exponent to perform log10_pow2 approximation.");
   // This approximation is based on the float value for log_10(2). It first
@@ -144,7 +147,7 @@ LIBC_INLINE constexpr uint32_t log10_pow2(const uint64_t e) {
 }
 
 // Same as above, but with different constants.
-LIBC_INLINE constexpr uint32_t log2_pow5(const uint64_t e) {
+LIBC_INLINE constexpr uint32_t log2_pow5(uint64_t e) {
   return static_cast<uint32_t>((e * 0x12934f0979bll) >> 39);
 }
 
@@ -152,19 +155,18 @@ LIBC_INLINE constexpr uint32_t log2_pow5(const uint64_t e) {
 // power of 2 was also a power of 10, but since that doesn't exist this is
 // always accurate. This is used to calculate the maximum number of base-10
 // digits a given e-bit number could have.
-LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
+LIBC_INLINE constexpr uint32_t ceil_log10_pow2(uint32_t e) {
   return log10_pow2(e) + 1;
 }
 
-LIBC_INLINE constexpr uint32_t div_ceil(const uint32_t num,
-                                        const uint32_t denom) {
+LIBC_INLINE constexpr uint32_t div_ceil(uint32_t num, uint32_t denom) {
   return (num + (denom - 1)) / denom;
 }
 
 // Returns the maximum number of 9 digit blocks a number described by the given
 // index (which is ceil(exponent/16)) and mantissa width could need.
-LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
-                                              const uint32_t mantissa_width) {
+LIBC_INLINE constexpr uint32_t length_for_num(uint32_t idx,
+                                              uint32_t mantissa_width) {
   return div_ceil(ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1),
                   BLOCK_SIZE);
 }
@@ -194,24 +196,21 @@ LIBC_INLINE constexpr cpp::UInt<MID_INT_SIZE> get_table_positive(int exponent,
   // can get, since it needs to be small enough to fit in the result UInt,
   // otherwise we'll get truncation on return.
   constexpr cpp::UInt<INT_SIZE> MOD_SIZE =
-      (cpp::UInt<INT_SIZE>(1000000000)
+      (cpp::UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
-
-  constexpr uint64_t FIVE_EXP_NINE = 1953125;
 
   num = cpp::UInt<INT_SIZE>(1) << (shift_amount);
   if (i > 0) {
-    cpp::UInt<INT_SIZE> fives(FIVE_EXP_NINE);
+    cpp::UInt<INT_SIZE> fives(EXP5_9);
     fives.pow_n(i);
     num = num / fives;
   }
 
   num = num + 1;
   if (num > MOD_SIZE) {
-    auto rem =
-        num.div_uint32_times_pow_2(
-               1000000000, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
-            .value();
+    auto rem = num.div_uint32_times_pow_2(
+                      EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
+                   .value();
     num = rem;
   }
   return num;
@@ -235,7 +234,7 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_positive_df(int exponent,
   }
   fputil::DyadicFloat<INT_SIZE> num(false, 0, 1);
   constexpr cpp::UInt<INT_SIZE> MOD_SIZE =
-      (cpp::UInt<INT_SIZE>(1000000000)
+      (cpp::UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
 
   constexpr cpp::UInt<INT_SIZE> FIVE_EXP_MINUS_NINE_MANT{
@@ -256,8 +255,8 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_positive_df(int exponent,
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
-            .div_uint32_times_pow_2(
-                1000000000, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
+            .div_uint32_times_pow_2(EXP10_9, CALC_SHIFT_CONST +
+                                                 (IDX_SIZE > 1 ? IDX_SIZE : 0))
             .value();
     int_num = rem;
   }
@@ -280,11 +279,9 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
   int shift_amount = CALC_SHIFT_CONST - exponent;
   cpp::UInt<INT_SIZE> num(1);
   constexpr cpp::UInt<INT_SIZE> MOD_SIZE =
-      (cpp::UInt<INT_SIZE>(1000000000)
+      (cpp::UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
 
-  constexpr uint64_t TEN_EXP_NINE = 1000000000;
-  constexpr uint64_t FIVE_EXP_NINE = 1953125;
   size_t ten_blocks = i;
   size_t five_blocks = 0;
   if (shift_amount < 0) {
@@ -301,12 +298,12 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
   }
 
   if (five_blocks > 0) {
-    cpp::UInt<INT_SIZE> fives(FIVE_EXP_NINE);
+    cpp::UInt<INT_SIZE> fives(EXP5_9);
     fives.pow_n(five_blocks);
     num = fives;
   }
   if (ten_blocks > 0) {
-    cpp::UInt<INT_SIZE> tens(TEN_EXP_NINE);
+    cpp::UInt<INT_SIZE> tens(EXP10_9);
     tens.pow_n(ten_blocks);
     if (five_blocks <= 0) {
       num = tens;
@@ -321,10 +318,9 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     num = num >> (-shift_amount);
   }
   if (num > MOD_SIZE) {
-    auto rem =
-        num.div_uint32_times_pow_2(
-               1000000000, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
-            .value();
+    auto rem = num.div_uint32_times_pow_2(
+                      EXP10_9, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
+                   .value();
     num = rem;
   }
   return num;
@@ -346,10 +342,10 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative_df(int exponent,
 
   fputil::DyadicFloat<INT_SIZE> num(false, 0, 1);
   constexpr cpp::UInt<INT_SIZE> MOD_SIZE =
-      (cpp::UInt<INT_SIZE>(1000000000)
+      (cpp::UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
 
-  constexpr cpp::UInt<INT_SIZE> TEN_EXP_NINE_MANT(1000000000);
+  constexpr cpp::UInt<INT_SIZE> TEN_EXP_NINE_MANT(EXP10_9);
 
   static const fputil::DyadicFloat<INT_SIZE> TEN_EXP_NINE(false, 0,
                                                           TEN_EXP_NINE_MANT);
@@ -364,8 +360,8 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative_df(int exponent,
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
-            .div_uint32_times_pow_2(
-                1000000000, CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0))
+            .div_uint32_times_pow_2(EXP10_9, CALC_SHIFT_CONST +
+                                                 (IDX_SIZE > 1 ? IDX_SIZE : 0))
             .value();
     int_num = rem;
   }
@@ -385,7 +381,7 @@ LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
   const uint64_t result = static_cast<uint64_t>(middle[2]);
   const uint64_t shifted = result >> 29;
   return static_cast<uint32_t>(static_cast<uint32_t>(val) -
-                               (1000000000 * shifted));
+                               (EXP10_9 * shifted));
 }
 
 LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
@@ -393,8 +389,7 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const int32_t shift_amount) {
   cpp::UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
   val = (val * mantissa) >> shift_amount;
-  return static_cast<uint32_t>(
-      val.div_uint32_times_pow_2(1000000000, 0).value());
+  return static_cast<uint32_t>(val.div_uint32_times_pow_2(EXP10_9, 0).value());
 }
 
 } // namespace internal
@@ -623,6 +618,11 @@ public:
     !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
+// this algorithm will work exactly the same for 80 bit and 128 bit long
+// doubles. They have the same max exponent, but even if they didn't the
+// constants should be calculated to be correct for any provided floating point
+// type.
+
 template <> class FloatToString<long double> {
   fputil::FPBits<long double> float_bits;
   bool is_negative = 0;
@@ -631,19 +631,23 @@ template <> class FloatToString<long double> {
 
   static constexpr int FRACTION_LEN = fputil::FPBits<long double>::FRACTION_LEN;
   static constexpr int EXP_BIAS = fputil::FPBits<long double>::EXP_BIAS;
+  static constexpr size_t UINT_WORD_SIZE = 64;
 
   static constexpr size_t FLOAT_AS_INT_WIDTH =
       internal::div_ceil(fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
                              FPBits::EXP_BIAS,
-                         64) *
-      64;
+                         UINT_WORD_SIZE) *
+      UINT_WORD_SIZE;
   static constexpr size_t EXTRA_INT_WIDTH =
-      internal::div_ceil(sizeof(long double) * 8, 64) * 64;
+      internal::div_ceil(sizeof(long double) * CHAR_BIT, UINT_WORD_SIZE) *
+      UINT_WORD_SIZE;
+
+  using wide_int = cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH>;
 
   // float_as_fixed represents the floating point number as a fixed point number
   // with the point EXTRA_INT_WIDTH bits from the left of the number. This can
   // store any number with a negative exponent.
-  cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_fixed = 0;
+  wide_int float_as_fixed = 0;
   int int_block_index = 0;
 
   static constexpr size_t BLOCK_BUFFER_LEN =
@@ -653,19 +657,18 @@ template <> class FloatToString<long double> {
 
   template <size_t Bits>
   LIBC_INLINE static constexpr BlockInt grab_digits(cpp::UInt<Bits> &int_num) {
-    auto wide_result = int_num.div_uint32_times_pow_2(1953125, 9);
+    auto wide_result = int_num.div_uint32_times_pow_2(EXP5_9, 9);
     // the optional only comes into effect when dividing by 0, which will
     // never happen here. Thus, we just assert that it has value.
     LIBC_ASSERT(wide_result.has_value());
     return static_cast<BlockInt>(wide_result.value());
   }
 
-  LIBC_INLINE static constexpr void zero_leading_digits(
-      cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> &int_num) {
+  LIBC_INLINE static constexpr void zero_leading_digits(wide_int &int_num) {
     // WORD_SIZE is the width of the numbers used to internally represent the
     // UInt
-    for (size_t i = 0; i < EXTRA_INT_WIDTH / int_num.WORD_SIZE; ++i)
-      int_num[i + (FLOAT_AS_INT_WIDTH / int_num.WORD_SIZE)] = 0;
+    for (size_t i = 0; i < EXTRA_INT_WIDTH / wide_int::WORD_SIZE; ++i)
+      int_num[i + (FLOAT_AS_INT_WIDTH / wide_int::WORD_SIZE)] = 0;
   }
 
   // init_convert initializes float_as_int, cur_block, and block_buffer based on
@@ -684,7 +687,7 @@ template <> class FloatToString<long double> {
       // from left to right, so it caches the results so they can be read in
       // reverse order.
 
-      cpp::UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH> float_as_int = mantissa;
+      wide_int float_as_int = mantissa;
 
       float_as_int.shift_left(exponent);
       int_block_index = 0;
@@ -812,7 +815,7 @@ public:
     // requested block. This is likely to only be one step.
     while (block_index < int_block_index) {
       zero_leading_digits(float_as_fixed);
-      float_as_fixed.mul(1000000000);
+      float_as_fixed.mul(EXP10_9);
       --int_block_index;
     }
 
