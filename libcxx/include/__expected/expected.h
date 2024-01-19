@@ -284,6 +284,11 @@ class __expected_base {
                                                     _Args&&... __args)
         : __union_(in_place, __tag, std::forward<_Args>(__args)...), __has_val_(false) {}
 
+    // The return value of `__make_union` must be constructed in place in the
+    // `__v` member of `__union_`, relying on guaranteed copy elision. To do
+    // this, the `__conditional_no_unique_address_invoke_tag` constructor is
+    // called with a lambda that is immediately called inside
+    // `__conditional_no_unique_address`'s constructor.
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
       requires(!__put_flag_in_tail)
