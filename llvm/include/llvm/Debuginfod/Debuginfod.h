@@ -46,7 +46,7 @@ bool canUseDebuginfod();
 /// environment variable.
 SmallVector<StringRef> getDefaultDebuginfodUrls();
 
-/// Creates the cache-key for a given Debuginfod UrlPath
+/// Returns the cache key for a given debuginfod URL path.
 std::string getDebuginfodCacheKey(StringRef UrlPath);
 
 /// Sets the list of debuginfod server URLs to query. This overrides the
@@ -61,7 +61,8 @@ Expected<std::string> getDefaultDebuginfodCacheDirectory();
 /// DEBUGINFOD_TIMEOUT environment variable, default is 90 seconds (90000 ms).
 std::chrono::milliseconds getDefaultDebuginfodTimeout();
 
-/// Get the full UrlPath for a source request of a given BuildID and file path.
+/// Get the full URL path for a source request of a given BuildID and file
+/// path.
 std::string getDebuginfodSourceUrlPath(object::BuildIDRef ID,
                                        StringRef SourceFilePath);
 
@@ -70,14 +71,14 @@ std::string getDebuginfodSourceUrlPath(object::BuildIDRef ID,
 Expected<std::string> getCachedOrDownloadSource(object::BuildIDRef ID,
                                                 StringRef SourceFilePath);
 
-/// Get the full UrlPath for an Executable request of a given BuildID.
+/// Get the full URL path for an executable request of a given BuildID.
 std::string getDebuginfodExecutableUrlPath(object::BuildIDRef ID);
 
 /// Fetches an executable by searching the default local cache directory and
 /// server URLs.
 Expected<std::string> getCachedOrDownloadExecutable(object::BuildIDRef ID);
 
-/// Get the full UrlPath for a debug binary request of a given BuildID.
+/// Get the full URL path for a debug binary request of a given BuildID.
 std::string getDebuginfodDebuginfoUrlPath(object::BuildIDRef ID);
 
 /// Fetches a debug binary by searching the default local cache directory and

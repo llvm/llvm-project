@@ -57,7 +57,7 @@ public:
     return urls;
   }
 
-  llvm::Expected<llvm::StringRef> GetCachePath() {
+  llvm::Expected<std::string> GetCachePath() {
     OptionValueString *s =
         m_collection_sp->GetPropertyAtIndexAsOptionValueString(
             ePropertySymbolCachePath);
@@ -65,13 +65,11 @@ public:
     if (!s || !s->GetCurrentValueAsRef().size()) {
       llvm::Expected<std::string> maybeCachePath =
           llvm::getDefaultDebuginfodCacheDirectory();
-      if (!maybeCachePath) {
+      if (!maybeCachePath)
         return maybeCachePath;
-      }
-      m_cache_path = *maybeCachePath;
-      return llvm::StringRef(m_cache_path);
+      return *maybeCachePath;
     }
-    return s->GetCurrentValueAsRef();
+    return s->GetCurrentValue();
   }
 
   std::chrono::milliseconds GetTimeout() const {
@@ -96,7 +94,6 @@ private:
   }
   // Storage for the StringRef's used within the Debuginfod library.
   Args m_server_urls;
-  std::string m_cache_path;
 };
 
 } // namespace
@@ -157,12 +154,11 @@ GetFileForModule(const ModuleSpec &module_spec,
   // Grab LLDB's Debuginfod overrides from the
   // plugin.symbol-locator.debuginfod.* settings.
   PluginProperties &plugin_props = GetGlobalPluginProperties();
-  llvm::Expected<llvm::StringRef> cache_path_or_err =
-      plugin_props.GetCachePath();
+  llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
   // A cache location is *required*.
   if (!cache_path_or_err)
     return {};
-  llvm::StringRef cache_path = *cache_path_or_err;
+  std::string cache_path = *cache_path_or_err;
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
   std::chrono::milliseconds timeout = plugin_props.GetTimeout();
