@@ -14,10 +14,10 @@
 ///    within VPBasicBlocks;
 /// 3. Pure virtual VPSingleDefRecipe serving as a base class for recipes that
 ///    also inherit from VPValue.
-/// 3. VPInstruction, a concrete Recipe and VPUser modeling a single planned
+/// 4. VPInstruction, a concrete Recipe and VPUser modeling a single planned
 ///    instruction;
-/// 4. The VPlan class holding a candidate for vectorization;
-/// 5. The VPlanPrinter class providing a way to print a plan in dot format;
+/// 5. The VPlan class holding a candidate for vectorization;
+/// 6. The VPlanPrinter class providing a way to print a plan in dot format;
 /// These are documented in docs/VectorizationPlan.rst.
 //
 //===----------------------------------------------------------------------===//
@@ -819,6 +819,7 @@ public:
 
 /// VPSingleDef is a base class for recipes for modeling a sequence of one or
 /// more output IR that define a single result VPValue.
+/// Note that VPRecipeBase must be inherited from before VPValue.
 class VPSingleDefRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
@@ -862,6 +863,7 @@ public:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenMemoryInstructionSC:
+      // TODO: Widened stores don't define a value, but widened loads do. Split the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
     }
     llvm_unreachable("Unhandled VPDefID");
