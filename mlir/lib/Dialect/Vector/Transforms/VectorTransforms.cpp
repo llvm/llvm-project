@@ -1153,7 +1153,12 @@ struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
 };
 
 /// Returns the number of dims can be folded away from transfer ops. It returns
-/// a failure if strides and offsets can not be resolved.
+/// a failure if it can not determine the number of dims to be folded.
+/// Example 1: it returns "2" if `srcType` is memref<512x16x1x1xf32> and
+/// `vectorType` is vector<16x16x1x1xf32>. Because there two inner most dims
+/// can be dropped by memref.subview ops.
+/// Example 2: it returns "1" if `srcType` is the same memref type with
+/// [8192, 16, 8, 1] strides.
 static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
@@ -1162,14 +1167,13 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
     return failure();
 
   // According to vector.transfer_read/write semantics, the vector can be a
-  // slice. It pads the indices with `1` starting from beginning. Thus, we have
-  // to offset the check index with `rankDiff` in `srcStrides` and source dim
-  // sizes.
+  // slice. Thus, we have to offset the check index with `rankDiff` in
+  // `srcStrides` and source dim sizes.
   size_t result = 0;
   int rankDiff = srcType.getRank() - vectorType.getRank();
   for (int64_t i = 0, e = vectorType.getRank(); i < e; ++i) {
-    // Check that the inner dim size is 1 for both memref/tensor type and
-    // vector slice. It can be folded only if they are 1 and the stride is 1.
+    // Check that the inner dim size is 1 for both memref type and  vector
+    // slice. It can be folded only if they are 1 and the stride is 1.
     int dim = vectorType.getRank() - i - 1;
     if (srcStrides[dim + rankDiff] == 1 &&
         srcType.getDimSize(dim + rankDiff) == 1 &&
@@ -1183,7 +1187,8 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
 }
 
 /// Returns a MemRef type that drops inner `dimsToDrop` dimensions from
-/// `srcType`.
+/// `srcType`. E.g., if `srcType` is memref<512x16x1x1xf32> and `dimsToDrop` is
+/// two, it returns memref<512x16x16> type.
 static MemRefType getMemRefTypeWithDroppingInnerDims(OpBuilder &builder,
                                                      MemRefType srcType,
                                                      size_t dimsToDrop) {
@@ -1199,15 +1204,19 @@ static MemRefType getMemRefTypeWithDroppingInnerDims(OpBuilder &builder,
     auto strides = llvm::to_vector(strided.getStrides().drop_back(dimsToDrop));
     updatedLayout = StridedLayoutAttr::get(strided.getContext(),
                                            strided.getOffset(), strides);
-  } else {
-    AffineMap map = srcType.getLayout().getAffineMap();
-    int numSymbols = map.getNumSymbols();
-    for (size_t i = 0; i < dimsToDrop; ++i) {
-      int dim = srcType.getRank() - i - 1;
-      map = map.replace(builder.getAffineDimExpr(dim),
-                        builder.getAffineConstantExpr(0), map.getNumDims() - 1,
-                        numSymbols);
-    }
+    return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
+                           srcType.getElementType(), updatedLayout,
+                           srcType.getMemorySpace());
+  }
+
+  // Non-strided layout case.
+  AffineMap map = srcType.getLayout().getAffineMap();
+  int numSymbols = map.getNumSymbols();
+  for (size_t i = 0; i < dimsToDrop; ++i) {
+    int dim = srcType.getRank() - i - 1;
+    map = map.replace(builder.getAffineDimExpr(dim),
+                      builder.getAffineConstantExpr(0), map.getNumDims() - 1,
+                      numSymbols);
   }
   return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
                          srcType.getElementType(), updatedLayout,
@@ -1282,6 +1291,21 @@ class DropInnerMostUnitDimsTransferRead
 };
 
 /// Drop inner most contiguous unit dimensions from transfer_write operand.
+/// E.g.,
+///    vector.transfer_write %arg1, %arg0[%c0, %arg2, %c0, %c0, %c0]
+///      {in_bounds = [true, true, true, true, true]}
+///      : vector<1x16x16x1x1xf32>, memref<1x512x16x1x1xf32>
+///
+/// will be replaced with
+///
+///    %subview = memref.subview %arg0
+///      [0, 0, 0, 0, 0] [1, 512, 16, 1, 1] [1, 1, 1, 1, 1]
+///      : memref<1x512x16x1x1xf32> to memref<1x512x16xf32>
+///    %0 = vector.shape_cast %arg1 : vector<1x16x16x1x1xf32>
+///      to vector<1x16x16xf32>
+///    vector.transfer_write %0, %subview[%c0, %arg2, %c0]
+///      {in_bounds = [true, true, true]}
+///      : vector<1x16x16xf32>, memref<1x512x16xf32>
 class DropInnerMostUnitDimsTransferWrite
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern::OpRewritePattern;
