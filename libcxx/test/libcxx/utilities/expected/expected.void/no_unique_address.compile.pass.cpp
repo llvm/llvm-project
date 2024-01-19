@@ -11,6 +11,8 @@
 // XFAIL: msvc
 
 // test [[no_unique_address]] is applied to the union
+// In particular, we ensure that we reuse tail padding in the T
+// to store the discriminator whenever we can.
 
 #include <__type_traits/datasizeof.h>
 #include <expected>
