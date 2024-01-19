@@ -112,7 +112,7 @@ int main(int, char**) {
   {
     auto invoke_abort = [] { _LIBCPP_VERBOSE_ABORT("contains some message"); };
 
-    auto simple_matcher = [] (const std::string& text) {
+    auto simple_matcher = [](const std::string& text) {
       bool success = text.find("some") != std::string::npos;
       return MatchResult(success, "");
     };
