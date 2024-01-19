@@ -1156,8 +1156,9 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
-- Added a code model attribute for the global variable. The following values
-  are supported: ``normal``, ``medium`` and ``extreme``.
+- The ``model`` attribute is now supported for overriding the default code
+  model used to access global variables. The following values are supported:
+  ``normal``, ``medium`` and ``extreme``.
 
   *Example Code*:
 
