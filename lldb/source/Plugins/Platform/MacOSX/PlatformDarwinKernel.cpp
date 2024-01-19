@@ -811,7 +811,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
         FileSpecList search_paths =
             process->GetTarget().GetDebugFileSearchPaths();
         FileSpec dsym_fspec =
-            PluginManager::LocateExecutableSymbolFile(kern_spec, search_paths);
+            Symbols::LocateExecutableSymbolFile(kern_spec, search_paths);
         if (FileSystem::Instance().Exists(dsym_fspec))
           module_sp->SetSymbolFileFileSpec(dsym_fspec);
         if (did_create_ptr)
