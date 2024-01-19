@@ -1,0 +1,31 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: rm -rf %t || echo ok
+# RUN: mkdir -p %t/output
+# RUN: mkdir -p %t/tmpstuff
+# RUN: mkdir -p %t/cache
+# RUN: mkdir -p %t/buildid/8b5b6416f61adc140ae457e208f1699f89bfda86
+
+# Scenario 4
+#  A stripped binary/split-dwarf combination
+# LLDB should ask Debuginfod for both it's executable AND it's symbols
+
+# RUN: yaml2obj %p/Inputs/main-split-nodbg.yaml -o %t/tmpstuff/main-split-nodbg.tmp
+# RUN: yaml2obj %p/Inputs/main-split-dbg.yaml -o %t/tmpstuff/main-split-dbg
+# RUN: yaml2obj %p/Inputs/main-dwp.yaml -o %t/buildid/8b5b6416f61adc140ae457e208f1699f89bfda86/debuginfo
+# RUN: llvm-objcopy %t/tmpstuff/main-split-nodbg.tmp --add-gnu-debuglink=%t/tmpstuff/main-split-dbg %t/output/main-split-nodbg
+# RUN: mv %t/tmpstuff/main-split-dbg %t/buildid/8b5b6416f61adc140ae457e208f1699f89bfda86/executable
+# RUN: chmod a+x %t/output/main-split-nodbg
+
+# Verify that we -don't- find symbols when not using the Debuginfod service
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
+# RUN:       -o "target create %t/output/main-split-nodbg" \
+# RUN:       -o "b func" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# Should NOT have source file information:
+# CHECK: Breakpoint 1: where = main-split-nodbg`func, address = 0x{{[0-9a-f]+}}

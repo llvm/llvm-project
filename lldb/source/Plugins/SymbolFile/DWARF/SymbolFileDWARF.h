@@ -280,6 +280,9 @@ public:
 
   DWARFContext &GetDWARFContext() { return m_context; }
 
+  static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
+                              const FileSpec &file_spec);
+
   const std::shared_ptr<SymbolFileDWARFDwo> &GetDwpSymbolFile();
 
   FileSpec GetFile(DWARFUnit &unit, size_t file_idx);

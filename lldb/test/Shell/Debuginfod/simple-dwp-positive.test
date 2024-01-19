@@ -1,0 +1,37 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: rm -rf %t || echo ok
+# RUN: mkdir -p %t/output
+# RUN: mkdir -p %t/tmpstuff
+# RUN: mkdir -p %t/cache
+# RUN: mkdir -p %t/buildid/8b5b6416f61adc140ae457e208f1699f89bfda86
+
+# Scenario 2
+#  A stripped binary, with an "-only-keep-debug" symbols file
+#  Debuginfo has the 'okd' file as the 'debuginfo' item
+# LLDB should ask Debuginfod for it's symbols
+
+# RUN: yaml2obj %p/Inputs/main-split.yaml -o %t/output/main-split
+# RUN: yaml2obj %p/Inputs/main-dwp.yaml -o %t/buildid/8b5b6416f61adc140ae457e208f1699f89bfda86/debuginfo
+# RUN: chmod a+x %t/output/main-split
+
+# Positive test: We find the DWP file with the Debuginfod service
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
+# RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
+# RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
+# RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
+# RUN:       -o "target create %t/output/main-split" \
+# RUN:       -o "target modules dump separate-debug-info" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# CHECK: Symbol file: {{.*}}/main-split
+# CHECK-NEXT: Type: "dwo"
+# CHECK-NEXT: Dwo ID{{.*}}
+# CHECK-NEXT: {{^[- ]+$}}
+# The cache key is stable, so we can mandate that we discover this thing from the cache
+# It's an implementation detail, so it could potentially change, but the ensures that
+# CHECK-NEXT: 0x{{[0-9a-f]+.*}} {{.*}}/cache/llvmcache-9657596136574283768

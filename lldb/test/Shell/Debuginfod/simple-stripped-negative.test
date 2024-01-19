@@ -1,0 +1,32 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: rm -rf %t || echo ok
+# RUN: mkdir -p %t/output
+# RUN: mkdir -p %t/tmpstuff
+# RUN: mkdir -p %t/cache
+# RUN: mkdir -p %t/buildid/b4927ea09a08ee63313299cf347043010d03cc5e
+
+# Scenario 1
+#  A simple stripped binary
+#  Debuginfod has the unstripped binary as the 'executable'
+# LLDB should ask Debuginfod for it's unstripped binary
+
+# Put the unstripped binary in the Debuginfod server as 'executable'
+
+# RUN: yaml2obj %p/Inputs/main-full.yaml -o %t/buildid/b4927ea09a08ee63313299cf347043010d03cc5e/executable
+# RUN: yaml2obj %p/Inputs/main-stripped.yaml -o %t/output/main-stripped
+# RUN: chmod a+x %t/output/main-stripped
+
+# Run a negative test (make sure we don't have symbols)
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
+# RUN:       -o "target create %t/output/main-stripped" \
+# RUN:       -o "b func" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# Should NOT have source file information:
+
+# CHECK: Breakpoint 1: where = main-stripped`func, address = 0x{{[0-9a-f]+}}

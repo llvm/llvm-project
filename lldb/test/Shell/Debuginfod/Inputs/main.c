@@ -1,0 +1,82 @@
+/*
+
+script to (re)create the .yaml files:
+---------------------------------------------------------------------------
+#!/bin/sh
+
+# I need 4 different scenarios:
+# 1 - A stripped binary with it's corresponding unstripped binary:
+# 2 - A stripped binary with a corresponding -only-keep-debug symbols file
+# 3 - A split binary with it's corresponding DWP file
+# 4 - A stripped, split binary with an unstripped binary and a DWP file
+
+# Note: gnu-debuglink has to be added from the yaml2obj output,
+# as the CRC's are slightly different from the original binary
+
+mkdir -p gen
+mkdir -p run
+
+# First, compile & link the binary itself
+${builddir}/bin/clang -g -o gen/main-full.o -O0 -c main.c
+ld -nostdlib gen/main-full.o --build-id=sha1 -o gen/main-full
+${builddir}/bin/clang -g -gsplit-dwarf -o gen/main-split.o -O0 -c main.c
+ld -nostdlib gen/main-split.o --build-id=sha1 -o gen/main-split
+${builddir}/bin/llvm-dwp -e gen/main-split -o gen/main-split.dwp
+
+# Scenario 1: main-strip -> main-full (both executable and debuginfo)
+${builddir}/bin/llvm-objcopy --strip-debug gen/main-full gen/main-stripped
+${builddir}/bin/obj2yaml gen/main-full > main-full.yaml
+${builddir}/bin/obj2yaml gen/main-stripped > main-stripped.yaml
+${builddir}/bin/yaml2obj main-full.yaml > run/main-full
+${builddir}/bin/yaml2obj main-stripped.yaml > run/main-stripped
+
+# Scenario 2: main-nodbg -> main-dbg (debuginfo)
+${builddir}/bin/llvm-objcopy --only-keep-debug gen/main-full gen/main-dbg
+${builddir}/bin/llvm-objcopy --strip-debug gen/main-full gen/main-nodbg
+${builddir}/bin/obj2yaml gen/main-nodbg > main-nodbg.yaml
+${builddir}/bin/obj2yaml gen/main-dbg > main-dbg.yaml
+${builddir}/bin/yaml2obj main-nodbg.yaml > gen/main-nodbg.tmp
+${builddir}/bin/yaml2obj main-dbg.yaml > run/main-dbg
+${builddir}/bin/llvm-objcopy gen/main-nodbg.tmp --add-gnu-debuglink=run/main-dbg run/main-nodbg
+
+# Scenario 3: main-split, main-split.dwp (debuginfo)
+${builddir}/bin/obj2yaml gen/main-split > main-split.yaml
+${builddir}/bin/obj2yaml gen/main-split.dwp > main-dwp.yaml
+${builddir}/bin/yaml2obj main-split.yaml > run/main-split
+${builddir}/bin/yaml2obj main-dwp.yaml > run/main-split.dwp
+
+# Scenario 4: main-split-nodbg, main-split-dbg (executable), main-split.dwp (debuginfo)
+${builddir}/bin/llvm-objcopy --only-keep-debug gen/main-split gen/main-split-dbg
+${builddir}/bin/llvm-objcopy --strip-debug gen/main-split gen/main-split-nodbg
+${builddir}/bin/obj2yaml gen/main-split-nodbg > main-split-nodbg.yaml
+${builddir}/bin/obj2yaml gen/main-split-dbg > main-split-dbg.yaml
+${builddir}/bin/yaml2obj main-split-nodbg.yaml > gen/main-split-nodbg.tmp
+${builddir}/bin/yaml2obj main-split-dbg.yaml > run/main-split-dbg
+${builddir}/bin/llvm-objcopy gen/main-split-nodbg.tmp --add-gnu-debuglink=run/main-split-dbg run/main-split-nodbg
+# the main-dwp.yaml should be the same for both Scenario 3 and 4
+
+chmod a+x 'run/'*
+
+---------------------------------------------------------------------------
+You need to re-generate the gnu-debuglinks after the yaml2obj step (in the test)
+
+You can find the build id's in the yaml files under "NT_PRPSINFO" from the YAML files
+(grep for 'Desc')
+
+*/
+
+int func(int argc, const char **argv) {
+  return (argc + 1) * (argv[argc][0] + 2);
+}
+
+__attribute__((force_align_arg_pointer)) void _start(void) {
+
+  /* main body of program: call main(), etc */
+
+  const char *argv[] = {""};
+  func(0, argv);
+
+  /* exit system call */
+  asm("mov $60,%rax; mov $0,%rdi; syscall");
+  __builtin_unreachable(); // tell the compiler to make sure side effects are done before the asm statement
+}

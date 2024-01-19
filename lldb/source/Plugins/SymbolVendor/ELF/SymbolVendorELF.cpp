@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -87,8 +88,16 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec dsym_fspec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-  if (!dsym_fspec)
-    return nullptr;
+  if (!dsym_fspec ||
+      plugin::dwarf::SymbolFileDWARF::IsDwpSymbolFile(module_sp, dsym_fspec)) {
+    // If we have a stripped binary or if we got a DWP file, we should prefer
+    // symbols in the executable acquired through a plugin.
+    ModuleSpec unstripped_spec =
+        PluginManager::LocateExecutableObjectFile(module_spec);
+    if (!unstripped_spec)
+      return nullptr;
+    dsym_fspec = unstripped_spec.GetFileSpec();
+  }
 
   DataBufferSP dsym_file_data_sp;
   lldb::offset_t dsym_file_data_offset = 0;
