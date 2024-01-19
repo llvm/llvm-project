@@ -323,7 +323,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
-  case OpenCL: return "opencl";
+  case OpenCL:
+    return "opencl";
   case OpenHOS: return "ohos";
   }
 
@@ -1220,7 +1221,8 @@ VersionTuple Triple::getEnvironmentVersion() const {
 StringRef Triple::getEnvironmentVersionString() const {
   StringRef EnvironmentName = getEnvironmentName();
 
-  // none is a valid environment type - it basically amounts to a freestanding environment.
+  // none is a valid environment type - it basically amounts to a freestanding
+  // environment.
   if (EnvironmentName == "none")
     return "";
 

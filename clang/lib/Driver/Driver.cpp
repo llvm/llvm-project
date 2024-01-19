@@ -1433,10 +1433,11 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Check if the environment version is valid.
   llvm::Triple Triple = TC.getTriple();
   StringRef TripleVersionName = Triple.getEnvironmentVersionString();
-  StringRef TripleObjectFormat = Triple.getObjectFormatTypeName(Triple.getObjectFormat());
+  StringRef TripleObjectFormat =
+      Triple.getObjectFormatTypeName(Triple.getObjectFormat());
 
-  if (Triple.getEnvironmentVersion().empty() && TripleVersionName != ""
-    && TripleVersionName != TripleObjectFormat) {
+  if (Triple.getEnvironmentVersion().empty() && TripleVersionName != "" &&
+      TripleVersionName != TripleObjectFormat) {
     Diags.Report(diag::err_drv_triple_version_invalid)
         << TripleVersionName << TC.getTripleString();
     ContainsError = true;
