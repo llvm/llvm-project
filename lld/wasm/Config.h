@@ -23,6 +23,13 @@ enum class CodeGenOptLevel;
 namespace lld::wasm {
 
 class InputFile;
+class StubFile;
+class ObjFile;
+class SharedFile;
+class BitcodeFile;
+class InputTable;
+class InputGlobal;
+class InputFunction;
 class Symbol;
 
 // For --unresolved-symbols.
@@ -108,6 +115,14 @@ extern Configuration *config;
 
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
+  llvm::SmallVector<ObjFile *, 0> objectFiles;
+  llvm::SmallVector<StubFile *, 0> stubFiles;
+  llvm::SmallVector<SharedFile *, 0> sharedFiles;
+  llvm::SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
+  llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
+  llvm::SmallVector<InputTable *, 0> syntheticTables;
+
   // True if we are creating position-independent code.
   bool isPic;
 
