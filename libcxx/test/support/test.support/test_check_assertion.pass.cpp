@@ -18,8 +18,8 @@
 #include "check_assertion.h"
 
 template <class Func>
-inline bool TestDeathTest(
-    Outcome expected_outcome, DeathCause expected_cause, const char* stmt, Func&& func, AssertionInfoMatcher matcher) {
+bool TestDeathTest(
+    Outcome expected_outcome, DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
   DeathTest test_case;
   DeathTestResult test_result = test_case.Run(expected_cause, func, matcher);
   std::string maybe_failure_description;
@@ -54,30 +54,29 @@ inline bool TestDeathTest(
 // clang-format off
 
 #define TEST_DEATH_TEST(outcome, cause, ...)                   \
-  assert(( TestDeathTest(outcome, cause, #__VA_ARGS__, [&]() { __VA_ARGS__; }, AnyMatcher) ))
+  assert(( TestDeathTest(outcome, cause, #__VA_ARGS__, [&]() { __VA_ARGS__; }, MakeAnyMatcher()) ))
 #define TEST_DEATH_TEST_MATCHES(outcome, cause, matcher, ...)  \
   assert(( TestDeathTest(outcome, cause, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
 
 // clang-format on
 
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+DeathCause assertion_death_cause = DeathCause::VerboseAbort;
+#else
+DeathCause assertion_death_cause = DeathCause::Trap;
+#endif
+
 int main(int, char**) {
+
   { // Success -- verbose abort with any matcher.
     auto fail_assert = [] { _LIBCPP_ASSERT(false, "Some message"); };
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-    TEST_DEATH_TEST_MATCHES(Outcome::Success, DeathCause::VerboseAbort, AnyMatcher, fail_assert());
-#else
-    TEST_DEATH_TEST_MATCHES(Outcome::Success, DeathCause::Trap, AnyMatcher, fail_assert());
-#endif
+    TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, MakeAnyMatcher(), fail_assert());
   }
 
   { // Success -- verbose abort with a specific matcher.
     auto fail_assert = [] { _LIBCPP_ASSERT(false, "Some message"); };
-    AssertionInfoMatcher matcher("Some message");
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-    TEST_DEATH_TEST_MATCHES(Outcome::Success, DeathCause::VerboseAbort, matcher, fail_assert());
-#else
-    TEST_DEATH_TEST_MATCHES(Outcome::Success, DeathCause::Trap, matcher, fail_assert());
-#endif
+    Matcher matcher = MakeAssertionMessageMatcher("Some message");
+    TEST_DEATH_TEST_MATCHES(Outcome::Success, assertion_death_cause, matcher, fail_assert());
   }
 
   { // Success -- `std::terminate`.
@@ -90,12 +89,8 @@ int main(int, char**) {
 
   { // Error message doesn't match.
     auto fail_assert = [] { _LIBCPP_ASSERT(false, "Actual message doesn't match"); };
-    AssertionInfoMatcher matcher("Bad expected message");
-#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
-    TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedAbortMessage, DeathCause::VerboseAbort, matcher, fail_assert());
-#else
-    TEST_DEATH_TEST_MATCHES(Outcome::Success, DeathCause::Trap, matcher, fail_assert());
-#endif
+    Matcher matcher = MakeAssertionMessageMatcher("Bad expected message");
+    TEST_DEATH_TEST_MATCHES(Outcome::UnexpectedErrorMessage, assertion_death_cause, matcher, fail_assert());
   }
 
   { // Invalid cause -- child did not die.
