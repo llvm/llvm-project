@@ -2503,7 +2503,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     break;
   }
-
   return true;
 }
 
