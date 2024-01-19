@@ -27,7 +27,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX12-LABEL: test_scratch_load_i8_zext_v:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_u8 v0, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
@@ -59,7 +59,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_v(ptr addrspace(5) %in, ptr %ou
 ; GFX12-LABEL: test_scratch_load_i8_sext_v:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_i8 v0, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
@@ -91,7 +91,7 @@ define amdgpu_ps void @test_scratch_load_i16_zext_v(ptr addrspace(5) %in, ptr %o
 ; GFX12-LABEL: test_scratch_load_i16_zext_v:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_u16 v0, v0, off offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
@@ -123,7 +123,7 @@ define amdgpu_ps void @test_scratch_load_i16_sext_v(ptr addrspace(5) %in, ptr %o
 ; GFX12-LABEL: test_scratch_load_i16_sext_v:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_i16 v0, v0, off offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
@@ -159,7 +159,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_v(ptr addrspace(5) %i
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_u8 v3, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -197,7 +197,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_v(ptr addrspace(5) %i
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_i8 v3, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -235,7 +235,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_v(ptr addrspace(5) %in, p
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_b16 v3, v0, off offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -273,7 +273,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_v(ptr addrspace(5) %i
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_u8 v3, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -311,7 +311,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_v(ptr addrspace(5) %i
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_i8 v3, v0, off offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -349,7 +349,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_v(ptr addrspace(5) %in, p
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v3, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_b16 v3, v0, off offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -384,7 +384,7 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_v(ptr %in, ptr addrspac
 ; GFX12-LABEL: test_scratch_store_b8_from_d16_hi_v:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b8 v2, v0, off offset:4
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -419,7 +419,7 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_v(ptr %in, ptr addrspa
 ; GFX12-LABEL: test_scratch_store_b16_from_d16_hi_v:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b16 v2, v0, off offset:2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -457,7 +457,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_s(ptr addrspace(5) inreg %in, p
 ; GFX12-LABEL: test_scratch_load_i8_zext_s:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_u8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
@@ -489,7 +489,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_s(ptr addrspace(5) inreg %in, p
 ; GFX12-LABEL: test_scratch_load_i8_sext_s:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_i8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i32 1
@@ -521,7 +521,7 @@ define amdgpu_ps void @test_scratch_load_i16_zext_s(ptr addrspace(5) inreg %in, 
 ; GFX12-LABEL: test_scratch_load_i16_zext_s:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_u16 v2, off, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
@@ -553,7 +553,7 @@ define amdgpu_ps void @test_scratch_load_i16_sext_s(ptr addrspace(5) inreg %in, 
 ; GFX12-LABEL: test_scratch_load_i16_sext_s:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    scratch_load_i16 v2, off, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
@@ -590,7 +590,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_s(ptr addrspace(5) in
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_u8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -629,7 +629,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_s(ptr addrspace(5) in
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_i8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -668,7 +668,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_s(ptr addrspace(5) inreg 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0xffff0000
 ; GFX12-NEXT:    scratch_load_d16_b16 v2, off, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -707,7 +707,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_s(ptr addrspace(5) in
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_u8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -746,7 +746,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_s(ptr addrspace(5) in
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_i8 v2, off, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -785,7 +785,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_s(ptr addrspace(5) inreg 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX12-NEXT:    scratch_load_d16_hi_b16 v2, off, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -820,7 +820,7 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_s(ptr %in, ptr addrspac
 ; GFX12-LABEL: test_scratch_store_b8_from_d16_hi_s:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b8 off, v0, s0 offset:4
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -855,7 +855,7 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_s(ptr %in, ptr addrspa
 ; GFX12-LABEL: test_scratch_store_b16_from_d16_hi_s:
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b16 off, v0, s0 offset:2
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -896,7 +896,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_svs(ptr addrspace(5) inreg %in,
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_u8 v0, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
@@ -933,7 +933,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_svs(ptr addrspace(5) inreg %in,
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_i8 v0, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
@@ -970,7 +970,7 @@ define amdgpu_ps void @test_scratch_load_i16_zext_svs(ptr addrspace(5) inreg %in
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_u16 v0, v0, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
@@ -1007,7 +1007,7 @@ define amdgpu_ps void @test_scratch_load_i16_sext_svs(ptr addrspace(5) inreg %in
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_i16 v0, v0, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %voffset4 = mul i32 %voffset, 4
@@ -1048,7 +1048,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_lo_svs(ptr addrspace(5) 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, 0xffff0000 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_u8 v3, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1091,7 +1091,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_lo_svs(ptr addrspace(5) 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, 0xffff0000 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_i8 v3, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1134,7 +1134,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_lo_svs(ptr addrspace(5) inre
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, 0xffff0000 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_b16 v3, v0, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1177,7 +1177,7 @@ define amdgpu_ps void @test_scratch_load_i8_zext_to_d16_hi_svs(ptr addrspace(5) 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, -1 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_hi_u8 v3, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1220,7 +1220,7 @@ define amdgpu_ps void @test_scratch_load_i8_sext_to_d16_hi_svs(ptr addrspace(5) 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, -1 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_hi_i8 v3, v0, s0 offset:1
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1263,7 +1263,7 @@ define amdgpu_ps void @test_scratch_load_i16_to_d16_hi_svs(ptr addrspace(5) inre
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_dual_mov_b32 v3, -1 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX12-NEXT:    scratch_load_d16_hi_b16 v3, v0, s0 offset:2
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    flat_store_b32 v[1:2], v3
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1304,7 +1304,7 @@ define amdgpu_ps void @test_scratch_store_b8_from_d16_hi_svs(ptr %in, ptr addrsp
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v2
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b8 v1, v0, s0 offset:4
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -1345,7 +1345,7 @@ define amdgpu_ps void @test_scratch_store_b16_from_d16_hi_svs(ptr %in, ptr addrs
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 2, v2
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    scratch_store_d16_hi_b16 v1, v0, s0 offset:2
 ; GFX12-NEXT:    s_endpgm
 bb:
