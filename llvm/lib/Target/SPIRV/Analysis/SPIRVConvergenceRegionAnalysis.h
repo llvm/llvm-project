@@ -1,4 +1,4 @@
-//===- ConvergenceRegionAnalysis.h -----------------------------*- C++ -*--===//
+//===- SPIRVConvergenceRegionAnalysis.h ------------------------*- C++ -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -132,14 +132,16 @@ public:
   const ConvergenceRegion *getTopLevelRegion() const { return TopLevelRegion; }
 };
 
+} // namespace SPIRV
+
 // Wrapper around the function above to use it with the legacy pass manager.
-class ConvergenceRegionAnalysisWrapperPass : public FunctionPass {
-  ConvergenceRegionInfo CRI;
+class SPIRVConvergenceRegionAnalysisWrapperPass : public FunctionPass {
+  SPIRV::ConvergenceRegionInfo CRI;
 
 public:
   static char ID;
 
-  ConvergenceRegionAnalysisWrapperPass();
+  SPIRVConvergenceRegionAnalysisWrapperPass();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -149,25 +151,26 @@ public:
 
   bool runOnFunction(Function &F) override;
 
-  ConvergenceRegionInfo &getRegionInfo() { return CRI; }
-  const ConvergenceRegionInfo &getRegionInfo() const { return CRI; }
+  SPIRV::ConvergenceRegionInfo &getRegionInfo() { return CRI; }
+  const SPIRV::ConvergenceRegionInfo &getRegionInfo() const { return CRI; }
 };
 
 // Wrapper around the function above to use it with the new pass manager.
-class ConvergenceRegionAnalysis
-    : public AnalysisInfoMixin<ConvergenceRegionAnalysis> {
-  friend AnalysisInfoMixin<ConvergenceRegionAnalysis>;
+class SPIRVConvergenceRegionAnalysis
+    : public AnalysisInfoMixin<SPIRVConvergenceRegionAnalysis> {
+  friend AnalysisInfoMixin<SPIRVConvergenceRegionAnalysis>;
   static AnalysisKey Key;
 
 public:
-  using Result = ConvergenceRegionInfo;
+  using Result = SPIRV::ConvergenceRegionInfo;
 
   Result run(Function &F, FunctionAnalysisManager &AM);
 };
 
+namespace SPIRV {
 ConvergenceRegionInfo getConvergenceRegions(Function &F, DominatorTree &DT,
                                             LoopInfo &LI);
-
 } // namespace SPIRV
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H

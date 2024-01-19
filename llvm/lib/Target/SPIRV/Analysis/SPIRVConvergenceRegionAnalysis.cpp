@@ -12,14 +12,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConvergenceRegionAnalysis.h"
+#include "SPIRVConvergenceRegionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/InitializePasses.h"
 #include <optional>
 #include <queue>
 
+#define DEBUG_TYPE "spirv-convergence-region-analysis"
+
 namespace llvm {
+void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
+
+INITIALIZE_PASS_BEGIN(SPIRVConvergenceRegionAnalysisWrapperPass,
+                      "convergence-region",
+                      "SPIRV convergence regions analysis", true, true);
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_END(SPIRVConvergenceRegionAnalysisWrapperPass,
+                    "convergence-region", "SPIRV convergence regions analysis",
+                    true, true);
+
 namespace SPIRV {
 
 namespace {
@@ -281,30 +295,32 @@ ConvergenceRegionInfo getConvergenceRegions(Function &F, DominatorTree &DT,
   return Analyzer.analyze();
 }
 
-char ConvergenceRegionAnalysisWrapperPass::ID = 0;
+} // namespace SPIRV
 
-ConvergenceRegionAnalysisWrapperPass::ConvergenceRegionAnalysisWrapperPass()
+char SPIRVConvergenceRegionAnalysisWrapperPass::ID = 0;
+
+SPIRVConvergenceRegionAnalysisWrapperPass::
+    SPIRVConvergenceRegionAnalysisWrapperPass()
     : FunctionPass(ID) {}
 
-bool ConvergenceRegionAnalysisWrapperPass::runOnFunction(Function &F) {
+bool SPIRVConvergenceRegionAnalysisWrapperPass::runOnFunction(Function &F) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
-  CRI = getConvergenceRegions(F, DT, LI);
+  CRI = SPIRV::getConvergenceRegions(F, DT, LI);
   // Nothing was modified.
   return false;
 }
 
-ConvergenceRegionAnalysis::Result
-ConvergenceRegionAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
+SPIRVConvergenceRegionAnalysis::Result
+SPIRVConvergenceRegionAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   Result CRI;
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  CRI = getConvergenceRegions(F, DT, LI);
+  CRI = SPIRV::getConvergenceRegions(F, DT, LI);
   return CRI;
 }
 
-AnalysisKey ConvergenceRegionAnalysis::Key;
+AnalysisKey SPIRVConvergenceRegionAnalysis::Key;
 
-} // namespace SPIRV
 } // namespace llvm

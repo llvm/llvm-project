@@ -1,5 +1,5 @@
 add_llvm_component_library(LLVMSPIRVAnalysis
-  ConvergenceRegionAnalysis.cpp
+  SPIRVConvergenceRegionAnalysis.cpp
 
   LINK_COMPONENTS
   Core

@@ -30,6 +30,7 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const RegisterBankInfo &RBI);
 
 void initializeSPIRVModuleAnalysisPass(PassRegistry &);
+void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 } // namespace llvm

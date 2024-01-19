@@ -1,4 +1,4 @@
-//===- llvm/unittests/Target/SPIRV/ConvergenceRegionAnalysisTests.cpp -----===//
+//===- SPIRVConvergenceRegionAnalysisTests.cpp ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Analysis/ConvergenceRegionAnalysis.h"
+#include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
@@ -31,7 +31,7 @@ template <typename T> struct IsA {
   friend bool operator==(const Value *V, const IsA &) { return isa<T>(V); }
 };
 
-class ConvergenceRegionAnalysisTest : public testing::Test {
+class SPIRVConvergenceRegionAnalysisTest : public testing::Test {
 protected:
   void SetUp() override {
     // Required for tests.
@@ -42,12 +42,12 @@ protected:
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
 
-    FAM.registerPass([&] { return ConvergenceRegionAnalysis(); });
+    FAM.registerPass([&] { return SPIRVConvergenceRegionAnalysis(); });
   }
 
   void TearDown() override { M.reset(); }
 
-  ConvergenceRegionAnalysis::Result &runAnalysis(StringRef Assembly) {
+  SPIRVConvergenceRegionAnalysis::Result &runAnalysis(StringRef Assembly) {
     assert(M == nullptr &&
            "Calling runAnalysis multiple times is unsafe. See getAnalysis().");
 
@@ -58,12 +58,12 @@ protected:
 
     ModulePassManager MPM;
     MPM.run(*M, MAM);
-    return FAM.getResult<ConvergenceRegionAnalysis>(*F);
+    return FAM.getResult<SPIRVConvergenceRegionAnalysis>(*F);
   }
 
-  ConvergenceRegionAnalysis::Result &getAnalysis() {
+  SPIRVConvergenceRegionAnalysis::Result &getAnalysis() {
     assert(M != nullptr && "Has runAnalysis been called before?");
-    return FAM.getResult<ConvergenceRegionAnalysis>(*getFunction());
+    return FAM.getResult<SPIRVConvergenceRegionAnalysis>(*getFunction());
   }
 
   Function *getFunction() const {
@@ -132,7 +132,7 @@ MATCHER_P(ContainsBasicBlock, label, "") {
   return false;
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, DefaultRegion) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, DefaultRegion) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       ret void
@@ -146,7 +146,7 @@ TEST_F(ConvergenceRegionAnalysisTest, DefaultRegion) {
   EXPECT_EQ(CR->Children.size(), 0u);
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, DefaultRegionWithToken) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, DefaultRegionWithToken) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -165,7 +165,7 @@ TEST_F(ConvergenceRegionAnalysisTest, DefaultRegionWithToken) {
             Intrinsic::experimental_convergence_entry);
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopOneRegion) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SingleLoopOneRegion) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -204,7 +204,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopOneRegion) {
   EXPECT_EQ(CR->Children.size(), 1u);
 }
 
-TEST_F(ConvergenceRegionAnalysisTest,
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
        SingleLoopLoopRegionParentsIsTopLevelRegion) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
@@ -242,7 +242,7 @@ TEST_F(ConvergenceRegionAnalysisTest,
   EXPECT_EQ(CR->Children[0]->ConvergenceToken.value()->getName(), "tl1");
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopExits) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SingleLoopExits) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -278,7 +278,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopExits) {
   EXPECT_THAT(L->Exits, ContainsBasicBlock("l1"));
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakExits) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SingleLoopWithBreakExits) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -330,7 +330,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakExits) {
   EXPECT_TRUE(CR->contains(getBlock("l1_condition_true")));
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakRegionBlocks) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SingleLoopWithBreakRegionBlocks) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -399,7 +399,8 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakRegionBlocks) {
 // Exact same test as before, except the 'if() break' condition in the loop is
 // not marked with any convergence intrinsic. In such case, it is valid to
 // consider it outside of the loop.
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakNoConvergenceControl) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
+       SingleLoopWithBreakNoConvergenceControl) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -452,7 +453,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithBreakNoConvergenceControl) {
   EXPECT_FALSE(L->contains(getBlock("end")));
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, TwoLoopsWithControl) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, TwoLoopsWithControl) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -543,7 +544,7 @@ TEST_F(ConvergenceRegionAnalysisTest, TwoLoopsWithControl) {
 // targets are unreachable, meaning no reachable back-edge. This should
 // transform the loop condition into a simple condition, meaning we have a
 // single convergence region.
-TEST_F(ConvergenceRegionAnalysisTest, LoopBothBranchExits) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, LoopBothBranchExits) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -592,7 +593,7 @@ TEST_F(ConvergenceRegionAnalysisTest, LoopBothBranchExits) {
   EXPECT_THAT(R->Exits, ContainsBasicBlock("end"));
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, InnerLoopBreaks) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, InnerLoopBreaks) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -679,7 +680,7 @@ TEST_F(ConvergenceRegionAnalysisTest, InnerLoopBreaks) {
        "l2_condition_true", "l1_exit", "end"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopMultipleExits) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SingleLoopMultipleExits) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -744,7 +745,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopMultipleExits) {
                      "sw.bb", "sw.bb2", "l1_exit"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest,
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
        SingleLoopMultipleExitsWithPartialConvergence) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
@@ -817,7 +818,8 @@ TEST_F(ConvergenceRegionAnalysisTest,
                     {"", "l1_end", "end", "sw.bb", "l1_exit"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithDeepConvergenceBranch) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
+       SingleLoopWithDeepConvergenceBranch) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -882,7 +884,8 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithDeepConvergenceBranch) {
                     {"", "l1_end", "end"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithDeepConvergenceLateBranch) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
+       SingleLoopWithDeepConvergenceLateBranch) {
   StringRef Assembly = R"(
     define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %t1 = call token @llvm.experimental.convergence.entry()
@@ -951,7 +954,8 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithDeepConvergenceLateBranch) {
                     {"", "l1_end", "end", "d"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithNoConvergenceIntrinsics) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
+       SingleLoopWithNoConvergenceIntrinsics) {
   StringRef Assembly = R"(
     define void @main() "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       %1 = icmp ne i32 0, 0
@@ -998,7 +1002,7 @@ TEST_F(ConvergenceRegionAnalysisTest, SingleLoopWithNoConvergenceIntrinsics) {
       {"", "l1_end", "end", "l1_condition_true", "a"});
 }
 
-TEST_F(ConvergenceRegionAnalysisTest, SimpleFunction) {
+TEST_F(SPIRVConvergenceRegionAnalysisTest, SimpleFunction) {
   StringRef Assembly = R"(
     define void @main() "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
       ret void
