@@ -564,6 +564,37 @@ Improvements to Clang's diagnostics
        48 | static_assert(1 << 4 == 15);
           |               ~~~~~~~^~~~~
 
+- Clang will now print ``static_assert`` failure details for binary operators on
+  structs, vectors, or arrays. The diagnostic is limited in size (the limit may
+  be adjusted with `-fconstexpr-print-value-size-limit=N`), and is not emitted
+  when it would be redundant with the existing "requirement" diagnostic.
+  Example:
+
+  .. code-block:: cpp
+
+    struct S {
+      int a, b;
+      bool operator==(const S &) const = default;
+    };
+
+    static_assert(S{1, 2} == S{3, 4});
+    constexpr auto f = [] { return S{3, 4}; };
+    static_assert(S{1, 2} == f());
+
+  will now print:
+
+  .. code-block:: text
+
+    error: static assertion failed due to requirement 'S{1, 2} == S{3, 4}'
+       85 | static_assert(S{1, 2} == S{3, 4});
+          |               ^~~~~~~~~~~~~~~~~~
+    error: static assertion failed due to requirement 'S{1, 2} == f()'
+       87 | static_assert(S{1, 2} == f());
+          |               ^~~~~~~~~~~~~~
+    note: expression evaluates to 'S{1, 2} == S{3, 4}'
+       87 | static_assert(S{1, 2} == f());
+          |               ~~~~~~~~^~~~~~
+
 - Clang now diagnoses definitions of friend function specializations, e.g. ``friend void f<>(int) {}``.
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
@@ -610,6 +641,7 @@ Improvements to Clang's diagnostics
 - Clang now won't mention invisible namespace when diagnose invisible declarations
   inside namespace. The original diagnostic message is confusing.
   (`#73893: <https://github.com/llvm/llvm-project/issues/73893>`_)
+
 
 Improvements to Clang's time-trace
 ----------------------------------
