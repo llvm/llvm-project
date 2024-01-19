@@ -405,10 +405,10 @@ bool Address::GetDescription(Stream &s, Target &target,
   return false;
 }
 
-bool Address::Dump(
-    Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
-    DumpStyle fallback_style, uint32_t addr_size, bool all_ranges,
-    std::optional<Stream::HighlightSettings> pattern_info) const {
+bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
+                   DumpStyle fallback_style, uint32_t addr_size,
+                   bool all_ranges,
+                   std::optional<Stream::HighlightSettings> settings) const {
   // If the section was nullptr, only load address is going to work unless we
   // are trying to deref a pointer
   SectionSP section_sp(GetSection());
@@ -525,7 +525,7 @@ bool Address::Dump(
                     ansi_suffix =
                         target->GetDebugger().GetRegexMatchAnsiSuffix();
                   }
-                  s->PutCStringColorHighlighted(symbol_name, pattern_info);
+                  s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
                   if (delta)
@@ -653,7 +653,7 @@ bool Address::Dump(
                     pointer_sc.symbol != nullptr) {
                   s->PutCString(": ");
                   pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false,
-                                             false, true, true, pattern_info);
+                                             false, true, true, settings);
                 }
               }
             }
@@ -693,13 +693,13 @@ bool Address::Dump(
               sc.DumpStopContext(s, exe_scope, *this, show_fullpaths,
                                  show_module, show_inlined_frames,
                                  show_function_arguments, show_function_name,
-                                 pattern_info);
+                                 settings);
             } else {
               // We found a symbol but it was in a different section so it
               // isn't the symbol we should be showing, just show the section
               // name + offset
               Dump(s, exe_scope, DumpStyleSectionNameOffset, DumpStyleInvalid,
-                   UINT32_MAX, false, pattern_info);
+                   UINT32_MAX, false, settings);
             }
           }
         }
@@ -707,7 +707,7 @@ bool Address::Dump(
     } else {
       if (fallback_style != DumpStyleInvalid)
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
-                    false, pattern_info);
+                    false, settings);
       return false;
     }
     break;
@@ -728,7 +728,7 @@ bool Address::Dump(
               sc.symbol->GetAddressRef().GetSection() != GetSection())
             sc.symbol = nullptr;
         }
-        sc.GetDescription(s, eDescriptionLevelBrief, target, pattern_info);
+        sc.GetDescription(s, eDescriptionLevelBrief, target, settings);
 
         if (sc.block) {
           bool can_create = true;
@@ -777,7 +777,7 @@ bool Address::Dump(
     } else {
       if (fallback_style != DumpStyleInvalid)
         return Dump(s, exe_scope, fallback_style, DumpStyleInvalid, addr_size,
-                    false, pattern_info);
+                    false, settings);
       return false;
     }
     break;

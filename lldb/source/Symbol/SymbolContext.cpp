@@ -73,7 +73,7 @@ bool SymbolContext::DumpStopContext(
     Stream *s, ExecutionContextScope *exe_scope, const Address &addr,
     bool show_fullpaths, bool show_module, bool show_inlined_frames,
     bool show_function_arguments, bool show_function_name,
-    std::optional<Stream::HighlightSettings> pattern_info) const {
+    std::optional<Stream::HighlightSettings> settings) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -96,7 +96,7 @@ bool SymbolContext::DumpStopContext(
       if (!name)
         name = function->GetName();
       if (name)
-        s->PutCStringColorHighlighted(name.GetStringRef(), pattern_info);
+        s->PutCStringColorHighlighted(name.GetStringRef(), settings);
     }
 
     if (addr.IsValid()) {
@@ -170,8 +170,7 @@ bool SymbolContext::DumpStopContext(
         ansi_prefix = target_sp->GetDebugger().GetRegexMatchAnsiPrefix();
         ansi_suffix = target_sp->GetDebugger().GetRegexMatchAnsiSuffix();
       }
-      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(),
-                                    pattern_info);
+      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), settings);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {
@@ -195,7 +194,7 @@ bool SymbolContext::DumpStopContext(
 
 void SymbolContext::GetDescription(
     Stream *s, lldb::DescriptionLevel level, Target *target,
-    std::optional<Stream::HighlightSettings> pattern_info) const {
+    std::optional<Stream::HighlightSettings> settings) const {
   if (module_sp) {
     s->Indent("     Module: file = \"");
     module_sp->GetFileSpec().Dump(s->AsRawOstream());
@@ -255,7 +254,7 @@ void SymbolContext::GetDescription(
 
   if (symbol != nullptr) {
     s->Indent("     Symbol: ");
-    symbol->GetDescription(s, level, target, pattern_info);
+    symbol->GetDescription(s, level, target, settings);
     s->EOL();
   }
 

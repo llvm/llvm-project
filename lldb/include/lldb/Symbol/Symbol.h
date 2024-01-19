@@ -175,9 +175,9 @@ public:
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      std::optional<Stream::HighlightSettings> pattern_info =
-                          std::nullopt) const;
+  void GetDescription(
+      Stream *s, lldb::DescriptionLevel level, Target *target,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   bool IsSynthetic() const { return m_is_synthetic; }
 

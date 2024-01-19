@@ -273,7 +273,7 @@ public:
 
   void PutCStringColorHighlighted(
       llvm::StringRef text,
-      std::optional<HighlightSettings> pattern_info = std::nullopt);
+      std::optional<HighlightSettings> settings = std::nullopt);
 
   /// Output and End of Line character to the stream.
   size_t EOL();
