@@ -70,6 +70,8 @@ Changes to the LLVM IR
 
 * Added `llvm.exp10` intrinsic.
 
+* Added a code model attribute for the global variable.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -130,6 +132,8 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
+* Respect the code model attribute of global variables when different from
+  their default values.
 
 Changes to the MIPS Backend
 ---------------------------
