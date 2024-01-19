@@ -197,7 +197,7 @@ Code Generation
    Describes the TableGen tool, which is used heavily by the LLVM code
    generator.
 
-:doc:`Mdl <mdl/index>`
+:doc:`Mdl <Mdl/index>`
    Describes the Machine Description Language compiler that can be optionally
    used to describe a targets's microarchitecture.
 
