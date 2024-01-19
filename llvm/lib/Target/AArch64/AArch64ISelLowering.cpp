@@ -16569,8 +16569,7 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
   auto DetectAddExtract = [&](SDValue A) {
     // Look for add(zext(extract_lo(x)), zext(extract_hi(x))), returning
     // UADDLP(x) if found.
-    if (A.getOpcode() != ISD::ADD)
-      return SDValue();
+    assert(A.getOpcode() == ISD::ADD);
     EVT VT = A.getValueType();
     SDValue Op0 = A.getOperand(0);
     SDValue Op1 = A.getOperand(1);
@@ -16618,8 +16617,7 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
 static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
   // Look for add(zext(64-bit source), zext(64-bit source)), returning
   // UADDLV(concat(zext, zext)) if found.
-  if (A.getOpcode() != ISD::ADD)
-    return SDValue();
+  assert(A.getOpcode() == ISD::ADD);
   EVT VT = A.getValueType();
   if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
     return SDValue();
@@ -16633,7 +16631,7 @@ static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
   EVT ExtVT1 = Ext1.getValueType();
   // Check zext VTs are the same and 64-bit length.
   if (ExtVT0 != ExtVT1 ||
-      !(ExtVT0 == MVT::v8i8 || ExtVT0 == MVT::v4i16 || ExtVT0 == MVT::v2i32))
+      VT.getScalarSizeInBits() != (2 * ExtVT0.getScalarSizeInBits()))
     return SDValue();
   // Get VT for concat of zext sources.
   EVT PairVT = ExtVT0.getDoubleNumVectorElementsVT(*DAG.getContext());
