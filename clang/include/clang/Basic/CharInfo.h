@@ -59,7 +59,6 @@ LLVM_READONLY inline bool isAsciiIdentifierStart(unsigned char c,
   return AllowDollar && c == '$';
 }
 
-
 LLVM_READONLY inline bool isAsciiIdentifierContinue(unsigned char c) {
   // Precomputed CHAR_UPPER|CHAR_LOWER|CHAR_DIGIT|CHAR_UNDER
   static constexpr unsigned char IDContinue[256] = {
