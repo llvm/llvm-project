@@ -791,7 +791,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
     const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
-  module_sp.reset();
+  assert(module_sp.get() == nullptr);
   UpdateKextandKernelsLocalScan();
   if (did_create_ptr)
     *did_create_ptr = false;
@@ -841,7 +841,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     }
   }
 
-  // Give the generic methods, including possibly calling into  DebugSymbols
+  // Give the generic methods, including possibly calling into DebugSymbols
   // framework on macOS systems, a chance.
   return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
                                          module_search_paths_ptr, old_modules,
