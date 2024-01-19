@@ -2263,15 +2263,27 @@ public:
         MsgParam = 3;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
-        const uint64_t dSize =
-            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
-        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(ECE->getSubExpr())) {
-          QualType srcType = CE->getType();
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
-          if (sSize >= dSize)
+        if (!isa<PointerType>(destType))
+          return;
+
+        const Expr *subExpr = ECE->getSubExpr();
+        // Check if related to DataInvocation warning gadget.
+        if (!isa<CXXMemberCallExpr>(subExpr)) {
+          if (const auto *SE = dyn_cast<ParenExpr>(subExpr)) {
+            if (!isa<CXXMemberCallExpr>(SE->getSubExpr()))
+              return;
+          } else
             return;
         }
+        const uint64_t dSize =
+            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
         MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();

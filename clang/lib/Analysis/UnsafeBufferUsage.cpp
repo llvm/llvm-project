@@ -739,9 +739,10 @@ public:
   }
 
   static Matcher matcher() {
+    Matcher callExpr = cxxMemberCallExpr(
+        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
     return stmt(
-        explicitCastExpr(has(cxxMemberCallExpr(callee(cxxMethodDecl(
-                             hasName("data"), ofClass(hasName("std::span")))))))
+        explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));
   }
   const Stmt *getBaseStmt() const override { return Op; }
