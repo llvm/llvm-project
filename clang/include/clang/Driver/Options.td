@@ -3821,7 +3821,7 @@ def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Override the visibility of globals based on their final DLL storage class.s">,
+          "Override the visibility of globals based on their final DLL storage class.">,
   NegFlag<SetFalse>>;
 class MarshallingInfoVisibilityFromDLLStorage<KeyPathAndMacro kpm, code default>
   : MarshallingInfoEnum<kpm, default>,
