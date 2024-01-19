@@ -116,8 +116,7 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
   // Note: semantics turns x%p() into x%t%p() when the procedure pointer
   // component is part of parent component t.
   if (!fieldType)
-    fir::emitFatalError(loc,
-                        "procedure pointer component not found in FIR type");
+    TODO(loc, "passing type bound procedure (extension)");
   mlir::Type designatorType = fir::ReferenceType::get(fieldType);
   mlir::Value compRef = builder.create<hlfir::DesignateOp>(
       loc, designatorType, base, fieldName,
