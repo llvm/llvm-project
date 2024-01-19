@@ -57,8 +57,27 @@ class BPFunctionNode {
   friend class BalancedPartitioning;
 
 public:
+  /// The type of ID
   using IDT = uint64_t;
-  using UtilityNodeT = uint32_t;
+  /// The type of UtilityNode
+  struct UtilityNodeT {
+    UtilityNodeT(uint32_t Id, uint32_t Weight = 1) : Id(Id), Weight(Weight) {}
+    uint32_t Id;
+    uint32_t Weight;
+
+    // Deduplicate utility nodes for a given function.
+    // TODO: One may experiment with accumulating the weights of duplicates.
+    static void sortAndDeduplicate(SmallVector<UtilityNodeT, 4> &UNs) {
+      llvm::sort(UNs, [](const UtilityNodeT &L, const UtilityNodeT &R) {
+        return L.Id < R.Id;
+      });
+      UNs.erase(std::unique(UNs.begin(), UNs.end(),
+                            [](const UtilityNodeT &L, const UtilityNodeT &R) {
+                              return L.Id == R.Id;
+                            }),
+                UNs.end());
+    }
+  };
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
   BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
@@ -78,8 +97,7 @@ protected:
   uint64_t InputOrderIndex = 0;
 
   friend class BPFunctionNodeTest_Basic_Test;
-  friend class BalancedPartitioningTest_Basic_Test;
-  friend class BalancedPartitioningTest_Large_Test;
+  friend class BalancedPartitioningTest;
 };
 
 /// Algorithm parameters; default values are tuned on real-world binaries
@@ -188,6 +206,8 @@ private:
     float CachedGainRL;
     /// Whether \p CachedGainLR and \p CachedGainRL are valid
     bool CachedGainIsValid = false;
+    /// The weight of this utility node
+    uint32_t Weight = 1;
   };
 
 protected:
