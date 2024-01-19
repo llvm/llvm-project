@@ -1032,6 +1032,9 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
   defm int_amdgcn_image_atomic_cmpswap :
       AMDGPUImageDimAtomicX<"ATOMIC_CMPSWAP", [AMDGPUArg<LLVMMatchType<0>, "src">,
                                                AMDGPUArg<LLVMMatchType<0>, "cmp">]>;
+
+  defm int_amdgcn_image_atomic_pk_add_f16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_F16">;
+  defm int_amdgcn_image_atomic_pk_add_bf16 : AMDGPUImageDimFloatAtomic<"ATOMIC_PK_ADD_BF16">;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1316,6 +1319,26 @@ def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyfloat_ty>;
+// gfx12+ intrinsic
+def int_amdgcn_raw_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+ [ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+ AMDGPURsrcIntrinsic<1, 0>;
+def int_amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   AMDGPUBufferRsrcTy,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+ [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+  ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+ AMDGPURsrcIntrinsic<1, 0>;
 
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
@@ -1392,6 +1415,28 @@ def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
 def int_amdgcn_struct_ptr_buffer_atomic_fadd : AMDGPUStructPtrBufferAtomic<llvm_anyfloat_ty>;
+// gfx12 intrinsic
+def int_amdgcn_struct_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   llvm_v4i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+  [ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<1, 0>;
+def int_amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16 : Intrinsic <
+  [llvm_v2bf16_ty],
+  [llvm_v2bf16_ty,
+   AMDGPUBufferRsrcTy,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty,
+   llvm_i32_ty],
+  [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
+  AMDGPURsrcIntrinsic<1, 0>;
 
 // gfx90a intrinsics
 def int_amdgcn_struct_buffer_atomic_fmin : AMDGPUStructBufferAtomic<llvm_anyfloat_ty>;
