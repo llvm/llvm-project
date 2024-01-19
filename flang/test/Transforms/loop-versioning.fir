@@ -263,7 +263,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK-SAME:            %[[N1:.*]]: !fir.ref<i32> {{.*}},
 // CHECK-SAME:            %[[M1:.*]]: !fir.ref<i32> {{.*}}) {
 // CHECK: fir.do_loop
-// CHECL:   %[[FOUR:.*]] = arith.constant 4 : index
+// CHECK:   %[[FOUR:.*]] = arith.constant 4 : index
 // CHECK:   %[[COMP:.*]] = arith.cmpi {{.*}}, %[[FOUR]]
 // CHECK:   fir.if %[[COMP]] -> {{.*}} {
 // CHECK:     %[[CONV:.*]] = fir.convert %[[B]] :
@@ -1548,14 +1548,13 @@ func.func @minloc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"}, %ar
 }
 // CHECK-LABEL: func @minloc
 // CHECK: %[[V17:.*]] = fir.if %{{.*}} -> (i32) {
-// CHECK: %[[V27:.*]] = fir.do_loop
-// CHECK: fir.result %[[V27]] : i32
+// CHECK:   %[[V27:.*]] = fir.do_loop
+// CHECK:   fir.result %[[V27]] : i32
 // CHECK: } else {
-// CHECK: %[[V23:.*]] = fir.do_loop
-// CHECK: fir.result %[[V23]] : i32
+// CHECK:   %[[V23:.*]] = fir.do_loop
+// CHECK:   fir.result %[[V23]] : i32
 // CHECK: fir.if %{{.*}} {
-// CHECL: {{.*}} = arith.cmpi eq, %[[V17]], %c2147483647_i32
-
+// CHECK:   {{.*}} = arith.cmpi eq, %[[V17]], %c2147483647_i32
 
 
 } // End module
