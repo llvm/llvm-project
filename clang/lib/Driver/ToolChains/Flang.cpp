@@ -352,6 +352,27 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
+                               options::OPT_mno_outline_atomics)) {
+    // Option -moutline-atomics supported for AArch64 target only.
+    if (!Triple.isAArch64()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else {
+      if (A->getOption().matches(options::OPT_moutline_atomics)) {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("+outline-atomics");
+      } else {
+        CmdArgs.push_back("-target-feature");
+        CmdArgs.push_back("-outline-atomics");
+      }
+    }
+  } else if (Triple.isAArch64() &&
+             getToolChain().IsAArch64OutlineAtomicsDefault(Args)) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+outline-atomics");
+  }
+
   // Add the target features.
   switch (TC.getArch()) {
   default:
@@ -672,7 +693,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
