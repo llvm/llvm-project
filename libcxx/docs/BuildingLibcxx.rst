@@ -485,18 +485,14 @@ LLVM-specific options
 .. _assertion-handler:
 
 Overriding the default assertion handler
-==========================================
+========================================
 
-When the library wants to terminate due to an unforeseen condition (such as
-a hardening assertion failure), the program is aborted through a special verbose
-termination function. The library provides a default function that prints an
-error message and calls ``std::abort()``. Note that this function is provided by
-the static or shared library, so it is only available when deploying to
-a platform where the compiled library is sufficiently recent. On older
-platforms, the program will terminate in an unspecified unsuccessful manner, but
-the quality of diagnostics won't be great.
+When the library wants to terminate due to a hardening assertion failure, the
+program is aborted by invoking a trap instruction (or in debug mode, by
+a special verbose termination function that prints an error message and calls
+``std::abort()``). However, vendors can also override that mechanism at CMake
+configuration time.
 
-However, vendors can also override that mechanism at CMake configuration time.
 When a hardening assertion fails, the library invokes the
 ``_LIBCPP_ASSERTION_HANDLER`` macro. A vendor may provide a header that contains
 a custom definition of this macro and specify the path to the header via the
