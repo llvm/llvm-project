@@ -34,7 +34,7 @@ bool test() {
   test_runtime_assertion<int>();
   test_runtime_assertion<long int>();
   test_runtime_assertion<long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_runtime_assertion<__int128_t>();
 #endif
   // Unsigned
@@ -43,7 +43,7 @@ bool test() {
   test_runtime_assertion<unsigned int>();
   test_runtime_assertion<unsigned long int>();
   test_runtime_assertion<unsigned long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_runtime_assertion<__uint128_t>();
 #endif
 
@@ -51,7 +51,7 @@ bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
 
   return 0;
 }

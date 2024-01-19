@@ -111,7 +111,7 @@ constexpr bool test() {
   test_signed_saturated<int, long long int>();
   test_signed_saturated<long int, long long int>();
   test_signed_saturated<long long int, long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_signed_notsaturated<__int128_t, signed char>();
   test_signed_notsaturated<__int128_t, short int>();
   test_signed_notsaturated<__int128_t, int>();
@@ -134,7 +134,7 @@ constexpr bool test() {
   test_unsigned_saturated<unsigned int, unsigned long long int>();
   test_unsigned_saturated<unsigned long int, unsigned long long int>();
   test_unsigned_saturated<unsigned long long int, unsigned long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_unsigned_notsaturated<__uint128_t, unsigned char>();
   test_unsigned_notsaturated<__uint128_t, unsigned short int>();
   test_unsigned_notsaturated<__uint128_t, unsigned int>();
@@ -151,7 +151,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
   static_assert(test());
 
   return 0;

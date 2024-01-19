@@ -46,7 +46,7 @@ constexpr void test() {
   test_constraint_success<int, SI>();
   test_constraint_success<long int, SI>();
   test_constraint_success<long long int, int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_constraint_success<__int128_t, SI>();
 #endif
   // Contraint success - Unsigned
@@ -56,14 +56,14 @@ constexpr void test() {
   test_constraint_success<unsigned int, UI>();
   test_constraint_success<unsigned long int, UI>();
   test_constraint_success<unsigned long long int, unsigned int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_constraint_success<__uint128_t, UI>();
 #endif
 
   // Contraint failure
   test_constraint_fail<bool>();
   test_constraint_fail<char>();
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_INT128
   test_constraint_fail<wchar_t>();
 #endif
   test_constraint_fail<char8_t>();

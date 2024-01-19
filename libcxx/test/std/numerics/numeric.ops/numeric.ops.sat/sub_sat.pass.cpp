@@ -99,7 +99,7 @@ constexpr bool test() {
   test_signed<int>();
   test_signed<long int>();
   test_signed<long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_signed<__int128_t>();
 #endif
   // Unsigned
@@ -108,7 +108,7 @@ constexpr bool test() {
   test_unsigned<unsigned int>();
   test_unsigned<unsigned long int>();
   test_unsigned<unsigned long long int>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_unsigned<__uint128_t>();
 #endif
 
@@ -116,7 +116,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  assert();
   static_assert(test());
 
   return 0;
