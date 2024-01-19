@@ -6143,28 +6143,31 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
 
 std::string Driver::GetStdModuleManifestPath(const Compilation &C,
                                              const ToolChain &TC) const {
-
   std::string error = "<NOT PRESENT>";
 
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
-    std::string lib = "libc++.so";
-    std::string path = GetFilePath(lib, TC);
+    std::string lib = GetFilePath("libc++.so", TC);
 
     // Note when there are multiple flavours of libc++ the module json needs to
     // look at the command-line arguments for the proper json.
-	// These flavours do not exist at the moment, but there are plans to
-	// provide a variant that is built with sanitizer instrumentation enabled.
+    // These flavours do not exist at the moment, but there are plans to
+    // provide a variant that is built with sanitizer instrumentation enabled.
 
     // For example
-    //  const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-    //  if (Sanitize.needsAsanRt())
-    //    return path.replace(path.size() - lib.size(), lib.size(),
-    //                        "modules-asan.json");
+    //  StringRef modules = [&] {
+    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+    //    if (Sanitize.needsAsanRt())
+    //      return "modules-asan.json";
+    //    return "modules.json";
+    //  }();
+    StringRef modules = "modules.json";
 
-    path = path.replace(path.size() - lib.size(), lib.size(), "modules.json");
+    SmallString<128> path(lib.begin(), lib.end());
+    llvm::sys::path::remove_filename(path);
+    llvm::sys::path::append(path, modules);
     if (TC.getVFS().exists(path))
-      return path;
+      return static_cast<std::string>(path);
 
     return error;
   }

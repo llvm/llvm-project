@@ -602,8 +602,7 @@ public:
   // FIXME: This should be in CompilationInfo.
   std::string GetProgramPath(StringRef Name, const ToolChain &TC) const;
 
-  /// GetStdModuleManifestPath - Lookup the path to the Standard library module
-  /// manifest.
+  /// Lookup the path to the Standard library module manifest.
   ///
   /// \param C - The compilation.
   /// \param TC - The tool chain for additional information on
