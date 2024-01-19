@@ -14,8 +14,9 @@
 namespace llvm {
 
 DPValue::DPValue(const DbgVariableIntrinsic *DVI)
-    : DebugValueUser(DVI->getRawLocation()), Variable(DVI->getVariable()),
-      Expression(DVI->getExpression()), DbgLoc(DVI->getDebugLoc()) {
+    : DebugValueUser({DVI->getRawLocation(), nullptr, nullptr}),
+      Variable(DVI->getVariable()), Expression(DVI->getExpression()),
+      DbgLoc(DVI->getDebugLoc()), AddressExpression(nullptr) {
   switch (DVI->getIntrinsicID()) {
   case Intrinsic::dbg_value:
     Type = LocationType::Value;
@@ -23,6 +24,15 @@ DPValue::DPValue(const DbgVariableIntrinsic *DVI)
   case Intrinsic::dbg_declare:
     Type = LocationType::Declare;
     break;
+  case Intrinsic::dbg_assign: {
+    Type = LocationType::Assign;
+    const DbgAssignIntrinsic *Assign =
+        static_cast<const DbgAssignIntrinsic *>(DVI);
+    resetDebugValue(1, Assign->getRawAddress());
+    AddressExpression = Assign->getAddressExpression();
+    setAssignId(Assign->getAssignID());
+    break;
+  }
   default:
     llvm_unreachable(
         "Trying to create a DPValue with an invalid intrinsic type!");
@@ -30,16 +40,76 @@ DPValue::DPValue(const DbgVariableIntrinsic *DVI)
 }
 
 DPValue::DPValue(const DPValue &DPV)
-    : DebugValueUser(DPV.getRawLocation()),
-      Variable(DPV.getVariable()), Expression(DPV.getExpression()),
-      DbgLoc(DPV.getDebugLoc()), Type(DPV.getType()) {}
+    : DebugValueUser(DPV.DebugValues), Variable(DPV.getVariable()),
+      Expression(DPV.getExpression()), DbgLoc(DPV.getDebugLoc()),
+      AddressExpression(DPV.AddressExpression), Type(DPV.getType()) {}
 
 DPValue::DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
                  const DILocation *DI, LocationType Type)
-    : DebugValueUser(Location), Variable(DV), Expression(Expr), DbgLoc(DI),
-      Type(Type) {}
+    : DebugValueUser({Location, nullptr, nullptr}), Variable(DV),
+      Expression(Expr), DbgLoc(DI), Type(Type) {}
+
+DPValue::DPValue(Metadata *Value, DILocalVariable *Variable,
+                 DIExpression *Expression, DIAssignID *AssignID,
+                 Metadata *Address, DIExpression *AddressExpression,
+                 const DILocation *DI)
+    : DebugValueUser({Value, Address, AssignID}), Variable(Variable),
+      Expression(Expression), DbgLoc(DI), AddressExpression(AddressExpression),
+      Type(LocationType::Assign) {}
 
 void DPValue::deleteInstr() { delete this; }
+
+DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
+                     LocationType::Value);
+}
+
+DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI,
+                                DPValue &InsertBefore) {
+  auto *NewDPValue = createDPValue(Location, DV, Expr, DI);
+  NewDPValue->insertBefore(&InsertBefore);
+  return NewDPValue;
+}
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Address), DV, Expr, DI,
+                     LocationType::Declare);
+}
+
+DPValue *DPValue::createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore) {
+  auto *NewDPVDeclare = createDPVDeclare(Address, DV, Expr, DI);
+  NewDPVDeclare->insertBefore(&InsertBefore);
+  return NewDPVDeclare;
+}
+
+DPValue *DPValue::createDPVAssign(Value *Val, DILocalVariable *Variable,
+                                  DIExpression *Expression,
+                                  DIAssignID *AssignID, Value *Address,
+                                  DIExpression *AddressExpression,
+                                  const DILocation *DI) {
+  return new DPValue(ValueAsMetadata::get(Val), Variable, Expression, AssignID,
+                     ValueAsMetadata::get(Address), AddressExpression, DI);
+}
+
+DPValue *DPValue::createLinkedDPVAssign(Instruction *LinkedInstr, Value *Val,
+                                        DILocalVariable *Variable,
+                                        DIExpression *Expression,
+                                        Value *Address,
+                                        DIExpression *AddressExpression,
+                                        const DILocation *DI) {
+  auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
+  assert(Link && "Linked instruction must have DIAssign metadata attached");
+  auto *NewDPVAssign = DPValue::createDPVAssign(Val, Variable, Expression,
+                                                cast<DIAssignID>(Link), Address,
+                                                AddressExpression, DI);
+  LinkedInstr->getParent()->insertDPValueAfter(NewDPVAssign, LinkedInstr);
+  return NewDPVAssign;
+}
 
 iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   auto *MD = getRawLocation();
@@ -96,10 +166,15 @@ static ValueAsMetadata *getAsMetadata(Value *V) {
 void DPValue::replaceVariableLocationOp(Value *OldValue, Value *NewValue,
                                         bool AllowEmpty) {
   assert(NewValue && "Values must be non-null");
+
+  bool DbgAssignAddrReplaced = isDbgAssign() && OldValue == getAddress();
+  if (DbgAssignAddrReplaced)
+    setAddress(NewValue);
+
   auto Locations = location_ops();
   auto OldIt = find(Locations, OldValue);
   if (OldIt == Locations.end()) {
-    if (AllowEmpty)
+    if (AllowEmpty || DbgAssignAddrReplaced)
       return;
     llvm_unreachable("OldValue must be a current location");
   }
@@ -190,9 +265,6 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
          "Cannot clone from BasicBlock that is not part of a Module or "
          "DICompileUnit!");
   LLVMContext &Context = getDebugLoc()->getContext();
-  Value *Args[] = {MetadataAsValue::get(Context, getRawLocation()),
-                   MetadataAsValue::get(Context, getVariable()),
-                   MetadataAsValue::get(Context, getExpression())};
   Function *IntrinsicFn;
 
   // Work out what sort of intrinsic we're going to produce.
@@ -203,16 +275,34 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   case DPValue::LocationType::Value:
     IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_value);
     break;
+  case DPValue::LocationType::Assign:
+    IntrinsicFn = Intrinsic::getDeclaration(M, Intrinsic::dbg_assign);
+    break;
   case DPValue::LocationType::End:
   case DPValue::LocationType::Any:
     llvm_unreachable("Invalid LocationType");
-    break;
   }
 
   // Create the intrinsic from this DPValue's information, optionally insert
   // into the target location.
-  DbgVariableIntrinsic *DVI = cast<DbgVariableIntrinsic>(
-      CallInst::Create(IntrinsicFn->getFunctionType(), IntrinsicFn, Args));
+  DbgVariableIntrinsic *DVI;
+  if (isDbgAssign()) {
+    Value *AssignArgs[] = {
+        MetadataAsValue::get(Context, getRawLocation()),
+        MetadataAsValue::get(Context, getVariable()),
+        MetadataAsValue::get(Context, getExpression()),
+        MetadataAsValue::get(Context, getAssignID()),
+        MetadataAsValue::get(Context, getRawAddress()),
+        MetadataAsValue::get(Context, getAddressExpression())};
+    DVI = cast<DbgVariableIntrinsic>(CallInst::Create(
+        IntrinsicFn->getFunctionType(), IntrinsicFn, AssignArgs));
+  } else {
+    Value *Args[] = {MetadataAsValue::get(Context, getRawLocation()),
+                     MetadataAsValue::get(Context, getVariable()),
+                     MetadataAsValue::get(Context, getExpression())};
+    DVI = cast<DbgVariableIntrinsic>(
+        CallInst::Create(IntrinsicFn->getFunctionType(), IntrinsicFn, Args));
+  }
   DVI->setTailCall();
   DVI->setDebugLoc(getDebugLoc());
   if (InsertBefore)
@@ -221,8 +311,30 @@ DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   return DVI;
 }
 
-void DPValue::handleChangedLocation(Metadata *NewLocation) {
-  resetDebugValue(NewLocation);
+Value *DPValue::getAddress() const {
+  auto *MD = getRawAddress();
+  if (auto *V = dyn_cast<ValueAsMetadata>(MD))
+    return V->getValue();
+
+  // When the value goes to null, it gets replaced by an empty MDNode.
+  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
+  return nullptr;
+}
+
+DIAssignID *DPValue::getAssignID() const {
+  return cast<DIAssignID>(DebugValues[2]);
+}
+
+void DPValue::setAssignId(DIAssignID *New) { resetDebugValue(2, New); }
+
+void DPValue::setKillAddress() {
+  resetDebugValue(
+      1, ValueAsMetadata::get(UndefValue::get(getAddress()->getType())));
+}
+
+bool DPValue::isKillAddress() const {
+  Value *Addr = getAddress();
+  return !Addr || isa<UndefValue>(Addr);
 }
 
 const BasicBlock *DPValue::getParent() const {
@@ -247,6 +359,35 @@ LLVMContext &DPValue::getContext() { return getBlock()->getContext(); }
 
 const LLVMContext &DPValue::getContext() const {
   return getBlock()->getContext();
+}
+
+void DPValue::insertBefore(DPValue *InsertBefore) {
+  assert(!getMarker() &&
+         "Cannot insert a DPValue that is already has a DPMarker!");
+  assert(InsertBefore->getMarker() &&
+         "Cannot insert a DPValue before a DPValue that does not have a "
+         "DPMarker!");
+  InsertBefore->getMarker()->insertDPValue(this, InsertBefore);
+}
+void DPValue::insertAfter(DPValue *InsertAfter) {
+  assert(!getMarker() &&
+         "Cannot insert a DPValue that is already has a DPMarker!");
+  assert(InsertAfter->getMarker() &&
+         "Cannot insert a DPValue after a DPValue that does not have a "
+         "DPMarker!");
+  InsertAfter->getMarker()->insertDPValueAfter(this, InsertAfter);
+}
+void DPValue::moveBefore(DPValue *MoveBefore) {
+  assert(getMarker() &&
+         "Canot move a DPValue that does not currently have a DPMarker!");
+  removeFromParent();
+  insertBefore(MoveBefore);
+}
+void DPValue::moveAfter(DPValue *MoveAfter) {
+  assert(getMarker() &&
+         "Canot move a DPValue that does not currently have a DPMarker!");
+  removeFromParent();
+  insertAfter(MoveAfter);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -313,9 +454,14 @@ void DPMarker::eraseFromParent() {
 iterator_range<DPValue::self_iterator> DPMarker::getDbgValueRange() {
   return make_range(StoredDPValues.begin(), StoredDPValues.end());
 }
+iterator_range<DPValue::const_self_iterator>
+DPMarker::getDbgValueRange() const {
+  return make_range(StoredDPValues.begin(), StoredDPValues.end());
+}
 
 void DPValue::removeFromParent() {
   getMarker()->StoredDPValues.erase(getIterator());
+  Marker = nullptr;
 }
 
 void DPValue::eraseFromParent() {
@@ -326,6 +472,18 @@ void DPValue::eraseFromParent() {
 void DPMarker::insertDPValue(DPValue *New, bool InsertAtHead) {
   auto It = InsertAtHead ? StoredDPValues.begin() : StoredDPValues.end();
   StoredDPValues.insert(It, *New);
+  New->setMarker(this);
+}
+void DPMarker::insertDPValue(DPValue *New, DPValue *InsertBefore) {
+  assert(InsertBefore->getMarker() == this &&
+         "DPValue 'InsertBefore' must be contained in this DPMarker!");
+  StoredDPValues.insert(InsertBefore->getIterator(), *New);
+  New->setMarker(this);
+}
+void DPMarker::insertDPValueAfter(DPValue *New, DPValue *InsertAfter) {
+  assert(InsertAfter->getMarker() == this &&
+         "DPValue 'InsertAfter' must be contained in this DPMarker!");
+  StoredDPValues.insert(++(InsertAfter->getIterator()), *New);
   New->setMarker(this);
 }
 

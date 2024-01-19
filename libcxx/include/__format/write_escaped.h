@@ -71,7 +71,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   std::ranges::copy(std::begin(__buffer), __r.ptr, __out_it);
 
   __str += _CharT('}');

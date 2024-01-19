@@ -113,7 +113,7 @@ MethodBody::MethodBody(bool declOnly)
     : declOnly(declOnly), stringOs(body), os(stringOs) {}
 
 void MethodBody::writeTo(raw_indented_ostream &os) const {
-  auto bodyRef = StringRef(body).drop_while([](char c) { return c == '\n'; });
+  auto bodyRef = StringRef(body).ltrim('\n');
   os << bodyRef;
   if (bodyRef.empty())
     return;

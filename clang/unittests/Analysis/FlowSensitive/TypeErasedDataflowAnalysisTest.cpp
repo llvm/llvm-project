@@ -86,7 +86,7 @@ protected:
     const std::optional<StateT> &MaybeState = BlockStates[Block->getBlockID()];
     assert(MaybeState.has_value());
     return *MaybeState;
-  };
+  }
 
   std::unique_ptr<ASTUnit> AST;
   std::unique_ptr<ControlFlowContext> CFCtx;

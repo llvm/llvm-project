@@ -17,8 +17,9 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
   x = xbits.get_val();
 
   uint32_t x_u = xbits.uintval();

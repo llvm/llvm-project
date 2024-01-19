@@ -1242,7 +1242,8 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
       case AMDGPU::S_WAITCNT: {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
-        return (Decoded.LgkmCnt == 0);
+        // DsCnt corresponds to LGKMCnt here.
+        return (Decoded.DsCnt == 0);
       }
       default:
         // SOPP instructions cannot mitigate the hazard.
@@ -1450,20 +1451,27 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
       return false;
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
-  auto IsExpiredFn = [](const MachineInstr &I, int) {
+  bool LdsdirCanWait = ST.hasLdsWaitVMSRC();
+  auto IsExpiredFn = [this, LdsdirCanWait](const MachineInstr &I, int) {
     return SIInstrInfo::isVALU(I) || SIInstrInfo::isEXP(I) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT && !I.getOperand(0).getImm()) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            AMDGPU::DepCtr::decodeFieldVmVsrc(I.getOperand(0).getImm()) == 0);
+            AMDGPU::DepCtr::decodeFieldVmVsrc(I.getOperand(0).getImm()) == 0) ||
+           (LdsdirCanWait && SIInstrInfo::isLDSDIR(I) &&
+            !TII.getNamedOperand(I, AMDGPU::OpName::waitvsrc)->getImm());
   };
 
   if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
       std::numeric_limits<int>::max())
     return false;
 
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+  if (LdsdirCanWait) {
+    TII.getNamedOperand(*MI, AMDGPU::OpName::waitvsrc)->setImm(0);
+  } else {
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+        .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+  }
 
   return true;
 }

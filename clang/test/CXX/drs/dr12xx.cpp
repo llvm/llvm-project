@@ -154,7 +154,7 @@ namespace dr1295 { // dr1295: 4
   Y<x.bitfield> y; // #dr1295-y
   // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#dr1295-Y {{template parameter is declared here}}
-  // since-cxx17-error@#dr1295-y {{non-type template argument refers to subobject 'x.bitfield'}}
+  // since-cxx17-error@#dr1295-y {{reference cannot bind to bit-field in converted constant expression}}
 
 #if __cplusplus >= 201103L
   const unsigned other = 0;

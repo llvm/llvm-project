@@ -266,7 +266,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 
-  friend void FunctionDecl::setPure(bool);
+  friend void FunctionDecl::setIsPureVirtual(bool);
   friend void TagDecl::startDefinition();
 
   /// Values used in DefinitionData fields to represent special members.
@@ -1425,6 +1425,9 @@ public:
   /// (C++11 [class]p6).
   bool isTriviallyCopyable() const;
 
+  /// Determine whether this class is considered trivially copyable per
+  bool isTriviallyCopyConstructible() const;
+
   /// Determine whether this class is considered trivial.
   ///
   /// C++11 [class]p6:
@@ -1436,31 +1439,20 @@ public:
 
   /// Determine whether this class is a literal type.
   ///
-  /// C++11 [basic.types]p10:
+  /// C++20 [basic.types]p10:
   ///   A class type that has all the following properties:
-  ///     - it has a trivial destructor
-  ///     - every constructor call and full-expression in the
-  ///       brace-or-equal-intializers for non-static data members (if any) is
-  ///       a constant expression.
-  ///     - it is an aggregate type or has at least one constexpr constructor
-  ///       or constructor template that is not a copy or move constructor, and
-  ///     - all of its non-static data members and base classes are of literal
-  ///       types
-  ///
-  /// We resolve DR1361 by ignoring the second bullet. We resolve DR1452 by
-  /// treating types with trivial default constructors as literal types.
-  ///
-  /// Only in C++17 and beyond, are lambdas literal types.
-  bool isLiteral() const {
-    const LangOptions &LangOpts = getLangOpts();
-    return (LangOpts.CPlusPlus20 ? hasConstexprDestructor()
-                                          : hasTrivialDestructor()) &&
-           (!isLambda() || LangOpts.CPlusPlus17) &&
-           !hasNonLiteralTypeFieldsOrBases() &&
-           (isAggregate() || isLambda() ||
-            hasConstexprNonCopyMoveConstructor() ||
-            hasTrivialDefaultConstructor());
-  }
+  ///     - it has a constexpr destructor
+  ///     - all of its non-static non-variant data members and base classes
+  ///       are of non-volatile literal types, and it:
+  ///        - is a closure type
+  ///        - is an aggregate union type that has either no variant members
+  ///          or at least one variant member of non-volatile literal type
+  ///        - is a non-union aggregate type for which each of its anonymous
+  ///          union members satisfies the above requirements for an aggregate
+  ///          union type, or
+  ///        - has at least one constexpr constructor or constructor template
+  ///          that is not a copy or move constructor.
+  bool isLiteral() const;
 
   /// Determine whether this is a structural type.
   bool isStructural() const {
@@ -2044,6 +2036,14 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == RequiresExprBody; }
+
+  static DeclContext *castToDeclContext(const RequiresExprBodyDecl *D) {
+    return static_cast<DeclContext *>(const_cast<RequiresExprBodyDecl *>(D));
+  }
+
+  static RequiresExprBodyDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<RequiresExprBodyDecl *>(const_cast<DeclContext *>(DC));
+  }
 };
 
 /// Represents a static or instance method of a struct/union/class.
@@ -2110,7 +2110,7 @@ public:
 
     // Member function is virtual if it is marked explicitly so, or if it is
     // declared in __interface -- then it is automatically pure virtual.
-    if (CD->isVirtualAsWritten() || CD->isPure())
+    if (CD->isVirtualAsWritten() || CD->isPureVirtual())
       return true;
 
     return CD->size_overridden_methods() != 0;

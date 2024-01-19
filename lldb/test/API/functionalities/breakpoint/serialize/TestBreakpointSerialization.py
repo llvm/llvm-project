@@ -55,7 +55,7 @@ class BreakpointSerialization(TestBase):
         self.setup_targets_and_cleanup()
 
         exe_path = self.getBuildArtifact("a.out")
-        exe_module = self.orig_target.module[exe_path]
+        exe_module = self.orig_target.module["a.out"]
         self.assertTrue(
             exe_module.IsValid(), "Failed to find the executable module in target"
         )

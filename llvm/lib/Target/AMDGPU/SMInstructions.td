@@ -29,6 +29,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let mayStore = 0;
   let mayLoad = 1;
   let hasSideEffects = 0;
+  let maybeAtomic = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
 
@@ -305,6 +306,10 @@ let SubtargetPredicate = HasScalarDwordx3Loads in
 defm S_LOAD_DWORDX4  : SM_Pseudo_Loads <SReg_64, SReg_128>;
 defm S_LOAD_DWORDX8  : SM_Pseudo_Loads <SReg_64, SReg_256>;
 defm S_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_64, SReg_512>;
+defm S_LOAD_I8       : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U8       : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_I16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
+defm S_LOAD_U16      : SM_Pseudo_Loads <SReg_64, SReg_32_XM0_XEXEC>;
 
 let is_buffer = 1 in {
 defm S_BUFFER_LOAD_DWORD : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
@@ -316,6 +321,10 @@ let SubtargetPredicate = HasScalarDwordx3Loads in
 defm S_BUFFER_LOAD_DWORDX4 : SM_Pseudo_Loads <SReg_128, SReg_128>;
 defm S_BUFFER_LOAD_DWORDX8 : SM_Pseudo_Loads <SReg_128, SReg_256>;
 defm S_BUFFER_LOAD_DWORDX16 : SM_Pseudo_Loads <SReg_128, SReg_512>;
+defm S_BUFFER_LOAD_I8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U8 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_I16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
+defm S_BUFFER_LOAD_U16 : SM_Pseudo_Loads <SReg_128, SReg_32_XM0_XEXEC>;
 }
 
 let SubtargetPredicate = HasScalarStores in {
@@ -801,7 +810,7 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 // Scalar Memory Patterns
 //===----------------------------------------------------------------------===//
 
-def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformLoad(N);}]> {
+class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ return isUniformLoad(N);}]> {
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;
@@ -817,6 +826,14 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformL
     return true;
   }];
 }
+
+def smrd_load : SMRDLoadPat<load>;
+def smrd_extloadi8 : SMRDLoadPat<extloadi8>;
+def smrd_zextloadi8 : SMRDLoadPat<zextloadi8>;
+def smrd_sextloadi8 : SMRDLoadPat<sextloadi8>;
+def smrd_extloadi16 : SMRDLoadPat<extloadi16>;
+def smrd_zextloadi16 : SMRDLoadPat<zextloadi16>;
+def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
@@ -914,10 +931,77 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
   }
 }
 
+multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, ValueType vt> {
+   // 1. IMM offset
+   def : GCNPat <
+     (node (SMRDImm i64:$sbase, i32:$offset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 2. SGPR offset
+   def : GCNPat <
+     (node (SMRDSgpr i64:$sbase, i32:$soffset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 3. SGPR+IMM offset
+   def : GCNPat <
+     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 4. No offset
+   def : GCNPat <
+     (vt (node (i64 SReg_64:$sbase))),
+     (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+  }
+}
+
+multiclass ScalarBufferLoadIntrinsicPat <SDPatternOperator name, string Instr> {
+
+  // 1. Offset as an immediate
+  def : GCNPat <
+    (name v4i32:$sbase, (SMRDBufferImm i32:$offset), timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_IMM") SReg_128:$sbase, i32imm:$offset, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+
+  // 2. Offset as an 32-bit SGPR
+  def : GCNPat <
+    (name v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, 0, (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+
+  // 3. Offset as an 32-bit SGPR + immediate
+  def : GCNPat <
+    (name v4i32:$sbase, (SMRDBufferSgprImm i32:$soffset, i32:$offset),
+                    timm:$cachepolicy),
+    (i32 (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, i32imm:$offset,
+                                             (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX12Plus];
+  }
+}
+
 // Global and constant loads can be selected to either MUBUF or SMRD
 // instructions, but SMRD instructions are faster so we want the instruction
 // selector to prefer those.
 let AddedComplexity = 100 in {
+
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_extloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U8", smrd_zextloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_I8", smrd_sextloadi8, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_extloadi16, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_U16", smrd_zextloadi16, i32>;
+defm : ScalarLoadWithExtensionPat <"S_LOAD_I16", smrd_sextloadi16, i32>;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_byte, "S_BUFFER_LOAD_I8">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ubyte, "S_BUFFER_LOAD_U8">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_short, "S_BUFFER_LOAD_I16">;
+defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ushort, "S_BUFFER_LOAD_U16">;
 
 foreach vt = Reg32Types.types in {
 defm : SMRD_Pattern <"S_LOAD_DWORD", vt>;
@@ -1336,12 +1420,22 @@ defm S_LOAD_B128 : SM_Real_Loads_gfx12<0x02, "S_LOAD_DWORDX4">;
 defm S_LOAD_B256 : SM_Real_Loads_gfx12<0x03, "S_LOAD_DWORDX8">;
 defm S_LOAD_B512 : SM_Real_Loads_gfx12<0x04, "S_LOAD_DWORDX16">;
 
+defm S_LOAD_I8   : SM_Real_Loads_gfx12<0x08>;
+defm S_LOAD_U8   : SM_Real_Loads_gfx12<0x09>;
+defm S_LOAD_I16  : SM_Real_Loads_gfx12<0x0a>;
+defm S_LOAD_U16  : SM_Real_Loads_gfx12<0x0b>;
+
 defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx12<0x10, "S_BUFFER_LOAD_DWORD">;
 defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx12<0x11, "S_BUFFER_LOAD_DWORDX2">;
 defm S_BUFFER_LOAD_B96  : SM_Real_Loads_gfx12<0x15, "S_BUFFER_LOAD_DWORDX3">;
 defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx12<0x12, "S_BUFFER_LOAD_DWORDX4">;
 defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx12<0x13, "S_BUFFER_LOAD_DWORDX8">;
 defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx12<0x14, "S_BUFFER_LOAD_DWORDX16">;
+
+defm S_BUFFER_LOAD_I8  : SM_Real_Loads_gfx12<0x18>;
+defm S_BUFFER_LOAD_U8  : SM_Real_Loads_gfx12<0x19>;
+defm S_BUFFER_LOAD_I16 : SM_Real_Loads_gfx12<0x1a>;
+defm S_BUFFER_LOAD_U16 : SM_Real_Loads_gfx12<0x1b>;
 
 def S_DCACHE_INV_gfx12 : SMEM_Real_gfx12<0x021, S_DCACHE_INV>;
 

@@ -81,7 +81,7 @@ public:
       llvm::function_ref<bool(lldb_private::Module &)>) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
-                         lldb_private::FileSpecList &support_files) override;
+                         lldb_private::SupportFileList &support_files) override;
 
   bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
 

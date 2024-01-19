@@ -2374,6 +2374,9 @@ bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
+  Register OriginalSrcReg = getSrcRegIgnoringCopies(SrcReg, MRI);
+  if (OriginalSrcReg.isValid())
+    SrcReg = OriginalSrcReg;
   LLT DstTy = MRI.getType(DstReg);
   return mi_match(SrcReg, MRI,
                   m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
@@ -2400,6 +2403,9 @@ bool CombinerHelper::matchCombineExtOfExt(
           MI.getOpcode() == TargetOpcode::G_ZEXT) &&
          "Expected a G_[ASZ]EXT");
   Register SrcReg = MI.getOperand(1).getReg();
+  Register OriginalSrcReg = getSrcRegIgnoringCopies(SrcReg, MRI);
+  if (OriginalSrcReg.isValid())
+    SrcReg = OriginalSrcReg;
   MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
   // Match exts with the same opcode, anyext([sz]ext) and sext(zext).
   unsigned Opc = MI.getOpcode();
@@ -3874,9 +3880,8 @@ bool CombinerHelper::matchLoadOrCombine(
 
 bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
                                             MachineInstr *&ExtMI) {
-  assert(MI.getOpcode() == TargetOpcode::G_PHI);
-
-  Register DstReg = MI.getOperand(0).getReg();
+  auto &PHI = cast<GPhi>(MI);
+  Register DstReg = PHI.getReg(0);
 
   // TODO: Extending a vector may be expensive, don't do this until heuristics
   // are better.
@@ -3905,8 +3910,8 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
   // they'll be optimized in some way.
   // Collect the unique incoming values.
   SmallPtrSet<MachineInstr *, 4> InSrcs;
-  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
-    auto *DefMI = getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI);
+  for (unsigned I = 0; I < PHI.getNumIncomingValues(); ++I) {
+    auto *DefMI = getDefIgnoringCopies(PHI.getIncomingValue(I), MRI);
     switch (DefMI->getOpcode()) {
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_TRUNC:
@@ -3914,7 +3919,7 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_CONSTANT:
-      InSrcs.insert(getDefIgnoringCopies(MI.getOperand(Idx).getReg(), MRI));
+      InSrcs.insert(DefMI);
       // Don't try to propagate if there are too many places to create new
       // extends, chances are it'll increase code size.
       if (InSrcs.size() > 2)
@@ -3929,7 +3934,7 @@ bool CombinerHelper::matchExtendThroughPhis(MachineInstr &MI,
 
 void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
                                             MachineInstr *&ExtMI) {
-  assert(MI.getOpcode() == TargetOpcode::G_PHI);
+  auto &PHI = cast<GPhi>(MI);
   Register DstReg = ExtMI->getOperand(0).getReg();
   LLT ExtTy = MRI.getType(DstReg);
 
@@ -3938,8 +3943,9 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
   // deterministic iteration order.
   SmallSetVector<MachineInstr *, 8> SrcMIs;
   SmallDenseMap<MachineInstr *, MachineInstr *, 8> OldToNewSrcMap;
-  for (unsigned SrcIdx = 1; SrcIdx < MI.getNumOperands(); SrcIdx += 2) {
-    auto *SrcMI = MRI.getVRegDef(MI.getOperand(SrcIdx).getReg());
+  for (unsigned I = 0; I < PHI.getNumIncomingValues(); ++I) {
+    auto SrcReg = PHI.getIncomingValue(I);
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (!SrcMIs.insert(SrcMI))
       continue;
 
@@ -3951,8 +3957,7 @@ void CombinerHelper::applyExtendThroughPhis(MachineInstr &MI,
 
     Builder.setInsertPt(*SrcMI->getParent(), InsertPt);
     Builder.setDebugLoc(MI.getDebugLoc());
-    auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy,
-                                          SrcMI->getOperand(0).getReg());
+    auto NewExt = Builder.buildExtOrTrunc(ExtMI->getOpcode(), ExtTy, SrcReg);
     OldToNewSrcMap[SrcMI] = NewExt;
   }
 
@@ -6548,6 +6553,90 @@ bool CombinerHelper::tryFoldBoolSelectToLogic(GSelect *Select,
   return false;
 }
 
+bool CombinerHelper::tryFoldSelectToIntMinMax(GSelect *Select,
+                                              BuildFnTy &MatchInfo) {
+  Register DstReg = Select->getReg(0);
+  Register Cond = Select->getCondReg();
+  Register True = Select->getTrueReg();
+  Register False = Select->getFalseReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  if (DstTy.isPointer())
+    return false;
+
+  // We need an G_ICMP on the condition register.
+  GICmp *Cmp = getOpcodeDef<GICmp>(Cond, MRI);
+  if (!Cmp)
+    return false;
+
+  // We want to fold the icmp and replace the select.
+  if (!MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+    return false;
+
+  CmpInst::Predicate Pred = Cmp->getCond();
+  // We need a larger or smaller predicate for
+  // canonicalization.
+  if (CmpInst::isEquality(Pred))
+    return false;
+
+  Register CmpLHS = Cmp->getLHSReg();
+  Register CmpRHS = Cmp->getRHSReg();
+
+  // We can swap CmpLHS and CmpRHS for higher hitrate.
+  if (True == CmpRHS && False == CmpLHS) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  // (icmp X, Y) ? X : Y -> integer minmax.
+  // see matchSelectPattern in ValueTracking.
+  // Legality between G_SELECT and integer minmax can differ.
+  if (True == CmpLHS && False == CmpRHS) {
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_UGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_SGE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMAX, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMax(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_ULE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildUMin(DstReg, True, False);
+      };
+      return true;
+    }
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_SLE: {
+      if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SMIN, DstTy}))
+        return false;
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildSMin(DstReg, True, False);
+      };
+      return true;
+    }
+    default:
+      return false;
+    }
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
   GSelect *Select = cast<GSelect>(&MI);
 
@@ -6555,6 +6644,9 @@ bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return true;
 
   if (tryFoldBoolSelectToLogic(Select, MatchInfo))
+    return true;
+
+  if (tryFoldSelectToIntMinMax(Select, MatchInfo))
     return true;
 
   return false;

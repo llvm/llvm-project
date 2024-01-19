@@ -1166,12 +1166,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(nullptr_t, const shared_ptr<_Tp>& _
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT {
-  return less<_Tp*>()(__x.get(), nullptr);
+  return less<typename shared_ptr<_Tp>::element_type*>()(__x.get(), nullptr);
 }
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT {
-  return less<_Tp*>()(nullptr, __x.get());
+  return less<typename shared_ptr<_Tp>::element_type*>()(nullptr, __x.get());
 }
 
 template <class _Tp>

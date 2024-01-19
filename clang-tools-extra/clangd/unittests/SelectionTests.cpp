@@ -880,6 +880,19 @@ TEST(SelectionTest, DeclContextIsLexical) {
   }
 }
 
+TEST(SelectionTest, DeclContextLambda) {
+  llvm::Annotations Test(R"cpp(
+    void foo();
+    auto lambda = [] {
+      return $1^foo();
+    };
+  )cpp");
+  auto AST = TestTU::withCode(Test.code()).build();
+  auto ST = SelectionTree::createRight(AST.getASTContext(), AST.getTokens(),
+                                       Test.point("1"), Test.point("1"));
+  EXPECT_TRUE(ST.commonAncestor()->getDeclContext().isFunctionOrMethod());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

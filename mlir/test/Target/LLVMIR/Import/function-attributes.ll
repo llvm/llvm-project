@@ -220,6 +220,27 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 // -----
 
+; CHECK-LABEL: @arm_new_za_func
+; CHECK-SAME: attributes {arm_new_za}
+define void @arm_new_za_func() "aarch64_pstate_za_new" {
+  ret void
+}
+
+
+; CHECK-LABEL: @arm_preserves_za_func
+; CHECK-SAME: attributes {arm_preserves_za}
+define void @arm_preserves_za_func() "aarch64_pstate_za_preserved" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_shared_za_func
+; CHECK-SAME: attributes {arm_shared_za}
+define void @arm_shared_za_func() "aarch64_pstate_za_shared" {
+  ret void
+}
+
+// -----
+
 ; CHECK-LABEL: @section_func
 ; CHECK-SAME: attributes {section = ".section.name"}
 define void @section_func() section ".section.name" {
