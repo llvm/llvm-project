@@ -1504,7 +1504,6 @@ def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureDot9Insts,
