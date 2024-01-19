@@ -88,6 +88,12 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 #  endif
 }
 
+// If parameter type `_Tp` of `__conditional_no_unique_address` is neither
+// copyable nor movable, a constructor with this tag is provided. For that
+// constructor, the user has to provide a function and arguments. The function
+// must return an object of type `_Tp`. When the function is invoked by the
+// constructor, guaranteed copy elision kicks in and the `_Tp` is constructed
+// in place.
 struct __conditional_no_unique_address_invoke_tag {};
 
 // This class implements an object with `[[no_unique_address]]` conditionally applied to it,
