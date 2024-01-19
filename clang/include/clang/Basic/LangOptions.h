@@ -381,6 +381,17 @@ public:
     All,
   };
 
+  enum class VisibilityFromDLLStorageClassKinds {
+    /// Keep the IR-gen assigned visibility.
+    Keep,
+    /// Override the IR-gen assigned visibility with default visibility.
+    Default,
+    /// Override the IR-gen assigned visibility with hidden visibility.
+    Hidden,
+    /// Override the IR-gen assigned visibility with protected visibility.
+    Protected,
+  };
+
   enum class StrictFlexArraysLevelKind {
     /// Any trailing array member is a FAM.
     Default = 0,
