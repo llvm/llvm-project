@@ -1879,12 +1879,7 @@ The other primary artifact is a set of objects and methods for managing the low-
 
 As part of this effort, we will incrementally modify the LLVM compiler to alternatively use this information alongside of SchedMachineModel and Itinerary methodologies.
 
-
-
-<p id="gdcalert1" ><span style="color: red; font-weight: bold">>>>>  GDC alert: inline image link here (to images/image1.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert2">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>> </span></p>
-
-
-![alt_text](images/image1.png "image_tooltip")
+![alt_text](images/MachineDescriptionSchema.png "image_tooltip")
 
 
 
@@ -1915,11 +1910,7 @@ The general development flow of using an MDL description in LLVM looks like this
 5. Build LLVM.
 
 
-
-<p id="gdcalert2" ><span style="color: red; font-weight: bold">>>>>  GDC alert: inline image link here (to images/image2.png). Store image on your image server and adjust path/filename/extension if necessary. </span><br>(<a href="#">Back to top</a>)(<a href="#gdcalert3">Next alert</a>)<br><span style="color: red; font-weight: bold">>>>> </span></p>
-
-
-![alt_text](images/image2.png "image_tooltip")
+![alt_text](images/MachineDescriptionDevFlow.png "image_tooltip")
 
 
 
