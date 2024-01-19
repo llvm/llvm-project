@@ -659,6 +659,7 @@ _LIBCPP_PUSH_MACROS
 #else
 #  define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
 #endif
+#define _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED false
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -1895,17 +1896,22 @@ private:
 #endif
   }
 
+  // ASan: short string is poisoned if and only if this function returns true.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __asan_short_string_is_annotated() const _NOEXCEPT {
+    return _LIBCPP_SHORT_STRING_ANNOTATIONS_ALLOWED && !__libcpp_is_constant_evaluated();
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void) __current_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
 #endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
 #endif
   }
@@ -1913,7 +1919,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void) __n;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
 #endif
   }
@@ -1921,7 +1927,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void) __old_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    if (!__libcpp_is_constant_evaluated())
+    if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
 #endif
   }

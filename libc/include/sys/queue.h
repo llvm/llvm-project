@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===-- BSD sys/queue.h ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that the compile flags contain no module information.
+#ifndef LLVM_LIBC_SYS_QUEUE_H
+#define LLVM_LIBC_SYS_QUEUE_H
 
-// MODULE_DEPENDENCIES:
+#include <llvm-libc-macros/sys-queue-macros.h>
 
-// RUN: echo "%{compile_flags}" | grep -v "std.pcm"
-// RUN: echo "%{compile_flags}" | grep -v "std.compat.pcm"
+#endif // LLVM_LIBC_SYS_QUEUE_H
