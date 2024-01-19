@@ -77,7 +77,10 @@ template <unsigned NumUses, typename Pattern> struct NUses_match {
   explicit NUses_match(const Pattern &P) : P(P) {}
 
   bool match(const SelectionDAG *DAG, SDValue N) {
-    return N && N->hasNUsesOfValue(NumUses, N.getResNo()) && P.match(DAG, N);
+    // SDNode::hasNUsesOfValue is pretty expensive when the SDNode produces
+    // multiple results, hence we check the subsequent pattern here before
+    // checking the number of value users.
+    return N && P.match(DAG, N) && N->hasNUsesOfValue(NumUses, N.getResNo());
   }
 };
 
