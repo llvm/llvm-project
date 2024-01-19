@@ -122,7 +122,7 @@ void test_argument_SA(SA *a) {
   calleeSA(*a);
 }
 
-// CHECK: define void @test_return_SA(ptr noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
+// CHECK: define void @test_return_SA(ptr dead_on_unwind noalias writable sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
