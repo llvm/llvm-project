@@ -1545,6 +1545,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
 
+    Block &getBody() { return getLoopRegions().front()->front(); }
+
     /// Return true if the op has the auto attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasAuto();
