@@ -2,6 +2,9 @@
 ## contain PGO data, --symbolize-operands is able to label the basic blocks
 ## correctly.
 
+## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
+# UNSUPPORTED: system-windows
+
 ## Check the case where we only have entry counts.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
