@@ -187,7 +187,7 @@ function(create_libc_unittest fq_target_name)
   if(LLVM_LIBC_FULL_BUILD)
     target_compile_options(
       ${fq_build_target_name}
-      PRIVATE -ffreestanding
+      PRIVATE -ffreestanding -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
     )
   endif()
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
