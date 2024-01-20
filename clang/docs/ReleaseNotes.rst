@@ -804,6 +804,9 @@ Bug Fixes in This Version
   Objective-C++ property accesses to not be converted to a function call
   to the getter in the placement-args of new-expressions.
   Fixes (`#65053 <https://github.com/llvm/llvm-project/issues/65053>`_)
+- Fix an issue with missing symbol definitions when the first coroutine
+  statement appears in a discarded ``if constexpr`` branch.
+  Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
