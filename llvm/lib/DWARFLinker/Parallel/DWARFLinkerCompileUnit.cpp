@@ -294,7 +294,7 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
                ": " + Entry + " and " + Path + ".",
            &Die);
     }
-    Entry = std::string(ResolvedPath.str());
+    Entry = std::string(ResolvedPath);
   }
 }
 
@@ -1229,8 +1229,9 @@ void CompileUnit::cloneDieAttrExpression(
   }
 }
 
-Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple,
-                                TypeUnit *ArtificialTypeUnit) {
+Error CompileUnit::cloneAndEmit(
+    std::optional<std::reference_wrapper<const Triple>> TargetTriple,
+    TypeUnit *ArtificialTypeUnit) {
   BumpPtrAllocator Allocator;
 
   DWARFDie OrigUnitDIE = getOrigUnit().getUnitDIE();
@@ -1247,18 +1248,17 @@ Error CompileUnit::cloneAndEmit(std::optional<Triple> TargetTriple,
       std::nullopt, std::nullopt, Allocator, ArtificialTypeUnit);
   setOutUnitDIE(OutCUDie.first);
 
-  if (getGlobalData().getOptions().NoOutput || (OutCUDie.first == nullptr))
+  if (!TargetTriple.has_value() || (OutCUDie.first == nullptr))
     return Error::success();
 
-  assert(TargetTriple.has_value());
-  if (Error Err = cloneAndEmitLineTable(*TargetTriple))
+  if (Error Err = cloneAndEmitLineTable((*TargetTriple).get()))
     return Err;
 
   if (Error Err = cloneAndEmitDebugMacro())
     return Err;
 
   getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo);
-  if (Error Err = emitDebugInfo(*TargetTriple))
+  if (Error Err = emitDebugInfo((*TargetTriple).get()))
     return Err;
 
   // ASSUMPTION: .debug_info section should already be emitted at this point.
@@ -1514,7 +1514,7 @@ TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
   return Entry;
 }
 
-Error CompileUnit::cloneAndEmitLineTable(Triple &TargetTriple) {
+Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   const DWARFDebugLine::LineTable *InputLineTable =
       getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit());
   if (InputLineTable == nullptr) {
