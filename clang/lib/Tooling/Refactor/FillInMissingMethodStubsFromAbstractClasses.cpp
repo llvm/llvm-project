@@ -91,7 +91,7 @@ class PureMethodSet {
       if (!RD || !RD->isAbstract())
         continue;
       for (const CXXMethodDecl *M : RD->methods()) {
-        if (M->isPure())
+        if (M->isPureVirtual())
           Methods.insert(std::make_pair(M->getCanonicalDecl(), Priority++));
       }
       addPureMethodsFromAbstractClasses(RD, Priority);
@@ -105,11 +105,11 @@ class PureMethodSet {
 
   void subtractImplementedPureMethods(const CXXRecordDecl *Class) {
     for (const CXXMethodDecl *M : Class->methods()) {
-      if (!M->isVirtual() || M->isPure())
+      if (!M->isVirtual() || M->isPureVirtual())
         continue;
       for (const CXXMethodDecl *OM : M->overridden_methods()) {
         OM = OM->getCanonicalDecl();
-        if (OM->isPure())
+        if (OM->isPureVirtual())
           Methods.erase(OM);
       }
     }
@@ -155,7 +155,7 @@ static SourceLocation findInsertionLocationForMethodsFromAbstractClass(
     const SourceManager &SM, const LangOptions &LangOpts) {
   SourceLocation Loc;
   for (const CXXMethodDecl *M : Class->methods()) {
-    if (!M->isVirtual() || M->isPure() || M->isImplicit())
+    if (!M->isVirtual() || M->isPureVirtual() || M->isImplicit())
       continue;
     for (const CXXMethodDecl *OM : M->overridden_methods()) {
       OM = OM->getCanonicalDecl();
@@ -256,11 +256,11 @@ FillInMissingMethodStubsFromAbstractClassesOperation::perform(
     auto *MD = const_cast<CXXMethodDecl *>(Method);
     bool IsVirtual = MD->isVirtualAsWritten();
     MD->setVirtualAsWritten(false);
-    bool IsPure = MD->isPure();
-    MD->setPure(false);
+    bool IsPure = MD->isPureVirtual();
+    MD->setIsPureVirtual(false);
     MD->print(OS, PP);
     MD->setVirtualAsWritten(IsVirtual);
-    MD->setPure(IsPure);
+    MD->setIsPureVirtual(IsPure);
 
     OS << " override";
     if (GenerateBodyDummies)
