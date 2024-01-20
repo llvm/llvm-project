@@ -2232,6 +2232,18 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
   Tokens = Annotate("01234Vector");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+
+  // Structured statements.
+  Tokens = Annotate("class Foo {}");
+  EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_FunctionLBrace);
+  Tokens = Annotate("def Def: Foo {}");
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_InheritanceColon);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  Tokens = Annotate("if cond then {} else {}");
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_ControlStatementLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_ElseLBrace);
+  Tokens = Annotate("defset Foo Def2 = {}");
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
