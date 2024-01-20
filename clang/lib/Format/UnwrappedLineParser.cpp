@@ -3433,6 +3433,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     case tok::coloncolon:
       LastWasColonColon = true;
       break;
+    case tok::kw_decltype:
     case tok::identifier:
       if (FoundType && !LastWasColonColon && OpenAngles == 0) {
         FormatTok = Tokens->setPosition(StoredPosition);
