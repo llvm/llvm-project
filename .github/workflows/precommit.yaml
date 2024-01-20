@@ -1,0 +1,47 @@
+name: "Precommit tests"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/precommit.yaml'
+      - 'llvm/**'
+
+jobs:
+  build-llvm:
+    name: "Build and test LLVM"
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          max-size: 500M
+          variant: sccache
+          key: precommit-linux
+      - name: Configure LLVM
+        run: |
+          cmake -B llvm-build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DLLVM_LIT_ARGS="-v --no-progress-bar" \
+            ./llvm
+      - name: Build LLVM
+        run: |
+          ninja -C llvm-build llvm-test-depends
+      - name: Check LLVM
+        run: |
+          ninja -C llvm-build check-llvm
