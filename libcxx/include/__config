@@ -283,10 +283,11 @@
 // - `_LIBCPP_ASSERT_VALID_DEALLOCATION` -- checks that an attempt to deallocate memory is valid (e.g. the given object
 //   was allocated by the given allocator). Violating this category typically results in a memory leak.
 //
-// - `_LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL` -- checks that a call to an external API (e.g. a syscall) doesn't fail in
+// - `_LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL` -- checks that a call to an external API doesn't fail in
 //   an unexpected manner. This includes triggering documented cases of undefined behavior in an external library (like
-//   attempting to unlock an unlocked mutex in pthreads). We generally don't expect these failures to compromize memory
-//   safety or otherwise create an immediate security issue.
+//   attempting to unlock an unlocked mutex in pthreads). Any API external to the library falls under this category
+//   (from system calls to compiler intrinsics). We generally don't expect these failures to compromize memory safety or
+//   otherwise create an immediate security issue.
 //
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
