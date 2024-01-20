@@ -3176,7 +3176,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       llvm::sys::fs::make_absolute(WorkingDir, P);
   }
   llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P.str());
+  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -3217,7 +3217,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       SmallString<32> Buffer;
       llvm::sys::path::append(Buffer, Opts.Sysroot,
                               llvm::StringRef(A->getValue()).substr(1));
-      Path = std::string(Buffer.str());
+      Path = std::string(Buffer);
     }
 
     Opts.AddPath(Path, Group, IsFramework,
