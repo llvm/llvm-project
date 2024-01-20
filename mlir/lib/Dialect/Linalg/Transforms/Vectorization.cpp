@@ -1400,11 +1400,11 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
   return success();
 }
-// Vectorize an `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
-//   Vector::TransferReadOp - Reads the Vector Array of Source data
-//   vector::TransposeOp - Transpose the Source
-//   ShapeCastOp - Reshapes the data based on the target.
-//   vector::TransferWriteOp. - Write the result vector back.
+/// Vectorize an `tensor::UnPackOp` without OuterDimsPerms to these 4 Ops:
+///   Vector::TransferReadOp - Reads the Vector Array of Source data
+///   vector::TransposeOp - Transpose the Source
+///   ShapeCastOp - Reshapes the data based on the target.
+///   vector::TransferWriteOp. - Write the result vector back.
 
 static LogicalResult vectorizeAsUnpackOp(RewriterBase &rewriter,
                                          tensor::UnPackOp unpackOp,
@@ -1827,12 +1827,6 @@ vectorizePackOpPrecondition(tensor::PackOp packOp,
     return failure();
   }
 
-  return success();
-}
-
-static LogicalResult
-vectorizeUnpackOpPrecondition(tensor::UnPackOp unpackOp,
-                              ArrayRef<int64_t> inputVectorSizes) {
   return success();
 }
 
