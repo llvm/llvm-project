@@ -19721,7 +19721,8 @@ bool Sema::tryCaptureVariable(
   // it can therefore have non-negigible impact on performances.
   // For local variables and when there is no capturing scope,
   // we can bailout early.
-  if (CapturingFunctionScopes == 0 && (!BuildAndDiagnose || VarDC == CurContext))
+  if (CapturingFunctionScopes == 0 &&
+      (!BuildAndDiagnose || VarDC == CurContext))
     return true;
 
   DeclContext *DC = ignoreReuquiresBodyDecl(CurContext);
