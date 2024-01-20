@@ -259,7 +259,9 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
-  OTHERREF = 0xff, // Unmodeled value types include ref types with heap types other than funcref or externref
+  // Unmodeled value types include ref types with heap types other than
+  // funcr or extern, and type-specialized funcrefs
+  OTHERREF = 0xff,
 };
 
 struct WasmDylinkImportInfo {

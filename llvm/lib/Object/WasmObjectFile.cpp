@@ -1626,10 +1626,11 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     bool HasInitExprs = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
     bool HasElemKind = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) && !HasInitExprs;
 
-    llvm::errs() << llvm::format("segment %d flags %x, InitExprs %d HasKind %d\n",
+    llvm::errs() << llvm::format("\nsegment %d flags %x, InitExprs %d HasKind %d\n",
       ElemSegments.capacity() - Count-1, Segment.Flags, HasInitExprs,HasElemKind);
-    if (HasTableNumber)
+    if (HasTableNumber) {
       Segment.TableNumber = readVaruint32(Ctx);
+      llvm::errs() << " table " << Segment.TableNumber << "\n"; }
     else
       Segment.TableNumber = 0;
     if (!isValidTableNumber(Segment.TableNumber))
@@ -1682,7 +1683,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     uint32_t NumElems = readVaruint32(Ctx);
     llvm::errs() << llvm::format(" num elems %d\n", NumElems);
 
-    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
+    if (HasInitExprs) {
       while(NumElems--) {
         wasm::WasmInitExpr Expr;
         if(Error Err = readInitExpr(Expr, Ctx))
