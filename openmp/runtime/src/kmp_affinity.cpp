@@ -28,6 +28,8 @@
 #endif
 #include <ctype.h>
 
+#include "llvm/Support/Compiler.h"
+
 // The machine topology
 kmp_topology_t *__kmp_topology = nullptr;
 // KMP_HW_SUBSET environment variable
@@ -131,7 +133,7 @@ const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural) {
   case KMP_HW_LAST:
     return KMP_I18N_STR(Unknown);
   }
-  llvm_unreachable("Unhandled kmp_hw_t enumeration");
+  LLVM_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
@@ -164,7 +166,7 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
   case KMP_HW_LAST:
     return ((plural) ? "unknowns" : "unknown");
   }
-  llvm_unreachable("Unhandled kmp_hw_t enumeration");
+  LLVM_BUILTIN_UNREACHABLE;
 }
 
 const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
@@ -179,7 +181,7 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
     return "Intel(R) Core(TM) processor";
 #endif
   }
-  llvm_unreachable("Unhandled kmp_hw_core_type_t enumeration");
+  LLVM_BUILTIN_UNREACHABLE;
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -1255,7 +1257,7 @@ bool kmp_topology_t::filter_hw_subset() {
         return 2;
 #endif
       }
-      llvm_unreachable("Unhandled kmp_hw_core_type_t enumeration");
+      LLVM_BUILTIN_UNREACHABLE;
     }
   };
   struct core_eff_indexer {
