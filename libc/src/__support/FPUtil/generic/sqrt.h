@@ -97,7 +97,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       StorageType x_mant = bits.get_mantissa();
 
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
-      if (bits.get_biased_exponent() == 0) {
+      if (bits.is_subnormal()) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
         internal::normalize<T>(x_exp, x_mant);
       } else {

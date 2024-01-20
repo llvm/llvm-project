@@ -386,8 +386,11 @@ public:
     bits = (value & FP_MASK);
   }
 
-  LIBC_INLINE constexpr bool is_zero() const {
-    return (bits & EXP_SIG_MASK) == 0;
+  LIBC_INLINE constexpr bool is_zero() const { return exp_sig_bits() == 0; }
+
+  LIBC_INLINE
+  constexpr bool is_subnormal() const {
+    return exp_bits() == encode(BiasedExponent::BITS_ALL_ZEROES());
   }
 
   LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }
@@ -435,19 +438,11 @@ public:
     return exp_sig_bits() ==
            encode(BiasedExponent::BITS_ALL_ONES(), Significand::ZERO());
   }
-  LIBC_INLINE constexpr bool is_zero() const {
-    return exp_sig_bits() ==
-           encode(BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
-  }
   LIBC_INLINE constexpr bool is_finite() const {
     return exp_bits() != encode(BiasedExponent::BITS_ALL_ONES());
   }
-  LIBC_INLINE
-  constexpr bool is_subnormal() const {
-    return exp_bits() == encode(BiasedExponent::BITS_ALL_ZEROES());
-  }
   LIBC_INLINE constexpr bool is_normal() const {
-    return is_finite() && !is_subnormal();
+    return is_finite() && !UP::is_subnormal();
   }
 
   LIBC_INLINE static constexpr StorageType zero(Sign sign = Sign::POS) {
@@ -488,7 +483,7 @@ public:
   // The function return mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
-    if (is_subnormal())
+    if (UP::is_subnormal())
       return sig_bits();
     return (StorageType(1) << UP::SIG_LEN) | sig_bits();
   }
@@ -550,17 +545,8 @@ public:
     return exp_sig_bits() ==
            encode(BiasedExponent::BITS_ALL_ONES(), Significand::MSB());
   }
-  LIBC_INLINE constexpr bool is_zero() const {
-    return exp_sig_bits() ==
-           encode(BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
-  }
   LIBC_INLINE constexpr bool is_finite() const {
     return !is_inf() && !is_nan();
-  }
-  LIBC_INLINE
-  constexpr bool is_subnormal() const {
-    return exp_sig_bits() >
-           encode(BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
   }
   LIBC_INLINE constexpr bool is_normal() const {
     const auto exp = exp_bits();

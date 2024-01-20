@@ -67,7 +67,7 @@ public:
 static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   sys::path::replace_extension(Val, ".lib");
-  return std::string(Val.str());
+  return std::string(Val);
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,

@@ -104,15 +104,15 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   int z_exp = 0;
 
   // Normalize denormal inputs.
-  if (LIBC_UNLIKELY(FPBits(x).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(x).is_subnormal())) {
     x_exp -= 52;
     x *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(y).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(y).is_subnormal())) {
     y_exp -= 52;
     y *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(z).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(z).is_subnormal())) {
     z_exp -= 52;
     z *= 0x1.0p+52;
   }

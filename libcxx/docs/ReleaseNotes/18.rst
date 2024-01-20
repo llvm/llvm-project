@@ -59,7 +59,9 @@ Implemented Papers
 - P2821R5 - ``span.at()``
 - P0521R0 - Proposed Resolution for CA 14 (``shared_ptr`` ``use_count/unique``)
 - P1759R6 - Native handles and file streams
+- P2868R3 - Remove Deprecated ``std::allocator`` Typedef From C++26
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
+- P2447R6 - ``span`` over initializer list
 
 
 Improvements and New Features
@@ -86,12 +88,11 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
   the function ``std::basic_string<...>::reserve()`` available.
 
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS`` macro has been added to make
+  the function ``allocator<T>::is_always_equal`` available.
+
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
   the function ``std::shared_ptr<...>::unique()`` available.
-
-- The cmake option ``LIBCXX_ENABLE_STD_MODULES`` has been removed. The test
-  infrastructure no longer depends on a modern CMake, it works with the minimal
-  required LLVM version (3.20.0).
 
 
 Deprecations and Removals
@@ -111,13 +112,18 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
-- The only supported way to customize the assertion handler that gets invoked when a hardening assertion fails
-  is now by setting the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See
-  the documentation on overriding the default assertion handler for details.
+- Overriding `__libcpp_verbose_abort` no longer has any effect on library assertions. The only supported way
+  to customize the assertion handler that gets invoked when a hardening assertion fails is now by setting the
+  ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See the documentation on
+  overriding the default assertion handler for details. The ability to override `__libcpp_verbose_abort` will
+  be removed in an upcoming release in favor of the new overriding mechanism.
+
+- In safe mode (which is now equivalent to the ``extensive`` hardening mode), a failed assertion will now
+  generate a trap rather than a call to verbose abort.
 
 - The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro is not honored anymore in LLVM 18.
-  Please see the updated documentation about the hardening modes in libc++ and in particular the
-  ``_LIBCPP_VERBOSE_ABORT`` macro for details.
+  Please see the updated documentation about the hardening modes in libc++ and in particular on
+  overriding the default assertion handler.
 
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
@@ -140,13 +146,15 @@ Deprecations and Removals
 Upcoming Deprecations and Removals
 ----------------------------------
 
+- The ability to override ``__libcpp_verbose_abort`` will be removed in an upcoming release.
+
 LLVM 19
 ~~~~~~~
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode will be deprecated and setting
   it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``extensive`` instead. Similarly,
-  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the extensive mode the
-  LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
+  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro will be deprecated (setting it to ``1`` still enables the extensive mode in
+  the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
 
 - The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 19. If you

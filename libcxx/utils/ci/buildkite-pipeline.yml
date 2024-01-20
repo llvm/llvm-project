@@ -48,6 +48,7 @@ environment_definitions:
       CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
       CC: clang-${LLVM_HEAD_VERSION}
       CXX: clang++-${LLVM_HEAD_VERSION}
+      CMAKE: /opt/bin/cmake
 
   _absolute_path_clang: &absolute_path_clang
     # Note modules require and absolute path for clang-scan-deps
@@ -261,6 +262,7 @@ steps:
     env:
       CC: clang16
       CXX: clang++16
+      ENABLE_STD_MODULES: 'Off'
     agents:
       queue: libcxx-builders
       os: freebsd

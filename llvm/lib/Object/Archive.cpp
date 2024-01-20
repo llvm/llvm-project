@@ -567,7 +567,7 @@ Expected<std::string> Archive::Child::getFullName() const {
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {

@@ -1143,6 +1143,7 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
   if (!ST.hasVMEMtoScalarWriteHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (!SIInstrInfo::isSALU(*MI) && !SIInstrInfo::isSMRD(*MI))
     return false;
@@ -1189,6 +1190,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   if (!ST.hasSMEMtoVectorWriteHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (!SIInstrInfo::isVALU(*MI))
     return false;
@@ -1273,7 +1275,11 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
-  if (!ST.hasVcmpxExecWARHazard() || !SIInstrInfo::isVALU(*MI))
+  if (!ST.hasVcmpxExecWARHazard())
+    return false;
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!SIInstrInfo::isVALU(*MI))
     return false;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1343,6 +1349,7 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
     return false;
 
   assert(ST.hasLdsBranchVmemWARHazard());
+  assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
     if (SIInstrInfo::isDS(MI))
@@ -1452,6 +1459,8 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
   bool LdsdirCanWait = ST.hasLdsWaitVMSRC();
+  // TODO: On GFX12 the hazard should expire on S_WAIT_LOADCNT/SAMPLECNT/BVHCNT
+  // according to the type of VMEM instruction.
   auto IsExpiredFn = [this, LdsdirCanWait](const MachineInstr &I, int) {
     return SIInstrInfo::isVALU(I) || SIInstrInfo::isEXP(I) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT && !I.getOperand(0).getImm()) ||
@@ -1477,11 +1486,11 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
-  if (!ST.isWave64())
-    return false;
   if (!ST.hasVALUPartialForwardingHazard())
     return false;
-  if (!SIInstrInfo::isVALU(*MI))
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!ST.isWave64() || !SIInstrInfo::isVALU(*MI))
     return false;
 
   SmallSetVector<Register, 4> SrcVGPRs;
@@ -1628,6 +1637,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   if (!ST.hasVALUTransUseHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
+
   if (!SIInstrInfo::isVALU(*MI))
     return false;
 
@@ -1767,6 +1778,7 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!ST.hasShift64HighRegBug())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   switch (MI->getOpcode()) {
   default:
@@ -1896,6 +1908,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
 
   if (!ST.hasFPAtomicToDenormModeHazard())
     return 0;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (MI->getOpcode() != AMDGPU::S_DENORM_MODE)
     return 0;
@@ -2721,11 +2734,11 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
 }
 
 bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
-  if (!ST.isWave64())
-    return false;
   if (!ST.hasVALUMaskWriteHazard())
     return false;
-  if (!SIInstrInfo::isSALU(*MI))
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!ST.isWave64() || !SIInstrInfo::isSALU(*MI))
     return false;
 
   // The hazard sequence is three instructions:

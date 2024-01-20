@@ -55,6 +55,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"m", {2, 0}},
 
     {"smaia", {1, 0}},
+    {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
@@ -88,6 +89,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xtheadvdot", {1, 0}},
     {"xventanacondops", {1, 0}},
 
+    {"za128rs", {1, 0}},
+    {"za64rs", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -116,9 +119,14 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zhinx", {1, 0}},
     {"zhinxmin", {1, 0}},
 
+    {"zic64b", {1, 0}},
     {"zicbom", {1, 0}},
     {"zicbop", {1, 0}},
     {"zicboz", {1, 0}},
+    {"ziccamoa", {1, 0}},
+    {"ziccif", {1, 0}},
+    {"zicclsm", {1, 0}},
+    {"ziccrse", {1, 0}},
     {"zicntr", {2, 0}},
     {"zicsr", {2, 0}},
     {"zifencei", {2, 0}},

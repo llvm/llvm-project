@@ -29,12 +29,6 @@ public:
                   MessageHandlerTy WarningHandler,
                   TranslatorFuncTy StringsTranslator);
 
-  /// Create debug info emitter.
-  Error createEmitter(const Triple &TheTriple, OutputFileType FileType,
-                      raw_pwrite_stream &OutFile) override;
-
-  ExtraDwarfEmitter *getEmitter() override;
-
   /// Add object file to be linked. Pre-load compile unit die. Call
   /// \p OnCUDieLoaded for each compile unit die. If specified \p File
   /// has reference to the Clang module then such module would be
@@ -48,6 +42,14 @@ public:
 
   /// Link debug info for added files.
   Error link() override;
+
+  /// Set output DWARF handler. May be not set if output generation is not
+  /// necessary.
+  void setOutputDWARFHandler(const Triple &TargetTriple,
+                             SectionHandlerTy SectionHandler) override {
+    GlobalData.setTargetTriple(TargetTriple);
+    this->SectionHandler = SectionHandler;
+  }
 
   /// \defgroup Methods setting various linking options:
   ///
@@ -190,8 +192,6 @@ protected:
 
     StringMap<uint64_t> &ClangModules;
 
-    std::optional<Triple> TargetTriple;
-
     /// Flag indicating that new inter-connected compilation units were
     /// discovered. It is used for restarting units processing
     /// if new inter-connected units were found.
@@ -204,8 +204,7 @@ protected:
 
     LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
                 StringMap<uint64_t> &ClangModules,
-                std::atomic<size_t> &UniqueUnitID,
-                std::optional<Triple> TargetTriple);
+                std::atomic<size_t> &UniqueUnitID);
 
     /// Check whether specified \p CUDie is a Clang module reference.
     /// if \p Quiet is false then display error messages.
@@ -364,8 +363,8 @@ protected:
   /// Common sections.
   OutputSections CommonSections;
 
-  /// The emitter of final dwarf file.
-  std::unique_ptr<DwarfEmitterImpl> TheDwarfEmitter;
+  /// Hanler for output sections.
+  SectionHandlerTy SectionHandler = nullptr;
 
   /// Overall compile units number.
   uint64_t OverallNumberOfCU = 0;
