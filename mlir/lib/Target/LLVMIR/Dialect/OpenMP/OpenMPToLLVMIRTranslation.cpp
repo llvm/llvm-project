@@ -1884,7 +1884,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::EnterDataOp enterDataOp) {
             if (enterDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(enterDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1900,7 +1901,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
             if (exitDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(exitDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1917,7 +1919,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::UpdateDataOp updateDataOp) {
             if (updateDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(updateDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = updateDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
