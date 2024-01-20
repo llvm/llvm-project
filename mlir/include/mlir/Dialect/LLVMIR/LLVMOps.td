@@ -1420,11 +1420,14 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<UnitAttr>:$arm_streaming_compatible,
     OptionalAttr<UnitAttr>:$arm_new_za,
+    OptionalAttr<UnitAttr>:$arm_preserves_za,
+    OptionalAttr<UnitAttr>:$arm_shared_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
+    OptionalAttr<StrAttr>:$target_cpu,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
   );
 

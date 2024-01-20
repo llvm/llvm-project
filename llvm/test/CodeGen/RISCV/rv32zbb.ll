@@ -42,7 +42,7 @@ define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi a1, a1, 257
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -105,7 +105,7 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi s3, a1, 257
 ; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    srli a0, s2, 1
 ; RV32I-NEXT:    or a0, s2, a0
@@ -129,7 +129,7 @@ define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s6
 ; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    bnez s0, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srli a0, a0, 24
@@ -179,7 +179,7 @@ define i32 @cttz_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 30667
 ; RV32I-NEXT:    addi a1, a1, 1329
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    lui a1, %hi(.LCPI2_0)
 ; RV32I-NEXT:    addi a1, a1, %lo(.LCPI2_0)
@@ -219,14 +219,14 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a1, 30667
 ; RV32I-NEXT:    addi s3, a1, 1329
 ; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV32I-NEXT:    addi s4, a0, %lo(.LCPI3_0)
 ; RV32I-NEXT:    neg a0, s2
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    bnez s2, .LBB3_3
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a0, 32
@@ -295,7 +295,7 @@ define i32 @ctpop_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi a1, a1, 257
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -418,7 +418,7 @@ define <2 x i32> @ctpop_v2i32(<2 x i32> %a) nounwind {
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi s1, a1, 257
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli s2, a0, 24
 ; RV32I-NEXT:    srli a0, s0, 1
 ; RV32I-NEXT:    and a0, a0, s3
@@ -431,7 +431,7 @@ define <2 x i32> @ctpop_v2i32(<2 x i32> %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s5
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a1, a0, 24
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -586,7 +586,7 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi s1, a1, 257
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli s5, a0, 24
 ; RV32I-NEXT:    srli a0, s0, 1
 ; RV32I-NEXT:    and a0, a0, s2
@@ -599,7 +599,7 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s4
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    add a0, a0, s5
 ; RV32I-NEXT:    li a1, 0
@@ -773,7 +773,7 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    lui a1, 4112
 ; RV32I-NEXT:    addi s1, a1, 257
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli s8, a0, 24
 ; RV32I-NEXT:    srli a0, s6, 1
 ; RV32I-NEXT:    and a0, a0, s3
@@ -786,7 +786,7 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s7
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    add s8, a0, s8
 ; RV32I-NEXT:    srli a0, s5, 1
@@ -800,7 +800,7 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s7
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli s5, a0, 24
 ; RV32I-NEXT:    srli a0, s2, 1
 ; RV32I-NEXT:    and a0, a0, s3
@@ -813,7 +813,7 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    and a0, a0, s7
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    call __mulsi3@plt
+; RV32I-NEXT:    call __mulsi3
 ; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    add a0, a0, s5
 ; RV32I-NEXT:    sw zero, 12(s0)

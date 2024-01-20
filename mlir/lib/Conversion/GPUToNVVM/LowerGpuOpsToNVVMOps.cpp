@@ -352,7 +352,9 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       /*workgroupAddrSpace=*/
       static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
       StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()));
+                      NVVM::NVVMDialect::getKernelFuncAttrName()),
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getMaxntidAttrName()));
 
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");

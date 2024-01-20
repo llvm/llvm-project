@@ -14,7 +14,7 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
 # Install the server and associated header.
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/rpc_server.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm/
-        COMPONENT libc)
+        COMPONENT libc-headers)
 install(TARGETS llvmlibc_rpc_server
         ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"
         COMPONENT libc)

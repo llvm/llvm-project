@@ -247,8 +247,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   bit hasREPPrefix = 0;     // Does this inst have a REP prefix?
   bits<2> OpEncBits = OpEnc.Value;
   bit IgnoresW = 0;         // Does this inst ignore REX_W field?
-  bit EVEX_W1_VEX_W0 = 0;   // This EVEX inst with VEX.W==1 can become a VEX
-                            // instruction with VEX.W == 0.
   bit hasVEX_4V = 0;        // Does this inst require the VEX.VVVV field?
   bit hasVEX_L = 0;         // Does this inst use large (256-bit) registers?
   bit ignoresVEX_L = 0;     // Does this instruction ignore the L-bit
@@ -279,10 +277,6 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
                                      CD8_EltSize,
                                      !srl(VectSize, CD8_Form{1-0}))), 0);
 
-  // Used to prevent an explicit EVEX2VEX override for this instruction.
-  string EVEX2VEXOverride = ?;
-
-  bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
   ExplicitOpPrefix explicitOpPrefix = NoExplicitOpPrefix;
   bits<2> explicitOpPrefixBits = explicitOpPrefix.Value;
   // TSFlags layout should be kept in sync with X86BaseInfo.h.

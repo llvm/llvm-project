@@ -497,14 +497,12 @@ public:
 // symbols into consideration.
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef name, uint32_t flags, InputFile *file,
-             const llvm::object::Archive::Symbol &sym)
-      : Symbol(name, LazyKind, flags, file), archiveSymbol(sym) {}
+  LazySymbol(StringRef name, uint32_t flags, InputFile *file)
+      : Symbol(name, LazyKind, flags, file) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-  void fetch();
+  void extract();
   void setWeak();
-  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction in which case we need to be able to preserve the
@@ -512,9 +510,6 @@ public:
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
   const WasmSignature *signature = nullptr;
-
-private:
-  llvm::object::Archive::Symbol archiveSymbol;
 };
 
 // linker-generated symbols

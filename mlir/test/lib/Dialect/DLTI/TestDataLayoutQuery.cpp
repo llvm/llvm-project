@@ -41,6 +41,8 @@ struct TestDataLayoutQuery
       unsigned alignment = layout.getTypeABIAlignment(op.getType());
       unsigned preferred = layout.getTypePreferredAlignment(op.getType());
       Attribute allocaMemorySpace = layout.getAllocaMemorySpace();
+      Attribute programMemorySpace = layout.getProgramMemorySpace();
+      Attribute globalMemorySpace = layout.getGlobalMemorySpace();
       unsigned stackAlignment = layout.getStackAlignment();
       op->setAttrs(
           {builder.getNamedAttr("size", builder.getIndexAttr(size)),
@@ -51,6 +53,14 @@ struct TestDataLayoutQuery
                                 allocaMemorySpace == Attribute()
                                     ? builder.getUI32IntegerAttr(0)
                                     : allocaMemorySpace),
+           builder.getNamedAttr("program_memory_space",
+                                programMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : programMemorySpace),
+           builder.getNamedAttr("global_memory_space",
+                                globalMemorySpace == Attribute()
+                                    ? builder.getUI32IntegerAttr(0)
+                                    : globalMemorySpace),
            builder.getNamedAttr("stack_alignment",
                                 builder.getIndexAttr(stackAlignment))});
     });
