@@ -56,11 +56,14 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // http://google.github.io/styleguide/cppguide.html#64-bit_Portability
   // "Where possible, avoid passing arguments of types specified by
   // bitwidth typedefs to printf-based APIs."
-  Finder->addMatcher(typeLoc(loc(isInteger()),
-                             unless(hasAncestor(callExpr(
-                                 callee(functionDecl(hasAttr(attr::Format)))))))
-                         .bind("tl"),
-                     this);
+  Finder->addMatcher(
+      typeLoc(loc(isInteger()),
+              unless(anyOf(hasAncestor(callExpr(
+                               callee(functionDecl(hasAttr(attr::Format))))),
+                           hasParent(parmVarDecl(hasAncestor(functionDecl(
+                               matchesName("operator\"\".*$"))))))))
+          .bind("tl"),
+      this);
   IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
 }
 
