@@ -2209,7 +2209,8 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
+          NextNonComment->is(tok::string_literal) ||
+          (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
 
@@ -3765,7 +3766,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
 
   if (Left.is(tok::coloncolon))
-    return 500;
+    return Style.PenaltyBreakScopeResolution;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
       Right.is(tok::kw_operator)) {
     if (Line.startsWith(tok::kw_for) && Right.PartOfMultiVariableDeclStmt)
@@ -4674,6 +4675,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
+    // spaces inside square brackets.
+    if (Left.is(tok::l_square) || Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+
     if (Left.is(Keywords.kw_synchronized) && Right.is(tok::l_paren)) {
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);

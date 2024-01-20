@@ -38,8 +38,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
     return to;
 
   // Convert pseudo subnormal number to normal number.
-  if (from_bits.get_implicit_bit() == 1 &&
-      from_bits.get_biased_exponent() == 0) {
+  if (from_bits.get_implicit_bit() == 1 && from_bits.is_subnormal()) {
     from_bits.set_biased_exponent(1);
   }
 
@@ -61,7 +60,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
         if (from_bits.is_inf())
           raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-        return from_bits;
+        return from_bits.get_val();
       } else {
         ++int_val;
       }
@@ -75,7 +74,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
         from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
-        return from_bits;
+        return from_bits.get_val();
       } else {
         --int_val;
       }
@@ -94,7 +93,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         // from == 0 is handled separately so decrementing the exponent will not
         // lead to underflow.
         from_bits.set_biased_exponent(from_bits.get_biased_exponent() - 1);
-        return from_bits;
+        return from_bits.get_val();
       } else {
         --int_val;
       }
@@ -109,7 +108,7 @@ LIBC_INLINE long double nextafter(long double from, long double to) {
         from_bits.set_biased_exponent(from_bits.get_biased_exponent() + 1);
         if (from_bits.is_inf())
           raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-        return from_bits;
+        return from_bits.get_val();
       } else {
         ++int_val;
       }

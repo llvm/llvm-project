@@ -188,8 +188,6 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #undef Word_HiMask
 #undef Word_LoMask
 #undef Word_FullMask
-#else
-typedef long double fp_t;
 #endif // defined(CRT_HAS_TF_MODE)
 #else
 #error SINGLE_PRECISION, DOUBLE_PRECISION or QUAD_PRECISION must be defined.
@@ -376,10 +374,10 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 #endif
 }
 
-#elif defined(QUAD_PRECISION)
+#elif defined(QUAD_PRECISION) && defined(CRT_HAS_TF_MODE)
 // The generic implementation only works for ieee754 floating point. For other
 // floating point types, continue to rely on the libm implementation for now.
-#if defined(CRT_HAS_IEEE_TF) && defined(CRT_HAS_128BIT)
+#if defined(CRT_HAS_IEEE_TF)
 static __inline tf_float __compiler_rt_logbtf(tf_float x) {
   return __compiler_rt_logbX(x);
 }
@@ -407,8 +405,6 @@ static __inline tf_float __compiler_rt_fmaxtf(tf_float x, tf_float y) {
 #define __compiler_rt_logbl crt_logbl
 #define __compiler_rt_scalbnl crt_scalbnl
 #define __compiler_rt_fmaxl crt_fmaxl
-#define crt_fabstf crt_fabsl
-#define crt_copysigntf crt_copysignl
 #else
 #error Unsupported TF mode type
 #endif

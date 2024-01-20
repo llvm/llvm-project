@@ -7,7 +7,7 @@ RUN:   %p/dummy-debug-map.map -o %t \
 RUN:   -object-prefix-map=/ModuleCache=/ModuleCacheRenamed \
 RUN:   2>&1 | FileCheck %s
 
-RUN: dsymutil --linker llvm -verify -f -oso-prepend-path=%t.dir -y \
+RUN: dsymutil --linker parallel -verify -f -oso-prepend-path=%t.dir -y \
 RUN:   %p/dummy-debug-map.map -o %t \
 RUN:   -object-prefix-map=/ModuleCache=/ModuleCacheRenamed \
 RUN:   2>&1 | FileCheck %s

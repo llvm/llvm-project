@@ -5610,7 +5610,7 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
 
 bool AArch64InstructionSelector::selectIndexedExtLoad(
     MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &ExtLd = cast<GIndexedExtLoad>(MI);
+  auto &ExtLd = cast<GIndexedAnyExtLoad>(MI);
   Register Dst = ExtLd.getDstReg();
   Register WriteBack = ExtLd.getWritebackReg();
   Register Base = ExtLd.getBaseReg();
@@ -5697,10 +5697,6 @@ bool AArch64InstructionSelector::selectIndexedExtLoad(
 
 bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
                                                    MachineRegisterInfo &MRI) {
-  // TODO: extending loads.
-  if (isa<GIndexedExtLoad>(MI))
-    return false;
-
   auto &Ld = cast<GIndexedLoad>(MI);
   Register Dst = Ld.getDstReg();
   Register WriteBack = Ld.getWritebackReg();
@@ -5709,6 +5705,9 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
   assert(MRI.getType(Dst).getSizeInBits() <= 128 &&
          "Unexpected type for indexed load");
   unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
+
+  if (MemSize < MRI.getType(Dst).getSizeInBytes())
+    return selectIndexedExtLoad(MI, MRI);
 
   unsigned Opc = 0;
   if (Ld.isPre()) {

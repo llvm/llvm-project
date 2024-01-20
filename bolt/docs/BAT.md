@@ -21,9 +21,9 @@ contain the metadata for input functions.
 # Internals
 ## Section contents
 The section is organized as follows:
-- Functions table
+- Hot functions table
   - Address translation tables
-- Fragment linkage table
+- Cold functions table
 
 ## Construction and parsing
 BAT section is created from `BoltAddressTranslation` class which captures
@@ -43,7 +43,7 @@ and [BoltAddressTranslation.cpp](/bolt/lib/Profile/BoltAddressTranslation.cpp).
 ### Layout
 The general layout is as follows:
 ```
-Functions table header
+Hot functions table header
 |------------------|
 |  Function entry  |
 | |--------------| |
@@ -51,13 +51,17 @@ Functions table header
 | |--------------| |
 ~~~~~~~~~~~~~~~~~~~~
 
-Fragment linkage header
+Cold functions table header
 |------------------|
-| ColdAddr HotAddr |
+|  Function entry  |
+| |--------------| |
+| | OutOff InOff | |
+| |--------------| |
 ~~~~~~~~~~~~~~~~~~~~
 ```
 
 ### Functions table
+Hot and cold functions tables share the encoding except difference marked below.
 Header:
 | Entry  | Encoding | Description |
 | ------ | ----- | ----------- |
@@ -65,10 +69,16 @@ Header:
 
 The header is followed by Functions table with `NumFuncs` entries.
 Output binary addresses are delta encoded, meaning that only the difference with
-the previous output address is stored. Addresses implicitly start at zero.
+the last previous output address is stored. Addresses implicitly start at zero.
+Output addresses are continuous through function start addresses and function
+internal offsets, and between hot and cold fragments, to better spread deltas
+and save space.
+
+Hot indices are delta encoded, implicitly starting at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `Address` | Delta, ULEB128 | Function address in the output binary |
+| `Address` | Continuous, Delta, ULEB128 | Function address in the output binary |
+| `HotIndex` | Delta, ULEB128 | Cold functions only: index of corresponding hot function in hot functions table |
 | `NumEntries` | ULEB128 | Number of address translation entries for a function |
 
 Function header is followed by `NumEntries` pairs of offsets for current
@@ -76,26 +86,12 @@ function.
 
 ### Address translation table
 Delta encoding means that only the difference with the previous corresponding
-entry is encoded. Offsets implicitly start at zero.
+entry is encoded. Input offsets implicitly start at zero.
 | Entry  | Encoding | Description |
 | ------ | ------| ----------- |
-| `OutputOffset` | Delta, ULEB128 | Function offset in output binary |
+| `OutputOffset` | Continuous, Delta, ULEB128 | Function offset in output binary |
 | `InputOffset` | Delta, SLEB128 | Function offset in input binary with `BRANCHENTRY` LSB bit |
 
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
 (basic block offset).
-
-### Fragment linkage table
-Following Functions table, fragment linkage table is encoded to link split
-cold fragments with main (hot) fragment.
-Header:
-| Entry  | Encoding | Description |
-| ------ | ------------ | ----------- |
-| `NumColdEntries` | ULEB128 | Number of split functions in the functions table |
-
-`NumColdEntries` pairs of addresses follow:
-| Entry  | Encoding | Description |
-| ------ | ------| ----------- |
-| `ColdAddress` | ULEB128 | Cold fragment address in output binary |
-| `HotAddress` | ULEB128 | Hot fragment address in output binary |

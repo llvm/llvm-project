@@ -645,13 +645,13 @@ struct PrepareTransferWriteConversion
     rewriter.create<memref::StoreOp>(loc, xferOp.getVector(),
                                      buffers.dataBuffer);
     auto loadedVec = rewriter.create<memref::LoadOp>(loc, buffers.dataBuffer);
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getVectorMutable().assign(loadedVec);
       xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
     });
 
     if (xferOp.getMask()) {
-      rewriter.updateRootInPlace(xferOp, [&]() {
+      rewriter.modifyOpInPlace(xferOp, [&]() {
         xferOp.getMaskMutable().assign(buffers.maskBuffer);
       });
     }
@@ -966,7 +966,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
                                            loadIndices, iv);
                   auto mask = b.create<memref::LoadOp>(loc, castedMaskBuffer,
                                                        loadIndices);
-                  rewriter.updateRootInPlace(newXfer, [&]() {
+                  rewriter.modifyOpInPlace(newXfer, [&]() {
                     newXfer.getMaskMutable().assign(mask);
                   });
                 }
@@ -1060,10 +1060,10 @@ struct UnrollTransferReadConversion
     setHasBoundedRewriteRecursion();
   }
 
-  /// Return the vector into which the newly created TransferReadOp results
-  /// are inserted.
-  Value getResultVector(TransferReadOp xferOp,
-                        PatternRewriter &rewriter) const {
+  /// Get or build the vector into which the newly created TransferReadOp
+  /// results are inserted.
+  Value buildResultVector(PatternRewriter &rewriter,
+                          TransferReadOp xferOp) const {
     if (auto insertOp = getInsertOp(xferOp))
       return insertOp.getDest();
     Location loc = xferOp.getLoc();
@@ -1098,23 +1098,26 @@ struct UnrollTransferReadConversion
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "vector rank is less or equal to target rank");
     if (isTensorOp(xferOp) && !options.lowerTensors)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "transfers operating on tensors are excluded");
     // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
-      return failure();
-
-    auto insertOp = getInsertOp(xferOp);
-    auto vec = getResultVector(xferOp, rewriter);
-    auto vecType = dyn_cast<VectorType>(vec.getType());
+      return rewriter.notifyMatchFailure(
+          xferOp, "not yet supported: element type mismatch");
     auto xferVecType = xferOp.getVectorType();
-
     if (xferVecType.getScalableDims()[0]) {
       // Cannot unroll a scalable dimension at compile time.
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "scalable dimensions cannot be unrolled");
     }
+
+    auto insertOp = getInsertOp(xferOp);
+    auto vec = buildResultVector(rewriter, xferOp);
+    auto vecType = dyn_cast<VectorType>(vec.getType());
 
     VectorType newXferVecType = VectorType::Builder(xferVecType).dropDim(0);
 

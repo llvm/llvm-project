@@ -55,6 +55,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"m", {2, 0}},
 
     {"smaia", {1, 0}},
+    {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
@@ -88,6 +89,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xtheadvdot", {1, 0}},
     {"xventanacondops", {1, 0}},
 
+    {"za128rs", {1, 0}},
+    {"za64rs", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -116,9 +119,14 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zhinx", {1, 0}},
     {"zhinxmin", {1, 0}},
 
+    {"zic64b", {1, 0}},
     {"zicbom", {1, 0}},
     {"zicbop", {1, 0}},
     {"zicboz", {1, 0}},
+    {"ziccamoa", {1, 0}},
+    {"ziccif", {1, 0}},
+    {"zicclsm", {1, 0}},
+    {"ziccrse", {1, 0}},
     {"zicntr", {2, 0}},
     {"zicsr", {2, 0}},
     {"zifencei", {2, 0}},
@@ -187,7 +195,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"zcmop", {0, 2}},
 
-    {"zfbfmin", {0, 8}},
+    {"zfbfmin", {1, 0}},
 
     {"zicfilp", {0, 4}},
     {"zicfiss", {0, 4}},
@@ -198,8 +206,8 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"ztso", {0, 1}},
 
-    {"zvfbfmin", {0, 8}},
-    {"zvfbfwma", {0, 8}},
+    {"zvfbfmin", {1, 0}},
+    {"zvfbfwma", {1, 0}},
 };
 
 static void verifyTables() {
@@ -1278,20 +1286,20 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
   if (XLen == 32) {
+    if (hasExtension("e"))
+      return "ilp32e";
     if (hasExtension("d"))
       return "ilp32d";
     if (hasExtension("f"))
       return "ilp32f";
-    if (hasExtension("e"))
-      return "ilp32e";
     return "ilp32";
   } else if (XLen == 64) {
+    if (hasExtension("e"))
+      return "lp64e";
     if (hasExtension("d"))
       return "lp64d";
     if (hasExtension("f"))
       return "lp64f";
-    if (hasExtension("e"))
-      return "lp64e";
     return "lp64";
   }
   llvm_unreachable("Invalid XLEN");

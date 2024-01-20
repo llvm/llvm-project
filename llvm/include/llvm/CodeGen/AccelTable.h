@@ -255,6 +255,20 @@ public:
   static uint32_t hash(StringRef Buffer) { return djbHash(Buffer); }
 };
 
+/// Helper class to identify an entry in DWARF5AccelTable based on their DIE
+/// offset and UnitID.
+struct OffsetAndUnitID : std::pair<uint64_t, uint32_t> {
+  using Base = std::pair<uint64_t, uint32_t>;
+  OffsetAndUnitID(Base B) : Base(B) {}
+
+  OffsetAndUnitID(uint64_t Offset, uint32_t UnitID) : Base(Offset, UnitID) {}
+  uint64_t offset() const { return first; };
+  uint32_t unitID() const { return second; };
+};
+
+template <>
+struct DenseMapInfo<OffsetAndUnitID> : DenseMapInfo<OffsetAndUnitID::Base> {};
+
 /// The Data class implementation for DWARF v5 accelerator table. Unlike the
 /// Apple Data classes, this class is just a DIE wrapper, and does not know to
 /// serialize itself. The complete serialization logic is in the
@@ -270,9 +284,12 @@ public:
 
   DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
                        const bool IsTU = false);
-  DWARF5AccelTableData(const uint64_t DieOffset, const unsigned DieTag,
-                       const unsigned UnitID, const bool IsTU = false)
-      : OffsetVal(DieOffset), DieTag(DieTag), UnitID(UnitID), IsTU(IsTU) {}
+  DWARF5AccelTableData(const uint64_t DieOffset,
+                       const std::optional<uint64_t> DefiningParentOffset,
+                       const unsigned DieTag, const unsigned UnitID,
+                       const bool IsTU = false)
+      : OffsetVal(DieOffset), ParentOffset(DefiningParentOffset),
+        DieTag(DieTag), UnitID(UnitID), IsTU(IsTU) {}
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -282,19 +299,44 @@ public:
     assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     return std::get<uint64_t>(OffsetVal);
   }
+
+  OffsetAndUnitID getDieOffsetAndUnitID() const {
+    return {getDieOffset(), UnitID};
+  }
+
   unsigned getDieTag() const { return DieTag; }
   unsigned getUnitID() const { return UnitID; }
   bool isTU() const { return IsTU; }
   void normalizeDIEToOffset() {
     assert(!isNormalized() && "Accessing offset after normalizing.");
-    OffsetVal = std::get<const DIE *>(OffsetVal)->getOffset();
+    const DIE *Entry = std::get<const DIE *>(OffsetVal);
+    ParentOffset = getDefiningParentDieOffset(*Entry);
+    OffsetVal = Entry->getOffset();
   }
   bool isNormalized() const {
     return std::holds_alternative<uint64_t>(OffsetVal);
   }
 
+  std::optional<uint64_t> getParentDieOffset() const {
+    if (auto OffsetAndId = getParentDieOffsetAndUnitID())
+      return OffsetAndId->offset();
+    return {};
+  }
+
+  std::optional<OffsetAndUnitID> getParentDieOffsetAndUnitID() const {
+    assert(isNormalized() && "Accessing DIE Offset before normalizing.");
+    if (!ParentOffset)
+      return std::nullopt;
+    return OffsetAndUnitID(*ParentOffset, getUnitID());
+  }
+
+  /// If `Die` has a non-null parent and the parent is not a declaration,
+  /// return its offset.
+  static std::optional<uint64_t> getDefiningParentDieOffset(const DIE &Die);
+
 protected:
   std::variant<const DIE *, uint64_t> OffsetVal;
+  std::optional<uint64_t> ParentOffset;
   uint32_t DieTag : 16;
   uint32_t UnitID : 15;
   uint32_t IsTU : 1;
@@ -341,7 +383,8 @@ public:
   void addTypeEntries(DWARF5AccelTable &Table) {
     for (auto &Entry : Table.getEntries()) {
       for (auto *Data : Entry.second.getValues<DWARF5AccelTableData *>()) {
-        addName(Entry.second.Name, Data->getDieOffset(), Data->getDieTag(),
+        addName(Entry.second.Name, Data->getDieOffset(),
+                Data->getParentDieOffset(), Data->getDieTag(),
                 Data->getUnitID(), true);
       }
     }

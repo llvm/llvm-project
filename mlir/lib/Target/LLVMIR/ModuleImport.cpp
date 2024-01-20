@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
@@ -132,18 +133,17 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
-/// Get a topologically sorted list of blocks for the given function.
+/// Get a topologically sorted list of blocks for the given basic blocks.
 static SetVector<llvm::BasicBlock *>
-getTopologicallySortedBlocks(llvm::Function *func) {
+getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   SetVector<llvm::BasicBlock *> blocks;
-  for (llvm::BasicBlock &bb : *func) {
-    if (!blocks.contains(&bb)) {
-      llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(&bb);
+  for (llvm::BasicBlock *basicBlock : basicBlocks) {
+    if (!blocks.contains(basicBlock)) {
+      llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(basicBlock);
       blocks.insert(traversal.begin(), traversal.end());
     }
   }
-  assert(blocks.size() == func->size() && "some blocks are not sorted");
-
+  assert(blocks.size() == basicBlocks.size() && "some blocks are not sorted");
   return blocks;
 }
 
@@ -1744,11 +1744,14 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                  .value()));
   }
 
+  if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
+      attr.isStringAttribute())
+    funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
-      attr.isStringAttribute()) {
+      attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
-  }
 }
 
 DictionaryAttr
@@ -1856,11 +1859,26 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->isDeclaration())
     return success();
 
-  // Eagerly create all blocks.
-  for (llvm::BasicBlock &bb : *func) {
-    Block *block =
-        builder.createBlock(&funcOp.getBody(), funcOp.getBody().end());
-    mapBlock(&bb, block);
+  // Collect the set of basic blocks reachable from the function's entry block.
+  // This step is crucial as LLVM IR can contain unreachable blocks that
+  // self-dominate. As a result, an operation might utilize a variable it
+  // defines, which the import does not support. Given that MLIR lacks block
+  // label support, we can safely remove unreachable blocks, as there are no
+  // indirect branch instructions that could potentially target these blocks.
+  llvm::df_iterator_default_set<llvm::BasicBlock *> reachable;
+  for (llvm::BasicBlock *basicBlock : llvm::depth_first_ext(func, reachable))
+    (void)basicBlock;
+
+  // Eagerly create all reachable blocks.
+  SmallVector<llvm::BasicBlock *> reachableBasicBlocks;
+  for (llvm::BasicBlock &basicBlock : *func) {
+    // Skip unreachable blocks.
+    if (!reachable.contains(&basicBlock))
+      continue;
+    Region &body = funcOp.getBody();
+    Block *block = builder.createBlock(&body, body.end());
+    mapBlock(&basicBlock, block);
+    reachableBasicBlocks.push_back(&basicBlock);
   }
 
   // Add function arguments to the entry block.
@@ -1873,10 +1891,11 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Process the blocks in topological order. The ordered traversal ensures
   // operands defined in a dominating block have a valid mapping to an MLIR
   // value once a block is translated.
-  SetVector<llvm::BasicBlock *> blocks = getTopologicallySortedBlocks(func);
+  SetVector<llvm::BasicBlock *> blocks =
+      getTopologicallySortedBlocks(reachableBasicBlocks);
   setConstantInsertionPointToStart(lookupBlock(blocks.front()));
-  for (llvm::BasicBlock *bb : blocks)
-    if (failed(processBasicBlock(bb, lookupBlock(bb))))
+  for (llvm::BasicBlock *basicBlock : blocks)
+    if (failed(processBasicBlock(basicBlock, lookupBlock(basicBlock))))
       return failure();
 
   // Process the debug intrinsics that require a delayed conversion after

@@ -362,11 +362,10 @@ public:
   void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
-  bool CanBeAssumedShape() const {
+  bool IsAssumedShape() const {
     return isDummy() && shape_.CanBeAssumedShape();
   }
   bool CanBeDeferredShape() const { return shape_.CanBeDeferredShape(); }
-  bool IsAssumedSize() const { return isDummy() && shape_.CanBeAssumedSize(); }
   bool IsAssumedRank() const { return isDummy() && shape_.IsAssumedRank(); }
   std::optional<common::CUDADataAttr> cudaDataAttr() const {
     return cudaDataAttr_;
