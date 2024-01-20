@@ -124,12 +124,9 @@ View the diff from {self.name} here.
         existing_comment = self.find_comment(pr)
 
         if args.write_comment_to_file:
-            self.comment = {
-                'number' : pr.number,
-                'body' : comment_text
-            }
+            self.comment = {'number' : pr.number, 'body' : comment_text}
             if existing_comment:
-                self.comment['id'] =  existing_comment.id
+                self.comment['id'] = existing_comment.id
             return
 
         if existing_comment:
@@ -323,7 +320,7 @@ def hook_main():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
             if fmt.comment:
-              comments.append(fmt.comment)
+                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
@@ -366,8 +363,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--write-comment-to-file",
-        action='store_true',
-        help="Don't create a comments on the PR, instead write the comments and metadata a file called 'comment'"   )
+        action="store_true",
+        help="Don't create a comments on the PR, instead write the comments and metadata a file called 'comment'")
 
     args = FormatArgs(parser.parse_args())
 
@@ -384,7 +381,7 @@ if __name__ == "__main__":
             comments.append(fmt.comment)
     
     if len(comments):
-        with open('comments', 'w') as f:
+        with open("comments", "w") as f:
             import json
             json.dump(comments, f)
 
