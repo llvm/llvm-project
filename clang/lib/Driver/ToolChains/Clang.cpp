@@ -8903,7 +8903,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + TC->getTripleString(),
-        "arch=" + Arch.str(),
+        "arch=" + getProcessorFromTargetID(TC->getTriple(), Arch).str(),
         "kind=" + Kind.str(),
     };
 
