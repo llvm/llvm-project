@@ -76,6 +76,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  float
+  DEF_FILE float.h.def
+  GEN_HDR float.h
+  DEPENDS
+    .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
