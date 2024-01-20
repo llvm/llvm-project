@@ -38,7 +38,7 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     (ins TransformHandleTypeInterface:$target,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes,
         DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_interchange,
-        DefaultValuedAttr<BoolAttr, "{false}">:$use_forall);
+        DefaultValuedAttr<BoolAttr, "false">:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transfomed,
       Variadic<TransformHandleTypeInterface>:$loops);
 

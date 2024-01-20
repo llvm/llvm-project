@@ -112,6 +112,8 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
 /// - `resultSizes` is of the same size as `tiledValues` and represents
 ///   the size of the corresponding element from `tiledValues` inserted into
 ///   the element from `newBbArgs`.
+/// In case the method needs to return `failure()` the method is expected
+/// to clean up any inserted operations.
 using YieldTiledValuesFn = std::function<LogicalResult(
     RewriterBase &rewriter, Location loc, ValueRange ivs, ValueRange newBbArgs,
     SmallVector<Value> &tiledValues,
@@ -354,15 +356,8 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
   if (failed(yieldTiledValuesFn(rewriter, loc, newLoop.getInductionVar(),
                                 newRegionIterArgs, tiledValues, resultOffsets,
                                 resultSizes))) {
+    rewriter.eraseOp(newLoop);
     return rewriter.notifyMatchFailure(loopOp, "failed to get tiled values");
-  }
-
-  if (tiledValues.size() != resultOffsets.size() ||
-      tiledValues.size() != resultSizes.size()) {
-    return rewriter.notifyMatchFailure(
-        loopOp,
-        "expected number of tiled values returned, the number of offset "
-        "vectors and number of size vectors to be the same");
   }
 
   SmallVector<Value> newYieldValues = llvm::to_vector(yieldOp.getOperands());
@@ -414,6 +409,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
   if (failed(yieldTiledValuesFn(rewriter, loc, newLoop.getInductionVars(),
                                 regionIterArgs, tiledValues, resultOffsets,
                                 resultSizes))) {
+    rewriter.eraseOp(newLoop);
     return rewriter.notifyMatchFailure(loopOp,
                                        "failed to get yielded tiled values");
   }
@@ -625,8 +621,10 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
 
     // 5c. Tile the cloned operation.
     tilingResult = clonedOp.getTiledImplementation(rewriter, offsets, sizes);
-    if (failed(tilingResult))
-      return op.emitOpError("failed to tile operation");
+    if (failed(tilingResult)) {
+      rewriter.eraseOp(clonedOp);
+      return op.emitOpError("faild to tile operation");
+    }
 
     // 5d. Delete the cloned operation.
     rewriter.eraseOp(clonedOp);
@@ -639,6 +637,9 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
       SmallVector<OpFoldResult> resultOffset, resultSize;
       if (failed(op.getResultTilePosition(rewriter, index, offsets, sizes,
                                           resultOffset, resultSize))) {
+        for (auto op : tilingResult->tiledOps) {
+          rewriter.eraseOp(op);
+        }
         return rewriter.notifyMatchFailure(
             op, "failed to get slice of result produced");
       }
