@@ -581,7 +581,7 @@ Improvements to Clang's diagnostics
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
-
+- Clang now diagnoses incorrect usage of ``const`` and ``pure`` attributes, so ``-Wignored-attributes`` diagnoses more cases.
 - Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
   expressions on matrix types or builtin functions without an argument list) as placement-args
   to new-expressions.
