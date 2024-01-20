@@ -2503,6 +2503,9 @@ private:
     if (!PrevToken)
       return true;
 
+    if (Tok.is(tok::ampamp))
+      return false;
+
     // These keywords are deliberately not included here because they may
     // precede only one of unary star/amp and plus/minus but not both.  They are
     // either included in determineStarAmpUsage or determinePlusMinusCaretUsage.
