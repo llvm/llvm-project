@@ -505,8 +505,6 @@ def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
-
-
 }
 } // End has_sdst = 0
 
@@ -1722,23 +1720,30 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
-    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;
   def S_WAIT_LOADCNT_DSCNT :
     SOPP_Pseudo<"s_wait_loadcnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT :
-    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_storecnt timm:$simm16)]>;
   def S_WAIT_STORECNT_DSCNT :
     SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_SAMPLECNT :
-    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
   def S_WAIT_BVHCNT :
-    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
   def S_WAIT_EXPCNT :
-    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
   def S_WAIT_DSCNT :
-    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_dscnt timm:$simm16)]>;
   def S_WAIT_KMCNT :
-    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//

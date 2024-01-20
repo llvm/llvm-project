@@ -3621,7 +3621,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 
 def MSInheritanceDocs : Documentation {
   let Category = DocCatDecl;
-  let Heading = "__single_inhertiance, __multiple_inheritance, __virtual_inheritance";
+  let Heading = "__single_inheritance, __multiple_inheritance, __virtual_inheritance";
   let Content = [{
 This collection of keywords is enabled under ``-fms-extensions`` and controls
 the pointer-to-member representation used on ``*-*-win32`` targets.

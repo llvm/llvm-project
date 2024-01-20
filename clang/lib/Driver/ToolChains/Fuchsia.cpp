@@ -258,7 +258,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   if (!D.SysRoot.empty()) {
     SmallString<128> P(D.SysRoot);
     llvm::sys::path::append(P, "lib");
-    getFilePaths().push_back(std::string(P.str()));
+    getFilePaths().push_back(std::string(P));
   }
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
@@ -266,7 +266,7 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
     if (std::optional<std::string> Path = getStdlibPath()) {
       SmallString<128> P(*Path);
       llvm::sys::path::append(P, M.gccSuffix());
-      FP.push_back(std::string(P.str()));
+      FP.push_back(std::string(P));
     }
     return FP;
   };
