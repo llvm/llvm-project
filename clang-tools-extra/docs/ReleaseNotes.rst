@@ -240,6 +240,11 @@ New checks
 
   Detects explicit type casting operations that involve the same source and
   destination types, and subsequently recommend their removal.
+  
+- New :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check.
+
+  Detects redundant ``inline`` specifiers on function and variable declarations.
 
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
