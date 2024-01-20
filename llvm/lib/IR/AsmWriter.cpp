@@ -2858,6 +2858,8 @@ void AssemblyWriter::printModule(const Module *M) {
     Out << "\"\n";
   }
 
+  Out << "\n\n ; Testing to print my name : Sabari\n\n";
+
   const std::string &DL = M->getDataLayoutStr();
   if (!DL.empty())
     Out << "target datalayout = \"" << DL << "\"\n";
