@@ -29,6 +29,23 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+
+  let extraClassDeclaration = [{
+    /// Return true if the given MemRefType has an integer address
+    /// space that matches the ROCDL shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool hasSharedMemoryAddressSpace(MemRefType type);
+
+    /// Return true if the given Attribute has an integer address
+    /// space that matches the ROCDL shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool isSharedMemoryAddressSpace(Attribute type);
+
+    /// Defines the MemRef memory space attribute numeric value that indicates
+    /// a memref is located in shared memory. This should correspond to the
+    /// value used in ROCDL.
+    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
