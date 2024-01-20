@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
-#include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
