@@ -157,6 +157,10 @@ Changes to the RISC-V Backend
 * ``-mcpu=sifive-p450`` was added.
 * CodeGen of RV32E/RV64E was supported experimentally.
 * CodeGen of ilp32e/lp64e was supported experimentally.
+* Support was added for the Ziccif, Ziccrse, Ziccamoa, Zicclsm, Za64rs, Za128rs
+  and Zic64b extensions which were introduced as a part of the RISC-V Profiles
+  specification.
+* The Smepmp 1.0 extension is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

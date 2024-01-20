@@ -92,11 +92,14 @@ on support follow.
      ``H``            Assembly Support
      ``M``            Supported
      ``Smaia``        Supported
+     ``Smepmp``       Supported
      ``Ssaia``        Supported
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
      ``V``            Supported
+     ``Za128rs``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Za64rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported
@@ -118,9 +121,14 @@ on support follow.
      ``Zfinx``        Supported
      ``Zhinx``        Supported
      ``Zhinxmin``     Supported
+     ``Zic64b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicbom``       Assembly Support
      ``Zicbop``       Supported
      ``Zicboz``       Assembly Support
+     ``Ziccamoa``     Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccif``       Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zicclsm``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccrse``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
      ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
@@ -204,6 +212,11 @@ Supported
 
 ``zicntr``, ``zicsr``, ``zifencei``, ``zihpm``
   Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is partially described in "Preface to Document Version 20190608-Base-Ratified" from the specification document (the ``zicntr`` and ``zihpm`` bits are not mentioned).  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
+
+.. _riscv-profiles-extensions-note:
+
+``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``
+  These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`_.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 Experimental Extensions
 =======================

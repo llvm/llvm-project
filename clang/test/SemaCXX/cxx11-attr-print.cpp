@@ -30,11 +30,11 @@ alignas(4) int cxx11_alignas;
 // CHECK: int c11_alignas _Alignas(int);
 _Alignas(int) int c11_alignas;
 
-// CHECK: void foo() __attribute__((const));
-void foo() __attribute__((const));
+// CHECK: int foo() __attribute__((const));
+int foo() __attribute__((const));
 
-// CHECK: void bar() __attribute__((__const));
-void bar() __attribute__((__const));
+// CHECK: int bar() __attribute__((__const));
+int bar() __attribute__((__const));
 
 // FIXME: It's unfortunate that the string literal prints with the below three
 // cases given that the string is only exposed via the [[nodiscard]] spelling.

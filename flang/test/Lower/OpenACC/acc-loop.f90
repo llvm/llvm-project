@@ -326,4 +326,10 @@ program acc_loop
 
 ! CHECK: acc.loop gang([#acc.device_type<none>], {num=%c8{{.*}} : i32} [#acc.device_type<nvidia>])
 
+  !$acc loop device_type(nvidia, default) gang
+  DO i = 1, n
+  END DO
+
+! CHECK: acc.loop gang([#acc.device_type<nvidia>, #acc.device_type<default>]) {
+
 end program

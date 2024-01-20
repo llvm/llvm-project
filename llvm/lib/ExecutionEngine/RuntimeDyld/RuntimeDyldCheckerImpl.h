@@ -64,7 +64,8 @@ private:
 
   std::pair<uint64_t, std::string>
   getStubOrGOTAddrFor(StringRef StubContainerName, StringRef Symbol,
-                      bool IsInsideLoad, bool IsStubAddr) const;
+                      StringRef StubKindFilter, bool IsInsideLoad,
+                      bool IsStubAddr) const;
 
   std::optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
 
