@@ -43,6 +43,7 @@ static_library("readability") {
     "QualifiedAutoCheck.cpp",
     "ReadabilityTidyModule.cpp",
     "RedundantAccessSpecifiersCheck.cpp",
+    "RedundantCastingCheck.cpp",
     "RedundantControlFlowCheck.cpp",
     "RedundantDeclarationCheck.cpp",
     "RedundantFunctionPtrDereferenceCheck.cpp",
