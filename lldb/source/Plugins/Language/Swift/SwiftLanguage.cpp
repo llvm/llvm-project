@@ -23,6 +23,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -768,6 +769,10 @@ ExtractSwiftTypeNameFromCxxInteropType(CompilerType type) {
   }
 
   const clang::RecordDecl *record_decl = record_type->getDecl();
+  auto *metadata = tsc->GetMetadata(record_decl);
+  if (metadata && !metadata->GetIsPotentiallySwiftInteropType())
+    return {};
+
   for (auto *child_decl : record_decl->decls()) {
     auto *var_decl = llvm::dyn_cast<clang::VarDecl>(child_decl);
     if (!var_decl)
