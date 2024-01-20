@@ -93,8 +93,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
-    if (Style.isTableGen())
+    if (Style.isTableGen()) {
       handleTableGenMultilineString();
+      handleTableGenNumericLikeIdentifier();
+    }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -802,6 +804,44 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   // ColumnWidth holds only the width of the first line.
   MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
       FirstLineText, MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+}
+
+void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
+  FormatToken *Tok = Tokens.back();
+  // TableGen identifiers can begin with digits. Such tokens are lexed as
+  // numeric_constant now.
+  if (Tok->isNot(tok::numeric_constant))
+    return;
+  StringRef Text = Tok->TokenText;
+  // The following check is based on llvm::TGLexer::LexToken.
+  // That lexes the token as a number if any of the following holds:
+  // 1. It starts with '+', '-'.
+  // 2. All the characters are digits.
+  // 3. The first non-digit character is 'b', and the next is '0' or '1'.
+  // 4. The first non-digit character is 'x', and the next is a hex digit.
+  // Note that in the case 3 and 4, if the next character does not exists in
+  // this token, the token is an identifier.
+  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+    return;
+  const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
+  // All the characters are digits
+  if (NonDigitPos == StringRef::npos)
+    return;
+  char FirstNonDigit = Text[NonDigitPos];
+  if (NonDigitPos < Text.size() - 1) {
+    char TheNext = Text[NonDigitPos + 1];
+    // Regarded as a binary number.
+    if (FirstNonDigit == 'b' && (TheNext == '0' || TheNext == '1'))
+      return;
+    // Regarded as hex number.
+    if (FirstNonDigit == 'x' && isxdigit(TheNext))
+      return;
+  }
+  if (isalpha(FirstNonDigit) || FirstNonDigit == '_') {
+    // This is actually an identifier in TableGen.
+    Tok->Tok.setKind(tok::identifier);
+    Tok->Tok.setIdentifierInfo(nullptr);
+  }
 }
 
 void FormatTokenLexer::handleTemplateStrings() {
