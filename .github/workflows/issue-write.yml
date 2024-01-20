@@ -70,3 +70,7 @@ jobs:
                 });
               }
             });
+
+      - name: Dump comments file
+        if: always()
+        run: cat comments
