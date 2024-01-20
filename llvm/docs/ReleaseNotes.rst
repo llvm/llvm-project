@@ -457,6 +457,15 @@ Changes to LLDB
 
 * AArch64 Linux targets now provide access to the Thread Local Storage
   register ``tpidr``.
+* Methods in SBHostOS related to threads have had their implementations
+  removed. These methods will return a value indicating failure.
+* ``SBType::FindDirectNestedType`` function is added. It's useful
+  for formatters to quickly find directly nested type when it's known
+  where to search for it, avoiding more expensive global search via
+  ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
 
 Changes to Sanitizers
 ---------------------

@@ -90,7 +90,7 @@ def use_lldb_substitutions(config):
             unresolved="ignore",
         ),
         "lldb-test",
-        "lldb-vscode",
+        "lldb-dap",
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),
