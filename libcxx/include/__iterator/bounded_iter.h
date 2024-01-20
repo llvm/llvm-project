@@ -225,6 +225,8 @@ public:
 private:
   template <class>
   friend struct pointer_traits;
+  template <class, class>
+  friend struct __bounded_iter;
   _Iterator __current_;       // current iterator
   _Iterator __begin_, __end_; // valid range represented as [begin, end]
 };

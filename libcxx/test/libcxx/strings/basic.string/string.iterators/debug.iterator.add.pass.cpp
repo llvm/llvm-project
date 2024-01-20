@@ -10,8 +10,8 @@
 
 // Add to iterator out of bounds.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
+// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators
+// UNSUPPORTED: libcpp-hardening-mode=none, c++03
 
 #include <string>
 #include <cassert>
@@ -26,7 +26,7 @@ void test() {
   i += 1;
   assert(i == c.end());
   i = c.begin();
-  TEST_LIBCPP_ASSERT_FAILURE(i += 2, "Attempted to add/subtract an iterator outside its valid range");
+  TEST_LIBCPP_ASSERT_FAILURE(i += 2, "__bounded_iter::operator+=: Attempt to advance an iterator past the end");
 }
 
 int main(int, char**) {
