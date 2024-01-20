@@ -365,6 +365,7 @@ Clang-Tidy Checks
    :doc:`readability-operators-representation <readability/operators-representation>`, "Yes"
    :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`readability-redundant-access-specifiers <readability/redundant-access-specifiers>`, "Yes"
+   :doc:`readability-redundant-casting <readability/redundant-casting>`, "Yes"
    :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
