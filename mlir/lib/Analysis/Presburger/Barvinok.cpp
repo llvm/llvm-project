@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Barvinok.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include <algorithm>
 
@@ -246,37 +247,6 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   return coefficients[power].simplify();
 }
 
-static std::vector<Fraction> convolution(ArrayRef<Fraction> a,
-                                         ArrayRef<Fraction> b) {
-  // The length of the convolution is the sum of the lengths
-  // of the two sequences. We pad the shorter one with zeroes.
-  unsigned len = a.size() + b.size();
-
-  // We define accessors to avoid out-of-bounds errors.
-  std::function<Fraction(unsigned i)> aGetItem = [a](unsigned i) -> Fraction {
-    if (i < a.size())
-      return a[i];
-    else
-      return 0;
-  };
-  std::function<Fraction(unsigned i)> bGetItem = [b](unsigned i) -> Fraction {
-    if (i < b.size())
-      return b[i];
-    else
-      return 0;
-  };
-
-  std::vector<Fraction> convolution;
-  convolution.reserve(len);
-  for (unsigned k = 0; k < len; ++k) {
-    Fraction sum(0, 1);
-    for (unsigned l = 0; l <= k; ++l)
-      sum += aGetItem(l) * bGetItem(k - l);
-    convolution.push_back(sum);
-  }
-  return convolution;
-}
-
 /// Substitute x_i = t^μ_i in one term of a generating function,
 /// returning
 /// a quasipolynomial which represents the exponent of the numerator
@@ -402,12 +372,13 @@ std::vector<Fraction> getBinomialCoefficients(Fraction n, Fraction r) {
 ///
 /// where sign_i is ±1,
 /// n_i \in Q^p -> Q^d is the sum of the vectors d_{ij}, weighted by the
-/// floors of d affine functions.
+/// floors of d affine functions on p parameters.
 /// d_{ij} \in Q^d are vectors.
 ///
 /// We need to find the number of terms of the form x^t in the expansion of
 /// this function.
-/// However, direct substitution causes the denominator to become zero.
+/// However, direct substitution (x = (1, ..., 1)) causes the denominator
+/// to become zero.
 ///
 /// We therefore use the following procedure instead:
 /// 1. Substitute x_i = (s+1)^μ_i for some vector μ. This makes the generating

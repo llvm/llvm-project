@@ -281,6 +281,8 @@ SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
 /// The vectors must have the same sizes.
 Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
 
+std::vector<Fraction> convolution(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
+
 } // namespace presburger
 } // namespace mlir
 

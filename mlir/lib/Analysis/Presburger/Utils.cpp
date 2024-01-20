@@ -538,3 +538,34 @@ Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
     sum += a[i] * b[i];
   return sum;
 }
+
+std::vector<Fraction> presburger::convolution(ArrayRef<Fraction> a,
+                                              ArrayRef<Fraction> b) {
+  // The length of the convolution is the sum of the lengths
+  // of the two sequences. We pad the shorter one with zeroes.
+  unsigned len = a.size() + b.size();
+
+  // We define accessors to avoid out-of-bounds errors.
+  std::function<Fraction(unsigned i)> aGetItem = [a](unsigned i) -> Fraction {
+    if (i < a.size())
+      return a[i];
+    else
+      return 0;
+  };
+  std::function<Fraction(unsigned i)> bGetItem = [b](unsigned i) -> Fraction {
+    if (i < b.size())
+      return b[i];
+    else
+      return 0;
+  };
+
+  std::vector<Fraction> convolution;
+  convolution.reserve(len);
+  for (unsigned k = 0; k < len; ++k) {
+    Fraction sum(0, 1);
+    for (unsigned l = 0; l <= k; ++l)
+      sum += aGetItem(l) * bGetItem(k - l);
+    convolution.push_back(sum);
+  }
+  return convolution;
+}
