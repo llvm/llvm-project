@@ -44,6 +44,10 @@ void test() {
   auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
   auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
   auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
+#if __cplusplus >= 202002L
+  auto explicit_by_value_unused_requires = [i] (auto) requires requires { i; } {}; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
+  explicit_by_value_unused_requires(1);
+#endif
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}
