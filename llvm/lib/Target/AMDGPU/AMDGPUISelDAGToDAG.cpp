@@ -3193,7 +3193,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   return !AllUsesAcceptSReg && (Limit < 10);
 }
 
-bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
+bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   auto Ld = cast<LoadSDNode>(N);
 
   const MachineMemOperand *MMO = Ld->getMemOperand();

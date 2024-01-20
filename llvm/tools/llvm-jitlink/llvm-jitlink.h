@@ -51,6 +51,16 @@ struct Session {
     StringMap<MemoryRegionInfo> SectionInfos;
     StringMap<MemoryRegionInfo> StubInfos;
     StringMap<MemoryRegionInfo> GOTEntryInfos;
+
+    using Symbol = jitlink::Symbol;
+    using LinkGraph = jitlink::LinkGraph;
+    using GetSymbolTargetFunction =
+        unique_function<Expected<Symbol &>(LinkGraph &G, jitlink::Block &)>;
+
+    Error registerGOTEntry(LinkGraph &G, Symbol &Sym,
+                           GetSymbolTargetFunction GetSymbolTarget);
+    Error registerStubEntry(LinkGraph &G, Symbol &Sym,
+                            GetSymbolTargetFunction GetSymbolTarget);
   };
 
   using DynLibJDMap = std::map<std::string, orc::JITDylib *>;

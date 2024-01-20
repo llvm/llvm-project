@@ -76,6 +76,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  float
+  DEF_FILE float.h.def
+  GEN_HDR float.h
+  DEPENDS
+    .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
@@ -343,6 +351,14 @@ add_gen_header(
   GEN_HDR sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_header(
+  sys_queue
+  HDR
+    sys/queue.h
+  DEPENDS
+    .llvm-libc-macros.sys_queue_macros
 )
 
 add_gen_header(

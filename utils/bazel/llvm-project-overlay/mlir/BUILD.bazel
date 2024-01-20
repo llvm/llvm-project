@@ -4568,6 +4568,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":TransformDialect",
+        ":TransformUtils",
     ],
 )
 
@@ -7261,8 +7262,7 @@ cc_library(
         ":TensorTransforms",
         ":TensorUtils",
         ":TransformDialect",
-        ":ValueBoundsOpInterface",
-        "//llvm:Support",
+        ":TransformUtils",
     ],
 )
 
