@@ -760,6 +760,7 @@ R"(All available -march extensions for RISC-V
     zhinx               1.0
     zhinxmin            1.0
     smaia               1.0
+    smepmp              1.0
     ssaia               1.0
     svinval             1.0
     svnapot             1.0
