@@ -916,7 +916,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
-      (ins i32imm:$addr, i32imm:$last_use)> {
+      (ins i32imm:$addr)> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -985,7 +985,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
       (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset, i32imm:$last_use)> {
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -3447,18 +3447,6 @@ def : GCNPat <
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
-
-class SMPrefetchGetPcPat<string type, int cache_type> : GCNPat <
-    (prefetch (i64 imm:$offset), timm, timm, (i32 cache_type)),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64_PSEUDO), $offset),
-                                                   (i32 20), (i32 SGPR_NULL), (i8 0))
-    // Offset 20 should roughly adjust getpc sequence length.
-  > {
-  let AddedComplexity = 9;
-}
-
-def : SMPrefetchGetPcPat<"INST", 0>;
-def : SMPrefetchGetPcPat<"DATA", 1>;
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns

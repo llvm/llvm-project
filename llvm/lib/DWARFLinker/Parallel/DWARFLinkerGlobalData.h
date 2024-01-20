@@ -39,9 +39,6 @@ struct DWARFLinkerOptions {
   /// Verify the input DWARF.
   bool VerifyInputDWARF = false;
 
-  /// Do not emit output.
-  bool NoOutput = false;
-
   /// Do not unique types according to ODR
   bool NoODR = false;
 
@@ -59,13 +56,14 @@ struct DWARFLinkerOptions {
   unsigned Threads = 1;
 
   /// The accelerator table kinds
-  SmallVector<DWARFLinker::AccelTableKind, 1> AccelTables;
+  SmallVector<DWARFLinkerBase::AccelTableKind, 1> AccelTables;
 
   /// Prepend path for the clang modules.
   std::string PrependPath;
 
   /// input verification handler(it might be called asynchronously).
-  DWARFLinker::InputVerificationHandlerTy InputVerificationHandler = nullptr;
+  DWARFLinkerBase::InputVerificationHandlerTy InputVerificationHandler =
+      nullptr;
 
   /// A list of all .swiftinterface files referenced by the debug
   /// info, mapping Module name to path on disk. The entries need to
@@ -74,12 +72,12 @@ struct DWARFLinkerOptions {
   /// this is dsymutil specific fag.
   ///
   /// (it might be called asynchronously).
-  DWARFLinker::SwiftInterfacesMapTy *ParseableSwiftInterfaces = nullptr;
+  DWARFLinkerBase::SwiftInterfacesMapTy *ParseableSwiftInterfaces = nullptr;
 
   /// A list of remappings to apply to file paths.
   ///
   /// (it might be called asynchronously).
-  DWARFLinker::ObjectPrefixMapTy *ObjectPrefixMap = nullptr;
+  DWARFLinkerBase::ObjectPrefixMapTy *ObjectPrefixMap = nullptr;
 };
 
 class DWARFLinkerImpl;
@@ -147,6 +145,19 @@ public:
     });
   }
 
+  /// Set target triple.
+  void setTargetTriple(const Triple &TargetTriple) {
+    this->TargetTriple = TargetTriple;
+  }
+
+  /// Optionally return target triple.
+  std::optional<std::reference_wrapper<const Triple>> getTargetTriple() {
+    if (TargetTriple)
+      return std::cref(*TargetTriple);
+
+    return std::nullopt;
+  }
+
 protected:
   llvm::parallel::PerThreadBumpPtrAllocator Allocator;
   StringPool Strings;
@@ -154,6 +165,10 @@ protected:
   DWARFLinkerOptions Options;
   MessageHandlerTy WarningHandler;
   MessageHandlerTy ErrorHandler;
+
+  /// Triple for output data. May be not set if generation of output
+  /// data is not requested.
+  std::optional<Triple> TargetTriple;
 };
 
 } // end of namespace parallel

@@ -237,7 +237,7 @@ void EmitQuotedChar(char32_t ch, const NORMAL &emit, const INSERTED &insert,
   }};
   if (ch <= 0x7f) {
     emitOneByte(ch);
-  } else if (useHexadecimalEscapeSequences) {
+  } else if (backslashEscapes && useHexadecimalEscapeSequences) {
     insert('\\');
     insert('u');
     if (ch > 0xffff) {

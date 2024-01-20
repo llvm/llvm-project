@@ -51,7 +51,7 @@ body:             |
     ; GFX908-NEXT: S_ENDPGM 0
     $agpr0_agpr1 = IMPLICIT_DEF
     SI_SPILL_AV64_SAVE killed $agpr0_agpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     $agpr2_agpr3 = COPY $agpr0_agpr1, implicit $exec
     S_ENDPGM 0
 ...

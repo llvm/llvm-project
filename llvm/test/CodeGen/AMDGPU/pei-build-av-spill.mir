@@ -69,7 +69,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0 = IMPLICIT_DEF
     SI_SPILL_AV32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, align 4, addrspace 5)
-    $vgpr0 = SI_SPILL_AV32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
+    $vgpr0 = SI_SPILL_AV32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -147,7 +147,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = IMPLICIT_DEF
     SI_SPILL_AV64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -237,7 +237,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2 = IMPLICIT_DEF
     SI_SPILL_AV96_SAVE killed $vgpr0_vgpr1_vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2 = SI_SPILL_AV96_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2 = SI_SPILL_AV96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -339,7 +339,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMPLICIT_DEF
     SI_SPILL_AV128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -457,7 +457,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = IMPLICIT_DEF
     SI_SPILL_AV160_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s160) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = SI_SPILL_AV160_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = SI_SPILL_AV160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -587,7 +587,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = IMPLICIT_DEF
     SI_SPILL_AV192_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, %stack.0, $sgpr32, 0, implicit $exec :: (store (s192) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_AV192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_AV192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -729,7 +729,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 = IMPLICIT_DEF
     SI_SPILL_AV224_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6, %stack.0, $sgpr32, 0, implicit $exec :: (store (s224) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 = SI_SPILL_AV224_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s224) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6 = SI_SPILL_AV224_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s224) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -883,7 +883,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = IMPLICIT_DEF
     SI_SPILL_AV256_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, %stack.0, $sgpr32, 0, implicit $exec :: (store (s256) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV256_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1141,7 +1141,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = IMPLICIT_DEF
     SI_SPILL_AV512_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1607,7 +1607,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = IMPLICIT_DEF
     SI_SPILL_AV1024_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, %stack.0, $sgpr32, 0, implicit $exec :: (store (s1024) into %stack.0, align 4, addrspace 5)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = SI_SPILL_AV1024_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = SI_SPILL_AV1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1677,7 +1677,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0 = IMPLICIT_DEF
     SI_SPILL_AV32_SAVE killed $agpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, align 4, addrspace 5)
-    $agpr0 = SI_SPILL_AV32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
+    $agpr0 = SI_SPILL_AV32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1765,7 +1765,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1 = IMPLICIT_DEF
     SI_SPILL_AV64_SAVE killed $agpr0_agpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1871,7 +1871,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2 = IMPLICIT_DEF
     SI_SPILL_AV96_SAVE killed $agpr0_agpr1_agpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2 = SI_SPILL_AV96_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2 = SI_SPILL_AV96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -1995,7 +1995,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
     SI_SPILL_AV128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2139,7 +2139,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
     SI_SPILL_AV160_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s160) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_AV160_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_AV160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2301,7 +2301,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
     SI_SPILL_AV192_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, %stack.0, $sgpr32, 0, implicit $exec :: (store (s192) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2481,7 +2481,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 = IMPLICIT_DEF
     SI_SPILL_AV224_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6, %stack.0, $sgpr32, 0, implicit $exec :: (store (s224) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 = SI_SPILL_AV224_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s224) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6 = SI_SPILL_AV224_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s224) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2679,7 +2679,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
     SI_SPILL_AV256_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, %stack.0, $sgpr32, 0, implicit $exec :: (store (s256) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_AV256_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_AV256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2897,7 +2897,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = IMPLICIT_DEF
     SI_SPILL_AV288_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8, %stack.0, $sgpr32, 0, implicit $exec :: (store (s288) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_AV288_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_AV288_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3133,7 +3133,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = IMPLICIT_DEF
     SI_SPILL_AV320_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9, %stack.0, $sgpr32, 0, implicit $exec :: (store (s320) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_AV320_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_AV320_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3387,7 +3387,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = IMPLICIT_DEF
     SI_SPILL_AV352_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10, %stack.0, $sgpr32, 0, implicit $exec :: (store (s352) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_AV352_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_AV352_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3659,7 +3659,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = IMPLICIT_DEF
     SI_SPILL_AV384_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11, %stack.0, $sgpr32, 0, implicit $exec :: (store (s384) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_AV384_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_AV384_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -4005,7 +4005,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
     SI_SPILL_AV512_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -4647,7 +4647,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
     SI_SPILL_AV1024_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, %stack.0, $sgpr32, 0, implicit $exec :: (store (s1024) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_AV1024_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_AV1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...

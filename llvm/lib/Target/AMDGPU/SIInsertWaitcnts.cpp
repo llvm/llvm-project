@@ -1370,9 +1370,10 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   if (Wait.hasWaitStoreCnt()) {
     assert(ST->hasVscnt());
 
-    [[maybe_unused]] auto SWaitInst = BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
-                         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-                         .addImm(Wait.StoreCnt);
+    [[maybe_unused]] auto SWaitInst =
+        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT))
+            .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+            .addImm(Wait.StoreCnt);
     Modified = true;
 
     LLVM_DEBUG(dbgs() << "generateWaitcnt\n";
@@ -1682,7 +1683,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     if (Count == ~0u)
       continue;
 
-    auto SWaitInst =
+    [[maybe_unused]] auto SWaitInst =
         BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
             .addImm(Count);
 
@@ -2116,7 +2117,8 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
     }
     Wait.ExpCnt = ~0u;
 
-    LLVM_DEBUG(dbgs() << "generateWaitcnt\n" << "Update Instr: " << *It);
+    LLVM_DEBUG(dbgs() << "generateWaitcnt\n"
+                      << "Update Instr: " << *It);
   }
 
   if (WCG->createNewWaitcnt(Block, It, Wait))

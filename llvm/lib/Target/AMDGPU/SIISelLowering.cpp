@@ -4086,7 +4086,7 @@ SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
-  if (!Subtarget->hasVectorPrefetch() && Op->isDivergent())
+  if (Op->isDivergent())
     return SDValue();
 
   switch (cast<MemSDNode>(Op)->getAddressSpace()) {
@@ -14600,8 +14600,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
   case ISD::LOAD: {
-    if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
-      return Widended;
+    if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
+      return Widened;
     [[fallthrough]];
   }
   default: {

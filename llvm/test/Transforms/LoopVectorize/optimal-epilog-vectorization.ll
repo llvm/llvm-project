@@ -662,7 +662,7 @@ outer.latch:
   br label %outer.header
 }
 
-; Check handling of widended/truncated inductions.
+; Check handling of widened/truncated inductions.
 define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  iter.check:

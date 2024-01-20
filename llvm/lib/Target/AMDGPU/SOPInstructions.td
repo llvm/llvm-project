@@ -296,7 +296,7 @@ def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
 // PSEUDO includes a workaround for a hardware anomaly where some ASICs
 // zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64_PSEUDO : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
@@ -551,7 +551,6 @@ def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
-
 }
 } // End has_sdst = 0
 

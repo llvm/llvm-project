@@ -384,6 +384,9 @@ public:
   void copyMetadata(const Instruction &SrcInst,
                     ArrayRef<unsigned> WL = ArrayRef<unsigned>());
 
+  /// Erase all metadata that matches the predicate.
+  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
+
   /// If the instruction has "branch_weights" MD_prof metadata and the MDNode
   /// has three operands (including name string), swap the order of the
   /// metadata.

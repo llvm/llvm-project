@@ -1978,7 +1978,6 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
         .addFrameIndex(FrameIndex) // addr
         .addMemOperand(MMO)        // offset
-        .addImm(0)                 // last_use
         .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
@@ -1990,7 +1989,6 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
       .addImm(0)                           // offset
-      .addImm(0)                           // last_use
       .addMemOperand(MMO);
 }
 
@@ -2486,7 +2484,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_MUL_U64));
     break;
 
-  case AMDGPU::S_GETPC_B64_PSEUDO:
+  case AMDGPU::S_GETPC_B64_pseudo:
     MI.setDesc(get(AMDGPU::S_GETPC_B64));
     if (ST.hasGetPCZeroExtension()) {
       Register Dst = MI.getOperand(0).getReg();
@@ -2499,7 +2497,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     break;
   }
-
   return true;
 }
 

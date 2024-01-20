@@ -44,7 +44,6 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackProtector.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -177,80 +176,73 @@ protected:
   // Function object to maintain state while adding codegen IR passes.
   class AddIRPass {
   public:
-    AddIRPass(ModulePassManager &MPM, const DerivedT &PB) : MPM(MPM), PB(PB) {}
+    AddIRPass(ModulePassManager &MPM) : MPM(MPM) {}
     ~AddIRPass() {
       if (!FPM.isEmpty())
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
     }
 
-    template <typename PassT>
-    void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
+    template <typename PassT> void operator()(PassT &&Pass) {
       static_assert((is_detected<is_function_pass_t, PassT>::value ||
                      is_detected<is_module_pass_t, PassT>::value) &&
                     "Only module pass and function pass are supported.");
 
-      if (!PB.runBeforeAdding(Name))
-        return;
-
       // Add Function Pass
       if constexpr (is_detected<is_function_pass_t, PassT>::value) {
         FPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       } else {
         // Add Module Pass
         if (!FPM.isEmpty()) {
           MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
           FPM = FunctionPassManager();
         }
-
         MPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       }
     }
 
   private:
     ModulePassManager &MPM;
     FunctionPassManager FPM;
-    const DerivedT &PB;
   };
 
   // Function object to maintain state while adding codegen machine passes.
   class AddMachinePass {
   public:
-    AddMachinePass(MachineFunctionPassManager &PM, const DerivedT &PB)
-        : PM(PM), PB(PB) {}
+    AddMachinePass(MachineFunctionPassManager &PM) : PM(PM) {}
 
     template <typename PassT> void operator()(PassT &&Pass) {
       static_assert(
           is_detected<has_key_t, PassT>::value,
           "Machine function pass must define a static member variable `Key`.");
-
-      if (!PB.runBeforeAdding(PassT::name()))
-        return;
-
+      for (auto &C : BeforeCallbacks)
+        if (!C(&PassT::Key))
+          return;
       PM.addPass(std::forward<PassT>(Pass));
-
-      for (auto &C : PB.AfterCallbacks)
-        C(PassT::name());
+      for (auto &C : AfterCallbacks)
+        C(&PassT::Key);
     }
 
     template <typename PassT> void insertPass(MachinePassKey *ID, PassT Pass) {
-      PB.AfterCallbacks.emplace_back(
+      AfterCallbacks.emplace_back(
           [this, ID, Pass = std::move(Pass)](MachinePassKey *PassID) {
             if (PassID == ID)
               this->PM.addPass(std::move(Pass));
           });
     }
 
+    void disablePass(MachinePassKey *ID) {
+      BeforeCallbacks.emplace_back(
+          [ID](MachinePassKey *PassID) { return PassID != ID; });
+    }
+
     MachineFunctionPassManager releasePM() { return std::move(PM); }
 
   private:
     MachineFunctionPassManager &PM;
-    const DerivedT &PB;
+    SmallVector<llvm::unique_function<bool(MachinePassKey *)>, 4>
+        BeforeCallbacks;
+    SmallVector<llvm::unique_function<void(MachinePassKey *)>, 4>
+        AfterCallbacks;
   };
 
   LLVMTargetMachine &TM;
@@ -481,25 +473,6 @@ private:
   const DerivedT &derived() const {
     return static_cast<const DerivedT &>(*this);
   }
-
-  bool runBeforeAdding(StringRef Name) const {
-    bool ShouldAdd = true;
-    for (auto &C : BeforeCallbacks)
-      ShouldAdd &= C(Name);
-    return ShouldAdd;
-  }
-
-  void setStartStopPasses(const TargetPassConfig::StartStopInfo &Info) const;
-
-  Error verifyStartStop(const TargetPassConfig::StartStopInfo &Info) const;
-
-  mutable SmallVector<llvm::unique_function<bool(StringRef)>, 4>
-      BeforeCallbacks;
-  mutable SmallVector<llvm::unique_function<void(StringRef)>, 4> AfterCallbacks;
-
-  /// Helper variable for `-start-before/-start-after/-stop-before/-stop-after`
-  mutable bool Started = true;
-  mutable bool Stopped = true;
 };
 
 template <typename Derived>
@@ -507,17 +480,13 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
     ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
-  if (!StartStopInfo)
-    return StartStopInfo.takeError();
-  setStartStopPasses(*StartStopInfo);
-  AddIRPass addIRPass(MPM, derived());
+  AddIRPass addIRPass(MPM);
   // `ProfileSummaryInfo` is always valid.
   addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
   addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
   addISelPasses(addIRPass);
 
-  AddMachinePass addPass(MFPM, derived());
+  AddMachinePass addPass(MFPM);
   if (auto Err = addCoreISelPasses(addPass))
     return std::move(Err);
 
@@ -530,68 +499,6 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
       });
 
   addPass(FreeMachineFunctionPass());
-  return verifyStartStop(*StartStopInfo);
-}
-
-template <typename Derived>
-void CodeGenPassBuilder<Derived>::setStartStopPasses(
-    const TargetPassConfig::StartStopInfo &Info) const {
-  if (!Info.StartPass.empty()) {
-    Started = false;
-    BeforeCallbacks.emplace_back([this, &Info, AfterFlag = Info.StartAfter,
-                                  Count = 0u](StringRef ClassName) mutable {
-      if (Count == Info.StartInstanceNum) {
-        if (AfterFlag) {
-          AfterFlag = false;
-          Started = true;
-        }
-        return Started;
-      }
-
-      auto PassName = PIC->getPassNameForClassName(ClassName);
-      if (Info.StartPass == PassName && ++Count == Info.StartInstanceNum)
-        Started = !Info.StartAfter;
-
-      return Started;
-    });
-  }
-
-  if (!Info.StopPass.empty()) {
-    Stopped = false;
-    BeforeCallbacks.emplace_back([this, &Info, AfterFlag = Info.StopAfter,
-                                  Count = 0u](StringRef ClassName) mutable {
-      if (Count == Info.StopInstanceNum) {
-        if (AfterFlag) {
-          AfterFlag = false;
-          Stopped = true;
-        }
-        return !Stopped;
-      }
-
-      auto PassName = PIC->getPassNameForClassName(ClassName);
-      if (Info.StopPass == PassName && ++Count == Info.StopInstanceNum)
-        Stopped = !Info.StopAfter;
-      return !Stopped;
-    });
-  }
-}
-
-template <typename Derived>
-Error CodeGenPassBuilder<Derived>::verifyStartStop(
-    const TargetPassConfig::StartStopInfo &Info) const {
-  if (Started && Stopped)
-    return Error::success();
-
-  if (!Started)
-    return make_error<StringError>(
-        "Can't find start pass \"" +
-            PIC->getPassNameForClassName(Info.StartPass) + "\".",
-        std::make_error_code(std::errc::invalid_argument));
-  if (!Stopped)
-    return make_error<StringError>(
-        "Can't find stop pass \"" +
-            PIC->getPassNameForClassName(Info.StopPass) + "\".",
-        std::make_error_code(std::errc::invalid_argument));
   return Error::success();
 }
 
