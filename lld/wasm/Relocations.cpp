@@ -19,7 +19,7 @@ using namespace llvm::wasm;
 namespace lld::wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
-  if (!config->isPic &&
+  if (!ctx.isPic &&
       config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
@@ -141,7 +141,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (config->isPic ||
+    if (ctx.isPic ||
         (sym->isUndefined() &&
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
