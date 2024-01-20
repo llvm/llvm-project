@@ -32,6 +32,12 @@ static_assert(noexcept(std::saturate_cast<signed char>(std::numeric_limits<unsig
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<signed int>::max())));
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<unsigned int>::max())));
 
+template <typename IntegerT>
+constexpr auto zero()
+{
+  return IntegerT{0};
+}
+
 constexpr bool test() {
   // clang-format off
 
@@ -46,53 +52,53 @@ constexpr bool test() {
   // Constants: biggest numbers
 
   constexpr auto sintMin  = std::numeric_limits<SIntT>::min();
-  constexpr auto sintZero = SIntT{0};
+  constexpr auto sintZero =                zero<SIntT>();
   constexpr auto sintMax  = std::numeric_limits<SIntT>::max();
 
   constexpr auto uintMin  = std::numeric_limits<UIntT>::min();
-  constexpr auto uintZero = UIntT{0};
+  constexpr auto uintZero =                zero<UIntT>();
   constexpr auto uintMax  = std::numeric_limits<UIntT>::max();
 
   // Constants: numeric limits
 
   constexpr auto std_scharMin  = std::numeric_limits<signed char>::min();
-  constexpr auto std_scharZero =         static_cast<signed char>(0);
+  constexpr auto std_scharZero =                zero<signed char>();
   constexpr auto std_scharMax  = std::numeric_limits<signed char>::max();
 
   constexpr auto std_ucharMin  = std::numeric_limits<unsigned char>::min();
-  constexpr auto std_ucharZero =         static_cast<unsigned char>(0);
+  constexpr auto std_ucharZero =                zero<unsigned char>();
   constexpr auto std_ucharMax  = std::numeric_limits<unsigned char>::max();
 
   constexpr auto std_ssintMin  = std::numeric_limits<signed short int>::min();
-  constexpr auto std_ssintZero =  static_cast<signed short int>(0);
+  constexpr auto std_ssintZero =                zero<signed short int>();
   constexpr auto std_ssintMax  = std::numeric_limits<signed short int>::max();
 
   constexpr auto std_usintMin  = std::numeric_limits<unsigned short int>::min();
-  constexpr auto std_usintZero =         static_cast<unsigned short int>(0);
+  constexpr auto std_usintZero =                zero<unsigned short int>();
   constexpr auto std_usintMax  = std::numeric_limits<unsigned short int>::max();
 
   constexpr auto std_sintMin   = std::numeric_limits<signed int>::min();
-  constexpr auto std_sintZero  =         static_cast<signed int>(0);
+  constexpr auto std_sintZero  =                zero<signed int>();
   constexpr auto std_sintMax   = std::numeric_limits<signed int>::max();
 
   constexpr auto std_uintMin   = std::numeric_limits<unsigned int>::min();
-  constexpr auto std_uintZero  =         static_cast<unsigned int>(0);
+  constexpr auto std_uintZero  =                zero<unsigned int>();
   constexpr auto std_uintMax   = std::numeric_limits<unsigned int>::max();
 
   constexpr auto std_slMin     = std::numeric_limits<signed long int>::min();
-  constexpr auto std_slZero    =         static_cast<signed long int>(0);
+  constexpr auto std_slZero    =                zero<signed long int>();
   constexpr auto std_slMax     = std::numeric_limits<signed long int>::max();
 
   constexpr auto std_ulMin     = std::numeric_limits<unsigned long int>::min();
-  constexpr auto std_ulZero    =         static_cast<unsigned long int>(0);
+  constexpr auto std_ulZero    =                zero<unsigned long int>();
   constexpr auto std_ulMax     = std::numeric_limits<unsigned long int>::max();
 
   constexpr auto std_sllMin    = std::numeric_limits<signed long long int>::min();
-  constexpr auto std_sllZero   =         static_cast<signed long long int>(0);
+  constexpr auto std_sllZero   =                zero<signed long long int>();
   constexpr auto std_sllMax    = std::numeric_limits<signed long long int>::max();
 
   constexpr auto std_ullMin    = std::numeric_limits<unsigned long long int>::min();
-  constexpr auto std_ullZero   =         static_cast<unsigned long long int>(0);
+  constexpr auto std_ullZero   =                zero<unsigned long long int>();
   constexpr auto std_ullMax    = std::numeric_limits<unsigned long long int>::max();
   
   // signed char

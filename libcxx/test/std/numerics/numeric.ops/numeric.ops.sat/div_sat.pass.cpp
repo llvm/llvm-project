@@ -26,18 +26,20 @@ constexpr bool test_signed() {
   [[maybe_unused]] std::same_as<IntegerT> decltype(auto) quot = std::div_sat(minVal, maxVal);
   static_assert(noexcept(std::div_sat(minVal, maxVal)));
 
+  // clang-format off
+
   // No saturation (-1, 0, 1)
 
-  assert(std::div_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{1});
-  assert(std::div_sat(IntegerT{-1}, IntegerT{1}) == IntegerT{-1});
-  assert(std::div_sat(IntegerT{-1}, minVal) == IntegerT{0});
-  assert(std::div_sat(IntegerT{-1}, maxVal) == IntegerT{0});
-  assert(std::div_sat(IntegerT{0}, IntegerT{-1}) == IntegerT{0});
-  assert(std::div_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
-  assert(std::div_sat(IntegerT{0}, minVal) == IntegerT{0});
-  assert(std::div_sat(IntegerT{1}, IntegerT{-1}) == IntegerT{-1});
-  assert(std::div_sat(IntegerT{1}, minVal) == IntegerT{0});
-  assert(std::div_sat(IntegerT{1}, maxVal) == IntegerT{0});
+  assert(std::div_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
+  assert(std::div_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
+  assert(std::div_sat(IntegerT{-1},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{-1},       maxVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
+  assert(std::div_sat(IntegerT{ 1},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 1},       maxVal) == IntegerT{ 0});
 
   // No saturation (Large values)
 
@@ -73,6 +75,8 @@ constexpr bool test_signed() {
   // Saturation - max only
 
   assert(std::div_sat(minVal, IntegerT{-1}) == maxVal);
+
+  // clang-format on
 
   return true;
 }
