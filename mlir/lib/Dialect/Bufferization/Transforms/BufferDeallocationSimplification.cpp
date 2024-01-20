@@ -240,13 +240,6 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newRetainedMemrefs, replacements;
-    Value falseValue;
-    auto getOrCreateFalse = [&]() -> Value {
-      if (!falseValue)
-        falseValue = rewriter.create<arith::ConstantOp>(
-            deallocOp.getLoc(), rewriter.getBoolAttr(false));
-      return falseValue;
-    };
 
     for (auto retainedMemref : deallocOp.getRetained()) {
       if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
@@ -256,7 +249,8 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
         continue;
       }
 
-      replacements.push_back(getOrCreateFalse());
+      replacements.push_back(rewriter.create<arith::ConstantOp>(
+          deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
