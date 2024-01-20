@@ -9272,10 +9272,17 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     }
     // The result is a pointer to the first element of the array.
     auto *AT = Info.Ctx.getAsArrayType(SubExpr->getType());
-    if (auto *CAT = dyn_cast<ConstantArrayType>(AT))
+    if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
       Result.addArray(Info, E, CAT);
-    else
-      Result.addUnsizedArray(Info, E, AT->getElementType());
+    }
+    else {
+      if (Result.checkNullPointer(Info, E, CSK_ArrayToPointer)) {
+        // Only add unsized array if there actually is a pointer.
+        return false;        
+      } else {
+        Result.addUnsizedArray(Info, E, AT->getElementType());
+      }
+    }
     return true;
   }
 
