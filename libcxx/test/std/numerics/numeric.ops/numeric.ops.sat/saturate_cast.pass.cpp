@@ -33,8 +33,7 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<sig
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<unsigned int>::max())));
 
 template <typename IntegerT>
-constexpr auto zero()
-{
+constexpr auto zero() {
   return IntegerT{0};
 }
 
