@@ -46,9 +46,9 @@ int main(int, char**)
     assert(e_code2 == e_code2);
     assert(e_code2 != e_code3);
     assert(e_code2 != e_code4);
-    assert(e_code2 == e_condition1);  // ?
+    LIBCPP_ASSERT(e_code2 == e_condition1);
     assert(e_code2 == e_condition2);
-    assert(e_code2 != e_condition3);
+    LIBCPP_ASSERT(e_code2 != e_condition3);
     assert(e_code2 != e_condition4);
 
     assert(e_code3 != e_code1);
@@ -64,15 +64,15 @@ int main(int, char**)
     assert(e_code4 != e_code2);
     assert(e_code4 != e_code3);
     assert(e_code4 == e_code4);
-    assert(e_code4 != e_condition1);
+    LIBCPP_ASSERT(e_code4 != e_condition1);
     assert(e_code4 != e_condition2);
-    assert(e_code4 == e_condition3);  // ?
+    LIBCPP_ASSERT(e_code4 == e_condition3);
     assert(e_code4 == e_condition4);
 
     assert(e_condition1 == e_code1);
-    assert(e_condition1 == e_code2);  // ?
+    LIBCPP_ASSERT(e_condition1 == e_code2);
     assert(e_condition1 != e_code3);
-    assert(e_condition1 != e_code4);
+    LIBCPP_ASSERT(e_condition1 != e_code4);
     assert(e_condition1 == e_condition1);
     assert(e_condition1 != e_condition2);
     assert(e_condition1 != e_condition3);
@@ -88,9 +88,9 @@ int main(int, char**)
     assert(e_condition2 != e_condition4);
 
     assert(e_condition3 != e_code1);
-    assert(e_condition3 != e_code2);
+    LIBCPP_ASSERT(e_condition3 != e_code2);
     assert(e_condition3 == e_code3);
-    assert(e_condition3 == e_code4);  // ?
+    LIBCPP_ASSERT(e_condition3 == e_code4);
     assert(e_condition3 != e_condition1);
     assert(e_condition3 != e_condition2);
     assert(e_condition3 == e_condition3);

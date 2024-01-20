@@ -36,11 +36,11 @@ int main(int, char**)
     {
         const std::error_category& e_cat1 = std::system_category();
         std::error_condition e_cond = e_cat1.default_error_condition(5);
-        assert(e_cond.value() == 5);
-        assert(e_cond.category() == std::generic_category());
+        LIBCPP_ASSERT(e_cond.value() == 5);
+        LIBCPP_ASSERT(e_cond.category() == std::generic_category());
         e_cond = e_cat1.default_error_condition(5000);
-        assert(e_cond.value() == 5000);
-        assert(e_cond.category() == std::system_category());
+        LIBCPP_ASSERT(e_cond.value() == 5000);
+        LIBCPP_ASSERT(e_cond.category() == std::system_category());
     }
 
     // Test the result of message(int cond) when given a bad error condition

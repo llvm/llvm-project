@@ -30,7 +30,7 @@ int main(int, char**)
     assert(!m1.empty());
     assert(!m2.empty());
     assert(!m3.empty());
-    assert(m1 == m2);
+    LIBCPP_ASSERT(m1 == m2);
     assert(m1 != m3);
 
   return 0;
