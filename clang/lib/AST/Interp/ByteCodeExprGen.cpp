@@ -398,7 +398,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 
   if (!LT || !RT || !T)
-    return this->bail(BO);
+    return false;
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
@@ -478,7 +478,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   case BO_LAnd:
     llvm_unreachable("Already handled earlier");
   default:
-    return this->bail(BO);
+    return false;
   }
 
   llvm_unreachable("Unhandled binary op");
@@ -531,7 +531,7 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   else if (Op == BO_Sub)
     return this->emitSubOffset(OffsetType, E);
 
-  return this->bail(E);
+  return false;
 }
 
 template <class Emitter>
@@ -2389,7 +2389,9 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   // Return the value
   if (VarT)
     return this->emitRet(*VarT, VD);
-  return this->emitRetValue(VD);
+
+  // Return non-primitive values as pointers here.
+  return this->emitRet(PT_Ptr, VD);
 }
 
 template <class Emitter>
@@ -2409,7 +2411,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
-      return this->bail(VD);
+      return false;
 
     assert(Init);
     {
