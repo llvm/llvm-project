@@ -3188,12 +3188,16 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   if (!GA)
     return false;
 
-  std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
-  if (!CR)
-    return Width == 32 && TM.getCodeModel() == CodeModel::Small;
-
-  return CR->getSignedMin().sge(-1ull << Width) &&
-         CR->getSignedMax().slt(1ull << Width);
+  auto *GV = GA->getGlobal();
+  std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange();
+  if (CR)
+    return CR->getSignedMin().sge(-1ull << Width) &&
+           CR->getSignedMax().slt(1ull << Width);
+  // In the kernel code model, globals are in the negative 2GB of the address
+  // space, so globals can be a sign extended 32-bit immediate.
+  // In other code models, small globals are in the low 2GB of the address
+  // space, so sign extending them is equivalent to zero extending them.
+  return Width == 32 && !TM.isLargeGlobalValue(GV);
 }
 
 X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {

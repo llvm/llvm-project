@@ -601,9 +601,9 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   }
 
   sys::path::append(Path, "Contents", "Resources");
-  std::string ResourceDir = std::string(Path.str());
+  std::string ResourceDir = std::string(Path);
   sys::path::append(Path, "DWARF", sys::path::filename(DwarfFile));
-  return OutputLocation(std::string(Path.str()), ResourceDir);
+  return OutputLocation(std::string(Path), ResourceDir);
 }
 
 int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {

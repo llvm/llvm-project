@@ -2,23 +2,12 @@
 
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -verify -S -emit-llvm -o - %s
 
-kernel void builtins_amdgcn_s_barrier_signal_err(global int* in, global int* out, int barrier) {
+typedef unsigned int uint;
 
-  __builtin_amdgcn_s_barrier_signal(barrier); // expected-error {{'__builtin_amdgcn_s_barrier_signal' must be a constant integer}}
-  __builtin_amdgcn_s_barrier_wait(-1);
-  *out = *in;
-}
-
-kernel void builtins_amdgcn_s_barrier_wait_err(global int* in, global int* out, int barrier) {
-
-  __builtin_amdgcn_s_barrier_signal(-1);
-  __builtin_amdgcn_s_barrier_wait(barrier); // expected-error {{'__builtin_amdgcn_s_barrier_wait' must be a constant integer}}
-  *out = *in;
-}
-
-kernel void builtins_amdgcn_s_barrier_signal_isfirst_err(global int* in, global int* out, int barrier) {
-
-  __builtin_amdgcn_s_barrier_signal_isfirst(barrier); // expected-error {{'__builtin_amdgcn_s_barrier_signal_isfirst' must be a constant integer}}
-  __builtin_amdgcn_s_barrier_wait(-1);
-  *out = *in;
+kernel void test_builtins_amdgcn_gws_insts(uint a, uint b) {
+  __builtin_amdgcn_ds_gws_init(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_init' needs target feature gws}}
+  __builtin_amdgcn_ds_gws_barrier(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_barrier' needs target feature gws}}
+  __builtin_amdgcn_ds_gws_sema_v(a); // expected-error {{'__builtin_amdgcn_ds_gws_sema_v' needs target feature gws}}
+  __builtin_amdgcn_ds_gws_sema_br(a, b); // expected-error {{'__builtin_amdgcn_ds_gws_sema_br' needs target feature gws}}
+  __builtin_amdgcn_ds_gws_sema_p(a); // expected-error {{'__builtin_amdgcn_ds_gws_sema_p' needs target feature gws}}
 }

@@ -93,6 +93,22 @@ def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                                    AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                    "'Zifencei' (fence.i)">;
 
+def FeatureStdExtZiccamoa
+    : SubtargetFeature<"ziccamoa", "HasStdExtZiccamoa", "true",
+                       "'Ziccamoa' (Main Memory Supports All Atomics in A)">;
+
+def FeatureStdExtZiccif
+    : SubtargetFeature<"ziccif", "HasStdExtZiccif", "true",
+                       "'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement)">;
+
+def FeatureStdExtZicclsm
+    : SubtargetFeature<"zicclsm", "HasStdExtZicclsm", "true",
+                       "'Zicclsm' (Main Memory Supports Misaligned Loads/Stores)">;
+
+def FeatureStdExtZiccrse
+    : SubtargetFeature<"ziccrse", "HasStdExtZiccrse", "true",
+                       "'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences)">;
+
 def FeatureStdExtZicntr
     : SubtargetFeature<"zicntr", "HasStdExtZicntr", "true",
                        "'Zicntr' (Base Counters and Timers)",
@@ -517,6 +533,10 @@ def HasStdExtZfhOrZvfh
                                    "'Zfh' (Half-Precision Floating-Point) or "
                                    "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
+def FeatureStdExtZic64b
+    : SubtargetFeature<"zic64b", "HasStdExtZic64b", "true",
+                       "'Zic64b' (Cache Block Size Is 64 Bytes)">;
+
 def FeatureStdExtZicbom
     : SubtargetFeature<"zicbom", "HasStdExtZicbom", "true",
                        "'Zicbom' (Cache-Block Management Instructions)">;
@@ -560,6 +580,12 @@ def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                               AssemblerPredicate<(all_of FeatureStdExtZtso),
                               "'Ztso' (Memory Model - Total Store Order)">;
 def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
+
+def FeatureStdExtZa64rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
+                                           "'Za64rs' (Reservation Set Size of at Most 64 Bytes)">;
+
+def FeatureStdExtZa128rs : SubtargetFeature<"za128rs", "HasStdExtZa128rs", "true",
+                                            "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
 
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
@@ -721,6 +747,10 @@ def FeatureStdExtSsaia
     : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
                        "'Ssaia' (Advanced Interrupt Architecture Supervisor "
                        "Level)", []>;
+
+def FeatureStdExtSmepmp
+    : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
+                       "'Smepmp' (Enhanced Physical Memory Protection)", []>;
 
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,

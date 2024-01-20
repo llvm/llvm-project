@@ -57,7 +57,7 @@ public:
 bool DylinkSection::isNeeded() const {
   return ctx.isPic ||
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
-         !symtab->sharedFiles.empty();
+         !ctx.sharedFiles.empty();
 }
 
 void DylinkSection::writeBody() {
@@ -72,10 +72,10 @@ void DylinkSection::writeBody() {
     sub.writeTo(os);
   }
 
-  if (symtab->sharedFiles.size()) {
+  if (ctx.sharedFiles.size()) {
     SubSection sub(WASM_DYLINK_NEEDED);
-    writeUleb128(sub.os, symtab->sharedFiles.size(), "Needed");
-    for (auto *so : symtab->sharedFiles)
+    writeUleb128(sub.os, ctx.sharedFiles.size(), "Needed");
+    for (auto *so : ctx.sharedFiles)
       writeStr(sub.os, llvm::sys::path::filename(so->getName()), "so name");
     sub.writeTo(os);
   }

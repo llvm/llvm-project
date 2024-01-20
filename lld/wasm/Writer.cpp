@@ -133,7 +133,7 @@ private:
 void Writer::calculateCustomSections() {
   log("calculateCustomSections");
   bool stripDebug = config->stripDebug || config->stripAll;
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *section : file->customSections) {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
@@ -207,7 +207,7 @@ void Writer::createRelocSections() {
 }
 
 void Writer::populateProducers() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     const WasmProducerInfo &info = file->getWasmObj()->getProducerInfo();
     out.producersSec->addInfo(info);
   }
@@ -591,7 +591,7 @@ void Writer::populateTargetFeatures() {
   }
 
   // Find the sets of used, required, and disallowed features
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
       switch (feature.Prefix) {
@@ -654,7 +654,7 @@ void Writer::populateTargetFeatures() {
   }
 
   // Validate the required and disallowed constraints for each file
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     StringRef fileName(file->getName());
     SmallSet<std::string, 8> objectFeatures;
     for (const auto &feature : file->getWasmObj()->getTargetFeatures()) {
@@ -832,7 +832,7 @@ void Writer::populateSymtab() {
     if (sym->isUsedInRegularObj && sym->isLive())
       out.linkingSec->addToSymtab(sym);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Local symtab entries: " << file->getName() << "\n");
     for (Symbol *sym : file->getSymbols())
       if (sym->isLocal() && !isa<SectionSymbol>(sym) && sym->isLive())
@@ -848,7 +848,7 @@ void Writer::calculateTypes() {
   // 4. The signatures of all imported tags
   // 5. The signatures of all defined tags
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     ArrayRef<WasmSignature> types = file->getWasmObj()->types();
     for (uint32_t i = 0; i < types.size(); i++)
       if (file->typeIsUsed[i])
@@ -939,7 +939,7 @@ static void finalizeIndirectFunctionTable() {
 }
 
 static void scanRelocations() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
     for (InputChunk *chunk : file->functions)
       scanRelocations(chunk);
@@ -955,37 +955,37 @@ void Writer::assignIndexes() {
   // global are effected by the number of imports.
   out.importSec->seal();
 
-  for (InputFunction *func : symtab->syntheticFunctions)
+  for (InputFunction *func : ctx.syntheticFunctions)
     out.functionSec->addFunction(func);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Functions: " << file->getName() << "\n");
     for (InputFunction *func : file->functions)
       out.functionSec->addFunction(func);
   }
 
-  for (InputGlobal *global : symtab->syntheticGlobals)
+  for (InputGlobal *global : ctx.syntheticGlobals)
     out.globalSec->addGlobal(global);
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Globals: " << file->getName() << "\n");
     for (InputGlobal *global : file->globals)
       out.globalSec->addGlobal(global);
   }
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Tags: " << file->getName() << "\n");
     for (InputTag *tag : file->tags)
       out.tagSec->addTag(tag);
   }
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     LLVM_DEBUG(dbgs() << "Tables: " << file->getName() << "\n");
     for (InputTable *table : file->tables)
       out.tableSec->addTable(table);
   }
 
-  for (InputTable *table : symtab->syntheticTables)
+  for (InputTable *table : ctx.syntheticTables)
     out.tableSec->addTable(table);
 
   out.globalSec->assignIndexes();
@@ -1022,7 +1022,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
 }
 
 void Writer::createOutputSegments() {
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *segment : file->segments) {
       if (!segment->live)
         continue;
@@ -1639,7 +1639,7 @@ void Writer::calculateInitFunctions() {
   if (!config->relocatable && !WasmSym::callCtors->isLive())
     return;
 
-  for (ObjFile *file : symtab->objectFiles) {
+  for (ObjFile *file : ctx.objectFiles) {
     const WasmLinkingData &l = file->getWasmObj()->linkingData();
     for (const WasmInitFunc &f : l.InitFunctions) {
       FunctionSymbol *sym = file->getFunctionSymbol(f.Symbol);

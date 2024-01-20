@@ -5422,6 +5422,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   I.eraseFromParent();
   return true;
 }
+
 bool AMDGPUInstructionSelector::selectSBarrierLeave(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
