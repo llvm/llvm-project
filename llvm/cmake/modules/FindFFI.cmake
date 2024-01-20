@@ -34,7 +34,7 @@ else()
   endif()
 endif()
 
-find_library(FFI_LIBRARIES ffi PATHS ${FFI_LIBRARY_DIR})
+find_library(FFI_LIBRARIES NAMES libffi.a ffi PATHS ${FFI_LIBRARY_DIR})
 
 if(FFI_LIBRARIES)
   include(CMakePushCheckState)
