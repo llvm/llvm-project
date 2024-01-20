@@ -104,6 +104,47 @@ struct MachOBuilderLoadCommand<MachO::LC_ID_DYLIB>
   std::string Name;
 };
 
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_LOAD_DYLIB>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_LOAD_DYLIB> {
+
+  MachOBuilderLoadCommand(std::string Name, uint32_t Timestamp,
+                          uint32_t CurrentVersion,
+                          uint32_t CompatibilityVersion)
+      : MachOBuilderLoadCommandImplBase(
+            MachO::dylib{24, Timestamp, CurrentVersion, CompatibilityVersion}),
+        Name(std::move(Name)) {
+    cmdsize += (this->Name.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, Name.data());
+    return Offset + ((Name.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string Name;
+};
+
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_RPATH>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_RPATH> {
+  MachOBuilderLoadCommand(std::string Path)
+      : MachOBuilderLoadCommandImplBase(12u), Path(std::move(Path)) {
+    cmdsize += (this->Path.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, Path.data());
+    return Offset + ((Path.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string Path;
+};
+
 // Builds MachO objects.
 template <typename MachOTraits> class MachOBuilder {
 private:
