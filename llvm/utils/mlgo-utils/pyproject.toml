@@ -11,6 +11,10 @@ dependencies = [
   "absl-py>=1.0.0"
 ]
 dynamic = ["version"]
+license = {text = "Apache-2.0 WITH LLVM-exception"}
+classifiers = [
+  "License :: OSI Approved :: Apache Software License"
+]
 
 [tool.setuptools.dynamic]
 version = {attr = "mlgo.__version__"}
