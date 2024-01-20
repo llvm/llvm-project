@@ -20,6 +20,7 @@
 #include "FormatInternal.h"
 #include "FormatToken.h"
 #include "FormatTokenLexer.h"
+#include "IncludesSeparator.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
@@ -995,6 +996,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("DisableFormat", Style.DisableFormat);
     IO.mapOptional("EmptyLineAfterAccessModifier",
                    Style.EmptyLineAfterAccessModifier);
+    IO.mapOptional("EmptyLinesAfterIncludes", Style.EmptyLinesAfterIncludes);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
                    Style.EmptyLineBeforeAccessModifier);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
@@ -1502,6 +1504,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.DerivePointerAlignment = false;
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
+  LLVMStyle.EmptyLinesAfterIncludes = std::nullopt;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
   LLVMStyle.FixNamespaceComments = true;
@@ -3712,6 +3715,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
     Passes.emplace_back([&](const Environment &Env) {
       return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
+
+  if (Style.EmptyLinesAfterIncludes.has_value()) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return IncludesSeparator(Env, Expanded).process();
     });
   }
 

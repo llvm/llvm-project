@@ -26990,6 +26990,191 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
 }
+
+TEST_F(FormatTest, EmptyLinesAfterInclude) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 2;
+
+  verifyFormat("#include <string>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#ifndef TEST_H\n"
+               "#define TEST_H\n"
+               "#include <string>\n"
+               "\n"
+               "\n"
+               "#define PP_DEFINE\n"
+               "#include <map>\n"
+               "#include <vector>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#include <string>\n"
+               "#ifdef WINDOWS\n"
+               "#include <win32>\n"
+               "#ifdef X32\n"
+               "#include <additionalHeader>\n"
+               "#else\n"
+               "#include <unistd.h>\n"
+               "#endif\n"
+               "#endif\n"
+               "#include <map>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#pragma once\n"
+               "#include <string>\n"
+               "#include <map>\n"
+               "#ifdef WINDOWS\n"
+               "#include <w32>\n"
+               "#endif\n"
+               "#include <vector>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#include <string>\n"
+               "\n"
+               "\n"
+               "#ifdef WINDOWS\n"
+               "#define OS_VERSION WINDOWS\n"
+               "#endif\n"
+               "\n"
+               "#include <map>\n"
+               "#include <vector>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#include <string>\n"
+               "#include <map>\n"
+               "\n"
+               "\n"
+               "#define INCLUDE_MACRO #include<vector> #include<set>\n"
+               "#include <queue>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#include <string>\n"
+               "\n"
+               "\n"
+               "#ifdef WINDOWS\n"
+               "#ifdef x86\n"
+               "#include <x86_windows>\n"
+               "#endif\n"
+               "#define OS_VERSION WINDOWS\n"
+               "#endif\n"
+               "\n"
+               "#include <map>\n"
+               "#include <vector>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  Style.EmptyLinesAfterIncludes = 1;
+  verifyFormat("#include <string>\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#pragma once\n"
+               "#include <string>\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#ifndef TEST_H\n"
+               "#define TEST_H\n"
+               "#include <string>\n"
+               "#include <map>\n"
+               "\n"
+               "void func();\n"
+               "#endif // TEST_H",
+               Style);
+}
+
+TEST_F(FormatTest, EmptyLinesAfterIncludesLimitedByMaxEmptyLinesToKeep) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 1;
+  verifyFormat("#include <string>\n"
+               "\n"
+               "class Test {};",
+               Style);
+}
+
+TEST_F(FormatTest, EmptyLinesAfterIncludesWithIncludesPreseve) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
+  verifyFormat("#pragma once\n"
+               "// test file documentation\n"
+               "#include \"b.h\"\n"
+               "#include \"d.h\"\n"
+               "\n"
+               "#include \"a.h\"\n"
+               "#include \"c.h\"\n"
+               "#include \"e.h\"\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+}
+
+TEST_F(FormatTest, EmptyLinesAfterIncludesWithIncludesMerge) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Merge;
+  verifyFormat("#pragma once\n"
+               "// test file documentation\n"
+               "#include \"a.h\"\n"
+               "#include \"b.h\"\n"
+               "#include \"c.h\"\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+}
+
+TEST_F(FormatTest, EmptyLinesAfterIncludesWithIncludesRegroup) {
+  auto Style = getLLVMStyle();
+  Style.EmptyLinesAfterIncludes = 2;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  verifyFormat("#pragma once\n"
+               "// test file documentation\n"
+               "#include \"a.h\"\n"
+               "#include \"c.h\"\n"
+               "\n"
+               "#include <b.h>\n"
+               "#include <d.h>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+
+  verifyFormat("#include <b.h>\n"
+               "#include <d.h>\n"
+               "\n"
+               "\n"
+               "class Test {};",
+               Style);
+}
 } // namespace
 } // namespace test
 } // namespace format
