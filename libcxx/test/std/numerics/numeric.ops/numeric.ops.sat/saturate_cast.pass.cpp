@@ -71,29 +71,29 @@ constexpr bool test() {
   constexpr auto std_usintZero =         static_cast<unsigned short int>(0);
   constexpr auto std_usintMax  = std::numeric_limits<unsigned short int>::max();
 
-  constexpr auto std_sintMin  = std::numeric_limits<signed int>::min();
-  constexpr auto std_sintZero =         static_cast<signed int>(0);
-  constexpr auto std_sintMax  = std::numeric_limits<signed int>::max();
+  constexpr auto std_sintMin   = std::numeric_limits<signed int>::min();
+  constexpr auto std_sintZero  =         static_cast<signed int>(0);
+  constexpr auto std_sintMax   = std::numeric_limits<signed int>::max();
 
-  constexpr auto std_uintMin  = std::numeric_limits<unsigned int>::min();
-  constexpr auto std_uintZero =         static_cast<unsigned int>(0);
-  constexpr auto std_uintMax  = std::numeric_limits<unsigned int>::max();
+  constexpr auto std_uintMin   = std::numeric_limits<unsigned int>::min();
+  constexpr auto std_uintZero  =         static_cast<unsigned int>(0);
+  constexpr auto std_uintMax   = std::numeric_limits<unsigned int>::max();
 
-  constexpr auto std_slMin    = std::numeric_limits<signed long int>::min();
-  constexpr auto std_slZero   =         static_cast<signed long int>(0);
-  constexpr auto std_slMax    = std::numeric_limits<signed long int>::max();
+  constexpr auto std_slMin     = std::numeric_limits<signed long int>::min();
+  constexpr auto std_slZero    =         static_cast<signed long int>(0);
+  constexpr auto std_slMax     = std::numeric_limits<signed long int>::max();
 
-  constexpr auto std_ulMin    = std::numeric_limits<unsigned long int>::min();
-  constexpr auto std_ulZero   =         static_cast<unsigned long int>(0);
-  constexpr auto std_ulMax    = std::numeric_limits<unsigned long int>::max();
+  constexpr auto std_ulMin     = std::numeric_limits<unsigned long int>::min();
+  constexpr auto std_ulZero    =         static_cast<unsigned long int>(0);
+  constexpr auto std_ulMax     = std::numeric_limits<unsigned long int>::max();
 
-  constexpr auto std_sllMin   = std::numeric_limits<signed long long int>::min();
-  constexpr auto std_sllZero  =         static_cast<signed long long int>(0);
-  constexpr auto std_sllMax   = std::numeric_limits<signed long long int>::max();
+  constexpr auto std_sllMin    = std::numeric_limits<signed long long int>::min();
+  constexpr auto std_sllZero   =         static_cast<signed long long int>(0);
+  constexpr auto std_sllMax    = std::numeric_limits<signed long long int>::max();
 
-  constexpr auto std_ullMin   = std::numeric_limits<unsigned long long int>::min();
-  constexpr auto std_ullZero  =         static_cast<unsigned long long int>(0);
-  constexpr auto std_ullMax   = std::numeric_limits<unsigned long long int>::max();
+  constexpr auto std_ullMin    = std::numeric_limits<unsigned long long int>::min();
+  constexpr auto std_ullZero   =         static_cast<unsigned long long int>(0);
+  constexpr auto std_ullMax    = std::numeric_limits<unsigned long long int>::max();
   
   // signed char
 
