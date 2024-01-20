@@ -2171,6 +2171,16 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
+    // FILE *fdopen(int fd, const char *mode);
+    addToFunctionSummaryMap(
+        "fdopen",
+        Signature(ArgTypes{IntTy, ConstCharPtrTy}, RetType{FilePtrTy}),
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(NotNull(ArgNo(1))));
+
     // FILE *tmpfile(void);
     addToFunctionSummaryMap(
         "tmpfile", Signature(ArgTypes{}, RetType{FilePtrTy}),
@@ -2852,15 +2862,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "pathconf", Signature(ArgTypes{ConstCharPtrTy, IntTy}, RetType{LongTy}),
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
-
-    // FILE *fdopen(int fd, const char *mode);
-    // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap(
-        "fdopen",
-        Signature(ArgTypes{IntTy, ConstCharPtrTy}, RetType{FilePtrTy}),
-        Summary(NoEvalCall)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
-            .ArgConstraint(NotNull(ArgNo(1))));
 
     // void rewinddir(DIR *dir);
     addToFunctionSummaryMap(

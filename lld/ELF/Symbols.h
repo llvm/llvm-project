@@ -37,7 +37,7 @@ class InputSectionBase;
 class SharedSymbol;
 class Symbol;
 class Undefined;
-class LazyObject;
+class LazySymbol;
 class InputFile;
 
 void printTraceSymbol(const Symbol &sym, StringRef name);
@@ -76,7 +76,7 @@ public:
     CommonKind,
     SharedKind,
     UndefinedKind,
-    LazyObjectKind,
+    LazyKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -181,7 +181,7 @@ public:
 
   bool isLocal() const { return binding == llvm::ELF::STB_LOCAL; }
 
-  bool isLazy() const { return symbolKind == LazyObjectKind; }
+  bool isLazy() const { return symbolKind == LazyKind; }
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
@@ -237,7 +237,7 @@ public:
   void resolve(const Undefined &other);
   void resolve(const CommonSymbol &other);
   void resolve(const Defined &other);
-  void resolve(const LazyObject &other);
+  void resolve(const LazySymbol &other);
   void resolve(const SharedSymbol &other);
 
   // If this is a lazy symbol, extract an input file and add the symbol
@@ -471,7 +471,7 @@ public:
   uint32_t alignment;
 };
 
-// LazyObject symbols represent symbols in object files between --start-lib and
+// LazySymbol symbols represent symbols in object files between --start-lib and
 // --end-lib options. LLD also handles traditional archives as if all the files
 // in the archive are surrounded by --start-lib and --end-lib.
 //
@@ -480,14 +480,14 @@ public:
 // and the lazy. We represent that with a lazy symbol with a weak binding. This
 // means that code looking for undefined symbols normally also has to take lazy
 // symbols into consideration.
-class LazyObject : public Symbol {
+class LazySymbol : public Symbol {
 public:
-  LazyObject(InputFile &file)
-      : Symbol(LazyObjectKind, &file, {}, llvm::ELF::STB_GLOBAL,
+  LazySymbol(InputFile &file)
+      : Symbol(LazyKind, &file, {}, llvm::ELF::STB_GLOBAL,
                llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
-  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyObjectKind); }
+  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyKind); }
 
-  static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
+  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 };
 
 // Some linker-generated symbols need to be created as
@@ -541,7 +541,7 @@ union SymbolUnion {
   alignas(CommonSymbol) char b[sizeof(CommonSymbol)];
   alignas(Undefined) char c[sizeof(Undefined)];
   alignas(SharedSymbol) char d[sizeof(SharedSymbol)];
-  alignas(LazyObject) char e[sizeof(LazyObject)];
+  alignas(LazySymbol) char e[sizeof(LazySymbol)];
 };
 
 template <typename... T> Defined *makeDefined(T &&...args) {
