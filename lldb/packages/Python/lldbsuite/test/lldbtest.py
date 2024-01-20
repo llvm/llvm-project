@@ -1679,6 +1679,11 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
 
+        # Default implementation for skip/xfail reason based on the debug category,
+        # where "None" means to run the test as usual.
+        def no_reason(_):
+            return None
+
         newattrs = {}
         for attrname, attrvalue in attrs.items():
             if attrname.startswith("test") and not getattr(
@@ -1700,6 +1705,12 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                xfail_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
+                )
+                skip_for_debug_info_cat_fn = getattr(
+                    attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
+                )
                 for cat in categories:
 
                     @decorators.add_test_categories([cat])
@@ -1710,6 +1721,17 @@ class LLDBTestCaseFactory(type):
                     method_name = attrname + "_" + cat
                     test_method.__name__ = method_name
                     test_method.debug_info = cat
+
+                    xfail_reason = xfail_for_debug_info_cat_fn(cat)
+                    if xfail_reason:
+                        test_method = unittest2.expectedFailure(xfail_reason)(
+                            test_method
+                        )
+
+                    skip_reason = skip_for_debug_info_cat_fn(cat)
+                    if skip_reason:
+                        test_method = unittest2.skip(skip_reason)(test_method)
+
                     newattrs[method_name] = test_method
 
             else:
