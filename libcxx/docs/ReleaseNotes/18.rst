@@ -59,6 +59,7 @@ Implemented Papers
 - P2821R5 - ``span.at()``
 - P0521R0 - Proposed Resolution for CA 14 (``shared_ptr`` ``use_count/unique``)
 - P1759R6 - Native handles and file streams
+- P2868R3 - Remove Deprecated ``std::allocator`` Typedef From C++26
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
 
 
@@ -85,6 +86,9 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
   the function ``std::basic_string<...>::reserve()`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS`` macro has been added to make
+  the function ``allocator<T>::is_always_equal`` available.
 
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
   the function ``std::shared_ptr<...>::unique()`` available.
