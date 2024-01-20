@@ -1411,7 +1411,7 @@ ReoptimizeBlock:
     // This has to check PrevBB->succ_size() because EH edges are ignored by
     // analyzeBranch.
     if (PriorCond.empty() && !PriorTBB && MBB->pred_size() == 1 &&
-        PrevBB.succ_size() == 1 &&
+        PrevBB.succ_size() == 1 && PrevBB.isSuccessor(MBB) &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {
       LLVM_DEBUG(dbgs() << "\nMerging into block: " << PrevBB
                         << "From MBB: " << *MBB);
