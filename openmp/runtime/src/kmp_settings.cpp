@@ -29,6 +29,8 @@
 #include "ompd-specific.h"
 #endif
 
+#include "llvm/Support/Compiler.h"
+
 static int __kmp_env_toPrint(char const *name, int flag);
 
 bool __kmp_env_format = 0; // 0 - old format; 1 - new format
@@ -2010,15 +2012,18 @@ static void __kmp_stg_print_foreign_threads_threadprivate(kmp_str_buf_t *buffer,
 static inline const char *
 __kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
   switch (type) {
+  case KMP_HW_CORE_TYPE_UNKNOWN:
+  case KMP_HW_MAX_NUM_CORE_TYPES:
+    return "unknown";
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   case KMP_HW_CORE_TYPE_ATOM:
     return "intel_atom";
   case KMP_HW_CORE_TYPE_CORE:
     return "intel_core";
 #endif
-  default:
-    return "unknown";
   }
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
+  LLVM_BUILTIN_UNREACHABLE;
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -4435,6 +4440,8 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       __kmp_str_buf_print(buffer, "%s,%d'\n", "auto", __kmp_chunk);
       break;
     default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      LLVM_BUILTIN_UNREACHABLE;
       break;
     }
   } else {
@@ -4462,6 +4469,8 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       __kmp_str_buf_print(buffer, "%s'\n", "auto");
       break;
     default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      LLVM_BUILTIN_UNREACHABLE;
       break;
     }
   }

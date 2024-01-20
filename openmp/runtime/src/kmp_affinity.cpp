@@ -133,6 +133,7 @@ const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural) {
   case KMP_HW_LAST:
     return KMP_I18N_STR(Unknown);
   }
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
   LLVM_BUILTIN_UNREACHABLE;
 }
 
@@ -166,6 +167,7 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
   case KMP_HW_LAST:
     return ((plural) ? "unknowns" : "unknown");
   }
+  KMP_ASSERT2(false, "Unhandled kmp_hw_t enumeration");
   LLVM_BUILTIN_UNREACHABLE;
 }
 
@@ -181,6 +183,7 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
     return "Intel(R) Core(TM) processor";
 #endif
   }
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
   LLVM_BUILTIN_UNREACHABLE;
 }
 
@@ -1257,6 +1260,7 @@ bool kmp_topology_t::filter_hw_subset() {
         return 2;
 #endif
       }
+      KMP_ASSERT2(false, "Unhandled kmp_hw_thread_t enumeration");
       LLVM_BUILTIN_UNREACHABLE;
     }
   };
