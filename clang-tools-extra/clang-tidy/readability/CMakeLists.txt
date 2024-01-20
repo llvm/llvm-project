@@ -35,6 +35,7 @@ add_clang_library(clangTidyReadabilityModule
   QualifiedAutoCheck.cpp
   ReadabilityTidyModule.cpp
   RedundantAccessSpecifiersCheck.cpp
+  RedundantCastingCheck.cpp
   RedundantControlFlowCheck.cpp
   RedundantDeclarationCheck.cpp
   RedundantFunctionPtrDereferenceCheck.cpp

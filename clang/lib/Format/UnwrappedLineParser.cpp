@@ -1170,6 +1170,15 @@ void UnwrappedLineParser::parsePPDefine() {
   assert((int)Line->PPLevel >= 0);
   Line->InMacroBody = true;
 
+  if (Style.SkipMacroDefinitionBody) {
+    do {
+      FormatTok->Finalized = true;
+      nextToken();
+    } while (!eof());
+    addUnwrappedLine();
+    return;
+  }
+
   if (FormatTok->is(tok::identifier) &&
       Tokens->peekNextToken()->is(tok::colon)) {
     nextToken();
