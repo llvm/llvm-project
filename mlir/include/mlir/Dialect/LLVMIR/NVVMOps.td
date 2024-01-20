@@ -378,22 +378,74 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Relaxed Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+    The .relaxed qualifier on `cluster.arrive` specifies that there are no memory
+    ordering and visibility guarantees provided for the memory accesses performed prior to
+    `cluster.arrive`.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Wait Op";
+  let description = [{
+    The `cluster.wait` causes the executing thread to wait for all non-exited threads
+    of the cluster to perform `cluster.arrive`. The `aligned` attribute, when provided,
+    generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
   }];
   let assemblyFormat = "attr-dict";
 }
@@ -1544,6 +1596,35 @@ def NVVM_CpAsyncBulkCommitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.commit.gro
   let assemblyFormat = "attr-dict";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("cp.async.bulk.commit_group;"); }
+  }];
+}
+
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.wait_group">,
+  Arguments<(ins 
+    ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
+    OptionalAttr<UnitAttr>:$read)> 
+{
+  let assemblyFormat = "$group attr-dict";
+  let description = [{
+    Op waits for completion of the most recent bulk async-groups.
+
+    The `$group` operand tells waiting has to be done until for $group or fewer
+    of the most recent bulk async-groups. If `$group` is 0, the op wait until 
+    all the most recent bulk async-groups have completed.
+
+    The `$read` indicates that the waiting has to be done until all the bulk 
+    async operations in the specified bulk async-group have completed reading 
+    from their source locations.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group)
+  }];
+  
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { 
+      auto ptx = std::string("cp.async.bulk.wait_group");
+      if(getRead()) ptx += ".read";
+      ptx += " %0;"; return ptx; }
   }];
 }
 

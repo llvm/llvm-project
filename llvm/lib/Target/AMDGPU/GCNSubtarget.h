@@ -1299,6 +1299,16 @@ public:
     return hasKernargPreload() && !hasGFX940Insts();
   }
 
+  // \returns true if the target has split barriers feature
+  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
+
+  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
+  bool hasCvtFP8VOP1Bug() const { return true; }
+
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
+  // no-return form.
+  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
+
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
   bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
 
@@ -1310,9 +1320,6 @@ public:
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
-
-  // \returns true if the target has split barriers feature
-  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   bool hasGFX12_10Insts() const { return GFX12_10Insts; }
 
@@ -1339,13 +1346,6 @@ public:
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
-
-  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
-
-  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) and COND_SUB atomics
-  // support a no-return form.
-  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also

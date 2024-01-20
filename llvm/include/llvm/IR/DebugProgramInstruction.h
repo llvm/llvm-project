@@ -47,10 +47,12 @@
 #ifndef LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 #define LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/SymbolTableListTraits.h"
 
 namespace llvm {
 
@@ -91,6 +93,9 @@ public:
   void removeFromParent();
   void eraseFromParent();
 
+  DPValue *getNextNode() { return &*std::next(getIterator()); }
+  DPValue *getPrevNode() { return &*std::prev(getIterator()); }
+
   using self_iterator = simple_ilist<DPValue>::iterator;
   using const_self_iterator = simple_ilist<DPValue>::const_iterator;
 
@@ -117,6 +122,17 @@ public:
   /// assigning \p Location to the DV / Expr / DI variable.
   DPValue(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
           const DILocation *DI, LocationType Type = LocationType::Value);
+
+  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI);
+  static DPValue *createDPValue(Value *Location, DILocalVariable *DV,
+                                DIExpression *Expr, const DILocation *DI,
+                                DPValue &InsertBefore);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI);
+  static DPValue *createDPVDeclare(Value *Address, DILocalVariable *DV,
+                                   DIExpression *Expr, const DILocation *DI,
+                                   DPValue &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
@@ -166,6 +182,9 @@ public:
     }
   };
 
+  bool isDbgDeclare() { return Type == LocationType::Declare; }
+  bool isDbgValue() { return Type == LocationType::Value; }
+
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
   /// variable's value or its address.
@@ -209,6 +228,10 @@ public:
 
   Metadata *getRawLocation() const { return DebugValue; }
 
+  Value *getValue(unsigned OpIdx = 0) const {
+    return getVariableLocationOp(OpIdx);
+  }
+
   /// Use of this should generally be avoided; instead,
   /// replaceVariableLocationOp and addVariableLocationOps should be used where
   /// possible to avoid creating invalid state.
@@ -223,6 +246,19 @@ public:
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;
+
+  bool isEquivalentTo(const DPValue &Other) {
+    return std::tie(Type, DebugValue, Variable, Expression, DbgLoc) ==
+           std::tie(Other.Type, Other.DebugValue, Other.Variable,
+                    Other.Expression, Other.DbgLoc);
+  }
+  // Matches the definition of the Instruction version, equivalent to above but
+  // without checking DbgLoc.
+  bool isIdenticalToWhenDefined(const DPValue &Other) {
+    return std::tie(Type, DebugValue, Variable, Expression) ==
+           std::tie(Other.Type, Other.DebugValue, Other.Variable,
+                    Other.Expression);
+  }
 
   DPValue *clone() const;
   /// Convert this DPValue back into a dbg.value intrinsic.
@@ -250,6 +286,13 @@ public:
 
   LLVMContext &getContext();
   const LLVMContext &getContext() const;
+
+  /// Insert this DPValue prior to \p InsertBefore. Must not be called if this
+  /// is already contained in a DPMarker.
+  void insertBefore(DPValue *InsertBefore);
+  void insertAfter(DPValue *InsertAfter);
+  void moveBefore(DPValue *MoveBefore);
+  void moveAfter(DPValue *MoveAfter);
 
   void print(raw_ostream &O, bool IsForDebug = false) const;
   void print(raw_ostream &ROS, ModuleSlotTracker &MST, bool IsForDebug) const;
@@ -309,6 +352,8 @@ public:
 
   /// Produce a range over all the DPValues in this Marker.
   iterator_range<simple_ilist<DPValue>::iterator> getDbgValueRange();
+  iterator_range<simple_ilist<DPValue>::const_iterator>
+  getDbgValueRange() const;
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
@@ -320,6 +365,10 @@ public:
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DPValue *New, bool InsertAtHead);
+  /// Insert a DPValue prior to a DPValue contained within this marker.
+  void insertDPValue(DPValue *New, DPValue *InsertBefore);
+  /// Insert a DPValue after a DPValue contained within this marker.
+  void insertDPValueAfter(DPValue *New, DPValue *InsertAfter);
   /// Clone all DPMarkers from \p From into this marker. There are numerous
   /// options to customise the source/destination, due to gnarliness, see class
   /// comment.

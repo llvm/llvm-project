@@ -1042,7 +1042,7 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
   def : GCNPat<(v2i16 (int_amdgcn_cvt_sr_pk_bf16_f32 (VOP3Mods f32:$src0, i32:$src0_modifiers),
                                                      (VOP3Mods f32:$src1, i32:$src1_modifiers), v2i16:$src2)),
-               (V_CVT_SR_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1, $src2)>;
+               (V_CVT_SR_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1, 0, $src2)>;
 }
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
@@ -1184,7 +1184,8 @@ defm V_MINIMUM_F32        : VOP3Only_Realtriple_gfx12<0x365>;
 defm V_MAXIMUM_F32        : VOP3Only_Realtriple_gfx12<0x366>;
 defm V_MINIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x367>;
 defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
-defm V_PERMLANE16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x30f>;
+
+defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
 
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_gfx12<0x369>;

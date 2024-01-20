@@ -373,7 +373,7 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT, getWaitCountMax(STORE_CNT));
+    setScoreUB(STORE_CNT, getScoreLB(STORE_CNT) + getWaitCountMax(STORE_CNT));
     PendingEvents |= WaitEventMaskForInst[STORE_CNT];
   }
 

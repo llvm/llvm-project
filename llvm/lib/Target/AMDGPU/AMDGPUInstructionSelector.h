@@ -355,8 +355,8 @@ private:
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
-  void renderSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                    int OpIdx) const;
+  void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                               int OpIdx) const;
 
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;

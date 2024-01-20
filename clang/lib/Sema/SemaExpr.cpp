@@ -2469,8 +2469,7 @@ bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, DeclContext *LookupCtx,
-                               TypoExpr **Out) {
+                               ArrayRef<Expr *> Args, TypoExpr **Out) {
   DeclarationName Name = R.getLookupName();
 
   unsigned diagnostic = diag::err_undeclared_var_use;
@@ -2486,8 +2485,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // unqualified lookup.  This is useful when (for example) the
   // original lookup would not have found something because it was a
   // dependent name.
-  DeclContext *DC =
-      LookupCtx ? LookupCtx : (SS.isEmpty() ? CurContext : nullptr);
+  DeclContext *DC = SS.isEmpty() ? CurContext : nullptr;
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
@@ -2530,12 +2528,12 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
           emitEmptyLookupTypoDiagnostic(TC, *this, SS, Name, TypoLoc, Args,
                                         diagnostic, diagnostic_suggest);
         },
-        nullptr, CTK_ErrorRecovery, LookupCtx);
+        nullptr, CTK_ErrorRecovery);
     if (*Out)
       return true;
-  } else if (S && (Corrected =
-                       CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S,
-                                   &SS, CCC, CTK_ErrorRecovery, LookupCtx))) {
+  } else if (S &&
+             (Corrected = CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(),
+                                      S, &SS, CCC, CTK_ErrorRecovery))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;
@@ -2825,7 +2823,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            std::nullopt, nullptr, &TE)) {
+                            std::nullopt, &TE)) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -9803,8 +9801,7 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
 }
 
 // Check that the SME attributes for PSTATE.ZA and PSTATE.SM are compatible.
-bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
-                                      AArch64SMECallConversionKind C) {
+bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType) {
   unsigned FromAttributes = 0, ToAttributes = 0;
   if (const auto *FromFn =
           dyn_cast<FunctionProtoType>(Context.getCanonicalType(FromType)))
@@ -9815,25 +9812,7 @@ bool Sema::IsInvalidSMECallConversion(QualType FromType, QualType ToType,
     ToAttributes =
         ToFn->getAArch64SMEAttributes() & FunctionType::SME_AttributeMask;
 
-  if (FromAttributes == ToAttributes)
-    return false;
-
-  // If the '__arm_preserves_za' is the only difference between the types,
-  // check whether we're allowed to add or remove it.
-  if ((FromAttributes ^ ToAttributes) ==
-      FunctionType::SME_PStateZAPreservedMask) {
-    switch (C) {
-    case AArch64SMECallConversionKind::MatchExactly:
-      return true;
-    case AArch64SMECallConversionKind::MayAddPreservesZA:
-      return !(ToAttributes & FunctionType::SME_PStateZAPreservedMask);
-    case AArch64SMECallConversionKind::MayDropPreservesZA:
-      return !(FromAttributes & FunctionType::SME_PStateZAPreservedMask);
-    }
-  }
-
-  // There has been a mismatch of attributes
-  return true;
+  return FromAttributes != ToAttributes;
 }
 
 // Check if we have a conversion between incompatible cmse function pointer
@@ -10002,9 +9981,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
     return Sema::IncompatibleFunctionPointer;
   if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return Sema::IncompatibleFunctionPointer;
-  if (S.IsInvalidSMECallConversion(
-          rtrans, ltrans,
-          Sema::AArch64SMECallConversionKind::MayDropPreservesZA))
+  if (S.IsInvalidSMECallConversion(rtrans, ltrans))
     return Sema::IncompatibleFunctionPointer;
   return ConvTy;
 }

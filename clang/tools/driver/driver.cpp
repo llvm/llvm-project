@@ -64,7 +64,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return std::string(ExecutablePath.str());
+    return std::string(ExecutablePath);
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
