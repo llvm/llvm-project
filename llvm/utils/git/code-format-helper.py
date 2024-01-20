@@ -124,9 +124,9 @@ View the diff from {self.name} here.
         existing_comment = self.find_comment(pr)
 
         if args.write_comment_to_file:
-            self.comment = {'body' : comment_text}
+            self.comment = {"body" : comment_text}
             if existing_comment:
-                self.comment['id'] = existing_comment.id
+                self.comment["id"] = existing_comment.id
             return
 
         if existing_comment:
@@ -364,7 +364,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--write-comment-to-file",
         action="store_true",
-        help="Don't create a comments on the PR, instead write the comments and metadata a file called 'comment'")
+        help="Don't post comments on the PR, instead write the comments and metadata a file called 'comment'",
+    )
 
     args = FormatArgs(parser.parse_args())
 
@@ -379,10 +380,11 @@ if __name__ == "__main__":
             failed_formatters.append(fmt.name)
         if fmt.comment:
             comments.append(fmt.comment)
-    
+
     if len(comments):
         with open("comments", "w") as f:
             import json
+
             json.dump(comments, f)
 
     if len(failed_formatters) > 0:
