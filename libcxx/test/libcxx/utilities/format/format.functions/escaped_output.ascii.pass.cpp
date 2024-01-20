@@ -226,7 +226,7 @@ void test_char() {
     static_assert(sizeof(CharT) == 4, "add support for unexpected size");
     // Unicode fitting in a 32-bit wchar_t
 
-    constexpr wchar_t x  = 0x1ffff;
+    constexpr wchar_t x       = 0x1ffff;
     constexpr std::uint32_t y = 0x1ffff;
     static_assert(x == y);
 
