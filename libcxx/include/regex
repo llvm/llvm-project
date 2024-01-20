@@ -5124,6 +5124,14 @@ bool basic_regex<_CharT, _Traits>::__search(
       }
       __m.__matches_.assign(__m.size(), __m.__unmatched_);
     }
+    __m.__matches_.assign(__m.size(), __m.__unmatched_);
+    if (__match_at_start(__first, __last, __m, __flags, false)) {
+      __m.__prefix_.second  = __m[0].first;
+      __m.__prefix_.matched = __m.__prefix_.first != __m.__prefix_.second;
+      __m.__suffix_.first   = __m[0].second;
+      __m.__suffix_.matched = __m.__suffix_.first != __m.__suffix_.second;
+      return true;
+    }
   }
   __m.__matches_.clear();
   return false;
