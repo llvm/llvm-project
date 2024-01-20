@@ -41,6 +41,8 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Absolute 32-bit value relocation
   Data_Pointer32,
 
+  Data_PRel31,
+
   /// Create GOT entry and store offset
   Data_RequestGOTAndTransformToDelta32,
 
