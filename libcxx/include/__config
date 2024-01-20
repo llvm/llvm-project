@@ -1514,9 +1514,9 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER ) &&_LIBCPP_CLANG_VER >= 1800)
-#  define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-#endif
+#  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
+#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif
 
 #endif // __cplusplus
 

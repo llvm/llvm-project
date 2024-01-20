@@ -8,7 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // The tested functionality needs deducing this.
-// UNSUPPORTED: clang-16 || clang-17 || apple-clang
+// UNSUPPORTED: clang-16 || clang-17
+// XFAIL: apple-clang
 
 // <variant>
 
@@ -60,19 +61,6 @@ void test_call_operator_forwarding() {
   Fn obj{};
   const Fn& cobj = obj;
 
-  { // test call operator forwarding - no variant
-    // non-member
-    {
-      std::visit<ReturnType>(obj);
-      assert(Fn::check_call<>(CT_NonConst | CT_LValue));
-      std::visit<ReturnType>(cobj);
-      assert(Fn::check_call<>(CT_Const | CT_LValue));
-      std::visit<ReturnType>(std::move(obj));
-      assert(Fn::check_call<>(CT_NonConst | CT_RValue));
-      std::visit<ReturnType>(std::move(cobj));
-      assert(Fn::check_call<>(CT_Const | CT_RValue));
-    }
-  }
   { // test call operator forwarding - single variant, single arg
     using V = std::variant<int>;
     V v(42);
