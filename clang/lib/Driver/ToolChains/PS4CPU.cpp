@@ -292,7 +292,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
         << Twine(Platform, " system libraries").str() << SDKLibDir << Whence;
     return;
   }
-  getFilePaths().push_back(std::string(SDKLibDir.str()));
+  getFilePaths().push_back(std::string(SDKLibDir));
 }
 
 void toolchains::PS4PS5Base::AddClangSystemIncludeArgs(
