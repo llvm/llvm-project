@@ -1367,11 +1367,10 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
   // The first cell of every row needs to be against the left brace.
-  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement)
-    if (Changes[Next->Index].NewlinesBefore == 0)
-      Changes[Next->Index].Spaces = BracePadding;
-    else
-      Changes[Next->Index].Spaces = CellDescs.InitialSpaces;
+  for (const auto *Next = CellIter; Next; Next = Next->NextColumnElement) {
+    auto &Change = Changes[Next->Index];
+    Change.Spaces = Change.NewlinesBefore == 0 ? BracePadding : CellDescs.InitialSpaces;
+  }
   ++CellIter;
   for (auto i = 1U; i < CellDescs.CellCounts[0]; i++, ++CellIter) {
     auto MaxNetWidth = getMaximumNetWidth(
