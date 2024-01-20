@@ -272,9 +272,11 @@ void LinkerDriver::addFile(StringRef path) {
     if (fs::exists(importFile))
       readImportFile(importFile.str());
 
+    auto members = getArchiveMembers(mbref);
+
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (const auto &[m, offset] : getArchiveMembers(mbref)) {
+      for (const auto &[m, offset] : members) {
         auto *object = createObjectFile(m, path, offset);
         // Mark object as live; object members are normally not
         // live by default but -whole-archive is designed to treat
@@ -289,12 +291,15 @@ void LinkerDriver::addFile(StringRef path) {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), path + ": failed to parse archive");
 
-    if (!file->isEmpty() && !file->hasSymbolTable()) {
-      error(mbref.getBufferIdentifier() +
-            ": archive has no index; run ranlib to add one");
+    for (const auto &[m, offset] : members) {
+      auto magic = identify_magic(m.getBuffer());
+      if (magic == file_magic::wasm_object || magic == file_magic::bitcode)
+        files.push_back(createObjectFile(m, path, offset, true));
+      else
+        warn(path + ": archive member '" + m.getBufferIdentifier() +
+             "' is neither Wasm object file nor LLVM bitcode");
     }
 
-    files.push_back(make<ArchiveFile>(mbref));
     return;
   }
   case file_magic::bitcode:
@@ -732,16 +737,10 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab->find(name);
-  if (!sym)
-    return;
-
-  if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    MemoryBufferRef mb = lazySym->getMemberBuffer();
-    if (isBitcode(mb)) {
-      if (!config->whyExtract.empty())
-        ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
-      lazySym->extract();
-    }
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->getFile())) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
+    cast<LazySymbol>(sym)->extract();
   }
 }
 

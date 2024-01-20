@@ -83,7 +83,7 @@ public:
 
   TableSymbol *resolveIndirectFunctionTable(bool required);
 
-  void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
+  void addLazy(StringRef name, InputFile *f);
 
   bool addComdat(StringRef name);
 
