@@ -23,7 +23,7 @@
 #include "make_string.h"
 #include "min_allocator.h"
 
-#if _LIBCPP_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 #endif
 

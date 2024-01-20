@@ -471,7 +471,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 // Clang-18 has support for deducing this, but it does not set the FTM.
-#if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
+#ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
