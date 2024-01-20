@@ -3,6 +3,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.errno
     # Fenv is currently disabled.
     #libc.include.fenv
+    libc.include.float
     libc.include.inttypes
     libc.include.math
     libc.include.stdlib

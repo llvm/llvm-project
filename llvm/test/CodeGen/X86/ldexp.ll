@@ -5,7 +5,7 @@
 define float @ldexp_f32(i8 zeroext %x) {
 ; X64-LABEL: ldexp_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    jmp ldexpf@PLT # TAILCALL
 ;
 ; WIN32-LABEL: ldexp_f32:
@@ -86,7 +86,7 @@ define float @ldexp_f32(i8 zeroext %x) {
 define double @ldexp_f64(i8 zeroext %x) {
 ; X64-LABEL: ldexp_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; X64-NEXT:    jmp ldexp@PLT # TAILCALL
 ;
 ; WIN32-LABEL: ldexp_f64:

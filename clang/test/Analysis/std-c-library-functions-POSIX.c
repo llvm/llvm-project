@@ -17,6 +17,7 @@
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: FILE *fopen(const char *restrict pathname, const char *restrict mode)
+// CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: FILE *tmpfile(void)
 // CHECK: Loaded summary for: FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream)
 // CHECK: Loaded summary for: int fclose(FILE *stream)
@@ -78,7 +79,6 @@
 // CHECK: Loaded summary for: int close(int fildes)
 // CHECK: Loaded summary for: long fpathconf(int fildes, int name)
 // CHECK: Loaded summary for: long pathconf(const char *path, int name)
-// CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: void rewinddir(DIR *dir)
 // CHECK: Loaded summary for: void seekdir(DIR *dirp, long loc)
 // CHECK: Loaded summary for: int rand_r(unsigned int *seedp)

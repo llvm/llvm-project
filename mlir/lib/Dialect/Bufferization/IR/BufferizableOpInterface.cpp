@@ -759,13 +759,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
-bool bufferization::isFunctionArgument(Value value) {
-  auto bbArg = llvm::dyn_cast<BlockArgument>(value);
-  if (!bbArg)
-    return false;
-  return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
-}
-
 BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
                                             MemRefLayoutAttrInterface layout,
