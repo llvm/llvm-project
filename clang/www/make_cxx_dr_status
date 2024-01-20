@@ -132,17 +132,6 @@ latest_release = 17
 def availability(issue):
   status = status_map.get(issue, 'unknown')
 
-  unresolved_status = ''
-  if status.endswith(' open'):
-    status = status[:-5]
-    unresolved_status = 'open'
-  elif status.endswith(' drafting'):
-    status = status[:-9]
-    unresolved_status = 'drafting'
-  elif status.endswith(' review'):
-    status = status[:-7]
-    unresolved_status = 'review'
-
   avail_suffix = ''
   if status.endswith(' c++11'):
     status = status[:-6]
@@ -191,17 +180,26 @@ def availability(issue):
     else:
       avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)
       try:
-        _, avail_style, _ = availability(int(dup))
+        _, avail_style = availability(int(dup))
       except:
         print("issue %s marked as sup %s" % (issue, dup), file=sys.stderr)
         avail_style = ' class="none"'
   elif status.startswith('dup '):
     dup = int(status.split(' ', 1)[1])
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)
-    _, avail_style, _ = availability(dup)
+    _, avail_style = availability(dup)
+  elif status == 'open':
+    avail = 'open'
+    avail_style = ''
+  elif status == 'drafting':
+    avail = 'drafting'
+    avail_style = ''
+  elif status == 'review':
+    avail = 'review'
+    avail_style = ''
   else:
     assert False, 'unknown status %s for issue %s' % (status, dr.issue)
-  return (avail + avail_suffix, avail_style, unresolved_status)
+  return (avail + avail_suffix, avail_style)
 
 count = {}
 for dr in drs:
@@ -217,20 +215,18 @@ for dr in drs:
 
   elif dr.status in ('open', 'drafting', 'review'):
     row_style = ' class="open"'
-    avail, avail_style, unresolved_status = availability(dr.issue)
-    if avail == 'Unknown':
-      avail = 'Not resolved'
-      avail_style = ''
-    else:
-      assert unresolved_status == dr.status, \
-             "Issue %s is marked '%s', which differs from CWG index status '%s'" \
-             % (dr.issue, unresolved_status, dr.status)
+    avail, _ = availability(dr.issue)
+    assert avail == 'Unknown' or avail == dr.status, \
+           "Issue %s is marked '%s', which differs from CWG index status '%s'" \
+           % (dr.issue, avail, dr.status)
+    avail = 'Not resolved'
+    avail_style = ''
   else:
     row_style = ''
-    avail, avail_style, unresolved_status = availability(dr.issue)
-    assert not unresolved_status, \
+    avail, avail_style = availability(dr.issue)
+    assert avail not in ('open', 'drafting', 'review'), \
            "Issue %s is marked '%s', even though it is resolved in CWG index" \
-           % (dr.issue, unresolved_status)
+           % (dr.issue, avail)
 
   if not avail.startswith('Sup') and not avail.startswith('Dup'):
     count[avail] = count.get(avail, 0) + 1

@@ -90,7 +90,7 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
-namespace dr2049 { // dr2049: 18 drafting
+namespace dr2049 { // dr2049: drafting
 #if __cplusplus >= 202302L
 template <int* x = {}> struct X {};
 X<> a;
