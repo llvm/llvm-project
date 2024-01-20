@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; The ret instruction can be duplicated into BB case2 even though there is an
 ; intermediate BB exit1 and call to llvm.assume.

@@ -902,7 +902,7 @@ public:
                     SourceManager &SourceMgr, FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
-                    std::unique_ptr<SyntaxOnlyAction> Act = nullptr);
+                    std::unique_ptr<SyntaxOnlyAction> Act);
 
   /// Save this translation unit to a file with the given name.
   ///

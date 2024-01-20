@@ -40,6 +40,10 @@ TEST(SMEAttributes, Constructors) {
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
                       ->getFunction("foo"))
+                  .sharesZA());
+
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
+                      ->getFunction("foo"))
                   .hasSharedZAInterface());
 
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_new\"")
@@ -49,6 +53,22 @@ TEST(SMEAttributes, Constructors) {
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_preserved\"")
                       ->getFunction("foo"))
                   .preservesZA());
+
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_in_zt0\"")->getFunction("foo"))
+          .isInZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_out_zt0\"")
+                      ->getFunction("foo"))
+                  .isOutZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_inout_zt0\"")
+                      ->getFunction("foo"))
+                  .isInOutZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_preserves_zt0\"")
+                      ->getFunction("foo"))
+                  .isPreservesZT0());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_new_zt0\"")
+                      ->getFunction("foo"))
+                  .isNewZT0());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
@@ -82,19 +102,90 @@ TEST(SMEAttributes, Basics) {
   // Test PSTATE.ZA interfaces.
   ASSERT_FALSE(SA(SA::ZA_Shared).hasPrivateZAInterface());
   ASSERT_TRUE(SA(SA::ZA_Shared).hasSharedZAInterface());
+  ASSERT_TRUE(SA(SA::ZA_Shared).sharesZA());
   ASSERT_TRUE(SA(SA::ZA_Shared).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_Shared).preservesZA());
   ASSERT_TRUE(SA(SA::ZA_Shared | SA::ZA_Preserved).preservesZA());
+  ASSERT_FALSE(SA(SA::ZA_Shared).sharesZT0());
+  ASSERT_FALSE(SA(SA::ZA_Shared).hasZT0State());
 
   ASSERT_TRUE(SA(SA::ZA_New).hasPrivateZAInterface());
+  ASSERT_FALSE(SA(SA::ZA_New).hasSharedZAInterface());
   ASSERT_TRUE(SA(SA::ZA_New).hasNewZABody());
   ASSERT_TRUE(SA(SA::ZA_New).hasZAState());
   ASSERT_FALSE(SA(SA::ZA_New).preservesZA());
+  ASSERT_FALSE(SA(SA::ZA_New).sharesZT0());
+  ASSERT_FALSE(SA(SA::ZA_New).hasZT0State());
 
   ASSERT_TRUE(SA(SA::Normal).hasPrivateZAInterface());
+  ASSERT_FALSE(SA(SA::Normal).hasSharedZAInterface());
   ASSERT_FALSE(SA(SA::Normal).hasNewZABody());
   ASSERT_FALSE(SA(SA::Normal).hasZAState());
   ASSERT_FALSE(SA(SA::Normal).preservesZA());
+
+  // Test ZT0 State interfaces
+  SA ZT0_In = SA(SA::encodeZT0State(SA::StateValue::In));
+  ASSERT_TRUE(ZT0_In.isInZT0());
+  ASSERT_FALSE(ZT0_In.isOutZT0());
+  ASSERT_FALSE(ZT0_In.isInOutZT0());
+  ASSERT_FALSE(ZT0_In.isPreservesZT0());
+  ASSERT_FALSE(ZT0_In.isNewZT0());
+  ASSERT_TRUE(ZT0_In.sharesZT0());
+  ASSERT_TRUE(ZT0_In.hasZT0State());
+  ASSERT_TRUE(ZT0_In.hasSharedZAInterface());
+  ASSERT_FALSE(ZT0_In.hasPrivateZAInterface());
+
+  SA ZT0_Out = SA(SA::encodeZT0State(SA::StateValue::Out));
+  ASSERT_TRUE(ZT0_Out.isOutZT0());
+  ASSERT_FALSE(ZT0_Out.isInZT0());
+  ASSERT_FALSE(ZT0_Out.isInOutZT0());
+  ASSERT_FALSE(ZT0_Out.isPreservesZT0());
+  ASSERT_FALSE(ZT0_Out.isNewZT0());
+  ASSERT_TRUE(ZT0_Out.sharesZT0());
+  ASSERT_TRUE(ZT0_Out.hasZT0State());
+  ASSERT_TRUE(ZT0_Out.hasSharedZAInterface());
+  ASSERT_FALSE(ZT0_Out.hasPrivateZAInterface());
+
+  SA ZT0_InOut = SA(SA::encodeZT0State(SA::StateValue::InOut));
+  ASSERT_TRUE(ZT0_InOut.isInOutZT0());
+  ASSERT_FALSE(ZT0_InOut.isInZT0());
+  ASSERT_FALSE(ZT0_InOut.isOutZT0());
+  ASSERT_FALSE(ZT0_InOut.isPreservesZT0());
+  ASSERT_FALSE(ZT0_InOut.isNewZT0());
+  ASSERT_TRUE(ZT0_InOut.sharesZT0());
+  ASSERT_TRUE(ZT0_InOut.hasZT0State());
+  ASSERT_TRUE(ZT0_InOut.hasSharedZAInterface());
+  ASSERT_FALSE(ZT0_InOut.hasPrivateZAInterface());
+
+  SA ZT0_Preserved = SA(SA::encodeZT0State(SA::StateValue::Preserved));
+  ASSERT_TRUE(ZT0_Preserved.isPreservesZT0());
+  ASSERT_FALSE(ZT0_Preserved.isInZT0());
+  ASSERT_FALSE(ZT0_Preserved.isOutZT0());
+  ASSERT_FALSE(ZT0_Preserved.isInOutZT0());
+  ASSERT_FALSE(ZT0_Preserved.isNewZT0());
+  ASSERT_TRUE(ZT0_Preserved.sharesZT0());
+  ASSERT_TRUE(ZT0_Preserved.hasZT0State());
+  ASSERT_TRUE(ZT0_Preserved.hasSharedZAInterface());
+  ASSERT_FALSE(ZT0_Preserved.hasPrivateZAInterface());
+
+  SA ZT0_New = SA(SA::encodeZT0State(SA::StateValue::New));
+  ASSERT_TRUE(ZT0_New.isNewZT0());
+  ASSERT_FALSE(ZT0_New.isInZT0());
+  ASSERT_FALSE(ZT0_New.isOutZT0());
+  ASSERT_FALSE(ZT0_New.isInOutZT0());
+  ASSERT_FALSE(ZT0_New.isPreservesZT0());
+  ASSERT_FALSE(ZT0_New.sharesZT0());
+  ASSERT_TRUE(ZT0_New.hasZT0State());
+  ASSERT_FALSE(ZT0_New.hasSharedZAInterface());
+  ASSERT_TRUE(ZT0_New.hasPrivateZAInterface());
+
+  ASSERT_FALSE(SA(SA::Normal).isInZT0());
+  ASSERT_FALSE(SA(SA::Normal).isOutZT0());
+  ASSERT_FALSE(SA(SA::Normal).isInOutZT0());
+  ASSERT_FALSE(SA(SA::Normal).isPreservesZT0());
+  ASSERT_FALSE(SA(SA::Normal).isNewZT0());
+  ASSERT_FALSE(SA(SA::Normal).sharesZT0());
+  ASSERT_FALSE(SA(SA::Normal).hasZT0State());
 }
 
 TEST(SMEAttributes, Transitions) {
@@ -102,86 +193,51 @@ TEST(SMEAttributes, Transitions) {
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::Normal)));
   // Normal -> Normal + LocallyStreaming
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 
   // Normal -> Streaming
-  ASSERT_EQ(*SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled)), true);
+  ASSERT_TRUE(SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled)));
   // Normal -> Streaming + LocallyStreaming
-  ASSERT_EQ(*SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)),
-            true);
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(
+      SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
 
   // Normal -> Streaming-compatible
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::SM_Compatible)));
   // Normal -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::Normal).requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 
   // Streaming -> Normal
-  ASSERT_EQ(*SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal)), false);
+  ASSERT_TRUE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal)));
   // Streaming -> Normal + LocallyStreaming
-  ASSERT_EQ(*SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal | SA::SM_Body)),
-            false);
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
+  ASSERT_TRUE(
+      SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
 
   // Streaming -> Streaming
   ASSERT_FALSE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Enabled)));
   // Streaming -> Streaming + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
 
   // Streaming -> Streaming-compatible
   ASSERT_FALSE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Compatible)));
   // Streaming -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
 
   // Streaming-compatible -> Normal
-  ASSERT_EQ(*SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal)), false);
-  ASSERT_EQ(
-      *SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal | SA::SM_Body)),
-      false);
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal)));
+  ASSERT_TRUE(
+      SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
 
   // Streaming-compatible -> Streaming
-  ASSERT_EQ(*SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled)), true);
+  ASSERT_TRUE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled)));
   // Streaming-compatible -> Streaming + LocallyStreaming
-  ASSERT_EQ(
-      *SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)),
-      true);
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(
+      SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
 
   // Streaming-compatible -> Streaming-compatible
   ASSERT_FALSE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Compatible)));
   // Streaming-compatible -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(SA(SA::SM_Compatible)
                    .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 }

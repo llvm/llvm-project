@@ -20,8 +20,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-Expected<Function *>
-ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -120,10 +119,6 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
-    // Return a dummy function if compilation failed.
-    if (BailLocation)
-      return llvm::make_error<ByteCodeGenError>(*BailLocation);
-
     Func->setIsFullyCompiled(true);
     return Func;
   }
@@ -181,12 +176,6 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   // Otherwise, record relocation and return dummy offset.
   LabelRelocs[Label].push_back(Position);
   return 0ull;
-}
-
-bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
-  if (!BailLocation)
-    BailLocation = Loc;
-  return false;
 }
 
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.

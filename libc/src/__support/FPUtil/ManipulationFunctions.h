@@ -49,13 +49,13 @@ LIBC_INLINE T modf(T x, T &iptr) {
     return x;
   } else if (bits.is_inf()) {
     iptr = x;
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
   } else {
     iptr = trunc(x);
     if (x == iptr) {
       // If x is already an integer value, then return zero with the right
       // sign.
-      return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+      return T(FPBits<T>::zero(bits.sign()));
     } else {
       return x - iptr;
     }
@@ -65,7 +65,7 @@ LIBC_INLINE T modf(T x, T &iptr) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T copysign(T x, T y) {
   FPBits<T> xbits(x);
-  xbits.set_sign(FPBits<T>(y).get_sign());
+  xbits.set_sign(FPBits<T>(y).sign());
   return T(xbits);
 }
 
@@ -103,12 +103,12 @@ LIBC_INLINE T logb(T x) {
   if (bits.is_zero()) {
     // TODO(Floating point exception): Raise div-by-zero exception.
     // TODO(errno): POSIX requires setting errno to ERANGE.
-    return T(FPBits<T>::neg_inf());
+    return T(FPBits<T>::inf(Sign::NEG));
   } else if (bits.is_nan()) {
     return x;
   } else if (bits.is_inf()) {
     // Return positive infinity.
-    return T(FPBits<T>::inf());
+    return T(FPBits<T>::inf(Sign::POS));
   }
 
   NormalFloat<T> normal(bits);
@@ -131,11 +131,11 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // calculating the limit.
   int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_inf()) : T(FPBits<T>::inf());
+    return T(FPBits<T>::inf(bits.sign()));
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (exp < -exp_limit)
-    return bits.get_sign() ? T(FPBits<T>::neg_zero()) : T(FPBits<T>::zero());
+    return T(FPBits<T>::zero(bits.sign()));
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   NormalFloat<T> normal(bits);
@@ -173,7 +173,7 @@ LIBC_INLINE T nextafter(T from, U to) {
     }
   } else {
     int_val = FPBits<T>::MIN_SUBNORMAL;
-    if (to_bits.get_sign())
+    if (to_bits.is_neg())
       int_val |= FPBits<T>::SIGN_MASK;
   }
 

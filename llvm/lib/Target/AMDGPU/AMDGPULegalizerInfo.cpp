@@ -701,13 +701,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .maxScalar(0, S32);
     }
 
-    getActionDefinitionsBuilder(G_MUL)
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .custom();
+    if (ST.hasScalarSMulU64()) {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S64, S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    } else {
+      getActionDefinitionsBuilder(G_MUL)
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .custom();
+    }
     assert(ST.hasMad64_32());
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
@@ -5873,6 +5883,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16;
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
@@ -5883,6 +5896,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX;
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32;
   default:
     llvm_unreachable("unhandled atomic opcode");
   }
@@ -6080,6 +6096,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   Register VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
   LLT Ty = MRI->getType(VData);
 
+  const bool IsAtomicPacked16Bit =
+      (BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
+       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
+
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
       MRI->getType(MI.getOperand(ArgOffset + Intr->GradientStart).getReg());
@@ -6088,7 +6108,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const bool IsG16 =
       ST.hasG16() ? (BaseOpcode->Gradients && GradTy == S16) : GradTy == S16;
   const bool IsA16 = AddrTy == S16;
-  const bool IsD16 = Ty.getScalarType() == S16;
+  const bool IsD16 = !IsAtomicPacked16Bit && Ty.getScalarType() == S16;
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
@@ -6130,7 +6150,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     LLT Ty = MRI->getType(VData0);
 
     // TODO: Allow atomic swap and bit ops for v2s16/v4s16
-    if (Ty.isVector())
+    if (Ty.isVector() && !IsAtomicPacked16Bit)
       return false;
 
     if (BaseOpcode->AtomicX2) {
@@ -6266,9 +6286,18 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   if (NumElts > 4 || DMaskLanes > 4)
     return false;
 
+  // Image atomic instructions are using DMask to specify how many bits
+  // input/output data will have. 32-bits (s32, v2s16) or 64-bits (s64, v4s16).
+  // DMaskLanes for image atomic has default value '0'.
+  // We must be sure that atomic variants (especially packed) will not be
+  // truncated from v2s16 or v4s16 to s16 type.
+  //
+  // ChangeElementCount will be needed for image load where Ty is always scalar.
   const unsigned AdjustedNumElts = DMaskLanes == 0 ? 1 : DMaskLanes;
   const LLT AdjustedTy =
-      Ty.changeElementCount(ElementCount::getFixed(AdjustedNumElts));
+      DMaskLanes == 0
+          ? Ty
+          : Ty.changeElementCount(ElementCount::getFixed(AdjustedNumElts));
 
   // The raw dword aligned data component of the load. The only legal cases
   // where this matters should be when using the packed D16 format, for
@@ -6433,15 +6462,28 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeSBufferLoad(
-  LegalizerHelper &Helper, MachineInstr &MI) const {
+bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
+                                              MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
 
-  Register Dst = MI.getOperand(0).getReg();
-  LLT Ty = B.getMRI()->getType(Dst);
+  Register OrigDst = MI.getOperand(0).getReg();
+  Register Dst;
+  LLT Ty = B.getMRI()->getType(OrigDst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
+  unsigned Opc = 0;
+  if (Size < 32 && ST.hasScalarSubwordLoads()) {
+    assert(Size == 8 || Size == 16);
+    Opc = Size == 8 ? AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE
+                    : AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
+    // The 8-bit and 16-bit scalar buffer load instructions have 32-bit
+    // destination register.
+    Dst = B.getMRI()->createGenericVirtualRegister(LLT::scalar(32));
+  } else {
+    Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD;
+    Dst = OrigDst;
+  }
 
   Observer.changingInstr(MI);
 
@@ -6459,19 +6501,24 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   // FIXME: We don't really need this intermediate instruction. The intrinsic
   // should be fixed to have a memory operand. Since it's readnone, we're not
   // allowed to add one.
-  MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_LOAD));
+  MI.setDesc(B.getTII().get(Opc));
   MI.removeOperand(1); // Remove intrinsic ID
 
   // FIXME: When intrinsic definition is fixed, this should have an MMO already.
   // TODO: Should this use datalayout alignment?
   const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign(4);
+  const Align MemAlign(std::min(MemSize, 4u));
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
       MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
+  if (Dst != OrigDst) {
+    MI.getOperand(0).setReg(Dst);
+    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+    B.buildTrunc(OrigDst, Dst);
+  }
 
   // If we don't have 96-bit result scalar loads, widening to 128-bit should
   // always be legal. We may need to restore this to a 96-bit result if it turns
@@ -7070,6 +7117,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::trap:
     return legalizeTrapIntrinsic(MI, MRI, B);

@@ -346,6 +346,8 @@ set(PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
+set(LLDB_BUG_REPORT_URL "${BUG_REPORT_URL}" CACHE STRING
+  "Default URL where lldb bug reports are to be submitted.")
 
 # Configure CPack.
 if(NOT DEFINED CPACK_PACKAGE_INSTALL_DIRECTORY)
@@ -1195,6 +1197,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/UnicodeData)
   add_subdirectory(utils/yaml-bench)
   add_subdirectory(utils/split-file)
+  add_subdirectory(utils/mlgo-utils)
   if( LLVM_INCLUDE_TESTS )
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
   endif()

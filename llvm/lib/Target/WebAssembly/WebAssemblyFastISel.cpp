@@ -839,9 +839,9 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
     unsigned Reg;
 
-    if (Attrs.hasParamAttr(I, Attribute::SExt))
+    if (Call->paramHasAttr(I, Attribute::SExt))
       Reg = getRegForSignedValue(V);
-    else if (Attrs.hasParamAttr(I, Attribute::ZExt))
+    else if (Call->paramHasAttr(I, Attribute::ZExt))
       Reg = getRegForUnsignedValue(V);
     else
       Reg = getRegForValue(V);
