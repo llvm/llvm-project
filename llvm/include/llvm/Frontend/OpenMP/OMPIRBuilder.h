@@ -1504,12 +1504,24 @@ public:
   /// Collection of regions that need to be outlined during finalization.
   SmallVector<OutlineInfo, 16> OutlineInfos;
 
+  /// A collection of candidate target functions that's constant allocas will
+  /// attempt to be raised on a call of finalize after all currently enqueued
+  /// outline info's have been processed.
+  SmallVector<llvm::Function *, 16> ConstantAllocaRaiseCandidates;
+
   /// Collection of owned canonical loop objects that eventually need to be
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;
 
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+
+  /// Add a function that's constant allocas will attempt to be raised on a
+  /// call of finalize after all currently enqueued outline info's have been
+  /// processed.
+  void addConstantAllocaRaiseCandidates(Function *F) {
+    ConstantAllocaRaiseCandidates.emplace_back(F);
+  }
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
