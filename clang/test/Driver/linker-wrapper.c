@@ -2,7 +2,7 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// UNSUPPORTED: system-linux
+// REQUIRES: system-linux
 
 // An externally visible variable so static libraries extract.
 __attribute__((visibility("protected"), used)) int x;
