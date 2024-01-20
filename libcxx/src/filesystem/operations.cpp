@@ -460,13 +460,13 @@ path __current_path(error_code* ec) {
   typedef decltype(&::free) Deleter;
   Deleter deleter = &::free;
 #else
-  errno = 0; // Note: POSIX mandates that modifying `errno` is thread-safe.
+  errno     = 0; // Note: POSIX mandates that modifying `errno` is thread-safe.
   auto size = ::pathconf(".", _PC_PATH_MAX);
   if (size == -1) {
     if (errno != 0) {
       return err.report(capture_errno(), "call to pathconf failed");
 
-    // `pathconf` returns `-1` without an error to indicate no limit.
+      // `pathconf` returns `-1` without an error to indicate no limit.
     } else {
 #  if defined(__MVS__) && !defined(PATH_MAX)
       size = _XOPEN_PATH_MAX + 1;
