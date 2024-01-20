@@ -185,10 +185,9 @@ hsa_status_t hostrpc_terminate();
 __attribute__((weak)) hsa_status_t hostrpc_terminate() {
   return HSA_STATUS_SUCCESS;
 }
-__attribute__((weak)) uint64_t
-hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t DeviceId,
-                      hsa_amd_memory_pool_t HostMemoryPool,
-                      hsa_amd_memory_pool_t DevMemoryPool) {
+__attribute__((weak)) uint64_t hostrpc_assign_buffer(
+    hsa_agent_t, hsa_queue_t *, uint32_t DeviceId,
+    hsa_amd_memory_pool_t HostMemoryPool, hsa_amd_memory_pool_t DevMemoryPool) {
   // FIXME:THIS SHOULD BE HARD FAIL
   DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
      "missing\n",
@@ -553,8 +552,9 @@ private:
 /// Class implementing the AMDGPU device images' properties.
 struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Create the AMDGPU image with the id and the target image pointer.
-  AMDGPUDeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage) {}
+  AMDGPUDeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                      const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage) {}
 
   /// Prepare and load the executable corresponding to the image.
   Error loadExecutable(const AMDGPUDeviceTy &Device);
@@ -608,8 +608,8 @@ private:
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
-  AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : GenericKernelTy(Name, ExecutionMode),
+  AMDGPUKernelTy(const char *Name)
+      : GenericKernelTy(Name),
         ServiceThreadDeviceBufferGlobal("service_thread_buf", sizeof(uint64_t)),
         HostServiceBufferHandler(Plugin::createGlobalHandler()) {}
 
@@ -855,9 +855,9 @@ private:
       CurrentMaxNumThreads = std::min(
           static_cast<uint32_t>(TeamsThreadLimitEnvVar), CurrentMaxNumThreads);
 
-    return std::min(CurrentMaxNumThreads,
-                    (ThreadLimitClause[0] > 0) ? ThreadLimitClause[0] :
-                    PreferredNumThreads);
+    return std::min(CurrentMaxNumThreads, (ThreadLimitClause[0] > 0)
+                                              ? ThreadLimitClause[0]
+                                              : PreferredNumThreads);
   }
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                         uint32_t NumTeamsClause[3], uint64_t LoopTripCount,
@@ -1637,7 +1637,6 @@ private:
     assert(Slot && "Invalid slot");
     assert(Slot->Signal && "Invalid signal");
 
-
     // Peform the operation.
     if (auto Err = Slot->performAction())
       FATAL_MESSAGE(1, "Error peforming post action: %s",
@@ -1826,21 +1825,21 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
-//
-// For some reason, the kernel completion signal value gets turned to 0
-// when it should be 1. The code we are commenting out causes this signal
-// to be ignored below and the D2H copy process starts too soon.
-// In this fix, we are not resetting the signal value to 1.
-// We are just not ignoring the signal in the asyncMemCopy below.
-//
-// This fix does not solve the random SDMA problem. 
-// We need to understand how this InputSignal value which was a kernel
-// completion signal became 0. More testing is needed.
-//
+    //
+    // For some reason, the kernel completion signal value gets turned to 0
+    // when it should be 1. The code we are commenting out causes this signal
+    // to be ignored below and the D2H copy process starts too soon.
+    // In this fix, we are not resetting the signal value to 1.
+    // We are just not ignoring the signal in the asyncMemCopy below.
+    //
+    // This fix does not solve the random SDMA problem.
+    // We need to understand how this InputSignal value which was a kernel
+    // completion signal became 0. More testing is needed.
+    //
     // Avoid defining the input dependency if already satisfied.
-//  if (InputSignal && !InputSignal->load())
-//      fprintf(stderr , " Inputsignal value %ld for signal %p\n",InputSignal->load(),InputSignal);
-//      InputSignal = nullptr;
+    //  if (InputSignal && !InputSignal->load())
+    //      fprintf(stderr , " Inputsignal value %ld for signal
+    //      %p\n",InputSignal->load(),InputSignal); InputSignal = nullptr;
 
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
@@ -1849,7 +1848,8 @@ public:
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
     if (InputSignal) {
-// fprintf(stderr,"calling utils::asyncMemCopy with InputSignal %p val%ld\n",InputSignal,InputSignal->load());
+      // fprintf(stderr,"calling utils::asyncMemCopy with InputSignal %p
+      // val%ld\n",InputSignal,InputSignal->load());
       hsa_signal_t InputSignalRaw = InputSignal->get();
       if (auto Err = utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
@@ -2448,7 +2448,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_ForceSyncRegions("OMPX_FORCE_SYNC_REGIONS", 0),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
-          // setting default to true here appears to solve random sdma problem
+            // setting default to true here appears to solve random sdma problem
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", true),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
@@ -2814,15 +2814,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name, ExecMode);
+    new (AMDGPUKernel) AMDGPUKernelTy(Name);
 
     return *AMDGPUKernel;
   }
@@ -2870,7 +2868,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Allocate and initialize the image object.
     AMDGPUDeviceImageTy *AMDImage =
         Plugin::get().allocate<AMDGPUDeviceImageTy>();
-    new (AMDImage) AMDGPUDeviceImageTy(ImageId, TgtImage);
+    new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the HSA executable.
     if (Error Err = AMDImage->loadExecutable(*this))
@@ -3602,13 +3600,8 @@ private:
     if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
 
-     // Retrieve the execution mode.
-     auto ExecModeOrErr = getExecutionModeForKernel(KernelName, Image);
-     if (!ExecModeOrErr)
-       return ExecModeOrErr.takeError();
-
     // Allocate and construct the AMDGPU kernel.
-    AMDGPUKernelTy AMDGPUKernel(KernelName, *ExecModeOrErr);
+    AMDGPUKernelTy AMDGPUKernel(KernelName);
     if (auto Err = AMDGPUKernel.init(*this, Image))
       return Err;
 
@@ -4196,9 +4189,9 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   bool canUseHostGlobals() override final {
-    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory is
-    // not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we can
-    // also use globals directly from the host.
+    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory
+    // is not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we
+    // can also use globals directly from the host.
     bool EnableHostGlobals = false;
     bool IsZeroCopyOnAPU = AreAllocationsForMapsOnApusDisabled();
     BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
@@ -4208,8 +4201,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     // Check if we are on a system that has an APU or on a non-APU system
     // where unified shared memory can be enabled:
-    bool IsUsmSystem =
-        hasAPUDevice() || hasDGpuWithUsmSupport();
+    bool IsUsmSystem = hasAPUDevice() || hasDGpuWithUsmSupport();
 
     // Warn user if there is a mismatch between the request and the system
     // architecture:

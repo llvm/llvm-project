@@ -68,8 +68,7 @@ using llvm::sys::DynamicLibrary;
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
-  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
-      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
+  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -127,8 +126,9 @@ private:
 /// Class implementing the GenELF64 device images properties.
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
-  GenELF64DeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), DynLib() {}
+  GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                        const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -157,16 +157,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(KernelEntry.name, ExecMode);
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
 
     return *GenELF64Kernel;
   }
@@ -180,7 +178,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image =
         Plugin::get().allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
@@ -346,13 +344,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
   Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
-
-protected:
-  /// Retrieve the execution mode for kernels. All kernels use the generic mode.
-  Expected<OMPTgtExecModeFlags>
-  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image) override {
-    return OMP_TGT_EXEC_MODE_GENERIC;
-  }
 
 private:
   /// Grid values for Generic ELF64 plugins.

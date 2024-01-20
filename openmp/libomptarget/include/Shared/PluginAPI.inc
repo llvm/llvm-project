@@ -19,6 +19,8 @@ PLUGIN_API_HANDLE(is_data_exchangable, false);
 PLUGIN_API_HANDLE(number_of_devices, true);
 PLUGIN_API_HANDLE(init_device, true);
 PLUGIN_API_HANDLE(load_binary, true);
+PLUGIN_API_HANDLE(get_global, true);
+PLUGIN_API_HANDLE(get_function, true);
 PLUGIN_API_HANDLE(data_alloc, true);
 PLUGIN_API_HANDLE(data_submit, true);
 PLUGIN_API_HANDLE(data_submit_async, false);

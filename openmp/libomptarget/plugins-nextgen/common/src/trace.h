@@ -280,16 +280,40 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
 #define __tgt_rtl_is_valid_binary(...)                                         \
   __tgt_rtl_is_valid_binary_impl(__VA_ARGS__)
 
-static __tgt_target_table *
-__tgt_rtl_load_binary_impl(int32_t device_id, __tgt_device_image *image);
-__tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
-                                          __tgt_device_image *image) {
-  auto t = detail::log<__tgt_target_table *>(__func__, device_id, image);
-  __tgt_target_table *r = __tgt_rtl_load_binary_impl(device_id, image);
+static int32_t __tgt_rtl_load_binary_impl(int32_t device_id,
+                                          __tgt_device_image *Image,
+                                          __tgt_device_binary *Binary);
+int32_t __tgt_rtl_load_binary(int32_t device_id, __tgt_device_image *Image,
+                              __tgt_device_binary *Binary) {
+  auto t = detail::log<int32_t>(__func__, device_id, Image);
+  int32_t r = __tgt_rtl_load_binary_impl(device_id, Image, Binary);
   t.res(r);
   return r;
 }
 #define __tgt_rtl_load_binary(...) __tgt_rtl_load_binary_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_get_global_impl(__tgt_device_binary Binary,
+                                         uint64_t Size, const char *Name,
+                                         void **DevicePtr);
+int32_t __tgt_rtl_get_global(__tgt_device_binary Binary, uint64_t Size,
+                             const char *Name, void **DevicePtr) {
+  auto t = detail::log<int32_t>(__func__, Size, Name, DevicePtr);
+  int32_t r = __tgt_rtl_get_global_impl(Binary, Size, Name, DevicePtr);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_get_global(...) __tgt_rtl_get_global_impl(__VA_ARGS__)
+
+static int32_t __tgt_rtl_get_function_impl(__tgt_device_binary Binary,
+                                           const char *Name, void **DevicePtr);
+int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
+                               void **DevicePtr) {
+  auto t = detail::log<int32_t>(__func__, Name, DevicePtr);
+  int32_t r = __tgt_rtl_get_function_impl(Binary, Name, DevicePtr);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_get_function(...) __tgt_rtl_get_function_impl(__VA_ARGS__)
 
 static int __tgt_rtl_number_of_devices_impl();
 int __tgt_rtl_number_of_devices() {
