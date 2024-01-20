@@ -30,6 +30,7 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
+using Sign = fputil::Sign;
 
 // log2(e)
 constexpr double LOG2_E = 0x1.71547652b82fep+0;
@@ -99,14 +100,18 @@ Float128 poly_approx_f128(const Float128 &dx) {
   using MType = typename Float128::MantissaType;
 
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {false, -128, MType({0, 0x8000000000000000})},                  // 0.5
-      {false, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
-      {false, -132, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
-      {false, -134, MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
-      {false, -137, MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {false, -140, MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
+      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
+      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
+      {Sign::POS, -128, MType({0, 0x8000000000000000})},                  // 0.5
+      {Sign::POS, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
+      {Sign::POS, -132,
+       MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
+      {Sign::POS, -134,
+       MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
+      {Sign::POS, -137,
+       MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
+      {Sign::POS, -140,
+       MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],

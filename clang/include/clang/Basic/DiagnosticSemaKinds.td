@@ -2411,7 +2411,8 @@ def err_auto_not_allowed : Error<
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
-  "|in array declaration}1">;
+  "|in array declaration"
+  "|in declaration of conversion function template}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -3113,6 +3114,8 @@ def err_musttail_scope : Error<
   "cannot perform a tail call from this return statement">;
 def err_musttail_no_variadic : Error<
   "%0 attribute may not be used with variadic functions">;
+def err_musttail_no_return : Error<
+  "%0 attribute may not be used with no-return-attribute functions">;
 
 def err_nsobject_attribute : Error<
   "'NSObject' attribute is for pointer types only">;
@@ -7006,6 +7009,11 @@ def err_member_decl_does_not_match : Error<
   "does not match any declaration in %1">;
 def err_friend_decl_with_def_arg_must_be_def : Error<
   "friend declaration specifying a default argument must be a definition">;
+def err_friend_decl_with_enclosing_temp_constraint_must_be_def : Error<
+  "friend declaration with a constraint that depends on an enclosing "
+  "template parameter must be a definition">;
+def err_non_temp_friend_decl_with_requires_clause_must_be_def : Error<
+  "non-template friend declaration with a requires clause must be a definition">;
 def err_friend_decl_with_def_arg_redeclared : Error<
   "friend declaration specifying a default argument must be the only declaration">;
 def err_friend_decl_does_not_match : Error<

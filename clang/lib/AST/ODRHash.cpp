@@ -688,7 +688,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
   AddBoolean(Function->isVirtualAsWritten());
-  AddBoolean(Function->isPure());
+  AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
 
@@ -741,8 +741,55 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
   if (Enum->isScoped())
     AddBoolean(Enum->isScopedUsingClassTag());
 
-  if (Enum->getIntegerTypeSourceInfo())
-    AddQualType(Enum->getIntegerType());
+  if (Enum->getIntegerTypeSourceInfo()) {
+    // FIMXE: This allows two enums with different spellings to have the same
+    // hash.
+    //
+    //  // mod1.cppm
+    //  module;
+    //  extern "C" {
+    //      typedef unsigned __int64 size_t;
+    //  }
+    //  namespace std {
+    //      using :: size_t;
+    //  }
+    //
+    //  extern "C++" {
+    //      namespace std {
+    //          enum class align_val_t : std::size_t {};
+    //      }
+    //  }
+    //
+    //  export module mod1;
+    //  export using std::align_val_t;
+    //
+    //  // mod2.cppm
+    //  module;
+    //  extern "C" {
+    //      typedef unsigned __int64 size_t;
+    //  }
+    //
+    //  extern "C++" {
+    //      namespace std {
+    //          enum class align_val_t : size_t {};
+    //      }
+    //  }
+    //
+    //  export module mod2;
+    //  import mod1;
+    //  export using std::align_val_t;
+    //
+    // The above example should be disallowed since it violates
+    // [basic.def.odr]p14:
+    //
+    //    Each such definition shall consist of the same sequence of tokens
+    //
+    // The definitions of `std::align_val_t` in two module units have different
+    // spellings but we failed to give an error here.
+    //
+    // See https://github.com/llvm/llvm-project/issues/76638 for details.
+    AddQualType(Enum->getIntegerType().getCanonicalType());
+  }
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.

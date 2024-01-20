@@ -1530,10 +1530,16 @@ cc_library(
         ":AMDGPUUtils",
         ":ArithDialect",
         ":ControlFlowDialect",
+        ":FuncDialect",
+        ":GPUDialect",
         ":IR",
+        ":MemRefDialect",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":Transforms",
+        ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -4568,6 +4574,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":TransformDialect",
+        ":TransformUtils",
     ],
 )
 
@@ -6271,7 +6278,7 @@ cc_library(
 
 cc_library(
     name = "NVVMToLLVM",
-    srcs = glob(["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"]),
+    srcs = ["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"],
     hdrs = glob(["include/mlir/Conversion/NVVMToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -7261,8 +7268,7 @@ cc_library(
         ":TensorTransforms",
         ":TensorUtils",
         ":TransformDialect",
-        ":ValueBoundsOpInterface",
-        "//llvm:Support",
+        ":TransformUtils",
     ],
 )
 

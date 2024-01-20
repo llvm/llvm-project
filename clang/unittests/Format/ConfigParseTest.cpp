@@ -184,6 +184,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(RemoveSemicolon);
+  CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
@@ -996,6 +997,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BBNSS_OnlyWithParen);
   CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Never",
               AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+  CHECK_PARSE("SeparateDefinitionBlocks: Always", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Always);
+  CHECK_PARSE("SeparateDefinitionBlocks: Leave", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Leave);
+  CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

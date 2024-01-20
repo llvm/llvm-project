@@ -526,7 +526,7 @@ static std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
     if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
       error(EC, "error creating the directory '" + ParentPath + "'");
   }
-  return std::string(NewPath.str());
+  return std::string(NewPath);
 }
 
 namespace thinlto {

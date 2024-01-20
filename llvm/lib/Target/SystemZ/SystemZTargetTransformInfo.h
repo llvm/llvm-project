@@ -28,6 +28,8 @@ class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
 
   unsigned const LIBCALL_COST = 30;
 
+  bool isInt128InVR(Type *Ty) { return Ty->isIntegerTy(128) && ST->hasVector(); }
+
 public:
   explicit SystemZTTIImpl(const SystemZTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),

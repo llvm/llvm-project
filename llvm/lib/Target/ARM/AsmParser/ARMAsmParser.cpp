@@ -8308,6 +8308,14 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL: {
+    if (Operands[2]->getReg() == Operands[3]->getReg()) {
+      return Error(Operands[2]->getStartLoc(),
+                   "Rda register and Rm register can't be identical");
+    }
+    break;
+  }
   case ARM::UMAAL:
   case ARM::UMLAL:
   case ARM::UMULL:

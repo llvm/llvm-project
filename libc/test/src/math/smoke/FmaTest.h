@@ -19,11 +19,13 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
+  const T inf = T(FPBits::inf(Sign::POS));
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
+  const T zero = T(FPBits::zero(Sign::POS));
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
   const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
 
 public:
   void test_special_numbers(Func func) {

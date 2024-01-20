@@ -12148,7 +12148,7 @@ TreeTransform<Derived>::TransformCXXMemberCallExpr(CXXMemberCallExpr *E) {
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
-  bool NeedRebuildFunc = E->getIdentKind() == SourceLocIdentKind::Function &&
+  bool NeedRebuildFunc = SourceLocExpr::MayBeDependent(E->getIdentKind()) &&
                          getSema().CurContext != E->getParentContext();
 
   if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)

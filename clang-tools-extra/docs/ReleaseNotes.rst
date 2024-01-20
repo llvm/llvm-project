@@ -235,6 +235,12 @@ New checks
   Finds return statements with ``void`` values used within functions with
   ``void`` result types.
 
+- New :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check.
+
+  Detects explicit type casting operations that involve the same source and
+  destination types, and subsequently recommend their removal.
+  
 - New :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check.
 
@@ -415,7 +421,8 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
-  and avoid crash for array of dependent array.
+  and avoid crash for array of dependent array and non-dereferenceable builtin
+  types used as iterators.
 
 - Improved :doc:`modernize-make-shared
   <clang-tidy/checks/modernize/make-shared>` check to support
@@ -451,6 +458,10 @@ Changes in existing checks
 - Improved :doc:`performance-faster-string-find
   <clang-tidy/checks/performance/faster-string-find>` check to properly escape
   single quotes.
+
+- Improved :doc:`performance-for-range-copy
+  <clang-tidy/checks/performance/for-range-copy>` check to handle cases where
+  the loop variable is a structured binding.
 
 - Improved :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` to better handle
@@ -503,8 +514,8 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value. It also ignores
-  false-positives for comparison containing bool bitfield.
+  suggestions when parentheses are added to the return value or expressions.
+  It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation
   <clang-tidy/checks/readability/misleading-indentation>` check to ignore
