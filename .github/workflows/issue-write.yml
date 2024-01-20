@@ -51,13 +51,26 @@ jobs:
             if (!comments) {
               return;
             }
-            console.log(comments);
+
+            let runInfo = await github.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            });
+
+            if (runInfo.data.pull_requests.length != 1) {
+              console.log("Error retrieving pull request number");
+              console.log(runInfo);
+              return;
+            }
+            const prNumber = runInfo.data.pull_requests[0].number;
+
             await comments.forEach(function (comment) {
               if (comment.id) {
                 github.issues.updateComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: comment.number,
+                  issue_number: prNumber,
                   comment_id: comment.id,
                   body: comment.body
                 });
@@ -65,7 +78,7 @@ jobs:
                 github.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: comment.number,
+                  issue_number: prNumber,
                   body: comment.body
                 });
               }
