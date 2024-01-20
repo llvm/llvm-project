@@ -1,11 +1,11 @@
-// RUN: %libomptarget-compile-run-and-check-generic
+// RUN: %libomptarget-compile-generic
+// RUN: env HSA_XNACK=1 \
+// RUN: %libomptarget-run-generic | %fcheck-generic
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
-// Fails on amdgpu with error: GPU Memory Error
 // Fails on nvptx with error: an illegal memory access was encountered
-// XFAIL: amdgcn-amd-amdhsa
 // XFAIL: nvptx64-nvidia-cuda
 // XFAIL: nvptx64-nvidia-cuda-LTO
 
