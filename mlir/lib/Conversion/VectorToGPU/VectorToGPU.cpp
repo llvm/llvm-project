@@ -848,10 +848,8 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
 static bool isSharedMemory(MemRefType type) {
   auto addressSpace =
       dyn_cast_or_null<gpu::AddressSpaceAttr>(type.getMemorySpace());
-  if (addressSpace &&
-      addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace())
-    return true;
-  return false;
+  return addressSpace &&
+         addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
 }
 
 /// Converts a `vector.transfer_read` operation directly to either a

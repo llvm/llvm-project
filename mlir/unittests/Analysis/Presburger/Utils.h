@@ -13,6 +13,7 @@
 #ifndef MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 #define MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 
+#include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
@@ -72,9 +73,42 @@ inline void EXPECT_EQ_FRAC_MATRIX(FracMatrix a, FracMatrix b) {
       EXPECT_EQ(a(row, col), b(row, col));
 }
 
+// Check the coefficients (in order) of two generating functions.
+// Note that this is not a true equality check.
+inline void EXPECT_EQ_REPR_GENERATINGFUNCTION(detail::GeneratingFunction a,
+                                              detail::GeneratingFunction b) {
+  EXPECT_EQ(a.getNumParams(), b.getNumParams());
+
+  SmallVector<int> aSigns = a.getSigns();
+  SmallVector<int> bSigns = b.getSigns();
+  EXPECT_EQ(aSigns.size(), bSigns.size());
+  for (unsigned i = 0, e = aSigns.size(); i < e; i++)
+    EXPECT_EQ(aSigns[i], bSigns[i]);
+
+  std::vector<detail::ParamPoint> aNums = a.getNumerators();
+  std::vector<detail::ParamPoint> bNums = b.getNumerators();
+  EXPECT_EQ(aNums.size(), bNums.size());
+  for (unsigned i = 0, e = aNums.size(); i < e; i++)
+    EXPECT_EQ_FRAC_MATRIX(aNums[i], bNums[i]);
+
+  std::vector<std::vector<detail::Point>> aDens = a.getDenominators();
+  std::vector<std::vector<detail::Point>> bDens = b.getDenominators();
+  EXPECT_EQ(aDens.size(), bDens.size());
+  for (unsigned i = 0, e = aDens.size(); i < e; i++) {
+    EXPECT_EQ(aDens[i].size(), bDens[i].size());
+    for (unsigned j = 0, f = aDens[i].size(); j < f; j++) {
+      EXPECT_EQ(aDens[i][j].size(), bDens[i][j].size());
+      for (unsigned k = 0, g = aDens[i][j].size(); k < g; k++) {
+        EXPECT_EQ(aDens[i][j][k], bDens[i][j][k]);
+      }
+    }
+  }
+}
+
 // Check the coefficients (in order) of two quasipolynomials.
 // Note that this is not a true equality check.
-inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a, QuasiPolynomial b) {
+inline void EXPECT_EQ_REPR_QUASIPOLYNOMIAL(QuasiPolynomial a,
+                                           QuasiPolynomial b) {
   EXPECT_EQ(a.getNumInputs(), b.getNumInputs());
 
   SmallVector<Fraction> aCoeffs = a.getCoefficients(),

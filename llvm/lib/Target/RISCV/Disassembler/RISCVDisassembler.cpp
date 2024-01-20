@@ -171,7 +171,7 @@ static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRPF64RegisterClass(MCInst &Inst, uint32_t RegNo,
+static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
   if (RegNo >= 32 || RegNo & 1)
@@ -546,6 +546,10 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                       !STI.hasFeature(RISCV::Feature64Bit),
                   DecoderTableRV32Zdinx32,
                   "RV32Zdinx table (Double in Integer and rv32)");
+    TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZacas) &&
+                      !STI.hasFeature(RISCV::Feature64Bit),
+                  DecoderTableRV32Zacas32,
+                  "RV32Zacas table (Compare-And-Swap and rv32)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZfinx, DecoderTableRVZfinx32,
                           "RVZfinx table (Float in Integer)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,

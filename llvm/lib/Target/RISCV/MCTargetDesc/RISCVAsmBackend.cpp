@@ -329,16 +329,17 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   return true;
 }
 
-bool RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
-                                  int64_t &Value) const {
+std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
+                                                   MCAsmLayout &Layout,
+                                                   int64_t &Value) const {
   if (LF.isSigned())
-    return false;
+    return std::make_pair(false, false);
   const MCExpr &Expr = LF.getValue();
   if (ULEB128Reloc) {
     LF.getFixups().push_back(
         MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   }
-  return Expr.evaluateKnownAbsolute(Value, Layout);
+  return std::make_pair(Expr.evaluateKnownAbsolute(Value, Layout), false);
 }
 
 // Given a compressed control flow instruction this function returns

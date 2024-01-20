@@ -69,7 +69,6 @@ LogicalResult verifyOperationHasValidTileId(Operation *op) {
     return success(); // Not having a tile ID (yet) is okay.
   if (!tileId.getType().isSignlessInteger(32))
     return tileOp.emitOpError("tile ID should be a 32-bit signless integer");
-  // TODO: Verify value of tile ID is in range.
   return success();
 }
 

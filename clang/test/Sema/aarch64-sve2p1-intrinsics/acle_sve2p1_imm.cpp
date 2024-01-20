@@ -114,9 +114,9 @@ void test_cntp(svcount_t c) {
 
 void test_svdot_lane_2way(svint32_t s32, svuint32_t u32, svint16_t s16, svuint16_t u16,
                           svfloat32_t f32, svfloat16_t f16) {
-  svdot_lane_s32_s16_s16(s32, s16, s16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-  svdot_lane_u32_u16_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-  svdot_lane_f32_f16_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_s32_s16(s32, s16, s16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_u32_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svdot_lane_f32_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
 
@@ -139,8 +139,8 @@ void test_svbfmul_lane(svbfloat16_t zn, svbfloat16_t zm, uint64_t idx){
 
 __attribute__((target("+sve2p1")))
 void test_svextq_lane(svint16_t zn_i16, svint16_t zm_i16, svfloat16_t zn_f16, svfloat16_t zm_f16){
-  svextq_lane_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
-  svextq_lane_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  svextq_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
+  svextq_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
 }
 
 __attribute__((target("+sve2p1")))
@@ -173,18 +173,18 @@ void test_svpmov_lane(){
 
 __attribute__((target("+sve2p1")))
 void test_svget_svset_b(uint64_t idx, svboolx2_t tuple2, svboolx4_t tuple4, svbool_t res){
-  svset2(tuple2, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
-  svset2(tuple2, 2,  res); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-  svset4(tuple4, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
-  svset4(tuple4, 4,  res); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svset2_b(tuple2, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svset2_b(tuple2, 2,  res); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svset4_b(tuple4, -1, res); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svset4_b(tuple4, 4,  res); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 
-  svget2(tuple2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
-  svget2(tuple2,  2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-  svget4(tuple4, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
-  svget4(tuple4,  4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+  svget2_b(tuple2, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svget2_b(tuple2,  2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
+  svget4_b(tuple4, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svget4_b(tuple4,  4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 
-  svset2(tuple2, idx, res); // expected-error {{argument to 'svset2' must be a constant integer}}
-  svset4(tuple4, idx, res); // expected-error {{argument to 'svset4' must be a constant integer}}
-  svget2(tuple2, idx); // expected-error {{argument to 'svget2' must be a constant integer}}
-  svget4(tuple4, idx); // expected-error {{argument to 'svget4' must be a constant integer}}
+  svset2_b(tuple2, idx, res); // expected-error {{argument to 'svset2_b' must be a constant integer}}
+  svset4_b(tuple4, idx, res); // expected-error {{argument to 'svset4_b' must be a constant integer}}
+  svget2_b(tuple2, idx); // expected-error {{argument to 'svget2_b' must be a constant integer}}
+  svget4_b(tuple4, idx); // expected-error {{argument to 'svget4_b' must be a constant integer}}
 }

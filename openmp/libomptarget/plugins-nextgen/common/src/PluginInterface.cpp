@@ -64,7 +64,7 @@ private:
   void *suggestAddress(uint64_t MaxMemoryAllocation) {
     // Get a valid pointer address for this system
     void *Addr =
-        Device->allocate(1024, /* HstPtr */ nullptr, TARGET_ALLOC_DEFAULT);
+        Device->allocate(1024, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
     Device->free(Addr);
     // Align Address to MaxMemoryAllocation
     Addr = (void *)alignPtr((Addr), MaxMemoryAllocation);
@@ -104,8 +104,8 @@ private:
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (TotalSize = MAX_MEMORY_ALLOCATION; TotalSize > 0; TotalSize -= STEP) {
-      MemoryStart = Device->allocate(TotalSize, /* HstPtr */ nullptr,
-                                     TARGET_ALLOC_DEFAULT);
+      MemoryStart =
+          Device->allocate(TotalSize, /*HstPtr=*/nullptr, TARGET_ALLOC_DEFAULT);
       if (MemoryStart)
         break;
     }
@@ -214,8 +214,8 @@ public:
     for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
       if (!OffloadEntry.size)
         continue;
-      Size += std::strlen(OffloadEntry.name) + /* '\0' */ 1 +
-              /* OffloadEntry.size value */ sizeof(uint32_t) +
+      // Get the total size of the string and entry including the null byte.
+      Size += std::strlen(OffloadEntry.name) + 1 + sizeof(uint32_t) +
               OffloadEntry.size;
     }
 
@@ -735,13 +735,12 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (ompt::Initialized) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize,
-                          /* device_num */ DeviceId +
-                              Plugin.getDeviceIdStartIndex(),
-                          /* type */ getComputeUnitKind().c_str(),
-                          /* device */ reinterpret_cast<ompt_device_t *>(this),
-                          /* lookup */ ompt::lookupCallbackByName,
-                          /* documentation */ nullptr);
+      performOmptCallback(device_initialize, /*device_num=*/DeviceId +
+                                                 Plugin.getDeviceIdStartIndex(),
+                          /*type=*/getComputeUnitKind().c_str(),
+                          /*device=*/reinterpret_cast<ompt_device_t *>(this),
+                          /*lookup=*/ompt::lookupCallbackByName,
+                          /*documentation=*/nullptr);
   }
 #endif
 
@@ -835,7 +834,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
       performOmptCallback(device_finalize,
-                          /* device_num */ DeviceId +
+                          /*device_num=*/DeviceId +
                               Plugin.getDeviceIdStartIndex());
   }
 #endif
@@ -897,16 +896,11 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (ompt::Initialized) {
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-    performOmptCallback(device_load,
-                        /* device_num */ DeviceId +
-                            Plugin.getDeviceIdStartIndex(),
-                        /* FileName */ nullptr,
-                        /* File Offset */ 0,
-                        /* VmaInFile */ nullptr,
-                        /* ImgSize */ Bytes,
-                        /* HostAddr */ InputTgtImage->ImageStart,
-                        /* DeviceAddr */ nullptr,
-                        /* FIXME: ModuleId */ 0);
+    performOmptCallback(
+        device_load, /*device_num=*/DeviceId + Plugin.getDeviceIdStartIndex(),
+        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+        /*ImgSize=*/Bytes, /*HostAddr=*/InputTgtImage->ImageStart,
+        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
 
@@ -1293,7 +1287,7 @@ Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
   // If pinned, just insert the entry representing the whole pinned buffer.
   if (*IsPinnedOrErr)
     return insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                       /* Externally locked */ true);
+                       /*Externallylocked=*/true);
 
   // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
   if (!LockMappedBuffers)
@@ -1398,6 +1392,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
       Alloc = MemoryManager->allocate(Size, HostPtr);
@@ -1667,8 +1662,8 @@ extern "C" {
 int32_t __tgt_rtl_init_plugin() {
   auto Err = Plugin::initIfNeeded();
   if (Err) {
-    REPORT("Failure to initialize plugin " GETNAME(TARGET_NAME) ": %s\n",
-           toString(std::move(Err)).data());
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to init plugin: %s", ErrStr.c_str());
     return OFFLOAD_FAIL;
   }
 
@@ -1862,7 +1857,7 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
 int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
                               int64_t Size) {
   return __tgt_rtl_data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                                     /* AsyncInfoPtr */ nullptr);
+                                     /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
@@ -1884,7 +1879,7 @@ int32_t __tgt_rtl_data_submit_async(int32_t DeviceId, void *TgtPtr,
 int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int32_t DeviceId, void *HstPtr,
@@ -1908,7 +1903,7 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDeviceId, void *SrcPtr,
                                 int64_t Size) {
   return __tgt_rtl_data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr,
                                        Size,
-                                       /* AsyncInfoPtr */ nullptr);
+                                       /*AsyncInfoPtr=*/nullptr);
 }
 
 int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,

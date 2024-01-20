@@ -1066,17 +1066,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
 
   std::string FullName = mangleName(ClassS);
   std::string ProtoName = mangleName(getClassKind());
-  std::string SMEAttrs = "";
-
-  if (Flags & Emitter.getEnumValueForFlag("IsStreaming"))
-    SMEAttrs += ", arm_streaming";
-  if (Flags & Emitter.getEnumValueForFlag("IsStreamingCompatible"))
-    SMEAttrs += ", arm_streaming_compatible";
-  if (Flags & Emitter.getEnumValueForFlag("IsSharedZA"))
-    SMEAttrs += ", arm_shared_za";
-  if (Flags & Emitter.getEnumValueForFlag("IsPreservesZA"))
-    SMEAttrs += ", arm_preserves_za";
-
   OS << (IsOverloaded ? "__aio " : "__ai ")
      << "__attribute__((__clang_arm_builtin_alias(";
 
@@ -1089,8 +1078,6 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
     break;
   }
 
-  if (!SMEAttrs.empty())
-    OS << SMEAttrs;
   OS << "))\n";
 
   OS << getTypes()[0].str() << " " << ProtoName << "(";
@@ -1619,7 +1606,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "}\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
-        "__arm_streaming_compatible __arm_shared_za "
+        "__arm_streaming_compatible __arm_out(\"za\") "
         "{ }\n\n";
 
   createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
@@ -1733,21 +1720,21 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
   for (auto *R : RV)
     createIntrinsic(R, Defs);
 
-  std::map<bool, std::set<std::string>> DefsZAState;
-
-  uint64_t IsSharedZAFlag = getEnumValueForFlag("IsSharedZA");
+  std::map<std::string, std::set<std::string>> IntrinsicsPerState;
   for (auto &Def : Defs) {
-    bool HasZAState = Def->isFlagSet(IsSharedZAFlag);
-    DefsZAState[HasZAState].insert(Def->getMangledName());
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZA")))
+      IntrinsicsPerState["ArmInZA"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZA")))
+      IntrinsicsPerState["ArmOutZA"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
+      IntrinsicsPerState["ArmInOutZA"].insert(Def->getMangledName());
   }
 
-  OS << "#ifdef GET_SME_BUILTIN_HAS_ZA_STATE\n";
-
-  for (auto HasZA : {true, false}) {
-    auto Names = DefsZAState[HasZA];
-    for (auto Name : Names)
+  OS << "#ifdef GET_SME_BUILTIN_GET_STATE\n";
+  for (auto &KV : IntrinsicsPerState) {
+    for (StringRef Name : KV.second)
       OS << "case SME::BI__builtin_sme_" << Name << ":\n";
-    OS << "  return " << (HasZA ? "true" : "false") << ";\n";
+    OS << "  return " << KV.first << ";\n";
   }
   OS << "#endif\n\n";
 }
