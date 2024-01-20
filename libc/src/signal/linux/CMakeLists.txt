@@ -41,7 +41,6 @@ add_object_library(
     -fomit-frame-pointer
     -O3
     -Wframe-larger-than=0
-    -Werror
     -Wno-attributes
     # asan creates asan.module_ctor which uses stack space, causing warnings.
     -fno-sanitize=address
