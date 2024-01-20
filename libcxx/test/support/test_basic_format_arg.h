@@ -20,7 +20,7 @@ bool test_basic_format_arg(std::basic_format_arg<Context> arg, T expected) {
     else
       return false;
   };
-#if _LIBCPP_STD_VER >= 26 && (!defined(TEST_COMPILER_CLANG) || TEST_CLANG_VER >= 1800)
+#if defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
   return arg.visit(std::move(visitor));
 #else
   return std::visit_format_arg(std::move(visitor), arg);

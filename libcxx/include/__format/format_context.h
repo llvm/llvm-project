@@ -175,7 +175,7 @@ public:
                   __format::__determine_arg_t<basic_format_context, decltype(__arg)>(),
                   __basic_format_arg_value<basic_format_context>(__arg)};
           };
-#  if _LIBCPP_STD_VER >= 26 && (!defined(_LIBCPP_COMPILER_CLANG_BASED) || _LIBCPP_CLANG_VER >= 1800)
+#  if if defined(_LIBCPP_HAS_EXPLICIT_THIS_PARAMETER)
           return static_cast<_Context*>(__c)->arg(__id).visit(std::move(__visitor));
 #  else
           _LIBCPP_SUPPRESS_DEPRECATED_PUSH

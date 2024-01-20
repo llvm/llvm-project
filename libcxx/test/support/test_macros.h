@@ -470,4 +470,9 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_IF_AIX(arg_true, arg_false) arg_false
 #endif
 
+// Clang-18 has support for deducing this, but it does not set the FTM.
+#if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER ) &&_LIBCPP_CLANG_VER >= 1800)
+#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
+#endif
+
 #endif // SUPPORT_TEST_MACROS_HPP
