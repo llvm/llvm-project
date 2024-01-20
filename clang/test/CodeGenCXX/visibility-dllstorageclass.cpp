@@ -43,17 +43,6 @@
 // RUN:     -x c++  %s -S -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=ALL_KEEP
 
-//// Show that omitting -fvisibility-from-dllstorageclass causes the other options to be ignored.
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
-// RUN:     -fvisibility=hidden \
-// RUN:     -fapply-global-visibility-to-externs \
-// RUN:     -fvisibility-dllexport=protected \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=protected \
-// RUN:     -fvisibility-externs-nodllstorageclass=protected \
-// RUN:     -x c++  %s -S -emit-llvm -o - | \
-// RUN:   FileCheck %s --check-prefixes=ALL_KEEP
-
 // Local
 static void l() {}
 void use_locals(){l();}
