@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// The test uses "Placeholder variables with no name" 
+// UNSUPPORTED: clang-17
+// XFAIL: apple-clang
 
 // <numeric>
 
@@ -23,7 +26,7 @@ constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, maxVal);
+  std::same_as<IntegerT> decltype(auto) _ = std::sub_sat(minVal, maxVal);
   static_assert(noexcept(std::sub_sat(minVal, maxVal)));
 
   // clang-format off
@@ -83,7 +86,7 @@ constexpr bool test_unsigned() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
   constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
 
-  [[maybe_unused]] std::same_as<IntegerT> decltype(auto) diff = std::sub_sat(minVal, maxVal);
+  std::same_as<IntegerT> decltype(auto) _ = std::sub_sat(minVal, maxVal);
   static_assert(noexcept(std::sub_sat(minVal, maxVal)));
   static_assert(noexcept(std::sub_sat(minVal, maxVal)));
 
