@@ -676,7 +676,7 @@ void request_attach(const llvm::json::Object &request) {
 
   // Run any initialize LLDB commands the user specified in the launch.json
   if (llvm::Error err = g_dap.RunInitCommands()) {
-    kkkk response["success"] = false;
+    response["success"] = false;
     EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
     g_dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
