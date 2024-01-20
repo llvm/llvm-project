@@ -92,11 +92,11 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %niter.ncmp.1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body
 }
 
-; TODO: We should not change 4294967295 to -1 here.
+; Make sure we do not change 4294967295 to -1 here.
 define i64 @bug(i32 %x) {
 ; CHECK-LABEL: @bug(
 ; CHECK-NEXT:    [[A:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], -1
+; CHECK-NEXT:    [[B:%.*]] = and i64 [[A]], 4294967295
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %a = sext i32 %x to i64
