@@ -3873,7 +3873,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
-  auto IsNonMacroIdentifier = [](FormatToken *Tok) {
+  auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
   // The actual identifier can be a nested name specifier, and in macros
