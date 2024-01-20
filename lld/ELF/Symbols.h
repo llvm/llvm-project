@@ -76,7 +76,7 @@ public:
     CommonKind,
     SharedKind,
     UndefinedKind,
-    LazySymbolKind,
+    LazyKind,
   };
 
   Kind kind() const { return static_cast<Kind>(symbolKind); }
@@ -181,7 +181,7 @@ public:
 
   bool isLocal() const { return binding == llvm::ELF::STB_LOCAL; }
 
-  bool isLazy() const { return symbolKind == LazySymbolKind; }
+  bool isLazy() const { return symbolKind == LazyKind; }
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
@@ -483,11 +483,11 @@ public:
 class LazySymbol : public Symbol {
 public:
   LazySymbol(InputFile &file)
-      : Symbol(LazySymbolKind, &file, {}, llvm::ELF::STB_GLOBAL,
+      : Symbol(LazyKind, &file, {}, llvm::ELF::STB_GLOBAL,
                llvm::ELF::STV_DEFAULT, llvm::ELF::STT_NOTYPE) {}
-  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazySymbolKind); }
+  void overwrite(Symbol &sym) const { Symbol::overwrite(sym, LazyKind); }
 
-  static bool classof(const Symbol *s) { return s->kind() == LazySymbolKind; }
+  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 };
 
 // Some linker-generated symbols need to be created as
