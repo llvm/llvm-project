@@ -43,6 +43,11 @@ public:
   bool ContainsTypeUnits();
   DWARFDIE GetDIE(const DIERef &die_ref);
 
+  /// Returns the AT_Name of this DIE, if it exists, without parsing the entire
+  /// compile unit. An empty is string is returned upon error or if the
+  /// attribute is not present.
+  llvm::StringRef PeekDIEName(const DIERef &die_ref);
+
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
     eDumpFlag_ShowForm = (1 << 1), // Show the DW_form type
