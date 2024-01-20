@@ -197,7 +197,7 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
       : GV->getParent()->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
-  return std::string(FullName.str());
+  return std::string(FullName);
 }
 
 void ExecutionEngine::addGlobalMapping(const GlobalValue *GV, void *Addr) {
