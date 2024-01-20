@@ -79,27 +79,17 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
 
-  const auto CreateString = [&](int index) -> llvm::StringRef {
-    switch (index) {
-    case 1:
-      return Lexer::getSourceText(
-          Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
-    case 2:
-      return Lexer::getSourceText(
-          Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
-    case 3:
-      return Lexer::getSourceText(
-          Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
-    default:
-      return "Invalid index";
-    }
-  };
-
   const auto CreateReplacement = [&](bool useMax) {
     std::string functionName = useMax ? "std::max" : "std::min";
-    return CreateString(/* AssignLhs */ 3).str() + " = " + functionName + "(" +
-           CreateString(/* CondLhs */ 1).str() + ", " +
-           CreateString(/* CondRhs */ 2).str() + ");";
+    const auto CondLhsStr = Lexer::getSourceText(
+        Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
+    const auto CondRhsStr = Lexer::getSourceText(
+        Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
+    const auto AssignLhsStr = Lexer::getSourceText(
+        Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
+    return (AssignLhsStr + " = " + functionName + "(" + CondLhsStr + ", " +
+            CondRhsStr + ");")
+        .str();
   };
   const auto OperatorStr = BinaryOp->getOpcodeStr();
   if (((BinaryOp->getOpcode() == BO_LT || BinaryOp->getOpcode() == BO_LE) &&
@@ -111,7 +101,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::min` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*useMax = false*/ 0))
+                                        CreateReplacement(/*useMax=*/false))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
 
@@ -130,7 +120,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::max` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*useMax = true*/ 1))
+                                        CreateReplacement(/*useMax=*/true))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   }
