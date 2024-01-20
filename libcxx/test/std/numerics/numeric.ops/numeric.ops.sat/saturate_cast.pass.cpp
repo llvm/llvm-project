@@ -14,138 +14,137 @@
 //   constexpr R saturate_cast(T x) noexcept;                     // freestanding
 
 #include <cassert>
-#include <concepts>
 #include <limits>
 #include <numeric>
-#include <utility>
 
-template <typename IntegerResultT, typename IntegerT>
-constexpr bool test_signed_notsaturated() {
-  constexpr auto minVal = std::numeric_limits<IntegerT>::min();
-  constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
+static_assert(noexcept(saturate_cast<signed char>(std::numeric_limits<signed int>::max())));
+static_assert(noexcept(saturate_cast<signed char>(std::numeric_limits<unsigned int>::max())));
+static_assert(noexcept(saturate_cast<unsigned char>(std::numeric_limits<signed int>::max())));
+static_assert(noexcept(saturate_cast<unsigned char>(std::numeric_limits<unsigned int>::max())));
 
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(minVal)));
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(maxVal)));
+constexpr bool test_signed() {
+  // clang-format on
 
-  assert(std::saturate_cast<IntegerResultT>(IntegerT{-1}) == IntegerT{-1});
-  assert(std::saturate_cast<IntegerResultT>(IntegerT{0}) == IntegerT{0});
-  assert(std::saturate_cast<IntegerResultT>(IntegerT{1}) == IntegerT{1});
+#ifndef TEST_HAS_NO_INT128
+  using BiggestSIntT = __int128_t;
+#else
+  using BiggestSIntT = long long int;
+#endif
 
-  {
-    // Large values
-    constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
-    assert(std::saturate_cast<IntegerResultT>(x) == x);
-  }
+  // signed char: -128 to 127
 
-  {
-    // Large values
-    constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
-    assert(std::saturate_cast<IntegerResultT>(x) == x);
-  }
+  assert(std::saturate_cast<signed char, BiggestSIntT>(-255) == -128);
+  assert(std::saturate_cast<signed char, BiggestSIntT>(-128) == -128);
+  assert(std::saturate_cast<signed char, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<signed char, BiggestSIntT>(127) == 127);
+  assert(std::saturate_cast<signed char, BiggestSIntT>(255) == 127);
 
-  assert(std::saturate_cast<IntegerResultT>(minVal) == minVal);
-  assert(std::saturate_cast<IntegerResultT>(maxVal) == maxVal);
+  // short: -32,768 to 32,767
 
-  return true;
+  assert(std::saturate_cast<short int, BiggestSIntT>(-255) == -128);
+  assert(std::saturate_cast<short int, BiggestSIntT>(-32'768) == -32'767);
+  assert(std::saturate_cast<short int, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<short int, BiggestSIntT>(32'768) == 32'768);
+  assert(std::saturate_cast<short int, BiggestSIntT>(255) == 32'768);
+
+  // int: -2,147,483,648 to 2,147,483,647
+
+  assert(std::saturate_cast<int, BiggestSIntT>(-255) == -2'147'483'648);
+  assert(std::saturate_cast<int, BiggestSIntT>(-2'147'483'648) == -2'147'483'648);
+  assert(std::saturate_cast<int, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<int, BiggestSIntT>(2'147'483'647) == 2'147'483'647);
+  assert(std::saturate_cast<int, BiggestSIntT>(255) == 2'147'483'647);
+
+  // long: -2,147,483,648 to 2,147,483,647
+
+  assert(std::saturate_cast<long int, BiggestSIntT>(-255) == -2'147'483'648);
+  assert(std::saturate_cast<long int, BiggestSIntT>(-2'147'483'648) == -2'147'483'648);
+  assert(std::saturate_cast<long int, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<long int, BiggestSIntT>(2'147'483'647) == 2'147'483'647);
+  assert(std::saturate_cast<long int, BiggestSIntT>(255) == 2'147'483'647);
+
+  // long long: -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
+
+  assert(std::saturate_cast<long long int, BiggestSIntT>(-255) == -9'223'372'036'854'775'808);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(-9'223'372'036'854'775'808) == -9'223'372'036'854'775'808);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(9'223'372'036'854'775'807) == 9'223'372'036'854'775'807);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(255) == 9'223'372'036'854'775'807);
+
+#ifndef TEST_HAS_NO_INT128
+  constexpr auto int128min = std::numeric_limits<__int128_t>::min();
+  constexpr auto int128max = std::numeric_limits<__int128_t>::max();
+
+  assert(std::saturate_cast<long long int, BiggestSIntT>(int128min) == -9'223'372'036'854'775'808);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(-9'223'372'036'854'775'808) == -9'223'372'036'854'775'808);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(9'223'372'036'854'775'807) == 9'223'372'036'854'775'807);
+  assert(std::saturate_cast<long long int, BiggestSIntT>(int128max) == 9'223'372'036'854'775'807);
+
+  assert(std::saturate_cast<__int128_t, BiggestSIntT>(int128min) == int128min);
+  assert(std::saturate_cast<__int128_t, BiggestSIntT>(0) == 0);
+  assert(std::saturate_cast<__int128_t, BiggestSIntT>(int128max) == int128max);
+#endif
+  // clang-format off
 }
 
-template <typename IntegerResultT, typename IntegerT>
-constexpr bool test_signed_saturated() {
-  constexpr auto minVal = std::numeric_limits<IntegerT>::min();
-  constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
+constexpr void test_unsigned()
+{
+  // clang-format off
 
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(minVal)));
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(maxVal)));
+#ifndef TEST_HAS_NO_INT128
+  using BiggestUIntT = __uint128_t;
+#else 
+  using BiggestUIntT = unsigned long long int;
+#endif
 
-  assert(std::saturate_cast<IntegerResultT>(minVal) == std::numeric_limits<IntegerResultT>::min());
-  assert(std::saturate_cast<IntegerResultT>(maxVal) == std::numeric_limits<IntegerResultT>::max());
+  // unsigned char: 0 to 255
 
-  // if constexpr (std::cmp_less(std::numeric_limits<IntegerResultT>::min(), std::numeric_limits<IntegerT>::min())) {
-  //   assert(std::saturate_cast<IntegerResultT>(minVal - IntegerT{1}) == std::numeric_limits<IntegerResultT>::min());
-  // }
+  assert(std::saturate_cast<unsigned char, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned char, BiggestUIntT>(127) == 127);
+  assert(std::saturate_cast<unsigned char, BiggestUIntT>(255) == 127);
 
-  // if constexpr (std::cmp_greater(std::numeric_limits<IntegerResultT>::max(), std::numeric_limits<IntegerT>::max())) {
-  //   assert(std::saturate_cast<IntegerResultT>(minVal - IntegerT{1}) == std::numeric_limits<IntegerResultT>::min());
-  // }
+  // short: 0 to 65,535
 
-  return true;
-}
+  assert(std::saturate_cast<unsigned short int, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned short int, BiggestUIntT>(65'535) == 65'535);
+  assert(std::saturate_cast<unsigned short int, BiggestUIntT>(255) == 65'535);
 
-template <typename IntegerResultT, typename IntegerT>
-constexpr bool test_unsigned_notsaturated() {
-  constexpr auto minVal = std::numeric_limits<IntegerT>::min();
-  constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
+  // unsigned int: 0 to 4,294,967,295
 
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(minVal)));
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(maxVal)));
+  assert(std::saturate_cast<unsigned int, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned int, BiggestUIntT>(4'294'967'295) == 4'294'967'295);
+  assert(std::saturate_cast<unsigned int, BiggestUIntT>(255) == 4'294'967'295);
 
-  assert(std::saturate_cast<IntegerResultT>(minVal) == minVal);
-  assert(std::saturate_cast<IntegerResultT>(maxVal) == maxVal);
+  // unsigned long: 0 to 4,294,967,295
 
-  return true;
-}
+  assert(std::saturate_cast<unsigned long int, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned long int, BiggestUIntT>(4'294'967'295) == 4'294'967'295);
+  assert(std::saturate_cast<unsigned long int, BiggestUIntT>(255) == 4'294'967'295);
 
-template <typename IntegerResultT, typename IntegerT>
-constexpr bool test_unsigned_saturated() {
-  constexpr auto minVal = std::numeric_limits<IntegerT>::min();
-  constexpr auto maxVal = std::numeric_limits<IntegerT>::max();
+  // unsigned long long: 0 to 18,446,744,073,709,551,615
 
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(minVal)));
-  static_assert(noexcept(std::saturate_cast<IntegerResultT>(maxVal)));
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(18'446'744'073'709'551'615) == 118'446'744'073'709'551'615);
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(255) == 18'446'744'073'709'551'615);
 
-  assert(std::saturate_cast<IntegerResultT>(maxVal) == std::numeric_limits<IntegerResultT>::max());
-  assert(std::saturate_cast<IntegerResultT>(maxVal) == std::numeric_limits<IntegerResultT>::max());
+#ifndef TEST_HAS_NO_INT128
+  constexpr auto uint128min = std::numeric_limits<__uint128_t>::min();
+  constexpr auto uint128max = std::numeric_limits<__uint128_t>::max();
 
-  return true;
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(18'446'744'073'709'551'615) == 18'446'744'073'709'551'615);
+  assert(std::saturate_cast<unsigned long long int, BiggestUIntT>(int128max) == 18'446'744'073'709'551'615);
+
+  assert(std::saturate_cast<__uint128_t, BiggestUIntT>(0) == 0);
+  assert(std::saturate_cast<__uint128_t, BiggestUIntT>(uint128max) == uint128max);
+#endif
+  // clang-format off
 }
 
 constexpr bool test() {
-  // Signed
-  test_signed_notsaturated<long long int, signed char>();
-  test_signed_notsaturated<long long int, short int>();
-  test_signed_notsaturated<long long int, int>();
-  test_signed_notsaturated<long long int, long int>();
-  test_signed_notsaturated<long long int, long long int>();
-  test_signed_saturated<signed char, long long int>();
-  test_signed_saturated<short int, long long int>();
-  test_signed_saturated<int, long long int>();
-  test_signed_saturated<long int, long long int>();
-  test_signed_saturated<long long int, long long int>();
-#ifndef TEST_HAS_NO_INT128
-  test_signed_notsaturated<__int128_t, signed char>();
-  test_signed_notsaturated<__int128_t, short int>();
-  test_signed_notsaturated<__int128_t, int>();
-  test_signed_notsaturated<__int128_t, long int>();
-  test_signed_notsaturated<__int128_t, long long int>();
-  test_signed_saturated<signed char, __int128_t>();
-  test_signed_saturated<short int, __int128_t>();
-  test_signed_saturated<int, __int128_t>();
-  test_signed_saturated<long int, __int128_t>();
-  test_signed_saturated<long long int, __int128_t>();
-#endif
-  // Unsigned
-  test_unsigned_notsaturated<unsigned long long int, unsigned char>();
-  test_unsigned_notsaturated<unsigned long long int, unsigned short int>();
-  test_unsigned_notsaturated<unsigned long long int, unsigned int>();
-  test_unsigned_notsaturated<unsigned long long int, unsigned long int>();
-  test_unsigned_notsaturated<unsigned long long int, unsigned long long int>();
-  test_unsigned_saturated<unsigned char, unsigned long long int>();
-  test_unsigned_saturated<unsigned short int, unsigned long long int>();
-  test_unsigned_saturated<unsigned int, unsigned long long int>();
-  test_unsigned_saturated<unsigned long int, unsigned long long int>();
-  test_unsigned_saturated<unsigned long long int, unsigned long long int>();
-#ifndef TEST_HAS_NO_INT128
-  test_unsigned_notsaturated<__uint128_t, unsigned char>();
-  test_unsigned_notsaturated<__uint128_t, unsigned short int>();
-  test_unsigned_notsaturated<__uint128_t, unsigned int>();
-  test_unsigned_notsaturated<__uint128_t, unsigned long int>();
-  test_unsigned_notsaturated<__uint128_t, unsigned long long int>();
-  test_unsigned_saturated<unsigned char, __uint128_t>();
-  test_unsigned_saturated<unsigned short int, __uint128_t>();
-  test_unsigned_saturated<unsigned int, __uint128_t>();
-  test_unsigned_saturated<unsigned long int, __uint128_t>();
-  test_unsigned_saturated<unsigned long long int, __uint128_t>();
-#endif
+  test_signed();
+  test_unsigned();
 
   return true;
 }
