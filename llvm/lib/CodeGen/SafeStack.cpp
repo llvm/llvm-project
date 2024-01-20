@@ -273,6 +273,12 @@ bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
 /// stack or not. The function analyzes all uses of AI and checks whether it is
 /// only accessed in a memory safe way (as decided statically).
 bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
+  // Consider the allocation unsafe if it is an AllocaInst with 'unsafealloca'
+  // metadata attached.
+  if (const auto *AI = dyn_cast<AllocaInst>(AllocaPtr);
+      AI && AI->hasMetadata(LLVMContext::MD_unsafealloc))
+    return false;
+
   // Go through all uses of this alloca and check whether all accesses to the
   // allocated object are statically known to be memory safe and, hence, the
   // object can be placed on the safe stack.
