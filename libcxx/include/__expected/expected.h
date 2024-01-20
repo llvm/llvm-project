@@ -193,12 +193,15 @@ inline constexpr bool __fits_in_tail_padding = []() {
 //         [[no_unique_address]] Err unex;
 //       };
 //
+//       static constexpr bool put_flag_in_tail                    = fits_in_tail_padding<union_t, bool>;
+//       static constexpr bool allow_reusing_expected_tail_padding = !put_flag_in_tail;
+//
 //       struct repr {
 //       private:
 //         // If "has value" fits into the tail, this should be
 //         // `[[no_unique_address]]`, otherwise not.
 //         [[no_unique_address]] conditional_no_unique_address<
-//             fits_in_tail_padding<union_t, bool>,
+//             put_flag_in_tail,
 //             union_t>::type union_;
 //         [[no_unique_address]] bool has_val_;
 //       };
@@ -208,7 +211,7 @@ inline constexpr bool __fits_in_tail_padding = []() {
 //       // `[[no_unique_address]]` so that we fill out the
 //       // complete `expected` object.
 //       [[no_unique_address]] conditional_no_unique_address<
-//           !fits_in_tail_padding<union_t, bool>,
+//           allow_reusing_expected_tail_padding,
 //           repr>::type repr_;
 //     };
 //
