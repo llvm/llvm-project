@@ -1,4 +1,13 @@
 if(LIBC_TESTS_CAN_USE_MPFR)
+  if (LLVM_LIBC_FULL_BUILD)
+    add_compile_options(
+      -ffreestanding
+      -fno-exceptions
+      -fno-rtti
+      -fno-unwind-tables
+      -fno-asynchronous-unwind-tables
+    )
+  endif()
   add_library(libcMPFRWrapper
     MPFRUtils.cpp
     MPFRUtils.h
