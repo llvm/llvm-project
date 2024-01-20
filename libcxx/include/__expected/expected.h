@@ -261,7 +261,8 @@ class __expected_base {
     _LIBCPP_NO_UNIQUE_ADDRESS _Err __unex_;
   };
 
-  static constexpr bool __put_flag_in_tail = __fits_in_tail_padding<__union_t, bool>;
+  static constexpr bool __put_flag_in_tail                    = __fits_in_tail_padding<__union_t, bool>;
+  static constexpr bool __allow_reusing_expected_tail_padding = !__put_flag_in_tail;
 
   struct __repr {
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
@@ -291,7 +292,7 @@ class __expected_base {
     // `__conditional_no_unique_address`'s constructor.
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
         : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
@@ -321,7 +322,8 @@ class __expected_base {
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__put_flag_in_tail && (is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>))
+      requires(__allow_reusing_expected_tail_padding &&
+               (is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>))
     {
       // Note: Since the destructor of the union is trivial, this does nothing
       // except to end the lifetime of the union.
@@ -329,7 +331,8 @@ class __expected_base {
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__put_flag_in_tail && (!is_trivially_destructible_v<_Tp> || !is_trivially_destructible_v<_Err>))
+      requires(__allow_reusing_expected_tail_padding &&
+               (!is_trivially_destructible_v<_Tp> || !is_trivially_destructible_v<_Err>))
     {
       __destroy_union_member();
       std::destroy_at(&__union_.__v);
@@ -337,7 +340,7 @@ class __expected_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(in_place_t, _Args&&... __args)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       std::construct_at(&__union_.__v, in_place, std::forward<_Args>(__args)...);
       __has_val_ = true;
@@ -345,7 +348,7 @@ class __expected_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(unexpect_t, _Args&&... __args)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       std::construct_at(&__union_.__v, unexpect, std::forward<_Args>(__args)...);
       __has_val_ = false;
@@ -367,7 +370,7 @@ class __expected_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI static constexpr __union_t __make_union(bool __has_val, _OtherUnion&& __other)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       if (__has_val)
         return __union_t(in_place, std::forward<_OtherUnion>(__other).__val_);
@@ -443,7 +446,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__put_flag_in_tail, __repr> __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__allow_reusing_expected_tail_padding, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
@@ -1201,7 +1204,8 @@ class __expected_void_base {
     _LIBCPP_NO_UNIQUE_ADDRESS _Err __unex_;
   };
 
-  static constexpr bool __put_flag_in_tail = __fits_in_tail_padding<__union_t, bool>;
+  static constexpr bool __put_flag_in_tail                    = __fits_in_tail_padding<__union_t, bool>;
+  static constexpr bool __allow_reusing_expected_tail_padding = !__put_flag_in_tail;
 
   struct __repr {
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
@@ -1220,7 +1224,7 @@ class __expected_void_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
         : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
@@ -1248,20 +1252,20 @@ class __expected_void_base {
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__put_flag_in_tail && is_trivially_destructible_v<_Err>)
+      requires(__allow_reusing_expected_tail_padding && is_trivially_destructible_v<_Err>)
     {
       std::destroy_at(&__union_.__v);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__put_flag_in_tail && !is_trivially_destructible_v<_Err>)
+      requires(__allow_reusing_expected_tail_padding && !is_trivially_destructible_v<_Err>)
     {
       __destroy_union_member();
       std::destroy_at(&__union_.__v);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(in_place_t)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       std::construct_at(&__union_.__v, in_place);
       __has_val_ = true;
@@ -1269,7 +1273,7 @@ class __expected_void_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(unexpect_t, _Args&&... __args)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       std::construct_at(&__union_.__v, unexpect, std::forward<_Args>(__args)...);
       __has_val_ = false;
@@ -1288,7 +1292,7 @@ class __expected_void_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI static constexpr __union_t __make_union(bool __has_val, _OtherUnion&& __other)
-      requires(!__put_flag_in_tail)
+      requires(__allow_reusing_expected_tail_padding)
     {
       if (__has_val)
         return __union_t(in_place);
@@ -1343,7 +1347,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__put_flag_in_tail, __repr> __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__allow_reusing_expected_tail_padding, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
