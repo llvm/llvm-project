@@ -79,15 +79,15 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
 
-  const auto CreateReplacement = [&](bool useMax) {
-    std::string functionName = useMax ? "std::max" : "std::min";
+  const auto CreateReplacement = [&](bool UseMax) {
+    const auto *FunctionName = UseMax ? "std::max" : "std::min";
     const auto CondLhsStr = Lexer::getSourceText(
         Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
     const auto CondRhsStr = Lexer::getSourceText(
         Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
     const auto AssignLhsStr = Lexer::getSourceText(
         Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
-    return (AssignLhsStr + " = " + functionName + "(" + CondLhsStr + ", " +
+    return (AssignLhsStr + " = " + FunctionName + "(" + CondLhsStr + ", " +
             CondRhsStr + ");")
         .str();
   };
@@ -101,7 +101,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::min` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*useMax=*/false))
+                                        CreateReplacement(/*UseMax=*/false))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
 
@@ -120,7 +120,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
     diag(IfLocation, "use `std::max` instead of `%0`")
         << OperatorStr
         << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*useMax=*/true))
+                                        CreateReplacement(/*UseMax=*/true))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   }

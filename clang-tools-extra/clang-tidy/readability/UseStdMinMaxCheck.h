@@ -14,9 +14,7 @@
 namespace clang::tidy::readability {
 
 /// Replaces certain conditional statements with equivalent ``std::min`` or
-/// ``std::max`` expressions, improving readability and promoting the use of
-/// standard library functions.
-///
+/// ``std::max`` expressions.
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/UseStdMinMax.html
 class UseStdMinMaxCheck : public ClangTidyCheck {
