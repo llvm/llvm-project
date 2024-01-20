@@ -96,6 +96,8 @@ constexpr bool test_unsigned() {
 
   static_assert(noexcept(std::mul_sat(minVal, maxVal)));
 
+  // clang-format off
+
   // No saturation (0, 1)
 
   assert(std::mul_sat(IntegerT{0}, IntegerT{0}) == IntegerT{0});
@@ -128,6 +130,8 @@ constexpr bool test_unsigned() {
     assert(std::mul_sat(x, y) == maxVal);
   }
   assert(std::mul_sat(maxVal, maxVal) == maxVal);
+
+  // clang-format on
 
   return true;
 }
