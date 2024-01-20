@@ -611,8 +611,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: RecordTypeInfo(num_fields=%i)",
-             type.GetMangledTypeName().GetCString(), rti->getNumFields());
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: RecordTypeInfo(num_fields={1})",
+             type.GetMangledTypeName(), rti->getNumFields());
     switch (rti->getRecordKind()) {
     case swift::reflection::RecordKind::ExistentialMetatype:
     case swift::reflection::RecordKind::ThickFunction:
@@ -630,15 +630,14 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     }
   }
   if (auto *eti = llvm::dyn_cast<swift::reflection::EnumTypeInfo>(ti)) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: EnumTypeInfo(num_payload_cases=%i)",
-              type.GetMangledTypeName().GetCString(),
-              eti->getNumPayloadCases());
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: EnumTypeInfo(num_payload_cases={1})",
+             type.GetMangledTypeName(), eti->getNumPayloadCases());
     return eti->getNumPayloadCases();
   }
   // Objects.
   if (auto *rti = llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: ReferenceTypeInfo()",
-              type.GetMangledTypeName().GetCString());
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: ReferenceTypeInfo()",
+             type.GetMangledTypeName().GetCString());
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
@@ -665,8 +664,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
       LLDB_LOG(GetLog(LLDBLog::Types),
-               "{0}: class RecordTypeInfo(num_fields=%i)",
-               type.GetMangledTypeName().GetCString(), rti->getNumFields());
+               "{0}: class RecordTypeInfo(num_fields={1})",
+               type.GetMangledTypeName(), rti->getNumFields());
 
       // The superclass, if any, is an extra child.
       if (reflection_ctx->LookupSuperclass(tr,
@@ -679,7 +678,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   }
   // FIXME: Implement more cases.
   LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
-           type.GetMangledTypeName().GetCString());
+           type.GetMangledTypeName());
   return {};
 }
 
@@ -1109,9 +1108,9 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
         });
 
     if (supers.size() == 0) {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Couldn't find the type metadata for %s in instance",
-                type.GetTypeName().AsCString());
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "Couldn't find the type metadata for {0} in instance",
+               type.GetTypeName());
       return {};
     }
 
@@ -1185,8 +1184,8 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
               i);
     return {};
   }
-  LLDB_LOGF(GetLog(LLDBLog::Types), "Cannot retrieve type information for %s",
-            type.GetTypeName().AsCString());
+  LLDB_LOG(GetLog(LLDBLog::Types), "Cannot retrieve type information for {0}",
+           type.GetTypeName());
   return {};
 }
 
@@ -1311,8 +1310,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
       ++i;
     }
     if (!pack_expansion) {
-      LLDB_LOGF(log, "cannot decode pack_expansion type: failed to find a "
-                     "matching type in the function signature");
+      LLDB_LOG(log, "cannot decode pack_expansion type: failed to find a "
+                    "matching type in the function signature");
       return {};
     }
 
@@ -1324,10 +1323,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
     llvm::Optional<lldb::addr_t> count =
         GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
     if (!count) {
-      LLDB_LOGF(log,
-                "cannot decode pack_expansion type: failed to find count "
-                "argument \"%s\" in frame",
-                count_var.str().c_str());
+      LLDB_LOG(log,
+               "cannot decode pack_expansion type: failed to find count "
+               "argument \"%s\" in frame",
+               count_var.str());
       return {};
     }
 
@@ -1354,11 +1353,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
           llvm::Optional<lldb::addr_t> mds_ptr =
               GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
           if (!mds_ptr) {
-            LLDB_LOGF(log,
+            LLDB_LOG(log,
                       "cannot decode pack_expansion type: failed to find "
                       "metadata "
-                      "for \"%s\" in frame",
-                      mds_var.str().c_str());
+                      "for \"{0}\" in frame",
+                      mds_var.str());
             error = true;
             return;
           }
@@ -2695,10 +2694,10 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
   if (log && log->GetVerbose()) {
     std::stringstream ss;
     type_ref->dump(ss);
-    LLDB_LOGF(log,
-              "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
-              "type: %s:\n%s",
-              type.GetMangledTypeName().GetCString(), ss.str().c_str());
+    LLDB_LOG(log,
+             "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
+             "type: {0}:\n{0}",
+             type.GetMangledTypeName(), ss.str());
   }
   return type_ref;
 }
@@ -2710,9 +2709,9 @@ SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
   Log *log(GetLog(LLDBLog::Types));
 
   if (log && log->GetVerbose())
-    LLDB_LOGF(log, "[SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo] Getting "
-                "type info for type: %s\n",
-                type.GetMangledTypeName().GetCString());
+    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo] Getting "
+             "type info for type: {0}",
+             type.GetMangledTypeName());
 
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
