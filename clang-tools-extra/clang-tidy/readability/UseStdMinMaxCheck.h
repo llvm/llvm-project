@@ -34,7 +34,6 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
-  StringRef AlgorithmHeader;
 };
 
 } // namespace clang::tidy::readability

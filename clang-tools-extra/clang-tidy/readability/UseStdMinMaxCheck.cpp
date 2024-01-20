@@ -17,6 +17,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+static const llvm::StringRef AlgorithmHeader("<algorithm>");
+
 UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
@@ -25,8 +27,6 @@ UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
 
 void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "AlgorithmHeader",
-                Options.get("AlgorithmHeader", "<algorithm>"));
 }
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
@@ -87,8 +87,10 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
         Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
     const auto AssignLhsStr = Lexer::getSourceText(
         Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
-    return (AssignLhsStr + " = " + FunctionName + "(" + CondLhsStr + ", " +
-            CondRhsStr + ");")
+    const auto AssignLhsType =
+        AssignLhs->getType().getCanonicalType().getAsString();
+    return (AssignLhsStr + " = " + FunctionName + "<" + AssignLhsType + ">(" +
+            CondLhsStr + ", " + CondRhsStr + ");")
         .str();
   };
   const auto OperatorStr = BinaryOp->getOpcodeStr();
@@ -100,8 +102,10 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
         tidy::utils::areStatementsIdentical(CondRhs, AssignRhs, Context)))) {
     diag(IfLocation, "use `std::min` instead of `%0`")
         << OperatorStr
-        << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*UseMax=*/false))
+        << FixItHint::CreateReplacement(
+               SourceRange(IfLocation, Lexer::getLocForEndOfToken(
+                                           ThenLocation, 0, Source, LO)),
+               CreateReplacement(/*UseMax=*/false))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
 
@@ -119,8 +123,10 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
                                                    Context)))) {
     diag(IfLocation, "use `std::max` instead of `%0`")
         << OperatorStr
-        << FixItHint::CreateReplacement(SourceRange(IfLocation, ThenLocation),
-                                        CreateReplacement(/*UseMax=*/true))
+        << FixItHint::CreateReplacement(
+               SourceRange(IfLocation, Lexer::getLocForEndOfToken(
+                                           ThenLocation, 0, Source, LO)),
+               CreateReplacement(/*UseMax=*/true))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   }
