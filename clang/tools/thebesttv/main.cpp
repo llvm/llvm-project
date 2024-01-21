@@ -152,7 +152,10 @@ public:
     // build CFG
     auto cfg = CFG::buildCFG(D, D->getBody() , &D->getASTContext(), CFG::BuildOptions());
     cfg->dump(D->getASTContext().getLangOpts(), true);
-    // cfg->viewCFG(D->getASTContext().getLangOpts());
+    cfg->viewCFG(D->getASTContext().getLangOpts());
+
+    int n = cfg->size();  // num of blocks
+    llvm::errs() << "Num of blocks: " << n << "\n";
 
     // traverse each block
     llvm::errs() << "--------- Block traversal: " << D->getQualifiedNameAsString() << "\n";
