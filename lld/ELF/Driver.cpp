@@ -3097,13 +3097,13 @@ bool LinkerDriver::checkFile(StringRef path) {
   if (config->ekind == ELFNoneKind || !config->CheckFormat)
     return true;
 
-  Optional<MemoryBufferRef> buffer = readFile(path);
+  std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return false;
 
   MemoryBufferRef mbref = *buffer;
 
-  switch(identify_magic(mbref.getBuffer())){
+  switch (identify_magic(mbref.getBuffer())){
   case file_magic::unknown:
     return true;
   case file_magic::archive: {
