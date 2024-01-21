@@ -1311,9 +1311,8 @@ struct CounterCoverageMappingBuilder
   void markSkipped(SourceLocation StartLoc, SourceLocation BeforeLoc) {
     const auto Skipped = findAreaStartingFromTo(StartLoc, BeforeLoc);
 
-    if (!Skipped) {
+    if (!Skipped)
       return;
-    }
 
     const auto NewStartLoc = Skipped->getBegin();
     const auto EndLoc = Skipped->getEnd();
