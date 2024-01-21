@@ -17,6 +17,7 @@ module m
   !dir$ integer
   !dir$ integer=64
   !dir$ integer = 64
+  !dir$  integer = 64
   PROC(4)
   !dir$ optimize:1
   !dir$ optimize : 1

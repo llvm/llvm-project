@@ -1270,36 +1270,38 @@ enum WatchpointValueKind {
 };
 
 enum CompletionType {
-  eNoCompletion = 0u,
-  eSourceFileCompletion = (1u << 0),
-  eDiskFileCompletion = (1u << 1),
-  eDiskDirectoryCompletion = (1u << 2),
-  eSymbolCompletion = (1u << 3),
-  eModuleCompletion = (1u << 4),
-  eSettingsNameCompletion = (1u << 5),
-  ePlatformPluginCompletion = (1u << 6),
-  eArchitectureCompletion = (1u << 7),
-  eVariablePathCompletion = (1u << 8),
-  eRegisterCompletion = (1u << 9),
-  eBreakpointCompletion = (1u << 10),
-  eProcessPluginCompletion = (1u << 11),
-  eDisassemblyFlavorCompletion = (1u << 12),
-  eTypeLanguageCompletion = (1u << 13),
-  eFrameIndexCompletion = (1u << 14),
-  eModuleUUIDCompletion = (1u << 15),
-  eStopHookIDCompletion = (1u << 16),
-  eThreadIndexCompletion = (1u << 17),
-  eWatchpointIDCompletion = (1u << 18),
-  eBreakpointNameCompletion = (1u << 19),
-  eProcessIDCompletion = (1u << 20),
-  eProcessNameCompletion = (1u << 21),
-  eRemoteDiskFileCompletion = (1u << 22),
-  eRemoteDiskDirectoryCompletion = (1u << 23),
-  eTypeCategoryNameCompletion = (1u << 24),
-  // This item serves two purposes.  It is the last element in the enum, so
-  // you can add custom enums starting from here in your Option class. Also
-  // if you & in this bit the base code will not process the option.
-  eCustomCompletion = (1u << 25)
+  eNoCompletion = 0ul,
+  eSourceFileCompletion = (1ul << 0),
+  eDiskFileCompletion = (1ul << 1),
+  eDiskDirectoryCompletion = (1ul << 2),
+  eSymbolCompletion = (1ul << 3),
+  eModuleCompletion = (1ul << 4),
+  eSettingsNameCompletion = (1ul << 5),
+  ePlatformPluginCompletion = (1ul << 6),
+  eArchitectureCompletion = (1ul << 7),
+  eVariablePathCompletion = (1ul << 8),
+  eRegisterCompletion = (1ul << 9),
+  eBreakpointCompletion = (1ul << 10),
+  eProcessPluginCompletion = (1ul << 11),
+  eDisassemblyFlavorCompletion = (1ul << 12),
+  eTypeLanguageCompletion = (1ul << 13),
+  eFrameIndexCompletion = (1ul << 14),
+  eModuleUUIDCompletion = (1ul << 15),
+  eStopHookIDCompletion = (1ul << 16),
+  eThreadIndexCompletion = (1ul << 17),
+  eWatchpointIDCompletion = (1ul << 18),
+  eBreakpointNameCompletion = (1ul << 19),
+  eProcessIDCompletion = (1ul << 20),
+  eProcessNameCompletion = (1ul << 21),
+  eRemoteDiskFileCompletion = (1ul << 22),
+  eRemoteDiskDirectoryCompletion = (1ul << 23),
+  eTypeCategoryNameCompletion = (1ul << 24),
+  eCustomCompletion = (1ul << 25),
+  eThreadIDCompletion = (1ul << 26),
+  // This last enum element is just for input validation.
+  // Add new completions before this element,
+  // and then increment eTerminatorCompletion's shift value
+  eTerminatorCompletion = (1ul << 27)
 };
 
 } // namespace lldb

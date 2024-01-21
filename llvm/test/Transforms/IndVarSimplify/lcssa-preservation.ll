@@ -109,9 +109,9 @@ define void @pr57000(i64 %a) {
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
 ; CHECK:       loop.2.header:
 ; CHECK-NEXT:    switch i8 [[CMP_EXT_LCSSA]], label [[LOOP_1_LOOPEXIT:%.*]] [
-; CHECK-NEXT:    i8 -1, label [[LOOP_2_LATCH:%.*]]
-; CHECK-NEXT:    i8 1, label [[LOOP_2_LATCH]]
-; CHECK-NEXT:    i8 4, label [[LOOP_2_HEADER]]
+; CHECK-NEXT:      i8 -1, label [[LOOP_2_LATCH:%.*]]
+; CHECK-NEXT:      i8 1, label [[LOOP_2_LATCH]]
+; CHECK-NEXT:      i8 4, label [[LOOP_2_HEADER]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop.2.latch:
 ; CHECK-NEXT:    [[CMP_TRUNC_LCSSA1:%.*]] = phi i1 [ [[CMP_LCSSA2]], [[LOOP_2_HEADER]] ], [ [[CMP_LCSSA2]], [[LOOP_2_HEADER]] ]
@@ -147,7 +147,7 @@ define void @D149435(i16 %arg) {
 ; CHECK:       loop1:
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i16 [[ARG:%.*]]
 ; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl i16 [[FR]], 1
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[ARRAYIDX_IDX]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[ARRAYIDX_IDX]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    [[FR_LCSSA:%.*]] = phi i16 [ [[FR]], [[LOOP1]] ]
@@ -175,7 +175,7 @@ define void @D149435(i16 %arg) {
 loop1:
   %fr = freeze i16 %arg
   %arrayidx.idx = shl i16 %fr, 1
-  %or = or i16 %arrayidx.idx, 1
+  %or = or disjoint i16 %arrayidx.idx, 1
   br i1 false, label %loop1, label %loop2.preheader
 
 loop2.preheader:

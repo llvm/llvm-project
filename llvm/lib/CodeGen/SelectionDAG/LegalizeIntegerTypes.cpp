@@ -165,7 +165,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_TO_FP16:
     Res = PromoteIntRes_FP_TO_FP16_BF16(N);
     break;
-
+  case ISD::STRICT_FP_TO_FP16:
+    Res = PromoteIntRes_STRICT_FP_TO_FP16_BF16(N);
+    break;
   case ISD::GET_ROUNDING: Res = PromoteIntRes_GET_ROUNDING(N); break;
 
   case ISD::AND:
@@ -785,6 +787,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16_BF16(SDNode *N) {
   SDLoc dl(N);
 
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_STRICT_FP_TO_FP16_BF16(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(NVT, MVT::Other),
+                            N->getOperand(0), N->getOperand(1));
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_XRINT(SDNode *N) {
@@ -1804,6 +1816,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP16_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::UINT_TO_FP:   Res = PromoteIntOp_UINT_TO_FP(N); break;
+  case ISD::STRICT_FP16_TO_FP:
   case ISD::STRICT_UINT_TO_FP:  Res = PromoteIntOp_STRICT_UINT_TO_FP(N); break;
   case ISD::ZERO_EXTEND:  Res = PromoteIntOp_ZERO_EXTEND(N); break;
   case ISD::VP_ZERO_EXTEND: Res = PromoteIntOp_VP_ZERO_EXTEND(N); break;
@@ -1870,6 +1883,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     Res = PromoteIntOp_VP_STRIDED(N, OpNo);
+    break;
+  case ISD::EXPERIMENTAL_VP_SPLICE:
+    Res = PromoteIntOp_VP_SPLICE(N, OpNo);
     break;
   }
 
@@ -2546,6 +2562,20 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
   SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
   NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
 
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo) {
+  SmallVector<SDValue, 6> NewOps(N->op_begin(), N->op_end());
+
+  if (OpNo == 2) { // Offset operand
+    NewOps[OpNo] = SExtPromotedInteger(N->getOperand(OpNo));
+    return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  }
+
+  assert((OpNo == 4 || OpNo == 5) && "Unexpected operand for promotion");
+
+  NewOps[OpNo] = ZExtPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -3830,20 +3860,7 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
                                          SDValue &Lo, SDValue &Hi) {
-  if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic load instructions.
-    SDLoc dl(N);
-    EVT VT = N->getMemoryVT();
-    SDVTList VTs = DAG.getVTList(VT, MVT::i1, MVT::Other);
-    SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDValue Swap = DAG.getAtomicCmpSwap(
-        ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl,
-        VT, VTs, N->getOperand(0),
-        N->getOperand(1), Zero, Zero, N->getMemOperand());
-    ReplaceValueWith(SDValue(N, 0), Swap.getValue(0));
-    ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
-    return;
-  }
+  assert(!N->isAtomic() && "Should have been a ATOMIC_LOAD?");
 
   if (ISD::isNormalLoad(N)) {
     ExpandRes_NormalLoad(N, Lo, Hi);
@@ -5398,16 +5415,8 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
-  if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic store instructions.
-    SDLoc dl(N);
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 N->getMemoryVT(),
-                                 N->getOperand(0), N->getOperand(2),
-                                 N->getOperand(1),
-                                 N->getMemOperand());
-    return Swap.getValue(1);
-  }
+  assert(!N->isAtomic() && "Should have been a ATOMIC_STORE?");
+
   if (ISD::isNormalStore(N))
     return ExpandOp_NormalStore(N, OpNo);
 
@@ -5561,7 +5570,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
         getTypeAction(InVT) == TargetLowering::TypeLegal) {
       EVT NInVT = InVT.getHalfNumVectorElementsVT(*DAG.getContext());
       unsigned NElts = NInVT.getVectorMinNumElements();
-      uint64_t IdxVal = cast<ConstantSDNode>(BaseIdx)->getZExtValue();
+      uint64_t IdxVal = BaseIdx->getAsZExtVal();
 
       SDValue Step1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NInVT, InOp0,
                                   DAG.getConstant(alignDown(IdxVal, NElts), dl,

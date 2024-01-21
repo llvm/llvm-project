@@ -142,7 +142,8 @@ public:
 
   /// Attaches module-level metadata for functions marked as kernels.
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
@@ -162,20 +163,18 @@ public:
           ->addOperand(llvmMetadataNode);
     };
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<ArrayAttr>(attribute.getValue()))
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
-      SmallVector<int64_t> values =
-          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getMaxntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getMaxntidYName());
       if (values.size() > 2)
         generateMetadata(values[2], NVVM::NVVMDialect::getMaxntidZName());
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<ArrayAttr>(attribute.getValue()))
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
-      SmallVector<int64_t> values =
-          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getReqntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getReqntidYName());

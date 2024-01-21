@@ -6,6 +6,8 @@ declare i8 @llvm.umin.i8(i8, i8)
 declare i8 @llvm.smax.i8(i8, i8)
 declare i8 @llvm.umax.i8(i8, i8)
 
+declare void @llvm.assume(i1)
+
 declare void @use.i8(i8)
 
 define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
@@ -129,6 +131,24 @@ define i8 @sub_2(i8 %a, i1 %c, i8 %x, i8 %y) {
   %ab = sub i8 %a, %b
   %not_ab = xor i8 %ab, -1
   ret i8 %not_ab
+}
+
+; Same as above but with a type larger than i64 to make sure we create -2
+; correctly.
+define i128 @sub_3(i128 %a, i1 %c, i128 %x, i128 %y) {
+; CHECK-LABEL: @sub_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i128 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i128 [[X:%.*]], i128 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i128 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = sub i128 -2, [[TMP3]]
+; CHECK-NEXT:    ret i128 [[NOT_AB]]
+;
+  %nx = xor i128 %x, -1
+  %yy = xor i128 %y, 123
+  %b = select i1 %c, i128 %nx, i128 %yy
+  %ab = sub i128 %a, %b
+  %not_ab = xor i128 %ab, -1
+  ret i128 %not_ab
 }
 
 define i8 @sub_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
@@ -491,4 +511,44 @@ define i8 @smax_both_freely_invertable_always(i8 %x, i8 %y) {
   %yy = xor i8 %y, 45
   %r = call i8 @llvm.smax.i8(i8 %xx, i8 %yy)
   ret i8 %r
+}
+
+define i8 @lshr_nneg(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_nneg(
+; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
+; CHECK-NEXT:    [[SHR_NOT:%.*]] = ashr i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[SHR_NOT]]
+;
+  %neg = icmp slt i8 %x, 0
+  call void @llvm.assume(i1 %neg)
+  %x.not = xor i8 %x, -1
+  %shr = lshr i8 %x.not, %y
+  %shr.not = xor i8 %shr, -1
+  ret i8 %shr.not
+}
+
+define i8 @lshr_not_nneg(i8 %x, i8 %y) {
+; CHECK-LABEL: @lshr_not_nneg(
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR_NOT:%.*]] = xor i8 [[SHR]], -1
+; CHECK-NEXT:    ret i8 [[SHR_NOT]]
+;
+  %x.not = xor i8 %x, -1
+  %shr = lshr i8 %x.not, %y
+  %shr.not = xor i8 %shr, -1
+  ret i8 %shr.not
+}
+
+define i8 @lshr_not_nneg2(i8 %x) {
+; CHECK-LABEL: @lshr_not_nneg2(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHR_NOT1:%.*]] = or disjoint i8 [[SHR]], -128
+; CHECK-NEXT:    ret i8 [[SHR_NOT1]]
+;
+  %x.not = xor i8 %x, -1
+  %shr = lshr i8 %x.not, 1
+  %shr.not = xor i8 %shr, -1
+  ret i8 %shr.not
 }

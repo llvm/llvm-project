@@ -308,7 +308,7 @@ public:
 
   bool VisitFunctionDecl(FunctionDecl *FD) {
     IdentifierInfo *II = FD->getIdentifier();
-    if (II && II->getName().startswith("__inline"))
+    if (II && II->getName().starts_with("__inline"))
       return true;
 
     // We skip function template definitions, as their semantics is

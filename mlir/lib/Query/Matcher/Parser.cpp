@@ -201,10 +201,7 @@ private:
   }
 
   // Consume all leading whitespace from code, except newlines
-  void consumeWhitespace() {
-    code = code.drop_while(
-        [](char c) { return llvm::StringRef(" \t\v\f\r").contains(c); });
-  }
+  void consumeWhitespace() { code = code.ltrim(" \t\v\f\r"); }
 
   // Returns the current location in the source code
   SourceLocation currentLocation() {
@@ -384,7 +381,7 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &nameToken,
 // completions minus the prefix.
 void Parser::addCompletion(const TokenInfo &compToken,
                            const MatcherCompletion &completion) {
-  if (llvm::StringRef(completion.typedText).startswith(compToken.text)) {
+  if (llvm::StringRef(completion.typedText).starts_with(compToken.text)) {
     completions.emplace_back(completion.typedText.substr(compToken.text.size()),
                              completion.matcherDecl);
   }

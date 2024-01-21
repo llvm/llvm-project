@@ -23,6 +23,14 @@ void test_fopen(void) {
   // stdfunc-warning{{should not be NULL}}
 }
 
+void test_fdopen(int fd) {
+  FILE *fp = fdopen(fd, "r");
+  clang_analyzer_eval(fp != NULL); // any-warning{{TRUE}} any-warning{{FALSE}}
+  fclose(fp); // \
+  // stream-warning{{Stream pointer might be NULL}} \
+  // stdfunc-warning{{should not be NULL}}
+}
+
 void test_tmpfile(void) {
   FILE *fp = tmpfile();
   clang_analyzer_eval(fp != NULL); // any-warning{{TRUE}} any-warning{{FALSE}}

@@ -266,7 +266,6 @@ protected:
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
-  LLVM_PREFERRED_TYPE(bool)
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
@@ -1373,6 +1372,8 @@ public:
     LangOptions::SignReturnAddressKeyKind SignKey =
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
+    bool BranchProtectionPAuthLR = false;
+    bool GuardedControlStack = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1424,6 +1425,8 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());

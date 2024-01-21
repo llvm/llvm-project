@@ -451,12 +451,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   PRINT_FIELD(OS, ".amdhsa_float_denorm_mode_16_64", KD,
               compute_pgm_rsrc1,
               amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
-  PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
-  PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+  if (IVersion.Major < 12) {
+    PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP);
+    PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE);
+  }
   if (IVersion.Major >= 9)
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
@@ -475,9 +475,14 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_forward_progress", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
-    PRINT_FIELD(OS, ".amdhsa_shared_vgpr_count", KD, compute_pgm_rsrc3,
-                amdhsa::COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
   }
+  if (IVersion.Major >= 10 && IVersion.Major < 12) {
+    PRINT_FIELD(OS, ".amdhsa_shared_vgpr_count", KD, compute_pgm_rsrc3,
+                amdhsa::COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT);
+  }
+  if (IVersion.Major >= 12)
+    PRINT_FIELD(OS, ".amdhsa_round_robin_scheduling", KD, compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN);
   PRINT_FIELD(
       OS, ".amdhsa_exception_fp_ieee_invalid_op", KD,
       compute_pgm_rsrc2,

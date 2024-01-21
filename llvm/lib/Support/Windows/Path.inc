@@ -76,7 +76,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
   // If the path is a long path, mangled into forward slashes, normalize
   // back to backslashes here.
-  if (Path8Str.startswith("//?/"))
+  if (Path8Str.starts_with("//?/"))
     llvm::sys::path::native(Path8Str, path::Style::windows_backslash);
 
   if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
@@ -96,7 +96,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   const char *const LongPathPrefix = "\\\\?\\";
 
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.startswith(LongPathPrefix))
+      Path8Str.starts_with(LongPathPrefix))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -154,7 +154,10 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
     return "";
 
   llvm::sys::path::make_preferred(PathNameUTF8);
-  return std::string(PathNameUTF8.data());
+
+  SmallString<256> RealPath;
+  sys::fs::real_path(PathNameUTF8, RealPath);
+  return std::string(RealPath);
 }
 
 UniqueID file_status::getUniqueID() const {
@@ -774,14 +777,16 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
   if (std::error_code ec = widenPath(path8, path_utf16))
     return ec;
 
-  DWORD attr = ::GetFileAttributesW(path_utf16.begin());
-  if (attr == INVALID_FILE_ATTRIBUTES)
-    return getStatus(INVALID_HANDLE_VALUE, result);
-
   DWORD Flags = FILE_FLAG_BACKUP_SEMANTICS;
-  // Handle reparse points.
-  if (!Follow && (attr & FILE_ATTRIBUTE_REPARSE_POINT))
-    Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  if (!Follow) {
+    DWORD attr = ::GetFileAttributesW(path_utf16.begin());
+    if (attr == INVALID_FILE_ATTRIBUTES)
+      return getStatus(INVALID_HANDLE_VALUE, result);
+
+    // Handle reparse points.
+    if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+      Flags |= FILE_FLAG_OPEN_REPARSE_POINT;
+  }
 
   ScopedFileHandle h(
       ::CreateFileW(path_utf16.begin(), 0, // Attributes only.

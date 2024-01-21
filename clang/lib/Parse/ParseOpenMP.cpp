@@ -2528,7 +2528,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       skipUntilPragmaOpenMPEnd(DKind);
     if (Tok.is(tok::annot_pragma_openmp_end))
       ConsumeAnnotationToken();
-    break;
+    // return an empty statement
+    return StmtEmpty();
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;

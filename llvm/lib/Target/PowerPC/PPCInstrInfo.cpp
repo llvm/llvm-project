@@ -155,22 +155,21 @@ unsigned PPCInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     if (!MO.isReg() || !MO.isDef() || MO.isImplicit())
       continue;
 
-    int Cycle = ItinData->getOperandCycle(DefClass, i);
-    if (Cycle < 0)
+    std::optional<unsigned> Cycle = ItinData->getOperandCycle(DefClass, i);
+    if (!Cycle)
       continue;
 
-    Latency = std::max(Latency, (unsigned) Cycle);
+    Latency = std::max(Latency, *Cycle);
   }
 
   return Latency;
 }
 
-int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                    const MachineInstr &DefMI, unsigned DefIdx,
-                                    const MachineInstr &UseMI,
-                                    unsigned UseIdx) const {
-  int Latency = PPCGenInstrInfo::getOperandLatency(ItinData, DefMI, DefIdx,
-                                                   UseMI, UseIdx);
+std::optional<unsigned> PPCInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
+  std::optional<unsigned> Latency = PPCGenInstrInfo::getOperandLatency(
+      ItinData, DefMI, DefIdx, UseMI, UseIdx);
 
   if (!DefMI.getParent())
     return Latency;
@@ -190,7 +189,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   }
 
   if (UseMI.isBranch() && IsRegCR) {
-    if (Latency < 0)
+    if (!Latency)
       Latency = getInstrLatency(ItinData, DefMI);
 
     // On some cores, there is an additional delay between writing to a condition
@@ -210,8 +209,8 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case PPC::DIR_PWR7:
     case PPC::DIR_PWR8:
     // FIXME: Is this needed for POWER9?
-      Latency += 2;
-      break;
+    Latency = *Latency + 2;
+    break;
     }
   }
 
@@ -1068,9 +1067,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
-    // This function should only be called for opcodes with the ReMaterializable
-    // flag set.
-    llvm_unreachable("Unknown rematerializable operation!");
+    // Let base implementaion decide.
     break;
   case PPC::LI:
   case PPC::LI8:
@@ -1976,14 +1973,6 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
   unsigned Opcode = getLoadOpcodeForSpill(RC);
   NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Opcode), DestReg),
                                      FrameIdx));
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-
-  if (PPC::CRRCRegClass.hasSubClassEq(RC) ||
-      PPC::CRBITRCRegClass.hasSubClassEq(RC))
-    FuncInfo->setSpillsCR();
-
-  if (isXFormMemOp(Opcode))
-    FuncInfo->setHasNonRISpills();
 }
 
 void PPCInstrInfo::loadRegFromStackSlotNoUpd(
@@ -1994,9 +1983,6 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   SmallVector<MachineInstr*, 4> NewMIs;
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
-
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  FuncInfo->setHasSpills();
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
@@ -2158,11 +2144,17 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
 bool PPCInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                         const MachineBasicBlock *MBB,
                                         const MachineFunction &MF) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
   // Set MFFS and MTFSF as scheduling boundary to avoid unexpected code motion
   // across them, since some FP operations may change content of FPSCR.
   // TODO: Model FPSCR in PPC instruction definitions and remove the workaround
-  if (MI.getOpcode() == PPC::MFFS || MI.getOpcode() == PPC::MTFSF)
+  case PPC::MFFS:
+  case PPC::MTFSF:
+  case PPC::FENCE:
     return true;
+  }
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -2878,8 +2870,9 @@ static bool isClusterableLdStOpcPair(unsigned FirstOpc, unsigned SecondOpc,
 }
 
 bool PPCInstrInfo::shouldClusterMemOps(
-    ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
+    ArrayRef<const MachineOperand *> BaseOps1, int64_t OpOffset1,
+    bool OffsetIsScalable1, ArrayRef<const MachineOperand *> BaseOps2,
+    int64_t OpOffset2, bool OffsetIsScalable2, unsigned ClusterSize,
     unsigned NumBytes) const {
 
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
@@ -2956,27 +2949,12 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
 std::pair<unsigned, unsigned>
 PPCInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
-  const unsigned Mask = PPCII::MO_ACCESS_MASK;
-  return std::make_pair(TF & Mask, TF & ~Mask);
+  // PPC always uses a direct mask.
+  return std::make_pair(TF, 0u);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
 PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
-  using namespace PPCII;
-  static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_LO, "ppc-lo"},
-      {MO_HA, "ppc-ha"},
-      {MO_TPREL_LO, "ppc-tprel-lo"},
-      {MO_TPREL_HA, "ppc-tprel-ha"},
-      {MO_DTPREL_LO, "ppc-dtprel-lo"},
-      {MO_TLSLD_LO, "ppc-tlsld-lo"},
-      {MO_TOC_LO, "ppc-toc-lo"},
-      {MO_TLS, "ppc-tls"}};
-  return ArrayRef(TargetFlags);
-}
-
-ArrayRef<std::pair<unsigned, const char *>>
-PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace PPCII;
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_PLT, "ppc-plt"},
@@ -2985,12 +2963,26 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_GOT_FLAG, "ppc-got"},
       {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"},
       {MO_TLSGD_FLAG, "ppc-tlsgd"},
-      {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_TLSLD_FLAG, "ppc-tlsld"},
       {MO_TLSGDM_FLAG, "ppc-tlsgdm"},
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
-      {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
+      {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"},
+      {MO_LO, "ppc-lo"},
+      {MO_HA, "ppc-ha"},
+      {MO_TPREL_LO, "ppc-tprel-lo"},
+      {MO_TPREL_HA, "ppc-tprel-ha"},
+      {MO_DTPREL_LO, "ppc-dtprel-lo"},
+      {MO_TLSLD_LO, "ppc-tlsld-lo"},
+      {MO_TOC_LO, "ppc-toc-lo"},
+      {MO_TLS, "ppc-tls"},
+      {MO_PIC_HA_FLAG, "ppc-ha-pic"},
+      {MO_PIC_LO_FLAG, "ppc-lo-pic"},
+      {MO_TPREL_PCREL_FLAG, "ppc-tprel-pcrel"},
+      {MO_TLS_PCREL_FLAG, "ppc-tls-pcrel"},
+      {MO_GOT_PCREL_FLAG, "ppc-got-pcrel"},
+  };
   return ArrayRef(TargetFlags);
 }
 
@@ -3180,9 +3172,11 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 
     // FIXME: Maybe we can expand it in 'PowerPC Expand Atomic' pass.
+  case PPC::CFENCE:
   case PPC::CFENCE8: {
     auto Val = MI.getOperand(0).getReg();
-    BuildMI(MBB, MI, DL, get(PPC::CMPD), PPC::CR7).addReg(Val).addReg(Val);
+    unsigned CmpOp = Subtarget.isPPC64() ? PPC::CMPD : PPC::CMPW;
+    BuildMI(MBB, MI, DL, get(CmpOp), PPC::CR7).addReg(Val).addReg(Val);
     BuildMI(MBB, MI, DL, get(PPC::CTRL_DEP))
         .addImm(PPC::PRED_NE_MINUS)
         .addReg(PPC::CR7)

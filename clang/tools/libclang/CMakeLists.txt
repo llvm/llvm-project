@@ -185,11 +185,22 @@ if(ENABLE_SHARED)
     endif()
   endif()
   if (USE_VERSION_SCRIPT)
-    target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
-    # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
-    # but requires a special option to enable it.
     if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-      target_link_options(libclang PRIVATE "-Wl,-z,gnu-version-script-compat")
+      include(CheckLinkerFlag)
+      # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
+      # but requires a special option to enable it.
+      llvm_check_linker_flag(CXX "-Wl,-z,gnu-version-script-compat"
+                             LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
+      # Older Solaris (and illumos) linker does not support GNU ld version scripts
+      # and does not support GNU version script compat.
+      if (LINKER_SUPPORTS_Z_GNU_VERSION_SCRIPT_COMPAT)
+        target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
+        target_link_options(libclang PRIVATE "-Wl,-z,gnu-version-script-compat")
+      else()
+        target_link_options(libclang PRIVATE "-Wl,-M,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
+      endif()
+    else()
+      target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
     endif()
     # Ensure that libclang.so gets rebuilt when the linker script changes.
     set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY

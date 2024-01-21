@@ -3,7 +3,7 @@
 ; RUN: cd %t
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-locaddrx.s \
 ; RUN: -split-dwarf-file=mainlocadddrx.dwo -o mainlocadddrx.o
-; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split mainlocadddrx.o -o mainlocadddrx.exe
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split mainlocadddrx.o -o mainlocadddrx.exe -fno-pic -no-pie
 ; RUN: llvm-bolt mainlocadddrx.exe -o mainlocadddrx.exe.bolt --update-debug-sections --always-convert-to-ranges
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info mainlocadddrx.exe | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-addr mainlocadddrx.exe.bolt &> %t/foo.txt

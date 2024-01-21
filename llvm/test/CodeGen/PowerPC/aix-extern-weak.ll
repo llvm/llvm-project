@@ -41,7 +41,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; BIT64-NEXT:     .vbyte	8, .main                   # @main
 ; BIT64-NEXT:     .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:     .vbyte	8, 0
-; COMMON-NEXT:    .csect  [PR]
+; COMMON-NEXT:    .csect  ..text..[PR]
 ; COMMON-NEXT:    .main:
 
 ; COMMON:         .csect  .data[RW]

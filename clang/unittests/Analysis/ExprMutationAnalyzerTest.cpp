@@ -592,6 +592,26 @@ TEST(ExprMutationAnalyzerTest, ByConstRRefArgument) {
               ElementsAre("static_cast<A &&>(x)"));
 }
 
+// Section: bindings.
+
+TEST(ExprMutationAnalyzerTest, BindingModifies) {
+  const auto AST =
+      buildASTFromCode("struct Point { int x; int y; };"
+                       "void mod(int&);"
+                       "void f(Point p) { auto& [x, y] = p; mod(x); }");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("p")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x", "mod(x)"));
+}
+
+TEST(ExprMutationAnalyzerTest, BindingDoesNotModify) {
+  const auto AST = buildASTFromCode("struct Point { int x; int y; };"
+                                    "void f(Point p) { auto& [x, y] = p; x; }");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("p")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
 // section: explicit std::move and std::forward testing
 
 TEST(ExprMutationAnalyzerTest, Move) {

@@ -130,6 +130,9 @@ let Predicates = [HasAVX, NoVLX] in {
   defm : subvec_zero_lowering<"DQA", VR128, v32i8, v16i8, sub_xmm>;
 }
 
+let Predicates = [HasAVXNECONVERT, NoVLX] in
+  defm : subvec_zero_lowering<"DQA", VR128, v16bf16, v8bf16, sub_xmm>;
+
 let Predicates = [HasVLX] in {
   defm : subvec_zero_lowering<"APDZ128", VR128X, v4f64, v2f64, sub_xmm>;
   defm : subvec_zero_lowering<"APSZ128", VR128X, v8f32, v4f32, sub_xmm>;
@@ -173,6 +176,12 @@ let Predicates = [HasFP16, HasVLX] in {
   defm : subvec_zero_lowering<"APSZ128", VR128X, v16f16, v8f16, sub_xmm>;
   defm : subvec_zero_lowering<"APSZ128", VR128X, v32f16, v8f16, sub_xmm>;
   defm : subvec_zero_lowering<"APSZ256", VR256X, v32f16, v16f16, sub_ymm>;
+}
+
+let Predicates = [HasBF16, HasVLX] in {
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v16bf16, v8bf16, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v32bf16, v8bf16, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ256", VR256X, v32bf16, v16bf16, sub_ymm>;
 }
 
 class maskzeroupper<ValueType vt, RegisterClass RC> :

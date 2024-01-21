@@ -303,8 +303,9 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
 /// `getSlice`. In scf.for we only want to include as part of the slice elements
 /// that are part of the use/def chain.
 static SetVector<Operation *>
-getSliceContract(Operation *op, BackwardSliceOptions backwardSliceOptions,
-                 ForwardSliceOptions forwardSliceOptions) {
+getSliceContract(Operation *op,
+                 const BackwardSliceOptions &backwardSliceOptions,
+                 const ForwardSliceOptions &forwardSliceOptions) {
   SetVector<Operation *> slice;
   slice.insert(op);
   unsigned currentIndex = 0;
@@ -455,7 +456,8 @@ struct CombineTransferReadOpTranspose final
     Type resultType = op.getType();
     Operation *extOp;
     if ((extOp = source.getDefiningOp<arith::ExtSIOp>()) ||
-        (extOp = source.getDefiningOp<arith::ExtUIOp>())) {
+        (extOp = source.getDefiningOp<arith::ExtUIOp>()) ||
+        (extOp = source.getDefiningOp<arith::ExtFOp>())) {
       source = extOp->getOperand(0);
       resultType =
           VectorType::get(cast<VectorType>(resultType).getShape(),
@@ -493,8 +495,11 @@ struct CombineTransferReadOpTranspose final
       if (isa<arith::ExtSIOp>(extOp))
         result = rewriter.create<arith::ExtSIOp>(loc, op.getType(), result)
                      .getResult();
-      else
+      else if (isa<arith::ExtUIOp>(extOp))
         result = rewriter.create<arith::ExtUIOp>(loc, op.getType(), result)
+                     .getResult();
+      else
+        result = rewriter.create<arith::ExtFOp>(loc, op.getType(), result)
                      .getResult();
     }
 
@@ -553,7 +558,7 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   auto elType = op.getVectorType().getElementType();
   const char *fragType = inferFragType(op);
   if (op->hasOneUse()) {
-    auto user = *op->user_begin();
+    auto *user = *op->user_begin();
     // Infer the signedness of the mma type from the integer extend.
     bool isSignedExtend = isa<arith::ExtSIOp>(user);
     if (isSignedExtend || isa<arith::ExtUIOp>(user)) {
@@ -843,10 +848,8 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
 static bool isSharedMemory(MemRefType type) {
   auto addressSpace =
       dyn_cast_or_null<gpu::AddressSpaceAttr>(type.getMemorySpace());
-  if (addressSpace &&
-      addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace())
-    return true;
-  return false;
+  return addressSpace &&
+         addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
 }
 
 /// Converts a `vector.transfer_read` operation directly to either a

@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRArmSMETransforms
-  ArmSMETypeConverter.cpp
   EnableArmStreaming.cpp
   TileAllocation.cpp
 

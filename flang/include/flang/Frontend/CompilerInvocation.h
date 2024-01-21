@@ -26,6 +26,10 @@
 #include "llvm/Option/ArgList.h"
 #include <memory>
 
+namespace llvm {
+class TargetMachine;
+}
+
 namespace Fortran::frontend {
 
 /// Fill out Opts based on the options given in Args.
@@ -98,6 +102,9 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr = false;
 
+  // Executable name
+  const char *argv0;
+
   /// This flag controls the unparsing and is used to decide whether to print
   /// out the semantically analyzed version of an object or expression or the
   /// plain version that does not include any information from semantic
@@ -158,7 +165,8 @@ public:
 
   /// Creates and configures semantics context based on the compilation flags.
   std::unique_ptr<Fortran::semantics::SemanticsContext>
-  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources);
+  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
+                  const llvm::TargetMachine &);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }
@@ -183,6 +191,8 @@ public:
   const bool &getEnableConformanceChecks() const {
     return enableConformanceChecks;
   }
+
+  const char *getArgv0() { return argv0; }
 
   bool &getEnableUsageChecks() { return enableUsageChecks; }
   const bool &getEnableUsageChecks() const { return enableUsageChecks; }
@@ -217,6 +227,8 @@ public:
   void setEnableUsageChecks() { enableUsageChecks = true; }
 
   /// Useful setters
+  void setArgv0(const char *dir) { argv0 = dir; }
+
   void setModuleDir(std::string &dir) { moduleDir = dir; }
 
   void setModuleFileSuffix(const char *suffix) {

@@ -369,6 +369,9 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   else if (Flags & X86::IP_HAS_REPEAT)
     O << "\trep\t";
 
+  if (TSFlags & X86II::EVEX_NF)
+    O << "\t{nf}";
+
   // These all require a pseudo prefix
   if ((Flags & X86::IP_USE_VEX) ||
       (TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix)

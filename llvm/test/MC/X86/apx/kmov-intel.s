@@ -1,5 +1,20 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding -x86-asm-syntax=intel -output-asm-variant=1 %s | FileCheck %s
 
+# CHECK: {evex}	kmovb	k2, k1
+# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0xd1]
+         {evex}	kmovb	k2, k1
+# CHECK: {evex}	kmovw	k2, k1
+# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0xd1]
+         {evex}	kmovw	k2, k1
+# CHECK: {evex}	kmovd	k2, k1
+# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0xd1]
+         {evex}	kmovd	k2, k1
+# CHECK: {evex}	kmovq	k2, k1
+# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
+         {evex}	kmovq	k2, k1
+
+# CHECK-NOT: {evex}
+
 # CHECK: kmovb	k1, r16d
 # CHECK: encoding: [0x62,0xf9,0x7d,0x08,0x92,0xc8]
          kmovb	k1, r16d
@@ -51,16 +66,3 @@
 # CHECK: kmovq	qword ptr [r16 + r17], k1
 # CHECK: encoding: [0x62,0xf9,0xf8,0x08,0x91,0x0c,0x08]
          kmovq	qword ptr [r16 + r17], k1
-
-# CHECK: {evex}	kmovb	k2, k1
-# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0xd1]
-         {evex}	kmovb	k2, k1
-# CHECK: {evex}	kmovw	k2, k1
-# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0xd1]
-         {evex}	kmovw	k2, k1
-# CHECK: {evex}	kmovd	k2, k1
-# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0xd1]
-         {evex}	kmovd	k2, k1
-# CHECK: {evex}	kmovq	k2, k1
-# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
-         {evex}	kmovq	k2, k1

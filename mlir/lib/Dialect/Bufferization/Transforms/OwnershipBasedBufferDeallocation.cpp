@@ -861,6 +861,12 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
 
   for (auto operand : llvm::make_filter_range(op->getOperands(), isMemref)) {
     if (op.getEffectOnValue<MemoryEffects::Free>(operand).has_value()) {
+      // The bufferization.manual_deallocation attribute can be attached to ops
+      // with an allocation and/or deallocation side effect. It indicates that
+      // the op is under a "manual deallocation" scheme. Deallocation ops are
+      // usually forbidden in the input IR (not supported by the buffer
+      // deallocation pass). However, if they are under manual deallocation,
+      // they can be safely ignored by the buffer deallocation pass.
       if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
         return op->emitError(
             "memory free side-effect on MemRef value not supported!");

@@ -2755,7 +2755,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
                                    IsExplicitSpecialization,
                                    Method->isThisDeclarationADefinition());
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     SemaRef.CheckPureMethod(Method, SourceRange());
 
   // Propagate access.  For a non-friend declaration, the access is
@@ -3056,16 +3056,21 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
         D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), DI);
 
   if (AutoTypeLoc AutoLoc = DI->getTypeLoc().getContainedAutoTypeLoc())
-    if (AutoLoc.isConstrained())
+    if (AutoLoc.isConstrained()) {
+      SourceLocation EllipsisLoc;
+      if (IsExpandedParameterPack)
+        EllipsisLoc =
+            DI->getTypeLoc().getAs<PackExpansionTypeLoc>().getEllipsisLoc();
+      else if (auto *Constraint = dyn_cast_if_present<CXXFoldExpr>(
+                   D->getPlaceholderTypeConstraint()))
+        EllipsisLoc = Constraint->getEllipsisLoc();
       // Note: We attach the uninstantiated constriant here, so that it can be
-      // instantiated relative to the top level, like all our other constraints.
-      if (SemaRef.AttachTypeConstraint(
-              AutoLoc, Param, D,
-              IsExpandedParameterPack
-                ? DI->getTypeLoc().getAs<PackExpansionTypeLoc>()
-                    .getEllipsisLoc()
-                : SourceLocation()))
+      // instantiated relative to the top level, like all our other
+      // constraints.
+      if (SemaRef.AttachTypeConstraint(AutoLoc, /*NewConstrainedParm=*/Param,
+                                       /*OrigConstrainedParm=*/D, EllipsisLoc))
         Invalid = true;
+    }
 
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());
@@ -6493,34 +6498,6 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
 
   if (!LocalOnly && LangOpts.PCHInstantiateTemplates)
     PendingInstantiations.swap(delayedPCHInstantiations);
-}
-
-// Instantiate all referenced specializations of the given function template
-// definition. This make sure that constexpr function templates that are defined
-// after the point of instantiation of their use can be evaluated after they
-// are defined. see CWG2497.
-void Sema::PerformPendingInstantiationsOfConstexprFunctions(FunctionDecl *Tpl) {
-
-  auto InstantiateAll = [&](const auto &Range) {
-    for (NamedDecl *D : Range) {
-      FunctionDecl *Fun = cast<FunctionDecl>(D);
-      InstantiateFunctionDefinition(Fun->getPointOfInstantiation(), Fun);
-    }
-  };
-
-  auto It =
-      PendingInstantiationsOfConstexprEntities.find(Tpl->getCanonicalDecl());
-  if (It != PendingInstantiationsOfConstexprEntities.end()) {
-    auto Decls = std::move(It->second);
-    PendingInstantiationsOfConstexprEntities.erase(It);
-    InstantiateAll(Decls);
-  }
-
-  llvm::SmallSetVector<NamedDecl *, 4> Decls;
-  if (ExternalSource) {
-    ExternalSource->ReadPendingInstantiationsOfConstexprEntity(Tpl, Decls);
-    InstantiateAll(Decls);
-  }
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

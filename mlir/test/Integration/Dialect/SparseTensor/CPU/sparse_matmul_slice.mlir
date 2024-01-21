@@ -158,7 +158,6 @@ module {
         [ 0.0, 0.0, 6.0, 0.0 ],
         [ 0.0, 0.0, 7.0, 8.0 ]
     ]> : tensor<8x4xf64>
-    %zero = arith.constant dense<0.0> : tensor<4x4xf64>
 
     // Convert all these matrices to sparse format.
     %tmp = sparse_tensor.convert %sa : tensor<8x8xf64> to tensor<8x8xf64, #DCSR>
@@ -257,9 +256,11 @@ module {
     %ds1 = tensor.extract_slice %sa[0, 1][4, 4][2, 1] : tensor<8x8xf64> to tensor<4x4xf64>
     %ds2 = tensor.extract_slice %sb[0, 0][4, 4][2, 1] : tensor<8x4xf64> to tensor<4x4xf64>
 
-    %d = bufferization.alloc_tensor() copy(%zero) : tensor<4x4xf64>
+    %d = tensor.empty() : tensor<4x4xf64>
+    %zeroed = linalg.fill ins(%f0 : f64) outs(%d : tensor<4x4xf64>)
+        -> tensor<4x4xf64>
     %r = linalg.matmul ins(%ds2, %ds1: tensor<4x4xf64>, tensor<4x4xf64>)
-                       outs(%d: tensor<4x4xf64>) -> tensor<4x4xf64>
+                       outs(%zeroed: tensor<4x4xf64>) -> tensor<4x4xf64>
     %du = tensor.cast %r : tensor<4x4xf64> to tensor<*xf64>
     call @printMemrefF64(%du) : (tensor<*xf64>) -> ()
 

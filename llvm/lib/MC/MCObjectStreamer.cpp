@@ -797,8 +797,9 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     return std::make_pair(true, std::string("unknown relocation name"));
 
   MCFixupKind Kind = *MaybeKind;
-
-  if (Expr == nullptr)
+  if (Expr)
+    visitUsedExpr(*Expr);
+  else
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
 

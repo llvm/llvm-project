@@ -18,6 +18,7 @@
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -242,10 +243,24 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
-  opts.AliasAnalysis =
-      args.hasFlag(clang::driver::options::OPT_falias_analysis,
-                   clang::driver::options::OPT_fno_alias_analysis,
-                   /*default=*/false);
+  opts.AliasAnalysis = opts.OptimizationLevel > 0;
+
+  // -mframe-pointer=none/non-leaf/all option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
+    std::optional<llvm::FramePointerKind> val =
+        llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
+            .Case("none", llvm::FramePointerKind::None)
+            .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("all", llvm::FramePointerKind::All)
+            .Default(std::nullopt);
+
+    if (!val.has_value()) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    } else
+      opts.setFramePointer(val.value());
+  }
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -698,19 +713,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 }
 
 // Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir() {
+static std::string getIntrinsicDir(const char *argv) {
   // TODO: Find a system independent API
   llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
 }
 
 // Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir() {
+static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(includePath);
   includePath.append("/../include/flang/OpenMP/");
   return std::string(includePath);
@@ -920,6 +935,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+      if (args.hasArg(clang::driver::options::OPT_nogpulib))
+        res.getLangOpts().NoGPULib = 1;
     }
 
     switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
@@ -1039,28 +1056,45 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 /// \param [out] diags DiagnosticsEngine to report erros with
 static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMin;
-    if (argValue.getAsInteger(/*Radix=*/10, VScaleMin)) {
-      diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
-      return false;
-    }
-    opts.VScaleMin = VScaleMin;
+  const auto *vscaleMin =
+      args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ);
+  const auto *vscaleMax =
+      args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ);
+
+  if (!vscaleMin && !vscaleMax)
+    return true;
+
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  if (!triple.isAArch64() && !triple.isRISCV()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "`-mvscale-max` and `-mvscale-min` are not "
+                              "supported for this architecture: %0");
+    diags.Report(diagID) << triple.getArchName();
+    return false;
   }
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMax;
-    if (argValue.getAsInteger(/*Radix=w*/ 10, VScaleMax)) {
+
+  LangOptions &opts = invoc.getLangOpts();
+  if (vscaleMin) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
+    unsigned vscaleMinVal;
+    if (argValue.getAsInteger(/*Radix=*/10, vscaleMinVal)) {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
+          << vscaleMax->getSpelling() << argValue;
       return false;
     }
-    opts.VScaleMax = VScaleMax;
+    opts.VScaleMin = vscaleMinVal;
+  }
+
+  if (vscaleMax) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMax->getValue());
+    unsigned vscaleMaxVal;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, vscaleMaxVal)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << vscaleMax->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = vscaleMaxVal;
   }
   return true;
 }
@@ -1087,7 +1121,7 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
 }
 
 bool CompilerInvocation::createFromArgs(
-    CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
+    CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
 
   bool success = true;
@@ -1098,7 +1132,7 @@ bool CompilerInvocation::createFromArgs(
   // NOTE: Like in Clang, it would be nice to use option marshalling
   // for this so that the entire logic for setting-up the triple is in one
   // place.
-  res.getTargetOpts().triple =
+  invoc.getTargetOpts().triple =
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
 
   // Parse the arguments
@@ -1130,7 +1164,7 @@ bool CompilerInvocation::createFromArgs(
   // -flang-experimental-hlfir
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
-    res.loweringOpts.setLowerToHighLevelFIR(true);
+    invoc.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
   // -flang-deprecated-no-hlfir
@@ -1143,16 +1177,17 @@ bool CompilerInvocation::createFromArgs(
           "'-flang-deprecated-no-hlfir' cannot be both specified");
       diags.Report(diagID);
     }
-    res.loweringOpts.setLowerToHighLevelFIR(false);
+    invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
-  if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
-    res.loweringOpts.setPolymorphicTypeImpl(true);
+  if (args.hasArg(
+          clang::driver::options::OPT_flang_experimental_polymorphism)) {
+    invoc.loweringOpts.setPolymorphicTypeImpl(true);
   }
 
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
-    res.loweringOpts.setNoPPCNativeVecElemOrder(true);
+    invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
@@ -1163,46 +1198,46 @@ bool CompilerInvocation::createFromArgs(
       // This is -Rfoo=, where foo is the name of the diagnostic
       // group. Add only the remark option name to the diagnostics. e.g. for
       // -Rpass= we will add the string "pass".
-      res.getDiagnosticOpts().Remarks.push_back(
+      invoc.getDiagnosticOpts().Remarks.push_back(
           std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
     else
       // If no regex was provided, add the provided value, e.g. for -Rpass add
       // the string "pass".
-      res.getDiagnosticOpts().Remarks.push_back(a->getValue());
+      invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
 
-  success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
-  parseTargetArgs(res.getTargetOpts(), args);
-  parsePreprocessorArgs(res.getPreprocessorOpts(), args);
-  parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
-  success &= parseVectorLibArg(res.getCodeGenOpts(), args, diags);
-  success &= parseSemaArgs(res, args, diags);
-  success &= parseDialectArgs(res, args, diags);
-  success &= parseDiagArgs(res, args, diags);
+  success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
+  parseTargetArgs(invoc.getTargetOpts(), args);
+  parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
+  parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
+  success &= parseSemaArgs(invoc, args, diags);
+  success &= parseDialectArgs(invoc, args, diags);
+  success &= parseDiagArgs(invoc, args, diags);
 
   // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
   // NOTE: Try to avoid adding any options directly to `llvmArgs` or
   // `mlirArgs`. Instead, you can use
   //    * `-mllvm <your-llvm-option>`, or
   //    * `-mmlir <your-mlir-option>`.
-  res.frontendOpts.llvmArgs =
+  invoc.frontendOpts.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
-  res.frontendOpts.mlirArgs =
+  invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(res, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
 
-  success &= parseVScaleArgs(res, args, diags);
+  success &= parseVScaleArgs(invoc, args, diags);
 
-  success &= parseLinkerOptionsArgs(res, args, diags);
+  success &= parseLinkerOptionsArgs(invoc, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent
   // compiler driver invocation with an environment variable, or failing that
   // set to the command line arguments of the frontend driver invocation.
-  res.allCompilerInvocOpts = std::string();
-  llvm::raw_string_ostream os(res.allCompilerInvocOpts);
+  invoc.allCompilerInvocOpts = std::string();
+  llvm::raw_string_ostream os(invoc.allCompilerInvocOpts);
   char *compilerOptsEnv = std::getenv("FLANG_COMPILER_OPTIONS_STRING");
   if (compilerOptsEnv != nullptr) {
     os << compilerOptsEnv;
@@ -1213,6 +1248,8 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  invoc.setArgv0(argv0);
 
   return success;
 }
@@ -1256,7 +1293,8 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   // Add the location of omp_lib.h to the search directories. Currently this is
   // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(getOpenMPHeadersDir());
+  fortranOptions.searchDirectories.emplace_back(
+      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1321,7 +1359,8 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
   //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(getIntrinsicDir());
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
@@ -1346,7 +1385,8 @@ void CompilerInvocation::setFortranOpts() {
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>
 CompilerInvocation::getSemanticsCtx(
-    Fortran::parser::AllCookedSources &allCookedSources) {
+    Fortran::parser::AllCookedSources &allCookedSources,
+    const llvm::TargetMachine &targetMachine) {
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
@@ -1359,21 +1399,10 @@ CompilerInvocation::getSemanticsCtx(
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);
 
-  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext->targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
-
-  std::string version = Fortran::common::getFlangFullVersion();
-  semanticsContext->targetCharacteristics()
-      .set_compilerOptionsString(allCompilerInvocOpts)
-      .set_compilerVersionString(version);
-
-  if (targetTriple.isPPC())
-    semanticsContext->targetCharacteristics().set_isPPC(true);
-
+  std::string compilerVersion = Fortran::common::getFlangFullVersion();
+  Fortran::tools::setUpTargetCharacteristics(
+      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
+      allCompilerInvocOpts);
   return semanticsContext;
 }
 

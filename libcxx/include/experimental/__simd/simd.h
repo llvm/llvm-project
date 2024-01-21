@@ -15,9 +15,7 @@
 #include <__utility/forward.h>
 #include <cstddef>
 #include <experimental/__config>
-#include <experimental/__simd/abi_tag.h>
 #include <experimental/__simd/declaration.h>
-#include <experimental/__simd/internal_declaration.h>
 #include <experimental/__simd/reference.h>
 #include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>

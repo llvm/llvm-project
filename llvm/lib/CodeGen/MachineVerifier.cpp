@@ -1812,6 +1812,29 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_PREFETCH: {
+    const MachineOperand &AddrOp = MI->getOperand(0);
+    if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer()) {
+      report("addr operand must be a pointer", &AddrOp, 0);
+      break;
+    }
+    const MachineOperand &RWOp = MI->getOperand(1);
+    if (!RWOp.isImm() || (uint64_t)RWOp.getImm() >= 2) {
+      report("rw operand must be an immediate 0-1", &RWOp, 1);
+      break;
+    }
+    const MachineOperand &LocalityOp = MI->getOperand(2);
+    if (!LocalityOp.isImm() || (uint64_t)LocalityOp.getImm() >= 4) {
+      report("locality operand must be an immediate 0-3", &LocalityOp, 2);
+      break;
+    }
+    const MachineOperand &CacheTypeOp = MI->getOperand(3);
+    if (!CacheTypeOp.isImm() || (uint64_t)CacheTypeOp.getImm() >= 2) {
+      report("cache type operand must be an immediate 0-1", &CacheTypeOp, 3);
+      break;
+    }
+    break;
+  }
   case TargetOpcode::G_ASSERT_ALIGN: {
     if (MI->getOperand(2).getImm() < 1)
       report("alignment immediate must be >= 1", MI);

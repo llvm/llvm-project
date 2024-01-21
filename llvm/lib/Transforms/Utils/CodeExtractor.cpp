@@ -998,6 +998,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::ByRef:
       case Attribute::WriteOnly:
       case Attribute::Writable:
+      case Attribute::DeadOnUnwind:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1734,13 +1735,9 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   NumExitBlocks = ExitBlocks.size();
 
   for (BasicBlock *Block : Blocks) {
-    Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      if (Blocks.count(TI->getSuccessor(i)))
-        continue;
-      BasicBlock *OldTarget = TI->getSuccessor(i);
-      OldTargets.push_back(OldTarget);
-    }
+    for (BasicBlock *OldTarget : successors(Block))
+      if (!Blocks.contains(OldTarget))
+        OldTargets.push_back(OldTarget);
   }
 
   // If we have to split PHI nodes of the entry or exit blocks, do so now.

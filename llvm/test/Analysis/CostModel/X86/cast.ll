@@ -616,27 +616,31 @@ define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
 ; SSE-LABEL: 'fp_conv'
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; SSE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %A3 = fpext <16 x float> %b to <16 x double>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A4 = fptrunc <4 x double> undef to <4 x float>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A5 = fptrunc <8 x double> undef to <8 x float>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'fp_conv'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %A3 = fpext <16 x float> %b to <16 x double>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A4 = fptrunc <4 x double> undef to <4 x float>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %A5 = fptrunc <8 x double> undef to <8 x float>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'fp_conv'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A1 = fpext <4 x float> %c to <4 x double>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A2 = fpext <8 x float> %a to <8 x double>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A3 = fptrunc <4 x double> undef to <4 x float>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A4 = fptrunc <8 x double> undef to <8 x float>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %A3 = fpext <16 x float> %b to <16 x double>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A4 = fptrunc <4 x double> undef to <4 x float>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %A5 = fptrunc <8 x double> undef to <8 x float>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %A1 = fpext <4 x float> %c to <4 x double>
   %A2 = fpext <8 x float> %a to <8 x double>
-  %A3 = fptrunc <4 x double> undef to <4 x float>
-  %A4 = fptrunc <8 x double> undef to <8 x float>
+  %A3 = fpext <16 x float> %b to <16 x double>
+  %A4 = fptrunc <4 x double> undef to <4 x float>
+  %A5 = fptrunc <8 x double> undef to <8 x float>
   ret void
 }

@@ -96,7 +96,7 @@ define void @pr56282() {
 ; CHECK:       inner.2.preheader:
 ; CHECK-NEXT:    br label [[INNER_2]]
 ; CHECK:       inner.2:
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

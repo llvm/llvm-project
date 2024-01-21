@@ -7,7 +7,9 @@ target triple = "arm64-apple-ios"
 
 ; CHECK-LABEL: LV: Checking a loop in 'test'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -18,12 +20,13 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double
 ; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function: __simd_sin_v2f64)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -34,6 +37,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: }
 
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
@@ -45,12 +49,13 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.src>
+; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%conv> = fpext ir<%l> to double
 ; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using vector intrinsic)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

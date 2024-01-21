@@ -63,7 +63,7 @@ struct msvc_hashing_ostream : public llvm::raw_svector_ostream {
       : llvm::raw_svector_ostream(Buffer), OS(OS) {}
   ~msvc_hashing_ostream() override {
     StringRef MangledName = str();
-    bool StartsWithEscape = MangledName.startswith("\01");
+    bool StartsWithEscape = MangledName.starts_with("\01");
     if (StartsWithEscape)
       MangledName = MangledName.drop_front(1);
     if (MangledName.size() < 4096) {
@@ -3809,14 +3809,14 @@ void MicrosoftMangleContextImpl::mangleCXXRTTICompleteObjectLocator(
   llvm::raw_svector_ostream Stream(VFTableMangling);
   mangleCXXVFTable(Derived, BasePath, Stream);
 
-  if (VFTableMangling.startswith("??@")) {
-    assert(VFTableMangling.endswith("@"));
+  if (VFTableMangling.starts_with("??@")) {
+    assert(VFTableMangling.ends_with("@"));
     Out << VFTableMangling << "??_R4@";
     return;
   }
 
-  assert(VFTableMangling.startswith("??_7") ||
-         VFTableMangling.startswith("??_S"));
+  assert(VFTableMangling.starts_with("??_7") ||
+         VFTableMangling.starts_with("??_S"));
 
   Out << "??_R4" << VFTableMangling.str().drop_front(4);
 }

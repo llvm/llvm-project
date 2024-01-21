@@ -615,6 +615,8 @@ public:
   /// immediately destroyed.
   raw_fd_stream(StringRef Filename, std::error_code &EC);
 
+  raw_fd_stream(int fd, bool shouldClose);
+
   /// This reads the \p Size bytes into a buffer pointed by \p Ptr.
   ///
   /// \param Ptr The start of the buffer to hold data to be read.

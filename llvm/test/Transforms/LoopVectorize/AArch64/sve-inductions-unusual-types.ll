@@ -11,7 +11,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: @induction_i7(
 ; CHECK:       vector.ph:
-; CHECK:         [[TMP4:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
+; CHECK:         %ind.end = trunc i64 %n.vec to i7
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
 ; CHECK:         [[TMP5:%.*]] = trunc <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i7> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i7> [[TMP6]], shufflevector (<vscale x 2 x i7> insertelement (<vscale x 2 x i7> poison, i7 1, i64 0), <vscale x 2 x i7> poison, <vscale x 2 x i32> zeroinitializer)
@@ -25,8 +28,6 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[EXT:%.+]]  = zext <vscale x 2 x i7> [[TMP11]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[EXT]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i7> [[VEC_IND]],
 ;
@@ -57,6 +58,9 @@ for.end:                                          ; preds = %for.body
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: @induction_i3_zext(
 ; CHECK:       vector.ph:
+; CHECK:         %ind.end = trunc i64 %n.vec to i3
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK:         [[TMP4:%.*]] = call <vscale x 2 x i8> @llvm.experimental.stepvector.nxv2i8()
 ; CHECK:         [[TMP5:%.*]] = trunc <vscale x 2 x i8> [[TMP4]] to <vscale x 2 x i3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i3> [[TMP5]], zeroinitializer
@@ -70,8 +74,6 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP10]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i3> [[VEC_IND]],
 ;

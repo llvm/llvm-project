@@ -787,7 +787,7 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: fmed3_f32_fpext_f16_fptrunc_bf16:
@@ -797,7 +797,7 @@ define bfloat @fmed3_f32_fpext_f16_fptrunc_bf16(half %arg0, half %arg1, half %ar
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %arg0.ext = fpext half %arg0 to float
   %arg1.ext = fpext half %arg1 to float
@@ -1021,6 +1021,9 @@ define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) #1 {
 ; GFX8-LABEL: fmed3_f32_fpext_bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1028,6 +1031,9 @@ define half @fmed3_f32_fpext_bf16(bfloat %arg0, bfloat %arg1, bfloat %arg2) #1 {
 ; GFX9-LABEL: fmed3_f32_fpext_bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1053,6 +1059,7 @@ define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1062,6 +1069,7 @@ define half @fmed3_f32_fpext_f16_bf16_0(bfloat %arg0, half %arg1, half %arg2) #1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1087,6 +1095,7 @@ define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1096,6 +1105,7 @@ define half @fmed3_f32_fpext_f16_bf16_1(half %arg0, bfloat %arg1, half %arg2) #1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1121,6 +1131,7 @@ define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX8-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1130,6 +1141,7 @@ define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX9-NEXT:    v_med3_f32 v0, v0, v1, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]

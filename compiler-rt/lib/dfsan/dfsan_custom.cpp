@@ -842,7 +842,7 @@ __dfsw_dlopen(const char *filename, int flag, dfsan_label filename_label,
               dfsan_label flag_label, dfsan_label *ret_label) {
   void *handle = dlopen(filename, flag);
   link_map *map = GET_LINK_MAP_BY_DLOPEN_HANDLE(handle);
-  if (map)
+  if (filename && map)
     ForEachMappedRegion(map, dfsan_set_zero_label);
   *ret_label = 0;
   return handle;
@@ -2792,7 +2792,7 @@ int __dfsw_sprintf(char *str, const char *format, dfsan_label str_label,
   va_list ap;
   va_start(ap, ret_label);
 
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, nullptr,
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label, nullptr,
                           nullptr, ap);
   va_end(ap);
   return ret;
@@ -2806,8 +2806,8 @@ int __dfso_sprintf(char *str, const char *format, dfsan_label str_label,
                    dfsan_origin *ret_origin, ...) {
   va_list ap;
   va_start(ap, ret_origin);
-  int ret = format_buffer(str, ~0ul, format, va_labels, ret_label, va_origins,
-                          ret_origin, ap);
+  int ret = format_buffer(str, INT32_MAX, format, va_labels, ret_label,
+                          va_origins, ret_origin, ap);
   va_end(ap);
   return ret;
 }
@@ -2893,13 +2893,13 @@ int __dfso___isoc99_sscanf(char *str, const char *format, dfsan_label str_label,
 }
 
 static void BeforeFork() {
-  StackDepotLockAll();
-  GetChainedOriginDepot()->LockAll();
+  StackDepotLockBeforeFork();
+  ChainedOriginDepotLockBeforeFork();
 }
 
-static void AfterFork() {
-  GetChainedOriginDepot()->UnlockAll();
-  StackDepotUnlockAll();
+static void AfterFork(bool fork_child) {
+  ChainedOriginDepotUnlockAfterFork(fork_child);
+  StackDepotUnlockAfterFork(fork_child);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -2913,7 +2913,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 pid_t __dfso_fork(dfsan_label *ret_label, dfsan_origin *ret_origin) {
   BeforeFork();
   pid_t pid = __dfsw_fork(ret_label);
-  AfterFork();
+  AfterFork(/* fork_child= */ pid == 0);
   return pid;
 }
 

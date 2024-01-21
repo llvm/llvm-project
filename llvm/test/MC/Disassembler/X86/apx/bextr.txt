@@ -1,0 +1,18 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   bextrl	%r18d, %r22d, %r26d
+# INTEL: bextr	r26d, r22d, r18d
+0x62,0x6a,0x6c,0x00,0xf7,0xd6
+
+# ATT:   bextrl	%r18d, 291(%r28,%r29,4), %r22d
+# INTEL: bextr	r22d, dword ptr [r28 + 4*r29 + 291], r18d
+0x62,0x8a,0x68,0x00,0xf7,0xb4,0xac,0x23,0x01,0x00,0x00
+
+# ATT:   bextrq	%r19, %r23, %r27
+# INTEL: bextr	r27, r23, r19
+0x62,0x6a,0xe4,0x00,0xf7,0xdf
+
+# ATT:   bextrq	%r19, 291(%r28,%r29,4), %r23
+# INTEL: bextr	r23, qword ptr [r28 + 4*r29 + 291], r19
+0x62,0x8a,0xe0,0x00,0xf7,0xbc,0xac,0x23,0x01,0x00,0x00

@@ -95,6 +95,8 @@ void CoverageSourceInfo::updateNextTokLoc(SourceLocation Loc) {
 }
 
 namespace {
+using MCDCConditionID = CounterMappingRegion::MCDCConditionID;
+using MCDCParameters = CounterMappingRegion::MCDCParameters;
 
 /// A region of source code that can be mapped to a counter.
 class SourceMappingRegion {
@@ -103,6 +105,9 @@ class SourceMappingRegion {
 
   /// Secondary Counter used for Branch Regions for "False" branches.
   std::optional<Counter> FalseCount;
+
+  /// Parameters used for Modified Condition/Decision Coverage
+  MCDCParameters MCDCParams;
 
   /// The region's starting location.
   std::optional<SourceLocation> LocStart;
@@ -122,11 +127,18 @@ public:
   }
 
   SourceMappingRegion(Counter Count, std::optional<Counter> FalseCount,
+                      MCDCParameters MCDCParams,
                       std::optional<SourceLocation> LocStart,
                       std::optional<SourceLocation> LocEnd,
                       bool GapRegion = false)
-      : Count(Count), FalseCount(FalseCount), LocStart(LocStart),
-        LocEnd(LocEnd), GapRegion(GapRegion) {}
+      : Count(Count), FalseCount(FalseCount), MCDCParams(MCDCParams),
+        LocStart(LocStart), LocEnd(LocEnd), GapRegion(GapRegion) {}
+
+  SourceMappingRegion(MCDCParameters MCDCParams,
+                      std::optional<SourceLocation> LocStart,
+                      std::optional<SourceLocation> LocEnd)
+      : MCDCParams(MCDCParams), LocStart(LocStart), LocEnd(LocEnd),
+        GapRegion(false) {}
 
   const Counter &getCounter() const { return Count; }
 
@@ -163,6 +175,10 @@ public:
   void setGap(bool Gap) { GapRegion = Gap; }
 
   bool isBranch() const { return FalseCount.has_value(); }
+
+  bool isMCDCDecision() const { return MCDCParams.NumConditions != 0; }
+
+  const MCDCParameters &getMCDCParams() const { return MCDCParams; }
 };
 
 /// Spelling locations for the start and end of a source region.
@@ -454,8 +470,13 @@ public:
             SR.LineEnd, SR.ColumnEnd));
       } else if (Region.isBranch()) {
         MappingRegions.push_back(CounterMappingRegion::makeBranchRegion(
-            Region.getCounter(), Region.getFalseCounter(), *CovFileID,
-            SR.LineStart, SR.ColumnStart, SR.LineEnd, SR.ColumnEnd));
+            Region.getCounter(), Region.getFalseCounter(),
+            Region.getMCDCParams(), *CovFileID, SR.LineStart, SR.ColumnStart,
+            SR.LineEnd, SR.ColumnEnd));
+      } else if (Region.isMCDCDecision()) {
+        MappingRegions.push_back(CounterMappingRegion::makeDecisionRegion(
+            Region.getMCDCParams(), *CovFileID, SR.LineStart, SR.ColumnStart,
+            SR.LineEnd, SR.ColumnEnd));
       } else {
         MappingRegions.push_back(CounterMappingRegion::makeRegion(
             Region.getCounter(), *CovFileID, SR.LineStart, SR.ColumnStart,
@@ -542,6 +563,232 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
   }
 };
 
+/// A wrapper object for maintaining stacks to track the resursive AST visitor
+/// walks for the purpose of assigning IDs to leaf-level conditions measured by
+/// MC/DC. The object is created with a reference to the MCDCBitmapMap that was
+/// created during the initial AST walk. The presence of a bitmap associated
+/// with a boolean expression (top-level logical operator nest) indicates that
+/// the boolean expression qualified for MC/DC.  The resulting condition IDs
+/// are preserved in a map reference that is also provided during object
+/// creation.
+struct MCDCCoverageBuilder {
+
+  struct DecisionIDPair {
+    MCDCConditionID TrueID = 0;
+    MCDCConditionID FalseID = 0;
+  };
+
+  /// The AST walk recursively visits nested logical-AND or logical-OR binary
+  /// operator nodes and then visits their LHS and RHS children nodes.  As this
+  /// happens, the algorithm will assign IDs to each operator's LHS and RHS side
+  /// as the walk moves deeper into the nest.  At each level of the recursive
+  /// nest, the LHS and RHS may actually correspond to larger subtrees (not
+  /// leaf-conditions). If this is the case, when that node is visited, the ID
+  /// assigned to the subtree is re-assigned to its LHS, and a new ID is given
+  /// to its RHS. At the end of the walk, all leaf-level conditions will have a
+  /// unique ID -- keep in mind that the final set of IDs may not be in
+  /// numerical order from left to right.
+  ///
+  /// Example: "x = (A && B) || (C && D) || (D && F)"
+  ///
+  ///      Visit Depth1:
+  ///              (A && B) || (C && D) || (D && F)
+  ///              ^-------LHS--------^    ^-RHS--^
+  ///                      ID=1              ID=2
+  ///
+  ///      Visit LHS-Depth2:
+  ///              (A && B) || (C && D)
+  ///              ^-LHS--^    ^-RHS--^
+  ///                ID=1        ID=3
+  ///
+  ///      Visit LHS-Depth3:
+  ///               (A && B)
+  ///               LHS   RHS
+  ///               ID=1  ID=4
+  ///
+  ///      Visit RHS-Depth3:
+  ///                         (C && D)
+  ///                         LHS   RHS
+  ///                         ID=3  ID=5
+  ///
+  ///      Visit RHS-Depth2:              (D && F)
+  ///                                     LHS   RHS
+  ///                                     ID=2  ID=6
+  ///
+  ///      Visit Depth1:
+  ///              (A && B)  || (C && D)  || (D && F)
+  ///              ID=1  ID=4   ID=3  ID=5   ID=2  ID=6
+  ///
+  /// A node ID of '0' always means MC/DC isn't being tracked.
+  ///
+  /// As the AST walk proceeds recursively, the algorithm will also use a stack
+  /// to track the IDs of logical-AND and logical-OR operations on the RHS so
+  /// that it can be determined which nodes are executed next, depending on how
+  /// a LHS or RHS of a logical-AND or logical-OR is evaluated.  This
+  /// information relies on the assigned IDs and are embedded within the
+  /// coverage region IDs of each branch region associated with a leaf-level
+  /// condition. This information helps the visualization tool reconstruct all
+  /// possible test vectors for the purposes of MC/DC analysis. If a "next" node
+  /// ID is '0', it means it's the end of the test vector. The following rules
+  /// are used:
+  ///
+  /// For logical-AND ("LHS && RHS"):
+  /// - If LHS is TRUE, execution goes to the RHS node.
+  /// - If LHS is FALSE, execution goes to the LHS node of the next logical-OR.
+  ///   If that does not exist, execution exits (ID == 0).
+  ///
+  /// - If RHS is TRUE, execution goes to LHS node of the next logical-AND.
+  ///   If that does not exist, execution exits (ID == 0).
+  /// - If RHS is FALSE, execution goes to the LHS node of the next logical-OR.
+  ///   If that does not exist, execution exits (ID == 0).
+  ///
+  /// For logical-OR ("LHS || RHS"):
+  /// - If LHS is TRUE, execution goes to the LHS node of the next logical-AND.
+  ///   If that does not exist, execution exits (ID == 0).
+  /// - If LHS is FALSE, execution goes to the RHS node.
+  ///
+  /// - If RHS is TRUE, execution goes to LHS node of the next logical-AND.
+  ///   If that does not exist, execution exits (ID == 0).
+  /// - If RHS is FALSE, execution goes to the LHS node of the next logical-OR.
+  ///   If that does not exist, execution exits (ID == 0).
+  ///
+  /// Finally, the condition IDs are also used when instrumenting the code to
+  /// indicate a unique offset into a temporary bitmap that represents the true
+  /// or false evaluation of that particular condition.
+  ///
+  /// NOTE regarding the use of CodeGenFunction::stripCond(). Even though, for
+  /// simplicity, parentheses and unary logical-NOT operators are considered
+  /// part of their underlying condition for both MC/DC and branch coverage, the
+  /// condition IDs themselves are assigned and tracked using the underlying
+  /// condition itself.  This is done solely for consistency since parentheses
+  /// and logical-NOTs are ignored when checking whether the condition is
+  /// actually an instrumentable condition. This can also make debugging a bit
+  /// easier.
+
+private:
+  CodeGenModule &CGM;
+
+  llvm::SmallVector<DecisionIDPair> DecisionStack;
+  llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDs;
+  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
+  MCDCConditionID NextID = 1;
+  bool NotMapped = false;
+
+  /// Represent a sentinel value of [0,0] for the bottom of DecisionStack.
+  static constexpr DecisionIDPair DecisionStackSentinel{0, 0};
+
+  /// Is this a logical-AND operation?
+  bool isLAnd(const BinaryOperator *E) const {
+    return E->getOpcode() == BO_LAnd;
+  }
+
+public:
+  MCDCCoverageBuilder(CodeGenModule &CGM,
+                      llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDMap,
+                      llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap)
+      : CGM(CGM), DecisionStack(1, DecisionStackSentinel), CondIDs(CondIDMap),
+        MCDCBitmapMap(MCDCBitmapMap) {}
+
+  /// Return whether the build of the control flow map is at the top-level
+  /// (root) of a logical operator nest in a boolean expression prior to the
+  /// assignment of condition IDs.
+  bool isIdle() const { return (NextID == 1 && !NotMapped); }
+
+  /// Return whether any IDs have been assigned in the build of the control
+  /// flow map, indicating that the map is being generated for this boolean
+  /// expression.
+  bool isBuilding() const { return (NextID > 1); }
+
+  /// Set the given condition's ID.
+  void setCondID(const Expr *Cond, MCDCConditionID ID) {
+    CondIDs[CodeGenFunction::stripCond(Cond)] = ID;
+  }
+
+  /// Return the ID of a given condition.
+  MCDCConditionID getCondID(const Expr *Cond) const {
+    auto I = CondIDs.find(CodeGenFunction::stripCond(Cond));
+    if (I == CondIDs.end())
+      return 0;
+    else
+      return I->second;
+  }
+
+  /// Return the LHS Decision ([0,0] if not set).
+  const DecisionIDPair &back() const { return DecisionStack.back(); }
+
+  /// Push the binary operator statement to track the nest level and assign IDs
+  /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
+  /// broken up on successive levels.
+  void pushAndAssignIDs(const BinaryOperator *E) {
+    if (!CGM.getCodeGenOpts().MCDCCoverage)
+      return;
+
+    // If binary expression is disqualified, don't do mapping.
+    if (!isBuilding() && !MCDCBitmapMap.contains(CodeGenFunction::stripCond(E)))
+      NotMapped = true;
+
+    // Don't go any further if we don't need to map condition IDs.
+    if (NotMapped)
+      return;
+
+    const DecisionIDPair &ParentDecision = DecisionStack.back();
+
+    // If the operator itself has an assigned ID, this means it represents a
+    // larger subtree.  In this case, assign that ID to its LHS node.  Its RHS
+    // will receive a new ID below. Otherwise, assign ID+1 to LHS.
+    if (CondIDs.contains(CodeGenFunction::stripCond(E)))
+      setCondID(E->getLHS(), getCondID(E));
+    else
+      setCondID(E->getLHS(), NextID++);
+
+    // Assign a ID+1 for the RHS.
+    MCDCConditionID RHSid = NextID++;
+    setCondID(E->getRHS(), RHSid);
+
+    // Push the LHS decision IDs onto the DecisionStack.
+    if (isLAnd(E))
+      DecisionStack.push_back({RHSid, ParentDecision.FalseID});
+    else
+      DecisionStack.push_back({ParentDecision.TrueID, RHSid});
+  }
+
+  /// Pop and return the LHS Decision ([0,0] if not set).
+  DecisionIDPair pop() {
+    if (!CGM.getCodeGenOpts().MCDCCoverage || NotMapped)
+      return DecisionStack.front();
+
+    assert(DecisionStack.size() > 1);
+    DecisionIDPair D = DecisionStack.back();
+    DecisionStack.pop_back();
+    return D;
+  }
+
+  /// Return the total number of conditions and reset the state. The number of
+  /// conditions is zero if the expression isn't mapped.
+  unsigned getTotalConditionsAndReset(const BinaryOperator *E) {
+    if (!CGM.getCodeGenOpts().MCDCCoverage)
+      return 0;
+
+    assert(!isIdle());
+    assert(DecisionStack.size() == 1);
+
+    // Reset state if not doing mapping.
+    if (NotMapped) {
+      NotMapped = false;
+      assert(NextID == 1);
+      return 0;
+    }
+
+    // Set number of conditions and reset.
+    unsigned TotalConds = NextID - 1;
+
+    // Reset ID back to beginning.
+    NextID = 1;
+
+    return TotalConds;
+  }
+};
+
 /// A StmtVisitor that creates coverage mapping regions which map
 /// from the source code locations to the PGO counters.
 struct CounterCoverageMappingBuilder
@@ -550,8 +797,14 @@ struct CounterCoverageMappingBuilder
   /// The map of statements to count values.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
 
+  /// The map of statements to bitmap coverage object values.
+  llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap;
+
   /// A stack of currently live regions.
-  std::vector<SourceMappingRegion> RegionStack;
+  llvm::SmallVector<SourceMappingRegion> RegionStack;
+
+  /// An object to manage MCDC regions.
+  MCDCCoverageBuilder MCDCBuilder;
 
   CounterExpressionBuilder Builder;
 
@@ -589,6 +842,8 @@ struct CounterCoverageMappingBuilder
     return Counter::getCounter(CounterMap[S]);
   }
 
+  unsigned getRegionBitmap(const Stmt *S) { return MCDCBitmapMap[S]; }
+
   /// Push a region onto the stack.
   ///
   /// Returns the index on the stack where the region was pushed. This can be
@@ -596,7 +851,9 @@ struct CounterCoverageMappingBuilder
   size_t pushRegion(Counter Count,
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt,
-                    std::optional<Counter> FalseCount = std::nullopt) {
+                    std::optional<Counter> FalseCount = std::nullopt,
+                    MCDCConditionID ID = 0, MCDCConditionID TrueID = 0,
+                    MCDCConditionID FalseID = 0) {
 
     if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
@@ -615,7 +872,19 @@ struct CounterCoverageMappingBuilder
       StartLoc = std::nullopt;
     if (EndLoc && EndLoc->isInvalid())
       EndLoc = std::nullopt;
-    RegionStack.emplace_back(Count, FalseCount, StartLoc, EndLoc);
+    RegionStack.emplace_back(Count, FalseCount,
+                             MCDCParameters{0, 0, ID, TrueID, FalseID},
+                             StartLoc, EndLoc);
+
+    return RegionStack.size() - 1;
+  }
+
+  size_t pushRegion(unsigned BitmapIdx, unsigned Conditions,
+                    std::optional<SourceLocation> StartLoc = std::nullopt,
+                    std::optional<SourceLocation> EndLoc = std::nullopt) {
+
+    RegionStack.emplace_back(MCDCParameters{BitmapIdx, Conditions}, StartLoc,
+                             EndLoc);
 
     return RegionStack.size() - 1;
   }
@@ -742,11 +1011,15 @@ struct CounterCoverageMappingBuilder
     return (Cond->EvaluateAsInt(Result, CVM.getCodeGenModule().getContext()));
   }
 
+  using MCDCDecisionIDPair = MCDCCoverageBuilder::DecisionIDPair;
+
   /// Create a Branch Region around an instrumentable condition for coverage
   /// and add it to the function's SourceRegions.  A branch region tracks a
   /// "True" counter and a "False" counter for boolean expressions that
   /// result in the generation of a branch.
-  void createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt) {
+  void
+  createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt,
+                     const MCDCDecisionIDPair &IDPair = MCDCDecisionIDPair()) {
     // Check for NULL conditions.
     if (!C)
       return;
@@ -756,6 +1029,10 @@ struct CounterCoverageMappingBuilder
     // function's SourceRegions) because it doesn't apply to any other source
     // code other than the Condition.
     if (CodeGenFunction::isInstrumentedCondition(C)) {
+      MCDCConditionID ID = MCDCBuilder.getCondID(C);
+      MCDCConditionID TrueID = IDPair.TrueID;
+      MCDCConditionID FalseID = IDPair.FalseID;
+
       // If a condition can fold to true or false, the corresponding branch
       // will be removed.  Create a region with both counters hard-coded to
       // zero. This allows us to visualize them in a special way.
@@ -764,11 +1041,19 @@ struct CounterCoverageMappingBuilder
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
       if (ConditionFoldsToBool(C))
         popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
-                              Counter::getZero()));
+                              Counter::getZero(), ID, TrueID, FalseID));
       else
         // Otherwise, create a region with the True counter and False counter.
-        popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt));
+        popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt, ID,
+                              TrueID, FalseID));
     }
+  }
+
+  /// Create a Decision Region with a BitmapIdx and number of Conditions. This
+  /// type of region "contains" branch regions, one for each of the conditions.
+  /// The visualization tool will group everything together.
+  void createDecisionRegion(const Expr *C, unsigned BitmapIdx, unsigned Conds) {
+    popRegions(pushRegion(BitmapIdx, Conds, getStart(C), getEnd(C)));
   }
 
   /// Create a Branch Region around a SwitchCase for code coverage
@@ -851,8 +1136,12 @@ struct CounterCoverageMappingBuilder
         // we've seen this region.
         if (StartLocs.insert(Loc).second) {
           if (I.isBranch())
-            SourceRegions.emplace_back(I.getCounter(), I.getFalseCounter(), Loc,
-                                       getEndOfFileOrMacro(Loc), I.isBranch());
+            SourceRegions.emplace_back(
+                I.getCounter(), I.getFalseCounter(),
+                MCDCParameters{0, 0, I.getMCDCParams().ID,
+                               I.getMCDCParams().TrueID,
+                               I.getMCDCParams().FalseID},
+                Loc, getEndOfFileOrMacro(Loc), I.isBranch());
           else
             SourceRegions.emplace_back(I.getCounter(), Loc,
                                        getEndOfFileOrMacro(Loc));
@@ -971,9 +1260,13 @@ struct CounterCoverageMappingBuilder
 
   CounterCoverageMappingBuilder(
       CoverageMappingModuleGen &CVM,
-      llvm::DenseMap<const Stmt *, unsigned> &CounterMap, SourceManager &SM,
-      const LangOptions &LangOpts)
-      : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap) {}
+      llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+      llvm::DenseMap<const Stmt *, unsigned> &MCDCBitmapMap,
+      llvm::DenseMap<const Stmt *, MCDCConditionID> &CondIDMap,
+      SourceManager &SM, const LangOptions &LangOpts)
+      : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
+        MCDCBitmapMap(MCDCBitmapMap),
+        MCDCBuilder(CVM.getCodeGenModule(), CondIDMap, MCDCBitmapMap) {}
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
@@ -1418,7 +1711,11 @@ struct CounterCoverageMappingBuilder
       extendRegion(S->getCond());
 
     Counter ParentCount = getRegion().getCounter();
-    Counter ThenCount = getRegionCounter(S);
+
+    // If this is "if !consteval" the then-branch will never be taken, we don't
+    // need to change counter
+    Counter ThenCount =
+        S->isNegatedConsteval() ? ParentCount : getRegionCounter(S);
 
     if (!S->isConsteval()) {
       // Emitting a counter for the condition makes it easier to interpret the
@@ -1435,7 +1732,12 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getThen());
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
 
-    Counter ElseCount = subtractCounters(ParentCount, ThenCount);
+    // If this is "if consteval" the else-branch will never be taken, we don't
+    // need to change counter
+    Counter ElseCount = S->isNonNegatedConsteval()
+                            ? ParentCount
+                            : subtractCounters(ParentCount, ThenCount);
+
     if (const Stmt *Else = S->getElse()) {
       bool ThenHasTerminateStmt = HasTerminateStmt;
       HasTerminateStmt = false;
@@ -1519,13 +1821,29 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
+    bool IsRootNode = MCDCBuilder.isIdle();
+
+    // Keep track of Binary Operator and assign MCDC condition IDs.
+    MCDCBuilder.pushAndAssignIDs(E);
+
     extendRegion(E->getLHS());
     propagateCounts(getRegion().getCounter(), E->getLHS());
     handleFileExit(getEnd(E->getLHS()));
 
+    // Track LHS True/False Decision.
+    const auto DecisionLHS = MCDCBuilder.pop();
+
     // Counter tracks the right hand side of a logical and operator.
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
+
+    // Track RHS True/False Decision.
+    const auto DecisionRHS = MCDCBuilder.back();
+
+    // Create MCDC Decision Region if at top-level (root).
+    unsigned NumConds = 0;
+    if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
+      createDecisionRegion(E, getRegionBitmap(E), NumConds);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -1538,11 +1856,11 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), RHSExecCnt,
-                       subtractCounters(ParentCnt, RHSExecCnt));
+                       subtractCounters(ParentCnt, RHSExecCnt), DecisionLHS);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), RHSTrueCnt,
-                       subtractCounters(RHSExecCnt, RHSTrueCnt));
+                       subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS);
   }
 
   // Determine whether the right side of OR operation need to be visited.
@@ -1556,13 +1874,29 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitBinLOr(const BinaryOperator *E) {
+    bool IsRootNode = MCDCBuilder.isIdle();
+
+    // Keep track of Binary Operator and assign MCDC condition IDs.
+    MCDCBuilder.pushAndAssignIDs(E);
+
     extendRegion(E->getLHS());
     Counter OutCount = propagateCounts(getRegion().getCounter(), E->getLHS());
     handleFileExit(getEnd(E->getLHS()));
 
+    // Track LHS True/False Decision.
+    const auto DecisionLHS = MCDCBuilder.pop();
+
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
+
+    // Track RHS True/False Decision.
+    const auto DecisionRHS = MCDCBuilder.back();
+
+    // Create MCDC Decision Region if at top-level (root).
+    unsigned NumConds = 0;
+    if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
+      createDecisionRegion(E, getRegionBitmap(E), NumConds);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -1579,11 +1913,11 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), subtractCounters(ParentCnt, RHSExecCnt),
-                       RHSExecCnt);
+                       RHSExecCnt, DecisionLHS);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), subtractCounters(RHSExecCnt, RHSFalseCnt),
-                       RHSFalseCnt);
+                       RHSFalseCnt, DecisionRHS);
   }
 
   void VisitLambdaExpr(const LambdaExpr *LE) {
@@ -1623,17 +1957,33 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       OS << "Gap,";
       break;
     case CounterMappingRegion::BranchRegion:
+    case CounterMappingRegion::MCDCBranchRegion:
       OS << "Branch,";
+      break;
+    case CounterMappingRegion::MCDCDecisionRegion:
+      OS << "Decision,";
       break;
     }
 
     OS << "File " << R.FileID << ", " << R.LineStart << ":" << R.ColumnStart
        << " -> " << R.LineEnd << ":" << R.ColumnEnd << " = ";
-    Ctx.dump(R.Count, OS);
 
-    if (R.Kind == CounterMappingRegion::BranchRegion) {
-      OS << ", ";
-      Ctx.dump(R.FalseCount, OS);
+    if (R.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+      OS << "M:" << R.MCDCParams.BitmapIdx;
+      OS << ", C:" << R.MCDCParams.NumConditions;
+    } else {
+      Ctx.dump(R.Count, OS);
+
+      if (R.Kind == CounterMappingRegion::BranchRegion ||
+          R.Kind == CounterMappingRegion::MCDCBranchRegion) {
+        OS << ", ";
+        Ctx.dump(R.FalseCount, OS);
+      }
+    }
+
+    if (R.Kind == CounterMappingRegion::MCDCBranchRegion) {
+      OS << " [" << R.MCDCParams.ID << "," << R.MCDCParams.TrueID;
+      OS << "," << R.MCDCParams.FalseID << "] ";
     }
 
     if (R.Kind == CounterMappingRegion::ExpansionRegion)
@@ -1842,8 +2192,9 @@ unsigned CoverageMappingModuleGen::getFileID(FileEntryRef File) {
 
 void CoverageMappingGen::emitCounterMapping(const Decl *D,
                                             llvm::raw_ostream &OS) {
-  assert(CounterMap);
-  CounterCoverageMappingBuilder Walker(CVM, *CounterMap, SM, LangOpts);
+  assert(CounterMap && MCDCBitmapMap);
+  CounterCoverageMappingBuilder Walker(CVM, *CounterMap, *MCDCBitmapMap,
+                                       *CondIDMap, SM, LangOpts);
   Walker.VisitDecl(D);
   Walker.write(OS);
 }

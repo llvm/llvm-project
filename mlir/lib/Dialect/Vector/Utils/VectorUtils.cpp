@@ -249,3 +249,57 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // between parallel, reduction and possibly other cases.
   return ratio.has_value();
 }
+
+bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
+  if (vectorType.isScalable())
+    return false;
+
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
+  auto vecRank = vectorType.getRank();
+
+  // Extract the trailing dims and strides of the input memref
+  auto memrefShape = memrefType.getShape().take_back(vecRank);
+  int64_t offset;
+  SmallVector<int64_t> stridesFull;
+  if (!succeeded(getStridesAndOffset(memrefType, stridesFull, offset)))
+    return false;
+  auto strides = ArrayRef<int64_t>(stridesFull).take_back(vecRank);
+  memrefType.getLayout().isIdentity();
+
+  // TODO: Add support for memref with trailing dynamic shapes. Memrefs
+  // with leading dynamic dimensions are already supported.
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  // Cond 1: Check whether `memrefType` is contiguous.
+  if (!strides.empty()) {
+    // Cond 1.1: A contiguous memref will always have a unit trailing stride.
+    if (strides.back() != 1)
+      return false;
+
+    // Cond 1.2: Strides of a contiguous memref have to match the flattened
+    // dims.
+    strides = strides.drop_back(1);
+    SmallVector<int64_t> flattenedDims;
+    for (size_t i = 1; i < memrefShape.size(); i++)
+      flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
+
+    if (!llvm::equal(strides, llvm::reverse(flattenedDims)))
+      return false;
+  }
+
+  // Cond 2: Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // In the most basic case, all dims will match.
+  auto firstNonMatchingDim =
+      std::mismatch(vectorShape.rbegin(), vectorShape.rend(),
+                    memrefShape.rbegin(), memrefShape.rend());
+  if (firstNonMatchingDim.first == vectorShape.rend())
+    return true;
+
+  // One non-matching dim is still fine, however the remaining leading dims of
+  // `vectorType` need to be 1.
+  SmallVector<int64_t> leadingDims(++firstNonMatchingDim.first,
+                                   vectorShape.rend());
+
+  return llvm::all_of(leadingDims, [](auto x) { return x == 1; });
+}

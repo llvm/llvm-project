@@ -1494,3 +1494,23 @@ func.func @extract_strided_metadata_of_cast_unranked(
       index, index,
       index, index
 }
+
+
+// -----
+memref.global "private" @dynamicShmem : memref<0xf16,3>
+
+// CHECK-LABEL: func @zero_sized_memred
+func.func @zero_sized_memred(%arg0: f32) -> (memref<f16, 3>, index,index,index) {
+  %c0 = arith.constant 0 : index
+  %dynamicMem = memref.get_global @dynamicShmem : memref<0xf16, 3>
+
+  // CHECK: %[[BASE:.*]] = memref.get_global @dynamicShmem : memref<0xf16, 3>
+  // CHECK: %[[CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [], strides: [] : memref<0xf16, 3> to memref<f16, 3>
+  // CHECK: return %[[CAST]]
+
+  %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %dynamicMem : memref<0xf16, 3> -> memref<f16, 3>, index, index, index
+  return %base_buffer, %offset,
+    %sizes, %strides :
+      memref<f16,3>, index,
+      index, index
+}

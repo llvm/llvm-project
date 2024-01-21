@@ -1350,7 +1350,7 @@ int main() {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.case2:
 // CHECK1-NEXT:    [[TMP21:%.*]] = load i32, ptr [[T_VAR2]], align 128
-// CHECK1-NEXT:    [[TMP22:%.*]] = atomicrmw add ptr [[TMP1]], i32 [[TMP21]] monotonic, align 4
+// CHECK1-NEXT:    [[TMP22:%.*]] = atomicrmw add ptr [[TMP1]], i32 [[TMP21]] monotonic, align 128
 // CHECK1-NEXT:    call void @__kmpc_critical(ptr @[[GLOB2]], i32 [[TMP12]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[CALL10:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN1SIiEanERKS0_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP3]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR3]])
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[TMP3]], ptr align 4 [[CALL10]], i64 4, i1 false)
@@ -1371,7 +1371,7 @@ int main() {
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP11]]) #[[ATTR5]]
 // CHECK1-NEXT:    call void @__kmpc_end_critical(ptr @[[GLOB2]], i32 [[TMP12]], ptr @.gomp_critical_user_.atomic_reduction.var)
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, ptr [[T_VAR15]], align 128
-// CHECK1-NEXT:    [[TMP25:%.*]] = atomicrmw min ptr [[TMP5]], i32 [[TMP24]] monotonic, align 4
+// CHECK1-NEXT:    [[TMP25:%.*]] = atomicrmw min ptr [[TMP5]], i32 [[TMP24]] monotonic, align 128
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
 // CHECK1-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR14]]) #[[ATTR5]]
@@ -2368,7 +2368,7 @@ int main() {
 // CHECK4-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK4:       .omp.reduction.case2:
 // CHECK4-NEXT:    [[TMP10:%.*]] = load i32, ptr [[G1]], align 128
-// CHECK4-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP10]] monotonic, align 4
+// CHECK4-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr [[TMP0]], i32 [[TMP10]] monotonic, align 128
 // CHECK4-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK4:       .omp.reduction.default:
 // CHECK4-NEXT:    ret void

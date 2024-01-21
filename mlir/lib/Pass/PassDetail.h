@@ -15,26 +15,6 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
-/// Encapsulate the "action" of executing a single pass, used for the MLIR
-/// tracing infrastructure.
-struct PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
-  using Base = tracing::ActionImpl<PassExecutionAction>;
-  PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass)
-      : Base(irUnits), pass(pass) {}
-  static constexpr StringLiteral tag = "pass-execution";
-  void print(raw_ostream &os) const override;
-  const Pass &getPass() const { return pass; }
-  Operation *getOp() const {
-    ArrayRef<IRUnit> irUnits = getContextIRUnits();
-    return irUnits.empty() ? nullptr
-                           : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
-  }
-
-public:
-  const Pass &pass;
-  Operation *op;
-};
-
 namespace detail {
 
 //===----------------------------------------------------------------------===//
@@ -118,9 +98,8 @@ private:
 
 class PassCrashReproducerGenerator {
 public:
-  PassCrashReproducerGenerator(
-      PassManager::ReproducerStreamFactory &streamFactory,
-      bool localReproducer);
+  PassCrashReproducerGenerator(ReproducerStreamFactory &streamFactory,
+                               bool localReproducer);
   ~PassCrashReproducerGenerator();
 
   /// Initialize the generator in preparation for reproducer generation. The

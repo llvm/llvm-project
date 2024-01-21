@@ -205,7 +205,7 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
 static bool isLegalType(Type type) {
   if (auto memRefType = dyn_cast<BaseMemRefType>(type)) {
     Attribute spaceAttr = memRefType.getMemorySpace();
-    return spaceAttr && isa<spirv::StorageClassAttr>(spaceAttr);
+    return isa_and_nonnull<spirv::StorageClassAttr>(spaceAttr);
   }
   return true;
 }

@@ -71,7 +71,7 @@ public:
   typedef typename std::iterator_traits<It>::difference_type difference_type;
   typedef It pointer;
   typedef typename std::iterator_traits<It>::reference reference;
-  typedef typename std::remove_pointer<It>::type element_type;
+  typedef std::remove_reference_t<reference> element_type;
 
   throw_operator_minus() : it_() {}
   explicit throw_operator_minus(It it) : it_(it) {}
@@ -114,7 +114,10 @@ public:
   friend difference_type operator-(throw_operator_minus, throw_operator_minus) { throw 42; };
 
   friend bool operator==(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ == y.it_; }
-  friend auto operator<=>(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ <=> y.it_; }
+  friend bool operator<(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ < y.it_; }
+  friend bool operator>(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ > y.it_; }
+  friend bool operator<=(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ <= y.it_; }
+  friend bool operator>=(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ >= y.it_; }
 };
 
 template <class It>

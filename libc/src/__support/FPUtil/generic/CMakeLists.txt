@@ -11,7 +11,6 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.bit
     libc.src.__support.uint128
 )
 
@@ -21,13 +20,12 @@ add_header_library(
     FMA.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
-    libc.src.__support.bit
     libc.src.__support.uint128
 )
 
@@ -37,12 +35,11 @@ add_header_library(
     FMod.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.float_properties
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
-    libc.src.__support.bit
     libc.src.math.generic.math_utils
 )

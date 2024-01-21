@@ -935,7 +935,7 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                      const hlfir::Entity &entity) {
+                      hlfir::Entity entity) {
   // Load scalar references to integer, logical, real, or complex value
   // to an mlir value, dereference allocatable and pointers, and get rid
   // of fir.box that are not needed or create a copy into contiguous memory.
@@ -957,7 +957,12 @@ static fir::ExtendedValue placeTrivialInMemory(mlir::Location loc,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                    const hlfir::Entity &entity, mlir::Type targetType) {
+                    hlfir::Entity entity, mlir::Type targetType) {
+  // fir::factory::createBoxValue is not meant to deal with procedures.
+  // Dereference procedure pointers here.
+  if (entity.isProcedurePointer())
+    entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+
   auto [exv, cleanup] = translateToExtendedValue(loc, builder, entity);
   // Procedure entities should not go through createBoxValue that embox
   // object entities. Return the fir.boxproc directly.
@@ -972,7 +977,7 @@ hlfir::convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                        const hlfir::Entity &entity, mlir::Type targetType) {
+                        hlfir::Entity entity, mlir::Type targetType) {
   hlfir::Entity derefedEntity =
       hlfir::derefPointersAndAllocatables(loc, builder, entity);
   auto [exv, cleanup] =
@@ -1132,8 +1137,13 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
   std::optional<int> toKindCharConvert;
   if (auto toCharTy = mlir::dyn_cast<fir::CharacterType>(toType)) {
     if (auto fromCharTy = mlir::dyn_cast<fir::CharacterType>(fromType))
-      if (toCharTy.getFKind() != fromCharTy.getFKind())
+      if (toCharTy.getFKind() != fromCharTy.getFKind()) {
         toKindCharConvert = toCharTy.getFKind();
+        // Preserve source length (padding/truncation will occur in assignment
+        // if needed).
+        toType = fir::CharacterType::get(
+            fromType.getContext(), toCharTy.getFKind(), fromCharTy.getLen());
+      }
     // Do not convert in case of character length mismatch only, hlfir.assign
     // deals with it.
     if (!toKindCharConvert)

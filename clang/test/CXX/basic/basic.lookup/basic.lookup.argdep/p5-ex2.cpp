@@ -50,9 +50,7 @@ void test() {
   auto x = make();
 
   // error: R and R::f are not visible here
-  R::f(x); // expected-error {{declaration of 'R' must be imported from module 'N' before it is required}}
-  // expected-note@N.cpp:4 {{declaration here is not visible}}
-  // expected-error@-2 {{no type named 'f' in namespace 'R'}}
+  R::f(x); // expected-error {{no type named 'f' in namespace 'R'}}
 
   f(x); // Found by [basic.lookup.argdep] / p4.3
 

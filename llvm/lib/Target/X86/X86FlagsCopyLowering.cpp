@@ -24,7 +24,6 @@
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"

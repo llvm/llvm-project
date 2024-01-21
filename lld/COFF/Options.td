@@ -302,6 +302,11 @@ def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
 def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
     HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
 
+defm build_id: B<
+     "build-id", 
+     "Generate build ID (always on when generating PDB)",
+     "Do not Generate build ID">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;

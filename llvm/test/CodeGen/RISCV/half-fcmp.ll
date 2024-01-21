@@ -8,17 +8,17 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
 ; RUN:   -target-abi lp64 < %s | FileCheck -check-prefix=CHECKIZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfh -verify-machineinstrs \
-; RUN:   < %s | FileCheck -check-prefix=RV32I %s
+; RUN:   -target-abi ilp32 < %s | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
-; RUN:   < %s | FileCheck -check-prefix=RV64I %s
+; RUN:   -target-abi lp64 < %s | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32f < %s | FileCheck -check-prefix=CHECKIZFHMIN-ILP32F-LP64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi lp64f < %s | FileCheck -check-prefix=CHECKIZFHMIN-ILP32F-LP64F %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
-; RUN:   < %s | FileCheck -check-prefix=CHECKIZFHMIN %s
+; RUN:   -target-abi ilp32 < %s | FileCheck -check-prefix=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
-; RUN:   < %s | FileCheck -check-prefix=CHECKIZFHMIN %s
+; RUN:   -target-abi lp64 < %s | FileCheck -check-prefix=CHECKIZFHMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32 < %s | FileCheck -check-prefix=CHECKIZHINXMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \

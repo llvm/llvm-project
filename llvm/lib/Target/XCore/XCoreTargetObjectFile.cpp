@@ -98,7 +98,7 @@ MCSection *XCoreTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
   // Infer section flags from the section name if we can.
-  bool IsCPRel = SectionName.startswith(".cp.");
+  bool IsCPRel = SectionName.starts_with(".cp.");
   if (IsCPRel && !Kind.isReadOnly())
     report_fatal_error("Using .cp. section for writeable object.");
   return getContext().getELFSection(SectionName, getXCoreSectionType(Kind),

@@ -5,7 +5,7 @@ module m0
 end
 module m
   use m0
-  !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p1'
+  !WARNING: Use-associated 'p1' already has 'CONTIGUOUS' attribute
   contiguous p1
   !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p2'
   contiguous p2

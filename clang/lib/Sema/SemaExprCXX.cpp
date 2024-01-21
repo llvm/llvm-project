@@ -843,21 +843,21 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
     //       operation from the operand to the exception object (15.1) can be
     //       omitted by constructing the automatic object directly into the
     //       exception object
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Ex->IgnoreParens()))
-      if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (Var->hasLocalStorage() && !Var->getType().isVolatileQualified()) {
-          for( ; S; S = S->getParent()) {
-            if (S->isDeclScope(Var)) {
-              IsThrownVarInScope = true;
-              break;
-            }
-
-            // FIXME: Many of the scope checks here seem incorrect.
-            if (S->getFlags() &
-                (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
-                 Scope::ObjCMethodScope | Scope::TryScope))
-              break;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Ex->IgnoreParens()))
+      if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl());
+          Var && Var->hasLocalStorage() &&
+          !Var->getType().isVolatileQualified()) {
+        for (; S; S = S->getParent()) {
+          if (S->isDeclScope(Var)) {
+            IsThrownVarInScope = true;
+            break;
           }
+
+          // FIXME: Many of the scope checks here seem incorrect.
+          if (S->getFlags() &
+              (Scope::FnScope | Scope::ClassScope | Scope::BlockScope |
+               Scope::ObjCMethodScope | Scope::TryScope))
+            break;
         }
       }
   }
@@ -1931,7 +1931,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
     }
   }
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, /*Scope=*/nullptr);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType AllocType = TInfo->getType();
   if (D.isInvalidType())
     return ExprError();
@@ -1947,11 +1947,11 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
 }
 
 static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
-                                       Expr *Init) {
+                                       Expr *Init, bool IsCPlusPlus20) {
   if (!Init)
     return true;
   if (ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init))
-    return PLE->getNumExprs() == 0;
+    return IsCPlusPlus20 || PLE->getNumExprs() == 0;
   if (isa<ImplicitValueInitExpr>(Init))
     return true;
   else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
@@ -2286,6 +2286,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   bool PassAlignment = getLangOpts().AlignedAllocation &&
                        Alignment > NewAlignment;
 
+  if (CheckArgsForPlaceholders(PlacementArgs))
+    return ExprError();
+
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
@@ -2403,7 +2406,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Array 'new' can't have any initializers except empty parentheses.
   // Initializer lists are also allowed, in C++11. Rely on the parser for the
   // dialect distinction.
-  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer)) {
+  if (ArraySize && !isLegalArrayNewInitializer(InitStyle, Initializer,
+                                               getLangOpts().CPlusPlus20)) {
     SourceRange InitRange(Exprs.front()->getBeginLoc(),
                           Exprs.back()->getEndLoc());
     Diag(StartLoc, diag::err_new_array_init_args) << InitRange;

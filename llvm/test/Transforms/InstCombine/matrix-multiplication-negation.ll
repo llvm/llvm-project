@@ -240,7 +240,7 @@ define <12 x double> @fneg_with_multiple_uses(<15 x double> %a, <20 x double> %b
 ; CHECK-LABEL: @fneg_with_multiple_uses(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <15 x double> [[A:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A_NEG]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
-; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <15 x double> [[A_NEG]], <15 x double> undef, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <15 x double> [[A_NEG]], <15 x double> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[RES_3:%.*]] = fadd <12 x double> [[RES_2]], [[RES]]
 ; CHECK-NEXT:    ret <12 x double> [[RES_3]]
 ;

@@ -257,7 +257,7 @@ define i64 @test8(i32 %A, i32 %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = zext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[E:%.*]] = shl nuw i64 [[D]], 32
-; CHECK-NEXT:    [[F:%.*]] = or i64 [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint i64 [[E]], [[C]]
 ; CHECK-NEXT:    ret i64 [[F]]
 ;
   %C = zext i32 %A to i128
@@ -273,7 +273,7 @@ define <2 x i64> @test8_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[E:%.*]] = shl nuw <2 x i64> [[D]], <i64 32, i64 32>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], [[C]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -289,7 +289,7 @@ define <2 x i64> @test8_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[E:%.*]] = shl <2 x i64> [[D]], <i64 32, i64 48>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], [[C]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -950,7 +950,7 @@ define <3 x i31> @wide_splat2(<3 x i33> %x) {
 
 define <3 x i31> @wide_splat3(<3 x i33> %x) {
 ; CHECK-LABEL: @wide_splat3(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> [[X:%.*]], <3 x i33> undef, <3 x i32> <i32 poison, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> [[X:%.*]], <3 x i33> poison, <3 x i32> <i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i33> [[SHUF]] to <3 x i31>
 ; CHECK-NEXT:    ret <3 x i31> [[TRUNC]]
 ;

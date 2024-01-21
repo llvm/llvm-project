@@ -46,9 +46,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
-#include <cassert>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 

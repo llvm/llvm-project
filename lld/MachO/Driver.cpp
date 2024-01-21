@@ -90,6 +90,10 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     return entry->second;
 
   auto doFind = [&] {
+    // Special case for Csu support files required for Mac OS X 10.7 and older
+    // (crt1.o)
+    if (name.ends_with(".o"))
+      return findPathCombination(name, config->librarySearchPaths, {""});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
@@ -952,8 +956,7 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
     StringRef segName = arg->getValue(0);
     StringRef sectName = arg->getValue(1);
     StringRef alignStr = arg->getValue(2);
-    if (alignStr.starts_with("0x") || alignStr.starts_with("0X"))
-      alignStr = alignStr.drop_front(2);
+    alignStr.consume_front_insensitive("0x");
     uint32_t align;
     if (alignStr.getAsInteger(16, align)) {
       error("-sectalign: failed to parse '" + StringRef(arg->getValue(2)) +

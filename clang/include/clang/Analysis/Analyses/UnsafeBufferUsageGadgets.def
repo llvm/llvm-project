@@ -30,12 +30,14 @@ WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
+WARNING_GADGET(DataInvocation)
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context
 FIXABLE_GADGET(DerefSimplePtrArithFixable)
 FIXABLE_GADGET(PointerDereference)
 FIXABLE_GADGET(UPCAddressofArraySubscript) // '&DRE[any]' in an Unspecified Pointer Context
 FIXABLE_GADGET(UPCStandalonePointer)
 FIXABLE_GADGET(UPCPreIncrement)            // '++Ptr' in an Unspecified Pointer Context
+FIXABLE_GADGET(UUCAddAssign)            // 'Ptr += n' in an Unspecified Untyped Context
 FIXABLE_GADGET(PointerAssignment)
 FIXABLE_GADGET(PointerInit)
 

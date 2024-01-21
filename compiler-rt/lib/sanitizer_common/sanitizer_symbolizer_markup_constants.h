@@ -35,6 +35,12 @@ constexpr const char *kFormatData = "{{{data:%p}}}";
 // One frame in a backtrace (printed on a line by itself).
 constexpr const char *kFormatFrame = "{{{bt:%u:%p}}}";
 
+// Module contextual element.
+constexpr const char *kFormatModule = "{{{module:%d:%s:elf:%s}}}";
+
+// mmap for a module segment.
+constexpr const char *kFormatMmap = "{{{mmap:%p:0x%x:load:%d:%s:0x%x}}}";
+
 // Dump trigger element.
 #define FORMAT_DUMPFILE "{{{dumpfile:%s:%s}}}"
 

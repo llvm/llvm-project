@@ -1,5 +1,6 @@
 ! Test default initialization of global variables (static init)
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s --check-prefixes=%if system-aix %{"CHECK","CHECK-BE"%} \
+! RUN:                                         %else %{"CHECK","CHECK-LE"%}
 
 module tinit
   real, target :: ziel(100)
@@ -191,7 +192,8 @@ subroutine eqv_same_default_init()
   type(tseq), save :: somet1(2), somet2
   equivalence (somet1(1), somet2)
 ! CHECK-LABEL: fir.global internal @_QFeqv_same_default_initEsomet1 : !fir.array<2xi64> {
-  ! CHECK: %[[VAL_62:.*]] = arith.constant 12884901890 : i64
+  ! CHECK-LE: %[[VAL_62:.*]] = arith.constant 12884901890 : i64
+  ! CHECK-BE: %[[VAL_62:.*]] = arith.constant 8589934595 : i64
   ! CHECK: %[[VAL_63:.*]] = fir.undefined !fir.array<2xi64>
   ! CHECK: %[[VAL_64:.*]] = fir.insert_on_range %[[VAL_63]], %[[VAL_62]] from (0) to (1) : (!fir.array<2xi64>, i64) -> !fir.array<2xi64>
   ! CHECK: fir.has_value %[[VAL_64]] : !fir.array<2xi64>

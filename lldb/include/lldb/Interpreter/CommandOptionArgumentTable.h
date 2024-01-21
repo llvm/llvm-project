@@ -192,6 +192,7 @@ static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eTypeCategoryNameCompletion, "type-category-name",
      "Completes to a type category name."},
     {lldb::eCustomCompletion, "custom", "Custom completion."},
+    {lldb::eThreadIDCompletion, "thread-id", "Completes to a thread ID."},
 };
 
 llvm::StringRef RegisterNameHelpTextCallback();

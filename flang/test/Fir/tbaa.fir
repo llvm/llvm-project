@@ -41,8 +41,8 @@ module {
 // CHECK:           %[[VAL_8:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[VAL_9:.*]] = llvm.getelementptr %[[VAL_0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_10:.*]] = llvm.load %[[VAL_9]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i64
-// CHECK:           %[[VAL_11:.*]] = llvm.mul %[[VAL_4]], %[[VAL_10]]  : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_11]], %[[VAL_8]]  : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.mul %[[VAL_4]], %[[VAL_10]] overflow<nsw> : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.add %[[VAL_11]], %[[VAL_8]] overflow<nsw> : i64
 // CHECK:           %[[VAL_14:.*]] = llvm.getelementptr %[[VAL_7]]{{\[}}%[[VAL_12]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
 // CHECK:           %[[VAL_16:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[VAL_17:.*]] = llvm.mlir.constant(-1 : i32) : i32
@@ -330,12 +330,12 @@ func.func @tbaa(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i64
-// CHECK:           %[[VAL_4:.*]] = llvm.sub %[[VAL_1]], %[[VAL_2]]  : i64
-// CHECK:           %[[VAL_5:.*]] = llvm.mul %[[VAL_4]], %[[VAL_2]]  : i64
+// CHECK:           %[[VAL_4:.*]] = llvm.sub %[[VAL_1]], %[[VAL_2]] overflow<nsw> : i64
+// CHECK:           %[[VAL_5:.*]] = llvm.mul %[[VAL_4]], %[[VAL_2]] overflow<nsw> : i64
 // CHECK:           %[[VAL_6:.*]] = llvm.getelementptr %[[VAL_0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK:           %[[VAL_7:.*]] = llvm.load %[[VAL_6]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> i64
-// CHECK:           %[[VAL_8:.*]] = llvm.mul %[[VAL_5]], %[[VAL_7]]  : i64
-// CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_8]], %[[VAL_3]]  : i64
+// CHECK:           %[[VAL_8:.*]] = llvm.mul %[[VAL_5]], %[[VAL_7]] overflow<nsw> : i64
+// CHECK:           %[[VAL_9:.*]] = llvm.add %[[VAL_8]], %[[VAL_3]] overflow<nsw> : i64
 // CHECK:           %[[VAL_10:.*]] = llvm.getelementptr %[[VAL_0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK:           %[[VAL_11:.*]] = llvm.load %[[VAL_10]] {tbaa = [#[[$BOXT]]]} : !llvm.ptr -> !llvm.ptr
 // CHECK:           %[[VAL_13:.*]] = llvm.getelementptr %[[VAL_11]]{{\[}}%[[VAL_9]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8

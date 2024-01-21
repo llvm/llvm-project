@@ -9798,7 +9798,7 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
   Results.ExitScope();
 
   if (!AtParameterName && !SelIdents.empty() &&
-      SelIdents.front()->getName().startswith("init")) {
+      SelIdents.front()->getName().starts_with("init")) {
     for (const auto &M : PP.macros()) {
       if (M.first->getName() != "NS_DESIGNATED_INITIALIZER")
         continue;
@@ -10110,9 +10110,9 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
     }
 
     const StringRef &Dirname = llvm::sys::path::filename(Dir);
-    const bool isQt = Dirname.startswith("Qt") || Dirname == "ActiveQt";
+    const bool isQt = Dirname.starts_with("Qt") || Dirname == "ActiveQt";
     const bool ExtensionlessHeaders =
-        IsSystem || isQt || Dir.endswith(".framework/Headers");
+        IsSystem || isQt || Dir.ends_with(".framework/Headers");
     std::error_code EC;
     unsigned Count = 0;
     for (auto It = FS.dir_begin(Dir, EC);

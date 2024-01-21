@@ -115,6 +115,7 @@ public:
   bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
+  void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }
   bool isCsect() const { return CsectProp.has_value(); }
   bool isDwarfSect() const { return DwarfSubtypeFlags.has_value(); }

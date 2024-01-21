@@ -14,7 +14,9 @@ module m1
   logical, parameter :: test_6 = nearest(-inf, -1.) == -inf
   logical, parameter :: test_7 = nearest(1.9999999, 1.) == 2.
   logical, parameter :: test_8 = nearest(2., -1.) == 1.9999999
+#if __x86_64__
   logical, parameter :: test_9 = nearest(1.9999999999999999999_10, 1.) == 2._10
+#endif
   logical, parameter :: test_10 = nearest(-1., 1.) == -.99999994
   logical, parameter :: test_11 = nearest(-1., -2.) == -1.0000001
   real, parameter :: negZero = sign(0., -1.)
@@ -24,6 +26,8 @@ module m1
   logical, parameter :: test_14 = nearest(0., negZero) == -minSubnormal
   !WARN: warning: NEAREST: S argument is zero
   logical, parameter :: test_15 = nearest(negZero, 0.) == minSubnormal
+  logical, parameter :: test_16 = nearest(tiny(1.),-1.) == 1.1754942E-38
+  logical, parameter :: test_17 = nearest(tiny(1.),1.) == 1.1754945E-38
 end module
 
 module m2
@@ -42,7 +46,9 @@ module m2
   logical, parameter :: test_8 = ieee_next_after(-inf, -1.) == -inf
   logical, parameter :: test_9 = ieee_next_after(1.9999999, 3.) == 2.
   logical, parameter :: test_10 = ieee_next_after(2., 1.) == 1.9999999
+#if __x86_64__
   logical, parameter :: test_11 = ieee_next_after(1.9999999999999999999_10, 3.) == 2._10
+#endif
   logical, parameter :: test_12 = ieee_next_after(1., 1.) == 1.
   !WARN: warning: invalid argument on division
   real, parameter :: nan = 0. / 0.

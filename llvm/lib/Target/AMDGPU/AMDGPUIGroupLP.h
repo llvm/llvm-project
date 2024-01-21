@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsPostRA);
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsReentry);
 
 } // namespace llvm
 

@@ -152,6 +152,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
@@ -380,6 +381,17 @@ public:
     All,
   };
 
+  enum class VisibilityFromDLLStorageClassKinds {
+    /// Keep the IR-gen assigned visibility.
+    Keep,
+    /// Override the IR-gen assigned visibility with default visibility.
+    Default,
+    /// Override the IR-gen assigned visibility with hidden visibility.
+    Hidden,
+    /// Override the IR-gen assigned visibility with protected visibility.
+    Protected,
+  };
+
   enum class StrictFlexArraysLevelKind {
     /// Any trailing array member is a FAM.
     Default = 0,
@@ -390,6 +402,8 @@ public:
     /// Any trailing array member of undefined size is a FAM.
     IncompleteOnly = 3,
   };
+
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran };
 
 public:
   /// The used language standard.
@@ -740,6 +754,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

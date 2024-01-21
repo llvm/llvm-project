@@ -1037,4 +1037,3 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
   %v = call <32 x double> @llvm.vp.fma.v32f64(<32 x double> %va, <32 x double> %b, <32 x double> %c, <32 x i1> %m, i32 %evl)
   ret <32 x double> %v
 }
-

@@ -53,6 +53,7 @@ using namespace test;
 Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
   return StringAttr::get(ctx, content);
 }
+
 LogicalResult
 MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError) {
@@ -64,6 +65,7 @@ MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
   prop.content = strAttr.getValue();
   return success();
 }
+
 llvm::hash_code MyPropStruct::hash() const {
   return hash_value(StringRef(content));
 }
@@ -127,6 +129,12 @@ static void customPrintProperties(OpAsmPrinter &p,
                                   const VersionedProperties &prop);
 static ParseResult customParseProperties(OpAsmParser &parser,
                                          VersionedProperties &prop);
+static ParseResult
+parseSwitchCases(OpAsmParser &p, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions);
+
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions);
 
 void test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
@@ -230,6 +238,7 @@ void TestDialect::initialize() {
   // unregistered op.
   fallbackEffectOpInterfaces = new TestOpEffectInterfaceFallback;
 }
+
 TestDialect::~TestDialect() {
   delete static_cast<TestOpEffectInterfaceFallback *>(
       fallbackEffectOpInterfaces);
@@ -540,10 +549,6 @@ OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
     return getResult();
   }
   return {};
-}
-
-OpFoldResult TestPassthroughFold::fold(FoldAdaptor adaptor) {
-  return getOperand();
 }
 
 OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
@@ -1018,6 +1023,13 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
 }
 
 //===----------------------------------------------------------------------===//
+// SwitchWithNoBreakOp
+//===----------------------------------------------------------------------===//
+
+void TestNoTerminatorOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {}
+
+//===----------------------------------------------------------------------===//
 // SingleNoTerminatorCustomAsmOp
 //===----------------------------------------------------------------------===//
 
@@ -1164,6 +1176,7 @@ setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
   prop.value = valueAttr.getValue().getSExtValue();
   return success();
 }
+
 static DictionaryAttr
 getPropertiesAsAttribute(MLIRContext *ctx,
                          const PropertiesWithCustomPrint &prop) {
@@ -1173,14 +1186,17 @@ getPropertiesAsAttribute(MLIRContext *ctx,
   attrs.push_back(b.getNamedAttr("value", b.getI32IntegerAttr(prop.value)));
   return b.getDictionaryAttr(attrs);
 }
+
 static llvm::hash_code computeHash(const PropertiesWithCustomPrint &prop) {
   return llvm::hash_combine(prop.value, StringRef(*prop.label));
 }
+
 static void customPrintProperties(OpAsmPrinter &p,
                                   const PropertiesWithCustomPrint &prop) {
   p.printKeywordOrString(*prop.label);
   p << " is " << prop.value;
 }
+
 static ParseResult customParseProperties(OpAsmParser &parser,
                                          PropertiesWithCustomPrint &prop) {
   std::string label;
@@ -1190,6 +1206,31 @@ static ParseResult customParseProperties(OpAsmParser &parser,
   prop.label = std::make_shared<std::string>(std::move(label));
   return success();
 }
+
+static ParseResult
+parseSwitchCases(OpAsmParser &p, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(p.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
+    if (p.parseInteger(value) || p.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = p.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
@@ -1213,6 +1254,7 @@ setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
   prop.value2 = value2Attr.getValue().getSExtValue();
   return success();
 }
+
 static DictionaryAttr
 getPropertiesAsAttribute(MLIRContext *ctx, const VersionedProperties &prop) {
   SmallVector<NamedAttribute> attrs;
@@ -1221,13 +1263,16 @@ getPropertiesAsAttribute(MLIRContext *ctx, const VersionedProperties &prop) {
   attrs.push_back(b.getNamedAttr("value2", b.getI32IntegerAttr(prop.value2)));
   return b.getDictionaryAttr(attrs);
 }
+
 static llvm::hash_code computeHash(const VersionedProperties &prop) {
   return llvm::hash_combine(prop.value1, prop.value2);
 }
+
 static void customPrintProperties(OpAsmPrinter &p,
                                   const VersionedProperties &prop) {
   p << prop.value1 << " | " << prop.value2;
 }
+
 static ParseResult customParseProperties(OpAsmParser &parser,
                                          VersionedProperties &prop) {
   if (parser.parseInteger(prop.value1) || parser.parseVerticalBar() ||
@@ -1397,6 +1442,7 @@ void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
   prop.value2 = value2;
   return success();
 }
+
 void TestOpWithVersionedProperties::writeToMlirBytecode(
     ::mlir::DialectBytecodeWriter &writer,
     const test::VersionedProperties &prop) {

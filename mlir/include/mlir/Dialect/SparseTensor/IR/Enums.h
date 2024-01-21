@@ -531,11 +531,11 @@ static_assert((isUniqueLT(LevelType::Dense) &&
 constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
   if (cf != 0) {
     assert(cf <= 0xfffff && cm == 0 && i <= 0xfffff);
-    return (0x01L << 60) | (cf << 20) | i;
+    return (0x01ULL << 60) | (cf << 20) | i;
   }
   if (cm != 0) {
     assert(cm <= 0xfffff && i <= 0xfffff);
-    return (0x02L << 60) | (cm << 20) | i;
+    return (0x02ULL << 60) | (cm << 20) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;
@@ -543,7 +543,7 @@ constexpr uint64_t encodeDim(uint64_t i, uint64_t cf, uint64_t cm) {
 constexpr uint64_t encodeLvl(uint64_t i, uint64_t c, uint64_t ii) {
   if (c != 0) {
     assert(c <= 0xfffff && ii <= 0xfffff && i <= 0xfffff);
-    return (0x03L << 60) | (c << 20) | (ii << 40) | i;
+    return (0x03ULL << 60) | (c << 20) | (ii << 40) | i;
   }
   assert(i <= 0x0fffffffffffffffu);
   return i;

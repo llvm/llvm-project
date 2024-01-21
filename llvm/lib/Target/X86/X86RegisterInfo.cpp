@@ -310,7 +310,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_AllRegs_AVX_SaveList;
     return CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
-    return CSR_64_RT_MostRegs_SaveList;
+    return IsWin64 ? CSR_Win64_RT_MostRegs_SaveList
+                   : CSR_64_RT_MostRegs_SaveList;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_SaveList;
@@ -431,7 +432,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
   case CallingConv::PreserveMost:
-    return CSR_64_RT_MostRegs_RegMask;
+    return IsWin64 ? CSR_Win64_RT_MostRegs_RegMask : CSR_64_RT_MostRegs_RegMask;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_RegMask;
@@ -1076,12 +1077,6 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
   unsigned ID = RC.getID();
-  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
-  if ((ID == X86::VK64RegClassID || ID == X86::VK64WMRegClassID) &&
-      Subtarget.hasAVX512() && !Subtarget.hasEVEX512())
-    report_fatal_error(
-        "64-bit mask registers are not supported without EVEX512");
-
   if (ID != X86::TILERegClassID)
     return BaseImplRetVal;
 

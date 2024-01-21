@@ -688,7 +688,7 @@ struct ForOpInterface
       yieldValues.push_back(*alloc);
     }
 
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         yieldOp, [&]() { yieldOp.getResultsMutable().assign(yieldValues); });
     return success();
   }
@@ -928,7 +928,7 @@ struct WhileOpInterface
         return failure();
       beforeYieldValues.push_back(*alloc);
     }
-    rewriter.updateRootInPlace(conditionOp, [&]() {
+    rewriter.modifyOpInPlace(conditionOp, [&]() {
       conditionOp.getArgsMutable().assign(beforeYieldValues);
     });
 

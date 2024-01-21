@@ -197,7 +197,7 @@ public:
     return false;
   }
   virtual bool ParseSupportFiles(CompileUnit &comp_unit,
-                                 FileSpecList &support_files) = 0;
+                                 SupportFileList &support_files) = 0;
   virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
   virtual bool ParseIsOptimized(CompileUnit &comp_unit) { return false; }
 
@@ -301,21 +301,20 @@ public:
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
-  virtual void
-  FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
-            uint32_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeMap &types);
 
-  /// Find types specified by a CompilerContextPattern.
-  /// \param languages
-  ///     Only return results in these languages.
-  /// \param searched_symbol_files
-  ///     Prevents one file from being visited multiple times.
-  virtual void
-  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            TypeMap &types);
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
+  ///
+  /// \see lldb_private::TypeQuery
+  ///
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
+  ///
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  virtual void FindTypes(const TypeQuery &query, TypeResults &results) {}
 
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,

@@ -45,7 +45,7 @@ struct UncheckedOptionalAccessModelOptions {
 class UncheckedOptionalAccessModel
     : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
 public:
-  UncheckedOptionalAccessModel(ASTContext &Ctx);
+  UncheckedOptionalAccessModel(ASTContext &Ctx, dataflow::Environment &Env);
 
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();
@@ -53,17 +53,6 @@ public:
   static NoopLattice initialElement() { return {}; }
 
   void transfer(const CFGElement &Elt, NoopLattice &L, Environment &Env);
-
-  ComparisonResult compare(QualType Type, const Value &Val1,
-                           const Environment &Env1, const Value &Val2,
-                           const Environment &Env2) override;
-
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override;
-
-  Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
-               Value &Current, Environment &CurrentEnv) override;
 
 private:
   CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;

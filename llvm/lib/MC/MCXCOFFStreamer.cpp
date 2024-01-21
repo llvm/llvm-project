@@ -96,6 +96,13 @@ void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   DF->getFixups().push_back(Fixup);
 }
 
+void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
+                                               StringRef Rename) {
+  const MCSymbolXCOFF *Symbol = cast<const MCSymbolXCOFF>(Name);
+  if (!Symbol->hasRename())
+    report_fatal_error("Only explicit .rename is supported for XCOFF.");
+}
+
 void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                                const MCSymbol *Trap,
                                                unsigned Lang, unsigned Reason,

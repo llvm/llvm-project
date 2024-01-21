@@ -917,7 +917,7 @@ define i32 @binop_or_is_iv_base(ptr %p, i32 %end) {
 ; CHECK-NEXT:    br i1 true, label [[GUARDED]], label [[DEOPT_LOOPEXIT2:%.*]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[IV_ADD]] = add i32 [[IV]], 8
-; CHECK-NEXT:    [[IV_OR:%.*]] = or i32 [[IV_ADD]], 7
+; CHECK-NEXT:    [[IV_OR:%.*]] = or disjoint i32 [[IV_ADD]], 7
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_OR]], [[END]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[IV_OR]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_HEADER]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -951,7 +951,7 @@ define i32 @binop_or_is_iv_base(ptr %p, i32 %end) {
 ; CHECK-NEXT:    br i1 [[CHECK_POSTLOOP]], label [[GUARDED_POSTLOOP]], label [[DEOPT_LOOPEXIT:%.*]]
 ; CHECK:       guarded.postloop:
 ; CHECK-NEXT:    [[IV_ADD_POSTLOOP]] = add i32 [[IV_POSTLOOP]], 8
-; CHECK-NEXT:    [[IV_OR_POSTLOOP:%.*]] = or i32 [[IV_ADD_POSTLOOP]], 7
+; CHECK-NEXT:    [[IV_OR_POSTLOOP:%.*]] = or disjoint i32 [[IV_ADD_POSTLOOP]], 7
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i32 [[IV_OR_POSTLOOP]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_HEADER_POSTLOOP]], label [[COMMON_RET_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP21:![0-9]+]], !loop_constrainer.loop.clone !6
 ;
@@ -967,7 +967,7 @@ loop.header:
 
 guarded:
   %iv.add = add i32 %iv, 8
-  %iv.or = or i32 %iv.add, 7
+  %iv.or = or disjoint i32 %iv.add, 7
   %cmp = icmp slt i32 %iv.or, %end
   br i1 %cmp, label %loop.header, label %common.ret
 

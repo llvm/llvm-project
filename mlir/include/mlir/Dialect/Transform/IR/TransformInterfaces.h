@@ -310,10 +310,8 @@ public:
   /// with the type of the handle value.
   LogicalResult mapBlockArguments(BlockArgument argument,
                                   ArrayRef<Operation *> operations) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(argument.getParentRegion() == regionStack.back() &&
+    assert(argument.getParentRegion() == regionStack.back()->region &&
            "mapping block arguments from a region other than the active one");
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
     return setPayloadOps(argument, operations);
   }
   LogicalResult mapBlockArgument(BlockArgument argument,
@@ -350,9 +348,7 @@ public:
           std::make_pair(&region, std::make_unique<Mappings>()));
       assert(res.second && "the region scope is already present");
       (void)res;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-      state.regionStack.push_back(&region);
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+      state.regionStack.push_back(this);
     }
 
     /// Back-reference to the transform state.
@@ -361,7 +357,10 @@ public:
     /// The region this scope is associated with.
     Region *region;
 
-    friend RegionScope TransformState::make_region_scope(Region &);
+    /// The transform op within this region that is currently being applied.
+    TransformOpInterface currentTransform;
+
+    friend class transform::TransformState;
   };
   friend class RegionScope;
 
@@ -784,24 +783,14 @@ private:
   /// location.
   InvalidatedHandleMap invalidatedHandles;
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
   /// Each region must be an ancestor of the following regions in this list.
   /// These are also the keys for "mappings".
-  SmallVector<Region *> regionStack;
+  SmallVector<RegionScope *> regionStack;
 
-  /// This cache stores operation names for operations that are tracked in the
-  /// transform dialect state. It is used to detect missing memory side effects
-  /// and op tracking.
-  ///
-  /// All tracked ops are added to this cache before a transform op is applied.
-  /// After the application of the transform op, the names of all tracked ops
-  /// are compared with the names in the cache. If there is a mismatch (or a
-  /// crash), op tracking is missing somewhere. This is typically a missing
-  /// "consumesHandle" side effect or a pattern that removes an op without
-  /// notifying a TrackingListener.
-  DenseMap<Operation *, OperationName> cachedNames;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// The top-level region scope. The first (bottom) element of `regionStack`
+  /// is the top-level region scope object.
+  std::unique_ptr<RegionScope> topLevelRegionScope;
 };
 
 /// Local mapping between values defined by a specific op implementing the
@@ -938,8 +927,14 @@ TransformState::RegionScope TransformState::make_region_scope(Region &region) {
 class TrackingListener : public RewriterBase::Listener,
                          public TransformState::Extension {
 public:
+  /// A function that returns "true" for handles that do not have to be updated.
+  using SkipHandleFn = std::function<bool(Value)>;
+
   /// Create a new TrackingListener for usage in the specified transform op.
-  TrackingListener(TransformState &state, TransformOpInterface op);
+  /// Optionally, a function can be specified to identify handles that should
+  /// do not have to be updated.
+  TrackingListener(TransformState &state, TransformOpInterface op,
+                   SkipHandleFn skipHandleFn = nullptr);
 
 protected:
   /// Return a replacement payload op for the given op, which is going to be
@@ -1027,6 +1022,10 @@ private:
 
   /// The handles that are consumed by the transform op.
   DenseSet<Value> consumedHandles;
+
+  /// Handles for which this function evaluates to "true" do not have to be
+  /// updated. These are typically dead or consumed handles.
+  SkipHandleFn skipHandleFn;
 };
 
 /// A specialized listener that keeps track of cases in which no replacement
@@ -1283,9 +1282,9 @@ public:
   }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand
-/// single-result operations that use their operand without consuming and
-/// without modifying the Payload IR to produce a new handle.
+/// Trait implementing the MemoryEffectOpInterface for operations that use their
+/// operands without consuming and without modifying the Payload IR to
+/// potentially produce new handles.
 template <typename OpTy>
 class NavigationTransformOpTrait
     : public OpTrait::TraitBase<OpTy, NavigationTransformOpTrait> {
@@ -1295,15 +1294,16 @@ public:
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
     onlyReadsHandle(this->getOperation()->getOperands(), effects);
     producesHandle(this->getOperation()->getResults(), effects);
-    onlyReadsPayload(effects);
+    if (llvm::any_of(this->getOperation()->getOperandTypes(), [](Type t) {
+          return isa<TransformHandleTypeInterface,
+                     TransformValueHandleTypeInterface>(t);
+        })) {
+      onlyReadsPayload(effects);
+    }
   }
 
   /// Checks that the op matches the expectation of this trait.
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
-                  "expected single-operand op");
-    static_assert(OpTy::template hasTrait<OpTrait::OneResult>(),
-                  "expected single-result op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError() << "NavigationTransformOpTrait should only be attached "
                          "to ops that implement MemoryEffectOpInterface";

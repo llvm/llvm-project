@@ -9,11 +9,11 @@ declare void @cold() cold
 ; Even though the likeliness of 'invoke' to throw an exception is assessed as low
 ; all other paths are even less likely. Check that hot paths leads to excepion handler.
 define void @test1(i32 %0) personality ptr @"personality_function"  !prof !1 {
-;CHECK: edge entry -> unreached probability is 0x00000001 / 0x80000000 = 0.00%
-;CHECK: edge entry -> invoke probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge invoke -> invoke.cont.unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge invoke -> land.pad probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge land.pad -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %unreached probability is 0x00000001 / 0x80000000 = 0.00%
+;CHECK: edge %entry -> %invoke probability is 0x7fffffff / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %invoke -> %invoke.cont.unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %invoke -> %land.pad probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %land.pad -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   br i1 undef, label %unreached, label %invoke, !prof !2
@@ -39,11 +39,11 @@ exit:
 }
 
 define void @test2(i32 %0) personality ptr @"personality_function" {
-;CHECK: edge entry -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge entry -> invoke probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge invoke -> invoke.cont.cold probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge invoke -> land.pad probability is 0x00008000 / 0x80000000 = 0.00%
-;CHECK: edge land.pad -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %entry -> %invoke probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %invoke -> %invoke.cont.cold probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %invoke -> %land.pad probability is 0x00008000 / 0x80000000 = 0.00%
+;CHECK: edge %land.pad -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   br i1 undef, label %unreached, label %invoke
@@ -69,11 +69,11 @@ exit:
 }
 
 define void @test3(i32 %0) personality ptr @"personality_function" {
-;CHECK: edge entry -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge entry -> invoke probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge invoke -> invoke.cont.cold probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge invoke -> land.pad probability is 0x00008000 / 0x80000000 = 0.00%
-;CHECK: edge land.pad -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %entry -> %invoke probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %invoke -> %invoke.cont.cold probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %invoke -> %land.pad probability is 0x00008000 / 0x80000000 = 0.00%
+;CHECK: edge %land.pad -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 entry:
   br i1 undef, label %unreached, label %invoke
 invoke:

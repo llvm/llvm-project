@@ -360,37 +360,6 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   return CooperativeMatrixType::get(elementTy, dims[0], dims[1], scope, use);
 }
 
-// nv-cooperative-matrix-type ::=
-//   `!spirv.NV.coopmatrix` `<` rows `x` columns `x` element-type `,` scope `>`
-static Type parseCooperativeMatrixNVType(SPIRVDialect const &dialect,
-                                         DialectAsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-
-  SmallVector<int64_t, 2> dims;
-  SMLoc countLoc = parser.getCurrentLocation();
-  if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
-    return Type();
-
-  if (dims.size() != 2) {
-    parser.emitError(countLoc, "expected rows and columns size");
-    return Type();
-  }
-
-  auto elementTy = parseAndVerifyType(dialect, parser);
-  if (!elementTy)
-    return Type();
-
-  Scope scope;
-  if (parser.parseComma() ||
-      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
-    return Type();
-
-  if (parser.parseGreater())
-    return Type();
-  return CooperativeMatrixNVType::get(elementTy, scope, dims[0], dims[1]);
-}
-
 // joint-matrix-type ::= `!spirv.jointmatrix` `<`rows `x` columns `x`
 // element-type
 //                                                       `,` layout `,` scope`>`
@@ -810,8 +779,6 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseArrayType(*this, parser);
   if (keyword == "coopmatrix")
     return parseCooperativeMatrixType(*this, parser);
-  if (keyword == "NV.coopmatrix")
-    return parseCooperativeMatrixNVType(*this, parser);
   if (keyword == "jointmatrix")
     return parseJointMatrixType(*this, parser);
   if (keyword == "image")
@@ -917,12 +884,6 @@ static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
      << type.getUse() << ">";
 }
 
-static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
-  os << "NV.coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
-  os << type.getElementType() << ", " << stringifyScope(type.getScope());
-  os << ">";
-}
-
 static void print(JointMatrixINTELType type, DialectAsmPrinter &os) {
   os << "jointmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
   os << type.getElementType() << ", "
@@ -937,10 +898,9 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
 
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
-      .Case<ArrayType, CooperativeMatrixType, CooperativeMatrixNVType,
-            JointMatrixINTELType, PointerType, RuntimeArrayType, ImageType,
-            SampledImageType, StructType, MatrixType>(
-          [&](auto type) { print(type, os); })
+      .Case<ArrayType, CooperativeMatrixType, JointMatrixINTELType, PointerType,
+            RuntimeArrayType, ImageType, SampledImageType, StructType,
+            MatrixType>([&](auto type) { print(type, os); })
       .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }
 
@@ -992,30 +952,39 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
   StringRef symbol = attribute.getName().strref();
   Attribute attr = attribute.getValue();
 
-  if (symbol != spirv::getInterfaceVarABIAttrName())
-    return emitError(loc, "found unsupported '")
-           << symbol << "' attribute on region argument";
+  if (symbol == spirv::getInterfaceVarABIAttrName()) {
+    auto varABIAttr = llvm::dyn_cast<spirv::InterfaceVarABIAttr>(attr);
+    if (!varABIAttr)
+      return emitError(loc, "'")
+             << symbol << "' must be a spirv::InterfaceVarABIAttr";
 
-  auto varABIAttr = llvm::dyn_cast<spirv::InterfaceVarABIAttr>(attr);
-  if (!varABIAttr)
-    return emitError(loc, "'")
-           << symbol << "' must be a spirv::InterfaceVarABIAttr";
+    if (varABIAttr.getStorageClass() && !valueType.isIntOrIndexOrFloat())
+      return emitError(loc, "'") << symbol
+                                 << "' attribute cannot specify storage class "
+                                    "when attaching to a non-scalar value";
+    return success();
+  }
+  if (symbol == spirv::DecorationAttr::name) {
+    if (!isa<spirv::DecorationAttr>(attr))
+      return emitError(loc, "'")
+             << symbol << "' must be a spirv::DecorationAttr";
+    return success();
+  }
 
-  if (varABIAttr.getStorageClass() && !valueType.isIntOrIndexOrFloat())
-    return emitError(loc, "'") << symbol
-                               << "' attribute cannot specify storage class "
-                                  "when attaching to a non-scalar value";
-
-  return success();
+  return emitError(loc, "found unsupported '")
+         << symbol << "' attribute on region argument";
 }
 
 LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
                                                      unsigned regionIndex,
                                                      unsigned argIndex,
                                                      NamedAttribute attribute) {
-  return verifyRegionAttribute(
-      op->getLoc(), op->getRegion(regionIndex).getArgument(argIndex).getType(),
-      attribute);
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return success();
+  Type argType = funcOp.getArgumentTypes()[argIndex];
+
+  return verifyRegionAttribute(op->getLoc(), argType, attribute);
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(

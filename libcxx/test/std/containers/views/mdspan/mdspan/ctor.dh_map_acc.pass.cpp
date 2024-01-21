@@ -43,7 +43,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
       assert((H::move_counter() == 1));
     }
   }
-  static_assert(!noexcept(MDS(handle, map, acc)));
+  LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, map, acc)));
   assert(m.extents() == map.extents());
   if constexpr (std::equality_comparable<H>)
     assert(m.data_handle() == handle);
@@ -87,7 +87,7 @@ constexpr void mixin_accessor() {
 }
 
 template <class E>
-using mapping_t = typename std::layout_right::template mapping<E>;
+using mapping_t = std::layout_right::mapping<E>;
 
 constexpr bool test() {
   mixin_accessor<int>();

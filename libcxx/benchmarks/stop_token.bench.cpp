@@ -15,6 +15,81 @@
 using namespace std::chrono_literals;
 
 // We have a single thread created by std::jthread consuming the stop_token:
+// polling for stop_requested.
+void BM_stop_token_single_thread_polling_stop_requested(benchmark::State& state) {
+  auto thread_func = [&](std::stop_token st, std::atomic<std::uint64_t>* loop_count) {
+    while (!st.stop_requested()) {
+      // doing some work
+      loop_count->fetch_add(1, std::memory_order_relaxed);
+    }
+  };
+
+  std::atomic<std::uint64_t> loop_count(0);
+  std::uint64_t total_loop_test_param = state.range(0);
+
+  auto thread = support::make_test_jthread(thread_func, &loop_count);
+
+  for (auto _ : state) {
+    auto start_total = loop_count.load(std::memory_order_relaxed);
+
+    while (loop_count.load(std::memory_order_relaxed) - start_total < total_loop_test_param) {
+      std::this_thread::yield();
+    }
+  }
+}
+
+BENCHMARK(BM_stop_token_single_thread_polling_stop_requested)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+
+// We have multiple threads polling for stop_requested of the same stop_token.
+void BM_stop_token_multi_thread_polling_stop_requested(benchmark::State& state) {
+  std::atomic<bool> start{false};
+
+  auto thread_func = [&start](std::atomic<std::uint64_t>* loop_count, std::stop_token st) {
+    start.wait(false);
+    while (!st.stop_requested()) {
+      // doing some work
+      loop_count->fetch_add(1, std::memory_order_relaxed);
+    }
+  };
+
+  constexpr size_t thread_count = 20;
+
+  std::uint64_t total_loop_test_param = state.range(0);
+
+  std::vector<std::atomic<std::uint64_t>> loop_counts(thread_count);
+  std::stop_source ss;
+  std::vector<std::jthread> threads;
+  threads.reserve(thread_count);
+
+  for (size_t i = 0; i < thread_count; ++i) {
+    threads.emplace_back(support::make_test_jthread(thread_func, &loop_counts[i], ss.get_token()));
+  }
+
+  auto get_total_loop = [&loop_counts] {
+    std::uint64_t total = 0;
+    for (const auto& loop_count : loop_counts) {
+      total += loop_count.load(std::memory_order_relaxed);
+    }
+    return total;
+  };
+
+  start = true;
+  start.notify_all();
+
+  for (auto _ : state) {
+    auto start_total = get_total_loop();
+
+    while (get_total_loop() - start_total < total_loop_test_param) {
+      std::this_thread::yield();
+    }
+  }
+
+  ss.request_stop();
+}
+
+BENCHMARK(BM_stop_token_multi_thread_polling_stop_requested)->RangeMultiplier(2)->Range(1 << 10, 1 << 24);
+
+// We have a single thread created by std::jthread consuming the stop_token:
 // registering/deregistering callbacks, one at a time.
 void BM_stop_token_single_thread_reg_unreg_callback(benchmark::State& state) {
   auto thread_func = [&](std::stop_token st, std::atomic<std::uint64_t>* reg_count) {
@@ -59,11 +134,11 @@ void BM_stop_token_async_reg_unreg_callback(benchmark::State& state) {
   std::atomic<bool> start{false};
 
   std::uint64_t total_reg_test_param = state.range(0);
+  std::vector<std::atomic<std::uint64_t>> reg_counts(thread_count);
 
   std::stop_source ss;
   std::vector<std::jthread> threads;
   threads.reserve(thread_count);
-  std::vector<std::atomic<std::uint64_t>> reg_counts(thread_count);
 
   auto thread_func = [&start](std::atomic<std::uint64_t>* count, std::stop_token st) {
     std::vector<std::optional<std::stop_callback<dummy_stop_callback>>> cbs(concurrent_request_count);
@@ -84,8 +159,8 @@ void BM_stop_token_async_reg_unreg_callback(benchmark::State& state) {
 
   auto get_total_reg = [&] {
     std::uint64_t total = 0;
-    for (const auto& reg_counts : reg_counts) {
-      total += reg_counts.load(std::memory_order_relaxed);
+    for (const auto& reg_count : reg_counts) {
+      total += reg_count.load(std::memory_order_relaxed);
     }
     return total;
   };

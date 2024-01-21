@@ -9,7 +9,7 @@
 ; OSABI-AMDHSA-ASM-NOT: .amd_kernel_code_t
 
 ; OSABI-AMDHSA-ASM: s_endpgm
-; OSABI-AMDHSA-ASM: .section .rodata,#alloc
+; OSABI-AMDHSA-ASM: .section .rodata,"a"
 ; OSABI-AMDHSA-ASM: .p2align 6
 ; OSABI-AMDHSA-ASM: .amdhsa_kernel fadd
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 6
@@ -28,7 +28,7 @@
 ; OSABI-AMDHSA-ASM-NOT: .amd_kernel_code_t
 
 ; OSABI-AMDHSA-ASM: s_endpgm
-; OSABI-AMDHSA-ASM: .section .rodata,#alloc
+; OSABI-AMDHSA-ASM: .section .rodata,"a"
 ; OSABI-AMDHSA-ASM: .p2align 6
 ; OSABI-AMDHSA-ASM: .amdhsa_kernel fsub
 ; OSABI-AMDHSA-ASM:     .amdhsa_user_sgpr_count 6

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}fma_vector_vector_scalar_lo:
 ; GCN: ds_read_b32 [[VEC0:v[0-9]+]]

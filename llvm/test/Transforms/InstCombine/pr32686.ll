@@ -11,7 +11,7 @@ define void @tinkywinky() {
 ; CHECK-NEXT:    [[LNOT_EXT:%.*]] = zext i1 [[TOBOOL_NOT]] to i32
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 icmp ne (ptr @a, ptr @b) to i32
 ; CHECK-NEXT:    [[XOR1:%.*]] = or i32 [[ZEXT]], [[LNOT_EXT]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], 2
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[XOR1]], 2
 ; CHECK-NEXT:    store i32 [[OR]], ptr @b, align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -35,7 +35,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
 clamp(_LIBCPP_LIFETIMEBOUND const _Tp& __v,
       _LIBCPP_LIFETIMEBOUND const _Tp& __lo,
       _LIBCPP_LIFETIMEBOUND const _Tp& __hi) {
-  return _VSTD::clamp(__v, __lo, __hi, __less<>());
+  return std::clamp(__v, __lo, __hi, __less<>());
 }
 #endif
 

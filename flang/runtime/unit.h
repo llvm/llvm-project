@@ -140,6 +140,7 @@ private:
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
+  bool anyWriteSinceLastPositioning_{false};
   bool directAccessRecWasSet_{false}; // REC= appeared
   // Subtle: The beginning of the frame can't be allowed to advance
   // during a single list-directed READ due to the possibility of a

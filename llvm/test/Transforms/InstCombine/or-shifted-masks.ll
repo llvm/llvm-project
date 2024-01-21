@@ -7,7 +7,7 @@ define i32 @or_and_shifts1(i32 %x) {
 ; CHECK-NEXT:    [[I1:%.*]] = and i32 [[I]], 8
 ; CHECK-NEXT:    [[I2:%.*]] = shl i32 [[X]], 5
 ; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I2]], 32
-; CHECK-NEXT:    [[I4:%.*]] = or i32 [[I1]], [[I3]]
+; CHECK-NEXT:    [[I4:%.*]] = or disjoint i32 [[I1]], [[I3]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i = shl i32 %x, 3
@@ -24,7 +24,7 @@ define i32 @or_and_shifts2(i32 %x) {
 ; CHECK-NEXT:    [[I1:%.*]] = and i32 [[I]], 896
 ; CHECK-NEXT:    [[I2:%.*]] = lshr i32 [[X]], 4
 ; CHECK-NEXT:    [[I3:%.*]] = and i32 [[I2]], 7
-; CHECK-NEXT:    [[I4:%.*]] = or i32 [[I1]], [[I3]]
+; CHECK-NEXT:    [[I4:%.*]] = or disjoint i32 [[I1]], [[I3]]
 ; CHECK-NEXT:    ret i32 [[I4]]
 ;
   %i = shl i32 %x, 3
@@ -60,8 +60,8 @@ define i32 @multiuse1(i32 %x) {
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I1]], 2
 ; CHECK-NEXT:    [[I21:%.*]] = shl i32 [[X]], 6
 ; CHECK-NEXT:    [[I6:%.*]] = and i32 [[I21]], 384
-; CHECK-NEXT:    [[I7:%.*]] = or i32 [[I3]], [[I5]]
-; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I7]], [[I6]]
+; CHECK-NEXT:    [[I7:%.*]] = or disjoint i32 [[I3]], [[I5]]
+; CHECK-NEXT:    [[I8:%.*]] = or disjoint i32 [[I7]], [[I6]]
 ; CHECK-NEXT:    ret i32 [[I8]]
 ;
   %i = and i32 %x, 2
@@ -86,9 +86,9 @@ define i32 @multiuse2(i32 %x) {
 ; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I6]], 192
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 8
 ; CHECK-NEXT:    [[I10:%.*]] = and i32 [[TMP1]], 32256
-; CHECK-NEXT:    [[I11:%.*]] = or i32 [[I8]], [[I5]]
-; CHECK-NEXT:    [[I12:%.*]] = or i32 [[I2]], [[I11]]
-; CHECK-NEXT:    [[I13:%.*]] = or i32 [[I10]], [[I12]]
+; CHECK-NEXT:    [[I11:%.*]] = or disjoint i32 [[I8]], [[I5]]
+; CHECK-NEXT:    [[I12:%.*]] = or disjoint i32 [[I2]], [[I11]]
+; CHECK-NEXT:    [[I13:%.*]] = or disjoint i32 [[I10]], [[I12]]
 ; CHECK-NEXT:    ret i32 [[I13]]
 ;
   %i = and i32 %x, 6
@@ -116,8 +116,8 @@ define i32 @multiuse3(i32 %x) {
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP1]], 8064
 ; CHECK-NEXT:    [[I6:%.*]] = lshr i32 [[X]], 1
 ; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 15
-; CHECK-NEXT:    [[I8:%.*]] = or i32 [[I2]], [[I7]]
-; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I5]]
+; CHECK-NEXT:    [[I8:%.*]] = or disjoint i32 [[I2]], [[I7]]
+; CHECK-NEXT:    [[I9:%.*]] = or disjoint i32 [[I8]], [[I5]]
 ; CHECK-NEXT:    ret i32 [[I9]]
 ;
   %i = and i32 %x, 96
@@ -142,7 +142,7 @@ define i32 @multiuse4(i32 %x) local_unnamed_addr {
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 24
 ; CHECK-NEXT:    [[I3:%.*]] = lshr i32 [[X]], 22
 ; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 480
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
+; CHECK-NEXT:    [[I5:%.*]] = or disjoint i32 [[I4]], [[I2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 17
@@ -184,13 +184,13 @@ define i32 @multiuse5(i32 %x) local_unnamed_addr {
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 21760
 ; CHECK-NEXT:    [[I3:%.*]] = shl i32 [[X]], 5
 ; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 43520
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
+; CHECK-NEXT:    [[I5:%.*]] = or disjoint i32 [[I4]], [[I2]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[I6:%.*]] = and i32 [[I]], 5570560
 ; CHECK-NEXT:    [[I7:%.*]] = shl i32 [[X]], 5
 ; CHECK-NEXT:    [[I8:%.*]] = and i32 [[I7]], 11141120
-; CHECK-NEXT:    [[I9:%.*]] = or i32 [[I8]], [[I6]]
+; CHECK-NEXT:    [[I9:%.*]] = or disjoint i32 [[I8]], [[I6]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[I10:%.*]] = phi i32 [ [[I5]], [[IF]] ], [ [[I9]], [[ELSE]] ]
@@ -223,7 +223,7 @@ define i32 @shl_mask(i32 %x) {
 ; CHECK-LABEL: @shl_mask(
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 8
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[Z]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[Z]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = and i32 %x, 255
@@ -249,7 +249,7 @@ define i37 @shl_mask_weird_type(i37 %x) {
 ; CHECK-LABEL: @shl_mask_weird_type(
 ; CHECK-NEXT:    [[Z:%.*]] = and i37 [[X:%.*]], 255
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i37 [[Z]], 8
-; CHECK-NEXT:    [[R:%.*]] = or i37 [[Z]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i37 [[Z]], [[S]]
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %z = and i37 %x, 255
@@ -263,7 +263,7 @@ define i32 @shl_mask_extra_use(i32 %x, ptr %p) {
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X:%.*]], 255
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 8
 ; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[Z]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[Z]], [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = and i32 %x, 255

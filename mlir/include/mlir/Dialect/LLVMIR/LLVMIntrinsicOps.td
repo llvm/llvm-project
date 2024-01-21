@@ -274,9 +274,9 @@ def LLVM_NoAliasScopeDeclOp
   let assemblyFormat = "$scope attr-dict";
 }
 
-//===----------------------------------------------------------------------===//
-// Lifetime Markers
-//===----------------------------------------------------------------------===//
+//
+// Memory marker intrinsics.
+//
 
 /// Base operation for lifetime markers. The LLVM intrinsics require the size
 /// operand to be an immediate. In MLIR it is encoded as an attribute.
@@ -290,6 +290,26 @@ class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [1],
 
 def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start">;
 def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
+
+def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
+    [DeclareOpInterfaceMethods<PromotableOpInterface>],
+    /*requiresFastmath=*/0, /*immArgPositions=*/[0],
+    /*immArgAttrNames=*/["size"]> {
+  let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
+  let results = (outs LLVM_DefaultPointer:$res);
+  let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
+}
+
+def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
+    [DeclareOpInterfaceMethods<PromotableOpInterface>],
+    /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+    /*immArgPositions=*/[1], /*immArgAttrNames=*/["size"]> {
+  let arguments = (ins LLVM_DefaultPointer:$start,
+                       I64Attr:$size,
+                       LLVM_AnyPointer:$ptr);
+  let assemblyFormat = "$start `,` $size `,` $ptr attr-dict `:` "
+      "qualified(type($ptr))";
+}
 
 // Intrinsics with multiple returns.
 
@@ -415,6 +435,14 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
+def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
+  let arguments = (ins LLVM_AnyPointer:$handle,
+                       I32:$align,
+                       I1:$from);
+  let results = (outs LLVM_AnyPointer:$res);
+  let assemblyFormat = "$handle `,` $align `,` $from attr-dict `:` functional-type(operands, results)";
+}
+
 //
 // Debug function intrinsics.
 //
@@ -434,7 +462,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
         llvm::MetadataAsValue::get(ctx,
             llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
         llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, llvm::DIExpression::get(ctx, $locationExpr)),
+        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateExpression($locationExpr)),
       });
   }];
   let mlirBuilder = [{
@@ -455,7 +483,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
   let arguments = (ins
     LLVM_AnyPointer:$addr,
     LLVM_DILocalVariableAttr:$varInfo,
-    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
 }
 
@@ -465,7 +493,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
   let arguments = (ins
     LLVM_Type:$value,
     LLVM_DILocalVariableAttr:$varInfo,
-    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
 }
 

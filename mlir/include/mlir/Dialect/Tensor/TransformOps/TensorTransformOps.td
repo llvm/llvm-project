@@ -15,6 +15,18 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def ApplyDecomposeTensorConcatPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.decompose_concat",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that tensor.concat ops should be decomposed into a chain of
+    tensor.insert_slice operations inserting into a materialized destination.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+
 def ApplyDropRedundantInsertSliceRankExpansionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.drop_redundant_insert_slice_rank_expansion",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -155,6 +167,24 @@ def MakeLoopIndependentOp
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def TypeConversionCastShapeDynamicDimsOp : Op<Transform_Dialect,
+    "type_conversion.tensor.cast_shape_dynamic_dims",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["populateTypeMaterializations"]>]> {
+  let description = [{
+    Populates a type converter with conversion materialization functions that
+    cast a tensor value between two cast-compatible tensors. See `tensor.cast`
+    for more information on cast compatibility between tensors.
+
+    If `ignore_dynamic_info` is not set, this will set an additional constraint
+    that source materializations do not cast dynamic dimensions to static ones.
+  }];
+  let arguments = (ins UnitAttr:$ignore_dynamic_info);
+
+  let assemblyFormat =
+      "(`ignore_dynamic_info` $ignore_dynamic_info^)? attr-dict";
 }
 
 #endif // TENSOR_TRANSFORM_OPS

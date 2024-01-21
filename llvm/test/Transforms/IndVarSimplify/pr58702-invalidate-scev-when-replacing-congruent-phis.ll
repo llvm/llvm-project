@@ -5,9 +5,9 @@ define i32 @test(i32 %p_16, i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[P_16:%.*]], 6
-; CHECK-NEXT:    [[OR_1:%.*]] = or i32 [[XOR]], [[P_16]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i32 [[XOR]], [[P_16]]
 ; CHECK-NEXT:    [[XOR_1:%.*]] = xor i32 [[OR_1]], 6
-; CHECK-NEXT:    [[OR_2:%.*]] = or i32 [[XOR_1]], [[P_16]]
+; CHECK-NEXT:    [[OR_2:%.*]] = or disjoint i32 [[XOR_1]], [[P_16]]
 ; CHECK-NEXT:    [[XOR_2:%.*]] = xor i32 [[OR_2]], 6
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
@@ -22,7 +22,7 @@ define i32 @test(i32 %p_16, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label [[OUTER_LATCH]], label [[INNER_LATCH_3:%.*]]
 ; CHECK:       inner.latch.3:
 ; CHECK-NEXT:    [[XOR_2_LCSSA:%.*]] = phi i32 [ [[XOR_2]], [[INNER_LATCH_2]] ]
-; CHECK-NEXT:    [[OR_3:%.*]] = or i32 [[XOR_2_LCSSA]], [[P_16]]
+; CHECK-NEXT:    [[OR_3:%.*]] = or disjoint i32 [[XOR_2_LCSSA]], [[P_16]]
 ; CHECK-NEXT:    [[XOR_3:%.*]] = xor i32 [[OR_3]], 6
 ; CHECK-NEXT:    ret i32 [[XOR_3]]
 ; CHECK:       outer.latch:
@@ -41,7 +41,7 @@ inner.header:
   br i1 %c, label %outer.latch, label %inner.latch
 
 inner.latch:
-  %or = or i32 %p.2, %p_16
+  %or = or disjoint i32 %p.2, %p_16
   %xor = xor i32 %or, 6
   %add = add nuw nsw i32 %p.3, 1
   %cmp = icmp ult i32 %p.3, 3

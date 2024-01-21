@@ -730,3 +730,29 @@ func.func @extui_uses_unsigned(%arg0 : i32) -> i1 {
     %4 = arith.andi %2, %3 : i1
     func.return %4 : i1
 }
+
+/// Catch a bug that caused a crash in getLoopBoundFromFold when
+/// SparseConstantPropagation is loaded in the solver.
+
+// CHECK-LABEL:   func.func @caller(
+// CHECK-SAME:                      %[[VAL_0:.*]]: memref<?xindex, 4>) {
+// CHECK:           call @callee(%[[VAL_0]]) : (memref<?xindex, 4>) -> ()
+// CHECK:           return
+// CHECK:         }
+func.func @caller(%arg0: memref<?xindex, 4>) {
+  call @callee(%arg0) : (memref<?xindex, 4>) -> ()
+  return
+}
+
+// CHECK-LABEL:   func.func private @callee(
+// CHECK-SAME:                              %[[VAL_0:.*]]: memref<?xindex, 4>) {
+// CHECK:           return
+// CHECK:         }
+func.func private @callee(%arg0: memref<?xindex, 4>) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = affine.load %arg0[0] : memref<?xindex, 4>
+  scf.for %arg1 = %c0 to %0 step %c1 {
+  }
+  return
+}

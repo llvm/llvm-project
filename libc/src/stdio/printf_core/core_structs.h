@@ -46,14 +46,14 @@ struct FormatSection {
   int precision = -1;
 
   // Needs to be large enough to hold a long double.
-  fputil::FPBits<long double>::UIntType conv_val_raw;
+  fputil::FPBits<long double>::StorageType conv_val_raw;
   void *conv_val_ptr;
 
   char conv_name;
 
   // This operator is only used for testing and should be automatically
   // optimized out for release builds.
-  bool operator==(const FormatSection &other) const {
+  LIBC_INLINE bool operator==(const FormatSection &other) const {
     if (has_conv != other.has_conv)
       return false;
 
@@ -93,11 +93,11 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
   if constexpr (cpp::is_same_v<T, void>) {
     return TypeDesc{0, PrimaryType::Unknown};
   } else {
-    constexpr bool isPointer = cpp::is_pointer_v<T>;
-    constexpr bool isFloat = cpp::is_floating_point_v<T>;
-    return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
-                               : isFloat ? PrimaryType::Float
-                                         : PrimaryType::Integer};
+    constexpr bool IS_POINTER = cpp::is_pointer_v<T>;
+    constexpr bool IS_FLOAT = cpp::is_floating_point_v<T>;
+    return TypeDesc{sizeof(T), IS_POINTER ? PrimaryType::Pointer
+                               : IS_FLOAT ? PrimaryType::Float
+                                          : PrimaryType::Integer};
   }
 }
 

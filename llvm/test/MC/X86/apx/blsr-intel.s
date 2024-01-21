@@ -1,0 +1,17 @@
+# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
+
+# CHECK: blsr	r22d, r18d
+# CHECK: encoding: [0x62,0xfa,0x4c,0x00,0xf3,0xca]
+         blsr	r22d, r18d
+
+# CHECK: blsr	r23, r19
+# CHECK: encoding: [0x62,0xfa,0xc4,0x00,0xf3,0xcb]
+         blsr	r23, r19
+
+# CHECK: blsr	r18d, dword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9a,0x68,0x00,0xf3,0x8c,0xac,0x23,0x01,0x00,0x00]
+         blsr	r18d, dword ptr [r28 + 4*r29 + 291]
+
+# CHECK: blsr	r19, qword ptr [r28 + 4*r29 + 291]
+# CHECK: encoding: [0x62,0x9a,0xe0,0x00,0xf3,0x8c,0xac,0x23,0x01,0x00,0x00]
+         blsr	r19, qword ptr [r28 + 4*r29 + 291]

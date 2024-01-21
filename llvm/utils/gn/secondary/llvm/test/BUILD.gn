@@ -65,6 +65,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_HAVE_OPT_VIEWER_MODULES=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DXIL_TESTS=0",
+    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
     "LLVM_LIBS_DIR=" + rebase_path("$root_out_dir/lib", dir),
     "LLVM_LINK_LLVM_DYLIB=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.

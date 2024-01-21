@@ -75,6 +75,7 @@ public:
                                bool IsCheckAll);
   void expandTIIFunctionCall(raw_ostream &OS, StringRef MethodName);
   void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
+  void expandCheckIsVRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckIsImmOperand(raw_ostream &OS, int OpIndex);
   void expandCheckInvalidRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckFunctionPredicate(raw_ostream &OS, StringRef MCInstFn,

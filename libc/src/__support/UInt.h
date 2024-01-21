@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h" // unsafe_clz
 #include "src/__support/integer_utils.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -30,7 +30,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in BigInt should be a multiple of 64.");
   LIBC_INLINE_VAR static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT]{};
+  cpp::array<uint64_t, WORDCOUNT> val{};
 
   LIBC_INLINE_VAR static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
@@ -103,13 +103,20 @@ template <size_t Bits, bool Signed> struct BigInt {
       val[i] = words[i];
   }
 
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
-                                                    sizeof(T) <= 16 &&
-                                                    !cpp::is_same_v<T, bool>>>
-  LIBC_INLINE constexpr explicit operator T() const {
-    if constexpr (sizeof(T) <= 8)
-      return static_cast<T>(val[0]);
+  template <typename T> LIBC_INLINE constexpr explicit operator T() const {
+    return to<T>();
+  }
 
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) <= 8 && !cpp::is_same_v<T, bool>, T>
+  to() const {
+    return static_cast<T>(val[0]);
+  }
+  template <typename T>
+  LIBC_INLINE constexpr cpp::enable_if_t<
+      cpp::is_integral_v<T> && sizeof(T) == 16, T>
+  to() const {
     // T is 128-bit.
     T lo = static_cast<T>(val[0]);
 
@@ -190,7 +197,7 @@ template <size_t Bits, bool Signed> struct BigInt {
     return d.borrow;
   }
 
-  LIBC_INLINE BigInt<Bits, Signed>
+  LIBC_INLINE constexpr BigInt<Bits, Signed>
   operator-(const BigInt<Bits, Signed> &other) const {
     BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
@@ -556,7 +563,7 @@ template <size_t Bits, bool Signed> struct BigInt {
       if (val[i - 1] == 0) {
         leading_zeroes += sizeof(uint64_t) * 8;
       } else {
-        leading_zeroes += unsafe_clz(val[i - 1]);
+        leading_zeroes += countl_zero(val[i - 1]);
         break;
       }
     }
@@ -896,6 +903,7 @@ public:
     return UInt<128>({0xffff'ffff'ffff'ffff, 0xffff'ffff'ffff'ffff});
   }
   LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>(0); }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 template <> class numeric_limits<Int<128>> {
@@ -906,6 +914,7 @@ public:
   LIBC_INLINE static constexpr Int<128> min() {
     return Int<128>({0, 0x8000'0000'0000'0000});
   }
+  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 // Provides is_integral of U/Int<128>, U/Int<192>, U/Int<256>.
@@ -944,6 +953,48 @@ struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in Int should be a multiple of 64.");
 };
+
+namespace internal {
+template <typename T> struct is_custom_uint : cpp::false_type {};
+template <size_t Bits> struct is_custom_uint<UInt<Bits>> : cpp::true_type {};
+} // namespace internal
+
+// bit_cast to UInt
+// Note: The standard scheme for SFINAE selection is to have exactly one
+// function instanciation valid at a time. This is usually done by having a
+// predicate in one function and the negated predicate in the other one.
+// e.g.
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == true> ...
+// template<typename = cpp::enable_if_t< is_custom_uint<To>::value == false> ...
+//
+// Unfortunately this would make the default 'cpp::bit_cast' aware of
+// 'is_custom_uint' (or any other customization). To prevent exposing all
+// customizations in the original function, we create a different function with
+// four 'typename's instead of three - otherwise it would be considered as a
+// redeclaration of the same function leading to "error: template parameter
+// redefines default argument".
+template <typename To, typename From,
+          typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                      cpp::is_trivially_copyable<To>::value &&
+                                      cpp::is_trivially_copyable<From>::value>,
+          typename = cpp::enable_if_t<internal::is_custom_uint<To>::value>>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
+  To out;
+  using Storage = decltype(out.val);
+  out.val = cpp::bit_cast<Storage>(from);
+  return out;
+}
+
+// bit_cast from UInt
+template <
+    typename To, size_t Bits,
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(UInt<Bits>) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<UInt<Bits>>::value>>
+LIBC_INLINE constexpr To bit_cast(const UInt<Bits> &from) {
+  return cpp::bit_cast<To>(from.val);
+}
 
 } // namespace LIBC_NAMESPACE::cpp
 

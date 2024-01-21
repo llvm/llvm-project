@@ -230,7 +230,7 @@ public:
   }
 
   void* __allocate_in_new_chunk(memory_resource* upstream, size_t block_size, size_t chunk_size) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(chunk_size % block_size == 0, "");
+    _LIBCPP_ASSERT_INTERNAL(chunk_size % block_size == 0, "");
     static_assert(__default_alignment >= alignof(std::max_align_t), "");
     static_assert(__default_alignment >= alignof(__chunk_footer), "");
     static_assert(__default_alignment >= alignof(__vacancy_header), "");

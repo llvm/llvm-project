@@ -8,6 +8,10 @@ corresponding ``std::string_view`` methods) result is compared with 0, and
 suggests replacing with ``absl::StartsWith()``. This is both a readability and
 performance issue.
 
+``starts_with`` was added as a built-in function on those types in C++20. If
+available, prefer enabling :doc:`modernize-use-starts-ends-with
+<../modernize/use-starts-ends-with>` instead of this check.
+
 .. code-block:: c++
 
   string s = "...";

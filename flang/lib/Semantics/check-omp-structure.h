@@ -33,6 +33,16 @@ static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
     OmpClauseSet{Clause::OMPC_reduction} | privateSet};
+// omp.td cannot differentiate allowed/not allowed clause list for few
+// directives for fortran. nowait is not allowed on begin directive clause list
+// for below list of directives. Directives with conflicting list of clauses are
+// included in below list.
+static const OmpDirectiveSet noWaitClauseNotAllowedSet{
+    Directive::OMPD_do,
+    Directive::OMPD_do_simd,
+    Directive::OMPD_sections,
+    Directive::OMPD_single,
+};
 } // namespace omp
 } // namespace llvm
 
@@ -61,6 +71,7 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
+  void Leave(const parser::OmpEndLoopDirective &);
 
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);

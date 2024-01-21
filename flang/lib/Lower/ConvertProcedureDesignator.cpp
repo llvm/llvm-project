@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 static bool areAllSymbolsInExprMapped(const Fortran::evaluate::ExtentExpr &expr,
                                       Fortran::lower::SymMap &symMap) {
@@ -96,6 +97,49 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
   return funcPtr;
 }
 
+static hlfir::EntityWithAttributes designateProcedurePointerComponent(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::Symbol &procComponentSym, mlir::Value base,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FortranVariableFlagsAttr attributes =
+      Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                procComponentSym);
+  /// Passed argument may be a descriptor. This is a scalar reference, so the
+  /// base address can be directly addressed.
+  if (base.getType().isa<fir::BaseBoxType>())
+    base = builder.create<fir::BoxAddrOp>(loc, base);
+  std::string fieldName = converter.getRecordTypeFieldName(procComponentSym);
+  auto recordType =
+      hlfir::getFortranElementType(base.getType()).cast<fir::RecordType>();
+  mlir::Type fieldType = recordType.getType(fieldName);
+  // Note: semantics turns x%p() into x%t%p() when the procedure pointer
+  // component is part of parent component t.
+  if (!fieldType)
+    TODO(loc, "passing type bound procedure (extension)");
+  mlir::Type designatorType = fir::ReferenceType::get(fieldType);
+  mlir::Value compRef = builder.create<hlfir::DesignateOp>(
+      loc, designatorType, base, fieldName,
+      /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+      /*substring=*/mlir::ValueRange{},
+      /*complexPart=*/std::nullopt,
+      /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{}, attributes);
+  return hlfir::EntityWithAttributes{compRef};
+}
+
+static hlfir::EntityWithAttributes convertProcedurePointerComponent(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::Component &procComponent,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  fir::ExtendedValue baseExv = Fortran::lower::convertDataRefToValue(
+      loc, converter, procComponent.base(), symMap, stmtCtx);
+  mlir::Value base = fir::getBase(baseExv);
+  const Fortran::semantics::Symbol &procComponentSym =
+      procComponent.GetLastSymbol();
+  return designateProcedurePointerComponent(loc, converter, procComponentSym,
+                                            base, symMap, stmtCtx);
+}
+
 hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
@@ -108,6 +152,10 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
             symMap.lookupVariableDefinition(*sym))
       return *varDef;
   }
+
+  if (const Fortran::evaluate::Component *procComponent = proc.GetComponent())
+    return convertProcedurePointerComponent(loc, converter, *procComponent,
+                                            symMap, stmtCtx);
 
   fir::ExtendedValue procExv =
       convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);
@@ -147,4 +195,16 @@ mlir::Value Fortran::lower::convertProcedureDesignatorInitialTarget(
       loc, converter, proc, globalOpSymMap, stmtCtx)};
   return fir::getBase(Fortran::lower::convertToAddress(
       loc, converter, procVal, stmtCtx, procVal.getType()));
+}
+
+mlir::Value Fortran::lower::derefPassProcPointerComponent(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::ProcedureDesignator &proc, mlir::Value passedArg,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  const Fortran::semantics::Symbol *procComponentSym = proc.GetSymbol();
+  assert(procComponentSym &&
+         "failed to retrieve pointer procedure component symbol");
+  hlfir::EntityWithAttributes pointerComp = designateProcedurePointerComponent(
+      loc, converter, *procComponentSym, passedArg, symMap, stmtCtx);
+  return converter.getFirOpBuilder().create<fir::LoadOp>(loc, pointerComp);
 }

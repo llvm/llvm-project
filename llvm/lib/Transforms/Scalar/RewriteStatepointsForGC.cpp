@@ -1975,19 +1975,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
     assert(AllocaMap.count(OriginalValue));
     Value *Alloca = AllocaMap[OriginalValue];
 
-    // Emit store into the related alloca
-    // All gc_relocates are i8 addrspace(1)* typed, and it must be bitcasted to
-    // the correct type according to alloca.
+    // Emit store into the related alloca.
     assert(Relocate->getNextNode() &&
            "Should always have one since it's not a terminator");
-    IRBuilder<> Builder(Relocate->getNextNode());
-    Value *CastedRelocatedValue =
-      Builder.CreateBitCast(Relocate,
-                            cast<AllocaInst>(Alloca)->getAllocatedType(),
-                            suffixed_name_or(Relocate, ".casted", ""));
-
-    new StoreInst(CastedRelocatedValue, Alloca,
-                  cast<Instruction>(CastedRelocatedValue)->getNextNode());
+    new StoreInst(Relocate, Alloca, Relocate->getNextNode());
 
 #ifndef NDEBUG
     VisitedLiveValues.insert(OriginalValue);
@@ -2057,7 +2048,7 @@ static void relocationViaAlloca(
   for (const auto &Info : Records)
     for (auto RematerializedValuePair : Info.RematerializedValues) {
       Value *OriginalValue = RematerializedValuePair.second;
-      if (AllocaMap.count(OriginalValue) != 0)
+      if (AllocaMap.contains(OriginalValue))
         continue;
 
       emitAllocaFor(OriginalValue);
@@ -2620,13 +2611,9 @@ static bool inlineGetBaseAndOffset(Function &F,
       Value *Base =
           findBasePointer(Callsite->getOperand(0), DVCache, KnownBases);
       assert(!DVCache.count(Callsite));
-      auto *BaseBC = IRBuilder<>(Callsite).CreateBitCast(
-          Base, Callsite->getType(), suffixed_name_or(Base, ".cast", ""));
-      if (BaseBC != Base)
-        DVCache[BaseBC] = Base;
-      Callsite->replaceAllUsesWith(BaseBC);
-      if (!BaseBC->hasName())
-        BaseBC->takeName(Callsite);
+      Callsite->replaceAllUsesWith(Base);
+      if (!Base->hasName())
+        Base->takeName(Callsite);
       Callsite->eraseFromParent();
       break;
     }

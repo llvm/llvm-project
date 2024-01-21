@@ -5223,11 +5223,8 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
     return BinaryOp(Op);
 
   case Instruction::Or: {
-    // LLVM loves to convert `add` of operands with no common bits
-    // into an `or`. But SCEV really doesn't deal with `or` that well,
-    // so try extra hard to recognize this `or` as an `add`.
-    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1),
-                            SimplifyQuery(DL, &DT, &AC, CxtI)))
+    // Convert or disjoint into add nuw nsw.
+    if (cast<PossiblyDisjointInst>(Op)->isDisjoint())
       return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
                       /*IsNSW=*/true, /*IsNUW=*/true);
     return BinaryOp(Op);
@@ -7917,9 +7914,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         //    expression. We already checked that ShlAmt < BitWidth, so
         //    the multiplier, 1 << (ShlAmt - AShrAmt), fits into TruncTy as
         //    ShlAmt - AShrAmt < Amt.
-        uint64_t ShlAmt = ShlAmtCI->getZExtValue();
-        if (ShlAmtCI->getValue().ult(BitWidth) && ShlAmt >= AShrAmt) {
-          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt, ShlAmt - AShrAmt);
+        const APInt &ShlAmt = ShlAmtCI->getValue();
+        if (ShlAmt.ult(BitWidth) && ShlAmt.uge(AShrAmt)) {
+          APInt Mul = APInt::getOneBitSet(BitWidth - AShrAmt,
+                                          ShlAmtCI->getZExtValue() - AShrAmt);
           const SCEV *CompositeExpr =
               getMulExpr(AddTruncateExpr, getConstant(Mul));
           if (L->getOpcode() != Instruction::Shl)
@@ -10723,6 +10721,10 @@ bool ScalarEvolution::isKnownNonPositive(const SCEV *S) {
 }
 
 bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
+  // Query push down for cases where the unsigned range is
+  // less than sufficient.
+  if (const auto *SExt = dyn_cast<SCEVSignExtendExpr>(S))
+    return isKnownNonZero(SExt->getOperand(0));
   return getUnsignedRangeMin(S) != 0;
 }
 
@@ -12913,7 +12915,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (!BECount) {
     auto canProveRHSGreaterThanEqualStart = [&]() {
       auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart))
+      const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
+      const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
+
+      if (isLoopEntryGuardedByCond(L, CondGE, OrigRHS, OrigStart) ||
+          isKnownPredicate(CondGE, GuardedRHS, GuardedStart))
         return true;
 
       // (RHS > Start - 1) implies RHS >= Start.

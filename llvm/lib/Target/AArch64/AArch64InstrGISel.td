@@ -209,7 +209,7 @@ def G_FCMLTZ : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_PREFETCH : AArch64GenericInstruction {
+def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
   let hasSideEffects = 1;
@@ -224,6 +224,18 @@ def G_UMULL : AArch64GenericInstruction {
 def G_SMULL : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_UADDLV : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_SADDLV : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
   let hasSideEffects = 0;
 }
 
@@ -282,12 +294,15 @@ def : GINodeEquiv<G_BSP, AArch64bsp>;
 def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
 
+def : GINodeEquiv<G_SADDLV, AArch64saddlv>;
+def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;
+
 def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
-def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
 
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),

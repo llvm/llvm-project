@@ -18,6 +18,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S s0, const typename S::allocator_type& a) {
@@ -28,6 +29,9 @@ TEST_CONSTEXPR_CXX20 void test(S s0, const typename S::allocator_type& a) {
   assert(s2 == s1);
   assert(s2.capacity() >= s2.size());
   assert(s2.get_allocator() == a);
+  LIBCPP_ASSERT(is_string_asan_correct(s0));
+  LIBCPP_ASSERT(is_string_asan_correct(s1));
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

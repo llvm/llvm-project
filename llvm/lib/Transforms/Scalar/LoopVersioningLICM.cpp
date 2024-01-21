@@ -258,14 +258,19 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
     // With MustAlias its not worth adding runtime bound check.
     if (AS.isMustAlias())
       return false;
-    Value *SomePtr = AS.begin()->getValue();
+    const Value *SomePtr = AS.begin()->Ptr;
     bool TypeCheck = true;
     // Check for Mod & MayAlias
     HasMayAlias |= AS.isMayAlias();
     HasMod |= AS.isMod();
-    for (const auto &A : AS) {
-      Value *Ptr = A.getValue();
+    for (const auto &MemLoc : AS) {
+      const Value *Ptr = MemLoc.Ptr;
       // Alias tracker should have pointers of same data type.
+      //
+      // FIXME: check no longer effective since opaque pointers?
+      // If the intent is to check that the memory accesses use the
+      // same data type (such that LICM can promote them), then we
+      // can no longer see this from the pointer value types.
       TypeCheck = (TypeCheck && (SomePtr->getType() == Ptr->getType()));
     }
     // At least one alias tracker should have pointers of same data type.

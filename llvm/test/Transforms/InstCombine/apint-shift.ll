@@ -273,7 +273,7 @@ define i18 @test13(i18 %x) {
 define i35 @test14(i35 %A) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[B:%.*]] = and i35 [[A:%.*]], -19760
-; CHECK-NEXT:    [[C:%.*]] = or i35 [[B]], 19744
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i35 [[B]], 19744
 ; CHECK-NEXT:    ret i35 [[C]]
 ;
   %B = lshr i35 %A, 4

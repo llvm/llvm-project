@@ -31,12 +31,13 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
+  const T inf = T(FPBits::inf(Sign::POS));
+  const T neg_inf = T(FPBits::inf(Sign::NEG));
+  const T zero = T(FPBits::zero(Sign::POS));
+  const T neg_zero = T(FPBits::zero(Sign::NEG));
   const T nan = T(FPBits::build_quiet_nan(1));
 
   static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
@@ -93,11 +94,10 @@ public:
   }
 
   void testSubnormalRange(RIntFunc func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
          i += STEP) {
       T x = T(FPBits(i));
       for (int mode : ROUNDING_MODES) {
@@ -109,10 +109,11 @@ public:
   }
 
   void testNormalRange(RIntFunc func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += STEP) {
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP =
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    for (StorageType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL;
+         i += STEP) {
       T x = T(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.

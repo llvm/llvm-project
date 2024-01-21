@@ -42,7 +42,7 @@ define i16 @test1_trunc(i32 %i) {
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
-; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
@@ -59,7 +59,7 @@ define i16 @test1_trunc_extra_use(i32 %i) {
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[I:%.*]], 24
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
-; CHECK-NEXT:    [[T5:%.*]] = or i32 [[T1]], [[T4]]
+; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    call void @extra_use(i32 [[T5]])
 ; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
@@ -605,7 +605,7 @@ define i64 @bswap_and_mask_1(i64 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP0:%.*]], 56
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP0]], 40
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 65280
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %2 = lshr i64 %0, 56
@@ -690,7 +690,7 @@ declare void @use(<4 x i8>)
 
 define i32 @shuf_4bytes_extra_use(<4 x i8> %x) {
 ; CHECK-LABEL: @shuf_4bytes_extra_use(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use(<4 x i8> [[BSWAP]])
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
@@ -705,7 +705,7 @@ define i32 @shuf_4bytes_extra_use(<4 x i8> %x) {
 
 define i128 @shuf_16bytes(<16 x i8> %x) {
 ; CHECK-LABEL: @shuf_16bytes(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <16 x i8> [[BSWAP]] to i128
 ; CHECK-NEXT:    ret i128 [[CAST]]
 ;
@@ -718,7 +718,7 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
 
 define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @shuf_2bytes_widening(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
@@ -781,7 +781,7 @@ define i16 @trunc_bswap_i160(ptr %a0) {
 ; CHECK-NEXT:    [[SH_DIFF:%.*]] = lshr i160 [[LOAD]], 120
 ; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i160 [[SH_DIFF]] to i16
 ; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TR_SH_DIFF]], -256
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[AND1]], [[SHL]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %load = load i160, ptr %a0, align 4

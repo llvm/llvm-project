@@ -20,7 +20,7 @@ define dso_local void @rftbsub(ptr %a) local_unnamed_addr #0 {
 entry:
   %arrayidx6 = getelementptr inbounds double, ptr %a, i64 2
   %0 = load double, ptr %arrayidx6, align 8
-  %1 = or i64 2, 1
+  %1 = or disjoint i64 2, 1
   %arrayidx12 = getelementptr inbounds double, ptr %a, i64 %1
   %2 = load double, ptr %arrayidx12, align 8
   %add16 = fadd double %2, undef

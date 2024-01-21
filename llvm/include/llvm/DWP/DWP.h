@@ -15,6 +15,12 @@
 #include <vector>
 
 namespace llvm {
+enum OnCuIndexOverflow {
+  HardStop,
+  SoftStop,
+  Continue,
+};
+
 struct UnitIndexEntry {
   DWARFUnitIndex::Entry::SectionContribution Contributions[8];
   std::string Name;
@@ -61,7 +67,7 @@ struct CompileUnitIdentifiers {
 };
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            bool ContinueOnCuIndexOverflow);
+            OnCuIndexOverflow OverflowOptValue);
 
 unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
 

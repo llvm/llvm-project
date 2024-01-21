@@ -16,7 +16,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ValueHandle.h"

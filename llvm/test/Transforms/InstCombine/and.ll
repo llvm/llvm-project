@@ -395,8 +395,8 @@ define i8 @test27(i8 %A) {
 
 define i32 @ashr_lowmask(i32 %x) {
 ; CHECK-LABEL: @ashr_lowmask(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = ashr i32 %x, 24
   %r = and i32 %a, 255
@@ -2433,7 +2433,7 @@ define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
 define i64 @test_and_or_constexpr_infloop() {
 ; CHECK-LABEL: @test_and_or_constexpr_infloop(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @g to i64), -8
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[AND]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[AND]], 1
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
   %and = and i64 ptrtoint (ptr @g to i64), -8
@@ -2709,5 +2709,62 @@ define i32 @canonicalize_and_sub_power2_or_zero_multiuse_nofold(i32 %x, i32 %y) 
   %val = sub i32 %x, %p2
   call void @use32(i32 %val)
   %and = and i32 %val, %p2
+  ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_pass(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP1]], 16
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 16
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define <2 x i16> @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(<2 x i16> %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_pass_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i16> [[X:%.*]], <i16 24, i16 24>
+; CHECK-NEXT:    [[AND:%.*]] = xor <2 x i16> [[TMP1]], <i16 16, i16 16>
+; CHECK-NEXT:    ret <2 x i16> [[AND]]
+;
+  %add = add <2 x i16> %x, <i16 16, i16 16>
+  %and = and <2 x i16> %add, <i16 24, i16 24>
+  ret <2 x i16> %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_fail1(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_fail1(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 8
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_fail2(i32 %x) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_fail2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 24
+  %and = and i32 %add, 24
+  ret i32 %and
+}
+
+define i32 @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_constant_equal_with_the_top_bit_of_demandedbits_insertpt(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 24
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %add = add i32 %x, 16
+  %or = or i32 %add, %y
+  %and = and i32 %or, 24
   ret i32 %and
 }

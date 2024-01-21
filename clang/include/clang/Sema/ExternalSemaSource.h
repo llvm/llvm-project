@@ -181,9 +181,6 @@ public:
                  SmallVectorImpl<std::pair<ValueDecl *,
                                            SourceLocation> > &Pending) {}
 
-  virtual void ReadPendingInstantiationsOfConstexprEntity(
-      const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls){};
-
   /// Read the set of late parsed template functions for this source.
   ///
   /// The external source should insert its own late parsed template functions

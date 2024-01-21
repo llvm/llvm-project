@@ -34,6 +34,7 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_NO_LOCALIZATION=",
       "_LIBCPP_HAS_NO_WIDE_CHARACTERS=",
       "_LIBCPP_HAS_NO_STD_MODULES=",
+      "_LIBCPP_INSTRUMENTED_WITH_ASAN=",
       "_LIBCPP_ABI_DEFINES=",
       "_LIBCPP_HARDENING_MODE_DEFAULT=_LIBCPP_HARDENING_MODE_NONE",
       "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH=",
@@ -65,6 +66,11 @@ if (current_toolchain == default_toolchain) {
     values = []
   }
 
+  copy("write_assertion_handler") {
+    sources = [ "//libcxx/vendor/llvm/default_assertion_handler.in" ]
+    outputs = [ "$libcxx_generated_include_dir/__assertion_handler" ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -90,6 +96,8 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/find_first_of.h",
       "__algorithm/find_if.h",
       "__algorithm/find_if_not.h",
+      "__algorithm/find_segment_if.h",
+      "__algorithm/fold.h",
       "__algorithm/for_each.h",
       "__algorithm/for_each_n.h",
       "__algorithm/for_each_segment.h",
@@ -175,6 +183,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/ranges_any_of.h",
       "__algorithm/ranges_binary_search.h",
       "__algorithm/ranges_clamp.h",
+      "__algorithm/ranges_contains.h",
       "__algorithm/ranges_copy.h",
       "__algorithm/ranges_copy_backward.h",
       "__algorithm/ranges_copy_if.h",
@@ -904,6 +913,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/void_t.h",
       "__undef_macros",
       "__utility/as_const.h",
+      "__utility/as_lvalue.h",
       "__utility/auto_cast.h",
       "__utility/cmp.h",
       "__utility/convert_to_integral.h",
@@ -975,10 +985,8 @@ if (current_toolchain == default_toolchain) {
       "execution",
       "experimental/__config",
       "experimental/__memory",
-      "experimental/__simd/abi_tag.h",
       "experimental/__simd/aligned_tag.h",
       "experimental/__simd/declaration.h",
-      "experimental/__simd/internal_declaration.h",
       "experimental/__simd/reference.h",
       "experimental/__simd/scalar.h",
       "experimental/__simd/simd.h",
@@ -1076,6 +1084,7 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":write_config_site",
       ":write_modulemap",
+      ":write_assertion_handler",
     ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets

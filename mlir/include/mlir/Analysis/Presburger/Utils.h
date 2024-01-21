@@ -276,6 +276,11 @@ SmallVector<MPInt, 8> getNegatedCoeffs(ArrayRef<MPInt> coeffs);
 /// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
 /// since all the variables are constrained to be integers.
 SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
+
+/// Compute the dot product of two vectors.
+/// The vectors must have the same sizes.
+Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
+
 } // namespace presburger
 } // namespace mlir
 

@@ -439,6 +439,27 @@ struct TestVectorChainedReductionFoldingPatterns
   }
 };
 
+struct TestVectorBreakDownReductionPatterns
+    : public PassWrapper<TestVectorBreakDownReductionPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorBreakDownReductionPatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-break-down-reduction-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to break down vector reductions into arith "
+           "reductions";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateBreakDownVectorReductionPatterns(patterns,
+                                             /*maxNumElementsToExtract=*/2);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestFlattenVectorTransferPatterns
     : public PassWrapper<TestFlattenVectorTransferPatterns,
                          OperationPass<func::FuncOp>> {
@@ -454,6 +475,8 @@ struct TestFlattenVectorTransferPatterns
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
+    registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -567,6 +590,11 @@ struct TestVectorDistribution
       llvm::cl::desc("Test distribution of transfer write"),
       llvm::cl::init(false)};
 
+  Option<unsigned> maxTransferWriteElements{
+      *this, "max-transfer-write-elements",
+      llvm::cl::desc("Maximum number of transfer write elements to distribute"),
+      llvm::cl::init(1)};
+
   Option<bool> hoistUniform{*this, "hoist-uniform",
                             llvm::cl::desc("Test hoist uniform"),
                             llvm::cl::init(false)};
@@ -623,7 +651,8 @@ struct TestVectorDistribution
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     } else if (distributeTransferWriteOps) {
       RewritePatternSet patterns(ctx);
-      populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
+      populateDistributeTransferWriteOpPatterns(patterns, distributionFn,
+                                                maxTransferWriteElements);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     } else if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
@@ -769,6 +798,31 @@ struct TestFoldArithExtensionIntoVectorContractPatterns
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestVectorEmulateMaskedLoadStore final
+    : public PassWrapper<TestVectorEmulateMaskedLoadStore,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorEmulateMaskedLoadStore)
+
+  StringRef getArgument() const override {
+    return "test-vector-emulate-masked-load-store";
+  }
+  StringRef getDescription() const override {
+    return "Test patterns that emulate the maskedload/maskedstore op by "
+           " memref.load/store and scf.if";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry
+        .insert<arith::ArithDialect, func::FuncDialect, memref::MemRefDialect,
+                scf::SCFDialect, vector::VectorDialect>();
+  }
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorMaskedLoadStoreEmulationPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -794,6 +848,8 @@ void registerTestVectorLowerings() {
 
   PassRegistration<TestVectorChainedReductionFoldingPatterns>();
 
+  PassRegistration<TestVectorBreakDownReductionPatterns>();
+
   PassRegistration<TestFlattenVectorTransferPatterns>();
 
   PassRegistration<TestVectorScanLowering>();
@@ -809,6 +865,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorGatherLowering>();
 
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
+
+  PassRegistration<TestVectorEmulateMaskedLoadStore>();
 }
 } // namespace test
 } // namespace mlir

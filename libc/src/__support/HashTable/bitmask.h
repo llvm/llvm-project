@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 
-#include "src/__support/bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include <stddef.h> // size_t
 #include <stdint.h> // uint8_t, uint64_t
@@ -31,9 +31,7 @@ namespace internal {
 // |  Available  | 0b1xxx'xxxx |
 // |  Occupied   | 0b0xxx'xxxx |
 // =============================
-template <typename T, T WORD_MASK, size_t WORD_STRIDE> struct BitMaskAdaptor {
-  // A masked constant whose bits are all set.
-  LIBC_INLINE_VAR constexpr static T MASK = WORD_MASK;
+template <typename T, size_t WORD_STRIDE> struct BitMaskAdaptor {
   // A stride in the bitmask may use multiple bits.
   LIBC_INLINE_VAR constexpr static size_t STRIDE = WORD_STRIDE;
 
@@ -45,7 +43,7 @@ template <typename T, T WORD_MASK, size_t WORD_STRIDE> struct BitMaskAdaptor {
   // Count trailing zeros with respect to stride. (Assume the bitmask is none
   // zero.)
   LIBC_INLINE constexpr size_t lowest_set_bit_nonzero() const {
-    return unsafe_ctz<T>(word) / WORD_STRIDE;
+    return cpp::countr_zero<T>(word) / WORD_STRIDE;
   }
 };
 
@@ -73,7 +71,7 @@ template <class BitMask> struct IteratableBitMaskAdaptor : public BitMask {
     return *this;
   }
   LIBC_INLINE IteratableBitMaskAdaptor begin() { return *this; }
-  LIBC_INLINE IteratableBitMaskAdaptor end() { return {0}; }
+  LIBC_INLINE IteratableBitMaskAdaptor end() { return {BitMask{0}}; }
   LIBC_INLINE bool operator==(const IteratableBitMaskAdaptor &other) {
     return this->word == other.word;
   }

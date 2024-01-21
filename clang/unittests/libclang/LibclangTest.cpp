@@ -451,8 +451,8 @@ public:
 
       const auto Filename = llvm::sys::path::filename(File->path());
       EXPECT_EQ(Filename.size(), std::strlen("preamble-%%%%%%.pch"));
-      EXPECT_TRUE(Filename.startswith("preamble-"));
-      EXPECT_TRUE(Filename.endswith(".pch"));
+      EXPECT_TRUE(Filename.starts_with("preamble-"));
+      EXPECT_TRUE(Filename.ends_with(".pch"));
 
       const auto Status = File->status();
       ASSERT_TRUE(Status);
@@ -659,7 +659,7 @@ TEST_F(LibclangReparseTest, FileName) {
   clang_disposeString(cxname);
 
   cxname = clang_File_tryGetRealPathName(cxf);
-  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).endswith("main.cpp"));
+  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).ends_with("main.cpp"));
   clang_disposeString(cxname);
 }
 

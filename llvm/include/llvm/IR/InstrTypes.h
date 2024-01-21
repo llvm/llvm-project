@@ -336,6 +336,15 @@ public:
     return BO;
   }
 
+  static inline BinaryOperator *
+  CreateDisjoint(BinaryOps Opc, Value *V1, Value *V2, const Twine &Name = "");
+  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               BasicBlock *BB);
+  static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               Instruction *I);
+
 #define DEFINE_HELPERS(OPC, NUWNSWEXACT)                                       \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(Value *V1, Value *V2,        \
                                                   const Twine &Name = "") {    \
@@ -363,6 +372,8 @@ public:
   DEFINE_HELPERS(UDiv, Exact)  // CreateExactUDiv
   DEFINE_HELPERS(AShr, Exact)  // CreateExactAShr
   DEFINE_HELPERS(LShr, Exact)  // CreateExactLShr
+
+  DEFINE_HELPERS(Or, Disjoint) // CreateDisjointOr
 
 #undef DEFINE_HELPERS
 
@@ -437,6 +448,27 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
+
+BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name) {
+  BinaryOperator *BO = Create(Opc, V1, V2, Name);
+  cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
+  return BO;
+}
+BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               BasicBlock *BB) {
+  BinaryOperator *BO = Create(Opc, V1, V2, Name, BB);
+  cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
+  return BO;
+}
+BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
+                                               Value *V2, const Twine &Name,
+                                               Instruction *I) {
+  BinaryOperator *BO = Create(Opc, V1, V2, Name, I);
+  cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
+  return BO;
+}
 
 //===----------------------------------------------------------------------===//
 //                               CastInst Class

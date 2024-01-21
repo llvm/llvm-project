@@ -37,6 +37,11 @@ def ImmPlus1 : SDNodeXForm<imm, [{
 def GINegImm : GICustomOperandRenderer<"renderNegImm">,
   GISDNodeXFormEquiv<NegImm>;
 
+def GIImmSubFromXLen : GICustomOperandRenderer<"renderImmSubFromXLen">,
+  GISDNodeXFormEquiv<ImmSubFromXLen>;
+def GIImmSubFrom32 : GICustomOperandRenderer<"renderImmSubFrom32">,
+  GISDNodeXFormEquiv<ImmSubFrom32>;
+
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;
@@ -56,9 +61,12 @@ def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
 // parameter appears to be ignored so this pattern works for both, however we
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
-def ShiftMaskGI :
+def GIShiftMaskXLen :
     GIComplexOperandMatcher<s32, "selectShiftMask">,
     GIComplexPatternEquiv<shiftMaskXLen>;
+def GIShiftMask32 :
+    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
                    GIComplexPatternEquiv<sh1add_op>;

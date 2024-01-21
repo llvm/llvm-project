@@ -19,11 +19,11 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
 
   FPBits x_bits(x), y_bits(y);
 
-  uint16_t x_exp = x_bits.get_unbiased_exponent();
-  uint16_t y_exp = y_bits.get_unbiased_exponent();
+  uint16_t x_exp = x_bits.get_biased_exponent();
+  uint16_t y_exp = y_bits.get_biased_exponent();
   uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
 
-  if (exp_diff >= fputil::MantissaWidth<float>::VALUE + 2) {
+  if (exp_diff >= FPBits::FRACTION_LEN + 2) {
     return fputil::abs(x) + fputil::abs(y);
   }
 

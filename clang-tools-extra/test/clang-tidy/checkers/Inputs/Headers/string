@@ -10,8 +10,13 @@ typedef unsigned __INT32_TYPE__ char32;
 namespace std {
 template <typename T>
 class allocator {};
+
 template <typename T>
 class char_traits {};
+
+template <typename C, typename T = char_traits<C>>
+struct basic_string_view;
+
 template <typename C, typename T = char_traits<C>, typename A = allocator<C>>
 struct basic_string {
   typedef size_t size_type;
@@ -52,6 +57,10 @@ struct basic_string {
   _Type& insert(size_type pos, const C* s);
   _Type& insert(size_type pos, const C* s, size_type n);
 
+  constexpr bool starts_with(std::basic_string_view<C, T> sv) const noexcept;
+  constexpr bool starts_with(C ch) const noexcept;
+  constexpr bool starts_with(const C* s) const;
+
   _Type& operator[](size_type);
   const _Type& operator[](size_type) const;
 
@@ -68,7 +77,7 @@ typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16> u16string;
 typedef basic_string<char32> u32string;
 
-template <typename C, typename T = char_traits<C>>
+template <typename C, typename T>
 struct basic_string_view {
   typedef size_t size_type;
   typedef basic_string_view<C, T> _Type;
@@ -86,8 +95,13 @@ struct basic_string_view {
   size_type rfind(const C* s, size_type pos, size_type count) const;
   size_type rfind(const C* s, size_type pos = npos) const;
 
+  constexpr bool starts_with(basic_string_view sv) const noexcept;
+  constexpr bool starts_with(C ch) const noexcept;
+  constexpr bool starts_with(const C* s) const;
+
   static constexpr size_t npos = -1;
 };
+
 typedef basic_string_view<char> string_view;
 typedef basic_string_view<wchar_t> wstring_view;
 typedef basic_string_view<char16> u16string_view;

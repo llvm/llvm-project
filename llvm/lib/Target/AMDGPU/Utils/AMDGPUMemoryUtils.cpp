@@ -74,6 +74,16 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
+    case Intrinsic::amdgcn_s_barrier_signal:
+    case Intrinsic::amdgcn_s_barrier_signal_var:
+    case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
+    case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_join:
+    case Intrinsic::amdgcn_s_barrier_wait:
+    case Intrinsic::amdgcn_s_barrier_leave:
+    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:

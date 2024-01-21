@@ -165,7 +165,6 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeStruct:
   case spirv::Opcode::OpTypePointer:
   case spirv::Opcode::OpTypeCooperativeMatrixKHR:
-  case spirv::Opcode::OpTypeCooperativeMatrixNV:
     return processType(opcode, operands);
   case spirv::Opcode::OpTypeForwardPointer:
     return processTypeForwardPointer(operands);
@@ -354,7 +353,7 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
     // The deserializer uses "spirv_fn_<id>" as the function name if the input
     // SPIR-V blob does not contain a name for it. We should use a more clear
     // indication for such case rather than relying on naming details.
-    if (!parsedFunc.getName().startswith("spirv_fn_"))
+    if (!parsedFunc.getName().starts_with("spirv_fn_"))
       return emitError(unknownLoc,
                        "function name mismatch between OpEntryPoint "
                        "and OpFunction with <id> ")

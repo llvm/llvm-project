@@ -22,6 +22,12 @@ def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
                              [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue]>;
+def AArch64_restore_zt : SDNode<"AArch64ISD::RESTORE_ZT", SDTypeProfile<0, 2,
+                                [SDTCisInt<0>, SDTCisPtrTy<1>]>,
+                                [SDNPHasChain, SDNPSideEffect, SDNPMayLoad]>;
+def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
+                             [SDTCisInt<0>, SDTCisPtrTy<1>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -203,7 +209,9 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
 def MSRpstatePseudo :
   Pseudo<(outs),
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
-    Sched<[WriteSys]>;
+    Sched<[WriteSys]> {
+  let hasPostISelHook = 1;
+}
 
 def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
           (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
@@ -539,19 +547,19 @@ defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001, int_aarch64_sme_smops
 defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100, int_aarch64_sme_umopa_za32>;
 defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops_za32>;
 
-def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
 
-def LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100>;
-def STR_TX : sme2_spill_fill_vector<"str", 0b11111100>;
+defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, AArch64_restore_zt>;
+defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, AArch64_save_zt>;
 
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
 
-defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2">;
+defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2", int_aarch64_sme_luti2_lane_zt>;
 defm LUTI2_2ZTZI : sme2_luti2_vector_vg2_index<"luti2">;
 defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
 
-defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
+defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4", int_aarch64_sme_luti4_lane_zt>;
 defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
 defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
 
@@ -808,7 +816,7 @@ defm FMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmopa", 0b0, 0b0, 0b11, ZPR16>;
 defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, 0b11, ZPR16>;
 }
 
-let Predicates = [HasSME2p1, HasB16B16] in {
+let Predicates = [HasSME2, HasB16B16] in {
 defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16, null_frag>;
 defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16, null_frag>;
 defm BFSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfsub", 0b1101, MatrixOp16, ZZ_h_mul_r,  nxv8bf16, null_frag>;

@@ -86,9 +86,9 @@ Column column(StringRef Str, unsigned Width, const T &Value) {
 }
 
 // Specify the default column widths.
-size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10, 16,
-                              16, 10, 12, 18, 10, 12, 18, 10};
-size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8, 10, 8, 8};
+size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10, 16, 16, 10,
+                              12, 18, 10, 12, 18, 10, 20, 21, 10};
+size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8, 10, 8, 8, 20, 8, 8};
 
 /// Adjust column widths to fit long file paths and function names.
 void adjustColumnWidths(ArrayRef<StringRef> Files,
@@ -211,7 +211,7 @@ void CoverageReport::render(const FileCoverageSummary &File,
   sys::path::native(FileName);
 
   // remove_dots will remove trailing slash, so we need to check before it.
-  auto IsDir = FileName.endswith(sys::path::get_separator());
+  auto IsDir = FileName.ends_with(sys::path::get_separator());
   sys::path::remove_dots(FileName, /*remove_dot_dot=*/true);
   if (IsDir)
     FileName += sys::path::get_separator();
@@ -291,6 +291,22 @@ void CoverageReport::render(const FileCoverageSummary &File,
       OS << column("-", FileReportColumns[15], Column::RightAlignment);
   }
 
+  if (Options.ShowMCDCSummary) {
+    OS << format("%*u", FileReportColumns[16],
+                 (unsigned)File.MCDCCoverage.getNumPairs());
+    Options.colored_ostream(OS, LineCoverageColor)
+        << format("%*u", FileReportColumns[17],
+                  (unsigned)(File.MCDCCoverage.getNumPairs() -
+                             File.MCDCCoverage.getCoveredPairs()));
+    if (File.MCDCCoverage.getNumPairs())
+      Options.colored_ostream(OS, LineCoverageColor)
+          << format("%*.2f", FileReportColumns[18] - 1,
+                    File.MCDCCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[18], Column::RightAlignment);
+  }
+
   OS << "\n";
 }
 
@@ -338,6 +354,19 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
                   Function.BranchCoverage.getPercentCovered())
         << '%';
   }
+  if (Options.ShowMCDCSummary) {
+    OS << format("%*u", FunctionReportColumns[10],
+                 (unsigned)Function.MCDCCoverage.getNumPairs());
+    Options.colored_ostream(OS, LineCoverageColor)
+        << format("%*u", FunctionReportColumns[11],
+                  (unsigned)(Function.MCDCCoverage.getNumPairs() -
+                             Function.MCDCCoverage.getCoveredPairs()));
+    Options.colored_ostream(
+        OS, determineCoveragePercentageColor(Function.MCDCCoverage))
+        << format("%*.2f", FunctionReportColumns[12] - 1,
+                  Function.MCDCCoverage.getPercentCovered())
+        << '%';
+  }
   OS << "\n";
 }
 
@@ -370,6 +399,11 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       OS << column("Branches", FunctionReportColumns[7], Column::RightAlignment)
          << column("Miss", FunctionReportColumns[8], Column::RightAlignment)
          << column("Cover", FunctionReportColumns[9], Column::RightAlignment);
+    if (Options.ShowMCDCSummary)
+      OS << column("MC/DC Conditions", FunctionReportColumns[10],
+                   Column::RightAlignment)
+         << column("Miss", FunctionReportColumns[11], Column::RightAlignment)
+         << column("Cover", FunctionReportColumns[12], Column::RightAlignment);
     OS << "\n";
     renderDivider(FunctionReportColumns, OS);
     OS << "\n";
@@ -380,6 +414,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
       Totals.BranchCoverage += Function.BranchCoverage;
+      Totals.MCDCCoverage += Function.MCDCCoverage;
       render(Function, DC, OS);
     }
     if (Totals.ExecutionCount) {
@@ -502,6 +537,12 @@ void CoverageReport::renderFileReports(
        << column("Missed Branches", FileReportColumns[14],
                  Column::RightAlignment)
        << column("Cover", FileReportColumns[15], Column::RightAlignment);
+  if (Options.ShowMCDCSummary)
+    OS << column("MC/DC Conditions", FileReportColumns[16],
+                 Column::RightAlignment)
+       << column("Missed Conditions", FileReportColumns[17],
+                 Column::RightAlignment)
+       << column("Cover", FileReportColumns[18], Column::RightAlignment);
   OS << "\n";
   renderDivider(FileReportColumns, OS);
   OS << "\n";

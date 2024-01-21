@@ -1093,6 +1093,19 @@ static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(')');
 }
 
+static void FormatInlinedBlock(Stream &out_stream, Block *block) {
+  if (!block)
+    return;
+  Block *inline_block = block->GetContainingInlinedBlock();
+  if (inline_block) {
+    if (const InlineFunctionInfo *inline_info =
+            inline_block->GetInlinedFunctionInfo()) {
+      out_stream.PutCString(" [inlined] ");
+      inline_info->GetName().Dump(&out_stream);
+    }
+  }
+}
+
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    const SymbolContext *sc,
                                    const ExecutionContext *exe_ctx,
@@ -1245,9 +1258,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
             llvm::Triple::OSType ostype = arch.IsValid()
                                               ? arch.GetTriple().getOS()
                                               : llvm::Triple::UnknownOS;
-            if ((ostype == llvm::Triple::FreeBSD) ||
-                (ostype == llvm::Triple::Linux) ||
-                (ostype == llvm::Triple::NetBSD)) {
+            if (ostype == llvm::Triple::FreeBSD ||
+                ostype == llvm::Triple::Linux ||
+                ostype == llvm::Triple::NetBSD ||
+                ostype == llvm::Triple::OpenBSD) {
               format = "%" PRIu64;
             }
           } else {
@@ -1591,18 +1605,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
       if (name) {
         s.PutCString(name);
-
-        if (sc->block) {
-          Block *inline_block = sc->block->GetContainingInlinedBlock();
-          if (inline_block) {
-            const InlineFunctionInfo *inline_info =
-                sc->block->GetInlinedFunctionInfo();
-            if (inline_info) {
-              s.PutCString(" [inlined] ");
-              inline_info->GetName().Dump(&s);
-            }
-          }
-        }
+        FormatInlinedBlock(s, sc->block);
         return true;
       }
     }
@@ -1637,6 +1640,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         name = sc->symbol->GetNameNoArguments();
       if (name) {
         s.PutCString(name.GetCString());
+        FormatInlinedBlock(s, sc->block);
         return true;
       }
     }
@@ -1677,7 +1681,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
             if (inline_block) {
               get_function_vars = false;
-              inline_info = sc->block->GetInlinedFunctionInfo();
+              inline_info = inline_block->GetInlinedFunctionInfo();
               if (inline_info)
                 variable_list_sp = inline_block->GetBlockVariableList(true);
             }
@@ -1732,14 +1736,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (!name)
       return false;
     s.PutCString(name);
-
-    if (sc->block && sc->block->GetContainingInlinedBlock()) {
-      if (const InlineFunctionInfo *inline_info =
-              sc->block->GetInlinedFunctionInfo()) {
-        s.PutCString(" [inlined] ");
-        inline_info->GetName().Dump(&s);
-      }
-    }
+    FormatInlinedBlock(s, sc->block);
     return true;
   }
   case Entry::Type::FunctionAddrOffset:

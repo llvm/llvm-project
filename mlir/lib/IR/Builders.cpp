@@ -486,14 +486,11 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto it : llvm::zip(foldResults, opResults.getTypes())) {
+  for (auto it : llvm::zip_equal(foldResults, opResults.getTypes())) {
     Type expectedType = std::get<1>(it);
 
     // Normal values get pushed back directly.
     if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
-      if (value.getType() != expectedType)
-        return cleanupFailure();
-
       results.push_back(value);
       continue;
     }
@@ -527,7 +524,8 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
 Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
-  // The `insert` call below handles the notification for inserting `newOp`
+  newOp = insert(newOp);
+  // The `insert` call above handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
   // about any ops that got inserted inside those regions as part of cloning.
   if (listener) {
@@ -535,9 +533,9 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
       listener->notifyOperationInserted(walkedOp);
     };
     for (Region &region : newOp->getRegions())
-      region.walk(walkFn);
+      region.walk<WalkOrder::PreOrder>(walkFn);
   }
-  return insert(newOp);
+  return newOp;
 }
 
 Operation *OpBuilder::clone(Operation &op) {

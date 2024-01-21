@@ -190,6 +190,7 @@ TEST(Support, Path) {
   paths.push_back("c:\\foo\\");
   paths.push_back("c:\\foo/");
   paths.push_back("c:/foo\\bar");
+  paths.push_back(":");
 
   for (SmallVector<StringRef, 40>::const_iterator i = paths.begin(),
                                                   e = paths.end();
@@ -882,7 +883,7 @@ TEST_F(FileSystemTest, TempFiles) {
   int FD2;
   SmallString<64> TempPath2;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD2, TempPath2));
-  ASSERT_TRUE(TempPath2.endswith(".temp"));
+  ASSERT_TRUE(TempPath2.ends_with(".temp"));
   ASSERT_NE(TempPath.str(), TempPath2.str());
 
   fs::file_status A, B;
@@ -908,7 +909,7 @@ TEST_F(FileSystemTest, TempFiles) {
 
   SmallString<64> TempPath3;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "", TempPath3));
-  ASSERT_FALSE(TempPath3.endswith("."));
+  ASSERT_FALSE(TempPath3.ends_with("."));
   FileRemover Cleanup3(TempPath3);
 
   // Create a hard link to Temp1.
@@ -1515,13 +1516,13 @@ TEST(Support, NormalizePath) {
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
   path::native(Path7, path::Style::windows_backslash);
-  EXPECT_TRUE(Path7.endswith("\\aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("\\aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
   Path7 = Path7a;
   path::native(Path7, path::Style::windows_slash);
-  EXPECT_TRUE(Path7.endswith("/aaa"));
-  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_TRUE(Path7.ends_with("/aaa"));
+  EXPECT_TRUE(Path7.starts_with(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
   const char *Path8a = "~";

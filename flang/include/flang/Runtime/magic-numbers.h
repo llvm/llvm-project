@@ -27,6 +27,10 @@ start at 100 so as to never conflict with those codes.
 #ifndef FORTRAN_RUNTIME_MAGIC_NUMBERS_H_
 #define FORTRAN_RUNTIME_MAGIC_NUMBERS_H_
 
+#define FORTRAN_DEFAULT_OUTPUT_UNIT 6
+#define FORTRAN_DEFAULT_INPUT_UNIT 5
+#define FORTRAN_ERROR_UNIT 0
+
 #define FORTRAN_RUNTIME_IOSTAT_END (-1)
 #define FORTRAN_RUNTIME_IOSTAT_EOR (-2)
 #define FORTRAN_RUNTIME_IOSTAT_FLUSH (-3)
@@ -58,5 +62,55 @@ Processor-defined status code for MOVE_ALLOC where arguments are the
 same allocatable.
 #endif
 #define FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE 109
+
+#if 0
+ieee_class_type values
+The sequence is that of F18 Clause 17.2p3, but nothing depends on that.
+#endif
+#define _FORTRAN_RUNTIME_IEEE_SIGNALING_NAN 1
+#define _FORTRAN_RUNTIME_IEEE_QUIET_NAN 2
+#define _FORTRAN_RUNTIME_IEEE_NEGATIVE_INF 3
+#define _FORTRAN_RUNTIME_IEEE_NEGATIVE_NORMAL 4
+#define _FORTRAN_RUNTIME_IEEE_NEGATIVE_SUBNORMAL 5
+#define _FORTRAN_RUNTIME_IEEE_NEGATIVE_ZERO 6
+#define _FORTRAN_RUNTIME_IEEE_POSITIVE_ZERO 7
+#define _FORTRAN_RUNTIME_IEEE_POSITIVE_SUBNORMAL 8
+#define _FORTRAN_RUNTIME_IEEE_POSITIVE_NORMAL 9
+#define _FORTRAN_RUNTIME_IEEE_POSITIVE_INF 10
+#define _FORTRAN_RUNTIME_IEEE_OTHER_VALUE 11
+
+#if 0
+ieee_flag_type values
+The values are those of a common but not universal fenv.h file.
+The denorm value is a nonstandard extension.
+#endif
+#define _FORTRAN_RUNTIME_IEEE_INVALID 1
+#define _FORTRAN_RUNTIME_IEEE_DENORM 2
+#define _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO 4
+#define _FORTRAN_RUNTIME_IEEE_OVERFLOW 8
+#define _FORTRAN_RUNTIME_IEEE_UNDERFLOW 16
+#define _FORTRAN_RUNTIME_IEEE_INEXACT 32
+
+#if 0
+ieee_round_type values
+The values are those of the llvm.get.rounding instrinsic, which is assumed by
+ieee_arithmetic module rounding procedures.
+#endif
+#define _FORTRAN_RUNTIME_IEEE_TO_ZERO 0
+#define _FORTRAN_RUNTIME_IEEE_NEAREST 1
+#define _FORTRAN_RUNTIME_IEEE_UP 2
+#define _FORTRAN_RUNTIME_IEEE_DOWN 3
+#define _FORTRAN_RUNTIME_IEEE_AWAY 4
+#define _FORTRAN_RUNTIME_IEEE_OTHER 5
+
+#if 0
+The size of derived types ieee_modes_type and ieee_status_type from intrinsic
+module ieee_exceptions must be large enough to hold an fenv.h object of type
+femode_t and fenv_t, respectively. These types have members that are declared
+as int arrays with the following extents to allow build time validation of
+these sizes in cross compilation environments.
+#endif
+#define _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT 2
+#define _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT 8
 
 #endif

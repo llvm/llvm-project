@@ -48,4 +48,246 @@ define void @test_udiv(i8 %x) {
   ret void
 }
 
+define i8 @test_cond(i8 %x) {
+; CHECK-LABEL: @test_cond(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i8 -4
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp eq i8 %and, 0
+  br i1 %cmp, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_inv(i8 %x) {
+; CHECK-LABEL: @test_cond_inv(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i8 -4
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  call void @use(i1 %cmp)
+  br i1 %cmp, label %exit, label %if
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp eq i8 %and, 0
+  %cond = and i1 %cmp, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_and_commuted(i8 %x, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @test_cond_and_commuted(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[C3]], [[CMP]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp eq i8 %and, 0
+  %c3 = and i1 %c1, %c2
+  %cond = and i1 %c3, %cmp
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_logical_and(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_logical_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp eq i8 %and, 0
+  %cond = select i1 %cmp, i1 %c, i1 false
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_or_invalid(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_or_invalid(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp eq i8 %and, 0
+  %cond = or i1 %cmp, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_inv_or(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_inv_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[CMP]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  %cond = or i1 %cmp, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_inv_logical_or(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_inv_logical_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  %cond = select i1 %cmp, i1 false, i1 %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+define i8 @test_cond_inv_and_invalid(i8 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_inv_and_invalid(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP]], [[C:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[EXIT:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR1]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[X]], -4
+; CHECK-NEXT:    ret i8 [[OR2]]
+;
+  %and = and i8 %x, 3
+  %cmp = icmp ne i8 %and, 0
+  %cond = and i1 %cmp, %c
+  br i1 %cond, label %if, label %exit
+
+if:
+  %or1 = or i8 %x, -4
+  ret i8 %or1
+
+exit:
+  %or2 = or i8 %x, -4
+  ret i8 %or2
+}
+
+declare void @use(i1)
 declare void @sink(i8)

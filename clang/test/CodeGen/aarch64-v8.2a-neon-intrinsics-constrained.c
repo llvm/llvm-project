@@ -150,7 +150,7 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 }
 
 // COMMON-LABEL: test_vfma_n_f16
-// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half %c, i32 3
@@ -163,7 +163,7 @@ float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 }
 
 // COMMON-LABEL: test_vfmaq_n_f16
-// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half %c, i32 3
@@ -271,7 +271,7 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 
 // COMMON-LABEL: test_vfms_n_f16
 // COMMONIR:      [[SUB:%.*]]  = fneg <4 x half> %b
-// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <4 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half %c, i32 3
@@ -285,7 +285,7 @@ float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 
 // COMMON-LABEL: test_vfmsq_n_f16
 // COMMONIR:      [[SUB:%.*]]  = fneg <8 x half> %b
-// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> undef, half %c, i32 0
+// COMMONIR:      [[TMP0:%.*]] = insertelement <8 x half> poison, half %c, i32 0
 // COMMONIR:      [[TMP1:%.*]] = insertelement <8 x half> [[TMP0]], half %c, i32 1
 // COMMONIR:      [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half %c, i32 2
 // COMMONIR:      [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half %c, i32 3

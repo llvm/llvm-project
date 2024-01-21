@@ -1,4 +1,4 @@
-        .section .rdata,"dr"
+        .section .00cfg,"dr"
         .globl _load_config_used
         .p2align 3, 0
 _load_config_used:
@@ -79,8 +79,8 @@ __chpe_metadata:
         .word 0 // __arm64x_redirection_metadata_count
         .rva __os_arm64x_get_x64_information
         .rva __os_arm64x_set_x64_information
-        .word 0 // __arm64x_extra_rfe_table
-        .word 0 // __arm64x_extra_rfe_table_size
+        .rva __arm64x_extra_rfe_table
+        .word __arm64x_extra_rfe_table_size
         .rva __os_arm64x_dispatch_fptr
         .word 0 // __hybrid_auxiliary_iat_copy
         .rva __os_arm64x_helper0

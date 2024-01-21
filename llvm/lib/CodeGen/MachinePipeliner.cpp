@@ -2225,7 +2225,7 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 }
 
 /// Return true for an order or output dependence that is loop carried
-/// potentially. A dependence is loop carried if the destination defines a valu
+/// potentially. A dependence is loop carried if the destination defines a value
 /// that may be used or defined by the source in a subsequent iteration.
 bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
                                          bool isSucc) {
@@ -2251,10 +2251,12 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
       SI->hasOrderedMemoryRef() || DI->hasOrderedMemoryRef())
     return true;
 
-  // Only chain dependences between a load and store can be loop carried.
-  if (!DI->mayStore() || !SI->mayLoad())
+  if (!DI->mayLoadOrStore() || !SI->mayLoadOrStore())
     return false;
 
+  // The conservative assumption is that a dependence between memory operations
+  // may be loop carried. The following code checks when it can be proved that
+  // there is no loop carried dependence.
   unsigned DeltaS, DeltaD;
   if (!computeDelta(*SI, DeltaS) || !computeDelta(*DI, DeltaD))
     return true;

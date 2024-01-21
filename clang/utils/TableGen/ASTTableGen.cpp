@@ -33,7 +33,7 @@ llvm::StringRef clang::tblgen::HasProperties::getName() const {
 
 static StringRef removeExpectedNodeNameSuffix(Record *node, StringRef suffix) {
   StringRef nodeName = node->getName();
-  if (!nodeName.endswith(suffix)) {
+  if (!nodeName.ends_with(suffix)) {
     PrintFatalError(node->getLoc(),
                     Twine("name of node doesn't end in ") + suffix);
   }

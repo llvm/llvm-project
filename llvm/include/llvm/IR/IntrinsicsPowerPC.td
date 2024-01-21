@@ -29,6 +29,11 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_ppc_dcbzl : Intrinsic<[], [llvm_ptr_ty], []>;
 
+  // Emit pseudo instruction as fence of instruction motion
+  def int_ppc_fence : ClangBuiltin<"__builtin_ppc_fence">,
+                      DefaultAttrsIntrinsic<[], [],
+                                            [IntrNoMerge, IntrHasSideEffects]>;
+
   // Get content from current FPSCR register
   def int_ppc_readflm : ClangBuiltin<"__builtin_readflm">,
                         DefaultAttrsIntrinsic<[llvm_double_ty], [],

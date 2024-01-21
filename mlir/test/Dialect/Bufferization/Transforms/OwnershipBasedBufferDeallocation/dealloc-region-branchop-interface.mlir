@@ -531,13 +531,28 @@ func.func @noRegionBranchOpInterface() {
 // This is not allowed in buffer deallocation.
 
 func.func @noRegionBranchOpInterface() {
-  // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
   %0 = "test.bar"() ({
+    // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
     %1 = "test.bar"() ({
       %2 = "test.get_memref"() : () -> memref<2xi32>
       "test.yield"(%2) : (memref<2xi32>) -> ()
     }) : () -> (memref<2xi32>)
     "test.yield"() : () -> ()
+  }) : () -> (i32)
+  "test.terminator"() : () -> ()
+}
+
+// -----
+
+// Test Case: The op "test.bar" does not implement the RegionBranchOpInterface.
+// This is not allowed in buffer deallocation.
+
+func.func @noRegionBranchOpInterface() {
+  // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
+  %0 = "test.bar"() ({
+    %2 = "test.get_memref"() : () -> memref<2xi32>
+    %3 = "test.foo"(%2) : (memref<2xi32>) -> (i32)
+    "test.yield"(%3) : (i32) -> ()
   }) : () -> (i32)
   "test.terminator"() : () -> ()
 }

@@ -255,9 +255,7 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
                                             StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
-  if (RelativePath.startswith("./")) {
-    RelativePath = RelativePath.substr(strlen("./"));
-  }
+  RelativePath.consume_front("./");
 
   SmallString<1024> AbsolutePath = RelativePath;
   if (auto EC = FS.makeAbsolute(AbsolutePath))
@@ -294,9 +292,9 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
   for (auto Token = ++CommandLine.begin(); Token != CommandLine.end();
        ++Token) {
     StringRef TokenRef(*Token);
-    ShouldAddTarget = ShouldAddTarget && !TokenRef.startswith(TargetOPT) &&
+    ShouldAddTarget = ShouldAddTarget && !TokenRef.starts_with(TargetOPT) &&
                       !TokenRef.equals(TargetOPTLegacy);
-    ShouldAddMode = ShouldAddMode && !TokenRef.startswith(DriverModeOPT);
+    ShouldAddMode = ShouldAddMode && !TokenRef.starts_with(DriverModeOPT);
   }
   if (ShouldAddMode) {
     CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
@@ -507,7 +505,7 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
                               void *MainAddr) {
   // Allow users to override the resource dir.
   for (StringRef Arg : Args)
-    if (Arg.startswith("-resource-dir"))
+    if (Arg.starts_with("-resource-dir"))
       return;
 
   // If there's no override in place add our resource dir.
@@ -556,6 +554,8 @@ int ClangTool::run(ToolAction *Action) {
                  << CWD.getError().message() << "\n";
   }
 
+  size_t NumOfTotalFiles = AbsolutePaths.size();
+  unsigned ProcessedFileCounter = 0;
   for (llvm::StringRef File : AbsolutePaths) {
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
@@ -611,7 +611,11 @@ int ClangTool::run(ToolAction *Action) {
 
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      LLVM_DEBUG({ llvm::dbgs() << "Processing: " << File << ".\n"; });
+      if (NumOfTotalFiles > 1)
+        llvm::errs() << "[" + std::to_string(++ProcessedFileCounter) + "/" +
+                            std::to_string(NumOfTotalFiles) +
+                            "] Processing file " + File
+                     << ".\n";
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);

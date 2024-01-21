@@ -158,7 +158,7 @@ CommandObjectProcessTraceStartIntelPT::CommandOptions::GetDefinitions() {
   return llvm::ArrayRef(g_process_trace_start_intel_pt_options);
 }
 
-bool CommandObjectProcessTraceStartIntelPT::DoExecute(
+void CommandObjectProcessTraceStartIntelPT::DoExecute(
     Args &command, CommandReturnObject &result) {
   if (Error err = m_trace.Start(
           m_options.m_ipt_trace_size, m_options.m_process_buffer_size_limit,
@@ -167,8 +167,6 @@ bool CommandObjectProcessTraceStartIntelPT::DoExecute(
     result.SetError(Status(std::move(err)));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);
-
-  return result.Succeeded();
 }
 
 std::optional<uint64_t>

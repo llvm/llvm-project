@@ -1004,8 +1004,8 @@ def Zn2WriteBROADCAST : SchedWriteRes<[Zn2AGU, Zn2FPU13]> {
   let Latency = 8;
 }
 // VBROADCASTF128 / VBROADCASTI128.
-def : InstRW<[Zn2WriteBROADCAST], (instrs VBROADCASTF128,
-                                          VBROADCASTI128)>;
+def : InstRW<[Zn2WriteBROADCAST], (instrs VBROADCASTF128rm,
+                                          VBROADCASTI128rm)>;
 
 // EXTRACTPS.
 // r32,x,i.

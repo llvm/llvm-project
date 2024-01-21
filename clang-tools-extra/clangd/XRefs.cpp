@@ -427,7 +427,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       // Special case: virtual void ^method() = 0: jump to all overrides.
       // FIXME: extend it to ^virtual, unfortunately, virtual location is not
       // saved in the AST.
-      if (CMD->isPure()) {
+      if (CMD->isPureVirtual()) {
         if (TouchedIdentifier && SM.getSpellingLoc(CMD->getLocation()) ==
                                      TouchedIdentifier->location()) {
           VirtualMethods.insert(getSymbolID(CMD));
@@ -1339,7 +1339,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   auto Converted = convertIncludes(AST);
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

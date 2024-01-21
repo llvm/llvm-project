@@ -372,7 +372,7 @@ struct {
 };
 
 std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
-  return Index.startswith("remote:")
+  return Index.starts_with("remote:")
              ? remote::getClient(Index.drop_front(strlen("remote:")),
                                  ProjectRoot)
              : loadIndex(Index, SymbolOrigin::Static, /*UseDex=*/true);
@@ -424,7 +424,7 @@ int main(int argc, const char *argv[]) {
   llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
-  bool RemoteMode = llvm::StringRef(IndexLocation).startswith("remote:");
+  bool RemoteMode = llvm::StringRef(IndexLocation).starts_with("remote:");
   if (RemoteMode && ProjectRoot.empty()) {
     llvm::errs() << "--project-root is required in remote mode\n";
     return -1;

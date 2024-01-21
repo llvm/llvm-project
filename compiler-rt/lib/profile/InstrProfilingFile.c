@@ -702,10 +702,15 @@ static void resetFilenameToDefault(void) {
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
     free((void *)lprofCurFilename.FilenamePat);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif
   }
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
@@ -751,6 +756,9 @@ static int parseFilenamePattern(const char *FilenamePat,
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
   /* Clean up cached prefix and filename.  */
   if (lprofCurFilename.ProfilePathPrefix)
@@ -761,6 +769,8 @@ static int parseFilenamePattern(const char *FilenamePat,
   }
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif
 
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
@@ -806,6 +816,7 @@ static int parseFilenamePattern(const char *FilenamePat,
         if (__llvm_profile_is_continuous_mode_enabled()) {
           PROF_WARN("%%c specifier can only be specified once in %s.\n",
                     FilenamePat);
+          __llvm_profile_disable_continuous_mode();
           return -1;
         }
 #if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32)

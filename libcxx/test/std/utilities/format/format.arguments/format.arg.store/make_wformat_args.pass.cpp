@@ -12,7 +12,7 @@
 
 // template<class... Args>
 //   format-arg-store<wformat_context, Args...>
-//   make_wformat_args(const Args&... args);
+//   make_wformat_args(Args&... args);
 
 #include <cassert>
 #include <format>
@@ -20,8 +20,19 @@
 #include "test_basic_format_arg.h"
 #include "test_macros.h"
 
+template <class... Args>
+concept can_make_wformat_args = requires(Args&&... args) { std::make_wformat_args(std::forward<Args>(args)...); };
+
+static_assert(can_make_wformat_args<int&>);
+static_assert(!can_make_wformat_args<int>);
+static_assert(!can_make_wformat_args<int&&>);
+
 int main(int, char**) {
-  [[maybe_unused]] auto store = std::make_wformat_args(42, nullptr, false, 'x');
+  int i                       = 1;
+  char c                      = 'c';
+  nullptr_t p                 = nullptr;
+  bool b                      = false;
+  [[maybe_unused]] auto store = std::make_wformat_args(i, p, b, c);
 
   LIBCPP_STATIC_ASSERT(
       std::same_as<decltype(store), std::__format_arg_store<std::wformat_context, int, nullptr_t, bool, char>>);

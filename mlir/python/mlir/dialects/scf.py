@@ -120,7 +120,7 @@ def for_(
     params = [start, stop, step]
     for i, p in enumerate(params):
         if isinstance(p, int):
-            p = constant(IntegerAttr.get(IndexType.get(), p))
+            p = constant(IndexType.get(), p)
         elif isinstance(p, float):
             raise ValueError(f"{p=} must be int.")
         params[i] = p

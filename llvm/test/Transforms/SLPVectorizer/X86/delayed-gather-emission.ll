@@ -15,7 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> <float poison, float undef>, float [[DOTPRE_PRE]], i32 0
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP8:%.*]], [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP10:%.*]], [[BB2:%.*]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x float> [ [[TMP1]], [[BB1]] ], [ [[TMP9:%.*]], [[BB2]] ]
@@ -29,8 +29,9 @@ define void @test() {
 ; CHECK-NEXT:    tail call void @foo(float [[MUL]])
 ; CHECK-NEXT:    [[I2:%.*]] = load float, ptr poison, align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[I2]], 0.000000e+00
-; CHECK-NEXT:    [[TMP8]] = insertelement <2 x float> [[TMP2]], float [[I2]], i32 0
-; CHECK-NEXT:    [[TMP9]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP9]] = insertelement <2 x float> [[TMP8]], float [[I2]], i32 0
+; CHECK-NEXT:    [[TMP10]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[BB1]], label [[BB2]]
 ;
 entry:

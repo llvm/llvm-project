@@ -182,7 +182,7 @@ public:
 };
 
 /// GetElementPtrConstantExpr - This class is private to Constants.cpp, and is
-/// used behind the scenes to implement getelementpr constant exprs.
+/// used behind the scenes to implement getelementptr constant exprs.
 class GetElementPtrConstantExpr final : public ConstantExpr {
   Type *SrcElementTy;
   Type *ResElementTy;

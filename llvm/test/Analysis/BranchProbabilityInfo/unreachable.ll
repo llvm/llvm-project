@@ -6,12 +6,12 @@ declare void @bar() cold
 ; 'unreachable' blocks. Check that 'cold' paths are preferred. Also ensure both
 ; paths from 'entry' block are equal.
 define void @test1(i32 %0) {
-;CHECK: edge entry -> l1 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge entry -> r1 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge l1 -> cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge l1 -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge r1 -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge r1 -> cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %l1 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %entry -> %r1 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %l1 -> %cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %l1 -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %r1 -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %r1 -> %cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   br i1 undef, label %l1, label %r1
@@ -34,12 +34,12 @@ cold:
 ; 'unreachable' block. Check that 'l1' has 50/50 while 'r1' has 0/100
 ; distributuion. Also ensure both paths from 'entry' block are equal.
 define void @test2(i32 %0) {
-;CHECK: edge entry -> l1 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge entry -> r1 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge l1 -> cold probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge l1 -> cold2 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge r1 -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge r1 -> cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %l1 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %entry -> %r1 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %l1 -> %cold probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %l1 -> %cold2 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %r1 -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %r1 -> %cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   br i1 undef, label %l1, label %r1
@@ -65,12 +65,12 @@ cold2:
 ; Both edges of 'r1' leads to 'unreachable' blocks while one edge of 'l1' leads to
 ; 'cold' block. Ensure that path leading to 'cold' block is preferred.
 define void @test3(i32 %0) {
-;CHECK: edge entry -> l1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge entry -> r1 probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge l1 -> cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge l1 -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
-;CHECK: edge r1 -> unreached probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge r1 -> unreached2 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %entry -> %l1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %r1 probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %l1 -> %cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %l1 -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %r1 -> %unreached probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %r1 -> %unreached2 probability is 0x40000000 / 0x80000000 = 50.00%
 
 entry:
   br i1 undef, label %l1, label %r1
@@ -96,13 +96,13 @@ cold:
 ; Check that we able to propagate 'cold' weight to 'entry' block. Also ensure
 ; both edges from 'l1' are equally likely.
 define void @test4(i32 %0) {
-;CHECK: edge entry -> l1 probability is 0x078780e3 / 0x80000000 = 5.88%
-;CHECK: edge entry -> r1 probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-;CHECK: edge l1 -> l2 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge l1 -> r2 probability is 0x40000000 / 0x80000000 = 50.00%
-;CHECK: edge l2 -> to.cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge r2 -> to.cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge to.cold -> cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %entry -> %l1 probability is 0x078780e3 / 0x80000000 = 5.88%
+;CHECK: edge %entry -> %r1 probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+;CHECK: edge %l1 -> %l2 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %l1 -> %r2 probability is 0x40000000 / 0x80000000 = 50.00%
+;CHECK: edge %l2 -> %to.cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %r2 -> %to.cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %to.cold -> %cold probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 entry:
   br i1 undef, label %l1, label %r1
@@ -129,11 +129,11 @@ cold:
 
 ; Check that most likely path from 'entry' to 'l2' through 'r1' is preferred.
 define void @test5(i32 %0) {
-;CHECK: edge entry -> cold probability is 0x078780e3 / 0x80000000 = 5.88%
-;CHECK: edge entry -> r1 probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
-;CHECK: edge cold -> l2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge r1 -> l2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-;CHECK: edge r1 -> unreached probability is 0x00000000 / 0x80000000 = 0.00%
+;CHECK: edge %entry -> %cold probability is 0x078780e3 / 0x80000000 = 5.88%
+;CHECK: edge %entry -> %r1 probability is 0x78787f1d / 0x80000000 = 94.12% [HOT edge]
+;CHECK: edge %cold -> %l2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %r1 -> %l2 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+;CHECK: edge %r1 -> %unreached probability is 0x00000000 / 0x80000000 = 0.00%
 
 entry:
   br i1 undef, label %cold, label %r1

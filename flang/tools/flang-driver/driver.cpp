@@ -99,13 +99,13 @@ int main(int argc, const char **argv) {
   auto firstArg = std::find_if(args.begin() + 1, args.end(),
                                [](const char *a) { return a != nullptr; });
   if (firstArg != args.end()) {
-    if (llvm::StringRef(args[1]).startswith("-cc1")) {
+    if (llvm::StringRef(args[1]).starts_with("-cc1")) {
       llvm::errs() << "error: unknown integrated tool '" << args[1] << "'. "
                    << "Valid tools include '-fc1'.\n";
       return 1;
     }
     // Call flang-new frontend
-    if (llvm::StringRef(args[1]).startswith("-fc1")) {
+    if (llvm::StringRef(args[1]).starts_with("-fc1")) {
       return executeFC1Tool(args);
     }
   }

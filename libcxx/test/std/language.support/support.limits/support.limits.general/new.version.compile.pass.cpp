@@ -58,7 +58,7 @@
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
 
-# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+# if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++17"
 #   endif
@@ -67,7 +67,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement 'defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)' is not met!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
 #   endif
 # endif
 
@@ -93,7 +93,7 @@
 #   endif
 # endif
 
-# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+# if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++20"
 #   endif
@@ -102,7 +102,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement 'defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)' is not met!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
 #   endif
 # endif
 
@@ -128,7 +128,7 @@
 #   endif
 # endif
 
-# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+# if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++23"
 #   endif
@@ -137,7 +137,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement 'defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)' is not met!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
 #   endif
 # endif
 
@@ -163,7 +163,7 @@
 #   endif
 # endif
 
-# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
+# if !defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++26"
 #   endif
@@ -172,7 +172,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement 'defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)' is not met!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))' is not met!"
 #   endif
 # endif
 
