@@ -9,11 +9,15 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <filesystem>
 #include <queue>
 
 using namespace clang;
 using namespace clang::tooling;
 using namespace llvm;
+namespace fs = std::filesystem;
+
+fs::path BUILD_PATH;
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
@@ -462,8 +466,15 @@ class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>,
 };
 
 class FindNamedClassConsumer : public clang::ASTConsumer {
+  private:
+    fs::path currentFile;
+
   public:
-    explicit FindNamedClassConsumer(ASTContext *Context) {}
+    explicit FindNamedClassConsumer(fs::path currentFile)
+        : currentFile(currentFile) {
+        requireTrue(currentFile.is_absolute());
+        llvm::errs() << "--- Processing " << currentFile << "\n";
+    }
 
     virtual void HandleTranslationUnit(clang::ASTContext &Context) {
         auto *TUD = Context.getTranslationUnitDecl();
@@ -508,17 +519,18 @@ class FindNamedClassAction : public clang::ASTFrontendAction {
     virtual std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
                       llvm::StringRef InFile) {
-        return std::make_unique<FindNamedClassConsumer>(
-            &Compiler.getASTContext());
+        fs::path currentFile = fs::canonical(BUILD_PATH / InFile.str());
+        return std::make_unique<FindNamedClassConsumer>(currentFile);
     }
 };
 
 std::unique_ptr<CompilationDatabase>
-getCompilationDatabase(std::string buildPath) {
+getCompilationDatabase(fs::path buildPath) {
     llvm::errs() << "Getting compilation database from: " << buildPath << "\n";
     std::string errorMsg;
     std::unique_ptr<CompilationDatabase> cb =
-        CompilationDatabase::autoDetectFromDirectory(buildPath, errorMsg);
+        CompilationDatabase::autoDetectFromDirectory(buildPath.string(),
+                                                     errorMsg);
     if (!cb) {
         llvm::errs() << "Error while trying to load a compilation database:\n"
                      << errorMsg << "Running without flags.\n";
@@ -528,8 +540,9 @@ getCompilationDatabase(std::string buildPath) {
 }
 
 int main(int argc, const char **argv) {
-    std::string buildPath = argv[1];
-    std::unique_ptr<CompilationDatabase> cb = getCompilationDatabase(buildPath);
+    BUILD_PATH = fs::canonical(fs::absolute(argv[1]));
+    std::unique_ptr<CompilationDatabase> cb =
+        getCompilationDatabase(BUILD_PATH);
 
     const auto &allFiles = cb->getAllFiles();
 
