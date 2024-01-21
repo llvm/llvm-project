@@ -157,7 +157,7 @@
 // RV32L: error: invalid arch name 'rv32l'
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32imadf -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN:   -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imm -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32IMM %s
@@ -184,7 +184,7 @@
 // RV64L: error: invalid arch name 'rv64l'
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64imadf -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN:   -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: not %clang --target=riscv64-unknown-elf -march=rv64imm -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64IMM %s
