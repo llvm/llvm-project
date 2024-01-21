@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
-#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -38,11 +37,11 @@ void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
           hasThen(anyOf(stmt(binaryOperator(hasOperatorName("="),
                                             hasLHS(expr().bind("AssignLhs")),
                                             hasRHS(expr().bind("AssignRhs")))),
-                        compoundStmt(has(binaryOperator(
+                        compoundStmt(statementCountIs(1),
+                                     has(binaryOperator(
                                          hasOperatorName("="),
                                          hasLHS(expr().bind("AssignLhs")),
-                                         hasRHS(expr().bind("AssignRhs")))))
-                            .bind("compound"))))
+                                         hasRHS(expr().bind("AssignRhs"))))))))
           .bind("if"),
       this);
 }
@@ -59,7 +58,6 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
   const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
   const auto &Context = *Result.Context;
   const auto &LO = Context.getLangOpts();
   const SourceManager &Source = Context.getSourceManager();
@@ -67,11 +65,6 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinaryOp = dyn_cast<BinaryOperator>(If->getCond());
   if (!BinaryOp || If->hasElseStorage())
     return;
-
-  if (Compound) {
-    if (Compound->size() > 1)
-      return;
-  }
 
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
@@ -87,11 +80,17 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
         Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
     const auto AssignLhsStr = Lexer::getSourceText(
         Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
-    const auto AssignLhsType =
-        AssignLhs->getType().getCanonicalType().getAsString();
-    return (AssignLhsStr + " = " + FunctionName + "<" + AssignLhsType + ">(" +
-            CondLhsStr + ", " + CondRhsStr + ");")
-        .str();
+    if (CondLhs->getType() != CondRhs->getType()) {
+      return (AssignLhsStr + " = " + FunctionName + "<" +
+              AssignLhs->getType().getAsString() + ">(" + CondLhsStr + ", " +
+              CondRhsStr + ");")
+          .str();
+    } else {
+      return (AssignLhsStr + " = " + FunctionName + "(" + CondLhsStr + ", " +
+              CondRhsStr + ");")
+          .str();
+    }
+    
   };
   const auto OperatorStr = BinaryOp->getOpcodeStr();
   if (((BinaryOp->getOpcode() == BO_LT || BinaryOp->getOpcode() == BO_LE) &&
