@@ -980,6 +980,11 @@ Bug Fixes to C++ Support
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
 
+- Clang now reports error when overriden method's non-class return type drops
+  qualifiers, or qualifiers of class return type are not subset of super method's.
+  Fixes:
+  (`#18233 <https://github.com/llvm/llvm-project/issues/18233>`_)
+
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
