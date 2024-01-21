@@ -42,8 +42,7 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 
 // Tests
 
-// constexpr
-bool test() {
+constexpr bool test() {
   // clang-format off
 
 #ifndef TEST_HAS_NO_INT128
@@ -200,6 +199,7 @@ bool test() {
   assert(std::saturate_cast<signed long long int>(      0ULL) == 0LL);
   assert(std::saturate_cast<signed long long int>(ULLONG_MAX) == LLONG_MAX); // saturated
 
+#ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(sBigMax); }
   assert(std::saturate_cast<signed long long int>(   sBigMin) == LLONG_MIN); // (128-bit) saturated
   assert(std::saturate_cast<signed long long int>(     sZero) == 0LL);
@@ -209,7 +209,6 @@ bool test() {
   assert(std::saturate_cast<signed long long int>(     uZero) == 0LL);
   assert(std::saturate_cast<signed long long int>(   uBigMax) == LLONG_MAX); // (128-bit) saturated
 
-#ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(SCHAR_MAX); }
   assert(std::saturate_cast<__int128_t>(SCHAR_MIN) == static_cast<__int128_t>(SCHAR_MIN));
   assert(std::saturate_cast<__int128_t>(      O_C) == sZero);
@@ -356,6 +355,7 @@ bool test() {
   assert(std::saturate_cast<unsigned long long int>(      0ULL) == 0ULL);
   assert(std::saturate_cast<unsigned long long int>(ULLONG_MAX) == ULLONG_MAX);
 
+#ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(sBigMax); }
   assert(std::saturate_cast<unsigned long long int>(   sBigMin) == 0ULL);       // (128-bit) saturated
   assert(std::saturate_cast<unsigned long long int>(     sZero) == 0ULL);
@@ -363,15 +363,8 @@ bool test() {
 
   { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(uBigMax); }
   assert(std::saturate_cast<unsigned long long int>(     uZero) == 0ULL);
-  constexpr auto a1 = std::saturate_cast<unsigned long long int>(   uBigMax);
-  constexpr auto a2 = ULLONG_MAX;
-  std::println(stderr, "{}", a1);
-  std::println(stderr, "{}", a2);
-  std::println(stderr, "{}", uBigMax);
-  assert(false);
   assert(std::saturate_cast<unsigned long long int>(   uBigMax) == ULLONG_MAX); // (128-bit) saturated
 
-#ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(SCHAR_MIN); }
   assert(std::saturate_cast<__uint128_t>(SCHAR_MIN) == uZero);
   assert(std::saturate_cast<__uint128_t>(      O_C) == uZero);
@@ -398,7 +391,7 @@ bool test() {
 
 int main(int, char**) {
   test();
-  // static_assert(test());
+  static_assert(test());
 
   return 0;
 }
