@@ -367,6 +367,7 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
   constexpr auto a2 = ULLONG_MAX;
   std::println(stderr, "{}", a1);
   std::println(stderr, "{}", a2);
+  std::println(stderr, "{}", uBigMax);
   assert(false);
 
 #ifndef TEST_HAS_NO_INT128
