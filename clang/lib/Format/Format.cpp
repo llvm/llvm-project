@@ -2830,7 +2830,7 @@ private:
 class ObjCHeaderStyleGuesser : public TokenAnalyzer {
 public:
   ObjCHeaderStyleGuesser(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style), IsObjC(false) {}
+      : TokenAnalyzer(Env, Style, MaxLinesToProcess), IsObjC(false) {}
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -2846,6 +2846,12 @@ public:
   bool isObjC() { return IsObjC; }
 
 private:
+  // Limit the number of variants of the file TokenAnalyzer processes for
+  // the purpose of guessing the language. An inaccurate guess is better than
+  // hanging for a long time or OOMing, which has been observed with real
+  // libraries which are single-header with many preprocessor branches.
+  static const unsigned MaxLinesToProcess = (1 << 20);
+
   static bool
   guessIsObjC(const SourceManager &SourceManager,
               const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,

@@ -83,12 +83,14 @@ Environment::Environment(StringRef Code, StringRef FileName,
       ID(VirtualSM->get().getMainFileID()), FirstStartColumn(FirstStartColumn),
       NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {}
 
-TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
+TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style,
+                             unsigned MaxLinesToProcess)
     : Style(Style), Env(Env),
       AffectedRangeMgr(Env.getSourceManager(), Env.getCharRanges()),
       UnwrappedLines(1),
       Encoding(encoding::detectEncoding(
-          Env.getSourceManager().getBufferData(Env.getFileID()))) {
+          Env.getSourceManager().getBufferData(Env.getFileID()))),
+      MaxLinesToProcess(MaxLinesToProcess) {
   LLVM_DEBUG(
       llvm::dbgs() << "File encoding: "
                    << (Encoding == encoding::Encoding_UTF8 ? "UTF8" : "unknown")
@@ -109,7 +111,7 @@ TokenAnalyzer::process(bool SkipAnnotation) {
   SmallVector<FormatToken *, 10> Tokens(Toks.begin(), Toks.end());
   UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
                              Env.getFirstStartColumn(), Tokens, *this,
-                             Allocator, IdentTable);
+                             Allocator, IdentTable, MaxLinesToProcess);
   Parser.parse();
   assert(UnwrappedLines.back().empty());
   unsigned Penalty = 0;

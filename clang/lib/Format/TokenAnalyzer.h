@@ -87,7 +87,8 @@ private:
 
 class TokenAnalyzer : public UnwrappedLineConsumer {
 public:
-  TokenAnalyzer(const Environment &Env, const FormatStyle &Style);
+  TokenAnalyzer(const Environment &Env, const FormatStyle &Style,
+                unsigned MaxLinesToProcess = 0);
 
   std::pair<tooling::Replacements, unsigned>
   process(bool SkipAnnotation = false);
@@ -109,6 +110,7 @@ protected:
   AffectedRangeManager AffectedRangeMgr;
   SmallVector<SmallVector<UnwrappedLine, 16>, 2> UnwrappedLines;
   encoding::Encoding Encoding;
+  unsigned MaxLinesToProcess;
 };
 
 } // end namespace format

@@ -111,7 +111,8 @@ public:
                       unsigned FirstStartColumn, ArrayRef<FormatToken *> Tokens,
                       UnwrappedLineConsumer &Callback,
                       llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
-                      IdentifierTable &IdentTable);
+                      IdentifierTable &IdentTable,
+                      unsigned MaxLinesToProcess = 0);
 
   void parse();
 
@@ -405,6 +406,11 @@ private:
   unsigned FirstStartColumn;
 
   MacroExpander Macros;
+
+  // If set to a nonzero value, stop generating new runs after this
+  // many lines (summed over all the runs generated so far) have been
+  // processed.
+  unsigned MaxLinesToProcess;
 
   friend class ScopedLineState;
   friend class CompoundStatementIndenter;

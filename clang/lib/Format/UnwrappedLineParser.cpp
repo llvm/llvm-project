@@ -151,7 +151,7 @@ UnwrappedLineParser::UnwrappedLineParser(
     const AdditionalKeywords &Keywords, unsigned FirstStartColumn,
     ArrayRef<FormatToken *> Tokens, UnwrappedLineConsumer &Callback,
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
-    IdentifierTable &IdentTable)
+    IdentifierTable &IdentTable, unsigned MaxLinesToProcess)
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
       CurrentLines(&Lines), Style(Style), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
@@ -160,7 +160,8 @@ UnwrappedLineParser::UnwrappedLineParser(
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable),
+      MaxLinesToProcess(MaxLinesToProcess) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -194,6 +195,7 @@ void UnwrappedLineParser::reset() {
 void UnwrappedLineParser::parse() {
   IndexedTokenSource TokenSource(AllTokens);
   Line->FirstStartColumn = FirstStartColumn;
+  size_t TotalLinesProcessed = 0;
   do {
     LLVM_DEBUG(llvm::dbgs() << "----\n");
     reset();
@@ -235,6 +237,7 @@ void UnwrappedLineParser::parse() {
         Callback.consumeUnwrappedLine(Line);
       }
       Callback.finishRun();
+      TotalLinesProcessed += ExpandedLines.size();
     }
 
     LLVM_DEBUG(llvm::dbgs() << "Unwrapped lines:\n");
@@ -243,6 +246,10 @@ void UnwrappedLineParser::parse() {
       Callback.consumeUnwrappedLine(Line);
     }
     Callback.finishRun();
+    TotalLinesProcessed += Lines.size();
+    if (MaxLinesToProcess > 0 && TotalLinesProcessed >= MaxLinesToProcess) {
+      break;
+    }
     Lines.clear();
     while (!PPLevelBranchIndex.empty() &&
            PPLevelBranchIndex.back() + 1 >= PPLevelBranchCount.back()) {
