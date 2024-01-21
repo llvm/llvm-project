@@ -271,6 +271,13 @@ C23 Feature Support
   previously implemented allowing a label at the end of a compound statement,
   and now we've implemented allowing a label to be followed by a declaration
   instead of a statement.
+- Implemented
+  `N2940 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2940.pdf>`_ which
+  removes support for trigraphs in C23 and later. In earlier language modes,
+  trigraphs remain enabled by default in conforming modes (e.g. ``-std=c17``)
+  and disabled by default in GNU and Microsoft modes (e.g., ``-std=gnu17`` or
+  ``-fms-compatibility``). If needed, you can enable trigraphs by passing
+  ``-ftrigraphs``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
