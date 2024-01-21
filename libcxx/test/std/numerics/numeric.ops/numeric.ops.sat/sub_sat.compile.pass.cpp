@@ -16,6 +16,8 @@
 #include <concepts>
 #include <numeric>
 
+#include "test_macros.h"
+
 template <typename T, typename U>
 concept CanDo = requires(T x, U y) {
   { std::sub_sat(x, y) } -> std::same_as<T>;

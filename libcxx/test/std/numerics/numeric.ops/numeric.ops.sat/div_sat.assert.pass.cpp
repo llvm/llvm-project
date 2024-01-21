@@ -21,6 +21,7 @@
 #include <numeric>
 
 #include "check_assertion.h"
+#include "test_macros.h"
 
 template <typename IntegerT>
 void test_runtime_assertion() {

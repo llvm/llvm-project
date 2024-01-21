@@ -16,6 +16,8 @@
 #include <concepts>
 #include <numeric>
 
+#include "test_macros.h"
+
 template <typename R, typename T>
 concept CanDo = requires(T x) {
   { std::saturate_cast<R>(x) } -> std::same_as<R>;

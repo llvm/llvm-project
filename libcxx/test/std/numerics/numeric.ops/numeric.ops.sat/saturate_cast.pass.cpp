@@ -21,6 +21,8 @@
 #include <limits>
 #include <numeric>
 
+#include "test_macros.h"
+
 // Smaller to larger
 static_assert(noexcept(std::saturate_cast<signed int>(std::numeric_limits<signed char>::max())));
 static_assert(noexcept(std::saturate_cast<signed int>(std::numeric_limits<unsigned char>::max())));

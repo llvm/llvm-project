@@ -21,6 +21,8 @@
 #include <limits>
 #include <numeric>
 
+#include "test_macros.h"
+
 template <typename IntegerT>
 constexpr bool test_signed() {
   constexpr auto minVal = std::numeric_limits<IntegerT>::min();
