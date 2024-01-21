@@ -3051,7 +3051,6 @@ bool Sema::SubstDefaultArgument(
     //   default argument expression appears.
     ContextRAII SavedContext(*this, FD);
     std::unique_ptr<LocalInstantiationScope> LIS;
-    auto NewTemplateArgs = TemplateArgs;
 
     if (ForCallExpr) {
       // When instantiating a default argument due to use in a call expression,
@@ -3064,18 +3063,11 @@ bool Sema::SubstDefaultArgument(
           /*ForDefinition*/ false);
       if (addInstantiatedParametersToScope(FD, PatternFD, *LIS, TemplateArgs))
         return true;
-      if (FD->isOutOfLine()) {
-        auto *CurrentTemplateArgumentList = TemplateArgumentList::CreateCopy(
-            getASTContext(), TemplateArgs.getInnermost());
-        NewTemplateArgs = getTemplateInstantiationArgs(
-            FD, FD->getDeclContext(), true, CurrentTemplateArgumentList, true,
-            nullptr, false, false);
-      }
     }
 
     runWithSufficientStackSpace(Loc, [&] {
-      Result = SubstInitializer(PatternExpr, NewTemplateArgs,
-                                /*DirectInit*/ false);
+      Result = SubstInitializer(PatternExpr, TemplateArgs,
+                                /*DirectInit*/false);
     });
   }
   if (Result.isInvalid())
