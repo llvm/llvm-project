@@ -17,7 +17,18 @@ using namespace clang::tooling;
 using namespace llvm;
 namespace fs = std::filesystem;
 
+/*****************************************************************
+ * Global Variables
+ *****************************************************************/
+
 fs::path BUILD_PATH;
+
+struct FunctionInfo;
+std::map<std::string, std::set<const FunctionInfo *>> functionsInFile;
+
+/*****************************************************************
+ * Main body
+ *****************************************************************/
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
