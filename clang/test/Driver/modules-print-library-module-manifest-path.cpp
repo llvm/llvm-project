@@ -23,14 +23,13 @@
 // RUN:     --target=x86_64-linux-gnu 2>&1 \
 // RUN:   | FileCheck libstdcxx.cpp
 
-
 //--- libcxx-no-module-json.cpp
 
 // CHECK: <NOT PRESENT>
 
 //--- libcxx.cpp
 
-// CHECK: {{.*}}{{/|.}}modules.json
+// CHECK: {{.*}}/Inputs/usr/lib/x86_64-linux-gnu{{/|.}}modules.json
 
 //--- libstdcxx.cpp
 
