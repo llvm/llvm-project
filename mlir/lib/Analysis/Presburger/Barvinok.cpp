@@ -397,7 +397,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   for (unsigned i = 0, e = ds.size(); i < e; ++i) {
     int sign = gf.getSigns()[i];
 
-    // Compute the new numerator and denominator after substituting μ.
+    // Compute the new exponents of (s+1) for the numerator and the
+    // denominator after substituting μ.
     auto [numExp, dens] =
         substituteMuInTerm(numParams, gf.getNumerators()[i], ds[i], mu);
     // Now the numerator is (s+1)^numExp
@@ -442,8 +443,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // we need to find the coefficient of s^r in P(s)/Q(s),
     // for which we use the `getCoefficientInRationalFunction()` function.
 
-    // First, we compute the coefficients of P(s),
-    // which are binomial coefficients.
+    // First, we compute the coefficients of P(s), which are binomial
+    // coefficients.
     // We only need the first r+1 of these, as higher-order terms do not
     // contribute to the coefficient of s^r.
     std::vector<QuasiPolynomial> numeratorCoefficients =
