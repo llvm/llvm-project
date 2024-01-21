@@ -41,25 +41,6 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 
 // Helpers to avoid casting in place
 
-// // signed char
-// constexpr auto operator ""_C(unsigned long long int i) {
-//     return static_cast<signed char>(i);
-// }
-
-// // unsigned char
-// constexpr auto operator ""_UC(unsigned long long int i) {
-//     return static_cast<unsigned char>(i);
-// }
-
-// // signed short int
-// constexpr auto operator ""_S(unsigned long long int i) {
-//     return static_cast<signed short int>(i);
-// }
-
-// // unsigned short int
-// constexpr auto operator ""_US(unsigned long long int i) {
-//     return static_cast<unsigned short int>(i);
-// }
 constexpr auto O_C  = static_cast<signed char>(0);
 constexpr auto O_UC = static_cast<unsigned char>(0);
 constexpr auto O_S  = static_cast<signed short int>(0);
