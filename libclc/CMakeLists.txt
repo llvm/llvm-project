@@ -154,6 +154,21 @@ if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "6.99.99" )
 	set( tahiti_aliases ${tahiti_aliases} gfx904 gfx906 )
 endif()
 
+# Support for gfx909, gfx1010, gfx1011 and gfx1012 was added in LLVM 10 (r345120)
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "9.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx909 gfx1010 gfx1011 gfx1012 )
+endif()
+
+# Support for gfx908 was added in LLVM 11 (r373411)
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "10.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx908 )
+endif()
+
+# Support for gfx90c, gfx1030, gfx1031, gfx1032, gfx1033 was added in LLVM 12
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "11.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx90c gfx1030 gfx1031 gfx1032 gfx1033 )
+endif()
+
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
