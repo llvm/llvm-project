@@ -29,7 +29,7 @@
 
 //--- libcxx.cpp
 
-// CHECK: {{.*}}{{/|\\\\}}modules.json
+// CHECK: {{.*}}{{/|.}}modules.json
 
 //--- libstdcxx.cpp
 
