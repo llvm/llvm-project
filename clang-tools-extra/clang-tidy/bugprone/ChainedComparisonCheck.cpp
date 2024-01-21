@@ -66,19 +66,19 @@ void ChainedComparisonData::add(llvm::StringRef Opcode) {
 }
 
 void ChainedComparisonData::extract(const BinaryOperator *Op) {
-  const Expr* LHS = Op->getLHS();
+  const Expr *LHS = Op->getLHS()->IgnoreImplicit();
   if (isExprAComparisonOperator(LHS))
-    extract(LHS->IgnoreImplicit());
+    extract(LHS);
   else
-    add(LHS->IgnoreUnlessSpelledInSource());
+    add(LHS);
 
   add(Op->getOpcodeStr());
 
-  const Expr* RHS = Op->getRHS();
+  const Expr *RHS = Op->getRHS()->IgnoreImplicit();
   if (isExprAComparisonOperator(RHS))
-    extract(RHS->IgnoreImplicit());
+    extract(RHS);
   else
-    add(RHS->IgnoreUnlessSpelledInSource());
+    add(RHS);
 }
 
 void ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
@@ -86,7 +86,7 @@ void ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
   if (isExprAComparisonOperator(FirstArg))
     extract(FirstArg);
   else
-    add(FirstArg->IgnoreUnlessSpelledInSource());
+    add(FirstArg);
 
   add(getOperatorSpelling(Op->getOperator()));
 
@@ -94,7 +94,7 @@ void ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
   if (isExprAComparisonOperator(SecondArg))
     extract(SecondArg);
   else
-    add(SecondArg->IgnoreUnlessSpelledInSource());
+    add(SecondArg);
 }
 
 void ChainedComparisonData::extract(const Expr *Op) {
