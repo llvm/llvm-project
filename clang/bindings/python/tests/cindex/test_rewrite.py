@@ -14,15 +14,7 @@ from clang.cindex import (
 
 
 class TestRewrite(unittest.TestCase):
-    code = """
-int test1;
-
-void test2(void);
-
-int f(int c) {
-    return c;
-}
-"""
+    code = """int main() { return 0; }"""
 
     def setUp(self):
         self.tmp = tempfile.NamedTemporaryFile(suffix=".cpp", buffering=0)
@@ -35,41 +27,48 @@ int f(int c) {
     def tearDown(self):
         self.tmp.close()
 
-    def test_insert(self):
-        snip = "#include <cstdio>\n"
-
-        beginning = SourceLocation.from_offset(self.tu, self.file, 0)
-        self.rew.insertTextBefore(beginning, snip)
-        self.rew.overwriteChangedFiles()
-
+    def get_content(self) -> str:
         with open(self.tmp.name, "r", encoding="utf-8") as f:
-            self.assertEqual(f.read(), snip + TestRewrite.code)
+            return f.read()
 
     def test_replace(self):
-        pattern = "test2"
-        replacement = "func"
-
-        offset = TestRewrite.code.find(pattern)
-        pattern_range = SourceRange.from_locations(
-            SourceLocation.from_offset(self.tu, self.file, offset),
-            SourceLocation.from_offset(self.tu, self.file, offset + len(pattern)),
+        rng = SourceRange.from_locations(
+            SourceLocation.from_position(self.tu, self.file, 1, 5),
+            SourceLocation.from_position(self.tu, self.file, 1, 9),
         )
-        self.rew.replaceText(pattern_range, replacement)
+        self.rew.replaceText(rng, "MAIN")
         self.rew.overwriteChangedFiles()
+        self.assertEqual(self.get_content(), "int MAIN() { return 0; }")
 
-        with open(self.tmp.name, "r", encoding="utf-8") as f:
-            self.assertEqual(f.read(), TestRewrite.code.replace(pattern, replacement))
+    def test_replace_shorter(self):
+        rng = SourceRange.from_locations(
+            SourceLocation.from_position(self.tu, self.file, 1, 5),
+            SourceLocation.from_position(self.tu, self.file, 1, 9),
+        )
+        self.rew.replaceText(rng, "foo")
+        self.rew.overwriteChangedFiles()
+        self.assertEqual(self.get_content(), "int foo() { return 0; }")
+
+    def test_replace_longer(self):
+        rng = SourceRange.from_locations(
+            SourceLocation.from_position(self.tu, self.file, 1, 5),
+            SourceLocation.from_position(self.tu, self.file, 1, 9),
+        )
+        self.rew.replaceText(rng, "patatino")
+        self.rew.overwriteChangedFiles()
+        self.assertEqual(self.get_content(), "int patatino() { return 0; }")
+
+    def test_insert(self):
+        pos = SourceLocation.from_position(self.tu, self.file, 1, 5)
+        self.rew.insertTextBefore(pos, "ro")
+        self.rew.overwriteChangedFiles()
+        self.assertEqual(self.get_content(), "int romain() { return 0; }")
 
     def test_remove(self):
-        pattern = "int c"
-
-        offset = TestRewrite.code.find(pattern)
-        pattern_range = SourceRange.from_locations(
-            SourceLocation.from_offset(self.tu, self.file, offset),
-            SourceLocation.from_offset(self.tu, self.file, offset + len(pattern)),
+        rng = SourceRange.from_locations(
+            SourceLocation.from_position(self.tu, self.file, 1, 5),
+            SourceLocation.from_position(self.tu, self.file, 1, 9),
         )
-        self.rew.removeText(pattern_range)
+        self.rew.removeText(rng)
         self.rew.overwriteChangedFiles()
-
-        with open(self.tmp.name, "r", encoding="utf-8") as f:
-            self.assertEqual(f.read(), TestRewrite.code.replace(pattern, ""))
+        self.assertEqual(self.get_content(), "int () { return 0; }")
