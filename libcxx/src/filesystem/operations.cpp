@@ -608,10 +608,9 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
   const bool resolve_symlinks = !has_opt(perm_options::nofollow);
   const bool add_perms        = has_opt(perm_options::add);
   const bool remove_perms     = has_opt(perm_options::remove);
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
       (add_perms + remove_perms + has_opt(perm_options::replace)) == 1,
-      "One and only one of the perm_options constants replace, add, or remove "
-      "is present in opts");
+      "One and only one of the perm_options constants 'replace', 'add', or 'remove' must be present in opts");
 
   bool set_sym_perms = false;
   prms &= perms::mask;
