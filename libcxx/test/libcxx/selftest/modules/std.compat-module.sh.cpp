@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: clang-modules-build
 // UNSUPPORTED: gcc
 
@@ -16,10 +16,13 @@
 // "using-if-exists" mechanism apparently did not work here.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
-// A minimal test to validate import works.
+// Make sure that the compile flags contain the expected elements.
+// The tests only look for the expected components and not the exact flags.
+// Otherwise changing the location of the module would break this test.
 
 // MODULE_DEPENDENCIES: std.compat
 
-import std.compat;
+// RUN: echo "%{compile_flags}" | grep -- "-fmodule-file=std.compat=.*/std.compat.pcm .*/std.compat.pcm"
 
-int main(int, char**) { return !(::strlen("Hello modular world") == 19); }
+// It's unspecified whether std.compat is built on the std module.
+// Therefore don't test its presence
