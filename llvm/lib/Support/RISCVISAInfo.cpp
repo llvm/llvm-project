@@ -910,6 +910,14 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
           return E;
       } else if (CurrExt.front() == 'z' || CurrExt.front() == 's' ||
                  CurrExt.front() == 'x') {
+        // Handle other types of extensions other than the standard
+        // general purpose and standard user-level extensions.
+        // Parse the ISA string containing non-standard user-level
+        // extensions, standard supervisor-level extensions and
+        // non-standard supervisor-level extensions.
+        // These extensions start with 'z', 's', 'x' prefixes, might have a
+        // version number (major, minor) and are separated by a single
+        // underscore '_'. We do not enforce a canonical order for them.
         if (auto E = processMultiLetterExtension(
                 CurrExt, SeenExts, ExtsVersion, IgnoreUnknown,
                 EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
