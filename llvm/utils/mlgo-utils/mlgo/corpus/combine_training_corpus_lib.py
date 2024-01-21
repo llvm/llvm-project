@@ -6,8 +6,7 @@
 import os
 import json
 import glob
-
-from absl import logging
+import logging
 
 _FILE_NAME = "corpus_description.json"
 
