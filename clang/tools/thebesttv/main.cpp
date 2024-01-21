@@ -476,65 +476,6 @@ class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>,
     }
 };
 
-class FindNamedClassConsumer : public clang::ASTConsumer {
-  private:
-    fs::path currentFile;
-
-  public:
-    explicit FindNamedClassConsumer(fs::path currentFile)
-        : currentFile(currentFile) {
-        requireTrue(currentFile.is_absolute());
-        llvm::errs() << "--- Processing " << currentFile << "\n";
-    }
-
-    virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-        auto *TUD = Context.getTranslationUnitDecl();
-        llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
-        TUD->dump();
-
-        // call different visitors
-        // llvm::errs() << "\n--- FunctionDeclVisitor ---\n";
-        // FunctionDeclVisitor(&Context).TraverseDecl(TUD);
-
-        llvm::errs() << "\n--- FindVarVisitor ---\n";
-        VarLocation targetLoc(
-            "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp", 2,
-            7);
-        FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
-
-        targetLoc.line = 2;
-        targetLoc.column = 14;
-        FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
-
-        targetLoc.line = 23;
-        targetLoc.column = 7;
-        FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
-
-        targetLoc.line = 23;
-        targetLoc.column = 11;
-        FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
-
-        targetLoc.line = 23;
-        targetLoc.column = 15;
-        FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
-
-        llvm::errs() << "\n--- FindPathVisitor ---\n";
-        FindPathVisitor fpv(&Context);
-        fpv.TraverseDecl(TUD);
-        fpv.collect();
-    }
-};
-
-class FindNamedClassAction : public clang::ASTFrontendAction {
-  public:
-    virtual std::unique_ptr<clang::ASTConsumer>
-    CreateASTConsumer(clang::CompilerInstance &Compiler,
-                      llvm::StringRef InFile) {
-        fs::path currentFile = fs::canonical(BUILD_PATH / InFile.str());
-        return std::make_unique<FindNamedClassConsumer>(currentFile);
-    }
-};
-
 std::unique_ptr<CompilationDatabase>
 getCompilationDatabase(fs::path buildPath) {
     llvm::errs() << "Getting compilation database from: " << buildPath << "\n";
@@ -563,5 +504,51 @@ int main(int argc, const char **argv) {
     }
 
     ClangTool Tool(*cb, allFiles);
-    return Tool.run(newFrontendActionFactory<FindNamedClassAction>().get());
+    std::vector<std::unique_ptr<ASTUnit>> ASTs;
+    Tool.buildASTs(ASTs);
+
+    for (auto &AST : ASTs) {
+        const ASTContext &Context = AST->getASTContext();
+
+        auto *TUD = Context.getTranslationUnitDecl();
+        llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
+        TUD->dump();
+
+        // call different visitors
+        // llvm::errs() << "\n--- FunctionDeclVisitor ---\n";
+        // FunctionDeclVisitor(&Context).TraverseDecl(TUD);
+
+        llvm::errs() << "\n--- FunctionAccumulator ---\n";
+        FunctionAccumulator fpv;
+        fpv.TraverseDecl(TUD);
+    }
+
+    // traverse functionInFile
+    for (const auto &[file, functions] : functionsInFile) {
+        llvm::errs() << "File: " << file << "\n";
+        for (const auto *fi : functions) {
+            llvm::errs() << "  " << fi->name << "\n";
+        }
+    }
+
+    // llvm::errs() << "\n--- FindVarVisitor ---\n";
+    // VarLocation targetLoc(
+    //     "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp", 2, 7);
+    // FindVarVisitor::findVar(functionsInFile, targetLoc);
+
+    // targetLoc.line = 2;
+    // targetLoc.column = 14;
+    // FindVarVisitor::findVar(&Context, targetLoc);
+
+    // targetLoc.line = 23;
+    // targetLoc.column = 7;
+    // FindVarVisitor::findVar(&Context, targetLoc);
+
+    // targetLoc.line = 23;
+    // targetLoc.column = 11;
+    // FindVarVisitor::findVar(&Context, targetLoc);
+
+    // targetLoc.line = 23;
+    // targetLoc.column = 15;
+    // FindVarVisitor::findVar(&Context, targetLoc);
 }
