@@ -39,13 +39,6 @@ static_assert(noexcept(std::saturate_cast<signed char>(std::numeric_limits<unsig
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<signed int>::max())));
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<unsigned int>::max())));
 
-// Helpers to avoid casting in place
-
-constexpr auto O_C  = static_cast<signed char>(0);
-constexpr auto O_UC = static_cast<unsigned char>(0);
-constexpr auto O_S  = static_cast<signed short int>(0);
-constexpr auto O_US = static_cast<unsigned short int>(0);
-
 // Tests
 
 constexpr bool test() {
@@ -59,7 +52,7 @@ constexpr bool test() {
   using UIntT = unsigned long long int;
 #endif
 
-  // Constants: the values depend on the platform
+  // Constants the values of which depend on the context (platform)
 
   constexpr auto sBigMin = std::numeric_limits<SIntT>::min();
   constexpr auto sZero   = SIntT{0};
@@ -68,8 +61,15 @@ constexpr bool test() {
   constexpr auto uZero   = UIntT{0};
   constexpr auto uBigMax = std::numeric_limits<UIntT>::max();
 
-  // signed char
+  // Constants to avoid casting in place
 
+  constexpr auto O_C  = static_cast<signed char>(0);
+  constexpr auto O_UC = static_cast<unsigned char>(0);
+  
+  constexpr auto O_S  = static_cast<signed short int>(0);
+  constexpr auto O_US = static_cast<unsigned short int>(0);
+
+  // signed char
 
   // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name",
   // here and bellow...
