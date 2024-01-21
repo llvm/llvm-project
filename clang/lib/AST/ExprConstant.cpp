@@ -2702,7 +2702,8 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
 static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
                                    QualType SrcType, QualType DestType,
                                    APFloat &Result) {
-  assert(isa<CastExpr>(E) || isa<CompoundAssignOperator>(E));
+  assert(isa<CastExpr>(E) || isa<CompoundAssignOperator>(E) ||
+         isa<ConvertVectorExpr>(E));
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
   APFloat Value = Result;
@@ -10643,6 +10644,9 @@ namespace {
     bool VisitUnaryImag(const UnaryOperator *E);
     bool VisitBinaryOperator(const BinaryOperator *E);
     bool VisitUnaryOperator(const UnaryOperator *E);
+    bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+    bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+
     // FIXME: Missing: conditional operator (for GNU
     //                 conditional select), shufflevector, ExtVectorElementExpr
   };
@@ -10892,6 +10896,132 @@ bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     ResultElements.push_back(*Elt);
   }
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
+static bool EvaluateVectorOrLValue(APValue &Result, EvalInfo &Info,
+                                   const Expr *E, const QualType &Type) {
+  if (!Evaluate(Result, Info, E))
+    return false;
+
+  if (Result.isLValue()) {
+    // Source of the data is an lvalue; Manually handle the lvalue as if
+    // it was an rvalue to get the current APValue.
+    LValue LValueFound;
+    LValueFound.setFrom(Info.Ctx, Result);
+    if (!handleLValueToRValueConversion(Info, E, Type, LValueFound, Result))
+      return false;
+  }
+
+  return Result.isVector();
+}
+
+static bool handleVectorConversion(EvalInfo &Info, const FPOptions FPO,
+                                   const Expr *E, QualType SourceTy,
+                                   QualType DestTy, APValue const &Original,
+                                   APValue &Result) {
+  if (SourceTy->isIntegerType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = APValue(APFloat(0.0));
+      return HandleIntToFloatCast(Info, E, FPO, SourceTy, Original.getInt(),
+                                  DestTy, Result.getFloat());
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(
+          HandleIntToIntCast(Info, E, DestTy, SourceTy, Original.getInt()));
+      return true;
+    }
+  } else if (SourceTy->isRealFloatingType()) {
+    if (DestTy->isRealFloatingType()) {
+      Result = Original;
+      return HandleFloatToFloatCast(Info, E, SourceTy, DestTy,
+                                    Result.getFloat());
+    }
+    if (DestTy->isIntegerType()) {
+      Result = APValue(APSInt());
+      return HandleFloatToIntCast(Info, E, SourceTy, Original.getFloat(),
+                                  DestTy, Result.getInt());
+    }
+  }
+  return false;
+}
+
+bool VectorExprEvaluator::VisitConvertVectorExpr(const ConvertVectorExpr *E) {
+  APValue Source;
+  QualType SourceVecType = E->getSrcExpr()->getType();
+  if (!EvaluateVectorOrLValue(Source, Info, E->getSrcExpr(), SourceVecType))
+    return false;
+
+  QualType DestTy = E->getType()->castAs<VectorType>()->getElementType();
+  QualType SourceTy = SourceVecType->castAs<VectorType>()->getElementType();
+
+  const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+
+  auto SourceLen = Source.getVectorLength();
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(SourceLen);
+  for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+    APValue Elt;
+    if (!handleVectorConversion(Info, FPO, E, SourceTy, DestTy,
+                                Source.getVectorElt(EltNum), Elt))
+      return false;
+    ResultElements.push_back(std::move(Elt));
+  }
+
+  return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
+static bool handleVectorShuffle(EvalInfo &Info, const ShuffleVectorExpr *E,
+                                QualType ElemType, APValue const &VecVal1,
+                                APValue const &VecVal2, unsigned EltNum,
+                                APValue &Result) {
+  unsigned const TotalElementsInAVector = VecVal1.getVectorLength();
+
+  Expr const *IndexExpr = E->getExpr(2 + EltNum);
+  APSInt IndexVal;
+  if (!EvaluateInteger(IndexExpr, IndexVal, Info))
+    return false;
+
+  uint32_t index = IndexVal.getZExtValue();
+  // The spec says that -1 should be treated as undef for optimizations,
+  // but in constexpr we need to choose a value. We'll choose 0.
+  if (index >= TotalElementsInAVector * 2)
+    index = 0;
+
+  if (index >= TotalElementsInAVector)
+    Result = VecVal2.getVectorElt(index - TotalElementsInAVector);
+  else
+    Result = VecVal1.getVectorElt(index);
+  return true;
+}
+
+bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
+  APValue VecVal1;
+  const Expr *Vec1 = E->getExpr(0);
+  if (!EvaluateVectorOrLValue(VecVal1, Info, Vec1, Vec1->getType()))
+    return false;
+  APValue VecVal2;
+  const Expr *Vec2 = E->getExpr(1);
+  if (!EvaluateVectorOrLValue(VecVal2, Info, Vec2, Vec2->getType()))
+    return false;
+
+  VectorType const *DestVecTy = E->getType()->castAs<VectorType>();
+  if (!DestVecTy)
+    return false;
+
+  QualType DestElTy = DestVecTy->getElementType();
+
+  auto TotalElementsInOutputVector = DestVecTy->getNumElements();
+
+  SmallVector<APValue, 4> ResultElements;
+  ResultElements.reserve(TotalElementsInOutputVector);
+  for (unsigned EltNum = 0; EltNum < TotalElementsInOutputVector; ++EltNum) {
+    APValue Elt;
+    if (!handleVectorShuffle(Info, E, DestElTy, VecVal1, VecVal2, EltNum, Elt))
+      return false;
+    ResultElements.push_back(std::move(Elt));
+  }
+
   return Success(APValue(ResultElements.data(), ResultElements.size()), E);
 }
 

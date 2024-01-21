@@ -2855,7 +2855,7 @@ Query for this feature with ``__has_builtin(__builtin_dump_struct)``
 ``__builtin_shufflevector`` is used to express generic vector
 permutation/shuffle/swizzle operations.  This builtin is also very important
 for the implementation of various target-specific header files like
-``<xmmintrin.h>``.
+``<xmmintrin.h>``. This builtin can be used within constant expressions.
 
 **Syntax**:
 
@@ -2909,7 +2909,8 @@ Query for this feature with ``__has_builtin(__builtin_shufflevector)``.
 
 ``__builtin_convertvector`` is used to express generic vector
 type-conversion operations. The input vector and the output vector
-type must have the same number of elements.
+type must have the same number of elements. This builtin can be used within
+constant expressions.
 
 **Syntax**:
 
