@@ -28,11 +28,7 @@ import argparse
 from mlgo.corpus import combine_training_corpus_lib
 
 
-def main(args):
-    combine_training_corpus_lib.combine_corpus(args.root_dir)
-
-
-if __name__ == "__main__":
+def parse_args_and_run():
     parser = argparse.ArgumentParser(
         description="A tool for combining multiple training corpora"
     )
@@ -41,3 +37,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args)
+
+
+def main(args):
+    combine_training_corpus_lib.combine_corpus(args.root_dir)
+
+
+if __name__ == "__main__":
+    parse_args_and_run()

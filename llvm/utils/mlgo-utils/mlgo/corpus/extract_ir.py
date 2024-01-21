@@ -24,71 +24,15 @@ and detailed debug information, -1 for solely warnings, and -2 to not produce
 any output.
 """
 
-import json
-import multiprocessing
-import logging
 import argparse
+import json
+import logging
+import multiprocessing
 
 from mlgo.corpus import extract_ir_lib
 
 
-def main(args):
-    objs = []
-    if args.input is not None and args.thinlto_build == "local":
-        raise ValueError("--thinlto_build=local cannot be run with --input")
-    if args.input is None:
-        if args.thinlto_build != "local":
-            raise ValueError("--input or --thinlto_build=local must be provided")
-        objs = extract_ir_lib.load_for_lld_thinlto(args.obj_base_dir, args.output_dir)
-    elif args.input_type == "json":
-        with open(args.input, encoding="utf-8") as f:
-            objs = extract_ir_lib.load_from_compile_commands(
-                json.load(f), args.output_dir
-            )
-    elif args.input_type == "params":
-        if not args.obj_base_dir:
-            logging.info(
-                "-obj_base_dir is unspecified, assuming current directory."
-                "If no objects are found, use this option to specify the root"
-                "directory for the object file paths in the input file."
-            )
-        with open(args.input, encoding="utf-8") as f:
-            objs = extract_ir_lib.load_from_lld_params(
-                [l.strip() for l in f.readlines()], args.obj_base_dir, args.output_dir
-            )
-    elif args.input_type == "directory":
-        logging.warning(
-            "Using the directory input is only recommended if the build system"
-            "your project uses does not support any structured output that"
-            "ml-compiler-opt understands. If your build system provides a"
-            "structured compilation database, use that instead"
-        )
-        objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
-    else:
-        logging.error("Unknown input type: %s", args.input_type)
-
-    relative_output_paths = extract_ir_lib.run_extraction(
-        objs,
-        args.num_workers,
-        args.llvm_objcopy_path,
-        args.cmd_filter,
-        args.thinlto_build,
-        args.cmd_section_name,
-        args.bitcode_section_name,
-    )
-
-    extract_ir_lib.write_corpus_manifest(
-        args.thinlto_build, relative_output_paths, args.output_dir
-    )
-
-    logging.info(
-        "Converted %d files out of %d",
-        len(objs) - relative_output_paths.count(None),
-        len(objs),
-    )
-
-
-if __name__ == "__main__":
+def parse_args_and_run():
     parser = argparse.ArgumentParser(
         description="A tool for making a corpus from build artifacts"
     )
@@ -171,3 +115,63 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args)
+
+
+def main(args):
+    objs = []
+    if args.input is not None and args.thinlto_build == "local":
+        raise ValueError("--thinlto_build=local cannot be run with --input")
+    if args.input is None:
+        if args.thinlto_build != "local":
+            raise ValueError("--input or --thinlto_build=local must be provided")
+        objs = extract_ir_lib.load_for_lld_thinlto(args.obj_base_dir, args.output_dir)
+    elif args.input_type == "json":
+        with open(args.input, encoding="utf-8") as f:
+            objs = extract_ir_lib.load_from_compile_commands(
+                json.load(f), args.output_dir
+            )
+    elif args.input_type == "params":
+        if not args.obj_base_dir:
+            logging.info(
+                "-obj_base_dir is unspecified, assuming current directory."
+                "If no objects are found, use this option to specify the root"
+                "directory for the object file paths in the input file."
+            )
+        with open(args.input, encoding="utf-8") as f:
+            objs = extract_ir_lib.load_from_lld_params(
+                [l.strip() for l in f.readlines()], args.obj_base_dir, args.output_dir
+            )
+    elif args.input_type == "directory":
+        logging.warning(
+            "Using the directory input is only recommended if the build system"
+            "your project uses does not support any structured output that"
+            "ml-compiler-opt understands. If your build system provides a"
+            "structured compilation database, use that instead"
+        )
+        objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
+    else:
+        logging.error("Unknown input type: %s", args.input_type)
+
+    relative_output_paths = extract_ir_lib.run_extraction(
+        objs,
+        args.num_workers,
+        args.llvm_objcopy_path,
+        args.cmd_filter,
+        args.thinlto_build,
+        args.cmd_section_name,
+        args.bitcode_section_name,
+    )
+
+    extract_ir_lib.write_corpus_manifest(
+        args.thinlto_build, relative_output_paths, args.output_dir
+    )
+
+    logging.info(
+        "Converted %d files out of %d",
+        len(objs) - relative_output_paths.count(None),
+        len(objs),
+    )
+
+
+if __name__ == "__main__":
+    parse_args_and_run()

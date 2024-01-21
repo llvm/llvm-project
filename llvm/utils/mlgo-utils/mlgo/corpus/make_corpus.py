@@ -12,10 +12,27 @@ PYTHONPATH=$PYTHONPATH:. python3 ./compiler_opt/tools/make_corpus.py \
   --default_args="<list of space separated flags>"
 """
 
-import logging
 import argparse
+import logging
 
 from mlgo.corpus import make_corpus_lib
+
+
+def parse_args_and_run():
+    parser = argparse.ArgumentParser(
+        description="A tool for making a corpus from arbitrary bitcode"
+    )
+    parser.add_argument("--input_dir", type=str, help="The input directory.")
+    parser.add_argument("--output_dir", type=str, help="The output directory.")
+    parser.add_argument(
+        "--default_args",
+        type=str,
+        help="The compiler flags to compile with when using downstream tooling.",
+        default="",
+        nargs="?",
+    )
+    args = parser.parse_args()
+    main(args)
 
 
 def main(args):
@@ -33,17 +50,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="A tool for making a corpus from arbitrary bitcode"
-    )
-    parser.add_argument("--input_dir", type=str, help="The input directory.")
-    parser.add_argument("--output_dir", type=str, help="The output directory.")
-    parser.add_argument(
-        "--default_args",
-        type=str,
-        help="The compiler flags to compile with when using downstream tooling.",
-        default="",
-        nargs="?",
-    )
-    args = parser.parse_args()
-    main(args)
+    parse_args_and_run()
