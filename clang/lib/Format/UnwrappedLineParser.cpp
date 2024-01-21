@@ -3423,9 +3423,12 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       break;
     case tok::r_paren:
     case tok::pipepipe:
-      FormatTok = Tokens->setPosition(StoredPosition);
-      parseRequiresClause(RequiresToken);
-      return true;
+      if (OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
+        parseRequiresClause(RequiresToken);
+        return true;
+      }
+      break;
     case tok::eof:
       // Break out of the loop.
       Lookahead = 50;
