@@ -12,7 +12,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
-#include <array>
 
 using namespace clang::ast_matchers;
 
@@ -49,8 +48,8 @@ private:
   void add(const Expr *Operand);
   void add(llvm::StringRef Opcode);
   void extract(const Expr *Op);
-  bool extract(const BinaryOperator *Op);
-  bool extract(const CXXOperatorCallExpr *Op);
+  void extract(const BinaryOperator *Op);
+  void extract(const CXXOperatorCallExpr *Op);
 };
 
 void ChainedComparisonData::add(const Expr *Operand) {
@@ -63,31 +62,26 @@ void ChainedComparisonData::add(const Expr *Operand) {
 
 void ChainedComparisonData::add(llvm::StringRef Opcode) {
   Name += ' ';
-  Name += Opcode.str();
+  Name += Opcode;
 }
 
-bool ChainedComparisonData::extract(const BinaryOperator *Op) {
-  if (!Op)
-    return false;
-
-  if (isExprAComparisonOperator(Op->getLHS()))
-    extract(Op->getLHS()->IgnoreImplicit());
+void ChainedComparisonData::extract(const BinaryOperator *Op) {
+  const Expr* LHS = Op->getLHS();
+  if (isExprAComparisonOperator(LHS))
+    extract(LHS->IgnoreImplicit());
   else
-    add(Op->getLHS()->IgnoreUnlessSpelledInSource());
+    add(LHS->IgnoreUnlessSpelledInSource());
 
   add(Op->getOpcodeStr());
 
-  if (isExprAComparisonOperator(Op->getRHS()))
-    extract(Op->getRHS()->IgnoreImplicit());
+  const Expr* RHS = Op->getRHS();
+  if (isExprAComparisonOperator(RHS))
+    extract(RHS->IgnoreImplicit());
   else
-    add(Op->getRHS()->IgnoreUnlessSpelledInSource());
-  return true;
+    add(RHS->IgnoreUnlessSpelledInSource());
 }
 
-bool ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
-  if (!Op || Op->getNumArgs() != 2U)
-    return false;
-
+void ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
   const Expr *FirstArg = Op->getArg(0U)->IgnoreImplicit();
   if (isExprAComparisonOperator(FirstArg))
     extract(FirstArg);
@@ -101,12 +95,21 @@ bool ChainedComparisonData::extract(const CXXOperatorCallExpr *Op) {
     extract(SecondArg);
   else
     add(SecondArg->IgnoreUnlessSpelledInSource());
-  return true;
 }
 
 void ChainedComparisonData::extract(const Expr *Op) {
-  extract(dyn_cast_or_null<BinaryOperator>(Op)) ||
-      extract(dyn_cast_or_null<CXXOperatorCallExpr>(Op));
+  if (!Op)
+    return;
+
+  if (const auto* BinaryOp = dyn_cast<BinaryOperator>(Op)) {
+    extract(BinaryOp);
+    return;
+  }
+
+  if (const auto* OverloadedOp = dyn_cast<CXXOperatorCallExpr>(Op)) {
+    if (OverloadedOp->getNumArgs() == 2U)
+      extract(OverloadedOp);
+  }
 }
 
 } // namespace
