@@ -10311,78 +10311,82 @@ static __inline__ vector float __ATTRS_o_ai vec_vspltw(vector float __a,
                                          b1, b2, b3, __b, b1, b2, b3));
 }
 
+typedef union {
+  struct {
+    signed int value : 5; // 5-bit signed integer
+  } field;
+  signed char byte;
+} FiveBitSigned;
+
 /* vec_splat_s8 */
 
 #define __builtin_altivec_vspltisb vec_splat_s8
 
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector signed char __ATTRS_o_ai
 vec_splat_s8(signed char __a) {
-  return (vector signed char)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector signed char)(fbs.field.value);
 }
 
 /* vec_vspltisb */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector signed char __ATTRS_o_ai
 vec_vspltisb(signed char __a) {
-  return (vector signed char)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector signed char)(fbs.field.value);
 }
 
 /* vec_splat_s16 */
-
-#define __builtin_altivec_vspltish vec_splat_s16
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector short __ATTRS_o_ai vec_splat_s16(signed char __a) {
-  return (vector short)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector short)(fbs.field.value);
 }
 
 /* vec_vspltish */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector short __ATTRS_o_ai vec_vspltish(signed char __a) {
-  return (vector short)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector short)(fbs.field.value);
 }
 
 /* vec_splat_s32 */
-
-#define __builtin_altivec_vspltisw vec_splat_s32
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector int __ATTRS_o_ai vec_splat_s32(signed char __a) {
-  return (vector int)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector int)(fbs.field.value);
 }
 
 /* vec_vspltisw */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector int __ATTRS_o_ai vec_vspltisw(signed char __a) {
-  return (vector int)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector int)(fbs.field.value);
 }
 
 /* vec_splat_u8 */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_splat_u8(unsigned char __a) {
-  return (vector unsigned char)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector unsigned char)(fbs.field.value);
 }
 
 /* vec_splat_u16 */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_splat_u16(signed char __a) {
-  return (vector unsigned short)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector unsigned short)(fbs.field.value);
 }
 
 /* vec_splat_u32 */
-
-// FIXME: parameter should be treated as 5-bit signed literal
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_splat_u32(signed char __a) {
-  return (vector unsigned int)(__a);
+  FiveBitSigned fbs;
+  fbs.byte = __a;
+  return (vector unsigned int)(fbs.field.value);
 }
 
 /* vec_sr */
