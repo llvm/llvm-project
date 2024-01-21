@@ -73,7 +73,7 @@ constexpr bool test() {
   // signed char
 
   // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name",
-  // here and bellow...
+  // here and below...
   { [[maybe_unused]] std::same_as<signed char> decltype(auto) _ = std::saturate_cast<signed char>(SCHAR_MAX); }
   assert(std::saturate_cast<signed char>(SCHAR_MIN)  == SCHAR_MIN);
   assert(std::saturate_cast<signed char>(      O_C)  ==       O_C);
