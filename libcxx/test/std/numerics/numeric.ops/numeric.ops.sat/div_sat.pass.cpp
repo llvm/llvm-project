@@ -33,7 +33,7 @@ constexpr bool test_signed() {
 
   // clang-format off
 
-  // No saturation (-1, 0, 1)
+  // Limit values (-1, 0, 1, min, max)
 
   assert(std::div_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
   assert(std::div_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
@@ -42,11 +42,21 @@ constexpr bool test_signed() {
   assert(std::div_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
   assert(std::div_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
   assert(std::div_sat(IntegerT{ 0},       minVal) == IntegerT{ 0});
+  assert(std::div_sat(IntegerT{ 0},       maxVal) == IntegerT{ 0});
   assert(std::div_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
+  assert(std::div_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 1});
   assert(std::div_sat(IntegerT{ 1},       minVal) == IntegerT{ 0});
   assert(std::div_sat(IntegerT{ 1},       maxVal) == IntegerT{ 0});
+  assert(std::div_sat(      minVal, IntegerT{ 1}) == minVal);
+  assert(std::div_sat(      minVal, IntegerT{-1}) == maxVal); // saturated
+  assert(std::div_sat(      minVal,       minVal) == IntegerT{ 1});
+  assert(std::div_sat(      minVal,       maxVal) == (minVal / maxVal));
+  assert(std::div_sat(      maxVal, IntegerT{-1}) == -maxVal);
+  assert(std::div_sat(      maxVal, IntegerT{ 1}) == maxVal);
+  assert(std::div_sat(      maxVal,       minVal) == IntegerT{ 0});
+  assert(std::div_sat(      maxVal,       maxVal) == IntegerT{ 1});
 
-  // No saturation (Large values)
+  // No saturation (no limit values)
 
   assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
   assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
@@ -69,18 +79,6 @@ constexpr bool test_signed() {
     assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
   }
 
-  // No saturation (min, max)
-
-  assert(std::div_sat(minVal, IntegerT{ 1}) == minVal);
-  assert(std::div_sat(minVal,       maxVal) == (minVal / maxVal));
-  assert(std::div_sat(maxVal,       minVal) == (maxVal / minVal));
-  assert(std::div_sat(maxVal, IntegerT{-1}) == -maxVal);
-  assert(std::div_sat(maxVal, IntegerT{ 1}) == maxVal);
-
-  // Saturation - max only
-
-  assert(std::div_sat(minVal, IntegerT{-1}) == maxVal);
-
   // clang-format on
 
   return true;
@@ -96,14 +94,18 @@ constexpr bool test_unsigned() {
 
   // clang-format off
 
-  // No saturation (0, 1)
+  // No limit values (0, 1, min, max)
 
   assert(std::div_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
   assert(std::div_sat(IntegerT{0},      maxVal) == IntegerT{0});
   assert(std::div_sat(IntegerT{1}, IntegerT{1}) == IntegerT{1});
   assert(std::div_sat(IntegerT{1},      maxVal) == IntegerT{0});
+  assert(std::div_sat(     minVal, IntegerT{1}) == minVal);
+  assert(std::div_sat(     minVal,      maxVal) == IntegerT{0});
+  assert(std::div_sat(     maxVal, IntegerT{1}) == maxVal);
+  assert(std::div_sat(     maxVal,      maxVal) == IntegerT{1});
 
-  // No saturation (large values)
+  // No saturation (no limit values)
 
   assert(std::div_sat(IntegerT{27}, IntegerT{28}) == IntegerT{0});
   assert(std::div_sat(IntegerT{28}, IntegerT{27}) == IntegerT{1});
@@ -113,11 +115,6 @@ constexpr bool test_unsigned() {
     assert(std::div_sat(lesserVal, biggerVal) == IntegerT{0});
     assert(std::div_sat(biggerVal, lesserVal) == IntegerT{1});
   }
-
-  // No saturation (min, max)
-
-  assert(std::div_sat(minVal, maxVal) == IntegerT{0});
-  assert(std::div_sat(maxVal, maxVal) == IntegerT{1});
 
   // Unsigned integer division never overflows
 

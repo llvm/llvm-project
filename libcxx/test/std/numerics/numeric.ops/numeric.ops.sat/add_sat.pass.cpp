@@ -61,7 +61,7 @@ constexpr bool test_signed() {
   assert(std::add_sat(      maxVal,       minVal) == IntegerT{-1});
   assert(std::add_sat(      maxVal,       maxVal) == maxVal); // saturated
 
-  // No saturation (No limit values)
+  // No saturation (no limit values)
 
   assert(std::add_sat(IntegerT{-27}, IntegerT{28})== IntegerT{ 1});
   assert(std::add_sat(IntegerT{ 27}, IntegerT{28})== IntegerT{55});
@@ -71,7 +71,7 @@ constexpr bool test_signed() {
     assert(std::add_sat(x, y) == maxVal);
   }
 
-  // Saturation (No limit values)
+  // Saturation (no limit values)
 
   {
     constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
@@ -118,11 +118,11 @@ constexpr bool test_unsigned() {
   assert(std::add_sat(     maxVal,      minVal) == maxVal);
   assert(std::add_sat(     maxVal,      maxVal) == maxVal); // saturated
 
-  // No saturation (No limit values)
+  // No saturation (no limit values)
 
   assert(std::add_sat(IntegerT{27}, IntegerT{28}) == IntegerT{55});
 
-  // Saturation (No limit values)
+  // Saturation (no limit values)
 
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
