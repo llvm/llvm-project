@@ -169,6 +169,31 @@ if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "11.99.99" )
 	set( tahiti_aliases ${tahiti_aliases} gfx90c gfx1030 gfx1031 gfx1032 gfx1033 )
 endif()
 
+# Support for tongapro, gfx602, gfx705, gfx805 was added in LLVM 13
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "12.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} tongapro gfx602 gfx705 gfx805 )
+endif()
+
+# Support for gfx90a, gfx1013, gfx1034, gfx1035 was added in LLVM 14
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "13.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx90a gfx1013 gfx1034 gfx1035 )
+endif()
+
+# Support for gfx940, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103 was added in LLVM 16
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "15.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx940 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 )
+endif()
+
+# Support for gfx941, gfx942, gfx1150, gfx1151 was added in LLVM 18
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "17.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx941 gfx942 gfx1150 gfx1151 )
+endif()
+
+# Support for gfx1200, gfx1201 was added in LLVM 19
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "18.99.99" )
+	set( tahiti_aliases ${tahiti_aliases} gfx1200 gfx1201 )
+endif()
+
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
