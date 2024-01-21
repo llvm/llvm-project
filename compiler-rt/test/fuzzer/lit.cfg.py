@@ -7,7 +7,6 @@ config.test_format = lit.formats.ShTest(True)
 config.suffixes = [".test"]
 config.test_source_root = os.path.dirname(__file__)
 config.available_features.add(config.target_arch)
-lit_config.note(f'arch feature "{config.target_arch}" available')
 
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
