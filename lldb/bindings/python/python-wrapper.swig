@@ -287,12 +287,12 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThrea
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Event *event,
+    void *implementer, const char *method_name, lldb_private::Event *event,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated())
@@ -325,12 +325,12 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Stream *stream,
+    void *implementer, const char *method_name, lldb_private::Stream *stream,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated()) 
@@ -845,16 +845,6 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
     return false;
 
   auto cmd_retobj_arg = SWIGBridge::ToSWIGWrapper(cmd_retobj);
-
-  // FIXME:
-  // I wanted to do something like:
-  // size_t num_elem = args.size();
-  // PythonList my_list(num_elem);
-  // for (const char *elem : args)
-  //   my_list.append(PythonString(elem);
-  //
-  // and then pass my_list to the pfunc, but that crashes somewhere
-  // deep in Python for reasons that aren't clear to me.
   
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());

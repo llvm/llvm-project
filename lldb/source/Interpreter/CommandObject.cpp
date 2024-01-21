@@ -449,18 +449,19 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
 
 std::optional<ArgumentRepetitionType> 
 CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
-  if (string == "plain") return eArgRepeatPlain ;   
-  if (string ==  "optional") return eArgRepeatOptional;
-  if (string ==  "plus") return eArgRepeatPlus;
-  if (string ==  "star") return eArgRepeatStar; 
-  if (string ==  "range") return eArgRepeatRange;
-  if (string ==  "pair-plain") return eArgRepeatPairPlain;
-  if (string ==  "pair-optional") return eArgRepeatPairOptional;
-  if (string ==  "pair-plus") return eArgRepeatPairPlus;
-  if (string ==  "pair-star") return eArgRepeatPairStar;
-  if (string ==  "pair-range") return eArgRepeatPairRange;
-  if (string ==  "pair-range-optional") return eArgRepeatPairRangeOptional;
-  return {};
+  return llvm::StringSwitch<ArgumentRepetitionType>(string)
+  .Case("plain", eArgRepeatPlain)  
+  .Case("optional", eArgRepeatOptional)
+  .Case("plus", eArgRepeatPlus)
+  .Case("star", eArgRepeatStar) 
+  .Case("range", eArgRepeatRange)
+  .Case("pair-plain", eArgRepeatPairPlain)
+  .Case("pair-optional", eArgRepeatPairOptional)
+  .Case("pair-plus", eArgRepeatPairPlus)
+  .Case("pair-star", eArgRepeatPairStar)
+  .Case("pair-range", eArgRepeatPairRange)
+  .Case("pair-range-optional", eArgRepeatPairRangeOptional)
+  .Default({});
 }
 
 static CommandObject::CommandArgumentEntry

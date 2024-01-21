@@ -1152,13 +1152,13 @@ private:
 /// This class implements a "raw" scripted command.  lldb does no parsing of the
 /// command line, instead passing the line unaltered (except for backtick
 /// substitution).
-class CommandObjectScriptingObject : public CommandObjectRaw {
+class CommandObjectScriptingObjectRaw : public CommandObjectRaw {
 public:
-  CommandObjectScriptingObject(CommandInterpreter &interpreter,
-                               std::string name,
-                               StructuredData::GenericSP cmd_obj_sp,
-                               ScriptedCommandSynchronicity synch,
-                               CompletionType completion_type)
+  CommandObjectScriptingObjectRaw(CommandInterpreter &interpreter,
+                                  std::string name,
+                                  StructuredData::GenericSP cmd_obj_sp,
+                                  ScriptedCommandSynchronicity synch,
+                                  CompletionType completion_type)
       : CommandObjectRaw(interpreter, name), m_cmd_obj_sp(cmd_obj_sp),
         m_synchro(synch), m_fetched_help_short(false),
         m_fetched_help_long(false), m_completion_type(completion_type) {
@@ -1169,7 +1169,7 @@ public:
       GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
   }
 
-  ~CommandObjectScriptingObject() override = default;
+  ~CommandObjectScriptingObjectRaw() override = default;
 
   void
   HandleArgumentCompletion(CompletionRequest &request,
@@ -1304,14 +1304,11 @@ private:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       ScriptInterpreter *scripter = 
         m_interpreter.GetDebugger().GetScriptInterpreter();
-      if (!scripter) {
+      if (!scripter || !m_cmd_obj_sp)
         return;
-      }
-      if (!m_cmd_obj_sp) {
-        return;
-      }
+
       scripter->OptionParsingStartedForCommandObject(m_cmd_obj_sp);
-    };
+    }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       if (!m_options_definition_up)
@@ -1319,17 +1316,18 @@ private:
       return llvm::ArrayRef(m_options_definition_up.get(), m_num_options);
     }
     
-    static bool ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp, 
-        size_t counter, uint32_t &usage_mask, Status &error) {
+    static Status ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp, 
+        size_t counter, uint32_t &usage_mask) {
       // If the usage entry is not provided, we use LLDB_OPT_SET_ALL.
       // If the usage mask is a UINT, the option belongs to that group.
       // If the usage mask is a vector of UINT's, the option belongs to all the
       // groups listed.
       // If a subelement of the vector is a vector of two ints, then the option
       // belongs to the inclusive range from the first to the second element.
+      Status error;
       if (!obj_sp) {
         usage_mask = LLDB_OPT_SET_ALL;
-        return true;
+        return error;
       }
       
       usage_mask = 0;
@@ -1342,17 +1340,17 @@ private:
         if (value == 0) {
           error.SetErrorStringWithFormatv(
               "0 is not a valid group for option {0}", counter);
-          return false;
+          return error;
         }
         usage_mask = (1 << (value - 1));
-        return true;
+        return error;
       }
       // Otherwise it has to be an array:
       StructuredData::Array *array_val = obj_sp->GetAsArray();
       if (!array_val) {
         error.SetErrorStringWithFormatv(
             "required field is not a array for option {0}", counter);
-        return false;
+        return error;
       }
       // This is the array ForEach for accumulating a group usage mask from
       // an array of string descriptions of groups.
@@ -1408,11 +1406,13 @@ private:
         }
         return true;
       };
-      return array_val->ForEach(groups_accumulator);
+      array_val->ForEach(groups_accumulator);
+      return error;
     }
     
     
-    Status SetOptionsFromArray(StructuredData::Array &options, Status &error) {
+    Status SetOptionsFromArray(StructuredData::Array &options) {
+      Status error;
       m_num_options = options.GetSize();
       m_options_definition_up.reset(new OptionDefinition[m_num_options]);
       // We need to hand out pointers to contents of these vectors; we reserve
@@ -1447,8 +1447,8 @@ private:
         // Usage Mask:
         StructuredData::ObjectSP obj_sp = opt_dict->GetValueForKey("groups");
         if (obj_sp) {
-          ParseUsageMaskFromArray(obj_sp, counter, option_def.usage_mask, 
-              error);
+          error = ParseUsageMaskFromArray(obj_sp, counter, 
+                                          option_def.usage_mask);
           if (error.Fail())
             return false;
         }
@@ -1694,6 +1694,34 @@ private:
   };
 
 public:
+  static CommandObjectSP Create(CommandInterpreter &interpreter, 
+                std::string name,
+                StructuredData::GenericSP cmd_obj_sp,
+                ScriptedCommandSynchronicity synch, 
+                CommandReturnObject &result) {
+    CommandObjectSP new_cmd_sp(new CommandObjectScriptingObjectParsed(
+        interpreter, name, cmd_obj_sp, synch));
+
+    CommandObjectScriptingObjectParsed *parsed_cmd 
+        = static_cast<CommandObjectScriptingObjectParsed *>(new_cmd_sp.get());
+    // Now check all the failure modes, and report if found.
+    Status opt_error = parsed_cmd->GetOptionsError();
+    Status arg_error = parsed_cmd->GetArgsError();
+
+    if (opt_error.Fail())
+      result.AppendErrorWithFormat("failed to parse option definitions: %s",
+                                   opt_error.AsCString());
+    if (arg_error.Fail())
+      result.AppendErrorWithFormat("%sfailed to parse argument definitions: %s",
+                                   opt_error.Fail() ? ", also " : "", 
+                                   arg_error.AsCString());
+
+    if (!result.Succeeded())
+      return {};
+
+    return new_cmd_sp;
+  }
+
   CommandObjectScriptingObjectParsed(CommandInterpreter &interpreter,
                                std::string name,
                                StructuredData::GenericSP cmd_obj_sp,
@@ -1720,7 +1748,7 @@ public:
       StructuredData::Array *options_array = options_object_sp->GetAsArray();
       // but if it exists, it has to be an array.
       if (options_array) {
-        m_options.SetOptionsFromArray(*(options_array), m_options_error);
+        m_options_error = m_options.SetOptionsFromArray(*(options_array));
         // If we got an error don't bother with the arguments...
         if (m_options_error.Fail())
           return;
@@ -1804,8 +1832,8 @@ public:
           
           // Usage Mask:
           obj_sp = arg_dict->GetValueForKey("groups");
-          CommandOptions::ParseUsageMaskFromArray(obj_sp, counter, 
-              arg_opt_set_association, m_args_error);
+          m_args_error = CommandOptions::ParseUsageMaskFromArray(obj_sp, 
+              counter, arg_opt_set_association);
           this_entry.emplace_back(arg_type, arg_repetition, 
               arg_opt_set_association);
           elem_counter++;
@@ -1879,7 +1907,7 @@ public:
 
 
 protected:
-  bool DoExecute(Args &args,
+  void DoExecute(Args &args,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
@@ -1900,8 +1928,6 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishResult);
       }
     }
-
-    return result.Succeeded();
   }
 
 private:
@@ -2306,17 +2332,12 @@ protected:
       }
       
       if (m_options.m_parsed_command) {
-        new_cmd_sp.reset(new CommandObjectScriptingObjectParsed(
-            m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity));
-        Status options_error 
-            = static_cast<CommandObjectScriptingObjectParsed *>(new_cmd_sp.get())->GetOptionsError();
-        if (options_error.Fail()) {
-          result.AppendErrorWithFormat("failed to parse option definitions: %s",
-                             options_error.AsCString());
-          return false;
-        }
+        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(m_interpreter, 
+            m_cmd_name, cmd_obj_sp, m_synchronicity, result);
+        if (!result.Succeeded())
+          return;
       } else
-        new_cmd_sp.reset(new CommandObjectScriptingObject(
+        new_cmd_sp.reset(new CommandObjectScriptingObjectRaw(
             m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
             m_completion_type));
     }

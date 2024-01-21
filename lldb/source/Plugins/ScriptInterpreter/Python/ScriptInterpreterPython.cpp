@@ -3067,8 +3067,9 @@ ScriptInterpreterPythonImpl::OptionParsingStartedForCommandObject(
   if (PyErr_Occurred())
     PyErr_Clear();
 
-  // FIXME: this should really be a void function
-  bool py_return = unwrapOrSetPythonException(
+  // option_parsing_starting doesn't return anything, ignore anything but 
+  // python errors.
+  unwrapOrSetPythonException(
       As<bool>(implementor.CallMethod(callee_name)));
 
   // if it fails, print the error but otherwise go on

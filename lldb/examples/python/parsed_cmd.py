@@ -1,50 +1,51 @@
 """
 This module implements a couple of utility classes to make writing
 lldb parsed commands more Pythonic.
-The way to use it is to make a class for you command that inherits from ParsedCommandBase.
+The way to use it is to make a class for your command that inherits from ParsedCommandBase.
 That will make an LLDBOVParser which you will use for your
 option definition, and to fetch option values for the current invocation
 of your command.  Access to the OV parser is through:
 
 ParsedCommandBase.get_parser()
 
-Next, implement setup_command_definition in your new command class, and call:
+Next, implement setup_command_definition() in your new command class, and call:
 
-  self.get_parser().add_option
+  self.get_parser().add_option()
 
 to add all your options.  The order doesn't matter for options, lldb will sort them
 alphabetically for you when it prints help.
 
 Similarly you can define the arguments with:
 
-  self.get_parser.add_argument
+  self.get_parser().add_argument()
 
-at present, lldb doesn't do as much work as it should verifying arguments, it pretty
-much only checks that commands that take no arguments don't get passed arguments.
+At present, lldb doesn't do as much work as it should verifying arguments, it
+only checks that commands that take no arguments don't get passed arguments.
 
 Then implement the execute function for your command as:
 
-    def __call__(self, debugger, args_array, exe_ctx, result):
+    def __call__(self, debugger, args_list, exe_ctx, result):
 
-The arguments will be in a python array as strings.  
+The arguments will be a list of strings.  
 
-You can access the option values using varname you passed in when defining the option.  
+You can access the option values using the 'varname' string you passed in when defining the option.
+
 If you need to know whether a given option was set by the user or not, you can retrieve 
 the option definition array with:
 
   self.get_options_definition()
 
-look up your element by varname and check the "_value_set" element.
+then look up your element by the 'varname' field, and check the "_value_set" element.
+FIXME: I should add a convenience method to do this.
 
 There are example commands in the lldb testsuite at:
 
 llvm-project/lldb/test/API/commands/command/script/add/test_commands.py
-
-FIXME: I should make a convenient wrapper for that. 
 """
 import inspect
 import lldb
 import sys
+from abc import abstractmethod
 
 class LLDBOVParser:
     def __init__(self):
@@ -59,12 +60,16 @@ class LLDBOVParser:
     def to_bool(in_value):
         error = True
         value = False
+        print(f"TYPE: {type(in_value)}")
+        if type(in_value) != str or len(in_value) == 0:
+            return (value, error)
+
         low_in = in_value.lower()
-        if low_in == "yes" or low_in == "true" or low_in == "1":
+        if low_in == "y" or low_in == "yes" or low_in == "t" or low_in == "true" or low_in == "1":
             value = True
             error = False
             
-        if not value and low_in == "no" or low_in == "false" or low_in == "0":
+        if not value and low_in == "n" or low_in == "no" or low_in == "f" or low_in == "false" or low_in == "0":
             value = False
             error = False
 
@@ -75,6 +80,7 @@ class LLDBOVParser:
         #FIXME: Not doing errors yet...
         return (int(in_value), False)
 
+    @staticmethod
     def to_unsigned(in_value):
         # FIXME: find an unsigned converter...
         # And handle errors.
@@ -102,7 +108,6 @@ class LLDBOVParser:
 
     @classmethod
     def translate_value(cls, value_type, value):
-        error = False
         try:
             return cls.translators[value_type](value)
         except KeyError:
@@ -176,7 +181,7 @@ class LLDBOVParser:
     def set_enum_value(self, enum_values, input):
         candidates = []
         for candidate in enum_values:
-            # The enum_values are a duple of value & help string.
+            # The enum_values are a two element list of value & help string.
             value = candidate[0]
             if value.startswith(input):
                 candidates.append(value)
@@ -294,9 +299,11 @@ class ParsedCommandBase:
         return self.get_parser().set_option_value(exe_ctx, opt_name, opt_value)
 
     # These are the two "pure virtual" methods:
+    @abstractmethod
     def __call__(self, debugger, args_array, exe_ctx, result):
         raise NotImplementedError()
 
+    @abstractmethod
     def setup_command_definition(self):
         raise NotImplementedError()
 
