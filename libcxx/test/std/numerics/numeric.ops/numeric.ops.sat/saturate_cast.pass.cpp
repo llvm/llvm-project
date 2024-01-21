@@ -26,14 +26,18 @@
 // Smaller to larger
 static_assert(noexcept(std::saturate_cast<signed int>(std::numeric_limits<signed char>::max())));
 static_assert(noexcept(std::saturate_cast<signed int>(std::numeric_limits<unsigned char>::max())));
+
 static_assert(noexcept(std::saturate_cast<unsigned int>(std::numeric_limits<signed char>::max())));
 static_assert(noexcept(std::saturate_cast<unsigned int>(std::numeric_limits<unsigned char>::max())));
+
 // Same type
 static_assert(noexcept(std::saturate_cast<signed long int>(std::numeric_limits<signed long int>::max())));
 static_assert(noexcept(std::saturate_cast<unsigned long int>(std::numeric_limits<unsigned long int>::max())));
+
 // Larger to smaller
 static_assert(noexcept(std::saturate_cast<signed char>(std::numeric_limits<signed int>::max())));
 static_assert(noexcept(std::saturate_cast<signed char>(std::numeric_limits<unsigned int>::max())));
+
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<signed int>::max())));
 static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<unsigned int>::max())));
 
@@ -55,13 +59,13 @@ constexpr bool test() {
 
   // Constants: biggest numbers
 
-  constexpr auto sintMin  = std::numeric_limits<SIntT>::min();
-  constexpr auto sintZero =                zero<SIntT>();
-  constexpr auto sintMax  = std::numeric_limits<SIntT>::max();
+  constexpr auto big_sintMin  = std::numeric_limits<SIntT>::min();
+  constexpr auto big_sintZero =                zero<SIntT>();
+  constexpr auto big_sintMax  = std::numeric_limits<SIntT>::max();
 
-  constexpr auto uintMin  = std::numeric_limits<UIntT>::min();
-  constexpr auto uintZero =                zero<UIntT>();
-  constexpr auto uintMax  = std::numeric_limits<UIntT>::max();
+  constexpr auto big_uintMin  = std::numeric_limits<UIntT>::min();
+  constexpr auto big_uintZero =                zero<UIntT>();
+  constexpr auto big_uintMax  = std::numeric_limits<UIntT>::max();
 
   // Constants: numeric limits
 
@@ -115,13 +119,13 @@ constexpr bool test() {
   assert(std::saturate_cast<signed char>(std_ucharZero) == std_scharZero);
   assert(std::saturate_cast<signed char>(std_ucharMax)  == std_scharMax);
 
-  assert(std::saturate_cast<signed char>(sintMin)       == std_scharMin);  // saturated
-  assert(std::saturate_cast<signed char>(sintZero)      == std_scharZero);
-  assert(std::saturate_cast<signed char>(sintMax)       == std_scharMax);  // saturated
+  assert(std::saturate_cast<signed char>(big_sintMin)   == std_scharMin);  // saturated
+  assert(std::saturate_cast<signed char>(big_sintZero)  == std_scharZero);
+  assert(std::saturate_cast<signed char>(big_sintMax)   == std_scharMax);  // saturated
 
-  assert(std::saturate_cast<signed char>(uintMin)       == std_scharZero);
-  assert(std::saturate_cast<signed char>(uintZero)      == std_scharZero);
-  assert(std::saturate_cast<signed char>(uintMax)       == std_scharMax);  // saturated
+  assert(std::saturate_cast<signed char>(big_uintMin)   == std_scharZero);
+  assert(std::saturate_cast<signed char>(big_uintZero)  == std_scharZero);
+  assert(std::saturate_cast<signed char>(big_uintMax)   == std_scharMax);  // saturated
 
   // short
 
@@ -145,15 +149,15 @@ constexpr bool test() {
   assert(std::saturate_cast<signed short int>(std_usintZero) == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_usintMax)  == std_ssintMax);  // saturated
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(sintMin);
-  assert(std::saturate_cast<signed short int>(sintMin)       == std_ssintMin);  // saturated
-  assert(std::saturate_cast<signed short int>(sintZero)      == std_ssintZero);
-  assert(std::saturate_cast<signed short int>(sintMax)       == std_ssintMax);  // saturated
+  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_sintMin);
+  assert(std::saturate_cast<signed short int>(big_sintMin)   == std_ssintMin);  // saturated
+  assert(std::saturate_cast<signed short int>(big_sintZero)  == std_ssintZero);
+  assert(std::saturate_cast<signed short int>(big_sintMax)   == std_ssintMax);  // saturated
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(uintMin);
-  assert(std::saturate_cast<signed short int>(uintMin)       == std_ssintZero);
-  assert(std::saturate_cast<signed short int>(uintZero)      == std_ssintZero);
-  assert(std::saturate_cast<signed short int>(uintMax)       == std_ssintMax);  // saturated
+  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_uintMin);
+  assert(std::saturate_cast<signed short int>(big_uintMin)   == std_ssintZero);
+  assert(std::saturate_cast<signed short int>(big_uintZero)  == std_ssintZero);
+  assert(std::saturate_cast<signed short int>(big_uintMax)   == std_ssintMax);  // saturated
 
   // int
 
@@ -177,15 +181,15 @@ constexpr bool test() {
   assert(std::saturate_cast<signed int>(std_uintZero)  == std_sintZero);
   assert(std::saturate_cast<signed int>(std_uintMax)   == std_sintMax);  // saturated
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(sintMin);
-  assert(std::saturate_cast<signed int>(sintMin)       == std_sintMin);  // saturated
-  assert(std::saturate_cast<signed int>(sintZero)      == std_sintZero);
-  assert(std::saturate_cast<signed int>(sintMax)       == std_sintMax);  // saturated
+  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_sintMin);
+  assert(std::saturate_cast<signed int>(big_sintMin)   == std_sintMin);  // saturated
+  assert(std::saturate_cast<signed int>(big_sintZero)  == std_sintZero);
+  assert(std::saturate_cast<signed int>(big_sintMax)   == std_sintMax);  // saturated
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(uintMin);
-  assert(std::saturate_cast<signed int>(uintMin)       == std_sintZero);
-  assert(std::saturate_cast<signed int>(uintZero)      == std_sintZero);
-  assert(std::saturate_cast<signed int>(uintMax)       == std_sintMax);  // saturated
+  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_uintMin);
+  assert(std::saturate_cast<signed int>(big_uintMin)   == std_sintZero);
+  assert(std::saturate_cast<signed int>(big_uintZero)  == std_sintZero);
+  assert(std::saturate_cast<signed int>(big_uintMax)   == std_sintMax);  // saturated
 
   // long
 
@@ -209,15 +213,15 @@ constexpr bool test() {
   assert(std::saturate_cast<signed long int>(std_ulZero)    == std_slZero);
   assert(std::saturate_cast<signed long int>(std_ulMax)     == std_slMax);  // saturated
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(sintMin);
-  assert(std::saturate_cast<signed long int>(sintMin)       == std_slMin);  // saturated
-  assert(std::saturate_cast<signed long int>(sintZero)      == std_slZero);
-  assert(std::saturate_cast<signed long int>(sintMax)       == std_slMax);  // saturated
+  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_sintMin);
+  assert(std::saturate_cast<signed long int>(big_sintMin)   == std_slMin);  // saturated
+  assert(std::saturate_cast<signed long int>(big_sintZero)  == std_slZero);
+  assert(std::saturate_cast<signed long int>(big_sintMax)   == std_slMax);  // saturated
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(uintMin);
-  assert(std::saturate_cast<signed long int>(uintMin)       == std_slZero);
-  assert(std::saturate_cast<signed long int>(uintZero)      == std_slZero);
-  assert(std::saturate_cast<signed long int>(uintMax)       == std_slMax);  // saturated
+  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_uintMin);
+  assert(std::saturate_cast<signed long int>(big_uintMin)   == std_slZero);
+  assert(std::saturate_cast<signed long int>(big_uintZero)  == std_slZero);
+  assert(std::saturate_cast<signed long int>(big_uintMax)   == std_slMax);  // saturated
 
   // long long
 
@@ -241,34 +245,34 @@ constexpr bool test() {
   assert(std::saturate_cast<signed long long int>(std_ullZero)    == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_ullMax)     == std_sllMax);  // saturated
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(sintMin);
-  assert(std::saturate_cast<signed long long int>(sintMin)        == std_sllMin);  // (128-bit) saturated
-  assert(std::saturate_cast<signed long long int>(sintZero)       == std_sllZero);
-  assert(std::saturate_cast<signed long long int>(sintMax)        == std_sllMax);  // (128-bit) saturated
+  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_sintMin);
+  assert(std::saturate_cast<signed long long int>(big_sintMin)    == std_sllMin);  // (128-bit) saturated
+  assert(std::saturate_cast<signed long long int>(big_sintZero)   == std_sllZero);
+  assert(std::saturate_cast<signed long long int>(big_sintMax)    == std_sllMax);  // (128-bit) saturated
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(uintMin);
-  assert(std::saturate_cast<signed long long int>(uintMin)        == std_sllZero);
-  assert(std::saturate_cast<signed long long int>(uintZero)       == std_sllZero);
-  assert(std::saturate_cast<signed long long int>(uintMax)        == std_sllMax);  // (128-bit) saturated
+  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_uintMin);
+  assert(std::saturate_cast<signed long long int>(big_uintMin)    == std_sllZero);
+  assert(std::saturate_cast<signed long long int>(big_uintZero)   == std_sllZero);
+  assert(std::saturate_cast<signed long long int>(big_uintMax)    == std_sllMax);  // (128-bit) saturated
 
 #ifndef TEST_HAS_NO_INT128
   std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_scharMin);
   assert(std::saturate_cast<__int128_t>(std_scharMin)  == static_cast<__int128_t>(std_scharMin));
-  assert(std::saturate_cast<__int128_t>(std_scharZero) == sintZero);
+  assert(std::saturate_cast<__int128_t>(std_scharZero) == big_sintZero);
   assert(std::saturate_cast<__int128_t>(std_scharMax)  == static_cast<__int128_t>(std_scharMax));
 
   std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_ucharMin);
   assert(std::saturate_cast<__int128_t>(std_ucharMin)  == static_cast<__int128_t>(std_ucharMin));
-  assert(std::saturate_cast<__int128_t>(std_ucharZero) == sintZero);
+  assert(std::saturate_cast<__int128_t>(std_ucharZero) == big_sintZero);
   assert(std::saturate_cast<__int128_t>(std_ucharMax)  == static_cast<__int128_t>(std_ucharMax));
 
-  assert(std::saturate_cast<__int128_t>(sintMin)       == sintMin);
-  assert(std::saturate_cast<__int128_t>(sintZero)      == sintZero);
-  assert(std::saturate_cast<__int128_t>(sintMax)       == sintMax);
+  assert(std::saturate_cast<__int128_t>(big_sintMin)   == big_sintMin);
+  assert(std::saturate_cast<__int128_t>(big_sintZero)  == big_sintZero);
+  assert(std::saturate_cast<__int128_t>(big_sintMax)   == big_sintMax);
 
-  assert(std::saturate_cast<__int128_t>(uintMin)       == sintZero);
-  assert(std::saturate_cast<__int128_t>(uintZero)      == sintZero);
-  assert(std::saturate_cast<__int128_t>(uintMax)       == sintMax);  // saturated
+  assert(std::saturate_cast<__int128_t>(big_uintMin)   == big_sintZero);
+  assert(std::saturate_cast<__int128_t>(big_uintZero)  == big_sintZero);
+  assert(std::saturate_cast<__int128_t>(big_uintMax)   == big_sintMax);  // saturated
 #endif
 
   // unsigned char
@@ -283,15 +287,15 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned char>(std_ucharZero) == std_ucharZero);
   assert(std::saturate_cast<unsigned char>(std_ucharMax)  == std_ucharMax);
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(sintMin);
-  assert(std::saturate_cast<unsigned char>(sintMin)       == std_ucharMin);  // saturated
-  assert(std::saturate_cast<unsigned char>(sintZero)      == std_ucharZero);
-  assert(std::saturate_cast<unsigned char>(sintMax)       == std_ucharMax);  // saturated
+  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_sintMin);
+  assert(std::saturate_cast<unsigned char>(big_sintMin)   == std_ucharMin);  // saturated
+  assert(std::saturate_cast<unsigned char>(big_sintZero)  == std_ucharZero);
+  assert(std::saturate_cast<unsigned char>(big_sintMax)   == std_ucharMax);  // saturated
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(uintMin);
-  assert(std::saturate_cast<unsigned char>(uintMin)       == std_ucharMin);
-  assert(std::saturate_cast<unsigned char>(uintZero)      == std_ucharZero);
-  assert(std::saturate_cast<unsigned char>(uintMax)       == std_ucharMax);  // saturated
+  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_uintMin);
+  assert(std::saturate_cast<unsigned char>(big_uintMin)   == std_ucharMin);
+  assert(std::saturate_cast<unsigned char>(big_uintZero)  == std_ucharZero);
+  assert(std::saturate_cast<unsigned char>(big_uintMax)   == std_ucharMax);  // saturated
 
   // short
 
@@ -315,15 +319,15 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned short int>(std_usintZero) == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(std_usintMax)  == std_usintMax);
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(sintMin);
-  assert(std::saturate_cast<unsigned short int>(sintMin)       == std_usintMin);  // saturated
-  assert(std::saturate_cast<unsigned short int>(sintZero)      == std_usintZero);
-  assert(std::saturate_cast<unsigned short int>(sintMax)       == std_usintMax);  // saturated
+  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_sintMin);
+  assert(std::saturate_cast<unsigned short int>(big_sintMin)   == std_usintMin);  // saturated
+  assert(std::saturate_cast<unsigned short int>(big_sintZero)  == std_usintZero);
+  assert(std::saturate_cast<unsigned short int>(big_sintMax)   == std_usintMax);  // saturated
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(uintMin);
-  assert(std::saturate_cast<unsigned short int>(uintMin)       == std_usintMin);
-  assert(std::saturate_cast<unsigned short int>(uintZero)      == std_usintZero);
-  assert(std::saturate_cast<unsigned short int>(uintMax)       == std_usintMax);  // saturated
+  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_uintMin);
+  assert(std::saturate_cast<unsigned short int>(big_uintMin)   == std_usintMin);
+  assert(std::saturate_cast<unsigned short int>(big_uintZero)  == std_usintZero);
+  assert(std::saturate_cast<unsigned short int>(big_uintMax)   == std_usintMax);  // saturated
 
   // unsigned int
 
@@ -347,15 +351,15 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned int>(std_uintZero)  == std_uintZero);
   assert(std::saturate_cast<unsigned int>(std_uintMax)   == std_uintMax);
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(sintMin);
-  assert(std::saturate_cast<unsigned int>(sintMin)       == std_uintMin);  // saturated
-  assert(std::saturate_cast<unsigned int>(sintZero)      == std_uintZero);
-  assert(std::saturate_cast<unsigned int>(sintMax)       == std_uintMax);  // saturated
+  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_sintMin);
+  assert(std::saturate_cast<unsigned int>(big_sintMin)   == std_uintMin);  // saturated
+  assert(std::saturate_cast<unsigned int>(big_sintZero)  == std_uintZero);
+  assert(std::saturate_cast<unsigned int>(big_sintMax)   == std_uintMax);  // saturated
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(uintMin);
-  assert(std::saturate_cast<unsigned int>(uintMin)       == std_uintMin);
-  assert(std::saturate_cast<unsigned int>(uintZero)      == std_uintZero);
-  assert(std::saturate_cast<unsigned int>(uintMax)       == std_uintMax);  // saturated
+  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_uintMin);
+  assert(std::saturate_cast<unsigned int>(big_uintMin)   == std_uintMin);
+  assert(std::saturate_cast<unsigned int>(big_uintZero)  == std_uintZero);
+  assert(std::saturate_cast<unsigned int>(big_uintMax)   == std_uintMax);  // saturated
 
   // unsigned long
 
@@ -379,15 +383,15 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned long int>(std_ulZero)    == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(std_ulMax)     == std_ulMax);
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(sintMin);
-  assert(std::saturate_cast<unsigned long int>(sintMin)       == std_ulMin);  // saturated
-  assert(std::saturate_cast<unsigned long int>(sintZero)      == std_ulZero);
-  assert(std::saturate_cast<unsigned long int>(sintMax)       == std_ulMax);  // saturated
+  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_sintMin);
+  assert(std::saturate_cast<unsigned long int>(big_sintMin)   == std_ulMin);  // saturated
+  assert(std::saturate_cast<unsigned long int>(big_sintZero)  == std_ulZero);
+  assert(std::saturate_cast<unsigned long int>(big_sintMax)   == std_ulMax);  // saturated
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(uintMin);
-  assert(std::saturate_cast<unsigned long int>(uintMin)       == std_ulMin);
-  assert(std::saturate_cast<unsigned long int>(uintZero)      == std_ulZero);
-  assert(std::saturate_cast<unsigned long int>(uintMax)       == std_ulMax);  // saturated
+  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_uintMin);
+  assert(std::saturate_cast<unsigned long int>(big_uintMin)   == std_ulMin);
+  assert(std::saturate_cast<unsigned long int>(big_uintZero)  == std_ulZero);
+  assert(std::saturate_cast<unsigned long int>(big_uintMax)   == std_ulMax);  // saturated
 
   // unsigned long long
 
@@ -411,34 +415,34 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned long long int>(std_ullZero)   == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(std_ullMax)    == std_ullMax);
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(sintMin);
-  assert(std::saturate_cast<unsigned long long int>(sintMin)       == std_ullMin);  // (128-bit) saturated
-  assert(std::saturate_cast<unsigned long long int>(sintZero)      == std_ullZero);
-  assert(std::saturate_cast<unsigned long long int>(sintMax)       == std_ullMax);  // (128-bit) saturated
+  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_sintMin);
+  assert(std::saturate_cast<unsigned long long int>(big_sintMin)   == std_ullMin);  // (128-bit) saturated
+  assert(std::saturate_cast<unsigned long long int>(big_sintZero)  == std_ullZero);
+  assert(std::saturate_cast<unsigned long long int>(big_sintMax)   == std_ullMax);  // (128-bit) saturated
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(uintMin);
-  assert(std::saturate_cast<unsigned long long int>(uintMin)       == std_ullMin);
-  assert(std::saturate_cast<unsigned long long int>(uintZero)      == std_ullZero);
-  assert(std::saturate_cast<unsigned long long int>(uintMax)       == std_ullMax);  // (128-bit) saturated
+  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_uintMin);
+  assert(std::saturate_cast<unsigned long long int>(big_uintMin)   == std_ullMin);
+  assert(std::saturate_cast<unsigned long long int>(big_uintZero)  == std_ullZero);
+  assert(std::saturate_cast<unsigned long long int>(big_uintMax)   == std_ullMax);  // (128-bit) saturated
 
 #ifndef TEST_HAS_NO_INT128
   std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_scharMin);
-  assert(std::saturate_cast<__uint128_t>(std_scharMin)  == uintMin);
-  assert(std::saturate_cast<__uint128_t>(std_scharZero) == uintZero);
+  assert(std::saturate_cast<__uint128_t>(std_scharMin)  == big_uintMin);
+  assert(std::saturate_cast<__uint128_t>(std_scharZero) == big_uintZero);
   assert(std::saturate_cast<__uint128_t>(std_scharMax)  == static_cast<__uint128_t>(std_scharMax));
 
   std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_ucharMin);
-  assert(std::saturate_cast<__uint128_t>(std_ucharMin)  == uintMin);
-  assert(std::saturate_cast<__uint128_t>(std_ucharZero) == uintZero);
+  assert(std::saturate_cast<__uint128_t>(std_ucharMin)  == big_uintMin);
+  assert(std::saturate_cast<__uint128_t>(std_ucharZero) == big_uintZero);
   assert(std::saturate_cast<__uint128_t>(std_ucharMax)  == static_cast<__uint128_t>(std_ucharMax));
 
-  assert(std::saturate_cast<__uint128_t>(sintMin)       == uintMin); // saturated
-  assert(std::saturate_cast<__uint128_t>(sintZero)      == uintZero);
-  assert(std::saturate_cast<__uint128_t>(sintMax)       == static_cast<__uint128_t>(sintMax));
+  assert(std::saturate_cast<__uint128_t>(big_sintMin)   == big_uintMin); // saturated
+  assert(std::saturate_cast<__uint128_t>(big_sintZero)  == big_uintZero);
+  assert(std::saturate_cast<__uint128_t>(big_sintMax)   == static_cast<__uint128_t>(big_sintMax));
 
-  assert(std::saturate_cast<__uint128_t>(uintMin)       == uintMin);
-  assert(std::saturate_cast<__uint128_t>(uintZero)      == uintZero);
-  assert(std::saturate_cast<__uint128_t>(uintMax)       == uintMax);
+  assert(std::saturate_cast<__uint128_t>(big_uintMin)   == big_uintMin);
+  assert(std::saturate_cast<__uint128_t>(big_uintZero)  == big_uintZero);
+  assert(std::saturate_cast<__uint128_t>(big_uintMax)   == big_uintMax);
 #endif
 
   // clang-format on
