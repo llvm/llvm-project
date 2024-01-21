@@ -90,7 +90,6 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
               CondRhsStr + ");")
           .str();
     }
-    
   };
   const auto OperatorStr = BinaryOp->getOpcodeStr();
   if (((BinaryOp->getOpcode() == BO_LT || BinaryOp->getOpcode() == BO_LE) &&
