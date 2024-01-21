@@ -1787,31 +1787,31 @@ let Predicates = [HasNDD] in {
 }
 
 // Shift amount is implicitly masked.
-multiclass MaskedShiftAmountPats<SDNode frag, string name> {
+multiclass MaskedShiftAmountPats<SDNode frag> {
   // (shift x (and y, 31)) ==> (shift x, y)
   def : Pat<(frag GR8:$src1, (shiftMask32 CL)),
-            (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
+            (!cast<Instruction>(NAME # "8rCL") GR8:$src1)>;
   def : Pat<(frag GR16:$src1, (shiftMask32 CL)),
-            (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
+            (!cast<Instruction>(NAME # "16rCL") GR16:$src1)>;
   def : Pat<(frag GR32:$src1, (shiftMask32 CL)),
-            (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
+            (!cast<Instruction>(NAME # "32rCL") GR32:$src1)>;
   def : Pat<(store (frag (loadi8 addr:$dst), (shiftMask32 CL)), addr:$dst),
-            (!cast<Instruction>(name # "8mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "8mCL") addr:$dst)>;
   def : Pat<(store (frag (loadi16 addr:$dst), (shiftMask32 CL)), addr:$dst),
-            (!cast<Instruction>(name # "16mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "16mCL") addr:$dst)>;
   def : Pat<(store (frag (loadi32 addr:$dst), (shiftMask32 CL)), addr:$dst),
-            (!cast<Instruction>(name # "32mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "32mCL") addr:$dst)>;
 
   // (shift x (and y, 63)) ==> (shift x, y)
   def : Pat<(frag GR64:$src1, (shiftMask64 CL)),
-            (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
+            (!cast<Instruction>(NAME # "64rCL") GR64:$src1)>;
   def : Pat<(store (frag (loadi64 addr:$dst), (shiftMask64 CL)), addr:$dst),
-            (!cast<Instruction>(name # "64mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "64mCL") addr:$dst)>;
 }
 
-defm : MaskedShiftAmountPats<shl, "SHL">;
-defm : MaskedShiftAmountPats<srl, "SHR">;
-defm : MaskedShiftAmountPats<sra, "SAR">;
+defm SHL : MaskedShiftAmountPats<shl>;
+defm SHR : MaskedShiftAmountPats<srl>;
+defm SAR : MaskedShiftAmountPats<sra>;
 
 // ROL/ROR instructions allow a stronger mask optimization than shift for 8- and
 // 16-bit. We can remove a mask of any (bitwidth - 1) on the rotation amount
@@ -1819,31 +1819,30 @@ defm : MaskedShiftAmountPats<sra, "SAR">;
 // docs with: "tempCOUNT <- (COUNT & COUNTMASK) MOD SIZE". Masking the rotation
 // amount could affect EFLAGS results, but that does not matter because we are
 // not tracking flags for these nodes.
-multiclass MaskedRotateAmountPats<SDNode frag, string name> {
+multiclass MaskedRotateAmountPats<SDNode frag> {
   // (rot x (and y, BitWidth - 1)) ==> (rot x, y)
   def : Pat<(frag GR8:$src1, (shiftMask8 CL)),
-  (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
+            (!cast<Instruction>(NAME # "8rCL") GR8:$src1)>;
   def : Pat<(frag GR16:$src1, (shiftMask16 CL)),
-  (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
+            (!cast<Instruction>(NAME # "16rCL") GR16:$src1)>;
   def : Pat<(frag GR32:$src1, (shiftMask32 CL)),
-  (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
+            (!cast<Instruction>(NAME # "32rCL") GR32:$src1)>;
   def : Pat<(store (frag (loadi8 addr:$dst), (shiftMask8 CL)), addr:$dst),
-  (!cast<Instruction>(name # "8mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "8mCL") addr:$dst)>;
   def : Pat<(store (frag (loadi16 addr:$dst), (shiftMask16 CL)), addr:$dst),
-  (!cast<Instruction>(name # "16mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "16mCL") addr:$dst)>;
   def : Pat<(store (frag (loadi32 addr:$dst), (shiftMask32 CL)), addr:$dst),
-  (!cast<Instruction>(name # "32mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "32mCL") addr:$dst)>;
 
   // (rot x (and y, 63)) ==> (rot x, y)
   def : Pat<(frag GR64:$src1, (shiftMask64 CL)),
-  (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
+            (!cast<Instruction>(NAME # "64rCL") GR64:$src1)>;
   def : Pat<(store (frag (loadi64 addr:$dst), (shiftMask64 CL)), addr:$dst),
-  (!cast<Instruction>(name # "64mCL") addr:$dst)>;
+            (!cast<Instruction>(NAME # "64mCL") addr:$dst)>;
 }
 
-
-defm : MaskedRotateAmountPats<rotl, "ROL">;
-defm : MaskedRotateAmountPats<rotr, "ROR">;
+defm ROL : MaskedRotateAmountPats<rotl>;
+defm ROR : MaskedRotateAmountPats<rotr>;
 
 // Double "funnel" shift amount is implicitly masked.
 // (fshl/fshr x (and y, 31)) ==> (fshl/fshr x, y) (NOTE: modulo32)
@@ -1865,34 +1864,33 @@ def : Pat<(fshr GR64:$src2, GR64:$src1, (shiftMask64 CL)),
           (SHRD64rrCL GR64:$src1, GR64:$src2)>;
 
 // Use BTR/BTS/BTC for clearing/setting/toggling a bit in a variable location.
-multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
-                            Instruction BTS, Instruction BTC,
-                            PatFrag ShiftMask> {
-  def : Pat<(and RC:$src1, (rotl -2, GR8:$src2)),
-            (BTR RC:$src1,
-                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(or RC:$src1, (shl 1, GR8:$src2)),
-            (BTS RC:$src1,
-                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(xor RC:$src1, (shl 1, GR8:$src2)),
-            (BTC RC:$src1,
-                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+multiclass OneBitPats<RegisterClass rc, ValueType vt, Instruction btr,
+                      Instruction bts, Instruction btc, PatFrag mask> {
+  def : Pat<(and rc:$src1, (rotl -2, GR8:$src2)),
+            (btr rc:$src1,
+                 (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(or rc:$src1, (shl 1, GR8:$src2)),
+            (bts rc:$src1,
+                 (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(xor rc:$src1, (shl 1, GR8:$src2)),
+            (btc rc:$src1,
+                 (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
   // Similar to above, but removing unneeded masking of the shift amount.
-  def : Pat<(and RC:$src1, (rotl -2, (ShiftMask GR8:$src2))),
-            (BTR RC:$src1,
-                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(or RC:$src1, (shl 1, (ShiftMask GR8:$src2))),
-            (BTS RC:$src1,
-                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(xor RC:$src1, (shl 1, (ShiftMask GR8:$src2))),
-            (BTC RC:$src1,
-                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(and rc:$src1, (rotl -2, (mask GR8:$src2))),
+            (btr rc:$src1,
+                 (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(or rc:$src1, (shl 1, (mask GR8:$src2))),
+            (bts rc:$src1,
+                (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(xor rc:$src1, (shl 1, (mask GR8:$src2))),
+            (btc rc:$src1,
+                (INSERT_SUBREG (vt (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
 
-defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
-defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
-defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
+defm : OneBitPats<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
+defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
+defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns

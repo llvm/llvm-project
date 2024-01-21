@@ -12,7 +12,7 @@
 
 func.func private @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
-  "test.memref_user"(%0) : (memref<4xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<4xf32>) -> ()
   return
 }
 
@@ -37,7 +37,7 @@ func.func private @emptyUsesValue(%arg0: memref<4xf32>) {
 
 func.func @emptyUsesValue(%arg0: memref<4xf32>) {
   %0 = memref.alloc() : memref<4xf32>
-  "test.memref_user"(%0) : (memref<4xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<4xf32>) -> ()
   return
 }
 
