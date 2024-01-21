@@ -84,9 +84,7 @@ int main(int argc, const char **argv) {
         llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
         TUD->dump();
 
-        llvm::errs() << "\n--- FunctionAccumulator ---\n";
-        FunctionAccumulator fpv(functionsInFile);
-        fpv.TraverseDecl(TUD);
+        FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
     llvm::errs() << "\n--- All functions from all files ---\n";
