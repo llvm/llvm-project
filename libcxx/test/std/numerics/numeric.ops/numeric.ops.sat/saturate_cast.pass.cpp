@@ -20,6 +20,7 @@
 #include <numeric>
 
 #include "test_macros.h"
+#include <print>
 
 // Smaller to larger
 static_assert(noexcept(std::saturate_cast<signed int>(std::numeric_limits<signed char>::max())));
@@ -41,7 +42,7 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 
 // Tests
 
-constexpr bool test() {
+ bool test() {
   // clang-format off
 
 #ifndef TEST_HAS_NO_INT128
@@ -65,7 +66,7 @@ constexpr bool test() {
 
   constexpr auto O_C  = static_cast<signed char>(0);
   constexpr auto O_UC = static_cast<unsigned char>(0);
-  
+
   constexpr auto O_S  = static_cast<signed short int>(0);
   constexpr auto O_US = static_cast<unsigned short int>(0);
 
@@ -362,6 +363,11 @@ constexpr bool test() {
   { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(uBigMax); }
   assert(std::saturate_cast<unsigned long long int>(     uZero) == 0ULL);
   assert(std::saturate_cast<unsigned long long int>(   uBigMax) == ULLONG_MAX); // (128-bit) saturated
+  constexpr auto a1 = std::saturate_cast<unsigned long long int>(   uBigMax);
+  constexpr auto a2 = ULLONG_MAX;
+  std::println(stderr, "{}", a1);
+  std::println(stderr, "{}", a2);
+  assert(false);
 
 #ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(SCHAR_MIN); }
@@ -390,7 +396,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  static_assert(test());
+  // static_assert(test());
 
   return 0;
 }
