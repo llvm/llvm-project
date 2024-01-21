@@ -37,9 +37,12 @@ int main(int, char**) {
     std::error_condition e_cond       = e_cat1.default_error_condition(5);
     LIBCPP_ASSERT(e_cond.value() == 5);
     LIBCPP_ASSERT(e_cond.category() == std::generic_category());
+    assert(e_cat1.equivalent(5, e_cond));
+
     e_cond = e_cat1.default_error_condition(5000);
     LIBCPP_ASSERT(e_cond.value() == 5000);
     LIBCPP_ASSERT(e_cond.category() == std::system_category());
+    assert(e_cat1.equivalent(5000, e_cond));
   }
 
   // Test the result of message(int cond) when given a bad error condition
