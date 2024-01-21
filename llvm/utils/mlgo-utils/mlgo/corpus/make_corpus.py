@@ -12,43 +12,42 @@ PYTHONPATH=$PYTHONPATH:. python3 ./compiler_opt/tools/make_corpus.py \
   --default_args="<list of space separated flags>"
 """
 
-from absl import app
-from absl import flags
-from absl import logging
+import argparse
+import logging
 
 from mlgo.corpus import make_corpus_lib
 
-flags.DEFINE_string("input_dir", None, "The input directory.")
-flags.DEFINE_string("output_dir", None, "The output directory.")
-flags.DEFINE_string(
-    "default_args",
-    "",
-    "The compiler flags to compile with when using downstream tooling.",
-)
 
-flags.mark_flag_as_required("input_dir")
-flags.mark_flag_as_required("output_dir")
+def parse_args_and_run():
+    parser = argparse.ArgumentParser(
+        description="A tool for making a corpus from arbitrary bitcode"
+    )
+    parser.add_argument("--input_dir", type=str, help="The input directory.")
+    parser.add_argument("--output_dir", type=str, help="The output directory.")
+    parser.add_argument(
+        "--default_args",
+        type=str,
+        help="The compiler flags to compile with when using downstream tooling.",
+        default="",
+        nargs="?",
+    )
+    args = parser.parse_args()
+    main(args)
 
-FLAGS = flags.FLAGS
 
-
-def main(_):
+def main(args):
     logging.warning(
         "Using this tool does not guarantee that the bitcode is taken at "
         "the correct stage for consumption during model training. Make "
         "sure to validate assumptions about where the bitcode is coming "
         "from before using it in production."
     )
-    relative_paths = make_corpus_lib.load_bitcode_from_directory(FLAGS.input_dir)
-    make_corpus_lib.copy_bitcode(relative_paths, FLAGS.input_dir, FLAGS.output_dir)
+    relative_paths = make_corpus_lib.load_bitcode_from_directory(args.input_dir)
+    make_corpus_lib.copy_bitcode(relative_paths, args.input_dir, args.output_dir)
     make_corpus_lib.write_corpus_manifest(
-        relative_paths, FLAGS.output_dir, FLAGS.default_args.split()
+        relative_paths, args.output_dir, args.default_args.split()
     )
 
 
-def entrypoint():
-    app.run(main)
-
-
 if __name__ == "__main__":
-    entrypoint()
+    parse_args_and_run()
