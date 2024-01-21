@@ -1325,11 +1325,6 @@ LineCoverageStats::LineCoverageStats(
       LineSegments.begin(), LineSegments.end(),
       [](const auto *Seq) { return Seq->IsRegionEntry && Seq->HasCount; });
 
-  // make sure last line of a block is covered if at that line there is also
-  // skipped region
-  Mapped |= WrappedSegment && WrappedSegment->IsRegionEntry &&
-            WrappedSegment->HasCount;
-
   if (!Mapped) {
     return;
   }
