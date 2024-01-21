@@ -12,6 +12,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// With clang-cl, some warnings have a 'which is a Microsoft extension' suffix
+// which break the tests.
+// XFAIL: msvc
+
 // Test the mandates
 
 // template<class F> constexpr auto transform_error(F&& f) &;
