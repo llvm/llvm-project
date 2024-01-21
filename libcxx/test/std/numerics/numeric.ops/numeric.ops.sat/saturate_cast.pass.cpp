@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// The test uses "Placeholder variables with no name"
-// UNSUPPORTED: clang-17
-// XFAIL: apple-clang
 
 // <numeric>
 
@@ -17,6 +14,7 @@
 //   constexpr R saturate_cast(T x) noexcept;                     // freestanding
 
 #include <cassert>
+#include <climits>
 #include <concepts>
 #include <limits>
 #include <numeric>
@@ -44,6 +42,22 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 template <typename IntegerT>
 constexpr auto zero() {
   return IntegerT{0};
+}
+
+constexpr auto operator ""_C(unsigned long long int i) {
+    return static_cast<signed char>(i);
+}
+
+constexpr auto operator ""_UC(unsigned long long int i) {
+    return static_cast<unsigned char>(i);
+}
+
+constexpr auto operator ""_S(unsigned long long int i) {
+    return static_cast<signed short int>(i);
+}
+
+constexpr auto operator ""_US(unsigned long long int i) {
+    return static_cast<unsigned short int>(i);
 }
 
 constexpr bool test() {
@@ -129,139 +143,165 @@ constexpr bool test() {
 
   // short
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_scharMin); }
   assert(std::saturate_cast<signed short int>(std_scharMin)  == static_cast<signed short int>(std_scharMin));
   assert(std::saturate_cast<signed short int>(std_scharZero) == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_scharMax)  == static_cast<signed short int>(std_scharMax));
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_ucharMin); }
   assert(std::saturate_cast<signed short int>(std_ucharMin)  == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_ucharZero) == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_ucharMax)  == static_cast<signed short int>(std_ucharMax));
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_ssintMin);
+   // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_ssintMin); }
   assert(std::saturate_cast<signed short int>(std_ssintMin)  == std_ssintMin);
   assert(std::saturate_cast<signed short int>(std_ssintZero) == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_ssintMax)  == std_ssintMax);
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_usintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(std_usintMin); }
   assert(std::saturate_cast<signed short int>(std_usintMin)  == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_usintZero) == std_ssintZero);
   assert(std::saturate_cast<signed short int>(std_usintMax)  == std_ssintMax);  // saturated
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_sintMin); }
   assert(std::saturate_cast<signed short int>(big_sintMin)   == std_ssintMin);  // saturated
   assert(std::saturate_cast<signed short int>(big_sintZero)  == std_ssintZero);
   assert(std::saturate_cast<signed short int>(big_sintMax)   == std_ssintMax);  // saturated
 
-  std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed short int> decltype(auto) _ = std::saturate_cast<signed short int>(big_uintMin); }
   assert(std::saturate_cast<signed short int>(big_uintMin)   == std_ssintZero);
   assert(std::saturate_cast<signed short int>(big_uintZero)  == std_ssintZero);
   assert(std::saturate_cast<signed short int>(big_uintMax)   == std_ssintMax);  // saturated
 
   // int
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_scharMin); }
   assert(std::saturate_cast<signed int>(std_scharMin)  == static_cast<signed int>(std_scharMin));
   assert(std::saturate_cast<signed int>(std_scharZero) == std_sintZero);
   assert(std::saturate_cast<signed int>(std_scharMax)  == static_cast<signed int>(std_scharMax));
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_ucharMin); }
   assert(std::saturate_cast<signed int>(std_ucharMin)  == std_sintZero);
   assert(std::saturate_cast<signed int>(std_ucharZero) == std_sintZero);
   assert(std::saturate_cast<signed int>(std_ucharMax)  == static_cast<signed int>(std_ucharMax));
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_sintMin); }
   assert(std::saturate_cast<signed int>(std_sintMin)   == std_sintMin);
   assert(std::saturate_cast<signed int>(std_sintZero)  == std_sintZero);
   assert(std::saturate_cast<signed int>(std_sintMax)   == std_sintMax);
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(std_uintMin); }
   assert(std::saturate_cast<signed int>(std_uintMin)   == std_sintZero);
   assert(std::saturate_cast<signed int>(std_uintZero)  == std_sintZero);
   assert(std::saturate_cast<signed int>(std_uintMax)   == std_sintMax);  // saturated
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_sintMin); }
   assert(std::saturate_cast<signed int>(big_sintMin)   == std_sintMin);  // saturated
   assert(std::saturate_cast<signed int>(big_sintZero)  == std_sintZero);
   assert(std::saturate_cast<signed int>(big_sintMax)   == std_sintMax);  // saturated
 
-  std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed int> decltype(auto) _ = std::saturate_cast<signed int>(big_uintMin); }
   assert(std::saturate_cast<signed int>(big_uintMin)   == std_sintZero);
   assert(std::saturate_cast<signed int>(big_uintZero)  == std_sintZero);
   assert(std::saturate_cast<signed int>(big_uintMax)   == std_sintMax);  // saturated
 
   // long
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_scharMin); }
   assert(std::saturate_cast<signed long int>(std_scharMin)  == static_cast<signed long int>(std_scharMin));
   assert(std::saturate_cast<signed long int>(std_scharZero) == std_slZero);
   assert(std::saturate_cast<signed long int>(std_scharMax)  == static_cast<signed long int>(std_scharMax));
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_ucharMin); }
   assert(std::saturate_cast<signed long int>(std_ucharMin)  == std_slZero);
   assert(std::saturate_cast<signed long int>(std_ucharZero) == std_slZero);
   assert(std::saturate_cast<signed long int>(std_ucharMax)  == static_cast<signed long int>(std_ucharMax));
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_slMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_slMin); }
   assert(std::saturate_cast<signed long int>(std_slMin)     == std_slMin);
   assert(std::saturate_cast<signed long int>(std_slZero)    == std_slZero);
   assert(std::saturate_cast<signed long int>(std_slMax)     == std_slMax);
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_ulMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(std_ulMin); }
   assert(std::saturate_cast<signed long int>(std_ulMin)     == std_slZero);
   assert(std::saturate_cast<signed long int>(std_ulZero)    == std_slZero);
   assert(std::saturate_cast<signed long int>(std_ulMax)     == std_slMax);  // saturated
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_sintMin); }
   assert(std::saturate_cast<signed long int>(big_sintMin)   == std_slMin);  // saturated
   assert(std::saturate_cast<signed long int>(big_sintZero)  == std_slZero);
   assert(std::saturate_cast<signed long int>(big_sintMax)   == std_slMax);  // saturated
 
-  std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long int> decltype(auto) _ = std::saturate_cast<signed long int>(big_uintMin); }
   assert(std::saturate_cast<signed long int>(big_uintMin)   == std_slZero);
   assert(std::saturate_cast<signed long int>(big_uintZero)  == std_slZero);
   assert(std::saturate_cast<signed long int>(big_uintMax)   == std_slMax);  // saturated
 
   // long long
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_scharMin); }
   assert(std::saturate_cast<signed long long int>(std_scharMin)  == static_cast<signed long long int>(std_scharMin));
   assert(std::saturate_cast<signed long long int>(std_scharZero) == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_scharMax)  == static_cast<signed long long int>(std_scharMax));
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_ucharMin);
+   // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]]   std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_ucharMin); }
   assert(std::saturate_cast<signed long long int>(std_ucharMin)  == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_ucharZero) == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_ucharMax)  == static_cast<signed long long int>(std_ucharMax));
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_sllMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_sllMin); }
   assert(std::saturate_cast<signed long long int>(std_sllMin)     == std_sllMin);
   assert(std::saturate_cast<signed long long int>(std_sllZero)    == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_sllMax)     == std_sllMax);
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_ullMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(std_ullMin); }
   assert(std::saturate_cast<signed long long int>(std_ullMin)     == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_ullZero)    == std_sllZero);
   assert(std::saturate_cast<signed long long int>(std_ullMax)     == std_sllMax);  // saturated
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_sintMin); }
   assert(std::saturate_cast<signed long long int>(big_sintMin)    == std_sllMin);  // (128-bit) saturated
   assert(std::saturate_cast<signed long long int>(big_sintZero)   == std_sllZero);
   assert(std::saturate_cast<signed long long int>(big_sintMax)    == std_sllMax);  // (128-bit) saturated
 
-  std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<signed long long int> decltype(auto) _ = std::saturate_cast<signed long long int>(big_uintMin); }
   assert(std::saturate_cast<signed long long int>(big_uintMin)    == std_sllZero);
   assert(std::saturate_cast<signed long long int>(big_uintZero)   == std_sllZero);
   assert(std::saturate_cast<signed long long int>(big_uintMax)    == std_sllMax);  // (128-bit) saturated
 
 #ifndef TEST_HAS_NO_INT128
-  std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_scharMin); }
   assert(std::saturate_cast<__int128_t>(std_scharMin)  == static_cast<__int128_t>(std_scharMin));
   assert(std::saturate_cast<__int128_t>(std_scharZero) == big_sintZero);
   assert(std::saturate_cast<__int128_t>(std_scharMax)  == static_cast<__int128_t>(std_scharMax));
 
-  std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<__int128_t> decltype(auto) _ = std::saturate_cast<__int128_t>(std_ucharMin); }
   assert(std::saturate_cast<__int128_t>(std_ucharMin)  == static_cast<__int128_t>(std_ucharMin));
   assert(std::saturate_cast<__int128_t>(std_ucharZero) == big_sintZero);
   assert(std::saturate_cast<__int128_t>(std_ucharMax)  == static_cast<__int128_t>(std_ucharMax));
@@ -277,161 +317,191 @@ constexpr bool test() {
 
   // unsigned char
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(std_scharMin); }
   assert(std::saturate_cast<unsigned char>(std_scharMin)  == std_ucharMin);
   assert(std::saturate_cast<unsigned char>(std_scharZero) == std_ucharZero);
   assert(std::saturate_cast<unsigned char>(std_scharMax)  == static_cast<unsigned char>(std_scharMax));
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(std_ucharMin); }
   assert(std::saturate_cast<unsigned char>(std_ucharMin)  == std_ucharMin);
   assert(std::saturate_cast<unsigned char>(std_ucharZero) == std_ucharZero);
   assert(std::saturate_cast<unsigned char>(std_ucharMax)  == std_ucharMax);
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_sintMin); }
   assert(std::saturate_cast<unsigned char>(big_sintMin)   == std_ucharMin);  // saturated
   assert(std::saturate_cast<unsigned char>(big_sintZero)  == std_ucharZero);
   assert(std::saturate_cast<unsigned char>(big_sintMax)   == std_ucharMax);  // saturated
 
-  std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned char> decltype(auto) _ = std::saturate_cast<unsigned char>(big_uintMin); }
   assert(std::saturate_cast<unsigned char>(big_uintMin)   == std_ucharMin);
   assert(std::saturate_cast<unsigned char>(big_uintZero)  == std_ucharZero);
   assert(std::saturate_cast<unsigned char>(big_uintMax)   == std_ucharMax);  // saturated
 
   // short
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_scharMin); }
   assert(std::saturate_cast<unsigned short int>(std_scharMin)  == std_usintMin);
   assert(std::saturate_cast<unsigned short int>(std_scharZero) == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(std_scharMax)  == static_cast<unsigned short int>(std_scharMax));
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_ucharMin); }
   assert(std::saturate_cast<unsigned short int>(std_ucharMin)  == std_usintMin);
   assert(std::saturate_cast<unsigned short int>(std_ucharZero) == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(std_ucharMax)  == static_cast<unsigned short int>(std_ucharMax));
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_scharMin); }
   assert(std::saturate_cast<unsigned short int>(std_ssintMin)  == std_usintMin);
   assert(std::saturate_cast<unsigned short int>(std_ssintZero) == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(std_ssintMax)  == static_cast<unsigned short int>(std_ssintMax));
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(std_ucharMin); }
   assert(std::saturate_cast<unsigned short int>(std_usintMin)  == std_usintMin);
   assert(std::saturate_cast<unsigned short int>(std_usintZero) == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(std_usintMax)  == std_usintMax);
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_sintMin); }
   assert(std::saturate_cast<unsigned short int>(big_sintMin)   == std_usintMin);  // saturated
   assert(std::saturate_cast<unsigned short int>(big_sintZero)  == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(big_sintMax)   == std_usintMax);  // saturated
 
-  std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned short int> decltype(auto) _ = std::saturate_cast<unsigned short int>(big_uintMin); }
   assert(std::saturate_cast<unsigned short int>(big_uintMin)   == std_usintMin);
   assert(std::saturate_cast<unsigned short int>(big_uintZero)  == std_usintZero);
   assert(std::saturate_cast<unsigned short int>(big_uintMax)   == std_usintMax);  // saturated
 
   // unsigned int
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_scharMin); }
   assert(std::saturate_cast<unsigned int>(std_scharMin)  == std_usintMin);
   assert(std::saturate_cast<unsigned int>(std_scharZero) == std_usintZero);
   assert(std::saturate_cast<unsigned int>(std_scharMax)  == static_cast<unsigned int>(std_scharMax));
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_ucharMin); }
   assert(std::saturate_cast<unsigned int>(std_ucharMin)  == std_uintMin);
   assert(std::saturate_cast<unsigned int>(std_ucharZero) == std_uintZero);
   assert(std::saturate_cast<unsigned int>(std_ucharMax)  == static_cast<unsigned int>(std_ucharMax));
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_sintMin); }
   assert(std::saturate_cast<unsigned int>(std_sintMin)   == std_uintMin);
   assert(std::saturate_cast<unsigned int>(std_sintZero)  == std_uintZero);
   assert(std::saturate_cast<unsigned int>(std_sintMax)   == static_cast<unsigned int>(std_sintMax));
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(std_uintMin); }
   assert(std::saturate_cast<unsigned int>(std_uintMin)   == std_uintMin);
   assert(std::saturate_cast<unsigned int>(std_uintZero)  == std_uintZero);
   assert(std::saturate_cast<unsigned int>(std_uintMax)   == std_uintMax);
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_sintMin); }
   assert(std::saturate_cast<unsigned int>(big_sintMin)   == std_uintMin);  // saturated
   assert(std::saturate_cast<unsigned int>(big_sintZero)  == std_uintZero);
   assert(std::saturate_cast<unsigned int>(big_sintMax)   == std_uintMax);  // saturated
 
-  std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(big_uintMin); }
   assert(std::saturate_cast<unsigned int>(big_uintMin)   == std_uintMin);
   assert(std::saturate_cast<unsigned int>(big_uintZero)  == std_uintZero);
   assert(std::saturate_cast<unsigned int>(big_uintMax)   == std_uintMax);  // saturated
 
   // unsigned long
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_scharMin); }
   assert(std::saturate_cast<unsigned long int>(std_scharMin)  == std_ulMin);
   assert(std::saturate_cast<unsigned long int>(std_scharZero) == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(std_scharMax)  == static_cast<unsigned long int>(std_scharMax));
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_ucharMin); }
   assert(std::saturate_cast<unsigned long int>(std_ucharMin)  == std_ulMin);
   assert(std::saturate_cast<unsigned long int>(std_ucharZero) == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(std_ucharMax)  == static_cast<unsigned long int>(std_ucharMax));
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_slMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_slMin); }
   assert(std::saturate_cast<unsigned long int>(std_slMin)     == std_ulMin);
   assert(std::saturate_cast<unsigned long int>(std_slZero)    == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(std_slMax)     == static_cast<unsigned long int>(std_slMax));
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_ulMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(std_ulMin); }
   assert(std::saturate_cast<unsigned long int>(std_ulMin)     == std_ulMin);
   assert(std::saturate_cast<unsigned long int>(std_ulZero)    == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(std_ulMax)     == std_ulMax);
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_sintMin); }
   assert(std::saturate_cast<unsigned long int>(big_sintMin)   == std_ulMin);  // saturated
   assert(std::saturate_cast<unsigned long int>(big_sintZero)  == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(big_sintMax)   == std_ulMax);  // saturated
 
-  std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(big_uintMin); }
   assert(std::saturate_cast<unsigned long int>(big_uintMin)   == std_ulMin);
   assert(std::saturate_cast<unsigned long int>(big_uintZero)  == std_ulZero);
   assert(std::saturate_cast<unsigned long int>(big_uintMax)   == std_ulMax);  // saturated
 
   // unsigned long long
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_scharMin); }
   assert(std::saturate_cast<unsigned long long int>(std_scharMin)  == std_ullMin);
   assert(std::saturate_cast<unsigned long long int>(std_scharZero) == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(std_scharMax)  == static_cast<unsigned long long int>(std_scharMax));
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_ucharMin); }
   assert(std::saturate_cast<unsigned long long int>(std_ucharMin)  == std_ullMin);
   assert(std::saturate_cast<unsigned long long int>(std_ucharZero) == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(std_ucharMax)  == static_cast<unsigned long long int>(std_ucharMax));
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_sllMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_sllMin); }
   assert(std::saturate_cast<unsigned long long int>(std_sllMin)    == std_ullMin);
   assert(std::saturate_cast<unsigned long long int>(std_sllZero)   == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(std_sllMax)    == static_cast<unsigned long long int>(std_sllMax));
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_ullMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(std_ullMin); }
   assert(std::saturate_cast<unsigned long long int>(std_ullMin)    == std_ullMin);
   assert(std::saturate_cast<unsigned long long int>(std_ullZero)   == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(std_ullMax)    == std_ullMax);
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_sintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_sintMin); }
   assert(std::saturate_cast<unsigned long long int>(big_sintMin)   == std_ullMin);  // (128-bit) saturated
   assert(std::saturate_cast<unsigned long long int>(big_sintZero)  == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(big_sintMax)   == std_ullMax);  // (128-bit) saturated
 
-  std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_uintMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(big_uintMin); }
   assert(std::saturate_cast<unsigned long long int>(big_uintMin)   == std_ullMin);
   assert(std::saturate_cast<unsigned long long int>(big_uintZero)  == std_ullZero);
   assert(std::saturate_cast<unsigned long long int>(big_uintMax)   == std_ullMax);  // (128-bit) saturated
 
 #ifndef TEST_HAS_NO_INT128
-  std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_scharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_scharMin); }
   assert(std::saturate_cast<__uint128_t>(std_scharMin)  == big_uintMin);
   assert(std::saturate_cast<__uint128_t>(std_scharZero) == big_uintZero);
   assert(std::saturate_cast<__uint128_t>(std_scharMax)  == static_cast<__uint128_t>(std_scharMax));
 
-  std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_ucharMin);
+  // TODO(LLVM-20) remove [[maybe_unused]] and `{}` scope since all supported compilers support "Placeholder variables with no name"
+  { [[maybe_unused]] std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(std_ucharMin); }
   assert(std::saturate_cast<__uint128_t>(std_ucharMin)  == big_uintMin);
   assert(std::saturate_cast<__uint128_t>(std_ucharZero) == big_uintZero);
   assert(std::saturate_cast<__uint128_t>(std_ucharMax)  == static_cast<__uint128_t>(std_ucharMax));
