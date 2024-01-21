@@ -174,7 +174,7 @@ public:
         E.dump();
         if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
           // CS->getStmt()->dump();
-          printStmtLocation(*CS->getStmt());
+          // printStmtLocation(*CS->getStmt());
         }
       }
 
@@ -184,9 +184,25 @@ public:
         if (T.getStmt()) {
           const Stmt &S = *T.getStmt();
           llvm::errs() << "  T: <" << S.getStmtClassName() << ">\n";
-          printStmtLocation(S);
+          // printStmtLocation(S);
         }
       }
+
+      // print predecessors
+      llvm::errs() << "  Preds:";
+      for (auto PI = B.pred_begin(); PI != B.pred_end(); ++PI) {
+        const CFGBlock *Pred = *PI;
+        llvm::errs() << " B" << Pred->getBlockID();
+      }
+      llvm::errs() << "\n";
+
+      // print successors
+      llvm::errs() << "  Succs:";
+      for (auto SI = B.succ_begin(); SI != B.succ_end(); ++SI) {
+        const CFGBlock *Succ = *SI;
+        llvm::errs() << " B" << Succ->getBlockID();
+      }
+      llvm::errs() << "\n";
     }
 
     return true;
